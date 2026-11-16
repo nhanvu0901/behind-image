@@ -2,9 +2,9 @@
 import { api } from './api.js';
 import { ctx, bus, intentHsl } from './ctx.js';
 import { $, fmtTime } from './util.js';
-import { timeToX, xToTime, wordIndexAt, clamp, shotIndexAt } from './logic.js';
+import { timeToX, xToTime, wordIndexAt, clamp, shotIndexAt, grabZone } from './logic.js';
 import * as E from './edit.js';
-import { toggleLock } from './actions.js';
+import { toggleLock, selectItem } from './actions.js';
 
 // DOM is looked up when the view is mounted (initTimeline), never at import time: the module outlives the view.
 let root = null, scope = null, alive = false;
@@ -55,13 +55,14 @@ function lanes() {
 }
 
 function thumb(shot) {
-  const key = shot.id + '|' + ctx.store.rev;
+  const rk = ctx.renderKey || ctx.store.rev;
+  const key = shot.id + '|' + rk;
   let t = thumbs.get(key);
   if (!t) {
     const img = new Image(); t = { img, ok: false };
     img.onload = () => { t.ok = true; requestDraw(); };
     img.onerror = () => { t.err = true; };
-    img.src = api.url(api.thumbUrl(ctx.pid, shot.id, ctx.store.rev));
+    img.src = api.url(api.thumbUrl(ctx.pid, shot.id, rk));
     thumbs.set(key, t);
     if (thumbs.size > 400) thumbs.delete(thumbs.keys().next().value);
   }
@@ -130,6 +131,11 @@ function draw() {
     if (s.transition_in && w > 30) { c.fillStyle = '#ffd666'; c.fillText('TR', x0 + 3, Y.shot + R.shot - 7); }
     c.restore();
     if (sel) { c.strokeStyle = '#4f9cff'; c.lineWidth = 2; c.strokeRect(x0 + 1, Y.shot + 1, Math.max(1, w - 3), R.shot - 2); }
+    if (ctx.incompleteOf(s.id) && w > 4) {           // incomplete (an empty required slot): amber dashed frame and a "!" badge
+      c.save(); c.strokeStyle = '#ffb020'; c.lineWidth = 2; c.setLineDash([4, 3]); c.strokeRect(x0 + 1, Y.shot + 1, Math.max(1, w - 3), R.shot - 2); c.restore();
+      if (w > 24) pill('! ' + ctx.incompleteOf(s.id).join(','), x0 + 3, Y.shot + R.shot - 16, '#a86a00');
+      else { c.fillStyle = '#ffb020'; c.fillRect(x0 + 1, Y.shot + R.shot - 6, Math.max(1, w - 3), 4); }
+    }
   }
   // ---- overlays
   c.fillStyle = '#10131a'; c.fillRect(0, Y.ov, W, R.ovH);
@@ -143,7 +149,9 @@ function draw() {
       const sel = ctx.store.sel.overlay === o.id && ctx.store.sel.shot === s.id;
       c.fillStyle = intentHsl(o.intent, 50, sel ? 42 : 34); c.beginPath(); c.roundRect(x0, y, x1 - x0, R.lane - 2, 4); c.fill();
       c.strokeStyle = sel ? '#fff' : (o.locked ? '#f4b400' : 'rgba(0,0,0,.4)'); c.lineWidth = sel ? 1.6 : 1; c.stroke();
-      if (x1 - x0 > 26) { c.save(); c.beginPath(); c.rect(x0, y, x1 - x0, R.lane); c.clip(); c.fillStyle = '#fff'; c.font = '10px sans-serif'; c.fillText(o.technique, x0 + 4, y + 7); c.restore(); }
+      const inc = ctx.incompleteOf(s.id, o.id);
+      if (inc) { c.save(); c.strokeStyle = '#ffb020'; c.lineWidth = 1.6; c.setLineDash([3, 2]); c.beginPath(); c.roundRect(x0, y, x1 - x0, R.lane - 2, 4); c.stroke(); c.restore(); }
+      if (x1 - x0 > 26) { c.save(); c.beginPath(); c.rect(x0, y, x1 - x0, R.lane); c.clip(); c.fillStyle = inc ? '#ffd27a' : '#fff'; c.font = '10px sans-serif'; c.fillText((inc ? '! ' : '') + o.technique + (inc && x1 - x0 > 110 ? ' ' + inc.join(',') : ''), x0 + 4, y + 7); c.restore(); }
     }
   }
   // ---- words
@@ -186,7 +194,7 @@ function draw() {
   c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(4 + t0 * mk, Y.mini - 1, (t1 - t0) * mk, R.mini - 6);
   c.strokeStyle = '#8a93a6'; c.lineWidth = 1; c.strokeRect(4 + t0 * mk + 0.5, Y.mini - 0.5, (t1 - t0) * mk, R.mini - 6);
   c.fillStyle = '#ff5c5c'; c.fillRect(4 + ctx.t * mk, Y.mini - 2, 1.5, R.mini - 4);
-  $('#tl-info').textContent = `${shots.length} shot | ${shots.reduce((n, s) => n + (s.overlays || []).length, 0)} lớp phủ | ${words.length} từ | ${view.pps.toFixed(1)} px/s`;
+  $('#tl-info').textContent = `${shots.length} shot | ${shots.reduce((n, s) => n + (s.overlays || []).length, 0)} lớp phủ | ${words.length} từ | ${view.pps.toFixed(1)} px/s` + (ctx.incomplete.size ? ` | ${ctx.incomplete.size} chưa đủ` : '');
 }
 
 // ---- hit testing
@@ -199,9 +207,14 @@ function band(y) {
 function hitBoundary(x) {
   const shots = ctx.store.draft.shots, t = xToTime(x, view);
   const i = shotIndexAt(shots, t);
-  for (const k of [i, i + 1]) if (k > 0 && k < shots.length && Math.abs(X(shots[k]._t0) - x) <= 5) return k;
+  for (const k of [i, i + 1]) {
+    if (!(k > 0 && k < shots.length)) continue;
+    const g = grabZone(X(shots[k]._t0) - X(shots[k - 1]._t0), X(shots[k]._t1) - X(shots[k]._t0));
+    if (g >= 1.5 && Math.abs(X(shots[k]._t0) - x) <= g) return k;
+  }
   return -1;
 }
+const shotAt = (x) => { const shots = ctx.store.draft.shots; return shots[shotIndexAt(shots, xToTime(x, view))]; };
 function overlayEdge(x, hit) {
   const x0 = X(hit.ov._t0), x1 = Math.max(x0 + 6, X(hit.ov._t1)), w = x1 - x0, g = Math.min(6, w / 3);
   return x <= x0 + g ? 'l' : x >= x1 - g ? 'r' : null;
@@ -219,7 +232,7 @@ function hitOverlay(x, y) {
   return best;
 }
 
-export function seek(t) { ctx.t = clamp(t, 0, dur()); bus.emit('time', ctx.t); requestDraw(); }
+export function seek(t) { ctx.seek(t); requestDraw(); }
 export function ensureVisible(t) {
   const x = X(t);
   if (x < 20 || x > W - 20) { view.t0 = t - (W / view.pps) * 0.2; clampView(); requestDraw(); }
@@ -244,15 +257,16 @@ function installCanvas() {
       drag = { kind: 'mini' }; return;
     }
     if (b === 'shot') {
-      const k = hitBoundary(x);
-      if (k > 0) { drag = { kind: 'boundary', idx: k, id: shots[k].id }; st.select(shots[k].id); return; }
-      const s = shots[shotIndexAt(shots, xToTime(x, view))];
-      st.select(s.id); seek(xToTime(x, view)); drag = { kind: 'scrub' }; return;
+      // a click always selects the shot under it and moves the playhead there; only a real drag from a boundary moves the boundary
+      const tc = xToTime(x, view), k = hitBoundary(x), s = shots[shotIndexAt(shots, tc)];
+      seek(tc); st.select(s.id);
+      drag = k > 0 ? { kind: 'boundary', idx: k, id: shots[k].id, x0: x, armed: false } : { kind: 'scrub' };
+      return;
     }
     if (b === 'ov') {
       const hit = hitOverlay(x, y);
       if (hit) {
-        st.select(hit.shot.id, hit.ov.id); bus.emit('tab', 'overlay');
+        selectItem(hit.shot.id, hit.ov.id); bus.emit('tab', 'overlay');   // the playhead goes into the overlay: still and handles are one moment
         const edge = overlayEdge(x, hit);
         if (edge) { drag = { kind: 'ovedge', id: hit.ov.id, shotId: hit.shot.id, edge }; return; }
         drag = { kind: 'overlay', id: hit.ov.id, shotId: hit.shot.id, off: xToTime(x, view) - hit.ov._t0, x0: x, moved: false }; return;
@@ -267,6 +281,9 @@ function installCanvas() {
     if (!drag) {
       const b = band(y);
       const oh = b === 'ov' ? hitOverlay(x, y) : null;
+      const hs = b === 'shot' ? shotAt(x) : null;
+      const tip = oh ? (ctx.incompleteText(oh.shot.id, oh.ov.id) ? `${oh.ov.technique} ${oh.ov.id}: ${ctx.incompleteText(oh.shot.id, oh.ov.id)}` : '') : hs ? (ctx.incompleteText(hs.id) ? `${hs.id}: ${ctx.incompleteText(hs.id)}` : '') : '';
+      if (cv.title !== tip) cv.title = tip;
       cv.style.cursor = b === 'shot' && hitBoundary(x) > 0 ? 'ew-resize' : oh ? (overlayEdge(x, oh) ? 'ew-resize' : 'grab') : 'default';
       return;
     }
@@ -274,6 +291,7 @@ function installCanvas() {
     if (drag.kind === 'mini') { const mk = (W - 8) / dur(); view.t0 = (x - 4) / mk - W / view.pps / 2; clampView(); requestDraw(); }
     else if (drag.kind === 'scrub') { seek(xToTime(clamp(x, 0, W), view)); const s = st.draft.shots[shotIndexAt(st.draft.shots, ctx.t)]; if (s && st.sel.shot !== s.id) st.select(s.id); }
     else if (drag.kind === 'boundary') {
+      if (!drag.armed) { if (Math.abs(x - drag.x0) < 3) return; drag.armed = true; }
       const t = xToTime(x, view);
       st.commit('Kéo ranh giới shot', (d) => E.moveBoundary(d, d.shots.findIndex((s) => s.id === drag.id), t, words, e.altKey), { coalesce: 'bd:' + drag.id });
       guide = st.shotById(drag.id)?._t0 ?? null; requestDraw();
@@ -308,9 +326,10 @@ export function initTimeline(viewRoot, viewScope) {
   drag = null; hover = null; guide = null; waves = null; drawQueued = false; laneCache = { v: -1, map: new Map() }; view.t0 = 0; view.pps = 10;
   scope.add(() => { alive = false; });
   installCanvas();
-  window.__tl = { view, Y, R, X, drawNow: () => draw(), get W() { return W; } };
+  window.__tl = { view, Y, R, X, grabZone, hitBoundary, drawNow: () => draw(), get W() { return W; } };
   const ro = new ResizeObserver(resize); ro.observe(wrap); scope.add(() => ro.disconnect());
   ctx.store.on((kind) => { if (kind === 'load') { view.t0 = 0; view.pps = minPps(); clampView(); loadWave(); } requestDraw(); });
+  bus.on('issues', requestDraw);
   bus.on('time', requestDraw); bus.on('tick', () => { ensureVisible(ctx.t); requestDraw(); });
   $('#tl-zin', root).onclick = () => zoomAt(1.6, W / 2);
   $('#tl-zout', root).onclick = () => zoomAt(1 / 1.6, W / 2);

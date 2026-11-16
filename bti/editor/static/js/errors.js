@@ -1,9 +1,11 @@
-/** Error of an HTTP call. `message` is the server's `detail` (Vietnamese or English) when there is one. */
+// Error of an HTTP call. `message` is a Vietnamese sentence (see errmsg.js, the one place that turns an error into
+// a message); `detail` is the raw text the server sent when it differs; `status` and `body` are the response itself.
+import { describeHttp } from './errmsg.js';
+
 export class ApiError extends Error {
   constructor(status, body, url) {
-    const d = body && typeof body === 'object' ? body.detail : typeof body === 'string' ? body : null;
-    const msg = typeof d === 'string' && d ? d.slice(0, 300) : d ? JSON.stringify(d).slice(0, 300) : `HTTP ${status}`;
-    super(msg);
-    this.status = status; this.body = body; this.url = url;
+    const d = describeHttp(status, body);
+    super(d.text);
+    this.status = status; this.body = body; this.url = url; this.detail = d.detail;
   }
 }

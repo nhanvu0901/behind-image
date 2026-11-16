@@ -4,7 +4,9 @@ Run: uvicorn bti.editor.app:create_app --factory --host 127.0.0.1 --port 8560
 """
 from __future__ import annotations
 
+import hashlib
 import json
+import logging
 import mimetypes
 import os
 import shutil
@@ -19,12 +21,16 @@ from fastapi import Body, FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from PIL import Image
 
+from bti.engine.errors import DataError
+from bti.script.runner import ScriptJobs
+from bti.script.store import DocumentCorrupt
+
 from . import audio as audio_mod
 from . import frames as frames_mod
 from . import jobs as jobs_mod
 from . import proposals as prop_mod
 from .common import (ApiError, ITEM_RE, REPO_ROOT, STYLE_RE, compute_rev, now_iso, quarantine, read_json,
-                     safe_join, strip_derived, valid_pid)
+                     safe_join, strip_derived, valid_pid, write_json_atomic)
 from .engine_adapter import ENGINE_LOCK, EngineAdapter
 from .media_adapter import LicenceRejected, MediaAdapter
 
@@ -52,9 +58,11 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     static = Path(static_dir or Path(__file__).parent / "static")
     engine = EngineAdapter(root, sroot, engine_module)
     media = MediaAdapter(root, media_module)
-    jobs = jobs_mod.JobManager(workers)
+    jobs = jobs_mod.JobManager(workers, root)
+    script_jobs = ScriptJobs(projects_root=root)          # one registry, shared by the script router and by delete-project
     save_lock = threading.RLock()
     rev_cache: dict[str, tuple[tuple, str]] = {}
+    readable: dict[str, tuple] = {}                        # pid -> (mtime_ns, size) of a storyboard.json known to load
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -63,11 +71,33 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
 
     app = FastAPI(title="BTI editor", docs_url="/docs", redoc_url=None, lifespan=lifespan)
     app.state.engine, app.state.media, app.state.jobs = engine, media, jobs
+    app.state.script_jobs = script_jobs
     app.state.projects_root = root
 
     @app.exception_handler(ApiError)
     async def _api_error(_: Request, e: ApiError):
         return JSONResponse({"detail": e.detail, **e.extra}, status_code=e.status)
+
+    @app.exception_handler(DataError)
+    async def _data_error(_: Request, e: DataError):
+        # the project's own data is unusable (missing or corrupt timing, unknown style...): the page can show the message
+        return JSONResponse({"detail": e.message, "data_error": e.what}, status_code=409)
+
+    @app.exception_handler(DocumentCorrupt)
+    async def _doc_corrupt(_: Request, e: DocumentCorrupt):
+        return JSONResponse({"detail": str(e), "data_error": "script"}, status_code=409)
+
+    @app.exception_handler(UnicodeEncodeError)
+    async def _unicode_error(_: Request, e: UnicodeEncodeError):
+        return JSONResponse({"detail": "the text contains a character that cannot be stored (a lone surrogate); "
+                                       "remove it and send again"}, status_code=422)
+
+    @app.exception_handler(Exception)
+    async def _any_error(_: Request, e: Exception):
+        # last line of defence: a bug is still answered as JSON, without the Python message; the traceback goes to the log
+        logging.getLogger("bti.editor").exception("unhandled error", exc_info=e)
+        return JSONResponse({"detail": f"internal error ({type(e).__name__}); this is a bug of the server, not of your input"},
+                            status_code=500)
 
     # ------------------------------------------------------------ helpers
     def pdir(pid: str) -> Path:
@@ -78,19 +108,59 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             raise ApiError(404, "project not found")
         return d
 
+    def history_files(d: Path) -> list[Path]:
+        h = d / "history"
+        if not h.is_dir() or h.is_symlink():
+            return []
+        fs = [f for f in h.glob("*.json") if f.is_file() and not f.is_symlink()]
+        return sorted(fs, key=lambda f: (f.stat().st_mtime_ns, f.name), reverse=True)
+
+    def newest_valid_history(d: Path) -> str | None:
+        for f in history_files(d):
+            try:
+                if isinstance(read_json(f), dict):
+                    return f.name
+            except (OSError, ValueError):
+                continue
+        return None
+
+    def check_readable(pid: str, d: Path) -> None:
+        """storyboard.json must load as an object, else a 409 that names the problem and the newest good copy in history/.
+        (The answer is cached per file version, so the check costs one stat for a healthy file.)"""
+        f = d / "storyboard.json"
+        try:
+            st = f.stat()
+        except OSError:
+            raise ApiError(404, "storyboard not found")
+        sig = (st.st_mtime_ns, st.st_size)
+        if readable.get(pid) == sig:
+            return
+        try:
+            doc = read_json(f)
+            problem = None if isinstance(doc, dict) else "the top level must be an object"
+        except (OSError, ValueError) as e:
+            problem = str(e)[:120]
+        if problem:
+            readable.pop(pid, None)
+            engine.forget(pid)
+            best = newest_valid_history(d)
+            raise ApiError(409, "storyboard.json is corrupt: " + problem
+                           + (f"; the newest good copy is history/{best} (POST .../storyboard/restore brings it back)" if best
+                              else "; there is no good copy in history/"),
+                           corrupt=True, restore_from=best)
+        readable[pid] = sig
+
     def project(pid: str):
         d = pdir(pid)
         if not (d / "storyboard.json").is_file():
             raise ApiError(404, "storyboard not found")
+        check_readable(pid, d)
         return engine.project(pid)
 
     def saved_storyboard(pid: str) -> dict:
         p = project(pid)
-        try:
-            with ENGINE_LOCK:
-                return p.storyboard()
-        except json.JSONDecodeError as e:
-            raise ApiError(500, f"storyboard.json is corrupt: {e}")
+        with ENGINE_LOCK:
+            return p.storyboard()
 
     def current_rev(pid: str) -> str:
         f = pdir(pid) / "storyboard.json"
@@ -106,6 +176,42 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         rev_cache[pid] = (sig, rev)
         return rev
 
+    def render_key(pid: str) -> str:
+        """Key of everything a still depends on: the storyboard, the timing file, the style files and the media files it uses.
+        The cached JPEGs and the ETag use it, so none of them can outlive a change of any of those."""
+        d = pdir(pid)
+        sb = saved_storyboard(pid)
+
+        def sig(path: Path | None) -> str:
+            try:
+                st = path.stat() if path is not None else None
+            except OSError:
+                st = None
+            return f"{st.st_mtime_ns}:{st.st_size}" if st else "-"
+        parts = [current_rev(pid)]
+        rel = sb.get("timing") or "timing.json"
+        tf = None
+        if isinstance(rel, str):
+            try:
+                tf = safe_join(d, rel)
+            except ApiError:
+                tf = None
+        parts.append("timing=" + sig(tf))
+        style = sb.get("style", "gae")
+        sd = sroot / style if isinstance(style, str) and STYLE_RE.fullmatch(style) else None
+        if sd is not None:
+            parts.append("style=" + ",".join(sig(sd / n) for n in ("style.json", "techniques.json")))
+            parts.append("patches=" + ",".join(sig(f) for f in sorted((sd / "patches").glob("*.json"))) if (sd / "patches").is_dir() else "patches=-")
+        for k, a in sorted((sb.get("assets") or {}).items()) if isinstance(sb.get("assets"), dict) else []:
+            f = None
+            if isinstance(a, dict) and isinstance(a.get("file"), str):
+                try:
+                    f = safe_join(d, a["file"])
+                except ApiError:
+                    f = None
+            parts.append(f"{k}={sig(f)}")
+        return hashlib.sha1("|".join(parts).encode()).hexdigest()
+
     def state(pid: str) -> dict:
         p = project(pid)
         with ENGINE_LOCK:
@@ -113,7 +219,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             resolved = p.resolve()
             issues = p.validate()
             timing = p.timing()
-        return {"storyboard": resolved, "timing": timing, "issues": issues, "rev": compute_rev(sb)}
+        return {"storyboard": resolved, "timing": timing, "issues": issues, "rev": compute_rev(sb),
+                "render_key": render_key(pid)}
 
     def save_result(pid: str, p) -> dict:
         with ENGINE_LOCK:
@@ -122,7 +229,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             issues = p.validate()
         rev = compute_rev(sb)
         rev_cache.pop(pid, None)
-        return {"rev": rev, "storyboard": resolved, "issues": issues}
+        return {"rev": rev, "storyboard": resolved, "issues": issues, "render_key": render_key(pid)}
 
     def commit(pid: str, p, doc: dict) -> dict:
         """validate, save through the engine, return PUT-shaped result. Caller holds save_lock."""
@@ -135,10 +242,13 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         try:
             with ENGINE_LOCK:
                 p.save(doc)
-        except ApiError:
+        except (ApiError, DataError):
             raise
-        except (ValueError, TypeError, KeyError) as e:
-            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [])
+        except Exception as e:      # noqa: BLE001 - the engine's ValidationError carries the issues; nothing was written
+            if isinstance(e, (ValueError, TypeError, KeyError)) or hasattr(e, "issues"):
+                raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [])
+            raise
+        readable.pop(pid, None)
         return save_result(pid, p)
 
     def audio_path(pid: str, sb: dict) -> Path | None:
@@ -242,6 +352,40 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             doc["approvals"] = saved.get("approvals") or {"storyboard": None}  # server-owned
             return commit(pid, p, doc)
 
+    @app.post("/api/projects/{pid}/storyboard/restore")
+    def restore_storyboard(pid: str, body: dict = Body(default={})):
+        """Bring back a good copy from history/ when storyboard.json is unreadable (or missing). The damaged file is moved
+        aside (storyboard.json.corrupt-<time>), never deleted. Body: {file?} (a name in history/; default: the newest good one)."""
+        d = pdir(pid)
+        with save_lock:
+            f = d / "storyboard.json"
+            if f.is_file():
+                try:
+                    healthy = isinstance(read_json(f), dict)
+                except (OSError, ValueError):
+                    healthy = False
+                if healthy:
+                    raise ApiError(409, "storyboard.json is readable; there is nothing to restore")
+            name = body.get("file")
+            if name is None:
+                name = newest_valid_history(d)
+                if name is None:
+                    raise ApiError(404, "there is no good copy in history/")
+            elif not isinstance(name, str) or name not in {h.name for h in history_files(d)}:
+                raise ApiError(404, "no such file in history/")
+            try:
+                doc = read_json(d / "history" / name)
+            except (OSError, ValueError):
+                doc = None
+            if not isinstance(doc, dict):
+                raise ApiError(422, f"history/{name} is not a readable storyboard")
+            moved = quarantine(f) if f.exists() else None
+            write_json_atomic(f, doc)
+            readable.pop(pid, None)
+            rev_cache.pop(pid, None)
+            engine.forget(pid)
+        return {"restored_from": name, "quarantined": moved.name if moved else None, "rev": compute_rev(doc)}
+
     @app.post("/api/projects/{pid}/validate")
     def post_validate(pid: str, body: dict = Body(...)):
         sb = need_dict(body, "storyboard")
@@ -255,16 +399,21 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         if not isinstance(tech, str) or not tech:
             raise ApiError(422, "technique is required")
         ctx = body.get("context") or {}
+        if not isinstance(ctx, dict):
+            raise ApiError(422, "context must be an object")
         p = project(pid)
-        ctx = engine_context(ctx if isinstance(ctx, dict) else {})
+        saved_assets = saved_storyboard(pid).get("assets")
+        slots = default_slots(engine.load_style(_style_of(saved_storyboard(pid))).get("techniques") or [], tech, ctx,
+                              saved_assets if isinstance(saved_assets, dict) else {})
+        ectx = engine_context(ctx)
         try:
             with ENGINE_LOCK:
-                params = p.default_params(tech, ctx)
-        except ApiError:
+                params = p.default_params(tech, ectx)
+        except (ApiError, DataError):
             raise
         except KeyError:
             raise ApiError(422, f"unknown technique {tech!r}")
-        return {"params": params}
+        return {"params": params, "slots": slots}
 
     @app.post("/api/projects/{pid}/approve")
     def approve(pid: str, body: dict = Body(...)):
@@ -279,6 +428,11 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                 issues = p.validate(saved)
             if any(i["level"] == "error" for i in issues):
                 raise ApiError(422, "cannot approve while there are errors", issues=issues)
+            todo = [i for i in issues if i.get("code") == "incomplete"]
+            if todo:
+                raise ApiError(422, "cannot approve while items are incomplete: "
+                               + "; ".join(f"{i['path']}: {i['message']}" for i in todo[:8])
+                               + (f" (and {len(todo) - 8} more)" if len(todo) > 8 else ""), issues=issues, incomplete=True)
             doc = strip_derived(saved)
             doc["approvals"] = {**(doc.get("approvals") or {}), "storyboard": {"rev": cur, "approved_at": now_iso()}}
             commit(pid, p, doc)
@@ -287,27 +441,52 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     # ------------------------------------------------------------ frames, audio, previews
     JPEG_HEADERS = {"Content-Type": "image/jpeg"}
 
+    def guarded(p, doc: dict | None, fn):
+        """Run a render. When it fails and the document has validation errors, the answer is a 422 that carries those issues
+        (the page debounces drafts that are half edited: that is not a server bug); otherwise the 500 stays (JSON)."""
+        try:
+            return fn()
+        except ApiError as e:
+            if e.status == 500 and e.extra.get("render_failed"):
+                with ENGINE_LOCK:
+                    issues = p.validate(doc) if doc is not None else p.validate()
+                errs = [i for i in issues if i["level"] == "error"]
+                if errs:
+                    raise ApiError(422, "this storyboard cannot be drawn: " + f"{errs[0]['path']}: {errs[0]['message']}",
+                                   issues=issues)
+            raise
+
+    def etag_response(request: Request, data: bytes, key: str, rev: str | None, extra: str = "") -> Response:
+        """`rev` is what the page put in the URL. Only the RENDER key (`render_key` of GET /api/projects/{pid}: storyboard +
+        timing + style + media) makes the URL immutable; the storyboard revision alone cannot, because timing.json can change
+        behind it. Any other value is revalidated by ETag."""
+        tag = f'"{key[:16]}{extra}"'
+        cc = "private, max-age=31536000, immutable" if rev == key else "private, no-cache"
+        headers = {"Cache-Control": cc, "ETag": tag}
+        if request.headers.get("if-none-match") == tag:
+            return Response(status_code=304, headers=headers)
+        return Response(data, media_type="image/jpeg", headers=headers)
+
     @app.get("/api/projects/{pid}/frame")
-    def get_frame(pid: str, t: float = Query(...), width: int = Query(960), rev: str | None = Query(None)):
+    def get_frame(pid: str, request: Request, t: float = Query(...), width: int = Query(960), rev: str | None = Query(None)):
         t = frames_mod.clean_t(t)
         width = frames_mod.clean_width(width)
         p = project(pid)
-        cur = current_rev(pid)
-        data = frames_mod.cached_jpeg(p, pdir(pid) / "cache" / "frames", cur, t, width)
-        cc = "private, max-age=31536000, immutable" if rev == cur else "no-cache"
-        return Response(data, media_type="image/jpeg", headers={"Cache-Control": cc, "ETag": f'"{cur[:12]}"'})
+        key = render_key(pid)
+        data = guarded(p, None, lambda: frames_mod.cached_jpeg(p, pdir(pid) / "cache" / "frames", key, t, width))
+        return etag_response(request, data, key, rev)
 
     @app.post("/api/projects/{pid}/frame")
     def post_frame(pid: str, body: dict = Body(...)):
         t = frames_mod.clean_t(body.get("t"))
         width = frames_mod.clean_width(body.get("width"))
-        draft = need_dict(body, "storyboard")
+        draft = strip_derived(need_dict(body, "storyboard"))
         p = project(pid)
-        data = frames_mod.render_jpeg(p, t, width, draft=strip_derived(draft))
+        data = guarded(p, draft, lambda: frames_mod.render_jpeg(p, t, width, draft=draft))
         return Response(data, media_type="image/jpeg", headers={"Cache-Control": "no-store"})
 
     @app.get("/api/projects/{pid}/thumb/{shot_id}")
-    def get_thumb(pid: str, shot_id: str, rev: str | None = Query(None)):
+    def get_thumb(pid: str, shot_id: str, request: Request, rev: str | None = Query(None)):
         if not ITEM_RE.fullmatch(shot_id):
             raise ApiError(404, "shot not found")
         p = project(pid)
@@ -317,10 +496,9 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         if shot is None or shot.get("_t0") is None or shot.get("_t1") is None:
             raise ApiError(404, "shot not found")
         t = shot["_t0"] + 0.4 * (shot["_t1"] - shot["_t0"])
-        cur = current_rev(pid)
-        data = frames_mod.cached_jpeg(p, pdir(pid) / "cache" / "frames", cur, t, 320, tag="th")
-        cc = "private, max-age=31536000, immutable" if rev == cur else "no-cache"
-        return Response(data, media_type="image/jpeg", headers={"Cache-Control": cc})
+        key = render_key(pid)
+        data = guarded(p, None, lambda: frames_mod.cached_jpeg(p, pdir(pid) / "cache" / "frames", key, t, 320, tag="th"))
+        return etag_response(request, data, key, rev, extra=f"-{shot_id}-{int(round(t * 1000))}")
 
     @app.get("/api/projects/{pid}/waveform")
     def get_waveform(pid: str, bins: int = Query(4000)):
@@ -340,6 +518,21 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             raise ApiError(404, "no audio file")
         return FileResponse(a, media_type=mimetypes.guess_type(a.name)[0] or "application/octet-stream")
 
+    MAX_PREVIEW_S = 30.0
+    MAX_PREVIEW_FRAMES = 900
+
+    def int_field(body: dict, key: str, default: int, lo: int, hi: int) -> int:
+        v = body.get(key)
+        if v is None:
+            return default
+        if isinstance(v, float) and v.is_integer():
+            v = int(v)
+        if isinstance(v, bool) or not isinstance(v, int):
+            raise ApiError(422, f"{key} must be an integer from {lo} to {hi}")
+        if not lo <= v <= hi:
+            raise ApiError(422, f"{key} must be an integer from {lo} to {hi} (got {v})")
+        return v
+
     @app.post("/api/projects/{pid}/preview")
     def post_preview(pid: str, body: dict = Body(...)):
         try:
@@ -350,27 +543,30 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         frames_mod.clean_t(t1)
         if not t1 > t0:
             raise ApiError(422, "t1 must be greater than t0")
-        if t1 - t0 > 60:
-            raise ApiError(422, "a preview is limited to 60 seconds")
-        try:
-            width = int(body.get("width") or 640)
-            fps = int(body.get("fps") or 15)
-        except (TypeError, ValueError):
-            raise ApiError(422, "width and fps must be integers")
-        if not 160 <= width <= 1280 or not 1 <= fps <= 30:
-            raise ApiError(422, "width must be 160..1280 and fps 1..30")
+        if t1 - t0 > MAX_PREVIEW_S:
+            raise ApiError(422, f"a preview is limited to {int(MAX_PREVIEW_S)} seconds")
+        width = int_field(body, "width", 640, 160, 1280)
+        fps = int_field(body, "fps", 15, 1, 30)
+        if (t1 - t0) * fps > MAX_PREVIEW_FRAMES:
+            raise ApiError(422, f"a preview is limited to {MAX_PREVIEW_FRAMES} frames (seconds x fps); shorten it or lower fps")
         draft = body.get("storyboard")
         if draft is not None and not isinstance(draft, dict):
             raise ApiError(422, "storyboard must be an object")
         p = project(pid)
         d = pdir(pid)
-        a = audio_path(pid, strip_derived(draft) if draft else saved_storyboard(pid))
+        doc = strip_derived(draft) if draft else saved_storyboard(pid)
+        with ENGINE_LOCK:
+            issues = p.validate(doc)
+        if any(i["level"] == "error" for i in issues):
+            raise ApiError(422, "this storyboard cannot be rendered: fix its errors first", issues=issues)
+        a = audio_path(pid, doc)
         draft = strip_derived(draft) if draft else None
-        jid = jobs.submit(pid, lambda progress: jobs_mod.render_preview(p, d, a, t0, t1, width, fps, draft, pid,
-                                                                         progress))
+        pp, plock = engine.preview_project(pid)       # a separate engine instance: the render never holds ENGINE_LOCK
+        jid = jobs.submit(pid, lambda progress: jobs_mod.render_preview(pp, d, a, t0, t1, width, fps, draft, pid, progress,
+                                                                         plock))
         return {"job_id": jid}
 
-    from .script_api import make_router as _script_router; app.include_router(_script_router(root))  # script stage; also serves /api/jobs/{id} for both job kinds
+    from .script_api import make_router as _script_router; app.include_router(_script_router(root, jobs=script_jobs))  # script stage; also serves /api/jobs/{id} for both job kinds
 
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str):
@@ -453,6 +649,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                     if size > MAX_UPLOAD:
                         raise ApiError(413, "file too large")
                     out.write(chunk)
+            from bti.media.imageinfo import readable_problem
+            problem = readable_problem(Path(tmp))
+            if problem:
+                raise ApiError(422, problem)
             meta = {"title": title, "artist": artist, "year": year, "licence": licence, "source_url": source_url,
                     "author": author}
             try:
@@ -477,26 +677,37 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             raise ApiError(404, "proposal file was corrupt and has been quarantined")
         if not isinstance(doc, dict) or not isinstance(doc.get("storyboard"), dict):
             raise ApiError(422, "proposal has no storyboard object")
+        problem = prop_mod.shape_problem(doc["storyboard"])
+        if problem:
+            raise ApiError(422, f"proposal {prop_id!r} is malformed: {problem}")
         doc["id"] = prop_id
         return doc
 
     @app.get("/api/projects/{pid}/proposals")
     def list_proposals(pid: str):
+        """`{items: [...], skipped: [{file, reason}]}`: a file that cannot be read never breaks the list and never vanishes
+        silently; it is named here with the reason."""
         d = pdir(pid) / "proposals"
         saved = saved_storyboard(pid)
-        out = []
+        out, skipped = [], []
         if d.is_dir():
             for f in sorted(d.glob("*.json")):
                 if not ITEM_RE.fullmatch(f.stem):
+                    skipped.append({"file": f.name, "reason": "the file name is not a valid proposal id"})
                     continue
                 try:
                     doc = load_proposal(pid, f.stem)
-                except ApiError:
+                    n = len(prop_mod.diff(saved, doc["storyboard"]))
+                except ApiError as e:
+                    skipped.append({"file": f.name, "reason": str(e.detail)[:200]})
+                    continue
+                except Exception as e:      # noqa: BLE001 - a shape the checks did not foresee: skip it, say so
+                    skipped.append({"file": f.name, "reason": f"unreadable ({type(e).__name__})"})
                     continue
                 out.append({"id": doc["id"], "created_at": doc.get("created_at"), "author": doc.get("author"),
-                            "summary": doc.get("summary"), "n_changes": len(prop_mod.diff(saved, doc["storyboard"]))})
+                            "summary": doc.get("summary"), "n_changes": n})
         out.sort(key=lambda x: x.get("created_at") or "", reverse=True)
-        return out
+        return {"items": out, "skipped": skipped}
 
     @app.get("/api/projects/{pid}/proposals/{prop_id}")
     def get_proposal(pid: str, prop_id: str):
@@ -519,10 +730,15 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                 out = commit(pid, p, new)
             return {**out, "applied": applied, "skipped_locked": skipped}
 
+    def forget_project(pid: str) -> None:
+        engine.forget(pid)
+        rev_cache.pop(pid, None)
+        readable.pop(pid, None)
+
     from .library_api import make_router as _library_router
     app.include_router(_library_router(root))
     from .pipeline_api import make_router as _pipeline_router
-    app.include_router(_pipeline_router(root))  # steps of a project (stepper, home) and delete-project
+    app.include_router(_pipeline_router(root, script_jobs=script_jobs, preview_jobs=jobs, on_delete=forget_project))  # steps of a project (stepper, home) and delete-project
 
     # ------------------------------------------------------------ static (dynamic, so a late frontend works)
     @app.get("/{path:path}", include_in_schema=False)
@@ -558,6 +774,52 @@ def fill_previews(techniques: list, pdir: Path) -> list:
     return out
 
 
+def _style_of(sb) -> str:
+    st = sb.get("style", "gae") if isinstance(sb, dict) else "gae"
+    return st if isinstance(st, str) else "gae"
+
+
+def _pos_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and 0 < v < 1e9
+
+
+def default_slots(techniques: list, tech: str, ctx: dict, saved_assets: dict) -> dict:
+    """Slots `/defaults` proposes for technique `tech`: {slot name: {"asset": key}}.
+    An `image` slot may take the context image (the first image asset of the context). A `video` or `mask` slot is filled only
+    when the context names, for that very slot, an asset of exactly that kind; otherwise it stays empty and the item is
+    incomplete (a warning), never wrongly filled."""
+    from bti.engine.storyboard import slot_kind
+    spec = next((t for t in techniques if isinstance(t, dict) and t.get("id") == tech), None)
+    if spec is None:
+        return {}
+    c_assets = ctx.get("assets") if isinstance(ctx.get("assets"), dict) else {}
+    c_slots = ctx.get("slots") if isinstance(ctx.get("slots"), dict) else {}
+
+    def kind_of(k):
+        a = c_assets.get(k) if isinstance(c_assets.get(k), dict) and c_assets[k].get("kind") else saved_assets.get(k)
+        return a.get("kind") if isinstance(a, dict) else None
+
+    def key_of(slot):
+        v = c_slots.get(slot)
+        k = v.get("asset") if isinstance(v, dict) else None
+        return k if isinstance(k, str) and k else None
+    image_key = next((key_of(n) for n in sorted(c_slots, key=lambda n: (n not in ("image", "left", "background"), n))
+                      if key_of(n) and kind_of(key_of(n)) in ("image", None)), None)
+    out, first_image = {}, True
+    for sd in spec.get("slots") or []:
+        want = slot_kind(sd)
+        if want is None:
+            continue
+        named = key_of(sd["name"])
+        if named and kind_of(named) == want:
+            out[sd["name"]] = {"asset": named}
+        elif want == "image" and first_image and image_key:
+            out[sd["name"]] = {"asset": image_key}
+        if want == "image":
+            first_image = False
+    return out
+
+
 def engine_context(ctx: dict) -> dict:
     """Translate the page's /defaults context (item, shot_id, slots, assets{key:{width,height,regions,...}}, canvas, camera)
     into what Project.default_params understands: `asset`, `asset_right`, `shot_id`, `camera`, `region`, `text`..."""
@@ -572,15 +834,15 @@ def engine_context(ctx: dict) -> dict:
             keys.append(k)
 
     def info(k):
-        a = assets.get(k) or {}
+        a = assets.get(k) if isinstance(assets.get(k), dict) else {}
         w, h = a.get("width") or a.get("w"), a.get("height") or a.get("h")
-        if not (w and h):
-            return k  # engine looks the key up in the saved storyboard
+        if not (_pos_num(w) and _pos_num(h)):
+            return k  # no usable size in the context (missing, negative, not a number): the engine looks the key up in the saved storyboard
         return {"key": k, "w": w, "h": h, "title": a.get("title"), "artist": a.get("artist"), "year": a.get("year"),
                 "regions": a.get("regions") or {}}
     if keys and "asset" not in out:
         out["asset"] = info(keys[0])
-        a0 = assets.get(keys[0]) or {}
+        a0 = assets.get(keys[0]) if isinstance(assets.get(keys[0]), dict) else {}
         out.setdefault("title", a0.get("title"))
         ay = ", ".join(x for x in (a0.get("artist"), a0.get("year")) if x)
         if ay:

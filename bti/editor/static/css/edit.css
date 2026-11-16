@@ -124,3 +124,12 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 
 .row button { white-space: nowrap; }
 .nopv { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; background: repeating-linear-gradient(45deg, #0c0e13, #0c0e13 8px, #11141b 8px, #11141b 16px); }
+
+/* incomplete items, notes and region handles (front-end fix round) */
+#incomplete-state.warn-badge { background: #4a3d10; color: var(--warn); border: 1px solid var(--warn); cursor: pointer; padding: 2px 8px; border-radius: 9px; font-size: 11px; }
+.banner.warn { border-color: var(--warn); background: #2a2310; color: #ffe29a; }
+.slot.missing { border-color: var(--warn); background: rgba(244, 180, 0, .06); }
+#frame-state.warn { color: var(--warn); }
+.hint.warn { color: var(--warn); }
+.regions-stage .rknob { fill: #fff; stroke: #000; stroke-width: 1; cursor: nwse-resize; }
+.ref-list { margin: 8px 0 0; padding-left: 18px; max-height: 40vh; overflow: auto; }

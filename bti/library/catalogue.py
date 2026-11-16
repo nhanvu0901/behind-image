@@ -16,6 +16,7 @@ from pathlib import Path
 import pymupdf
 
 from . import config, extract, parse
+from .. import textfold
 
 PARTICLES = {"van", "von", "de", "da", "di", "del", "della", "le", "la", "the", "elder", "younger", "of", "der",
              "den", "af", "el", "jr", "sir", "mr"}
@@ -41,13 +42,7 @@ def read_json(path: Path):
 
 # ------------------------------------------------------------------ normalising and matching
 def norm(s: str | None) -> str:
-    if not s:
-        return ""
-    s = unicodedata.normalize("NFKD", s)
-    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
-    s = s.replace("’", "'")
-    s = re.sub(r"[^a-z0-9]+", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
+    return textfold.norm(s)       # one folding for the query and the indexed text (đ to d, accents of any script)
 
 
 def title_norm(t: str | None) -> str:

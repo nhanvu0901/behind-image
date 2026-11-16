@@ -12,6 +12,7 @@ import unicodedata
 from pathlib import Path
 
 from ._io import read_json, write_json_atomic
+from .. import textfold
 
 INDEX_NAME = "sources.json"
 _STOP = {"with", "from", "by", "for", "the", "of", "a", "an", "and", "de", "la", "le", "in", "on", "at", "file"}
@@ -19,8 +20,7 @@ MAX_KEY = 24
 
 
 def slugify(title: str, fallback: str = "img") -> str:
-    s = unicodedata.normalize("NFKD", title or "").encode("ascii", "ignore").decode()
-    words = [w for w in re.findall(r"[a-z0-9]+", s.lower()) if w not in _STOP]
+    words = [w for w in re.findall(r"[a-z0-9]+", textfold.fold(title)) if w not in _STOP]
     slug = "_".join(words[:3])[:MAX_KEY].strip("_")
     return slug or fallback
 

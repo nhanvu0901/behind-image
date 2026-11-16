@@ -9,6 +9,7 @@ import re
 
 from .stats import WPS_DEFAULT, count_words, minutes, narration_stats
 from .store import Narration, Outline
+from .. import textfold
 
 MARKUP = [
     (re.compile(r"^\s*#{1,6}\s"), "a heading mark (#)"),
@@ -101,7 +102,7 @@ def _ngrams(words: list[str], n: int) -> set[tuple]:
 
 def source_overlap(n: Narration, brief: dict, size: int = 8) -> float:
     """Share of narration words inside an 8-word run copied from an included source (information only)."""
-    tok = lambda s: re.findall(r"[a-z0-9']+", s.lower())
+    tok = lambda s: re.findall(r"[a-z0-9']+", textfold.fold(s))     # same folding on both sides (đ is d, not a word break)
     src: set[tuple] = set()
     for s in brief["sources"]:
         if s["included"]:

@@ -44,9 +44,13 @@ class PanelOpening(TransitionRenderer):
         q = self.p
         x0, y0, x1, y1 = _box(q["box"])
         bw, bh = x1 - x0, y1 - y0
-        f = blend(f_out, f_in, ease("inout_sine", p))
+        e = ease("inout_sine", p)
+        f = np.empty_like(f_out)
+        for sl in ((slice(0, y0), slice(None)), (slice(y1, None), slice(None)), (slice(y0, y1), slice(0, x0)), (slice(y0, y1), slice(x1, None))):
+            f[sl] = blend(f_out[sl], f_in[sl], e)       # the cross-fade outside the box; inside it the box is written below
         dim = float(q["inner_dim"])
-        f[y0:y1, x0:x1] = f_in[y0:y1, x0:x1] * (dim + (1 - dim) * ease("inout_sine", p / max(float(q["inner_fade_frac"]), 1e-6)))
+        np.multiply(f_in[y0:y1, x0:x1], np.float32(dim + (1 - dim) * ease("inout_sine", p / max(float(q["inner_fade_frac"]), 1e-6))),
+                    out=f[y0:y1, x0:x1])
         th = math.radians(float(q["hinge_angle_deg"]) * ease("inout_cubic", p))
         w_ = (bw / 2) * math.cos(th)
         sq = (bh / 2) * float(q["perspective_squeeze_pct"]) / 100.0 * math.sin(th)
@@ -56,15 +60,23 @@ class PanelOpening(TransitionRenderer):
         halves = [crop[:, :hw], crop[:, hw:]]
         quads = [np.float32([[0, 0], [w_, sq], [w_, bh - sq], [0, bh]]),
                  np.float32([[bw - w_, sq], [bw, 0], [bw, bh], [bw - w_, bh - sq]])]
-        box = f[y0:y1, x0:x1]
+        box = f[y0:y1, x0:x1]                           # a view: the wings are blended into the frame in place
         for img, dst in zip(halves, quads):
             ih, iw = img.shape[:2]
+            # each wing only covers the columns its quad occupies: warp and blend just that strip (a full-box warp, a full-box
+            # float mask and two full-box float blends per wing made this transition about three times slower than the others)
+            xa = max(0, int(math.floor(float(dst[:, 0].min()))) - 1)
+            xb = min(bw, int(math.ceil(float(dst[:, 0].max()))) + 2)
+            if xb <= xa:
+                continue
             src = np.float32([[0, 0], [iw - 1, 0], [iw - 1, ih - 1], [0, ih - 1]])
-            M = cv2.getPerspectiveTransform(src, dst)
-            wr = cv2.warpPerspective(np.ascontiguousarray(img), M, (bw, bh), flags=cv2.INTER_LINEAR)
-            mk = cv2.warpPerspective(np.full((ih, iw), 255, np.uint8), M, (bw, bh), flags=cv2.INTER_LINEAR)[:, :, None].astype(np.float32) / 255 * wa
-            box = box * (1 - mk) + wr.astype(np.float32) * mk
-        f[y0:y1, x0:x1] = box
+            M = cv2.getPerspectiveTransform(src, dst - np.float32([xa, 0]))
+            wr = cv2.warpPerspective(np.ascontiguousarray(img), M, (xb - xa, bh), flags=cv2.INTER_LINEAR)
+            mk = cv2.warpPerspective(np.full((ih, iw), 255, np.uint8), M, (xb - xa, bh), flags=cv2.INTER_LINEAR)
+            m = mk.astype(np.float32)
+            m *= wa / 255.0
+            # per-pixel linear blend of the box strip and the warped wing (one pass, no broadcast temporaries)
+            box[:, xa:xb] = cv2.blendLinear(np.ascontiguousarray(box[:, xa:xb]), wr.astype(np.float32), 1.0 - m, m)
         return f
 
     @classmethod

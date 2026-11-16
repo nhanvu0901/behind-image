@@ -30,12 +30,14 @@ function validate(sb) {
       if (t.engine.available === false) issues.push({ level: 'warn', path: `shots[${i}].technique`, message: `${s.technique} chưa render được` });
       const known = new Set(t.params.map((p) => p.name));
       for (const k of Object.keys(s.params || {})) if (!known.has(k)) issues.push({ level: 'error', path: `shots[${i}].params.${k}`, message: `Tham số không xác định: ${k}` });
-      for (const sl of t.slots) if (sl.required && !s.slots?.[sl.name]?.asset) issues.push({ level: 'error', path: `shots[${i}].slots.${sl.name}`, message: `Slot bắt buộc còn trống: ${sl.name}` });
+      // incomplete is not invalid: a warning with code "incomplete" (saved normally, never approved), like the real server
+      for (const sl of t.slots) if (sl.required && sl.type !== 'text' && !s.slots?.[sl.name]?.asset) issues.push({ level: 'warn', code: 'incomplete', path: `shots[${i}].slots.${sl.name}`, message: `required slot '${sl.name}' is missing` });
     }
     if (s._t1 - s._t0 < MIN_SHOT - 1e-9) issues.push({ level: 'error', path: `shots[${i}].start`, message: 'Shot ngắn hơn 0.2 s' });
     (s.overlays || []).forEach((o, j) => {
       const ot = techById(o.technique);
       if (!ot) issues.push({ level: 'error', path: `shots[${i}].overlays[${j}].technique`, message: `Kỹ thuật không có trong registry: ${o.technique}` });
+      else for (const sl of ot.slots) if (sl.required && sl.type !== 'text' && !o.slots?.[sl.name]?.asset && !(sl.name === 'image' && Object.values(s.slots || {}).some((v) => v?.asset))) issues.push({ level: 'warn', code: 'incomplete', path: `shots[${i}].overlays[${j}].slots.${sl.name}`, message: `required slot '${sl.name}' is missing` });
       if (o._t0 < s._t0 - 1e-6 || o._t0 + (o.dur || 0) > s._t1 + 1e-6) issues.push({ level: 'warn', path: `shots[${i}].overlays[${j}].start`, message: 'Lớp phủ vượt ra ngoài shot' });
     });
   });
@@ -80,7 +82,11 @@ export const mockApi = {
     }
     return { params };
   },
-  async approve(pid, rev) { return { approvals: { storyboard: { rev, at: new Date().toISOString() } } }; },
+  async approve(pid, rev) {
+    await init();
+    const issues = validate(S.sb);
+    if (issues.some((i) => i.code === 'incomplete' || i.level === 'error')) throw new ApiError(422, { issues }, 'approve');
+    return { approvals: { storyboard: { rev, at: new Date().toISOString() } } }; },
   async frame(pid, t, width, storyboard) {
     await init(); await delay(40);
     const sb = resolved(stripDerived(storyboard));

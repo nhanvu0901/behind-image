@@ -245,6 +245,18 @@ Giai đoạn hiện ở trang chủ và ở thanh trên cùng: "Đã duyệt dà
 
 Chọn mô hình **Mock**. Trong ô ghi chú có thể gõ các dấu hiệu để thử các tình huống: `[mock:bad c02]` (lần viết đầu của chương c02 có ký hiệu lỗi, lần thử lại đúng), `[mock:alwaysbad c02]` (luôn lỗi, tác vụ dừng), `[mock:badoutline]` (dàn ý lần đầu không đọc được), `[mock:slow]` (chạy chậm khoảng 10 giây, để thử Hủy), `[mock:ratelimit]` (báo hết lượt).
 
+### 5.8 Chữ bạn đang sửa không bao giờ bị ghi đè
+
+- Câu trả lời của máy chủ (lưu, duyệt, dán, tác vụ mô hình kết thúc hoặc bị hủy, tải lại sau xung đột) luôn được **ghép** vào bản bạn đang sửa, theo từng chương, từng dòng, từng dữ kiện. Chỗ nào chỉ bạn sửa thì giữ, chỗ nào chỉ máy chủ sửa (một chương mô hình vừa viết) thì lấy.
+- Khi cả hai cùng sửa một chỗ (cùng một chương, cùng một câu hỏi chính...), trang hỏi: "Giữ bản của tôi" hoặc "Lấy bản mới" cho từng chỗ. Đóng hộp = giữ bản của bạn. Bản cũ vẫn lấy lại được bằng Hoàn tác.
+- Trong lúc một tác vụ mô hình đang ghi dàn ý (hoặc lời dẫn), phần đó **chưa lưu được** (tác vụ cũng ghi vào cùng tệp). Cứ gõ tiếp: chữ được giữ trên trang, ghép với kết quả khi tác vụ xong (hoặc bị hủy), rồi bạn bấm Lưu. Tách, gộp, bỏ, chuyển dòng chờ tác vụ xong.
+- Hai tab cùng sửa một dàn ý: lưu ở tab sau sẽ ghép phần bạn sửa vào bản mới (và lưu lại); chỉ khi trùng chỗ mới hỏi.
+- Mọi thao tác ghi (lưu, tách, gộp, chuyển, duyệt, dán, đổi tùy chọn) đi qua một hàng đợi: hai lần bấm ↑ liên tiếp là hai bước, không bao giờ báo "tệp đã đổi ở nơi khác" giả.
+- Ô số (số từ, mục tiêu): chỉ nhận số nguyên trong khoảng cho phép (0 đến 20000; mục tiêu của dự án 300 đến 20000). Giá trị sai bị từ chối kèm thông báo và ô quay về giá trị cũ.
+- Thông báo lỗi luôn bằng tiếng Việt. Văn bản gốc của máy chủ nằm dưới nút "chi tiết".
+- Hộp thoại: Tab xoay vòng trong hộp, Esc đóng hộp trên cùng, Enter trong ô chữ bấm nút chính (nút xanh). Trang phía sau bị khóa khi có hộp. Hộp có chữ bạn dán không đóng khi bấm ra ngoài.
+- Tìm kiếm (thư viện, trong sách) không phân biệt dấu và chữ hoa: "duc" khớp "Đức", "Durer" khớp "Dürer". Bộ đếm từ tính chữ của mọi bảng chữ cái, khớp với máy chủ.
+
 ## 6. Bước 3, 4 và 6: chưa xây dựng
 
 Ba bước này hiện chỉ là màn hình thông báo trung thực, không có nút giả:
@@ -262,18 +274,24 @@ Bước này để xem và sửa `storyboard.json` của một video: shot, lớ
 ### Các khu vực
 
 - **Thanh công cụ của bước**: Lưu, Kiểm tra (số lỗi/cảnh báo), Hoàn tác, Làm lại, Đề xuất, Duyệt (và trạng thái duyệt), Xem thử 10 giây. Khi bản lưu đã được duyệt, nút **Tiếp tục** ở góc phải mở bước kế tiếp.
-- **Khung xem trước (trái trên)**: ảnh thật tại vị trí đầu phát. Các khung màu K1, K2... là khóa camera của shot, kéo để đổi `cx, cy`; kéo núm vuông ở góc để đổi zoom. Khi chọn lớp phủ có tham số điểm/vùng, kéo chấm vàng để dời, kéo núm để đổi bán kính. Ô "Ảnh gốc" cho xem toàn ảnh để kéo khung dễ hơn. Ô "Hiện vùng" hiện tên các vùng (region) của hình.
+- **Khung xem trước (trái trên)**: ảnh thật tại vị trí đầu phát. Các khung màu K1, K2... là khóa camera của shot, kéo để đổi `cx, cy`; kéo núm vuông ở góc để đổi zoom. Khi chọn lớp phủ (hoặc shot) có tham số điểm/khung, kéo chấm vàng để dời, kéo núm để đổi bán kính hoặc kích thước. Ô "Ảnh gốc" cho xem toàn ảnh để kéo khung dễ hơn. Ô "Hiện vùng" hiện tên các vùng (region) của hình. Khung xem trước luôn là khung **tại đầu phát**: chọn một shot hoặc lớp phủ (trên timeline, trong danh sách, hoặc bấm một lỗi) thì đầu phát tự vào trong mục đó, để ảnh và tay cầm cùng một thời điểm.
+
+**Mỗi tham số điểm/khung sống trong đúng một hệ tọa độ**, ghi bên cạnh ô nhập: *px ảnh nguồn* (điểm trên ảnh gốc, qua camera, có thể là tên vùng), *px khung hình* (1920 x 1080), hoặc *tỉ lệ khung* (0 đến 1). Tay cầm được vẽ và ghi đúng hệ đó. Tham số mà xem trước không vẽ được (ví dụ `to_quad`) chỉ có ô số. Shot không có camera vẫn có tay cầm cho tham số theo px khung hình; tham số theo px ảnh nguồn của shot đó dùng ô số hoặc bật "Ảnh gốc". "Chọn trên ảnh" trả giá trị theo hệ của ô (tên vùng chỉ khi hệ là ảnh nguồn; Shift = luôn lấy x, y).
 - **Thanh phát**: shot trước/sau, phát/dừng, thời gian, từ đang đọc.
-- **Bảng bên phải**: tab *Shot* (kỹ thuật, slot hình, thời điểm bắt đầu, tham số, chuyển cảnh, khóa, ghi chú), *Lớp phủ*, *Hình* (hình của dự án, vùng, tìm kiếm Commons/The Met, tải lên), *Lỗi*.
+- **Bảng bên phải**: tab *Shot* (kỹ thuật, slot hình, thời điểm bắt đầu, tham số, chuyển cảnh, khóa, ghi chú), *Lớp phủ* (danh sách, và cho lớp phủ đang chọn: kỹ thuật, **slot hình của lớp phủ**, thời điểm, tham số), *Hình* (hình của dự án, vùng, tìm kiếm Commons/The Met, tải lên), *Lỗi*.
+
+**Slot hình chỉ nhận hình đúng loại**: ảnh, video và mặt nạ (mask) là ba loại khác nhau. Bấm "Chọn" ở một slot thì tab *Hình* chỉ hiện hình loại đó. Đổi kỹ thuật không bao giờ đặt bức tranh vào slot video hay mask: các slot ấy để trống. Lớp phủ có slot riêng như shot (ví dụ HI-03 cần `mask`); `image` của lớp phủ mặc định là hình của shot ("theo shot"), bấm "Bỏ" để quay lại như vậy.
+
+**Chưa đủ không phải là sai.** Shot hoặc lớp phủ còn trống slot bắt buộc (hoặc tham số bắt buộc) được đánh dấu "! thiếu: mask" trên timeline (viền cam nét đứt), trong danh sách lớp phủ và đầu tab Shot/Lớp phủ, và nút "N mục chưa đủ" hiện cạnh trạng thái duyệt. Vẫn **Lưu** được; khung xem trước hiện khung tạm kèm lý do. Nhưng **Duyệt** bị từ chối cho tới khi điền đủ, và hộp thoại liệt kê từng mục (bấm để tới).
 - **Timeline (dưới)**: chương, shot (ảnh nhỏ, huy hiệu kỹ thuật), lớp phủ, từng từ (khi phóng to), sóng âm, bản đồ nhỏ.
 
-Biểu mẫu tham số được sinh tự động từ registry (`style/gae/techniques.json` cùng các bản vá), nên kỹ thuật mới xuất hiện không cần sửa trang. Kiểu hỗ trợ: số, enum, bool, chuỗi, màu, điểm, danh sách điểm (`points`, có nút "Chọn trên ảnh" cho từng điểm), danh sách dòng (`lines`, mỗi dòng một mục), khung, camera. Kiểu lạ sẽ hiện ô JSON.
+Biểu mẫu tham số được sinh tự động từ registry (`style/gae/techniques.json` cùng các bản vá), nên kỹ thuật mới xuất hiện không cần sửa trang. Kiểu hỗ trợ: số, enum, bool, chuỗi, màu, điểm, danh sách điểm (`points`, có nút "Chọn trên ảnh" cho từng điểm), danh sách dòng (`lines`, mỗi dòng một mục), khung (`box`, bốn số `[x0, y0, x1, y1]`, hai góc, đúng dạng registry; kỹ thuật cho phép bỏ trống thì có nút "Bỏ khung"), camera. Kiểu lạ sẽ hiện ô JSON. Số gõ ngoài khoảng được ép về min/max, ô hiện giá trị thật đã lưu kèm chữ "đã ép về ...". Chữ của kỹ thuật (tiêu đề, nhãn...) là tham số cùng tên, nhập ở biểu mẫu; ô bắt buộc để trống bị tô đỏ.
 
 Không có phụ đề nào được vẽ lên hình. Lời thoại chỉ hiện ở timeline và thanh phát.
 
 ### Phím tắt
 
-Chỉ chạy khi bước Dựng hình đang mở (bước Kịch bản chỉ có Ctrl+S để lưu và Ctrl+Z, Ctrl+Shift+Z để hoàn tác khi không đang gõ).
+Chỉ chạy khi bước Dựng hình đang mở (bước Kịch bản chỉ có Ctrl+S để lưu và Ctrl+Z, Ctrl+Shift+Z để hoàn tác khi không đang gõ). **Phím tắt không chạy khi có hộp thoại đang mở** (Đề xuất, thư viện kỹ thuật, xác nhận, xem thử...): lúc ấy Delete, S, Space... thuộc về hộp thoại, kể cả Ctrl+S. Cũng không chạy khi đang gõ trong ô nhập (Ctrl+S vẫn lưu), khi đang ở chế độ "Chọn trên ảnh" hoặc chọn hình cho slot (chỉ Esc là của trang), và Space/Enter/mũi tên thuộc nút hay ô đang giữ tiêu điểm. Giữ phím không lặp lại việc phá hủy (xóa, cắt, khóa).
 
 | Phím | Việc |
 |---|---|
@@ -290,23 +308,23 @@ Chỉ chạy khi bước Dựng hình đang mở (bước Kịch bản chỉ có
 | Alt khi kéo | Đặt thời điểm tự do (neo `{t}`), không bám từ |
 | Esc | Hủy chế độ "Chọn trên ảnh" |
 
-Trên timeline: kéo ranh giới giữa hai shot để đổi thời lượng (bám đầu từ). Kéo thân thanh lớp phủ để dời, kéo mép trái/phải của thanh để đổi đầu/cuối. Khi một ranh giới đi qua lớp phủ, lớp phủ tự co hoặc dịch vào trong shot.
+Trên timeline: nhấp vào shot luôn chọn shot đó và dời đầu phát tới đó. Kéo (không chỉ nhấp) ranh giới giữa hai shot để đổi thời lượng; vùng bắt ranh giới co lại theo độ rộng của shot nên ở mức zoom nhỏ vẫn nhấp được vào shot. Ranh giới bám đầu từ chỉ khi có từ trong vòng 0,35 s; trong khoảng lặng thì đi theo con trỏ (Alt = luôn tự do). Nhấp vào thanh lớp phủ chọn nó và đưa đầu phát vào trong nó. Nhấp (hoặc kéo) bản đồ nhỏ để cuộn timeline. Kéo thân thanh lớp phủ để dời, kéo mép trái/phải của thanh để đổi đầu/cuối. Khi một ranh giới đi qua lớp phủ, lớp phủ tự co hoặc dịch vào trong shot.
 
 ### Cắt, gộp, camera
 
 - **Cắt**: mỗi nửa giữ đúng tư thế camera tại điểm cắt (zoom nội suy theo log, giống engine).
-- **Gộp với shot trước**: camera của shot trước giữ nguyên mốc thời gian tuyệt đối và giữ tư thế cuối trong phần gộp; camera của shot bị gộp bỏ đi; lớp phủ của hai shot được nối lại.
+- **Gộp với shot trước**: camera của shot trước giữ nguyên mốc thời gian tuyệt đối và giữ tư thế cuối trong phần gộp; camera của shot bị gộp bỏ đi; lớp phủ của hai shot được nối lại, lớp phủ nào trùng id (cả hai shot đều có `o1`) được cấp id mới để chọn, sửa, xóa đúng mục.
 - Đổi hình của một slot sẽ đặt lại camera theo hình mới (engine tính lại mặc định).
 
 ### Khóa, nguồn, duyệt
 
 - Mọi chỉnh sửa tay đặt `source: "human"`. **Khóa** (L) nghĩa là người đã chốt mục đó: đề xuất của agent không bao giờ sửa mục khóa (kể cả khi chọn "chấp nhận tất cả").
-- **Lưu** gửi bản nháp kèm `base_rev`. Nếu server đã đổi (409) trang hỏi giữ nháp hay tải lại. Nếu còn lỗi (422) trang không lưu và mở tab *Lỗi*; bấm vào một lỗi để chọn đúng mục.
-- **Duyệt** chỉ bật khi đã lưu và không còn lỗi. Trạng thái: *Chưa duyệt*, *Đã duyệt*, *Duyệt cũ (đã sửa)*. Duyệt gắn với phiên bản (`rev`), sửa xong lưu lại thì phải duyệt lại.
+- **Lưu** gửi bản nháp kèm `base_rev`. Chỉ phần đã gửi được coi là đã lưu: nếu bạn gõ thêm trong lúc đang lưu, phần đó vẫn giữ nguyên và dấu "chưa lưu" vẫn bật cho tới lần lưu sau. Vùng (region) là một phần của bản nháp: tạo, đổi tên, dời, xóa vùng đều Hoàn tác được và chỉ ghi lên đĩa khi Lưu; vùng đang được lớp phủ dùng thì không xóa được (trang nói rõ mục nào dùng), đổi tên thì hỏi có cập nhật các tham chiếu không. Đổi hình của slot mà các lớp phủ đang trỏ vùng của hình cũ thì trang hỏi: giữ tên vùng (sẽ báo lỗi) hoặc đổi thành tọa độ. Nếu server đã đổi (409) trang hỏi giữ nháp hay tải lại. Nếu còn lỗi (422) trang không lưu và mở tab *Lỗi*; bấm vào một lỗi để chọn đúng mục.
+- **Duyệt** chỉ chạy khi đã lưu, không còn lỗi và không còn mục chưa đủ (nếu còn, bấm Duyệt sẽ mở danh sách các mục đó). Trạng thái: *Chưa duyệt*, *Đã duyệt*, *Duyệt cũ (đã sửa)*. Duyệt gắn với phiên bản (`rev`), sửa xong lưu lại thì phải duyệt lại.
 
 ### Đề xuất của agent
 
-Agent ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu.
+Agent ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu. Đề xuất soạn trên một bản đã cũ (storyboard đã lưu thêm kể từ đó) có dải cảnh báo "dựa trên bản cũ" và hỏi lại trước khi áp dụng. Áp dụng khi bản nháp chưa lưu cũng hỏi (hộp thoại của ứng dụng, không dùng hộp thoại của trình duyệt).
 
 ### Xem thử 10 giây
 
@@ -320,7 +338,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met, chỉ nhận giấy ph
 
 - Camera của kỹ thuật có nhiều camera (ví dụ `camera_left`/`camera_right` của LAY-01) chỉ sửa được bằng ô số, chưa kéo khung được.
 - Chỉ Wikimedia Commons và The Met (chưa có AIC, Rijksmuseum, Europeana).
-- Khoảng 47 kỹ thuật còn lại hiện xám trong thư viện cho đến khi engine port xong.
+- Cả 71 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 60 `done`, 11 `partial` ở chip "Engine"). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
 - Chưa có chỉnh âm thanh, TTS, dựng bản cuối chất lượng cao.
 - Lịch sử hoàn tác chỉ nằm trong trình duyệt, mất khi tải lại trang. Bản lưu cũ nằm trong `history/`.
 

@@ -17,6 +17,7 @@ import numpy as np
 from . import registry as R
 from . import techniques  # noqa: F401  (registers every renderer)
 from .base import BaseRenderer, Ctx, OverlayRenderer, TransitionRenderer
+from .storyboard import missing_of
 from .vfx import ramp, to_u8
 
 DEFAULT_END_FADE_S = 1.6
@@ -36,6 +37,24 @@ class CompiledShot:
         return f
 
 
+class Placeholder(BaseRenderer):
+    """Stands in for a shot whose technique is INCOMPLETE (a required slot or parameter is empty): a neutral frame that
+    names the technique and what is missing. An incomplete storyboard can be saved but never approved, so this is only a
+    working picture for the editor."""
+
+    def __init__(self, tid, shot, ctx, missing):
+        super().__init__(tid, shot, ctx)
+        what = ", ".join("%s %s" % (k, n) for k, n in missing)
+        img = np.full((ctx.h, ctx.w, 3), 48, np.uint8)
+        for i, line in enumerate((tid, "incomplete: " + what)):
+            cv2.putText(img, line, (80, ctx.h // 2 - 20 + i * 70), cv2.FONT_HERSHEY_SIMPLEX, 1.6 if i == 0 else 1.2,
+                        (170, 170, 170), 2, cv2.LINE_AA)
+        self._frame = img.astype(np.float32)
+
+    def render(self, t):
+        return self._frame.copy()
+
+
 class Scene:
     def __init__(self, project_dir: Path, sb: dict, timing, bundle: R.StyleBundle):
         self.ctx = Ctx(project_dir, sb, timing, bundle)
@@ -46,15 +65,20 @@ class Scene:
         for s in sb["shots"]:
             tid = s["technique"]
             cls, kind = R.RENDERERS[tid]
-            base = cls(tid, s, self.ctx)
+            miss = missing_of(bundle.spec(tid), s, "base")
+            base = Placeholder(tid, s, self.ctx, miss) if miss else cls(tid, s, self.ctx)
             ovs = []
             for o in s.get("overlays") or []:
                 ocls, _ = R.RENDERERS[o["technique"]]
+                if missing_of(bundle.spec(o["technique"]), o, "overlay", s):
+                    continue                    # incomplete overlay: skipped, never an error
                 ovs.append(ocls(o["technique"], o, base, self.ctx))
             tr = None
             if s.get("transition_in"):
-                tcls, _ = R.RENDERERS[s["transition_in"]["technique"]]
-                tr = tcls(s["transition_in"]["technique"], s["transition_in"], self.ctx)
+                ttid = s["transition_in"]["technique"]
+                tcls, _ = R.RENDERERS[ttid]
+                if not missing_of(bundle.spec(ttid), s["transition_in"], "transition"):
+                    tr = tcls(ttid, s["transition_in"], self.ctx)
             self.shots.append(CompiledShot(s, base, ovs, tr))
         self.starts = [c.t0 for c in self.shots]
         self.starts[0] = min(self.starts[0], 0.0)    # the first shot also covers t < its start (benchmark: shots[0].t0 = 0)
@@ -95,8 +119,9 @@ class Scene:
         p = subprocess.Popen(["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "bgr24", "-s", "%dx%d" % (w, h), "-r", str(fps),
                               "-i", "-", "-c:v", "libx264", "-preset", preset, "-crf", crf, "-pix_fmt", "yuv420p", "-g", "60",
                               "-threads", str(int(threads) if threads else 4), "-movflags", "+faststart", str(out_path)], stdin=subprocess.PIPE)
-        i0, i1 = int(round(t0 * fps)), int(round(t1 * fps))
-        n = max(1, i1 - i0)
+        i0 = int(round(t0 * fps))
+        n = max(1, int(round((t1 - t0) * fps)))       # the length, not two rounded ends: 3.0 s at 15 fps is always 45 frames
+        i1 = i0 + n
         try:
             for k, i in enumerate(range(i0, i1)):
                 fr = self.frame_at(i / fps, 1920)

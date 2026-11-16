@@ -26,7 +26,7 @@ export async function mount(host, { shell, scope }) {
     const cur = pl?.steps.find((s) => s.id === pl.current);
     const del = pl?.protected
       ? h('span', { class: 'tag', title: 'Dự án gốc, không xóa được', text: 'được bảo vệ' })
-      : h('button', { class: 'small danger', text: 'Xóa', title: 'Xóa dự án này (phải gõ mã dự án để xác nhận)', onclick: async () => { if (await shell.deleteProject(p)) { shell.refreshProjects(); load(); } } });
+      : h('button', { class: 'small danger', text: 'Xóa', title: 'Xóa dự án này (phải gõ mã dự án để xác nhận)', onclick: async () => { if (await shell.deleteProject(p)) load(); } });
     return h('div', { class: 'prow', 'data-pid': p.id },
       h('div', null, h('div', { class: 'pt', text: p.title || p.id }), h('div', { class: 'mono', text: p.id }),
         pl?.painting?.title ? h('div', { class: 'sub', text: [pl.painting.title, [pl.painting.artist, pl.painting.year].filter(Boolean).join(', ')].join(' · ') }) : null),

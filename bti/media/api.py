@@ -10,7 +10,7 @@ from pathlib import Path
 
 from . import assets as _assets
 from .errors import ImageTooSmall, LicenceRejected, MediaError, NotFound  # noqa: F401
-from .imageinfo import image_size
+from .imageinfo import image_size, readable_problem
 from .licence import check_licence as _check_licence, check_text
 from .sources.commons import CommonsSource, ext_for
 from .sources.met import MetSource
@@ -100,6 +100,10 @@ def add_upload(project_dir: Path, file_path: Path, meta: dict) -> dict:
         raise LicenceRejected(reason, name)
     if not file_path.is_file():
         raise NotFound(f"no such file: {file_path}")
+    if file_path.suffix.lower() not in _VIDEO_EXT:
+        problem = readable_problem(file_path)
+        if problem:
+            raise ValueError(problem)
     title = (meta.get("title") or file_path.stem).strip()
     ident = f"upload:{file_path.name}:{file_path.stat().st_size}"
     idx = _assets.load_index(project_dir)

@@ -2,7 +2,8 @@
 // The views live in ./views/*.js and export mount(host, ctx) -> { isDirty?, save?, pipelineChanged?, unmount? }.
 import { api, setViewSignal } from './api.js';
 import { MOCK, SHOW_ALL } from './config.js';
-import { h, toast, setStatus, closeAllModals, ask, modal } from './util.js';
+import { h, toast, errorToast, errorInto, setStatus, closeAllModals, ask, modal } from './util.js';
+import { describeError } from './errmsg.js';
 import { createScope } from './lifecycle.js';
 import { parseHash, projectHash, legacyTarget } from './router.js';
 import { renderStepper, landing } from './stepper.js';
@@ -118,7 +119,7 @@ async function navigate(route) {
     if (seq !== S.seq) return;
     S.route = { name: 'notfound' };
     renderFrame();
-    msgView(e.status === 404 ? 'Không có dự án này.' : 'Không mở được dự án: ' + e.message, h('div', null, h('a', { class: 'lnk', href: '#/', text: 'Về danh sách dự án' })));
+    msgView(e.status === 404 ? 'Không có dự án này.' : 'Không mở được dự án: ' + describeError(e).text, h('div', null, h('a', { class: 'lnk', href: '#/', text: 'Về danh sách dự án' })));
     return;
   }
   renderFrame();
@@ -153,20 +154,23 @@ async function mountView(route, pipeline, seq) {
   } catch (e) {
     if (seq !== S.seq) return;
     console.error(e);
-    host.replaceChildren(h('div', { class: 'view-msg' }, 'Lỗi khi mở trang: ' + (e.message || e)));
-    toast('Lỗi khi mở trang: ' + (e.message || e), 'err', 8000);
+    host.replaceChildren(h('div', { class: 'view-msg' }, 'Lỗi khi mở trang: ' + describeError(e).text));
+    errorToast(e, 'Lỗi khi mở trang: ');
   }
 }
 
 // ---------------------------------------------------------------- frame
-function renderFrame() {
-  const r = S.route, p = S.pipeline;
-  // project picker
+function renderPicker() {
   const sel = $('#project-pick');
   const list = S.projects.filter((x) => SHOW_ALL || !/^(lab_|demo_)/.test(x.id) || x.id === S.pid);
   sel.replaceChildren(h('option', { value: '', text: list.length ? '- Chọn dự án -' : '(chưa có dự án)' }),
     ...list.map((x) => h('option', { value: x.id, text: `${x.title || x.id} (${x.id})` })));
   sel.value = S.pid && list.some((x) => x.id === S.pid) ? S.pid : '';
+}
+
+function renderFrame() {
+  const r = S.route, p = S.pipeline;
+  renderPicker();
   // title and painting of the current project
   const info = $('#frame-project');
   if (S.pid && p) {
@@ -205,7 +209,8 @@ async function refreshPipeline() {
 }
 
 async function refreshProjects() {
-  try { S.projects = await api.projects({ signal: null }); } catch (e) { toast('Không tải được danh sách dự án: ' + e.message, 'err', 8000); }
+  try { S.projects = await api.projects({ signal: null }); } catch (e) { errorToast(e, 'Không tải được danh sách dự án: '); }
+  if (S.route) renderPicker();                     // the picker in the bar always shows what the server has (a project just deleted or created)
   return S.projects;
 }
 
@@ -218,8 +223,11 @@ function deleteProject(p) {
     const err = h('div', { class: 'hint err' });
     const btn = h('button', { class: 'danger', text: 'Xóa vĩnh viễn', disabled: true, onclick: async () => {
       btn.disabled = true;
-      try { await api.deleteProject(p.id, input.value.trim()); fin(true); m.close(); toast(`Đã xóa dự án ${p.id}`, 'ok'); }
-      catch (e) { err.textContent = e.message; btn.disabled = false; }
+      try {
+        await api.deleteProject(p.id, input.value.trim());
+        S.projects = S.projects.filter((x) => x.id !== p.id); renderPicker();     // gone from the picker at once, before the list is fetched again
+        fin(true); m.close(); toast(`Đã xóa dự án ${p.id}`, 'ok');
+      } catch (e) { errorInto(err, e); btn.disabled = false; }
     } });
     input.addEventListener('input', () => { btn.disabled = input.value.trim() !== p.id; });
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter' && !btn.disabled) btn.click(); });
@@ -258,6 +266,8 @@ async function boot() {
     e.preventDefault(); go(a.getAttribute('href'));
   });
   window.addEventListener('hashchange', onHash);
+  let lastSync = 0;                                      // another tab may have created or deleted a project: refresh the picker when this tab is looked at again
+  window.addEventListener('focus', () => { if (Date.now() - lastSync > 5000 && !S.guarding) { lastSync = Date.now(); refreshProjects(); } });
   window.addEventListener('beforeunload', (e) => { if (S.view?.isDirty?.()) { e.preventDefault(); e.returnValue = ''; } });
   setInterval(loadHealth, 30000);
   await Promise.all([loadHealth(), refreshProjects()]);

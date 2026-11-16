@@ -19,6 +19,7 @@ import numpy as np
 
 from . import registry as R
 from . import storyboard as SB
+from .errors import DataError
 from .scene import Scene
 from .timing import Timing
 
@@ -45,8 +46,7 @@ class Project:
         self._saved_mtime = (self.dir / "storyboard.json").stat().st_mtime_ns
         self._draft = None
         self._scenes: OrderedDict = OrderedDict()
-        self._timing = None
-        self._timing_mtime = None
+        self._timings: dict = {}            # relative path -> (mtime_ns, Timing)
 
     # -- documents -------------------------------------------------------------------------------------------
     @property
@@ -62,13 +62,31 @@ class Project:
         self._reload_if_changed()
         return copy.deepcopy(self._saved)
 
-    def _tm(self) -> Timing:
-        path = self.dir / (self._saved.get("timing") or "timing.json")
-        mt = path.stat().st_mtime_ns
-        if self._timing is None or mt != self._timing_mtime:
-            self._timing, self._timing_mtime = Timing.load(path), mt
+    def _timing_for(self, sb) -> Timing:
+        """The timing file named by document `sb` (default timing.json): inside the project, present, well formed.
+        Any problem is a DataError that names it. Parsed files are cached by modification time."""
+        rel = sb.get("timing") if isinstance(sb, dict) else None
+        if rel is None or rel == "":
+            rel = "timing.json"
+        if not isinstance(rel, str):
+            raise DataError("timing must be a file path inside the project", what="timing")
+        path = SB.safe_rel(self.dir, rel)
+        if path is None:
+            raise DataError("timing %r must be a file inside the project" % rel, what="timing")
+        try:
+            mt = path.stat().st_mtime_ns
+        except OSError:
+            raise DataError("%s is missing" % rel, what="timing")
+        hit = self._timings.get(rel)
+        if hit is None or hit[0] != mt:
+            tm = Timing.load(path)
+            self._timings[rel] = hit = (mt, tm)
             self._scenes.clear()
-        return self._timing
+        return hit[1]
+
+    def _tm(self) -> Timing:
+        self._reload_if_changed()
+        return self._timing_for(self._saved)
 
     def timing(self) -> dict:
         return copy.deepcopy(self._tm().data)
@@ -84,11 +102,33 @@ class Project:
     # -- resolve / validate ----------------------------------------------------------------------------------
     def resolve(self, storyboard: dict | None = None) -> dict:
         sb = storyboard if storyboard is not None else self.storyboard()
-        return SB.resolve(sb, self._tm(), self.bundle)
+        return SB.resolve(sb, self._timing_for(sb), self._bundle_for(sb))
+
+    def _bundle_for(self, sb) -> R.StyleBundle:
+        style = sb.get("style", "gae") if isinstance(sb, dict) else "gae"
+        return R.load_bundle(style)
 
     def validate(self, storyboard: dict | None = None) -> list[dict]:
+        """Issues of `storyboard` (default: the saved one). Everything a later load needs is checked here: the style exists,
+        the timing file is inside the project and readable, audio and asset files stay inside the project."""
         sb = storyboard if storyboard is not None else self.storyboard()
-        return SB.validate(sb, self._tm(), self.bundle, self.dir)
+        if not isinstance(sb, dict):
+            return SB.validate(sb, None, None, self.dir)
+        issues: list[dict] = []
+        try:
+            bundle = self._bundle_for(sb)
+        except DataError as e:
+            issues.append({"level": "error", "path": "style", "message": e.message})
+            try:
+                bundle = self.bundle
+            except DataError:
+                bundle = R.load_bundle("gae")
+        try:
+            tm = self._timing_for(sb)
+        except DataError as e:
+            issues.append({"level": "error", "path": "timing", "message": e.message})
+            tm = Timing({"duration": 0.0, "words": []})
+        return issues + SB.validate(sb, tm, bundle, self.dir)
 
     def use_draft(self, storyboard: dict | None) -> None:
         self._draft = copy.deepcopy(storyboard) if storyboard is not None else None
@@ -96,12 +136,12 @@ class Project:
     # -- rendering -------------------------------------------------------------------------------------------
     def _scene(self) -> Scene:
         self._reload_if_changed()
-        tm = self._tm()
         sb = self._draft if self._draft is not None else self._saved
+        tm, bundle = self._timing_for(sb), self._bundle_for(sb)
         key = (SB.revision_of(sb), self._draft is not None)
         sc = self._scenes.get(key)
         if sc is None:
-            sc = Scene(self.dir, SB.resolve(sb, tm, self.bundle), tm, self.bundle)
+            sc = Scene(self.dir, SB.resolve(sb, tm, bundle), tm, bundle)
             self._scenes[key] = sc
             while len(self._scenes) > 4:
                 self._scenes.popitem(last=False)
@@ -120,10 +160,12 @@ class Project:
     # -- editing support -------------------------------------------------------------------------------------
     def _asset_info(self, key: str, sb: dict) -> dict | None:
         a = (sb.get("assets") or {}).get(key)
-        if not a:
+        if not isinstance(a, dict):
             return None
         w, h = a.get("width"), a.get("height")
-        if not (w and h):
+        ok = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0     # noqa: E731
+        if not (ok(w) and ok(h)):
+            w = h = None
             try:
                 import cv2
                 im = cv2.imread(str(self.dir / a["file"]), cv2.IMREAD_REDUCED_COLOR_8)
@@ -165,7 +207,7 @@ class Project:
 
     def save(self, storyboard: dict) -> str:
         """Validate (errors refuse the save with ValidationError), write atomically, back up to history/, return the revision."""
-        issues = SB.validate(storyboard, self._tm(), self.bundle, self.dir)
+        issues = self.validate(storyboard)
         rev = SB.save(self.dir, storyboard, issues)
         self._saved = SB.strip_derived(copy.deepcopy(storyboard))
         self._saved_mtime = (self.dir / "storyboard.json").stat().st_mtime_ns

@@ -12,23 +12,25 @@ from bti.script import brief as brief_mod
 from bti.script import generate, models as models_mod, ops as ops_mod, store, validate
 from bti.script.parse import parse_outline, parse_script
 from bti.script.prompting import PromptError, build_prompt
-from bti.script.runner import JobError, ScriptJobs
+from bti.script.runner import BusyError, JobError, ScriptJobs
 from bti.script.stats import narration_stats
 
 from .common import ApiError, valid_pid
+from .pipeline_api import project_meta
 
 
 def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: ScriptJobs | None = None,
                 library_root: Path | None = None) -> APIRouter:
     r = APIRouter(prefix="/api")
-    jobs = jobs or ScriptJobs()
     root = Path(projects_root)
+    jobs = jobs or ScriptJobs(projects_root=root)
 
     def pdir(pid: str) -> Path:
         if not valid_pid(pid):
             raise ApiError(404, "project not found")
         d = root / pid
-        if not d.is_dir() or not (d / "project.json").is_file() and not (d / "source").is_dir():
+        has_data = (d / "source").is_dir() or ((d / "project.json").is_file() and project_meta(d).get("imported") is not True)
+        if not d.is_dir() or not has_data:
             raise ApiError(404, "project not found")
         if d.is_symlink() and not d.resolve().is_relative_to(root.resolve()):
             raise ApiError(404, "project not found")
@@ -49,9 +51,11 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         issues = validate.validate_narration(n, o, wps=wps, brief=brief)
         rev = n.rev()
         ap = n.approval
+        # a narration approval stands only while the outline it was written from is still approved (design section 1)
+        fresh = bool(ap.get("approved")) and ap.get("sha1") == rev and o is not None and o.approved_fresh()
         return {"narration": n.to_dict(), "rev": rev, "issues": issues, "stats": narration_stats(n, o, wps),
-                "approved": bool(ap.get("approved")) and ap.get("sha1") == rev,
-                "stale": bool(ap.get("approved")) and ap.get("sha1") != rev,
+                "approved": fresh,
+                "stale": bool(ap.get("approved")) and not fresh,
                 "last_paste": store.read_paste(d, "narration"), "outline_rev": o.rev() if o else None}
 
     def outline_payload(d: Path, o: store.Outline | None, brief: dict | None = None) -> dict:
@@ -65,12 +69,26 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                 "stale": bool(ap.get("approved")) and ap.get("sha1") != rev,
                 "last_paste": store.read_paste(d, "outline")}
 
+    def str_field(body, key: str, required: bool = False) -> str:
+        v = body.get(key)
+        if v is None:
+            if required:
+                raise ApiError(422, f"{key} (string) is required")
+            return ""
+        if not isinstance(v, str):
+            raise ApiError(422, f"{key} must be a string")
+        return v
+
     def stale_409(cur: str):
         return ApiError(409, "the file changed since you loaded it; reload before saving", rev=cur)
 
-    def model_for(model_id: str | None) -> dict:
+    def model_for(model_id) -> dict:
+        """The model of a job must be NAMED: a request that omits it never falls back to the default model (a real model
+        uses the owner's subscription quota)."""
+        if not isinstance(model_id, str) or not model_id.strip():
+            raise ApiError(400, "model is required: name the model to run (see GET /api/models)")
         ms = models_mod.load_models(models_path)
-        spec = next((m for m in ms if m["id"] == model_id), None) if model_id else next((m for m in ms if m.get("default")), None)
+        spec = next((m for m in ms if m["id"] == model_id), None)
         if spec is None:
             raise ApiError(404, "unknown model")
         pub = models_mod.public(spec)
@@ -82,10 +100,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         return [m["id"] for m in models_mod.public_models(models_path) if m["enabled"]]
 
     def start_job(kind: str, pid: str, spec: dict, body) -> dict:
-        busy = jobs.running(pid)
-        if busy:
-            raise ApiError(409, "another model job is running for this project", job_id=busy.id)
-        job = jobs.start(kind, pid, spec["id"], body, alternatives=alternatives)
+        try:
+            job = jobs.start(kind, pid, spec["id"], body, alternatives=alternatives, exclusive=True)
+        except BusyError as e:
+            raise ApiError(409, "another model job is running for this project", job_id=e.job.id)
         return {"job_id": job.id}
 
     # ------------------------------------------------------------ models and jobs
@@ -100,6 +118,8 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             return j.public()
         prev = getattr(request.app.state, "jobs", None)       # the editor's preview jobs share this path
         pj = prev.get(job_id) if prev is not None else None
+        if pj is None:
+            pj = jobs.persisted(job_id)          # a job of an earlier run of the server
         if pj is None:
             raise ApiError(404, "job not found")
         return pj
@@ -123,7 +143,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.put("/projects/{pid}/brief/options")
     def put_brief_options(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        brief_mod.save_options(d, body)
+        try:
+            brief_mod.save_options(d, body)
+        except brief_mod.OptionsError as e:
+            raise ApiError(422, str(e))
         return brief_for(d)["options"]
 
     @r.get("/projects/{pid}/prompt")
@@ -149,24 +172,25 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     def outline_generate(pid: str, body: dict = Body(default={})):
         d = pdir(pid)
         spec = model_for(body.get("model"))
-        notes = str(body.get("notes") or "")
+        notes = str_field(body, "notes")
         wps = wps_for(d)
         return start_job("outline", pid, spec, lambda job: generate.run_outline(job, d, spec, notes, wps=wps))
 
     @r.post("/projects/{pid}/outline/import")
     def outline_import(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        text = str(body.get("text") or "")
-        brief = brief_for(d)
-        res = parse_outline(text, set(brief["paragraph_ids"]), target_words=brief["options"]["target_words"])
-        if not res.ok:
-            store.keep_paste(d, "outline", text)
-            raise ApiError(422, res.error or "the outline could not be read", paragraphs=res.paragraphs, issues=res.issues,
-                           kept=True)
-        res.outline.source = {"kind": "paste", "model": "", "created_at": store.now_iso()}
-        store.save_outline(d, res.outline)
-        store.clear_paste(d, "outline")
-        return {"ok": True, "parse_issues": res.issues, **outline_payload(d, store.load_outline(d), brief)}
+        with store.script_lock(d):
+            text = str_field(body, "text", True)
+            brief = brief_for(d)
+            res = parse_outline(text, set(brief["paragraph_ids"]), target_words=brief["options"]["target_words"])
+            if not res.ok:
+                store.keep_paste(d, "outline", text)
+                raise ApiError(422, res.error or "the outline could not be read", paragraphs=res.paragraphs, issues=res.issues,
+                               kept=True)
+            res.outline.source = {"kind": "paste", "model": "", "created_at": store.now_iso()}
+            store.save_outline(d, res.outline)
+            store.clear_paste(d, "outline")
+            return {"ok": True, "parse_issues": res.issues, **outline_payload(d, store.load_outline(d), brief)}
 
     @r.get("/projects/{pid}/outline")
     def get_outline(pid: str):
@@ -176,34 +200,40 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.put("/projects/{pid}/outline")
     def put_outline(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        o = store.Outline.from_dict(body.get("outline") or {})
-        cur = store.disk_rev(store.script_dir(d) / "outline.json", "outline")
-        if cur is not None and body.get("base_rev") != cur:
-            raise stale_409(cur)
-        old = store.load_outline(d)
-        o.approval = old.approval if old else o.approval
-        try:
-            store.save_outline(d, o, cur)
-        except store.StaleRevision as e:
-            raise stale_409(str(e))
-        return outline_payload(d, store.load_outline(d), brief_for(d))
+        with store.script_lock(d):
+            raw = body.get("outline")
+            problem = store.doc_problem("outline", raw)
+            if problem:
+                raise ApiError(422, problem)
+            o = store.Outline.from_dict(raw)
+            cur = store.disk_rev(store.script_dir(d) / "outline.json", "outline")
+            if cur is not None and body.get("base_rev") != cur:
+                raise stale_409(cur)
+            old = store.load_outline(d)
+            o.approval = old.approval if old else o.approval
+            try:
+                store.save_outline(d, o, cur)
+            except store.StaleRevision as e:
+                raise stale_409(str(e))
+            return outline_payload(d, store.load_outline(d), brief_for(d))
 
     @r.post("/projects/{pid}/outline/approve")
     def outline_approve(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        o = store.load_outline(d)
-        if o is None:
-            raise ApiError(404, "no outline to approve")
-        errs = validate.blocking(validate.validate_outline(o, None))
-        if errs:
-            raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs)
-        try:
-            store.approve(d, "outline", str(body.get("rev") or ""))
-        except store.StaleRevision as e:
-            raise stale_409(str(e))
-        return outline_payload(d, store.load_outline(d), brief_for(d))
+        with store.script_lock(d):
+            o = store.load_outline(d)
+            if o is None:
+                raise ApiError(404, "no outline to approve")
+            errs = validate.blocking(validate.validate_outline(o, None))
+            if errs:
+                raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs)
+            try:
+                store.approve(d, "outline", str(body.get("rev") or ""))
+            except store.StaleRevision as e:
+                raise stale_409(str(e))
+            return outline_payload(d, store.load_outline(d), brief_for(d))
 
-    # ------------------------------------------------------------ narration
+        # ------------------------------------------------------------ narration
     @r.post("/projects/{pid}/narration/generate")
     def narration_generate(pid: str, body: dict = Body(default={})):
         d = pdir(pid)
@@ -212,7 +242,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         gate = validate.outline_gate(o)
         if gate:
             raise ApiError(409, gate["message"])
-        chapters = [str(c) for c in (body.get("chapters") or [])] or None
+        raw_ch = body.get("chapters")
+        if raw_ch is not None and not (isinstance(raw_ch, list) and all(isinstance(c, str) for c in raw_ch)):
+            raise ApiError(422, "chapters must be a list of chapter ids")
+        chapters = list(raw_ch or []) or None
         if chapters:
             bad = [c for c in chapters if o.chapter(c) is None]
             if bad:
@@ -223,34 +256,43 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             locked = [f"{c.id}:{b.id}" for c in n.chapters if c.id in targets for b in c.beats if b.locked]
             if locked:
                 raise ApiError(409, "locked beats would be replaced (" + ", ".join(locked[:6]) + "); unlock them or send force", locked=locked)
-        notes = str(body.get("notes") or "")
+        notes = str_field(body, "notes")
         wps = wps_for(d)
         return start_job("narration", pid, spec, lambda job: generate.run_narration(job, d, spec, chapters, notes, wps=wps))
 
     @r.post("/projects/{pid}/narration/import")
     def narration_import(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        text = str(body.get("text") or "")
-        o = store.load_outline(d)
-        if o is None:
-            raise ApiError(409, "there is no outline yet: make or paste the outline first")
-        old = store.load_narration(d)
-        res = parse_script(text, o, project=pid, title=brief_for(d)["painting"]["title"],
-                           counter_start=(old.counters["beat"] if old else 0))
-        if not res.ok:
-            store.keep_paste(d, "narration", text)
-            raise ApiError(422, res.error or "the script could not be placed", paragraphs=res.paragraphs, issues=res.issues,
-                           kept=True)
-        n = res.narration
-        if body.get("merge") and old:
-            got = {c.id for c in n.chapters}
-            n.chapters = [c for c in old.chapters if c.id not in got] + n.chapters
-            order = {c.id: i for i, c in enumerate(o.chapters)}
-            n.chapters.sort(key=lambda c: order.get(c.id, 10_000))
-        n.source = {"kind": "paste", "model": "", "created_at": store.now_iso(), "outline_sha1": o.rev()}
-        store.save_narration(d, n)
-        store.clear_paste(d, "narration")
-        return {"ok": True, "parse_issues": res.issues, **narr_payload(d, store.load_narration(d), brief_for(d))}
+        with store.script_lock(d):
+            text = str_field(body, "text", True)
+            o = store.load_outline(d)
+            if o is None:
+                raise ApiError(409, "there is no outline yet: make or paste the outline first")
+            old = store.load_narration(d)
+            res = parse_script(text, o, project=pid, title=brief_for(d)["painting"]["title"],
+                               counter_start=(old.counters["beat"] if old else 0))
+            if not res.ok:
+                store.keep_paste(d, "narration", text)
+                raise ApiError(422, res.error or "the script could not be placed", paragraphs=res.paragraphs, issues=res.issues,
+                               kept=True)
+            n = res.narration
+            if old and not body.get("force"):
+                # the same protection as `generate`: a paste never silently replaces a beat the owner locked
+                got = {c.id for c in n.chapters}
+                locked = [f"{c.id}:{b.id}" for c in old.chapters if c.id in got for b in c.beats if b.locked]
+                if locked:
+                    store.keep_paste(d, "narration", text)
+                    raise ApiError(409, "locked beats would be replaced (" + ", ".join(locked[:6]) + "); unlock them or send force",
+                                   locked=locked, kept=True)
+            if body.get("merge") and old:
+                got = {c.id for c in n.chapters}
+                n.chapters = [c for c in old.chapters if c.id not in got] + n.chapters
+                order = {c.id: i for i, c in enumerate(o.chapters)}
+                n.chapters.sort(key=lambda c: order.get(c.id, 10_000))
+            n.source = {"kind": "paste", "model": "", "created_at": store.now_iso(), "outline_sha1": o.rev()}
+            store.save_narration(d, n)
+            store.clear_paste(d, "narration")
+            return {"ok": True, "parse_issues": res.issues, **narr_payload(d, store.load_narration(d), brief_for(d))}
 
     @r.get("/projects/{pid}/narration")
     def get_narration(pid: str):
@@ -260,54 +302,64 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.put("/projects/{pid}/narration")
     def put_narration(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        n = store.Narration.from_dict(body.get("narration") or {})
-        path = store.script_dir(d) / "narration.json"
-        cur = store.disk_rev(path)
-        if cur is not None and body.get("base_rev") != cur:
-            raise stale_409(cur)
-        old = store.load_narration(d)
-        if old:
-            n.approval = old.approval
-            n.counters["beat"] = max(n.counters["beat"], old.counters["beat"])
-        n.project = n.project or pid
-        try:
-            store.save_narration(d, n, cur)
-        except store.StaleRevision as e:
-            raise stale_409(str(e))
-        return narr_payload(d, store.load_narration(d), brief_for(d))
+        with store.script_lock(d):
+            raw = body.get("narration")
+            problem = store.doc_problem("narration", raw)
+            if problem:
+                raise ApiError(422, problem)
+            n = store.Narration.from_dict(raw)
+            path = store.script_dir(d) / "narration.json"
+            cur = store.disk_rev(path)
+            if cur is not None and body.get("base_rev") != cur:
+                raise stale_409(cur)
+            old = store.load_narration(d)
+            if old:
+                n.approval = old.approval
+                n.counters["beat"] = max(n.counters["beat"], old.counters["beat"])
+            n.project = n.project or pid
+            try:
+                store.save_narration(d, n, cur)
+            except store.StaleRevision as e:
+                raise stale_409(str(e))
+            return narr_payload(d, store.load_narration(d), brief_for(d))
 
     @r.post("/projects/{pid}/narration/ops")
     def narration_ops(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        n = store.load_narration(d)
-        if n is None:
-            raise ApiError(404, "no narration yet")
-        cur = n.rev()
-        if body.get("base_rev") != cur:
-            raise stale_409(cur)
-        results = []
-        try:
-            for op in body.get("ops") or []:
-                results.append(ops_mod.apply_op(n, op))
-        except ops_mod.OpError as e:
-            raise ApiError(422, str(e))
-        store.save_narration(d, n, cur)
-        return {"results": results, **narr_payload(d, store.load_narration(d), brief_for(d))}
+        with store.script_lock(d):
+            n = store.load_narration(d)
+            if n is None:
+                raise ApiError(404, "no narration yet")
+            cur = n.rev()
+            if body.get("base_rev") != cur:
+                raise stale_409(cur)
+            ops = body.get("ops")
+            if not isinstance(ops, list) or not ops:
+                raise ApiError(422, "ops must be a non-empty list of operations")
+            results = []
+            try:
+                for op in ops:
+                    results.append(ops_mod.apply_op(n, op))
+            except ops_mod.OpError as e:
+                raise ApiError(422, str(e))
+            store.save_narration(d, n, cur)
+            return {"results": results, **narr_payload(d, store.load_narration(d), brief_for(d))}
 
     @r.post("/projects/{pid}/narration/approve")
     def narration_approve(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        n = store.load_narration(d)
-        if n is None:
-            raise ApiError(404, "no narration to approve")
-        issues = validate.validate_narration(n, store.load_outline(d), wps=wps_for(d))
-        errs = validate.blocking(issues)
-        if errs:
-            raise ApiError(422, "the narration has errors: " + "; ".join(e["message"] for e in errs[:5]), issues=issues)
-        try:
-            store.approve(d, "narration", str(body.get("rev") or ""))
-        except store.StaleRevision as e:
-            raise stale_409(str(e))
-        return narr_payload(d, store.load_narration(d), brief_for(d))
+        with store.script_lock(d):
+            n = store.load_narration(d)
+            if n is None:
+                raise ApiError(404, "no narration to approve")
+            issues = validate.validate_narration(n, store.load_outline(d), wps=wps_for(d))
+            errs = validate.blocking(issues)
+            if errs:
+                raise ApiError(422, "the narration has errors: " + "; ".join(e["message"] for e in errs[:5]), issues=issues)
+            try:
+                store.approve(d, "narration", str(body.get("rev") or ""))
+            except store.StaleRevision as e:
+                raise stale_409(str(e))
+            return narr_payload(d, store.load_narration(d), brief_for(d))
 
     return r

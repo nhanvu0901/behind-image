@@ -1,4 +1,5 @@
 // Pure logic: time/x mapping, anchors, snapping, camera/box conversion, derived keys.
+import { makeSpaces } from './coords.js';
 export const MIN_SHOT = 0.2;
 
 // Must equal bti/engine/vfx.py EASE (the engine raises on any other name).
@@ -15,6 +16,10 @@ export const EASES = {
 export const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
 export const round = (v, n = 3) => { const k = 10 ** n; return Math.round(v * k) / k; };
 export const clone = (o) => (o === undefined ? undefined : JSON.parse(JSON.stringify(o)));
+
+/** Half-width (px) of the grab zone of a shot boundary: 5 px at most, never more than 15 % of the narrower neighbour, so shots
+ * stay clickable at a wide zoom out (U2-007). Under 1.5 px the boundary cannot be grabbed (zoom in to move it). */
+export const grabZone = (wPrev, wCur) => Math.min(5, 0.15 * Math.min(wPrev, wCur));
 
 // ---- time <-> x. view = {t0: time at x=0, pps: pixels per second}
 export const timeToX = (t, view) => (t - view.t0) * view.pps;
@@ -42,11 +47,17 @@ export function nearestWordStart(words, t) {
 
 export const cleanWord = (w) => String(w ?? '').replace(/[^\p{L}\p{N}'-]/gu, '') || String(w ?? '');
 
-/** Snap a time to a word start and return an anchor. free=true (Alt) gives {"t"}. */
-export function anchorFromTime(t, words, free = false) {
+/** How far (seconds) a drag, a cut or a placement reaches for a word start. Farther than this is silence or another passage:
+ * the time stays free. (Without a limit a boundary dragged inside a pause jumped to the next spoken word, U2-016.) */
+export const SNAP_S = 0.35;
+
+/** Snap a time to a word start and return an anchor. free=true (Alt) gives {"t"}. `maxDist`: only snap to a word start at most
+ * that far away (Infinity = always the nearest word, used by the buttons that say "nearest word"). */
+export function anchorFromTime(t, words, free = false, maxDist = SNAP_S) {
   t = round(Math.max(0, t), 3);
   if (free || !words.length) return { t };
   const n = nearestWordStart(words, t);
+  if (n.dist > maxDist) return { t };
   return { w: n.idx, off: 0, text: cleanWord(words[n.idx].w) };
 }
 
@@ -204,14 +215,10 @@ export function rescaleRel(keys, oldDur, newDur) {
   return keys.map((k) => (typeof k.at?.rel === 'number' ? { ...clone(k), at: { rel: round(k.at.rel * f, 4) } } : clone(k)));
 }
 
-// ---- screen <-> source mapping. view = {W,H} of the on-screen frame; cam in canvas units.
+// ---- screen <-> source mapping: a view of coords.js (the one place that converts between spaces). view = {W,H}; cam in canvas units.
 export function makeMapping(cam, canvas, view) {
-  const k = (cam.zoom * view.W) / canvas.w; // screen px per source px
-  return {
-    k,
-    toScreen: (x, y) => [(x - cam.cx) * k + view.W / 2, (y - cam.cy) * k + view.H / 2],
-    toSource: (sx, sy) => [(sx - view.W / 2) / k + cam.cx, (sy - view.H / 2) / k + cam.cy],
-  };
+  const S = makeSpaces({ canvas, view, cam });
+  return { k: S.scale('source')[0], toScreen: S.sourceToScreen, toSource: S.screenToSource };
 }
 export function fitCamera(asset, canvas) {
   const zoom = Math.min(canvas.w / asset.width, canvas.h / asset.height) * 0.94;

@@ -8,6 +8,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
+from bti.engine.errors import DataError
+
 from .common import ApiError
 from .engine_adapter import ENGINE_LOCK
 
@@ -55,7 +57,9 @@ def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> byt
         except ApiError:
             raise
         except Exception as e:  # noqa: BLE001
-            raise ApiError(500, f"render failed: {type(e).__name__}: {e}"[:300])
+            if isinstance(e, DataError):
+                raise
+            raise ApiError(500, f"render failed: {type(e).__name__}: {e}"[:300], render_failed=True)
         finally:
             if draft is not None:
                 try:
@@ -66,6 +70,7 @@ def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> byt
 
 
 def cached_jpeg(project, cache_dir: Path, rev: str, t: float, width: int, tag: str = "f") -> bytes:
+    """`rev` is the RENDER key (storyboard + timing + style + media), not the storyboard revision alone."""
     cache_dir.mkdir(parents=True, exist_ok=True)
     p = cache_dir / f"{tag}_{rev[:16]}_{int(round(t * 1000))}_{width}.jpg"
     try:

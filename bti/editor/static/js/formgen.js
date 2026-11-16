@@ -1,5 +1,6 @@
 // Parameter form generation from registry `params`. Pure part: descriptors, coercion, defaults.
 import { clamp, clone } from './logic.js';
+import { boxToRect, normBox } from './coords.js';
 
 export const WIDGETS = {
   number: 'number', enum: 'select', bool: 'checkbox', string: 'text', color: 'color', text: 'textarea',
@@ -7,7 +8,7 @@ export const WIDGETS = {
 };
 
 /** One descriptor per param definition, in registry order. Unknown types fall back to a JSON field. */
-export function buildFields(defs, values = {}) {
+export function buildFields(defs, values = {}, required = null) {
   return (defs || []).map((d) => {
     const has = Object.prototype.hasOwnProperty.call(values, d.name);
     const widget = WIDGETS[d.type] || 'json';
@@ -18,7 +19,7 @@ export function buildFields(defs, values = {}) {
       min: d.min ?? null, max: d.max ?? null, values: d.values || null, measured: d.measured || null,
       slider: ranged, step: ranged ? stepFor(d.min, d.max) : 'any',
     };
-    f.problem = validateValue(d, value);
+    f.problem = validateValue(d, value) || (required?.has(d.name) && !String(value ?? '').trim() ? 'bắt buộc nhập' : null);
     return f;
   });
 }
@@ -39,7 +40,15 @@ export function validateValue(d, v) {
     if (d.max != null && v > d.max) return `lớn hơn ${d.max}`;
   }
   if (d.type === 'enum' && d.values && !d.values.includes(v)) return 'giá trị không có trong danh sách';
+  if (d.type === 'box' && !boxToRect(v)) return 'khung phải là [x0, y0, x1, y1]';
   return null;
+}
+
+/** A number held to the registry's range. Each bound counts alone (a param with only a min is still held to it). */
+export function clampNumber(d, n) {
+  if (d.min != null) n = Math.max(d.min, n);
+  if (d.max != null) n = Math.min(d.max, n);
+  return n;
 }
 
 /** Convert a raw input string/value into the typed value (clamped for numbers). */
@@ -49,8 +58,7 @@ export function coerce(d, raw) {
       if (raw === '' || raw === null) return d.default ?? null;
       let n = typeof raw === 'number' ? raw : Number(raw);
       if (Number.isNaN(n)) return d.default ?? null;
-      if (d.min != null && d.max != null) n = clamp(n, d.min, d.max);
-      return n;
+      return clampNumber(d, n);
     }
     case 'bool': return !!raw;
     case 'enum': return raw;
@@ -62,7 +70,8 @@ export function coerce(d, raw) {
     }
     case 'points': return Array.isArray(raw) ? raw : [];
     case 'lines': { if (Array.isArray(raw)) return raw; const a = String(raw ?? '').split('\n').map((x) => x.replace(/\s+$/, '')); while (a.length && a[a.length - 1] === '') a.pop(); return a; }
-    case 'box': case 'camera':
+    case 'box': return normBox(typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw);   // always [x0, y0, x1, y1]
+    case 'camera':
       if (typeof raw === 'string') { try { return JSON.parse(raw); } catch { return null; } }
       return raw;
     case 'string': case 'text': case 'color': case 'asset': return raw === '' ? '' : raw;
@@ -79,4 +88,9 @@ export function defaultParams(defs) {
   return o;
 }
 
-export const pointToText = (v) => (Array.isArray(v) ? `${Math.round(v[0])}, ${Math.round(v[1])}` : v ?? '');
+/** A point as text. Whole pixels, except fractions of the frame (space 'frame') which keep 3 decimals. */
+export const pointToText = (v, space = 'source') => {
+  if (!Array.isArray(v)) return v ?? '';
+  const f = (n) => (space === 'frame' ? String(Math.round(n * 1e3) / 1e3) : String(Math.round(n)));
+  return `${f(v[0])}, ${f(v[1])}`;
+};

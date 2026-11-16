@@ -93,22 +93,44 @@ def move_beat(n: Narration, bid: str, to_chapter: str | None = None, after: str 
     dest.beats.insert(idx, b)
 
 
+def _need(op: dict, key: str, typ, what: str, optional: bool = False):
+    v = op.get(key)
+    if v is None:
+        if optional:
+            return None
+        raise OpError(f"bad operation: {key} ({what}) is required")
+    if isinstance(v, bool) or not isinstance(v, typ):
+        raise OpError(f"bad operation: {key} must be {what}, not {type(v).__name__}")
+    return v
+
+
+def _str_list(op: dict, key: str):
+    v = op.get(key)
+    if v is None:
+        return None
+    if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+        raise OpError(f"bad operation: {key} must be a list of strings")
+    return v
+
+
 def apply_op(n: Narration, op: dict) -> dict:
-    """Dispatch for the API: {"op": "split|merge|drop|insert|move", ...}. Returns {"id": ...} where relevant."""
+    """Dispatch for the API: {"op": "split|merge|drop|insert|move", ...}. Returns {"id": ...} where relevant.
+    Every field is type-checked; nothing is coerced (a list is not turned into text, a string is not turned into a list)."""
+    if not isinstance(op, dict):
+        raise OpError("bad operation: each operation must be an object")
     kind = op.get("op")
-    try:
-        if kind == "split":
-            return {"id": split_beat(n, op["beat"], int(op["at_word"]))}
-        if kind == "merge":
-            return {"id": merge_with_previous(n, op["beat"])}
-        if kind == "drop":
-            drop_beat(n, op["beat"])
-            return {}
-        if kind == "insert":
-            return {"id": insert_beat(n, op["chapter"], op.get("after"), op.get("text", ""), op.get("facts"), op.get("show"))}
-        if kind == "move":
-            move_beat(n, op["beat"], op.get("to_chapter"), op.get("after"))
-            return {}
-    except (KeyError, TypeError, ValueError) as e:
-        raise OpError(f"bad operation: {e}")
+    if kind == "split":
+        return {"id": split_beat(n, _need(op, "beat", str, "a beat id"), _need(op, "at_word", int, "an integer"))}
+    if kind == "merge":
+        return {"id": merge_with_previous(n, _need(op, "beat", str, "a beat id"))}
+    if kind == "drop":
+        drop_beat(n, _need(op, "beat", str, "a beat id"))
+        return {}
+    if kind == "insert":
+        return {"id": insert_beat(n, _need(op, "chapter", str, "a chapter id"), _need(op, "after", str, "a beat id", True),
+                                  _need(op, "text", str, "a string", True) or "", _str_list(op, "facts"), _str_list(op, "show"))}
+    if kind == "move":
+        move_beat(n, _need(op, "beat", str, "a beat id"), _need(op, "to_chapter", str, "a chapter id", True),
+                  _need(op, "after", str, "a beat id", True))
+        return {}
     raise OpError(f"unknown operation {kind!r}")

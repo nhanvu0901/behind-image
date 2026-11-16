@@ -10,6 +10,7 @@ import re
 from dataclasses import dataclass, field
 
 from .stats import count_words
+from .. import textfold
 from .store import CERTAINTY, Beat, Fact, Hook, NChapter, Narration, OChapter, Outline, now_iso
 
 FINAL_RE = re.compile(r"^[\W_]*FINAL\s+SCRIPT[\W_]*$", re.I | re.M)
@@ -59,7 +60,7 @@ def _clean_inline(s: str) -> str:
 
 
 def _norm(s: str) -> str:
-    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+    return textfold.norm(s)
 
 
 def paragraph_listing(text: str) -> list[dict]:

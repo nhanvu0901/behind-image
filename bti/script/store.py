@@ -11,6 +11,7 @@ import hashlib
 import json
 import os
 import tempfile
+import threading
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -22,8 +23,24 @@ CERTAINTY = ("established", "likely", "disputed")
 ROLES = ("cold_open", "chapter", "closing")
 
 
+_LOCKS: dict[str, threading.RLock] = {}
+_LOCKS_GUARD = threading.Lock()
+
+
+def script_lock(pdir: Path) -> threading.RLock:
+    """The one lock of a project's script files. Every read-modify-write of outline.json / narration.json (a save from the
+    page, an op, an approval, an import, and a model job that finishes a chapter) holds it, so none can overwrite another."""
+    key = str(Path(pdir).resolve())
+    with _LOCKS_GUARD:
+        return _LOCKS.setdefault(key, threading.RLock())
+
+
 class StaleRevision(Exception):
     """The caller's revision is not the current one."""
+
+
+class DocumentCorrupt(Exception):
+    """A script document on disk is not readable (not UTF-8, not JSON, or not an object). The message names the file."""
 
 
 def now_iso() -> str:
@@ -294,6 +311,70 @@ class Narration:
         return bool(self.approval.get("approved")) and self.approval.get("sha1") == self.rev()
 
 
+# ---------------------------------------------------------------- shape check of a document sent by a client
+def _is_str_list(v) -> bool:
+    return isinstance(v, list) and all(isinstance(x, str) for x in v)
+
+
+def _is_num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def doc_problem(kind: str, d) -> str | None:
+    """None when `d` is a plausible outline/narration document, else what is wrong. `from_dict` is forgiving by design
+    (it reads files written by older code); a document a client SENDS must have the right shape instead of being coerced."""
+    name = "outline" if kind == "outline" else "narration"
+    if not isinstance(d, dict):
+        return f"{name} (object) is required"
+    chs = d.get("chapters")
+    if not isinstance(chs, list):
+        return f"{name}.chapters must be a list"
+    seen = set()
+    for i, c in enumerate(chs):
+        p = f"{name}.chapters[{i}]"
+        if not isinstance(c, dict):
+            return f"{p} must be an object"
+        if not isinstance(c.get("id"), str) or not c["id"].strip():
+            return f"{p}.id must be a non-empty string"
+        if c["id"] in seen:
+            return f"{p}.id {c['id']!r} is used twice"
+        seen.add(c["id"])
+        for k in ("title", "role", "purpose"):
+            if k in c and not isinstance(c[k], str):
+                return f"{p}.{k} must be a string"
+        if kind == "outline":
+            for k in ("facts", "show"):
+                if k in c and not _is_str_list(c[k]):
+                    return f"{p}.{k} must be a list of strings"
+            if "word_budget" in c and not _is_num(c["word_budget"]):
+                return f"{p}.word_budget must be a number"
+        else:
+            beats = c.get("beats", [])
+            if not isinstance(beats, list):
+                return f"{p}.beats must be a list"
+            for j, b in enumerate(beats):
+                bp = f"{p}.beats[{j}]"
+                if not isinstance(b, dict):
+                    return f"{bp} must be an object"
+                for k in ("id", "text", "note"):
+                    if k in b and b[k] is not None and not isinstance(b[k], str):
+                        return f"{bp}.{k} must be a string"
+                for k in ("facts", "show"):
+                    if k in b and not _is_str_list(b[k]):
+                        return f"{bp}.{k} must be a list of strings"
+                if "locked" in b and not isinstance(b["locked"], bool):
+                    return f"{bp}.locked must be true or false"
+    if kind == "outline":
+        if "thesis" in d and not isinstance(d["thesis"], str):
+            return f"{name}.thesis must be a string"
+        for k in ("facts", "hook_options"):
+            if k in d and not (isinstance(d[k], list) and all(isinstance(x, dict) for x in d[k])):
+                return f"{name}.{k} must be a list of objects"
+        if "target_words" in d and not _is_num(d["target_words"]):
+            return f"{name}.target_words must be a number"
+    return None
+
+
 # ---------------------------------------------------------------- files
 def script_dir(pdir: Path) -> Path:
     return Path(pdir) / "script"
@@ -302,7 +383,13 @@ def script_dir(pdir: Path) -> Path:
 def _load(path: Path) -> dict | None:
     if not path.is_file():
         return None
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError) as e:
+        raise DocumentCorrupt("%s is corrupt: %s" % (path.name, str(e)[:120]))
+    if not isinstance(d, dict):
+        raise DocumentCorrupt("%s is corrupt: the top level must be an object" % path.name)
+    return d
 
 
 def load_outline(pdir: Path) -> Outline | None:
@@ -319,7 +406,7 @@ def _save(path: Path, obj, base_rev: str | None, *, backup: bool = True) -> str:
     """Write `obj`; the approval is dropped unless it still matches the new revision.
     `base_rev`, when given, must equal the revision currently on disk."""
     if base_rev is not None and path.is_file():
-        cur = type(obj).from_dict(json.loads(path.read_text(encoding="utf-8"))).rev()
+        cur = type(obj).from_dict(_load(path)).rev()
         if cur != base_rev:
             raise StaleRevision(cur)
     rev = obj.rev()
@@ -344,7 +431,7 @@ def save_narration(pdir: Path, n: Narration, base_rev: str | None = None, *, bac
 
 def disk_rev(path: Path, kind: str = "narration") -> str | None:
     cls = Outline if kind == "outline" else Narration
-    return cls.from_dict(json.loads(path.read_text(encoding="utf-8"))).rev() if path.is_file() else None
+    return cls.from_dict(_load(path)).rev() if path.is_file() else None
 
 
 def approve(pdir: Path, kind: str, rev: str) -> dict:
@@ -379,7 +466,7 @@ def keep_paste(pdir: Path, kind: str, text: str) -> None:
 
 def read_paste(pdir: Path, kind: str) -> str:
     p = paste_path(pdir, kind)
-    return p.read_text(encoding="utf-8") if p.is_file() else ""
+    return p.read_text(encoding="utf-8", errors="replace") if p.is_file() else ""
 
 
 def clear_paste(pdir: Path, kind: str) -> None:

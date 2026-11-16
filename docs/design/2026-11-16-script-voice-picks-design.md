@@ -173,12 +173,12 @@ Information only:
 |---|---|
 | `GET /brief` | the brief (section 2.1) |
 | `GET /prompt?phase=outline\|script` | the filled prompt as text, for copy and paste |
-| `POST /outline/generate` | body `{model, notes}`; returns `{job_id}` |
+| `POST /outline/generate` | body `{model, notes}`; `model` is REQUIRED (400 without it: no default model is ever started silently, a real model uses the owner's quota); returns `{job_id}`; 409 while another model job of the project runs |
 | `POST /outline/import` | body `{text}`; parses a pasted outline |
 | `GET /outline`, `PUT /outline` | read; save with `{outline, base_rev}`, returning `{rev, outline, issues}` |
 | `POST /outline/approve` | body `{rev}` |
 | `POST /narration/generate` | body `{model, chapters?, notes}`; returns `{job_id}`. `chapters` limits the run to some chapters, so one chapter can be rewritten with a note. |
-| `POST /narration/import` | body `{text}`; parses a pasted script |
+| `POST /narration/import` | body `{text, merge?, force?}`; parses a pasted script; 409 with the locked beat ids (and the paste kept) when it would replace locked beats, unless `force` |
 | `GET /narration`, `PUT /narration` | read; save with `{narration, base_rev}`, returning `{rev, narration, issues, stats}` |
 | `POST /narration/approve` | body `{rev}` |
 

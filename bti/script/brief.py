@@ -11,6 +11,7 @@ import re
 from pathlib import Path
 
 from .store import now_iso, script_dir, write_json_atomic
+from .. import textfold
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -92,16 +93,43 @@ def load_options(pdir: Path) -> dict:
             "wps": float(o["wps"]) if isinstance(o.get("wps"), (int, float)) and 0.5 <= o["wps"] <= 6 else DEFAULT_WPS}
 
 
-def save_options(pdir: Path, opts: dict) -> dict:
-    cur = load_options(pdir)
+class OptionsError(ValueError):
+    """A brief option is out of range or of the wrong type; the message names the option and the allowed values."""
+
+
+def check_options(opts: dict) -> dict:
+    """The options of `opts` that are present, validated; raises OptionsError. Nothing is coerced or silently dropped."""
+    out: dict = {}
+    num = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and v == v   # noqa: E731
     if "include_low" in opts:
-        cur["include_low"] = sorted({str(x) for x in opts["include_low"]})
-    if "target_words" in opts and isinstance(opts["target_words"], (int, float)) and 300 <= opts["target_words"] <= 20000:
-        cur["target_words"] = int(opts["target_words"])
+        v = opts["include_low"]
+        if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+            raise OptionsError("include_low must be a list of strings (book ids, work ids or source codes)")
+        out["include_low"] = sorted(set(v))
+    if "target_words" in opts:
+        v = opts["target_words"]
+        if not (num(v) and 300 <= v <= 20000):
+            raise OptionsError("target_words must be a number from 300 to 20000")
+        out["target_words"] = int(v)
     if "notes" in opts:
-        cur["notes"] = str(opts["notes"])[:4000]
-    if "wps" in opts and isinstance(opts["wps"], (int, float)) and 0.5 <= opts["wps"] <= 6:
-        cur["wps"] = float(opts["wps"])
+        v = opts["notes"]
+        if not isinstance(v, str):
+            raise OptionsError("notes must be a string")
+        if len(v) > 4000:
+            raise OptionsError("notes may have at most 4000 characters")
+        out["notes"] = v
+    if "wps" in opts:
+        v = opts["wps"]
+        if not (num(v) and 0.5 <= v <= 6):
+            raise OptionsError("wps (words per second) must be a number from 0.5 to 6")
+        out["wps"] = float(v)
+    return out
+
+
+def save_options(pdir: Path, opts: dict) -> dict:
+    new = check_options(opts)           # raises OptionsError before anything is written
+    cur = load_options(pdir)
+    cur.update(new)
     write_json_atomic(script_dir(pdir) / "brief_options.json", cur)
     return cur
 
@@ -177,7 +205,7 @@ def build_brief(pdir: Path, *, library_root: Path | None = None, include_low: li
             continue
         heads = s["detail_headings"] if s["book_id"] == "hodge_aid" and s["detail_headings"] else s["sections"]
         for h in heads:
-            key = re.sub(r"[^a-z0-9]+", " ", h.lower()).strip()
+            key = textfold.norm(h)
             if not key:
                 continue
             d = details.setdefault(key, {"name": h, "where": []})

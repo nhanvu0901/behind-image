@@ -1,6 +1,7 @@
 // Generic DOM form built from registry param definitions (see formgen.js). No per-technique code.
 import { h } from './util.js';
 import { buildFields, coerce, pointToText } from './formgen.js';
+import { splitSpace, normBox } from './coords.js';
 import { ctx, bus } from './ctx.js';
 import { EASES, describeAnchor, anchorFromTime, round, clone, cameraAt } from './logic.js';
 
@@ -13,7 +14,7 @@ const EASE_NAMES = Object.keys(EASES);
 export function renderForm(defs, values, opts) {
   const root = h('div', { class: 'form' });
   const widgets = {};
-  const fields = buildFields(defs, values);
+  const fields = buildFields(defs, values, opts.required);
   if (!fields.length) root.append(h('div', { class: 'hint', text: 'Kỹ thuật này không có tham số.' }));
   for (const f of fields) {
     const w = makeWidget(f, opts);
@@ -23,7 +24,7 @@ export function renderForm(defs, values, opts) {
   return {
     el: root,
     sync(vals) {
-      for (const f of buildFields(defs, vals)) {
+      for (const f of buildFields(defs, vals, opts.required)) {
         const w = widgets[f.name];
         if (w && !w.row.contains(document.activeElement)) w.update(f.value, f);
         else if (w) w.mark(f);
@@ -31,6 +32,10 @@ export function renderForm(defs, values, opts) {
     },
   };
 }
+
+const placeholderOf = (space) => (space === 'frame' ? 'x, y (0 đến 1 của khung)' : space === 'canvas' ? 'x, y (px khung hình)' : space === 'none' ? 'x, y' : 'tên vùng hoặc x, y');
+const pickTitle = (space) => (space === 'none' ? 'Tham số này không chọn được trên ảnh: nhập số' : 'Bấm lên khung xem trước để lấy tọa độ' + (space === 'source' ? ' (Shift = luôn lấy x,y)' : ''));
+const spaceTag = (space) => h('span', { class: 'hint', title: 'Hệ tọa độ của tham số', text: { source: 'px ảnh nguồn', canvas: 'px khung hình', frame: 'tỉ lệ khung (0 đến 1)', none: '' }[space] || '' });
 
 function row(f, ctl, extra) {
   const label = h('label', { title: f.name + (f.def.unit ? ` (${f.def.unit})` : ''), text: f.name });
@@ -51,16 +56,25 @@ function makeWidget(f, opts) {
     case 'number': {
       const num = h('input', { type: 'number', step: f.step, min: f.min ?? undefined, max: f.max ?? undefined, value: f.value ?? '' });
       const nodes = [num];
+      const note = h('span', { class: 'hint warn', hidden: true });
       let rng = null;
+      let last = f.value;                                    // the value that is stored: the field always ends up showing it
+      const show = (v) => { num.value = v ?? ''; if (rng) rng.value = v ?? f.min; };
       if (f.slider) {
         rng = h('input', { type: 'range', min: f.min, max: f.max, step: f.step, value: f.value ?? f.min, style: { flex: 1, minWidth: 0 } });
-        rng.addEventListener('input', () => { num.value = rng.value; emit(coerce(d, rng.value)); });
+        rng.addEventListener('input', () => { num.value = rng.value; last = coerce(d, rng.value); note.hidden = true; emit(last); });
         nodes.unshift(rng);
         num.style.width = '74px'; num.style.flex = 'none';
       }
-      num.addEventListener('input', () => { if (num.value === '') return; const v = coerce(d, num.value); if (rng) rng.value = v; emit(v); });
-      ctlNodes = [...nodes, f.unit ? h('span', { class: 'unit', text: f.unit }) : null, measuredTag(f)];
-      update = (v) => { num.value = v ?? ''; if (rng) rng.value = v ?? f.min; };
+      num.addEventListener('input', () => { note.hidden = true; if (num.value === '') return; const v = coerce(d, num.value); last = v; if (rng) rng.value = v; emit(v); });
+      // leaving the field: show the stored (clamped) value, and say so when it differs from what was typed (U2-004)
+      num.addEventListener('blur', () => {
+        const typed = num.value;
+        if (typed !== '' && Number(typed) !== last) { note.textContent = `đã ép về ${last}`; note.hidden = false; }
+        show(last);
+      });
+      ctlNodes = [...nodes, f.unit ? h('span', { class: 'unit', text: f.unit }) : null, measuredTag(f), note];
+      update = (v) => { last = v; show(v); note.hidden = true; };
       break;
     }
     case 'select': {
@@ -100,39 +114,43 @@ function makeWidget(f, opts) {
       break;
     }
     case 'point': {
+      const sp = () => splitSpace(opts.spaceOf ? opts.spaceOf(d) : 'source');
       const dl = 'dl-' + Math.random().toString(36).slice(2, 7);
-      const t = h('input', { type: 'text', list: dl, placeholder: 'tên vùng hoặc x, y', value: pointToText(f.value) });
-      const data = h('datalist', { id: dl }, ...Object.keys(opts.regions || {}).map((n) => h('option', { value: n })));
+      const t = h('input', { type: 'text', list: dl, placeholder: placeholderOf(sp().space), value: pointToText(f.value, sp().space) });
+      const data = h('datalist', { id: dl }, ...(sp().space === 'source' ? Object.keys(opts.regions || {}) : []).map((n) => h('option', { value: n })));
       t.addEventListener('change', () => emit(coerce(d, t.value)));
-      const pick = h('button', { class: 'small', title: 'Bấm lên khung xem trước để lấy tọa độ (Shift = luôn lấy x,y)', text: 'Chọn trên ảnh', onclick: () => {
-        ctx.pick = { cb: (v) => { t.value = pointToText(v); emit(v); } };
+      const pick = h('button', { class: 'small', title: pickTitle(sp().space), text: 'Chọn trên ảnh', disabled: sp().space === 'none', onclick: () => {
+        const { space } = sp();
+        ctx.pick = { space, cb: (v) => { t.value = pointToText(v, space); emit(v); } };
         bus.emit('pick', true);
       } });
-      ctlNodes = [h('div', { class: 'pt-ctl' }, t, data, pick)];
-      update = (v) => { t.value = pointToText(v); };
+      ctlNodes = [h('div', { class: 'pt-ctl' }, t, data, pick), spaceTag(sp().space)];
+      update = (v) => { t.value = pointToText(v, sp().space); };
       break;
     }
     case 'points': {
+      const sp = () => splitSpace(opts.spaceOf ? opts.spaceOf(d) : 'source');
       const dl = 'dl-' + Math.random().toString(36).slice(2, 7);
-      const data = h('datalist', { id: dl }, ...Object.keys(opts.regions || {}).map((n) => h('option', { value: n })));
+      const data = h('datalist', { id: dl }, ...(sp().space === 'source' ? Object.keys(opts.regions || {}) : []).map((n) => h('option', { value: n })));
       const wrap = h('div', { class: 'pts' }, data);
       let cur = Array.isArray(f.value) ? clone(f.value) : [];
       const push = (n) => { cur = n; emit(clone(n)); build(); };
       const build = () => {
+        const { space } = sp();
         wrap.replaceChildren(data);
         cur.forEach((pt, i) => {
-          const t = h('input', { type: 'text', list: dl, value: pointToText(pt), placeholder: 'tên vùng hoặc x, y', style: { flex: 1, minWidth: 0 } });
+          const t = h('input', { type: 'text', list: dl, value: pointToText(pt, space), placeholder: placeholderOf(space), style: { flex: 1, minWidth: 0 } });
           t.addEventListener('change', () => { const n = clone(cur); n[i] = coerce({ type: 'point' }, t.value); cur = n; emit(clone(n)); });
           wrap.append(h('div', { class: 'pt-ctl' }, h('span', { class: 'hint', text: String(i + 1) }), t,
-            h('button', { class: 'small', text: 'Chọn trên ảnh', title: 'Bấm lên khung xem trước để lấy tọa độ cho điểm này (Shift = luôn lấy x,y)', onclick: () => {
-              ctx.pick = { cb: (v) => { const n = clone(cur); n[i] = v; cur = n; emit(clone(n)); build(); } }; bus.emit('pick', true);
+            h('button', { class: 'small', text: 'Chọn trên ảnh', disabled: space === 'none', title: pickTitle(space), onclick: () => {
+              ctx.pick = { space, cb: (v) => { const n = clone(cur); n[i] = v; cur = n; emit(clone(n)); build(); } }; bus.emit('pick', true);
             } }),
             h('button', { class: 'small danger', text: 'Xóa', onclick: () => push(cur.filter((_, k) => k !== i)) })));
         });
-        wrap.append(h('button', { class: 'small', text: '+ Thêm điểm', onclick: () => {
-          const last = cur[cur.length - 1];
-          push([...cur, Array.isArray(last) ? [last[0] + 100, last[1] + 100] : (opts.centre ? opts.centre() : [1000, 1000])]);
-        } }));
+        wrap.append(h('div', { class: 'pt-ctl' }, h('button', { class: 'small', text: '+ Thêm điểm', onclick: () => {
+          const last = cur[cur.length - 1], step = space === 'frame' ? 0.05 : 100;
+          push([...cur, Array.isArray(last) ? [last[0] + step, last[1] + step] : (opts.centre ? opts.centre(space) : [1000, 1000])]);
+        } }), spaceTag(space)));
       };
       build();
       ctlNodes = [wrap];
@@ -147,13 +165,16 @@ function makeWidget(f, opts) {
       break;
     }
     case 'box': {
-      const keys = ['x', 'y', 'w', 'h'];
-      const ins = keys.map((k) => h('input', { type: 'number', step: 1, title: k, placeholder: k, style: { width: '25%' } }));
-      const set = (v) => ins.forEach((i, n) => { i.value = v && v[keys[n]] != null ? Math.round(v[keys[n]]) : ''; });
+      // the registry form is [x0, y0, x1, y1] (two corners); it is written back in exactly that form
+      const names = ['x0', 'y0', 'x1', 'y1'];
+      const ins = names.map((k) => h('input', { type: 'number', step: 1, title: k, placeholder: k, style: { width: '25%' } }));
+      const set = (v) => { const b = normBox(v); ins.forEach((i, n) => { i.value = b ? b[n] : ''; }); };
       set(f.value);
-      const commit = () => { const o = {}; keys.forEach((k, n) => { o[k] = Number(ins[n].value) || 0; }); emit(o); };
+      const hint = h('span', { class: 'hint', text: f.unit ? `[x0, y0, x1, y1], ${f.unit}` : '[x0, y0, x1, y1]' });
+      const commit = () => { if (ins.some((i) => i.value === '')) return; emit(ins.map((i) => Math.round(Number(i.value) || 0))); };
       ins.forEach((i) => i.addEventListener('input', commit));
-      ctlNodes = [h('div', { class: 'pt-ctl' }, ...ins)];
+      const clear = d.default == null ? h('button', { class: 'small', text: 'Bỏ khung', title: 'Để trống (kỹ thuật tự chọn)', onclick: () => { set(null); emit(null); } }) : null;
+      ctlNodes = [h('div', { class: 'pt-ctl' }, ...ins), clear, hint];
       update = set;
       break;
     }
@@ -172,7 +193,7 @@ function makeWidget(f, opts) {
         keys.forEach((k, i) => {
           const kind = typeof k.at?.t === 'number' ? 't' : typeof k.at?.w === 'number' ? 'w' : 'rel';
           const num = (key, step) => h('input', { type: 'number', step, value: round(k[key] ?? 0, 3), onchange: (e) => mutate(i, (kk) => { kk[key] = Number(e.target.value); }) });
-          const kindSel = h('select', { onchange: (e) => mutate(i, (kk) => { kk.at = e.target.value === 'rel' ? { rel: i ? 1 : 0 } : e.target.value === 't' ? { t: round(ctx.t, 3) } : anchorFromTime(ctx.t, ctx.words()); }, true) },
+          const kindSel = h('select', { onchange: (e) => mutate(i, (kk) => { kk.at = e.target.value === 'rel' ? { rel: i ? 1 : 0 } : e.target.value === 't' ? { t: round(ctx.t, 3) } : anchorFromTime(ctx.t, ctx.words(), false, Infinity); }, true) },
             ...[['rel', '% shot'], ['t', 'giây'], ['w', 'từ']].map(([v, l]) => h('option', { value: v, text: l, selected: v === kind })));
           const atIn = kind === 'rel' ? h('input', { type: 'number', step: 0.05, min: 0, max: 1, value: k.at?.rel ?? 0, onchange: (e) => mutate(i, (kk) => { kk.at = { rel: Number(e.target.value) }; }) })
             : kind === 't' ? h('input', { type: 'number', step: 0.1, value: k.at.t, onchange: (e) => mutate(i, (kk) => { kk.at = { t: Number(e.target.value) }; }) })
@@ -181,7 +202,7 @@ function makeWidget(f, opts) {
             h('div', { class: 'row' }, h('b', { text: 'Khóa ' + (i + 1), style: { flex: 1 } }),
               h('button', { class: 'small danger', text: 'Xóa', onclick: () => { const n = clone(cur); n.splice(i, 1); cur = n; emit(n); build(n); } })),
             h('div', { class: 'row' }, h('label', { text: 'Thời điểm' }), h('div', { class: 'ctl' }, kindSel, atIn,
-              h('button', { class: 'small', style: { whiteSpace: 'nowrap' }, title: 'Gắn vào từ tại đầu phát', text: '= đầu phát', onclick: () => mutate(i, (kk) => { kk.at = anchorFromTime(ctx.t, ctx.words()); }, true) }))),
+              h('button', { class: 'small', style: { whiteSpace: 'nowrap' }, title: 'Gắn vào từ tại đầu phát', text: '= đầu phát', onclick: () => mutate(i, (kk) => { kk.at = anchorFromTime(ctx.t, ctx.words(), false, Infinity); }, true) }))),
             h('div', { class: 'kf-grid' }, h('div', null, h('label', { text: 'cx' }), num('cx', 1)), h('div', null, h('label', { text: 'cy' }), num('cy', 1)), h('div', null, h('label', { text: 'zoom' }), num('zoom', 0.01))),
             h('div', { class: 'row', style: { marginTop: '4px' } }, h('label', { text: 'ease' }), h('div', { class: 'ctl' },
               h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }, ...EASE_NAMES.map((n) => h('option', { value: n, text: n, selected: n === (k.ease || 'linear') })))))));

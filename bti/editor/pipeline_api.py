@@ -13,7 +13,18 @@ from fastapi import APIRouter, Query
 
 from .common import ApiError, compute_rev, read_json, valid_pid
 
-PROTECTED = ("arnolfini", "technique_lab")
+def project_meta(d: Path) -> dict:
+    """project.json of a folder as a dict ({} when missing or unreadable)."""
+    try:
+        pj = read_json(d / "project.json")
+    except Exception:       # noqa: BLE001
+        return {}
+    return pj if isinstance(pj, dict) else {}
+
+
+def is_protected(d: Path) -> bool:
+    """A project is protected from delete when its project.json says `"protected": true` (the reference projects)."""
+    return project_meta(d).get("protected") is True
 
 # id, label, what the step is. The order here IS the order of the pipeline.
 STEPS = [
@@ -59,12 +70,12 @@ def outputs_of(d: Path) -> list[dict]:
 
 def _script_state(d: Path) -> tuple[str, str]:
     """('done'|'available', detail) from the approved script files."""
-    from bti.script.store import load_narration, load_outline
+    from bti.script.store import DocumentCorrupt, load_narration, load_outline
     try:
         n, o = load_narration(d), load_outline(d)
-    except (OSError, ValueError):
+    except (OSError, ValueError, DocumentCorrupt):
         return "available", "Tệp kịch bản không đọc được"
-    if n is not None and n.approved_fresh():
+    if n is not None and n.approved_fresh() and o is not None and o.approved_fresh():
         return "done", "Lời dẫn đã duyệt"
     if o is not None and o.approved_fresh():
         return "available", "Dàn ý đã duyệt, chờ viết và duyệt lời dẫn"
@@ -118,14 +129,10 @@ def template() -> dict:
 def compute(root: Path, pid: str) -> dict:
     from .library_api import stage_of
     d = root / pid
-    pj: dict = {}
     has_project = (d / "project.json").is_file()
-    if has_project:
-        try:
-            pj = read_json(d / "project.json")
-        except Exception:
-            pj = {}
-    imported = not has_project and not (d / "source").is_dir()
+    pj = project_meta(d) if has_project else {}
+    # imported = came from an earlier edit, has no book data. A project.json may exist only to carry flags (`protected`).
+    imported = bool(pj.get("imported")) or (not has_project and not (d / "source").is_dir())
     has_sb = (d / "storyboard.json").is_file()
     outputs = outputs_of(d)
 
@@ -160,11 +167,13 @@ def compute(root: Path, pid: str) -> dict:
         if s["id"] == current and s["state"] == "available":
             s["state"] = "current"
     return {"project": pid, "title": title or pid, "painting": _painting(d, pj), "stage": stage_of(d),
-            "imported": imported, "protected": pid in PROTECTED, "artwork_key": pj.get("artwork_key"), "current": current, "steps": steps,
+            "imported": imported, "protected": is_protected(d), "artwork_key": pj.get("artwork_key"), "current": current, "steps": steps,
             "outputs": outputs}
 
 
-def make_router(projects_root: Path) -> APIRouter:
+def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, on_delete=None) -> APIRouter:
+    """`script_jobs` / `preview_jobs`: the job registries (a project with a running job cannot be deleted);
+    `on_delete(pid)`: called after the folder is gone, to drop cached engine objects."""
     r = APIRouter(prefix="/api")
     root = Path(projects_root)
 
@@ -189,9 +198,9 @@ def make_router(projects_root: Path) -> APIRouter:
     def delete_project(pid: str, confirm: str = Query("")):
         if not valid_pid(pid):
             raise ApiError(404, "project not found")
-        if pid in PROTECTED:
-            raise ApiError(403, f"project {pid!r} is protected and cannot be deleted", protected=True)
         d = root / pid
+        if d.is_dir() and not d.is_symlink() and is_protected(d):
+            raise ApiError(403, f"project {pid!r} is protected and cannot be deleted", protected=True)
         if d.is_symlink():
             raise ApiError(409, "project folder is a symbolic link; refusing to delete it")
         if not d.is_dir():
@@ -201,7 +210,15 @@ def make_router(projects_root: Path) -> APIRouter:
             raise ApiError(400, "invalid project path")
         if confirm != pid:
             raise ApiError(422, "type the project id in `confirm` to delete it")
+        busy = script_jobs.running(pid) if script_jobs is not None else None
+        if busy is not None:
+            raise ApiError(409, "a model job is running for this project; cancel it first (POST /api/jobs/{id}/cancel)",
+                           job_id=busy.id)
+        if preview_jobs is not None and preview_jobs.running(pid):
+            raise ApiError(409, "a preview is being rendered for this project; wait for it to finish")
         shutil.rmtree(d)
+        if on_delete is not None:
+            on_delete(pid)
         return {"deleted": pid}
 
     return r

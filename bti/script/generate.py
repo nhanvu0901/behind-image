@@ -15,8 +15,8 @@ from .prompting import build_prompt
 from .providers import ProviderError, get_provider
 from .runner import Job, JobError
 from .stats import WPS_DEFAULT
-from .store import (NChapter, Narration, keep_paste, clear_paste, load_narration, load_outline, now_iso,
-                    save_narration, save_outline)
+from .store import (NChapter, Narration, disk_rev, keep_paste, clear_paste, load_narration, load_outline, now_iso,
+                    save_narration, save_outline, script_dir, script_lock)
 from .validate import markup_in, outline_gate
 
 PER_CALL_TIMEOUT = 300.0
@@ -59,6 +59,7 @@ def _retry_text(msg: str, limit: int = 1500) -> str:
 def run_outline(job: Job, pdir: Path, spec: dict, notes: str = "", *, wps: float = WPS_DEFAULT) -> None:
     brief = build_brief(pdir)
     opts = load_options(pdir)
+    start_rev = disk_rev(script_dir(pdir) / "outline.json", "outline")      # what the file was when the job began
     job.chapters = [{"id": "outline", "title": "Dàn ý", "state": "running", "attempts": 0, "words": 0, "message": ""}]
     retry = None
     for attempt in (1, 2):
@@ -67,12 +68,20 @@ def run_outline(job: Job, pdir: Path, spec: dict, notes: str = "", *, wps: float
         text = call_model(spec, p["system"], p["user"], job)
         res = parse_outline(text, set(brief["paragraph_ids"]), target_words=opts["target_words"])
         if res.ok:
-            if job.stopped:
-                return
             o = res.outline
             o.source = {"kind": "model", "model": spec["id"], "created_at": now_iso()}
-            rev = save_outline(pdir, o)
-            clear_paste(pdir, "outline")
+            with script_lock(pdir):
+                if job.stopped:
+                    return
+                if disk_rev(script_dir(pdir) / "outline.json", "outline") != start_rev:
+                    # The outline was saved by the owner while the model ran. A generated outline replaces the whole
+                    # document, so it is never written over their save: it goes to the paste box instead.
+                    keep_paste(pdir, "outline", text)
+                    job.set_chapter("outline", state="failed", message="outline changed while the model ran")
+                    raise JobError("conflict", "The outline was saved while the model was writing, so the model's outline was "
+                                               "not written over it. It was kept in the paste box; import it if you want it.")
+                rev = save_outline(pdir, o, start_rev)
+                clear_paste(pdir, "outline")
             job.set_chapter("outline", state="done", message=f"{len(o.chapters)} chương, {len(o.facts)} dữ kiện")
             job.result = {"rev": rev, "issues": res.issues}
             return
@@ -113,6 +122,10 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
     job.chapters = [{"id": c.id, "title": c.title, "state": "pending", "attempts": 0, "words": 0, "message": ""}
                     for c in outline.chapters if c.id in want]
     first_save = True
+    start_locked = {b.id for c in narr.chapters for b in c.beats if b.locked}     # locks that already stood (force replaced them)
+    written: list[str] = []
+    skipped: list[dict] = []
+    job.result = {"written": written, "skipped": skipped}
     for cid in want:
         if job.cancel.is_set():
             raise JobError("cancelled", "cancelled")
@@ -146,19 +159,39 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
             job.set_chapter(cid, state="failed", message=retry.splitlines()[0][:200])
             raise JobError("validation", f"Chapter {cid} failed validation twice ({retry.splitlines()[0][:200]}). "
                                          "The chapters written so far were kept, and the last answer is in the paste box.")
-        if job.stopped:
-            return
-        # keep ids: the new beats continue the counter; the replaced chapter keeps its place in the outline order
-        narr.counters["beat"] = max(narr.counters["beat"], res.narration.counters["beat"])
-        new = NChapter(cid, oc.role, oc.title, oc.card, ch.beats)
-        order = {c.id: i for i, c in enumerate(outline.chapters)}
-        narr.chapters = [c for c in narr.chapters if c.id != cid] + [new]
-        narr.chapters.sort(key=lambda c: order.get(c.id, 10_000))
-        narr.source = {"kind": "model", "model": spec["id"], "created_at": now_iso(), "outline_sha1": outline.rev()}
-        narr.title = narr.title or brief["painting"]["title"]
-        rev = save_narration(pdir, narr, backup=first_save)
-        first_save = False
-        clear_paste(pdir, "narration")
+        # Finish the chapter against the document AS IT IS ON DISK NOW, under the lock every save takes: only this chapter is
+        # replaced; whatever the owner saved to other chapters while the model ran is kept.
+        with script_lock(pdir):
+            if job.stopped:
+                return
+            cur = load_narration(pdir) or Narration(project=pdir.name, title=brief["painting"]["title"], language="en")
+            old = cur.chapter(cid)
+            new_locks = [b.id for b in (old.beats if old else []) if b.locked and b.id not in start_locked]
+            if new_locks:
+                skipped.append({"chapter": cid, "beats": new_locks, "reason": "locked while the job ran"})
+                job.set_chapter(cid, state="skipped", message="beats locked while the job ran: " + ", ".join(new_locks))
+                narr = cur
+                job.result = {"written": written, "skipped": skipped, "rev": cur.rev()}
+                job.changed()
+                continue
+            beats = ch.beats
+            taken = {b.id for c in cur.chapters if c.id != cid for b in c.beats}
+            for b in beats:                     # ids the owner's edits used in the meantime are never reused
+                if b.id in taken or not b.id:
+                    b.id = cur.new_beat_id()
+                taken.add(b.id)
+            cur.counters["beat"] = max(cur.counters["beat"], res.narration.counters["beat"])
+            new = NChapter(cid, oc.role, oc.title, oc.card, beats)
+            order = {c.id: i for i, c in enumerate(outline.chapters)}
+            cur.chapters = [c for c in cur.chapters if c.id != cid] + [new]
+            cur.chapters.sort(key=lambda c: order.get(c.id, 10_000))
+            cur.source = {"kind": "model", "model": spec["id"], "created_at": now_iso(), "outline_sha1": outline.rev()}
+            cur.title = cur.title or brief["painting"]["title"]
+            rev = save_narration(pdir, cur, backup=first_save)
+            first_save = False
+            clear_paste(pdir, "narration")
+            narr = cur                          # the next chapter's prompt sees the owner's edits too
+            written.append(cid)
+        job.result = {"written": written, "skipped": skipped, "rev": rev}
         words = sum(len(b.text.split()) for b in new.beats)
         job.set_chapter(cid, state="done", words=words, message="")
-        job.result = {"rev": rev}

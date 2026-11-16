@@ -107,7 +107,7 @@ def test_second_validation_failure_stops_the_job_but_keeps_what_was_written(appr
     j = run(jobs, "narration", d, lambda job: generate.run_narration(job, d, MOCK, notes="[mock:alwaysbad c03]"))
     assert j.state == "error" and j.error_kind == "validation" and "c03" in j.error
     states = {c["id"]: c["state"] for c in j.chapters}
-    assert states["c01"] == states["c02"] == "done" and states["c03"] == "failed" and states["c04"] == "pending"
+    assert states["c01"] == states["c02"] == "done" and states["c03"] == "failed" and states["c04"] == "skipped"   # B-012: no pending/running chapter on a dead job
     n = store.load_narration(d)
     assert [c.id for c in n.chapters] == ["c01", "c02"]                                    # finished chapters kept
     assert "[PAUSE]" in store.read_paste(d, "narration")                                   # the failed answer is kept for the owner
@@ -173,7 +173,7 @@ def test_rate_limit_offers_the_next_model(approved):
     j = run(jobs, "narration", d, lambda jb: generate.run_narration(jb, d, MOCK, ["c01"], "[mock:ratelimit]"),
             alternatives=lambda: ["mock", "openrouter-claude"])
     assert j.state == "error" and j.error_kind == "rate_limit" and j.alternatives == ["openrouter-claude"]
-    assert j.chapters[0]["state"] == "pending" or j.chapters[0]["state"] == "running"
+    assert j.chapters[0]["state"] == "failed"      # B-012: the chapter in flight failed; it is not left "running"
 
 
 def test_a_real_provider_through_the_job_with_a_recorded_shape_fake(approved, monkeypatch):

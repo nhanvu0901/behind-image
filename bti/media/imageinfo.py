@@ -41,3 +41,21 @@ def image_size(path: Path) -> tuple[int, int]:
             return im.size
     except Exception:
         return 0, 0
+
+
+def readable_problem(path: Path) -> str | None:
+    """None when `path` is a non-empty image that decodes completely, else a short reason. A file that only has a valid
+    header (truncated, or junk after it) is refused: a stored asset must never break the stills that use it."""
+    try:
+        if Path(path).stat().st_size == 0:
+            return "the file is empty"
+        from PIL import Image
+        with Image.open(path) as im:
+            im.verify()
+        with Image.open(path) as im:
+            im.load()
+            if im.width < 1 or im.height < 1:
+                return "the image has no pixels"
+    except Exception:       # noqa: BLE001 - any failure to decode means "not a usable image"
+        return "the file is not a readable image (damaged, truncated or not an image)"
+    return None

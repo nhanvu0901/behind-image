@@ -1,9 +1,10 @@
 /* The persistent frame of the app: bar, stepper, one view at a time. */
-#shell { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100vh; }
+#shell { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100vh; }   /* the column may not grow with a wide view: the view scrolls by itself */
 #shell-top { background: var(--panel); border-bottom: 1px solid var(--border); }
 #frame-bar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; min-width: 0; }
 .brand { font-weight: 700; letter-spacing: .02em; margin-right: 6px; color: var(--text); text-decoration: none; white-space: nowrap; }
-#project-pick { min-width: 190px; max-width: 280px; }
+#project-pick { min-width: 150px; max-width: 280px; flex: 0 1 280px; }
+#btn-new, #health { white-space: nowrap; flex: none; }
 #frame-project { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; white-space: nowrap; }
 #frame-project .pt { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
 #frame-project .pp { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }

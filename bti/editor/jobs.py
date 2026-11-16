@@ -14,18 +14,32 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable
 
+from bti.script.runner import RESTART_MESSAGE, find_record, job_file, write_record
+
 from .common import ApiError, safe_join
-from .engine_adapter import ENGINE_LOCK
 
 KEEP_PREVIEWS = 20
 MAX_JOBS = 300
 
 
 class JobManager:
-    def __init__(self, workers: int = 2):
+    def __init__(self, workers: int = 2, projects_root: Path | None = None):
+        """With `projects_root`, job records are written to projects/<pid>/cache/jobs/<id>.json (see bti.script.runner)."""
         self._pool = ThreadPoolExecutor(max_workers=workers, thread_name_prefix="bti-job")
         self._jobs: dict[str, dict] = {}
         self._lock = threading.Lock()
+        self.projects_root = Path(projects_root) if projects_root else None
+
+    def running(self, pid: str) -> bool:
+        return any(j["pid"] == pid and j["state"] in ("queued", "running") for j in list(self._jobs.values()))
+
+    def _persist(self, job: dict) -> None:
+        if self.projects_root is not None and (self.projects_root / job["pid"]).is_dir():
+            write_record(job_file(self.projects_root, job["pid"], job["id"]), self._public(job))
+
+    @staticmethod
+    def _public(j: dict) -> dict:
+        return {"state": j["state"], "progress": j["progress"], "result_url": j["result_url"], "error": j["error"]}
 
     def submit(self, pid: str, fn: Callable[[Callable[[float], None]], str]) -> str:
         """`fn(progress_cb)` returns the result_url."""
@@ -44,6 +58,7 @@ class JobManager:
 
         def run() -> None:
             job["state"] = "running"
+            self._persist(job)
             try:
                 url = fn(progress)
                 job["result_url"] = url
@@ -55,15 +70,20 @@ class JobManager:
             except BaseException as e:  # noqa: BLE001
                 job["error"] = f"{type(e).__name__}: {e}"[:400]
                 job["state"] = "error"
+            self._persist(job)
 
+        self._persist(job)
         self._pool.submit(run)
         return jid
 
     def get(self, jid: str) -> dict | None:
         j = self._jobs.get(jid)
         if j is None:
-            return None
-        return {"state": j["state"], "progress": j["progress"], "result_url": j["result_url"], "error": j["error"]}
+            rec = find_record(self.projects_root, jid) if self.projects_root else None
+            if rec is None or "kind" in rec:      # records of script jobs are served by the script router
+                return None
+            return {k: rec.get(k) for k in ("state", "progress", "result_url", "error")}
+        return self._public(j)
 
     def shutdown(self) -> None:
         self._pool.shutdown(wait=False, cancel_futures=True)
@@ -83,14 +103,17 @@ def prune_previews(pdir: Path, keep: int = KEEP_PREVIEWS) -> None:
 
 
 def render_preview(project, project_dir: Path, audio: Path | None, t0: float, t1: float, width: int, fps: int,
-                   draft: dict | None, pid: str, progress: Callable[[float], None]) -> str:
+                   draft: dict | None, pid: str, progress: Callable[[float], None], lock=None) -> str:
+    """`project` is the PREVIEW instance of the engine project (not the one that answers stills), and `lock` serialises
+    previews of that project among themselves. Stills and validation never wait for a preview."""
+    lock = lock or threading.RLock()
     pdir = project_dir / "cache" / "previews"
     pdir.mkdir(parents=True, exist_ok=True)
     uid = uuid.uuid4().hex[:8]
     silent = pdir / f"tmp_{uid}.mp4"
     final = pdir / f"pv_{int(t0 * 1000)}_{int(t1 * 1000)}_{uid}.mp4"
     try:
-        with ENGINE_LOCK:
+        with lock:
             try:
                 if draft is not None:
                     project.use_draft(draft)

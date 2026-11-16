@@ -15,12 +15,15 @@ import os
 import re
 from pathlib import Path
 
+from .errors import DataError, StyleError
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 STYLE_ROOT = Path(os.environ.get("BTI_STYLE_ROOT", REPO_ROOT / "style"))
 
 KINDS = ("base", "overlay", "transition", "card")
 RENDERERS: dict = {}          # technique id -> (renderer class, kind)
 
+STYLE_ID = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 _HEX = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -73,9 +76,16 @@ class StyleBundle:
 
     def __init__(self, style_id: str, root: Path | None = None):
         self.style_id = style_id
+        if not (isinstance(style_id, str) and STYLE_ID.fullmatch(style_id)):
+            raise StyleError("unknown style %r" % (style_id,))
         self.dir = (root or STYLE_ROOT) / style_id
-        self.style = json.loads((self.dir / "style.json").read_text(encoding="utf-8"))
-        reg = json.loads((self.dir / "techniques.json").read_text(encoding="utf-8"))
+        try:
+            self.style = json.loads((self.dir / "style.json").read_text(encoding="utf-8"))
+            reg = json.loads((self.dir / "techniques.json").read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            raise StyleError("unknown style %r (there is no style/%s/)" % (style_id, style_id))
+        except (OSError, ValueError) as e:
+            raise StyleError("style %r is unreadable: %s" % (style_id, str(e)[:120]))
         self.registry = reg
         pdir = self.dir / "patches"
         if pdir.is_dir():
@@ -85,10 +95,10 @@ class StyleBundle:
         self.by_id = {t["id"]: t for t in self.techniques}
 
     def spec(self, tid: str) -> dict | None:
-        return self.by_id.get(tid)
+        return self.by_id.get(tid) if isinstance(tid, str) else None
 
     def available(self, tid: str) -> bool:
-        s = self.by_id.get(tid)
+        s = self.by_id.get(tid) if isinstance(tid, str) else None
         return bool(s and s.get("engine", {}).get("available") is True and tid in RENDERERS)
 
     def sv(self, section: str, key: str, default=None):
@@ -106,6 +116,9 @@ _BUNDLES: dict = {}
 
 
 def load_bundle(style_id: str = "gae", root: Path | None = None) -> StyleBundle:
+    """The bundle of a style id; `StyleError` (a DataError and a FileNotFoundError) when there is no such style."""
+    if not (isinstance(style_id, str) and STYLE_ID.fullmatch(style_id)):
+        raise StyleError("unknown style %r" % (style_id,))
     key = (style_id, str(root))
     b = _BUNDLES.get(key)
     path = (root or STYLE_ROOT) / style_id / "techniques.json"
@@ -119,7 +132,8 @@ def load_bundle(style_id: str = "gae", root: Path | None = None) -> StyleBundle:
 
 # ----------------------------------------------------------------------------- parameter validation
 def _is_num(v):
-    return isinstance(v, (int, float)) and not isinstance(v, bool)
+    """A finite number (NaN and infinity are not numbers a document may hold)."""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and v not in (float("inf"), float("-inf"))
 
 
 def _check_point(v):
@@ -211,14 +225,27 @@ def validate_params(spec: dict, params: dict, path: str) -> list[dict]:
             issues.append({"level": "error", "path": "%s.%s" % (path, k), "message": "%s: %s" % (k, msg)})
     for k, d in defs.items():
         if d.get("required") and params.get(k) is None:
-            issues.append({"level": "error", "path": "%s.%s" % (path, k), "message": "required parameter %r is missing" % k})
+            issues.append({"level": "warn", "code": "incomplete", "path": "%s.%s" % (path, k),
+                           "message": "incomplete: required parameter %r is not set" % k})
     return issues
 
 
+def one_line(v):
+    """Collapse line breaks and runs of blanks: a one-line text field must never reach the text renderer with a newline."""
+    return re.sub(r"\s+", " ", v).strip() if isinstance(v, str) else v
+
+
 def merged_params(spec: dict, params: dict | None) -> dict:
-    """Registry defaults overlaid with the storyboard's params."""
+    """Registry defaults overlaid with the storyboard's params. Values of one-line text fields (type `string`, and each item
+    of `lines`) have their line breaks collapsed: a user pressing Enter in a text box must not break the picture."""
     out = {p["name"]: p["default"] for p in spec["params"]}
     out.update({k: v for k, v in (params or {}).items() if not k.startswith("_")})
+    for p in spec["params"]:
+        v = out.get(p["name"])
+        if p["type"] == "string" and isinstance(v, str):
+            out[p["name"]] = one_line(v)
+        elif p["type"] == "lines" and isinstance(v, (list, tuple)):
+            out[p["name"]] = [one_line(x) for x in v]
     return out
 
 

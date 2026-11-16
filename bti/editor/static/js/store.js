@@ -1,6 +1,13 @@
 // Single draft store with undo/redo. No DOM. Snapshots are stripped JSON strings.
 import { derive, stripDerived, clone } from './logic.js';
 
+/** Content snapshot (JSON string) of a storyboard: no derived keys, no approvals. */
+export function snapOf(sb) {
+  const c = stripDerived(sb);
+  delete c.approvals;
+  return JSON.stringify(c);
+}
+
 export class Store {
   constructor(limit = 200) {
     this.limit = limit;
@@ -8,17 +15,19 @@ export class Store {
     this.undoStack = []; this.redoStack = [];
     this.savedSnap = ''; this.lastKey = null; this.lastAt = 0;
     this.listeners = new Set();
-    this.version = 0;
+    this.version = 0;        // every emit
+    this.editVersion = 0;    // every change of the draft (edit, undo, redo, load): lets a late answer know it is out of date
     this.sel = { shot: null, overlay: null };
   }
   reset() {
     this.draft = null; this.timing = null; this.rev = null; this.undoStack = []; this.redoStack = [];
-    this.savedSnap = ''; this.lastKey = null; this.lastAt = 0; this.listeners.clear(); this.version = 0;
+    this.savedSnap = ''; this.lastKey = null; this.lastAt = 0; this.listeners.clear(); this.version = 0; this.editVersion = 0;
     this.sel = { shot: null, overlay: null };
   }
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   emit(kind = 'draft') { this.version++; for (const fn of this.listeners) fn(kind); }
-  snap() { return JSON.stringify(stripDerived(this.draft)); }
+  /** What "unsaved" means: the content of the storyboard. `approvals` belongs to the server (it changes on Duyệt and on Lưu), never to the draft. */
+  snap() { return snapOf(this.draft); }
 
   load(storyboard, timing, rev) {
     this.draft = clone(storyboard);
@@ -26,16 +35,38 @@ export class Store {
     derive(this.draft, timing);
     this.undoStack = []; this.redoStack = []; this.lastKey = null;
     this.savedSnap = this.snap();
+    this.editVersion++;
     this.emit('load');
   }
-  /** After a successful save: the server's copy becomes the baseline, history is kept. */
-  markSaved(storyboard, rev) {
+  /** Start a save: what is sent, and the state it was taken from. Edits made after this call are NOT part of the save. */
+  beginSave() {
+    return { board: stripDerived(this.draft), snap: this.snap(), version: this.editVersion, rev: this.rev };
+  }
+  /** The server accepted `sent`. The saved baseline is what the server holds; the draft keeps every edit made since the request
+   * was sent (so the unsaved marker stays true). Server-owned parts (approvals, anything the user did not touch) are adopted. */
+  finishSave(sent, serverBoard, rev) {
     this.rev = rev;
-    if (storyboard) {
-      this.draft = clone(storyboard); derive(this.draft, this.timing);
+    const edited = this.snap() !== sent.snap;
+    const baseline = serverBoard ? snapOf(serverBoard) : sent.snap;
+    if (serverBoard) {
+      if (!edited) { this.draft = clone(serverBoard); }
+      else {
+        this.draft.approvals = clone(serverBoard.approvals);
+        for (const k of Object.keys(serverBoard)) {
+          if (k === 'shots' || k === 'approvals') continue;
+          if (JSON.stringify(sent.board[k]) === JSON.stringify(stripDerived(this.draft)[k])) this.draft[k] = clone(serverBoard[k]);
+        }
+      }
+      derive(this.draft, this.timing);
     }
-    this.savedSnap = this.snap();
+    this.savedSnap = baseline;
     this.emit('saved');
+    return { edited };
+  }
+  /** Only the server-owned approvals changed (Duyệt): the content, and so the unsaved marker, is untouched. */
+  setApprovals(approvals) {
+    this.draft.approvals = clone(approvals);
+    this.emit('approvals');
   }
   get dirty() { return !!this.draft && this.snap() !== this.savedSnap; }
   get canUndo() { return this.undoStack.length > 0; }
@@ -56,11 +87,14 @@ export class Store {
     }
     this.redoStack = [];
     this.lastKey = coalesce; this.lastAt = now;
+    this.editVersion++;
     this.emit('draft');
     return true;
   }
   _restore(snap) {
+    const approvals = this.draft?.approvals;
     this.draft = JSON.parse(snap);
+    if (approvals !== undefined) this.draft.approvals = approvals;
     derive(this.draft, this.timing);
     this.lastKey = null;
   }
@@ -68,13 +102,13 @@ export class Store {
     const e = this.undoStack.pop();
     if (!e) return false;
     this.redoStack.push({ label: e.label, snap: this.snap() });
-    this._restore(e.snap); this.emit('draft'); return true;
+    this._restore(e.snap); this.editVersion++; this.emit('draft'); return true;
   }
   redo() {
     const e = this.redoStack.pop();
     if (!e) return false;
     this.undoStack.push({ label: e.label, snap: this.snap() });
-    this._restore(e.snap); this.emit('draft'); return true;
+    this._restore(e.snap); this.editVersion++; this.emit('draft'); return true;
   }
   select(shot, overlay = null) {
     this.sel = { shot, overlay };

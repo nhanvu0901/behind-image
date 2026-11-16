@@ -4,12 +4,13 @@ import { ctx, bus, assetThumbUrl, intentHsl, primaryAsset } from './ctx.js';
 import { api } from './api.js';
 import { renderForm } from './formui.js';
 import { openGallery, previewUrl, usageChip, engineChip } from './gallery.js';
-import { describeAnchor, anchorFromTime, round, anchorStale, shotIndexAt, cameraLists, fitCamera } from './logic.js';
+import { describeAnchor, anchorFromTime, round, anchorStale, cameraLists, fitCamera } from './logic.js';
+import { paramSpace } from './coords.js';
+import { slotKind, effectiveSlot, KIND_VI, isIncompleteIssue } from './slots.js';
 import * as E from './edit.js';
 const { parseIssuePath } = E;
 import * as A from './actions.js';
 import { renderMedia } from './media.js';
-import { seek } from './timeline.js';
 
 let tab = 'shot';
 let lastSig = '';
@@ -25,10 +26,10 @@ export function setTab(t) {
 
 function sig() {
   const st = ctx.store, s = st.shot, o = st.overlay;
-  if (tab === 'media') return 'media';
+  if (tab === 'media') return 'media' + JSON.stringify([ctx.slotPick, Object.keys(st.draft?.assets || {})]);   // regions follow the draft on their own (media.js)
   if (tab === 'issues') return 'issues' + ctx.issues.length + JSON.stringify(ctx.issues.slice(0, 40));
-  return JSON.stringify([tab, st.sel, s && [s.technique, s.intent, s.locked, s.source, s.transition_in?.technique, cameraLists(s.params).map((l) => l.name + l.keys.length), JSON.stringify(s.slots), (s.overlays || []).map((x) => x.id + x.technique + x.locked)],
-    o && [o.technique, o.intent, o.locked, o.source, Object.keys(o.params || {}).length, !!o.end, typeof o.dur], JSON.stringify(Object.keys(st.draft?.assets || {}))]);
+  return JSON.stringify([tab, st.sel, s && [s.technique, s.intent, s.locked, s.source, s.transition_in?.technique, cameraLists(s.params).map((l) => l.name + l.keys.length), JSON.stringify(s.slots), (s.overlays || []).map((x) => x.id + x.technique + x.locked), ctx.incompleteText(s.id)],
+    o && [o.technique, o.intent, o.locked, o.source, Object.keys(o.params || {}).length, !!o.end, typeof o.dur, JSON.stringify(o.slots), ctx.incompleteText(s.id, o.id), Object.keys(o.params || {}).map((k) => k === 'origin_space' || k === 'space' || k === 'background' ? o.params[k] : '').join()], JSON.stringify(Object.keys(st.draft?.assets || {}))]);
 }
 
 export function render(force = false) {
@@ -67,7 +68,7 @@ function startRow(item, kind, id) {
     rowOf('Offset (s)', offIn),
     rowOf('Đặt', h('button', { class: 'small', text: 'Từ tại đầu phát', title: 'Gắn vào từ gần đầu phát nhất', onclick: () => {
       if (kind === 'shot') { const i = ctx.store.draft.shots.findIndex((s) => s.id === id); ctx.store.commit('Đặt điểm bắt đầu', (d) => E.moveBoundary(d, i, ctx.t, ctx.words(), false)); }
-      else commit('Đặt điểm bắt đầu', id, (o) => { o.start = anchorFromTime(ctx.t, ctx.words()); });
+      else commit('Đặt điểm bắt đầu', id, (o) => { o.start = anchorFromTime(ctx.t, ctx.words(), false, Infinity); });
     } }), h('button', { class: 'small', text: 'Giây tự do', title: 'Neo theo giây tuyệt đối {t}', onclick: () => {
       if (kind === 'shot') { const i = ctx.store.draft.shots.findIndex((s) => s.id === id); ctx.store.commit('Đặt điểm bắt đầu', (d) => E.moveBoundary(d, i, item._t0, ctx.words(), true)); }
       else commit('Đặt điểm bắt đầu', id, (o) => { o.start = { t: round(o._t0, 3) }; });
@@ -86,52 +87,68 @@ function metaSection(item, kind) {
 
 function formFor(item, kind, tech) {
   const draft = ctx.store.draft;
-  const primary = Object.values(item.slots || ctx.store.shot?.slots || {}).map((v) => v?.asset).find((k) => k && draft.assets[k]);
-  const regions = primary ? draft.assets[primary].regions : {};
+  const shot = ctx.store.shot;
+  const pa = primaryAsset(shot);
+  const regions = pa ? draft.assets[pa.key].regions : {};
+  const live = () => (kind === 'overlay' ? ctx.store.overlay : ctx.store.shot) || item;
+  const hasSlot = (n) => !!(live().slots?.[n]?.asset || shot?.slots?.[n]?.asset);
   const f = renderForm(tech.params, item.params || {}, {
     assets: draft.assets, regions,
+    required: new Set((tech.slots || []).filter((sl) => sl.required && slotKind(sl) === 'text').map((sl) => sl.name)),
+    spaceOf: (def) => paramSpace(tech.id, def, { params: live().params || {}, hasSlot }),
+    centre: (space) => (space === 'frame' ? [0.5, 0.5] : space === 'canvas' ? [Math.round(ctx.canvasDims().w / 2), Math.round(ctx.canvasDims().h / 2)] : pa ? [Math.round(pa.asset.width / 2), Math.round(pa.asset.height / 2)] : [1000, 1000]),
     newKey: () => {
-      const sh = kind === 'overlay' ? ctx.store.shot : ctx.store.shot;
-      const pa = primaryAsset(sh);
       const c = pa ? fitCamera(pa.asset, ctx.canvasDims()) : { cx: 1000, cy: 1000, zoom: 0.5 };
       return { at: { rel: 0 }, cx: Math.round(c.cx), cy: Math.round(c.cy), zoom: Math.round(c.zoom * 1e4) / 1e4, ease: 'linear' };
     },
     onChange: (name, value) => A.setParam(kind, item.id, name, value),
   });
-  handle = { sync: () => { const it = kind === 'overlay' ? ctx.store.overlay : ctx.store.shot; if (it) f.sync(it.params || {}); } };
+  handle = { sync: () => { const it = live(); if (it) f.sync(it.params || {}); } };
   return f.el;
 }
+
+/** Slots that hold a picture (image, video, mask). A text "slot" is the parameter of the same name: it is edited in the parameter form. */
+const pictureSlots = (tech) => (tech?.slots || []).filter((sl) => slotKind(sl) !== 'text');
+const kids = (...x) => x.flat().filter((k) => k !== null && k !== undefined && k !== false);   // Element.append(null) would write the text "null"
+const incompleteBanner = (shotId, overlayId) => {
+  const n = ctx.incompleteOf(shotId, overlayId);
+  return n ? h('div', { class: 'banner warn', text: `Chưa đủ (${ctx.incompleteText(shotId, overlayId)}). Lưu được, nhưng chưa duyệt được cho tới khi điền đủ.` }) : null;
+};
 
 function renderShot() {
   const s = ctx.store.shot;
   if (!s) { body.append(h('div', { class: 'empty', text: 'Chọn một shot trên timeline.' })); return; }
   const tech = ctx.tech(s.technique);
   const intents = ctx.reg.intents;
-  body.append(
+  body.append(...kids(
     h('div', { class: 'hint', style: { marginBottom: '8px' }, text: `${s.id}: ${round(s._t0, 2)} - ${round(s._t1, 2)} s (${round(s._t1 - s._t0, 2)} s)` }),
+    incompleteBanner(s.id),
     sect('Kỹ thuật', techCard(tech, () => openGallery({ title: 'Chọn kỹ thuật cho shot', kinds: ['base', 'card'], current: s.technique, onPick: (id) => A.setShotTechnique(s.id, id) })),
       !tech ? h('div', { class: 'hint err', text: `Kỹ thuật ${s.technique} không có trong registry` }) : null,
       rowOf('Ý đồ (intent)', h('select', { onchange: (e) => A.commitShot('Đổi intent', s.id, (x) => { x.intent = e.target.value; }) },
         ...intents.map((i) => h('option', { value: i, text: i + (tech && tech.intents.includes(i) ? ' *' : ''), selected: i === s.intent }))), h('span', { class: 'hint', text: '* hợp với kỹ thuật' }))),
-    tech?.slots.length ? sect('Slot hình', ...tech.slots.map((sl) => slotRow(s, sl))) : null,
+    pictureSlots(tech).length ? sect('Slot hình', ...pictureSlots(tech).map((sl) => slotRow({ shotId: s.id }, s, sl, s, false))) : null,
     startRow(s, 'shot', s.id),
     tech ? sect('Tham số (sinh từ registry)', formFor(s, 'shot', tech)) : null,
     transitionSection(s),
-    metaSection(s, 'shot'));
+    metaSection(s, 'shot')));
 }
 
-function slotRow(s, sl) {
-  const key = s.slots?.[sl.name]?.asset;
+/** One slot of a shot or of an overlay. A slot shows its kind (ảnh, video, mặt nạ) and offers only assets of that kind. */
+function slotRow(target, item, sl, shot, isOverlay) {
+  const kind = slotKind(sl);
+  const eff = effectiveSlot(item, sl.name, shot, isOverlay);
+  const key = eff?.asset;
   const a = key && ctx.store.draft.assets[key];
-  if (sl.type === 'text') {
-    return h('div', { class: 'slot' }, h('div', { class: 'nm', text: sl.name }), h('input', { type: 'text', value: s.slots?.[sl.name]?.text || '', placeholder: 'văn bản', style: { flex: 1 },
-      oninput: (e) => A.commitShot('Đổi slot', s.id, (x) => { (x.slots ||= {})[sl.name] = { text: e.target.value }; }, 'slot' + sl.name) }));
-  }
-  return h('div', { class: 'slot', title: sl.required ? 'Bắt buộc' : 'Tùy chọn' },
+  const missing = sl.required && !eff?.asset;
+  const pick = () => { ctx.slotPick = { ...target, slot: sl.name, kind }; setTab('media'); };
+  return h('div', { class: 'slot' + (missing ? ' missing' : ''), title: `${sl.required ? 'Bắt buộc' : 'Tùy chọn'}, cần ${KIND_VI[kind] || kind}` },
     a ? h('img', { src: assetThumbUrl(key, api), alt: key }) : h('div', { style: { width: '56px', height: '42px', background: '#000' } }),
     h('div', { class: 'nm', text: sl.name + (sl.required ? ' *' : '') }),
-    h('div', { class: 'as', text: a ? `${key}: ${a.title || a.file}` : '(trống)' }),
-    h('button', { class: 'small', text: 'Chọn', onclick: () => { ctx.slotPick = { shotId: s.id, slot: sl.name, kind: sl.type }; setTab('media'); } }));
+    h('div', { class: 'as', text: a ? `${eff.own === false ? '(theo shot) ' : ''}${key}: ${a.title || a.file}` : `(trống) cần ${KIND_VI[kind] || kind}` }),
+    missing ? h('span', { class: 'chip partial', text: 'thiếu' }) : null,
+    eff?.own ? h('button', { class: 'small', text: 'Bỏ', title: isOverlay && sl.name === 'image' ? 'Dùng lại hình của shot' : 'Để trống slot này', onclick: () => A.clearSlot(target, sl.name) }) : null,
+    h('button', { class: 'small', text: 'Chọn', onclick: pick }));
 }
 
 function transitionSection(s) {
@@ -143,7 +160,7 @@ function transitionSection(s) {
   if (cur) {
     kids.push(rowOf('Thời lượng (s)', h('input', { type: 'number', step: 0.1, min: 0.1, value: cur.dur, onchange: (e) => A.commitShot('Đổi thời lượng chuyển cảnh', s.id, (x) => { x.transition_in.dur = Number(e.target.value) || 1; }) })));
     const t = ctx.tech(cur.technique);
-    if (t) kids.push(renderForm(t.params, cur.params || {}, { assets: ctx.store.draft.assets, regions: {}, onChange: (n, v) => A.commitShot('Đổi tham số chuyển cảnh', s.id, (x) => { (x.transition_in.params ||= {})[n] = v; }, 'tr' + n) }).el);
+    if (t) kids.push(renderForm(t.params, cur.params || {}, { assets: ctx.store.draft.assets, regions: {}, spaceOf: (def) => paramSpace(t.id, def, { params: ctx.store.shotById(s.id)?.transition_in?.params || {} }), onChange: (n, v) => A.commitShot('Đổi tham số chuyển cảnh', s.id, (x) => { (x.transition_in.params ||= {})[n] = v; }, 'tr' + n) }).el);
   }
   return sect('Chuyển cảnh', ...kids);
 }
@@ -151,25 +168,29 @@ function transitionSection(s) {
 function renderOverlay() {
   const st = ctx.store, s = st.shot;
   if (!s) { body.append(h('div', { class: 'empty', text: 'Chọn một shot hoặc lớp phủ.' })); return; }
-  const list = h('div', { class: 'list' }, ...(s.overlays || []).map((o) => h('div', { class: 'list-item' + (o.id === st.sel.overlay ? ' sel' : ''), onclick: () => st.select(s.id, o.id) },
+  const list = h('div', { class: 'list' }, ...(s.overlays || []).map((o) => h('div', { class: 'list-item' + (o.id === st.sel.overlay ? ' sel' : ''), onclick: () => A.selectItem(s.id, o.id) },
     h('span', { style: { width: '10px', height: '10px', borderRadius: '50%', background: intentHsl(o.intent, 50, 45) } }),
     h('b', { text: o.technique }), h('span', { class: 'muted', text: ctx.tech(o.technique)?.label_vi || '' }), h('span', { class: 'grow', style: { flex: 1 } }),
+    ctx.incompleteOf(s.id, o.id) ? h('span', { class: 'chip partial', title: ctx.incompleteText(s.id, o.id), text: ctx.incompleteText(s.id, o.id) }) : null,
     h('span', { class: 'hint', text: `${round(o._t0, 1)} s` }), o.locked ? h('span', { class: 'chip partial', text: 'khóa' }) : null)));
   body.append(sect(`Lớp phủ của ${s.id} (${(s.overlays || []).length})`, (s.overlays || []).length ? list : h('div', { class: 'hint', text: 'Shot này chưa có lớp phủ.' }),
     h('div', { style: { marginTop: '8px', display: 'flex', gap: '8px' } }, h('button', { class: 'primary small', text: '+ Thêm lớp phủ', onclick: () => openGallery({ title: 'Chọn lớp phủ', kinds: ['overlay'], onPick: (id) => A.addOverlayAction(s.id, id) }) }))));
   const o = st.overlay;
   if (!o) return;
   const tech = ctx.tech(o.technique);
-  body.append(
-    sect('Kỹ thuật', techCard(tech, () => openGallery({ title: 'Đổi kỹ thuật lớp phủ', kinds: ['overlay'], current: o.technique, onPick: (id) => A.setOverlayTechnique(o.id, id) })),
+  const target = { shotId: s.id, overlayId: o.id };
+  body.append(...kids(
+    incompleteBanner(s.id, o.id),
+    sect('Kỹ thuật', techCard(tech, () => openGallery({ title: 'Đổi kỹ thuật lớp phủ', kinds: ['overlay'], current: o.technique, onPick: (id) => A.setOverlayTechnique(o.id, id, s.id) })),
       rowOf('Ý đồ (intent)', h('select', { onchange: (e) => A.commitOverlay('Đổi intent', o.id, (x) => { x.intent = e.target.value; }) }, ...ctx.reg.intents.map((i) => h('option', { value: i, text: i, selected: i === o.intent }))))),
+    pictureSlots(tech).length ? sect('Slot hình của lớp phủ', ...pictureSlots(tech).map((sl) => slotRow(target, o, sl, s, true))) : null,
     startRow(o, 'overlay', o.id),
     sect('Thời lượng', rowOf('dur (s)', h('input', { type: 'number', step: 0.1, min: 0.1, value: round(o._t1 - o._t0, 2),
       onchange: (e) => A.commitOverlay('Đổi thời lượng', o.id, (x, sh) => { delete x.end; x.dur = Math.max(0.1, Math.min(Number(e.target.value) || 1, sh._t1 - x._t0)); }) }),
       h('button', { class: 'small', text: 'Đến hết shot', onclick: () => A.commitOverlay('Đến hết shot', o.id, (x) => { delete x.end; delete x.dur; }) }))),
     tech ? sect('Tham số (sinh từ registry)', formFor(o, 'overlay', tech)) : null,
     metaSection(o, 'overlay'),
-    h('button', { class: 'danger', text: 'Xóa lớp phủ này', onclick: () => A.removeOverlayAction(o.id) }));
+    h('button', { class: 'danger', text: 'Xóa lớp phủ này', onclick: () => A.removeOverlayAction(o.id, s.id) })));
 }
 
 function renderIssues() {
@@ -179,15 +200,14 @@ function renderIssues() {
   body.append(h('div', { class: 'hint', style: { marginBottom: '8px' }, text: `${errs} lỗi, ${list.length - errs} cảnh báo` }));
   body.append(h('div', { class: 'list' }, ...list.map((i) => h('div', { class: 'list-item issue ' + i.level, onclick: () => selectIssue(i) },
     h('div', { class: 'msg' }, h('div', { text: i.message }), h('div', { class: 'path', text: i.path })),
-    h('span', { class: 'chip ' + (i.level === 'error' ? 'missing' : 'partial'), text: i.level === 'error' ? 'lỗi' : 'cảnh báo' })))));
+    h('span', { class: 'chip ' + (i.level === 'error' ? 'missing' : 'partial'), text: i.level === 'error' ? 'lỗi' : isIncompleteIssue(i) ? 'chưa đủ' : 'cảnh báo' })))));
 }
 
 export function selectIssue(i) {
   const p = parseIssuePath(i.path), d = ctx.store.draft;
   if (!p || !d.shots[p.shot]) return;
   const s = d.shots[p.shot], o = p.overlay != null ? (s.overlays || [])[p.overlay] : null;
-  ctx.store.select(s.id, o?.id || null);
-  seek((o || s)._t0 + 0.01);
+  A.selectItem(s.id, o?.id || null);       // the playhead goes into the item
   setTab(o ? 'overlay' : 'shot');
 }
 

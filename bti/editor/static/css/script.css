@@ -1,7 +1,8 @@
 /* Script view ("Kịch bản"). Scoped under .v-scr (the view root, and the dialogs it opens). */
-.scr-root { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-width: 1180px; }
-.v-scr #model-pick { min-width: 190px; }
-.v-scr #smain { display: grid; grid-template-columns: minmax(300px, .85fr) minmax(380px, 1fr) minmax(460px, 1.45fr); min-height: 0; }
+.scr-root { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-width: 920px; }
+.v-scr #model-pick { min-width: 170px; max-width: 300px; flex: 0 1 260px; text-overflow: ellipsis; }
+.v-scr .vbar { flex-wrap: wrap; row-gap: 5px; padding-top: 5px; padding-bottom: 5px; overflow: visible; }
+.v-scr #smain { display: grid; grid-template-columns: minmax(250px, .85fr) minmax(300px, 1fr) minmax(360px, 1.45fr); min-height: 0; }
 .v-scr .col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
 .v-scr .col:last-child { border-right: 0; }
 .v-scr .col-h { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
@@ -74,7 +75,7 @@
 .v-scr .beat .wcn.over { color: var(--warn); }
 .v-scr .beat .iss { font-size: 11px; color: var(--warn); }
 .v-scr .beat .iss.e { color: var(--danger); }
-.v-scr #sstatus { display: grid; grid-template-columns: 330px minmax(0, 1fr) 330px; gap: 14px; padding: 8px 14px; background: var(--panel); border-top: 1px solid var(--border); align-items: center; min-height: 58px; }
+.v-scr #sstatus { display: grid; grid-template-columns: minmax(230px, 330px) minmax(0, 1fr) minmax(190px, 330px); gap: 14px; padding: 8px 14px; background: var(--panel); border-top: 1px solid var(--border); align-items: center; min-height: 58px; }
 .v-scr #st-bars { display: flex; gap: 6px; align-items: flex-end; overflow: hidden; }
 .v-scr .bar { flex: 1; min-width: 40px; max-width: 120px; }
 .v-scr .bar .t { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -95,3 +96,16 @@
 .v-scr .issue-row .lv.error { color: var(--danger); }
 .v-scr .issue-row .lv.warning { color: var(--warn); }
 .v-scr .issue-row .lv.info { color: var(--muted); }
+/* the "đến chỗ này" button of the check list: the place it points to lights up for a moment */
+.v-scr .flash { animation: bti-flash 1.8s ease-out; }
+@keyframes bti-flash { 0% { outline: 2px solid var(--accent); background: #1f3350; } 100% { outline: 2px solid transparent; } }
+/* two versions of the same chapter: the owner chooses */
+.v-scr .cf-row { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; margin: 8px 0; }
+.v-scr .cf-name { font-weight: 600; margin-bottom: 4px; }
+.v-scr .cf-opt { display: flex; gap: 8px; align-items: flex-start; padding: 3px 0; line-height: 1.4; }
+.v-scr .cf-opt input { margin-top: 3px; flex: none; }
+/* text areas that grow with their text, by the browser when it can (the script falls back to measuring them in one pass) */
+@supports (field-sizing: content) {
+  .v-scr .beat textarea, .v-scr .card textarea, .v-scr .hookrow textarea { field-sizing: content; height: auto; max-height: 520px; overflow: auto; }
+}
+.v-scr #st-job .jc.skipped { background: transparent; border-style: dashed; }

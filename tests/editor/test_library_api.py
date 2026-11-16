@@ -179,3 +179,11 @@ def test_low_trust_fields_and_default_exclusion(client):
     solo = only[0]["artwork_key"]
     c = client.post("/api/library/projects", json={"artwork_key": solo, "slug": "g3"})
     assert c.status_code == 200 and len(c.json()["sources"]) == 1  # only a low-trust source: kept, not empty
+
+
+def test_search_with_d_bar_is_not_an_empty_search(client):
+    """U1-001: q=đ used to fold to nothing and match every artwork."""
+    all_ = client.get("/api/library/artworks", params={"kind": "artwork"}).json()
+    q = client.get("/api/library/artworks", params={"kind": "artwork", "q": "đ"}).json()
+    plain = client.get("/api/library/artworks", params={"kind": "artwork", "q": "d"}).json()
+    assert 0 < len(q) < len(all_) and q == plain

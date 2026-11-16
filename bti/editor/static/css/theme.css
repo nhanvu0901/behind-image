@@ -49,3 +49,8 @@ textarea { width: 100%; resize: vertical; min-height: 54px; }
 .modal.wide { width: min(900px, 94vw); } .modal textarea.big { min-height: 300px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; user-select: text; }
 .modal .body label.lb { display: block; color: var(--muted); font-size: 12px; margin: 8px 0 3px; }
 .modal .confirm-msg { max-width: 520px; line-height: 1.5; white-space: pre-line; }
+/* error details: the raw text of the server, folded under "chi tiết" */
+.toast .toast-detail, .err-detail { margin-top: 4px; font-size: 11px; color: var(--muted); }
+.toast summary, .err-detail summary { cursor: pointer; }
+.toast .raw, .err-detail .raw { white-space: pre-wrap; word-break: break-word; font-family: ui-monospace, Menlo, Consolas, monospace; max-height: 160px; overflow: auto; margin-top: 3px; user-select: text; }
+textarea.invalid, input.invalid { border-color: var(--danger); box-shadow: 0 0 0 1px var(--danger); }

@@ -124,7 +124,11 @@ class Img:
             self.levels.append(cv2.resize(p, (p.shape[1] // 2, p.shape[0] // 2), interpolation=cv2.INTER_AREA))
         self.h, self.w = a.shape[:2]
 
-    def view(self, cx, cy, zoom, ow=W, oh=H, bg=None):
+    def rect(self, cx, cy, zoom, ow=W, oh=H):
+        """Where the source rectangle lands on the canvas: (x0, y0, x1, y1) in canvas px."""
+        return (ow / 2 + (0 - cx) * zoom, oh / 2 + (0 - cy) * zoom, ow / 2 + (self.w - cx) * zoom, oh / 2 + (self.h - cy) * zoom)
+
+    def view(self, cx, cy, zoom, ow=W, oh=H, bg=None, region=None):
         """Render the source into an ow x oh canvas. (cx,cy)=source point at canvas centre, zoom=out px per source px.
         Returns (frame BGR, alpha float32 ow x oh x1).  Outside the source, frame is `bg` (or 0) and alpha 0."""
         k = int(round(math.log2(1.0 / zoom))) if zoom < 1 else 0
@@ -140,8 +144,9 @@ class Img:
         x1 = ow / 2 + (self.w - cx) * zoom
         y0 = oh / 2 + (0 - cy) * zoom
         y1 = oh / 2 + (self.h - cy) * zoom
-        xs = np.arange(ow, dtype=np.float32) + .5
-        ys = np.arange(oh, dtype=np.float32) + .5
+        rx0, ry0, rx1, ry1 = region if region is not None else (0, 0, ow, oh)     # alpha only over `region` (x0, y0, x1, y1) when given
+        xs = np.arange(rx0, rx1, dtype=np.float32) + .5
+        ys = np.arange(ry0, ry1, dtype=np.float32) + .5
         ax = np.clip(np.minimum(xs - x0, x1 - xs), 0, 1)
         ay = np.clip(np.minimum(ys - y0, y1 - ys), 0, 1)
         alpha = (ay[:, None] * ax[None, :])[:, :, None].astype(np.float32)
@@ -171,8 +176,11 @@ def backdrop(ow=W, oh=H):
 
 def compose_matte(img, cx, cy, zoom, ow=W, oh=H, shadow=True):
     """Painting over designed backdrop with soft drop shadow. Returns float32 BGR frame."""
-    out, alpha, (x0, y0, x1, y1) = img.view(cx, cy, zoom, ow, oh)
-    bd = backdrop(ow, oh).copy()
+    x0, y0, x1, y1 = img.rect(cx, cy, zoom, ow, oh)
+    ix0, ix1 = max(0, int(math.floor(x0)) - 1), min(ow, int(math.ceil(x1)) + 1)
+    iy0, iy1 = max(0, int(math.floor(y0)) - 1), min(oh, int(math.ceil(y1)) + 1)
+    out, alpha, _ = img.view(cx, cy, zoom, ow, oh, region=(ix0, iy0, max(ix1, ix0), max(iy1, iy0)))   # alpha only where it can be non-zero
+    bd = backdrop(ow, oh)                     # shared, never modified: a copy is made below only when it is blended into
     covers = x0 <= 0 and y0 <= 0 and x1 >= ow and y1 >= oh
     if covers:
         return out.astype(np.float32)
@@ -181,9 +189,22 @@ def compose_matte(img, cx, cy, zoom, ow=W, oh=H, shadow=True):
         d = max(6, 14 * zoom / 0.17) / 4
         cv2.rectangle(sh, (int((x0 + 10) / 4), int((y0 + 22) / 4)), (int((x1 + 10) / 4), int((y1 + 22) / 4)), 1.0, -1)
         sh = cv2.GaussianBlur(sh, (0, 0), max(3.0, 11 * min(zoom, .6) / .17 / 4 * .5 + 3))
+        sh *= -.75                            # 1 - .75*sh on the small array (resize is linear, so it commutes)
+        sh += 1
         sh = cv2.resize(sh, (ow, oh), interpolation=cv2.INTER_LINEAR)[:, :, None]
-        bd = bd * (1 - .75 * sh)
-    return bd * (1 - alpha) + out.astype(np.float32) * alpha
+        bd = bd * sh                          # a new array (this is the copy)
+    else:
+        bd = bd.copy()
+    # bd*(1-a) + out*a == bd + (out-bd)*a. Outside the painting's rectangle a is exactly 0 (the frame is the backdrop), so only
+    # the rectangle (grown by a pixel) is blended; in place, no full-frame temporaries.
+    if ix1 > ix0 and iy1 > iy0:
+        sl = (slice(iy0, iy1), slice(ix0, ix1))
+        reg = out[sl].astype(np.float32)
+        reg -= bd[sl]
+        reg *= alpha
+        reg += bd[sl]
+        bd[sl] = reg
+    return bd
 
 
 # ----------------------------------------------------------------------------- camera paths

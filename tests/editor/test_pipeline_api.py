@@ -13,7 +13,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from bti.editor.app import create_app  # noqa: E402
-from bti.editor.pipeline_api import PROTECTED, STEPS  # noqa: E402
+from bti.editor.pipeline_api import STEPS  # noqa: E402
 from bti.script import env as env_mod, models as models_mod  # noqa: E402
 from bti.script.providers import mock as mock_mod, set_transport  # noqa: E402
 
@@ -176,18 +176,30 @@ def test_delete_needs_the_typed_id(c):
     assert "arn" not in [p["id"] for p in c.get("/api/projects").json()]
 
 
-@pytest.mark.parametrize("pid", sorted(PROTECTED))
-def test_protected_projects_cannot_be_deleted(c, pid):
+def _protect(c, pid, flag=True):
     (c.root / pid).mkdir()
     (c.root / pid / "storyboard.json").write_text("{}")
-    r = c.delete(f"/api/projects/{pid}", params={"confirm": pid})
+    (c.root / pid / "project.json").write_text(json.dumps({"id": pid, "protected": flag, "imported": True}))
+
+
+def test_protected_flag_in_project_json_blocks_delete(c):
+    _protect(c, "refproj")
+    r = c.delete("/api/projects/refproj", params={"confirm": "refproj"})
     assert r.status_code == 403 and r.json()["protected"] is True
-    assert (c.root / pid / "storyboard.json").is_file()
-    assert c.get(f"/api/projects/{pid}/pipeline").json()["protected"] is True
+    assert (c.root / "refproj" / "storyboard.json").is_file()
+    assert c.get("/api/projects/refproj/pipeline").json()["protected"] is True
 
 
-def test_protected_set_is_exactly_the_two_owner_projects():
-    assert set(PROTECTED) == {"arnolfini", "technique_lab"}
+def test_unflagged_project_with_a_lab_name_is_deletable(c):
+    """Owner decision: only `"protected": true` protects; lab_*, demo_* and arnolfini_edit are ordinary projects."""
+    _protect(c, "lab_x", flag=False)
+    assert c.delete("/api/projects/lab_x", params={"confirm": "lab_x"}).status_code == 200
+    assert not (c.root / "lab_x").exists()
+
+
+def test_the_two_owner_projects_carry_the_flag():
+    for pid in ("arnolfini", "technique_lab"):
+        assert json.loads((REPO / "projects" / pid / "project.json").read_text())["protected"] is True
 
 
 @pytest.mark.parametrize("pid", ["..", "../x", "%2e%2e", "a/b", "UPPER", ".hidden", "x" * 80])

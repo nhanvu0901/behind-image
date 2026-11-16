@@ -16,6 +16,26 @@ export const allOverlays = (sb) => sb.shots.flatMap((s) => s.overlays || []);
 export const nextShotId = (sb) => nextId(sb.shots, 's', 4);
 export const nextOverlayId = (sb) => nextId(allOverlays(sb), 'o');
 
+/** Ids must be unique: shot ids in the storyboard, overlay ids inside their shot. Any operation that brings items from two places
+ * together (merge, a proposal, an import) ends with this. The first holder of an id keeps it; later duplicates get a fresh id
+ * that is also unused anywhere else. Returns the list of renames [{shot, from, to, kind}]. */
+export function dedupeIds(sb) {
+  const out = [];
+  const seenShots = new Set();
+  for (const s of sb.shots) {
+    if (seenShots.has(s.id)) { const to = nextShotId(sb); out.push({ kind: 'shot', from: s.id, to }); s.id = to; }
+    seenShots.add(s.id);
+  }
+  for (const s of sb.shots) {
+    const seen = new Set();
+    for (const o of s.overlays || []) {
+      if (seen.has(o.id)) { const to = nextOverlayId(sb); out.push({ kind: 'overlay', shot: s.id, from: o.id, to }); o.id = to; }
+      seen.add(o.id);
+    }
+  }
+  return out;
+}
+
 const MIN_OV = 0.1;
 
 /** Keep an overlay inside [lo, hi] (the new span of its shot): shift it in when it starts early, shorten it when it ends late. */
@@ -104,6 +124,7 @@ export function mergeWithPrev(sb, idx) {
   const oldDur = prev._t1 - prev._t0, newDur = cur._t1 - prev._t0;
   for (const l of cameraLists(prev.params)) prev.params[l.name] = rescaleRel(l.keys, oldDur, newDur);
   prev.overlays = (prev.overlays || []).concat(cur.overlays || []);
+  dedupeIds(sb);                 // both shots may hold an "o1": the later one is renamed, so every overlay stays selectable and editable
   markHuman(prev);
   sb.shots.splice(idx, 1);
   return true;

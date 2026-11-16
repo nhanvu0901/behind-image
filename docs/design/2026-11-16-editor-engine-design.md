@@ -155,6 +155,8 @@ Field values:
   
   The resolved time is `words[w].s + off`. When the engine resolves a storyboard, it adds `_t` next to every anchor and `_t0`/`_t1` to every shot and overlay. Keys starting with `_` are derived; they are stripped on save.
 - **Overlays** belong to a shot and must lie inside its span. An overlay has `start` plus either `dur` or `end` (an anchor). With neither, it runs to the end of the shot.
+- **Slots are the one form for assets, on shots and on overlays.** A shot or an overlay may carry `"slots": {"<slot>": {"asset": "<key>"}}`; the technique's registry `slots` list declares which slots exist (an overlay's `image` slot is the shot's own image; any other slot, such as HI-03's `mask`, is set on the overlay). An asset must sit in a slot of its kind: an `image` slot takes an image, a `mask*` slot a mask, a `video` slot a video (a still image is accepted as a stand-in). `/defaults` returns `slots` as well as `params`; it fills an `image` slot from the context image and leaves `video` and `mask` slots empty unless the context names an asset of exactly that kind.
+- **Incomplete is not invalid.** A shot or overlay whose required slot is empty, or whose required parameter has no value, is *incomplete*: validation reports it as `level: "warn"` with `code: "incomplete"`, naming the slot or parameter; saving is allowed (a human may keep half-finished work); approval is refused while any `incomplete` issue exists; and the engine never fails on it: an incomplete shot renders as a neutral placeholder frame that names the technique and what is missing, an incomplete overlay or transition is skipped. Every other problem is an error and blocks the save (an unknown asset key or technique or parameter, an asset of the wrong kind in a slot, a file that does not exist or is not a readable image, a `style` that is not in the registry, a `timing`, `audio` or asset path that is not a file inside the project). The save path never writes a document that cannot be opened again.
 - **Coordinates** are in source pixels of the shot's image. A point is a region name or `[x, y]`. The camera is `cx, cy` (source pixels at the centre of the frame) and `zoom` (screen pixels per source pixel on the 1920-wide canvas). The visible box is therefore `1920/zoom` by `1080/zoom`.
 - **`params`** must match the parameter definitions of the technique in `style/gae/techniques.json`. Unknown parameters are errors.
 - **`transition_in`** is null for a hard cut, which is the channel's default. Otherwise it is `{"technique": "TR-01", "dur": 1.0, "params": {}}`. During the overlap the engine renders both shots.
@@ -263,11 +265,11 @@ JSON unless stated. The server binds to `127.0.0.1:8560`. Port 8550 belongs to t
 | Method and path | Purpose |
 |---|---|
 | `GET /api/projects` | `[{id, title, duration, updated_at}]` |
-| `GET /api/projects/{pid}` | `{storyboard (resolved), timing, issues, rev}` |
+| `GET /api/projects/{pid}` | `{storyboard (resolved), timing, issues, rev, render_key}`; `render_key` covers storyboard, timing, style and media and is what `frame`/`thumb` take as `rev` to be immutable; 409 `{detail, data_error}` when timing or the storyboard file is unusable |
 | `PUT /api/projects/{pid}/storyboard` | body `{storyboard, base_rev}`; returns `{rev, storyboard (resolved), issues}`; 409 if `base_rev` is not the saved revision; 422 with `issues` if there are errors |
 | `POST /api/projects/{pid}/validate` | body `{storyboard}`; returns `{issues}` |
-| `POST /api/projects/{pid}/defaults` | body `{technique, context}`; returns `{params}` |
-| `POST /api/projects/{pid}/approve` | body `{rev}`; returns `{approvals}`; refused if there are error issues |
+| `POST /api/projects/{pid}/defaults` | body `{technique, context}`; returns `{params, slots}` |
+| `POST /api/projects/{pid}/approve` | body `{rev}`; returns `{approvals}`; refused if there are error issues or `incomplete` warnings |
 
 **Frames, audio and previews**
 
@@ -278,7 +280,7 @@ JSON unless stated. The server binds to `127.0.0.1:8560`. Port 8550 belongs to t
 | `GET /api/projects/{pid}/thumb/{shot_id}?rev=` | small JPEG for the timeline block |
 | `GET /api/projects/{pid}/waveform?bins=4000` | `{duration, peaks: [0..1]}` |
 | `GET /api/projects/{pid}/audio` | the audio file, with HTTP range support |
-| `POST /api/projects/{pid}/preview` | body `{t0, t1, width, fps, storyboard?}`; returns `{job_id}`; renders a clip and muxes the matching audio slice |
+| `POST /api/projects/{pid}/preview` | body `{t0, t1, width, fps, storyboard?}` (at most 30 s and 900 frames; an invalid document is a 422 with its issues); returns `{job_id}`; renders on a second engine instance, so stills never wait for it; renders a clip and muxes the matching audio slice |
 | `GET /api/jobs/{job_id}` | `{state: queued\|running\|done\|error, progress, result_url, error}` |
 | `GET /api/projects/{pid}/files/{path}` | a file inside the project (preview clips, media) |
 
@@ -296,7 +298,7 @@ JSON unless stated. The server binds to `127.0.0.1:8560`. Port 8550 belongs to t
 
 | Method and path | Purpose |
 |---|---|
-| `GET /api/projects/{pid}/proposals` | `[{id, created_at, author, summary, n_changes}]` |
+| `GET /api/projects/{pid}/proposals` | `{items: [{id, created_at, author, summary, n_changes}], skipped: [{file, reason}]}`; a file that cannot be read is named in `skipped` and never breaks the list |
 | `GET /api/projects/{pid}/proposals/{id}` | `{proposal, changes: [{id, op, path, before, after, blocked_by_lock}]}` |
 | `POST /api/projects/{pid}/proposals/{id}/apply` | body `{accept: "all" \| [change ids]}`; returns the same shape as the storyboard PUT |
 

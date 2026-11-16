@@ -207,7 +207,7 @@ def test_frame_get_and_disk_cache(client, root):
 
 
 def test_frame_cache_control_and_rev(client, state):
-    r = client.get(f"{P}/frame", params={"t": 1, "rev": state["rev"]})
+    r = client.get(f"{P}/frame", params={"t": 1, "rev": state["render_key"]})
     assert "immutable" in r.headers["cache-control"]
     assert "immutable" not in client.get(f"{P}/frame", params={"t": 1, "rev": "old"}).headers["cache-control"]
 
