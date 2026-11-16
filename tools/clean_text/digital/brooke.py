@@ -16,7 +16,7 @@ def paragraphs(body, drop):
     margin=min(x for x,c in xs.items() if c>=2) if any(c>=2 for c in xs.values()) else min(xs)
     paras=[]; prev=None; first_cont=False; start_indented=False
     for idx,l in enumerate(body):
-        indent=l['x0']-margin>6
+        indent=6<l['x0']-margin<=30
         newp=False
         if prev is None:
             newp=True
@@ -31,6 +31,19 @@ def paragraphs(body, drop):
         else: paras[-1].append(l)
         prev=l
     return paras,first_cont
+def page_margin(body):
+    xs=collections.Counter(round(l['x0']) for l in body if not l['ital'])
+    c=[x for x,k in xs.items() if k>=2]
+    return min(c) if c else (min(xs) if xs else 0)
+def is_q(l,margin): return l['ital'] and l['size']==10.0 and l['x0']-margin>6
+def segments(body):
+    """split y-ordered body lines into ('s',lines) normal text and ('q',lines) block quotations"""
+    mg=page_margin(body); out=[]
+    for l in body:
+        k='q' if is_q(l,mg) else 's'
+        if out and out[-1][0]==k and (k=='s' or l['y0']-out[-1][1][-1]['y0']<=18): out[-1][1].append(l)
+        else: out.append((k,[l]))
+    return out
 struct={}
 for n in range(1,N+1):
     p=doc[n-1]; L,w,h=lines(p)
@@ -129,11 +142,18 @@ for n in range(1,N+1):
         # attribution: a 10.0 italic line shortly after the quote, before the drop cap
         at=[l for l in body if l['ital'] and l['y0']<ql[-1]['y1']+45 and l['size']==10.0]
         for l in at: items.append('[quote] '+clean(l['t'])); body=[b for b in body if b is not l]
-    paras,fc=paragraphs(body,drop)
+    segs=segments(body)
+    paras=[]; blocks=[]  # blocks: ('p',lines) / ('q',lines) in order
+    first_seg=True
+    for k,ls in segs:
+        if k=='q': blocks.append(('q',ls)); continue
+        ps,_=paragraphs(ls,drop if first_seg else None)
+        first_seg=False
+        for pp in ps: blocks.append(('p',pp)); paras.append(pp)
     if drop and paras:
         d=clean(drop['t']); first=paras[0][0]; ft=clean(first['t'])
-        w1=re.match(r"[A-Za-zÀ-ɏ]+",ft); w1s=w1.group(0).lower() if w1 else ''
-        letter=re.sub(r'[^A-Za-zÀ-ɏ]','',d)
+        w1=re.match(r"[A-Za-z\u00c0-\u024f]+",ft); w1s=w1.group(0).lower() if w1 else ''
+        letter=re.sub(r'[^A-Za-z\u00c0-\u024f]','',d)
         comb=(letter+w1s).lower()
         if letter.upper() in ('A','I') and len(w1s)>=2 and comb not in DICT and (w1s in DICT or V.c.get(w1s,0)>=1): txt=d+' '+ft
         else: txt=d+ft
@@ -142,8 +162,10 @@ for n in range(1,N+1):
     elif drop and not paras:
         m['issues'].append('drop cap without following text'); m['confidence']='low'
     lg=[]
-    for ps in paras:
-        items.append(join_lines([clean(x['t']) for x in ps],V,lg))
+    for k,ps in blocks:
+        t=join_lines([clean(x['t']) for x in ps],V,lg)
+        items.append(('[quote] '+t) if k=='q' else t)
+        if k=='q': stats['block_quote']+=1
     hylog.extend(lg)
     # footnotes
     nl=cls['note']
@@ -159,25 +181,52 @@ for n in range(1,N+1):
     # captions
     cl=cls['cap']
     if cl:
-        grp=[cl[0]]; res=[]
-        for l in cl[1:]:
-            if l['y0']-grp[-1]['y0']>16 or abs(l['x0']-grp[-1]['x0'])>20: res.append(grp); grp=[l]
-            else: grp.append(l)
-        res.append(grp)
+        # group captions by column (x0 cluster) first, then split each column by vertical gaps; never interleave columns
+        xs_=sorted(set(round(l['x0']) for l in cl)); cols=[]
+        for x in xs_:
+            if cols and x-cols[-1][-1]<=20: cols[-1].append(x)
+            else: cols.append([x])
+        res=[]
+        for cx in cols:
+            cc=sorted([l for l in cl if round(l['x0']) in cx],key=lambda l:l['y0'])
+            grp=[cc[0]]
+            for l in cc[1:]:
+                if l['y0']-grp[-1]['y0']>16: res.append(grp); grp=[l]
+                else: grp.append(l)
+            res.append(grp)
+        res.sort(key=lambda g:(round(g[0]['y0']/14),g[0]['x0']))
+        # a caption that runs on into the next column (same top, no sentence end) is one caption
+        merged=[]
+        for g in res:
+            prev=merged[-1] if merged else None
+            if prev and abs(prev[0]['y0']-g[0]['y0'])<8 and g[0]['x0']>prev[0]['x0'] and not re.search(r"[.!?)’”]\s*$",prev[-1]['t'].strip()):
+                merged[-1]=prev+g; m['issues'].append('caption continues into the next margin column; joined')
+            else: merged.append(g)
+        res=merged
         for g in res: items.append('[caption] '+join_lines([clean(x['t']) for x in g],V))
+        if len(cols)>1: m['issues'].append('two or more margin caption columns separated by x position')
     ptype='body'
     if not body and not paras and not heads:
         ptype='plate'
     m['type']=ptype
     # continuation
-    nxt=struct.get(n+1)
-    if nxt and (n+1) not in FRONT and (n+1) not in CONTENTS|BIB|INDEX|CREDITS:
+    nk=n+1
+    def has_text(k):
+        return any(classify(l,'body') in ('body','head') for l in struct[k]['L'])
+    while nk<=N and nk not in FRONT and nk not in CONTENTS|BIB|INDEX|CREDITS and not has_text(nk): nk+=1
+    nxt=struct.get(nk)
+    if nxt and nk<=N and nk not in FRONT and nk not in CONTENTS|BIB|INDEX|CREDITS:
         nb=[l for l in nxt['L'] if classify(l,'body')=='body']
         nd=[l for l in nxt['L'] if classify(l,'body')=='drop']
-        nh=[l for l in nxt['L'] if classify(l,'body')=='head']
         if nb:
-            nb.sort(key=lambda l:(l['y0'],l['x0'])); _,nfc=paragraphs(nb,nd[0] if nd else None)
-            if nfc and paras: cont=True
+            nb.sort(key=lambda l:(l['y0'],l['x0']))
+            nsegs=segments(nb)
+            last_kind=blocks[-1][0] if blocks else None
+            if nsegs[0][0]=='q':
+                if last_kind=='q' and not re.search(r"[.!?’”)]\s*$",items_last_text if False else blocks[-1][1][-1]['t']): cont=True
+            else:
+                _,nfc=paragraphs(nsegs[0][1],nd[0] if nd else None)
+                if nfc and paras and last_kind=='p': cont=True
     # first_cont on this page with no previous: nothing
     write_page(BID,n,ptype,items,cont); meta[f'{n:04d}']=m
 json.dump(meta,open(f'{ROOT}/.scratch/clean_digital/brooke_meta_raw.json','w'))

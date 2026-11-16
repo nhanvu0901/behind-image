@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kịch bản - Behind the Image</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/script.css">
+<link rel="icon" href="data:,">
+</head>
+<body class="scr">
+<div id="sapp">
+  <header id="topbar">
+    <div class="brand">Behind the Image</div>
+    <a href="library.html#/projects" class="badge lnk-badge" title="Thư viện sách: chọn tác phẩm, tạo dự án">Thư viện</a>
+    <a href="/" id="lnk-editor" class="badge lnk-badge" title="Trang biên tập video">Biên tập video</a>
+    <select id="project-pick" title="Dự án"></select>
+    <select id="model-pick" title="Mô hình dùng cho các nút bên dưới"></select>
+    <span class="sep"></span>
+    <button id="btn-outline" title="Mô hình viết dàn ý từ các đoạn sách đã đánh số">Lập dàn ý</button>
+    <button id="btn-write" title="Mô hình viết lời dẫn từng chương, theo dàn ý đã duyệt">Viết lời dẫn</button>
+    <button id="btn-copy" title="Lấy prompt để dán vào Gemini hoặc chat khác">Sao chép prompt</button>
+    <button id="btn-paste" title="Dán câu trả lời của mô hình (dàn ý hoặc lời dẫn)">Dán</button>
+    <span class="sep"></span>
+    <button id="btn-save" class="primary" title="Lưu (Ctrl+S)">Lưu<span id="dirty-dot" class="dot" hidden></span></button>
+    <button id="btn-undo" title="Hoàn tác (Ctrl+Z)">Hoàn tác</button>
+    <button id="btn-redo" title="Làm lại (Ctrl+Shift+Z)">Làm lại</button>
+    <button id="btn-check" title="Danh sách lỗi và cảnh báo">Kiểm tra <span id="issue-count" class="count">0</span></button>
+    <button id="btn-approve" title="Duyệt bản đã lưu (cần lưu trước, không còn lỗi)">Duyệt</button>
+    <span class="grow"></span>
+    <span id="approve-state" class="badge" title="Trạng thái duyệt"></span>
+  </header>
+  <main id="smain">
+    <section class="col" id="col-src"><div class="col-h"><h2>Nguồn</h2><span class="muted" id="src-note"></span></div><div class="col-b" id="src-body"></div></section>
+    <section class="col" id="col-out"><div class="col-h"><h2>Dàn ý</h2><span id="out-badge" class="badge"></span></div><div class="col-b" id="out-body"></div></section>
+    <section class="col" id="col-nar"><div class="col-h"><h2>Lời dẫn</h2><span id="nar-badge" class="badge"></span></div><div class="col-b" id="nar-body"></div></section>
+  </main>
+  <footer id="sstatus">
+    <div id="st-totals" class="mono"></div>
+    <div id="st-bars"></div>
+    <div id="st-job"></div>
+  </footer>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<script type="module" src="js/script.js"></script>
+</body>
+</html>

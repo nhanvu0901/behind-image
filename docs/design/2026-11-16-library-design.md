@@ -49,3 +49,32 @@ Normalise (accents, case, punctuation, leading articles). Two entries of differe
 - Grovier: no years and about 15 entries without an artist (monuments, anonymous works).
 - Madman's Gallery: many entries are groups ("... and Other ..."), 26 without an artist.
 - Payne spells chapter 12 "Rail, Steam and Speed" (Hodge: "Rain"); they still merge through the Hodge/Grovier title.
+
+---
+
+# Update: artwork-centred library (owner decision: one painting per video)
+
+The default page view is now "Tác phẩm" (`#/`): every artwork merged across books. The bookshelf is the second tab (`#/books`). Rights are information only: the badge is always shown and never hides, disables or warns-blocks anything.
+
+## Commands
+`python -m bti.library build` (catalogue + `regroup`), `regroup` (artwork groups, keys and rights from works.json, no PDF), `dossiers [artwork_key ...]` (re-runnable at any time; picks up new clean pages).
+
+## Dossier: `library/dossiers/<artwork_key>/dossier.json` + `sources/<book_id>_<nnn>.txt`
+`{artwork_key, kind: artwork|theme, identity:{title,artist,year}, variants:{title|artist|year:[{value,works}]}, conflicts:[{field,values:[{work_id,value}]}], sources:[{work_id, book_id, n, pdf_pages, words, text_source, ocr, title, artist, year, headline?, file, trust, trust_note, outline:{headings:[{level,text,page}], captions:[{page,text}], meta[], details? (hodge_aid: the `##` headings, the named details)}, pages_clean, pages_total}], totals:{books, sources, words, words_normal, words_low, pages_clean, pages_total}, images:[{work_id,xref,page,width,height}], details[], rights, only_low_trust, text_source}`.
+- Identity prefers Payne, Hodge, Brooke-Hitching, Hagen, Grovier. A conflict is a different normalised title, an artist that does not match, or years more than 5 apart. Spelling or case differences only (`Jan Van Eyck`/`Jan van Eyck`) are not conflicts.
+- Source text files hold body text only: headings (`#`, `##`), paragraphs, quotes (`> `). Metadata, captions, credits, notes and non-body page types (front, contents, notes, credits, index, back, blank) are excluded; captions and meta stay in the outline.
+
+## Clean text (`bti/library/clean.py`)
+Parses `[page-type]`, `# `/`## ` headings, `[meta] [caption] [credit] [note] [quote]` and `[continues]` (the last paragraph joins the first paragraph of the next page within the entry). A page uses `library/clean_text/<book>/page_NNNN.txt` when present, otherwise the text layer (soft hyphens repaired; digital layer text gets its outline from font-size headings). `text_source` per source and per dossier: `clean`, `mixed`, `layer`. `[sic]` is not a tag (it occurs inside quoted text).
+
+## Trust
+`library/overrides/books.json` (created by the build if missing, never rewritten) holds `{book_id: {trust: normal|low, trust_note}}`; `grovier_nws` is `low` (machine-translated edition). `book.json`, every dossier source and the endpoints carry `trust`. The lists show the badge "bản dịch máy, không dùng làm nguồn sự kiện", artworks covered only by low-trust sources say so, and word counts are split (`words_normal`, `words_low`). Creating a project from an artwork leaves low-trust sources unticked (API: when `exclude` is absent they are excluded unless nothing else would remain; an explicit `exclude: []` keeps all).
+
+## Manual merge and split: `library/overrides/artworks.json`
+`{"merge": [[work ids that are one artwork], ...], "split": [work ids that stay alone]}`. A forced merge ignores the one-entry-per-book rule; a split work is never auto-matched. Both write the file, run `regroup` and rebuild the affected dossiers (stale dossier folders are removed). Artwork keys are derived from the group, so a merge or split can change a key; projects keep their copy of the dossier.
+
+## Endpoints added
+`GET /api/library/artworks?q&century&has_project&min_sources&kind=artwork|theme|&rights&sort=sources|words|title|year` (rows: title, artist, year, century, books, n_sources, words, words_normal, words_low, only_low_trust, low_trust_books, text_source, n_conflicts, rights, projects, thumb_url); `GET /artworks/{key}` now also returns `dossier` (with source `text_url`, `pages`, image `url`); `GET /artworks/{key}/source/{book_nnn}` (body text); `POST /artworks/merge {key, with}`; `POST /artworks/split {work_id}`; `POST /projects {artwork_key, exclude?, slug?}` (or `{work_ids, slug?}` as before).
+
+## Project from an artwork
+`project.json` adds `artwork_key`, `dossier: "source/dossier.json"`, `library_dossier`. `source/` holds `dossier.json` (identity recomputed for the chosen sources) and `<book>_<nnn>.txt` as they were at creation. No storyboard.

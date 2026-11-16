@@ -24,6 +24,7 @@ a.lnk { color: var(--accent); text-decoration: none; } a.lnk:hover { text-decora
 .tag.unknown { color: var(--muted); }
 .tag.stage { color: #07101d; background: var(--accent); border-color: var(--accent); }
 .tag.stage.selected { background: var(--elev); color: var(--muted); border-color: var(--border); }
+.tag.stage.outlined { background: #2c3a4f; color: var(--text); border-color: var(--accent); }
 .tag.stage.rendered, .tag.stage.approved { background: var(--ok); border-color: var(--ok); }
 
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin: 12px 0; padding: 10px 12px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
@@ -56,3 +57,15 @@ pre.text { white-space: pre-wrap; word-wrap: break-word; margin: 0; max-height: 
 .dlg-field { margin: 12px 0 4px; } .dlg-field input[type=text] { width: 100%; }
 .empty { color: var(--muted); padding: 30px; text-align: center; }
 .nostory { color: var(--warn); font-size: 12px; }
+
+.conflict { color: var(--warn); } .idrow { display: grid; grid-template-columns: 2fr 1.2fr 1fr; gap: 12px; margin: 10px 0; }
+.idcell { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; }
+.idcell.conflict { border-color: var(--warn); background: #231d0a; } .conflictbox { border-color: var(--warn); }
+.conflictbox .tag { margin: 0 4px 4px 0; }
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.tabs button.active { background: var(--accent); border-color: var(--accent); color: #07101d; font-weight: 600; }
+.two { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 8px; }
+ol.outline { margin: 0; padding-left: 20px; } ol.outline li.lv1 { font-weight: 700; } ol.outline li.lv2 { color: #cfd4df; margin-left: 10px; } ol.outline li.lv3 { color: var(--muted); margin-left: 22px; }
+ul.caps { margin: 0; padding-left: 18px; color: #cfd4df; font-size: 12px; }
+.tag.lowtrust { color: var(--warn); border-color: #6a5410; background: #231d0a; }
+.lowbox { border: 1px solid #6a5410; background: #231d0a; padding: 6px 10px; border-radius: 6px; margin: 6px 0; }

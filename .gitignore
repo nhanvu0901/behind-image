@@ -47,3 +47,4 @@ projects/*/history/
 # Other agents' benchmark outputs (not part of the pipeline)
 demo_runs/antigravity/
 demo_runs/codex/
+!.env.example

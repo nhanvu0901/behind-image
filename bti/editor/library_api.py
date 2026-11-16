@@ -10,7 +10,7 @@ from pathlib import Path
 from fastapi import APIRouter, Body, Query
 from fastapi.responses import FileResponse
 
-from bti.library import catalogue, config as libcfg, extract
+from bti.library import catalogue, config as libcfg, dossiers, extract
 from bti.library import projects as libprojects
 
 from .common import ApiError, read_json, valid_pid
@@ -158,6 +158,72 @@ def make_router(projects_root: Path) -> APIRouter:
         except Exception:
             raise ApiError(415, "cannot extract this image")
 
+    def art_row(key: str, a: dict, arts_pidx: dict) -> dict:
+        d = dossiers.load(key) or {}
+        ids = a["works"]
+        books_ = []
+        yn = None
+        status = "unknown"
+        projs = []
+        for wid in ids:
+            bid, n = wid.split("/")
+            books_.append(bid)
+            w = catalogue.load_work(bid, int(n))
+            if w and yn is None and w.get("year_num") is not None:
+                yn = w["year_num"]
+            for p in arts_pidx.get(wid, []):
+                if p["id"] not in [x["id"] for x in projs]:
+                    projs.append(p)
+        rt = d.get("rights") or {"status": "unknown", "basis": ""}
+        return {"artwork_key": key, "title": d.get("identity", {}).get("title") or a["title"],
+                "artist": d.get("identity", {}).get("artist") or a.get("artist"),
+                "year": d.get("identity", {}).get("year") or a.get("year"), "kind": d.get("kind", "artwork"),
+                "century": None if yn is None else ((yn - 1) // 100 + 1 if yn > 0 else 0),
+                "books": books_, "n_sources": len(ids), "words": (d.get("totals") or {}).get("words", 0),
+                "words_normal": (d.get("totals") or {}).get("words_normal", 0),
+                "words_low": (d.get("totals") or {}).get("words_low", 0),
+                "only_low_trust": bool(d.get("only_low_trust")),
+                "low_trust_books": [b for b in books_ if catalogue.book_trust(b)["trust"] == "low"],
+                "text_source": d.get("text_source"), "n_conflicts": len(d.get("conflicts") or []),
+                "rights": rt, "projects": projs,
+                "thumb_url": _thumb_for(ids[0])}
+
+    def _thumb_for(wid: str) -> str:
+        bid, n = wid.split("/")
+        w = catalogue.load_work(bid, int(n))
+        pg = w["pdf_pages"][0] if w else 1
+        return f"/api/library/works/{bid}/{n}/page/{pg}.jpg?w=240"
+
+    @r.get("/artworks")
+    def artworks_list(q: str = "", century_: int | None = Query(None, alias="century"), has_project: bool | None = None,
+                      min_sources: int = 1, kind: str = "artwork", rights: str = "", sort: str = "sources"):
+        arts, pidx = catalogue.load_artworks(), project_index()
+        ql = catalogue.norm(q)
+        out = []
+        for k, a in arts.items():
+            row_ = art_row(k, a, pidx)
+            if kind and row_["kind"] != kind:
+                continue
+            if ql and ql not in catalogue.norm(f"{row_['title']} {row_['artist'] or ''} {row_['year'] or ''} {k}"):
+                continue
+            if century_ is not None and row_["century"] != century_:
+                continue
+            if has_project is not None and bool(row_["projects"]) != has_project:
+                continue
+            if row_["n_sources"] < min_sources:
+                continue
+            if rights and row_["rights"]["status"] != rights:
+                continue
+            out.append(row_)
+        keyf = {"sources": lambda x: (-x["n_sources"], -x["words"], x["title"] or ""),
+                "words": lambda x: (-x["words"], x["title"] or ""),
+                "title": lambda x: (catalogue.norm(x["title"]),),
+                "year": lambda x: (x["century"] is None, x["century"] or 0, catalogue.norm(x["title"]))}.get(sort)
+        if keyf is None:
+            raise ApiError(422, "sort must be sources, words, title or year")
+        out.sort(key=keyf)
+        return out
+
     @r.get("/artworks/{artwork_key}")
     def artwork(artwork_key: str):
         a = catalogue.load_artworks().get(artwork_key)
@@ -170,16 +236,68 @@ def make_router(projects_root: Path) -> APIRouter:
             w = catalogue.load_work(bid, int(n))
             if w:
                 ws.append(row(w, arts, pidx))
-        return {"artwork_key": artwork_key, **a, "works_detail": ws}
+        d = dossiers.load(artwork_key)
+        if d is not None:
+            for s in d["sources"]:
+                s.update(catalogue.book_trust(s["book_id"]))  # live, so a change in overrides/books.json shows at once
+                s["text_url"] = f"/api/library/artworks/{artwork_key}/source/{Path(s['file']).stem}"
+                s["pages"] = [{"page": p, "url": f"/api/library/works/{s['book_id']}/{s['n']}/page/{p}.jpg?w=900"}
+                              for p in range(s["pdf_pages"][0], s["pdf_pages"][1] + 1)]
+            for im in d["images"]:
+                bid, n = im["work_id"].split("/")
+                im["url"] = f"/api/library/works/{bid}/{int(n)}/image/{im['xref']}.jpg?w=700"
+        return {"artwork_key": artwork_key, **a, "works_detail": ws, "dossier": d,
+                "projects": art_row(artwork_key, a, pidx)["projects"], "rights_note": catalogue.RIGHTS_NOTE}
+
+    @r.get("/artworks/{artwork_key}/source/{name}")
+    def artwork_source(artwork_key: str, name: str):
+        d = dossiers.load(artwork_key)
+        if d is None:
+            raise ApiError(404, "dossier not found")
+        s = next((x for x in d["sources"] if Path(x["file"]).stem == name), None)
+        if s is None:
+            raise ApiError(404, "source not found")
+        f = dossiers.dossier_path(artwork_key).parent / s["file"]
+        if not f.is_file():
+            raise ApiError(404, "source text missing")
+        return {"work_id": s["work_id"], "text": f.read_text(encoding="utf-8")}
+
+    @r.post("/artworks/merge")
+    def merge(body: dict = Body(...)):
+        a, b = body.get("key"), body.get("with")
+        if not isinstance(a, str) or not isinstance(b, str):
+            raise ApiError(422, "key and with (artwork keys) are required")
+        try:
+            return {"artwork_key": dossiers.merge_artworks(a, b)}
+        except KeyError:
+            raise ApiError(404, "artwork not found")
+        except ValueError as e:
+            raise ApiError(422, str(e))
+
+    @r.post("/artworks/split")
+    def split(body: dict = Body(...)):
+        wid = body.get("work_id")
+        if not isinstance(wid, str) or not libcfg.WORK_ID_RE.fullmatch(wid):
+            raise ApiError(422, "work_id is required")
+        try:
+            return {"artwork_key": dossiers.split_work(wid)}
+        except KeyError:
+            raise ApiError(404, "work not found")
+        except ValueError as e:
+            raise ApiError(422, str(e))
 
     @r.post("/projects")
     def create(body: dict = Body(...)):
         wids = body.get("work_ids")
         slug = body.get("slug") or None
+        key = body.get("artwork_key")
+        excl = body.get("exclude")
         if slug is not None and not isinstance(slug, str):
             raise ApiError(422, "slug must be a string")
+        if excl is not None and not isinstance(excl, list):
+            raise ApiError(422, "exclude must be a list")
         try:
-            return libprojects.create_project(wids, slug, projects_root)
+            return libprojects.create_project(wids, slug, projects_root, artwork_key=key, exclude=excl)
         except libprojects.ProjectError as e:
             raise ApiError(e.status, str(e))
         except FileNotFoundError as e:
@@ -201,4 +319,5 @@ def _jpeg(book_id: str, pdf_page: int, w: int):
 
 
 def stage_of(d: Path) -> str:
-    return libprojects.infer_stage(d)
+    from bti.script.stage import bump_stage   # adds `outlined` / `script` from the approved script files
+    return bump_stage(libprojects.infer_stage(d), d)

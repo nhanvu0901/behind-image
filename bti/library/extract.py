@@ -45,18 +45,11 @@ def page_text(book_id: str, pdf_page: int) -> tuple[str, str]:
 
 
 def work_text(work: dict) -> dict:
-    book_id = work["id"].split("/")[0]
-    a, b = work["pdf_pages"]
-    scan = config.BOOK_BY_ID[book_id]["pdf_type"] == "scan"
-    pages, srcs = [], []
-    for p in range(a, b + 1):
-        t, src = page_text(book_id, p)
-        pages.append({"page": p, "text": repair(t) if src == "layer" else t})
-        srcs.append(src)
-    kinds = set(srcs)
-    source = "clean" if kinds == {"clean"} else "layer" if kinds == {"layer"} else "mixed"
-    return {"work_id": work["id"], "ocr": scan, "text_source": source, "pdf_pages": [a, b], "pages": pages,
-            "text": "\n\n".join(p["text"].strip() for p in pages if p["text"].strip())}
+    """Body text of one entry (clean pages when present, text layer otherwise); see clean.entry."""
+    from . import clean
+    e = clean.entry(work)
+    return {"work_id": work["id"], "ocr": e["ocr"], "text_source": e["text_source"], "pdf_pages": work["pdf_pages"],
+            "pages": e["pages"], "text": e["body"], "words": e["words"], "outline": e["outline"]}
 
 
 def headings(book_id: str, a: int, b: int, limit: int = 10) -> list[str]:

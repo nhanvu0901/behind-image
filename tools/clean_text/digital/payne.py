@@ -6,6 +6,37 @@ V=vocab_of(BID,doc)
 works=json.load(open(f'{ROOT}/library/books/{BID}/works.json'))
 chap_start={w['pdf_pages'][0]:w for w in works}
 NOTES=range(375,396); CREDITS=range(396,404); INDEX=range(405,416)
+CARDS_TXT = """15|1|ZHANG ZEDUAN (ATTRIB.)|ALONG THE RIVER DURING THE QINGMING FESTIVAL|1085–1145
+23|2|JAN VAN EYCK|THE ARNOLFINI PORTRAIT|1434
+36|3|SANDRO BOTTICELLI|THE BIRTH OF VENUS|1485
+47|4|HIERONYMUS BOSCH|THE GARDEN OF EARTHLY DELIGHTS|1490–1500
+59|5|MICHELANGELO|LA PIETÀ|1499
+71|6|LEONARDO DA VINCI|MONA LISA|1503
+83|7|ARTEMISIA GENTILESCHI|JUDITH BEHEADING HOLOFERNES|1620
+96|8|JOHANNES VERMEER|GIRL WITH A PEARL EARRING|c. 1665
+108|9|ÉLISABETH VIGÉE LE BRUN|MARIE ANTOINETTE IN A CHEMISE DRESS|1783
+121|10|FRANCISCO DE GOYA|SATURN DEVOURING HIS SON|c. 1819–23
+134|11|KATSUSHIKA HOKUSAI|UNDER THE WAVE OFF KANAGAWA|1830–32
+144|12|J. M. W. TURNER|RAIN, STEAM AND SPEED – THE GREAT WESTERN RAILWAY|1844
+155|13|AUGUSTE RODIN|THE KISS|1882
+168|14|VINCENT VAN GOGH|THE STARRY NIGHT|1889
+179|15|EDVARD MUNCH|THE SCREAM|1893
+193|16|PABLO PICASSO|LES DEMOISELLES D’AVIGNON|1907
+205|17|GUSTAV KLIMT|THE KISS|1907–8
+218|18|CLAUDE MONET|WATER LILIES|1914–26
+226|19|HILMA AF KLINT|GROUP X, ALTARPIECE NO. 1|1915
+240|20|SUZANNE VALADON|THE BLUE ROOM|1923
+252|21|GEORGIA O’KEEFFE|JIMSON WEED/WHITE FLOWER NO. 1|1932
+265|22|FRIDA KAHLO|SELF-PORTRAIT WITH THORN NECKLACE AND HUMMINGBIRD|1940
+277|23|EDWARD HOPPER|NIGHTHAWKS|1942
+288|24|FRANCIS BACON|THREE STUDIES FOR FIGURES AT THE BASE OF A CRUCIFIXION|1944
+303|25|SALVADOR DALÍ|THE TEMPTATION OF ST ANTHONY|1946
+314|26|JEAN-MICHEL BASQUIAT|HOLLYWOOD AFRICANS|1983
+327|27|FAITH RINGGOLD|WOMAN ON A BRIDGE #1 OF 5: TAR BEACH|1988
+341|28|EL ANATSUI|DUSASA II|2007
+353|29|YAYOI KUSAMA|THE AFTERMATH OF OBLITERATION OF ETERNITY|2009
+364|30|ISAAC JULIEN|LESSONS OF THE HOUR|2019"""
+CARDS={int(l.split('|')[0]):l.split('|') for l in CARDS_TXT.split('\n')}
 meta={}; stats=collections.Counter(); hylog=[]
 def kind(l):
     s=l['size']; f=l['font']
@@ -173,19 +204,17 @@ for n in range(1,N+1):
         else:
             lg=[]; items.append(join_lines(it[1],V,lg)); hylog.extend(lg)
     items+=kept_pull
-    if cs:
-        hd=[f"# {cs['title']}",f"[meta] {cs['artist']}",f"[meta] {cs['year']}"]
+    if n in CARDS:
+        c=CARDS[n]
+        hd=[f"# {c[3]}",f"[meta] CHAPTER {c[1]}",f"[meta] {c[2]}",f"[meta] {c[4]}"]
         items=['\n'.join(hd)]+items
-        m['issues'].append('chapter title/artist/year taken from the chapter-opening picture page and contents (image text, not text layer)')
-    # continuation: next page starts with non-indented body line (no heading before)
-    if (n+1) in struct:
-        nits,_,nfb=struct[n+1]
-        if nfb and its and its[-1][0]!='h': cont=True
-        elif nfb: cont=True
-    if its and its[-1][0]=='h': cont=False
-    if n+1 in struct and not struct[n+1][2]: cont=False
-    if n+1 not in struct: cont=False
-    if its and not any(i[0]=='p' for i in its): cont=False if not (n+1 in struct and struct[n+1][2]) else cont
+        m['issues'].append('chapter number/artist/title/year read from the picture card on the opening page (image text, read by eye); printed in capitals')
+        m['read_by_model']=True; m['method']='read'
+    # continuation: next page of type body (skipping plate pages) starts with a non-indented body line
+    nk=n+1
+    while nk<=N and not page_items[nk][0]: nk+=1
+    cont=False
+    if nk in struct and struct[nk][2] and its and its[-1][0]!='h' and any(i[0]=='p' for i in its): cont=True
     write_page(BID,n,'body',items,cont); meta[f'{n:04d}']=m
 json.dump(meta,open('/Users/nhanvu/Documents/code/behind-the-image/.scratch/clean_digital/payne_meta_raw.json','w'))
 print(stats); 

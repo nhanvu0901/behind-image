@@ -1,0 +1,683 @@
+{
+ "0009": {
+  "type": "contents",
+  "items": [
+   [
+    "h1",
+    "Contents"
+   ],
+   [
+    "para",
+    "8 Propaganda on cloth"
+   ],
+   [
+    "meta",
+    "Artist unknown: The Bayeux Tapestry, after 1066"
+   ],
+   [
+    "para",
+    "14 \"A garden inclosed is my spouse\""
+   ],
+   [
+    "meta",
+    "Upper Rhenish Master: The Little Garden of Paradise, c. 1410"
+   ],
+   [
+    "para",
+    "20 A deceptive idyll"
+   ],
+   [
+    "meta",
+    "The Limburg Brothers: February miniature from the \"Très Riches Heures du Duc de Berry\", c. 1416"
+   ],
+   [
+    "para",
+    "26 A saint with a practical turn of mind"
+   ],
+   [
+    "meta",
+    "Fra Angelico: St Nicholas of Bari, 1437"
+   ],
+   [
+    "para",
+    "32 May God help the Chancellor"
+   ],
+   [
+    "meta",
+    "Jan Eyck: The Virgin of Chancellor Nicolas Rolin, c. 1437"
+   ],
+   [
+    "para",
+    "38 What is Christ doing beside Lake Geneva?"
+   ],
+   [
+    "meta",
+    "Konrad Witz: The Miraculous Draught of Fishes, 1444"
+   ],
+   [
+    "para",
+    "44 A Christian artisan advertises his craft"
+   ],
+   [
+    "meta",
+    "Petrus Christus: St. Eligius, 1449"
+   ],
+   [
+    "para",
+    "50 A family sings its own praises"
+   ],
+   [
+    "meta",
+    "Benozzo Gozzoli: Procession of the Magi, 1459"
+   ],
+   [
+    "para",
+    "56 The splendours of a small dynasty"
+   ],
+   [
+    "meta",
+    "Andrea Mantegna: Ludovico Gonzaga and His Family, c. 1470"
+   ],
+   [
+    "para",
+    "62 An empire collapses; the painter retreats"
+   ],
+   [
+    "meta",
+    "Hugo van der Goes: The Portinari Altar, c. 1475"
+   ],
+   [
+    "para",
+    "68 Hocus-pocus, Inquisition and demons"
+   ],
+   [
+    "meta",
+    "Hieronymus Bosch: The Conjuror, after 1475"
+   ],
+   [
+    "para",
+    "74 The patrons watch over the city"
+   ],
+   [
+    "meta",
+    "Master of the Transfiguration of the Virgin: The Virgin and Child with St. Anne, c. 1480"
+   ],
+   [
+    "para",
+    "80 Shock treatment for the intractable"
+   ],
+   [
+    "meta",
+    "Sandro Botticelli: The Story of Nastagio degli Onesti, 1482/83"
+   ],
+   [
+    "para",
+    "86 A cart trundles towards damnation"
+   ],
+   [
+    "meta",
+    "Hieronymus Bosch: The Haywain, between 1485 and 1490"
+   ],
+   [
+    "para",
+    "92 Fairest daughter of heaven and waves"
+   ],
+   [
+    "meta",
+    "Sandro Botticelli: The Birth of Venus, c. 1486"
+   ],
+   [
+    "para",
+    "98 The merchants of Venice"
+   ],
+   [
+    "meta",
+    "Vittore Carpaccio: Miracle of the Relic of the Cross, 1494/95"
+   ],
+   [
+    "para",
+    "104 A message from the world of alchemy"
+   ],
+   [
+    "meta",
+    "Piero di Cosimo: The Death of Procris, c. 1500"
+   ],
+   [
+    "para",
+    "110 Strange quartet"
+   ],
+   [
+    "meta",
+    "Hans Baldung Grien: The Three Stages of Life, with Death, c. 1510"
+   ],
+   [
+    "para",
+    "116 Composure in the face of misfortune"
+   ],
+   [
+    "meta",
+    "Raphael: The Fire in the Borgo, 1514-1517"
+   ],
+   [
+    "para",
+    "122 The femme fatale charms the devout viewer"
+   ],
+   [
+    "meta",
+    "Niklaus Manuel: The Execution of John the Baptist, c. 1517"
+   ],
+   [
+    "para",
+    "128 The battle to end all battles"
+   ],
+   [
+    "meta",
+    "Albrecht Altdorfer: The Battle of Issues, 1529"
+   ],
+   [
+    "para",
+    "134 Careers in the king's service"
+   ],
+   [
+    "meta",
+    "Hans Holbein the Younger: The Ambassadors, 1533"
+   ],
+   [
+    "para",
+    "140 From the canopy of Heaven to a four-poster bed"
+   ],
+   [
+    "meta",
+    "Titian: Venus of Urbino, c. 1538"
+   ],
+   [
+    "para",
+    "146 The utopia of common huntsmanship"
+   ],
+   [
+    "meta",
+    "Lucas Cranach the Younger: The Stag Hunt, 1544"
+   ],
+   [
+    "para",
+    "152 The Lord sits at the table of lords"
+   ],
+   [
+    "meta",
+    "Paolo Caliari (Veronese): The Marriage at Cana, 1562/63"
+   ],
+   [
+    "para",
+    "158 The Antwerp building boom"
+   ],
+   [
+    "meta",
+    "Pieter Bruegel the Elder: The Tower of Babel, 1563"
+   ],
+   [
+    "para",
+    "164 Apostle wanted"
+   ],
+   [
+    "meta",
+    "Tintoretto: The Abduction of the Body of St Mark, 1562-1566"
+   ],
+   [
+    "para",
+    "170 For Tiber, read Seine"
+   ],
+   [
+    "meta",
+    "Antoine Caron: The Massacre by the Triumvirate, 1566"
+   ],
+   [
+    "para",
+    "176 The barn is full - time for a wedding!"
+   ],
+   [
+    "meta",
+    "Pieter Bruegel the Elder: Peasant Wedding Feast, c. 1567"
+   ],
+   [
+    "para",
+    "182 Faith in the magic festivals"
+   ],
+   [
+    "meta",
+    "Antoine Caron: Caesar Augustus and the Tiburtine Sybil, c. 1580"
+   ]
+  ],
+  "method": "script+vision",
+  "read": false,
+  "conf": "medium",
+  "issues": [
+   "contents rebuilt from Apple Vision rows; page numbers/years checked against works.json"
+  ]
+ },
+ "0010": {
+  "type": "contents",
+  "items": [
+   [
+    "para",
+    "188 Aspirations to immortality"
+   ],
+   [
+    "meta",
+    "Jacopo Tintoretto: The Origin of the Milky Way, c. 1580"
+   ],
+   [
+    "para",
+    "194 Two saints bury the munificent donor"
+   ],
+   [
+    "meta",
+    "El Greco: The Burial of Count Orgaz, 1586"
+   ],
+   [
+    "para",
+    "200 A woman thwarts Spain's pride"
+   ],
+   [
+    "meta",
+    "George Gower: Armada Portrait of Elizabeth I, c. 1590"
+   ],
+   [
+    "para",
+    "206 The princess in the hospital"
+   ],
+   [
+    "meta",
+    "Adam Elsheimer: St Elizabeth Tending the Sick, c. 1597"
+   ],
+   [
+    "para",
+    "212 Tyrannicide by tender hand"
+   ],
+   [
+    "meta",
+    "Caravaggio: Judith and Holofernes, c. 1599"
+   ],
+   [
+    "para",
+    "218 The theatre of cruelty"
+   ],
+   [
+    "meta",
+    "Caravaggio: Martyrdom of St Matthew, 1599/1600"
+   ],
+   [
+    "para",
+    "224 Double-dealing hands and eyes"
+   ],
+   [
+    "meta",
+    "Georges de La Tour: The Fortune Teller, after 1630"
+   ],
+   [
+    "para",
+    "230 Grateful for the gift of sensuous pleasure"
+   ],
+   [
+    "meta",
+    "Peter Paul Rubens: The Love Garden, c. 1632-1634"
+   ],
+   [
+    "para",
+    "236 The victor honours a defeated enemy"
+   ],
+   [
+    "meta",
+    "Diego Velázquez: The Surrender of Breda, 1635"
+   ],
+   [
+    "para",
+    "242 The writing on the wall"
+   ],
+   [
+    "meta",
+    "Rembrandt: Belshazzar's Feast, c. 1635"
+   ],
+   [
+    "para",
+    "248 Tho' our wealthy days be done, here's to a life of luxury"
+   ],
+   [
+    "meta",
+    "Jacob Jordaens: The King Drinks, 1640-1645"
+   ],
+   [
+    "para",
+    "254 A nude for the king"
+   ],
+   [
+    "meta",
+    "Diego Velázquez: Venus at her Mirror, c. 1646"
+   ],
+   [
+    "para",
+    "260 The Governor's catalogue"
+   ],
+   [
+    "meta",
+    "David Teniers the Younger: Archduke Leopold Wilhelm's Galleries at Brussels, c. 1650"
+   ],
+   [
+    "para",
+    "266 An Old Testament family portrait"
+   ],
+   [
+    "meta",
+    "Rembrandt: Jacob Blessing the Sons of Joseph, 1656"
+   ],
+   [
+    "para",
+    "272 A Careerist bathes in the Sun King's radiance"
+   ],
+   [
+    "meta",
+    "Charles Le Brun: The Chancellor Séguier, after 1660"
+   ],
+   [
+    "para",
+    "278 Life: a drawing-room comedy"
+   ],
+   [
+    "meta",
+    "Antoine Watteau: Love at the French Theatre, 1716-1721"
+   ],
+   [
+    "para",
+    "284 Cultivated leisure, music and champagne"
+   ],
+   [
+    "meta",
+    "Antoine Watteau: The Music-Party, c. 1718"
+   ],
+   [
+    "para",
+    "290 The fine art of extravagance"
+   ],
+   [
+    "meta",
+    "Giambattista Tiepolo: The Banquet of Cleopatra, 1746-1750"
+   ],
+   [
+    "para",
+    "296 The proper combination of activity and leisure"
+   ],
+   [
+    "meta",
+    "Thomas Gainsborough: Mr and Mrs Andrews, 1749"
+   ],
+   [
+    "para",
+    "302 Every convent had its salon"
+   ],
+   [
+    "meta",
+    "Francesco Guardi: The Parlour of San Zaccaria, 1750"
+   ],
+   [
+    "para",
+    "308 Tennis with Apollo"
+   ],
+   [
+    "meta",
+    "Giambattista Tiepolo: The Death of Hyacinthus, 1752/53"
+   ],
+   [
+    "para",
+    "314 Politics as a dirty business"
+   ],
+   [
+    "meta",
+    "William Hogarth: An Election Entertainment, 1754/55"
+   ],
+   [
+    "para",
+    "320 What's in a square"
+   ],
+   [
+    "meta",
+    "Bernardo Bellotto: The Freyung, Vienna, from the Southeast, 1759/60"
+   ],
+   [
+    "para",
+    "326 A star-machine explains the universe"
+   ],
+   [
+    "meta",
+    "Joseph Wright of Derby: A Philosopher giving a Lecture on the Orrery, 1764-1766"
+   ],
+   [
+    "para",
+    "332 The marriage of Venice with the sea"
+   ],
+   [
+    "meta",
+    "Francesco Guardi: The Departure of the Doge on Ascension Day, c. 1770"
+   ],
+   [
+    "para",
+    "338 A German icon"
+   ],
+   [
+    "meta",
+    "Johann Heinrich Wilhelm Tischbein: Goethe in the Roman Campagna, 1786/87"
+   ],
+   [
+    "para",
+    "344 The holy revolutionary"
+   ],
+   [
+    "meta",
+    "Jacques-Louis David: The Death of Marat, 1793"
+   ],
+   [
+    "para",
+    "350 The black widow, beautiful and deadly"
+   ],
+   [
+    "meta",
+    "Francisco de Goya: The Duchess of Alba, 1797"
+   ],
+   [
+    "para",
+    "356 Grand entrance in the cathedral"
+   ],
+   [
+    "meta",
+    "Jacques-Louis David: The Coronation of Napoleon, 1807"
+   ],
+   [
+    "para",
+    "362 A martyr's death at dawn"
+   ],
+   [
+    "meta",
+    "Francisco de Goya: The Third of May 1808, in Madrid, the Execution on Principe Pio Hill, 1814"
+   ]
+  ],
+  "method": "script+vision",
+  "read": false,
+  "conf": "medium",
+  "issues": [
+   "contents rebuilt from Apple Vision rows; page numbers/years checked against works.json"
+  ]
+ },
+ "0011": {
+  "type": "contents",
+  "items": [
+   [
+    "para",
+    "368 A view to infinity"
+   ],
+   [
+    "meta",
+    "Caspar David Friedrich: Chalk Cliffs on Rügen, c. 1818"
+   ],
+   [
+    "para",
+    "374 Dramatic struggle for survival"
+   ],
+   [
+    "meta",
+    "Théodore Géricault: The Raft of the Medusa, 1819"
+   ],
+   [
+    "para",
+    "380 A Romantic's Asiatic tour de force"
+   ],
+   [
+    "meta",
+    "Eugène Delacroix: The Death of Sardanapalus, c. 1827"
+   ],
+   [
+    "para",
+    "386 Across the river and into the past"
+   ],
+   [
+    "meta",
+    "Ludwig Richter: The Schreckenstein Crossing, 1837"
+   ],
+   [
+    "para",
+    "392 The German painting best-loved by Germans"
+   ],
+   [
+    "meta",
+    "Carl Spitzweg: The Poor Poet, 1839"
+   ],
+   [
+    "para",
+    "398 The greatest amateur musician of the nation"
+   ],
+   [
+    "meta",
+    "Adolph Menzel: The Flute Concert of Frederick the Great at Sanssouci, 1850-1852"
+   ],
+   [
+    "para",
+    "404 A studio opens its doors to the world"
+   ],
+   [
+    "meta",
+    "Gustave Courbet: The Studio, 1855"
+   ],
+   [
+    "para",
+    "410 A fragrance of women and the Orient"
+   ],
+   [
+    "meta",
+    "Jean-Auguste-Dominique Ingres: The Turkish Bath, 1863"
+   ],
+   [
+    "para",
+    "416 The wrong uniform exposes the true culprit"
+   ],
+   [
+    "meta",
+    "Edouard Manet: The Execution of Maximilian, 1868"
+   ],
+   [
+    "para",
+    "422 A look behind the scenes"
+   ],
+   [
+    "meta",
+    "Edgar Degas: The Rehearsal on the Stage, 1873"
+   ],
+   [
+    "para",
+    "428 Keeping in the time with machines"
+   ],
+   [
+    "meta",
+    "Adolph Menzel: Steel Mill, 1875"
+   ],
+   [
+    "para",
+    "434 Laughing struggle for freedom"
+   ],
+   [
+    "meta",
+    "Ilya Repin: Zaporogian Cossacks Composing a Letter to the Turkish Sutan, 1880-1891"
+   ],
+   [
+    "para",
+    "440 Venue for gentry, bourgeoisie and bohème"
+   ],
+   [
+    "meta",
+    "Pierre Auguste Renoir: The Luncheon of the Boating Party, 1881"
+   ],
+   [
+    "para",
+    "446 Declaration of love for the capital of the world"
+   ],
+   [
+    "meta",
+    "Edouard Manet: A Bar at the Folies Bergère, 1881"
+   ],
+   [
+    "para",
+    "452 In the paradise of the petite bourgeoisie, all are strangers"
+   ],
+   [
+    "meta",
+    "Georges Seurat: Sunday Afternoon on the Island of La Grande Jatte, 1884-1886"
+   ],
+   [
+    "para",
+    "458 An inflammatory protest against dictatorship"
+   ],
+   [
+    "meta",
+    "Vassily Surikov: The Boyarina Morozova, 1887"
+   ],
+   [
+    "para",
+    "464 Jesus Christ, the lonely contemporary"
+   ],
+   [
+    "meta",
+    "James Ensor: Christ's Entry into Brussels, 1888"
+   ],
+   [
+    "para",
+    "470 Not long until it bursts apart"
+   ],
+   [
+    "meta",
+    "Otto Dix: Metropolis (Triptych), 1928"
+   ],
+   [
+    "para",
+    "476 The Vitebsk Man of Sorrows"
+   ],
+   [
+    "meta",
+    "Marc Chagall: White Crucifixion, 1938"
+   ],
+   [
+    "para",
+    "482 400 years at a glance"
+   ],
+   [
+    "meta",
+    "Diego Rivera: Dream of a Sunday Afternoon in Alamedea Park, 1948"
+   ],
+   [
+    "para",
+    "488 Appendix"
+   ]
+  ],
+  "method": "script+vision",
+  "read": false,
+  "conf": "medium",
+  "issues": [
+   "contents rebuilt from Apple Vision rows; page numbers/years checked against works.json"
+  ]
+ }
+}

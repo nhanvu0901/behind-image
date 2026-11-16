@@ -370,6 +370,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                                                                          progress))
         return {"job_id": jid}
 
+    from .script_api import make_router as _script_router; app.include_router(_script_router(root))  # script stage; also serves /api/jobs/{id} for both job kinds
+
     @app.get("/api/jobs/{job_id}")
     def get_job(job_id: str):
         j = jobs.get(job_id)

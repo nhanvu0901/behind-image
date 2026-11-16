@@ -1,7 +1,8 @@
 """Stage C: layout analysis of text-layer lines -> per-page item lists.
 Items: dict(kind, text, ...) kinds: h1 meta h2 para note junk
 """
-import json,re,collections,statistics
+import json,re,collections,statistics,sys,os
+sys.path.insert(0,os.path.dirname(os.path.abspath(__file__)))
 import numpy as np
 from PIL import Image
 ROOT='/Users/nhanvu/Documents/code/behind-the-image/'
@@ -10,7 +11,7 @@ WORKS=json.load(open(ROOT+'library/books/hagen_wgps/works.json'))
 OPEN={w['pdf_pages'][0]:w for w in WORKS}
 DICT=set(x.strip().lower() for x in open('/usr/share/dict/words'))
 SOFT='¬'
-SHORT=set('a i an as at be by do go he if in is it me my no of on or so to up us we am ox oh ah'.split())
+SHORT=set('a i an as at be by do go he if in is it me my no of on or so to up us we am ox oh ah st mr mrs dr mt ms vs ca ed pp vol x m cm km mm de da di le la el du des van von der den ter ten al'.split())
 
 def tok_alpha(t): return re.sub(r"[^A-Za-z]","",t)
 # vocabulary from the book (joined across soft hyphens, lines only)
@@ -24,9 +25,11 @@ def build_vocab():
                 if len(a)>1: c[a]+=1
     return c
 VOC=build_vocab()
+import english as EN
 def valid(t):
     a=tok_alpha(t).lower()
     if not a: return True
+    if EN.valid_en(a): return True
     return a in DICT or VOC[a]>=4 or a+'s' in DICT or a.rstrip('s') in DICT or (a.endswith('ed') and a[:-2] in DICT) or (a.endswith('ing') and a[:-3] in DICT)
 
 _img={}
@@ -53,34 +56,59 @@ def runlen(n,l):
     bg=np.percentile(a,85); m=(a<bg-70).astype(np.int8)
     starts=((m[:,1:]==1)&(m[:,:-1]==0)).sum()+m[:,0].sum()
     return float(m.sum()/max(starts,1))
-def is_junk(l):
+def tokok(x):
+    if re.fullmatch(r"\d+(st|nd|rd|th|s)[,.;:]?",x) or re.fullmatch(r"[A-Za-z]+n['’]t[,.;:]?",x): return True
+    if re.search(r"[-’']",x.strip('-’\'.,;:!?()“”\"')):
+        parts=[p for p in re.split(r"[-’']",x) if len(tok_alpha(p))>=2]
+        return (not parts) or sum(tokok(p) for p in parts)/len(parts)>=0.5
+    a=tok_alpha(x)
+    if not a: return True
+    if a.lower() in SHORT: return True
+    if len(a)<=2: return False
+    if re.search('[a-z][A-Z]',a): return False
+    if not re.search('[aeiouy]',a.lower()): return False
+    an=[ch for ch in x if ch.isalnum()]
+    if sum(ch.isalpha() for ch in an)/max(len(an),1)<0.6: return False
+    return valid(x) or propername(x) or len(a)>=5
+def is_junk(l,loose=False):
     t=l['t'].replace(SOFT,'-').strip()
     if l['sp'] and all(x[5]>=20 for x in l['sp'] if re.search('[A-Za-z]',x[0])) and re.search('[A-Za-z]{3}',t):
         ws=t.split()
         if sum(ch.isalpha() or ch in " '’-!?,.:\"“”" for ch in t)/len(t)>=0.95 and all((len(tok_alpha(w))>=2 or w.lower() in ('a','i','—','-')) and re.fullmatch(r"[\"“(]?[A-Za-z][a-z'’-]*[,.:!?\"”)-]*|[A-Z0-9'’-]+[,.:!?]*|[-—–]",w) for w in ws): return False
     toks=[x for x in t.split() if re.search(r'[A-Za-z]',x)]
-    if len(re.sub(r'[^A-Za-z0-9]','',t))<=2 and not re.search(r'[A-Za-z]{2}',t): return True
+    if not toks:
+        if re.fullmatch(r"[\d\s:;,.\-–—()/]+",t) and sum(c.isdigit() for c in t)>=2 and len(t)>=4 and (l['b'][3]-l['b'][1])<16 and (l['b'][2]-l['b'][0])<120 and re.search(r'\d[:\-–/,.]\d',t): return False
+        return not (loose and re.search(r'\d{2}',t))
     sym=sum(1 for ch in t if not (ch.isalnum() or ch in " .,;:'’‘“”\"!?()-–—/&"))
     if sym/max(len(t),1)>0.12: return True
-    if len(toks)>=3:
-        v=sum(((valid(x) or propername(x)) and (len(tok_alpha(x))>2 or tok_alpha(x).lower() in SHORT)) for x in toks)/len(toks)
-        if v<0.6: return True
-    elif len(toks)<=2:
-        for x in toks:
-            a=tok_alpha(x)
-            if valid(x) or x[:1].isupper(): continue
-            if len(a)>=4 and re.search('[aeiouy]',a.lower()) and sum(ch.isalpha() for ch in x)/len(x)>=0.7: continue
-            return True
-    return False
+    ok=sum(tokok(x) for x in toks)/len(toks)
+    if len(toks)>=3: return ok<0.6
+    return ok<1.0
 
 def union(sp):
     return [min(x[1] for x in sp),min(x[2] for x in sp),max(x[3] for x in sp),max(x[4] for x in sp)]
 def split_line(n,l):
+    # first split at big horizontal gaps (two columns merged into one text-layer line)
+    sp0=[x for x in l['sp']]
+    cuts=[]
+    last=None
+    for k,x in enumerate(sp0):
+        if not x[0].strip(): continue
+        if last is not None and x[1]-sp0[last][3]>30: cuts.append(k)
+        last=k
+    if cuts:
+        out=[]; a=0
+        for c in cuts+[len(sp0)]:
+            seg=sp0[a:c]; a=c
+            if not any(q[0].strip() for q in seg): continue
+            d=dict(l); d['sp']=seg; d['t']=''.join(q[0] for q in seg).rstrip(); d['b']=union([q for q in seg if q[0].strip()])
+            out+=split_line(n,d)
+        return out
     sp=l['sp']
     smallpresent=any(x[5]<12 and re.search('[A-Za-z]{2}',x[0]) for x in sp)
     iscap=lambda x: smallpresent and x[5]>=25 and len(x[0].strip())==1 and x[0].strip().isalpha()
     caps=[i for i,x in enumerate(sp) if iscap(x)]
-    hv=lambda x: x[5]>=11.8 and len(re.sub(r'[^A-Za-z]','',x[0]))>=2 and not iscap(x)
+    hv=lambda x: x[5]>=11.8 and len(re.sub(r'[^A-Za-z]','',x[0]))>=1 and not iscap(x)
     # heading run: leading spans (before cap or first body span) that are large
     i=0
     while i<len(sp) and (hv(sp[i]) or (not sp[i][0].strip() and i+1<len(sp) and hv(sp[i+1]))): i+=1
@@ -89,11 +117,13 @@ def split_line(n,l):
         if body:
             l=dict(l); b=l['b']; l['b']=[b[0],min(x[2] for x in body),b[2],max(x[4] for x in body)]
     if i==0 or i==len(sp): return [l]
+    if not any(len(re.sub(r'[^A-Za-z]','',x[0]))>=2 for x in sp[:i]): return [l]
     rest=sp[i:]
     # only split when something body-like (cap or small text) follows
     rest=[x for x in rest]
     if not any(x[0].strip() for x in rest): return [l]
-    if not any(iscap(x) or x[5]<11 for x in rest): return [l]
+    gap=min(x[1] for x in rest if x[0].strip())-max(x[3] for x in sp[:i] if x[0].strip())
+    if not any(iscap(x) or x[5]<11 for x in rest) and gap<25: return [l]
     hd=dict(l); hd['sp']=sp[:i]; hd['t']=''.join(x[0] for x in sp[:i]).strip(); hd['b']=union([x for x in sp[:i] if x[0].strip()])
     hd['d'],hd['pc']=ink(n,hd)
     if not (hd['d']>=0.2 and hd['pc']>=13): return [l]
@@ -106,7 +136,7 @@ def split_line(n,l):
 
 def classify_page(n):
     """return dict(type, items, printed_page, flags)"""
-    p=P[n-1]; L=[dict(l) for l in p['lines']]
+    p=P[n-1]; L=[dict(l,_i=i) for i,l in enumerate(p['lines'])]
     W=p['w']; H=p['h']
     out=dict(items=[],printed=None,flags=[],junk=0)
     # printed page number
@@ -114,8 +144,15 @@ def classify_page(n):
     if foot:
         out['printed']=foot[0]['t'].strip(); L=[l for l in L if l not in foot]
     keep=[]
+    allraw=p['lines']
     for l in L:
-        if is_junk(l): out['junk']+=1
+        i=l['_i']
+        contfrag=False
+        # fragment completing a word broken at the end of the previous raw line (same column)
+        for j in range(max(0,(i or 0)-3),(i or 0)):
+            q=allraw[j]
+            if q['t'].rstrip().endswith(SOFT) and abs(q['b'][0]-l['b'][0])<70 and l['b'][1]>q['b'][1]-2 and len(l['t'].split())<=6 and re.match(r'^[a-z’]{1,10}\b',l['t'].strip()): contfrag=True
+        if is_junk(l) and not contfrag: out['junk']+=1
         else: keep.append(l)
     L=keep
     L2=[]
@@ -136,6 +173,7 @@ def clusters_x0(L,gap=60):
         else: cl[-1].append(x)
     return [(c[0],c[-1]) for c in cl]
 
+LINEFIX=None
 def assemble(n):
     L,out=classify_page(n)
     p=P[n-1]; W=p['w']
@@ -204,7 +242,14 @@ def assemble(n):
     # headings (sans bold): high density and ink per char
     for l in ordered:
         l['head']= l.get('forcehead',False) or (l['rl']>=5.0 and l['d']>=0.15 and not l['hascap'] and len(l['t'])<=70)
+    for i,l in enumerate(ordered):
+        if not l['head'] and i>0:
+            q=ordered[i-1]
+            asp=[x for x in l['sp'] if re.search('[A-Za-z]',x[0])]
+            if q['head'] and q['col']==l['col'] and l['b'][1]-q['b'][3]<14 and asp and all(11.4<=x[5]<=21 for x in asp) and len(l['t'].split())<=4 and not l['hascap'] and l['t'].strip()[:1] not in ('"','“'):
+                l['head']=True
     # build paragraphs
+    capleft=0
     cur=None; prev=None; pend=[]
     def flush():
         nonlocal cur
@@ -218,6 +263,10 @@ def assemble(n):
         c=cs[l['col']]
         l['t']=l['t'].strip()
         if not l['t']: continue
+        if LINEFIX: l['t']=LINEFIX(n,l['t'],l['b'],W,p['h'])
+        szs=[x[5] for x in l['sp'] if re.search('[A-Za-z]',x[0])]
+        if szs and max(szs)<8.4 and not l['head'] and l['b'][2]-l['b'][0]<190 and l['b'][1]<770:
+            flush(); items.append(dict(kind='quote',text=l['t'])); prev=l; continue
         if l['head']:
             if pend and prev is not None and prev['head'] and l['b'][1]-prev['b'][3]<14 and l['col']==prev['col']:
                 pend[-1]['lines'].append(l['t'])
@@ -233,9 +282,11 @@ def assemble(n):
                     flush(); cur=dict(kind='h2',lines=[l['t']])
             prev=l; continue
         indent=l['b'][0]-c['base']
+        if l['hascap']: capleft=3
+        elif capleft>0: capleft-=1
         if pend:
             lastp=cur if cur is not None else (items[-1] if items and items[-1]['kind']=='para' else None)
-            cont = l['t'][:1].islower() and indent<6 and lastp is not None
+            cont = indent<6 and lastp is not None and (l['t'][:1].islower() or not l['hascap'])
             if cont:
                 if cur is None: cur=items.pop(); cur.setdefault('lines',[cur.pop('text')] if 'text' in cur else [])
                 cur['lines'].append(l['t']); prev=l; continue
@@ -246,7 +297,8 @@ def assemble(n):
         else:
             prevshort = prev['b'][2] < c['R']-8 if prev['col']==l['col'] else False
             endp = bool(TERM.search(prev['t'].strip()))
-            if 6<=indent<=22 and (prevshort or endp or prev['col']!=l['col']): newp=True
+            wrapped=capleft>0 and not l['hascap']
+            if 6<=indent<=22 and (prevshort or endp or prev['col']!=l['col']) and not wrapped: newp=True
             if prevshort and endp and prev['col']==l['col'] and l['b'][1]-prev['b'][3]>2 and indent>=4: newp=True
         if newp:
             if cur is not None and cur['kind']=='para' and pend: emit_pend()

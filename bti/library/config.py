@@ -26,6 +26,7 @@ BOOKS = [
     dict(id="dasal_artcurious", key="ArtCurious", title="ArtCurious", author="Jennifer Dasal",
          pdf_type="digital", unit="themed_chapter"),
 ]
+TRUST_NOTE_LOW = "Bản dịch máy, không dùng làm nguồn sự kiện: văn xuôi thiếu tin cậy, nhiều tên riêng bị dịch sai."
 BOOK_BY_ID = {b["id"]: b for b in BOOKS}
 
 

@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import shutil
 from pathlib import Path
 
-from . import catalogue, config, extract
+from . import catalogue, config, dossiers
 
 PID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 STAGES = ["selected", "script", "voiced", "storyboard", "approved", "rendered"]
@@ -32,8 +33,22 @@ def parse_work_id(wid: str) -> tuple[str, int]:
     return bid, int(n)
 
 
-def create_project(work_ids: list[str], slug: str | None = None, projects_root: Path | None = None) -> dict:
+def create_project(work_ids: list[str] | None, slug: str | None = None, projects_root: Path | None = None,
+                   artwork_key: str | None = None, exclude: list[str] | None = None) -> dict:
+    """Project from an ARTWORK (`artwork_key`, minus the `exclude`d work ids) or from explicit `work_ids`.
+    Writes project.json and source/ (a copy of the dossier and its body texts as they are now)."""
     root = Path(projects_root or config.PROJECTS_DIR)
+    if artwork_key is not None:
+        art = catalogue.load_artworks().get(artwork_key) if isinstance(artwork_key, str) else None
+        if art is None:
+            raise ProjectError(f"artwork {artwork_key!r} not found", 404)
+        if work_ids:
+            raise ProjectError("give artwork_key or work_ids, not both")
+        if exclude is None:  # default: low-trust (machine-translated) sources are left out unless nothing else is left
+            low = {w for w in art["works"] if catalogue.book_trust(w.split("/")[0])["trust"] == "low"}
+            exclude = list(low) if len(low) < len(art["works"]) else []
+        excl = set(exclude)
+        work_ids = [w for w in art["works"] if w not in excl]
     if not isinstance(work_ids, list) or not work_ids:
         raise ProjectError("work_ids must be a non-empty list")
     if len(set(work_ids)) != len(work_ids):
@@ -58,30 +73,30 @@ def create_project(work_ids: list[str], slug: str | None = None, projects_root: 
     if d.exists():
         raise ProjectError(f"project {slug!r} already exists", 409)
     keys = [w.get("artwork_key") for w in works]
+    key = artwork_key or keys[0]
     d.mkdir(parents=True)
     try:
         src = d / "source"
+        tmp = d / ".dossier_tmp"
+        doc = dossiers.build_one(key, {"works": [w["id"] for w in works]}, out_dir=tmp)
         src.mkdir()
-        sources = []
-        for w in works:
-            bid = w["id"].split("/")[0]
-            t = extract.work_text(w)
-            base = f"{bid}_{w['n']:03d}"
-            (src / f"{base}.txt").write_text(t["text"] + "\n", encoding="utf-8")
-            catalogue.write_json(src / f"{base}.json", {
-                "work_id": w["id"], "book_id": bid, "title": w["title"], "artist": w.get("artist"),
-                "year": w.get("year"), "pdf_pages": w["pdf_pages"], "ocr": t["ocr"],
-                "text_source": t["text_source"], "words": len(t["text"].split()),
-                "note": "Trích từ sách có bản quyền, chỉ dùng nội bộ để nghiên cứu."})
-            sources.append({"work_id": w["id"], "book_id": bid, "pdf_pages": w["pdf_pages"]})
-        proj = {"id": slug, "title": head["title"], "artist": head.get("artist"), "year": head.get("year"),
+        for s in doc["sources"]:
+            base = Path(s["file"]).name
+            shutil.copyfile(tmp / s["file"], src / base)
+            s["file"] = base
+        catalogue.write_json(src / "dossier.json", doc)
+        shutil.rmtree(tmp)
+        sources = [{"work_id": s["work_id"], "book_id": s["book_id"], "pdf_pages": s["pdf_pages"]}
+                   for s in doc["sources"]]
+        proj = {"id": slug, "title": doc["identity"]["title"] or head["title"],
+                "artist": doc["identity"]["artist"], "year": doc["identity"]["year"],
                 "stage": "selected", "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-                "sources": sources, "artwork_key": keys[0]}
+                "sources": sources, "artwork_key": key, "dossier": "source/dossier.json",
+                "library_dossier": f"library/dossiers/{key}/dossier.json"}
         if len(set(keys)) > 1:
             proj["mixed_artwork_keys"] = keys
         catalogue.write_json(d / "project.json", proj)
     except BaseException:
-        import shutil
         shutil.rmtree(d, ignore_errors=True)
         raise
     return proj

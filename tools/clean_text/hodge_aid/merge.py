@@ -39,6 +39,7 @@ def tl_words(n):
     return out
 
 DIFFS=[]
+DOUBTS=[]
 LOOK=str.maketrans({'r':'1','i':'1','l':'1','I':'1','g':'9','s':'5','o':'0','O':'0','z':'2','y':'7','S':'5','B':'8'})
 def vq(t):
     t=re.sub(r"(?<=[A-Za-z])'(?=[A-Za-z])","’",t)
@@ -46,25 +47,42 @@ def vq(t):
     t=re.sub(r"(?<=\s)'","‘",' '+t)[1:] if False else t
     t=t.replace("'","’")
     return t
-def numrep(t):
-    """repair digit look-alikes in a numeric/ordinal token; returns repaired token or None"""
-    m=re.fullmatch(r"([\W]*)([A-Za-z0-9]{1,4}?)((?:st|nd|rd|th|s)?)([\W]*)",t)
-    if not m: return None
-    pre,core,suf,post=m.groups()
-    if re.fullmatch(r"[A-Za-z0-9]{3,4}",core) and sum(c.isdigit() for c in core)>=1 or (suf in('st','nd','rd','th') and re.fullmatch(r"[A-Za-z0-9]{1,2}",core)):
-        core2=core.translate(LOOK)
-        if core2.isdigit(): return pre+core2+suf+post
+LOOK2=str.maketrans({'r':'1','i':'1','l':'1','I':'1','g':'9','o':'0','O':'0','z':'2','y':'7','b':'6','S':'5','B':'8','|':'1','!':'1'})
+def numcore(t):
+    """(prefix, digits-or-None, suffix, postfix) if token is a year/ordinal/number with look-alike letters"""
+    mm=re.fullmatch(r"([^\w]*)([A-Za-z0-9]{2,5}?)(th|st|nd|rd|s)?([^\w]*)",t)
+    if not mm: return None
+    pre,core,suf,post=mm.groups(); suf=suf or ''
+    if re.fullmatch(r'x\d{3}',core): core='1'+core[1:]
+    if sum(c.isdigit() for c in core)==0 and len(core)<3: return None
+    c2=core.translate(LOOK2)
+    if c2.isdigit() and (sum(ch.isdigit() for ch in core)>=1 or len(core)>=3): return pre,c2,suf,post
+    # core may have swallowed suffix letters: try ordinal tail
+    mm2=re.fullmatch(r"([A-Za-z0-9]{1,3})(th|st|nd|rd)",core+suf)
+    if mm2 and mm2.group(1).translate(LOOK2).isdigit(): return pre,mm2.group(1).translate(LOOK2),mm2.group(2),post
     return None
+def numrep(t):
+    c=numcore(t)
+    return None if c is None else ''.join(c)
 def pick(x,y,z):
     """x=text layer, y=vision1, z=vision2 (or None). returns (token, doubt)"""
     if y in ("×","x") and x in ("x","×"): return "x",False
     cands=[('x',x),('y',y)]+([('z',z)] if z else [])
-    nums=[t for _,t in cands if re.search(r'\d',t)]
-    if nums:
-        rx=numrep(x) or x; ry=numrep(y) or y; rz=(numrep(z) or z) if z else None
-        if rx==ry or (rz and rx==rz): return rx,False
-        if rz and ry==rz and numrep(y): return ry,False
-        if fold(rx)==fold(ry) or (rz and fold(rx)==fold(rz)): return rx,False
+    if re.search(r'\d-\d',x) and re.search(r'\d-\d',y):
+        px,py=x.split('-'),y.split('-'); pz=z.split('-') if z else None
+        if len(px)==len(py) and (not pz or len(pz)==len(px)):
+            res=[];dd=False
+            for i in range(len(px)):
+                t,d=pick(px[i],py[i],pz[i] if pz else None); res.append(t); dd=dd or d
+            return '-'.join(res),dd
+    isnum=lambda t: numcore(t) is not None and (sum(ch.isdigit() for ch in t)>=1 or re.search(r'(th|st|nd|rd)\W*$',t) is not None)
+    if isnum(x) or isnum(y):
+        cx=numcore(x); cy=numcore(y); cz=numcore(z) if z else None
+        kx=cx[1]+cx[2] if cx else None; ky=cy[1]+cy[2] if cy else None; kz=cz[1]+cz[2] if cz else None
+        if kx and (kx==ky or kx==kz): return ''.join(cx),False
+        if ky and ky==kz: return ''.join(cy),False
+        if kx and not (ky or kz): return ''.join(cx),True
+        if kx: return ''.join(cx),True
         return x,True
     def sc(t,v):
         return v+(1.5 if isword(t) else 0)+(0.4 if t[:1].isupper() and not isword(t) else 0)
@@ -82,6 +100,8 @@ def pick(x,y,z):
 
 def merge_text(tl,v,v2=None):
     """word-level 3-way merge; returns (text, doubt)"""
+    _n=lambda s: re.sub(r'(?<=\d)\s*[-—–~]\s*(?=\d)','-',s) if s else s
+    tl,v,v2=_n(tl),_n(v),_n(v2)
     if not tl: return v,True
     if fold(tl)==fold(v) and (v2 is None or fold(v2)==fold(v)) and not re.search(r"[¢~@€|=<>¥£©®§_]",tl):
         pass
@@ -102,6 +122,11 @@ def merge_text(tl,v,v2=None):
                 if x!=y and re.search(r'[¢~@€|=<>¥£©®§_]',x) and not re.search(r'[¢~@€|=<>¥£©®§_]',y): out.append(vq(y))
                 elif x!=y and re.search(r"[A-Za-z]'[A-Za-z]",y) and not re.search(r"[A-Za-z][’'‘][A-Za-z]",x): out.append(vq(y))
                 elif x!=y and x[:1] in '‘“’”' and y[:1] not in "'\"‘“’”": out.append(x[1:])
+                elif x!=y and strip_acc(y).lower()==strip_acc(x).lower() and y!=strip_acc(y) and x==strip_acc(x):
+                    z=m12.get(j1+k)
+                    cand=[t for t in (y,z) if t and t!=strip_acc(t)]
+                    out.append(vq(cand[0]) if cand else x)
+                elif x!=y and x==strip_acc(x) and re.fullmatch(r"[^A-Za-z]*[A-Za-z]+[^A-Za-z]*",x) and False: out.append(x)
                 else:
                     z=m12.get(j1+k)
                     # digit tokens: repair look-alikes in text layer when engines agree
@@ -110,14 +135,19 @@ def merge_text(tl,v,v2=None):
             continue
         A=a[i1:i2]; B=b[j1:j2]
         DIFFS.append((' '.join(A),' '.join(B),' '.join(m12.get(j) or '' for j in range(j1,j2))))
+        if A and B and fold(''.join(A))==fold(''.join(B)) and not re.search(r'[¢~@€|=<>¥£©®§_]',' '.join(A)):
+            out+=A; continue
         if len(A)==len(B):
             for k,(x,y) in enumerate(zip(A,B)):
                 z=m12.get(j1+k)
                 if strip_acc(x).lower()==strip_acc(y).lower() and x!=y and not re.search(r'\d',x):
                     out.append(vq(y) if y!=strip_acc(y) else x); continue
                 t,d=pick(x,vq(y),vq(z) if z else None)
+                if d: DOUBTS.append((x,y,z or '',t))
                 out.append(t); doubt=doubt or d
-        elif not B and all(len(re.sub(r'[^A-Za-z]','',t))<=2 and not isword(t) or not re.search(r'[A-Za-z0-9]',t) for t in A):
+        elif not B and c is not None and all(fold(t) not in [fold(u) for u in c] for t in A) and all((len(re.sub(r'[^A-Za-z]','',t))<=3 or not isword(t)) for t in A):
+            continue
+        elif not B and all((len(re.sub(r'[^A-Za-z]','',t))<=2 and not isword(t)) or not re.search(r'[A-Za-z0-9]',t) or re.fullmatch(r'\W*\d{1,2}\W*',t) for t in A):
             continue
         else:
             def vr(T): return sum(isword(t) for t in T)/max(1,len(T))
@@ -128,7 +158,7 @@ def merge_text(tl,v,v2=None):
             doubt=True
     return ' '.join(out),doubt
 
-CAPS=re.compile(r"^[A-Z0-9ÀÁÂÃÄÅÇÈÉÊËÍÎÏÑÓÔÖÚÛÜ’'‘&,.:;\-–\"“”!?()/ ]+$")
+CAPS=re.compile(r"^[•©@®*A-Z0-9ÀÁÂÃÄÅÇÈÉÊËÍÎÏÑÓÔÖÚÛÜ’'‘&,.:;\-–\"“”!?()/ ]+$")
 def is_caps(t):
     t=re.sub(r'^\d{1,2}\s+','',t.strip())
     return bool(CAPS.match(t)) and sum(c.isalpha() for c in t)>=3
@@ -171,16 +201,28 @@ def clean_line(l):
         l['txt']=t; l['doubt']=d
         if re.search(r'\d\s*[x×]\s*\d|\d\s*cm\b|\bcm\b|\bin\.\)',v):
             v1=vq(fixdig(v)); v2=vq(fixdig(l['t2'])) if l.get('t2') else None
+            pen=lambda s: s.count('%')*3+len(re.findall(r'(?<=\d )[a-zA-Z](?= )|(?<=\d)[a-z](?=\W)',s))*3+len(re.findall(r'[^\w\s.,()×x½¼¾⅛⅜⅝⅞/–-]',s))
+            if v2 and pen(v2)<pen(v1): v1=v2
             l['txt']=v1; l['doubt']=bool(v2) and fold(v1)!=fold(v2) or not v2
     return l
 
+POST=[(r'trompe / ?ceil','trompe l’oeil'),(r',,\s*',', '),(r'\bBc\b','BC'),(r'Belgiu’»','Belgium'),(r'(?<=[a-z]) ?/ ?oeil','l’oeil'),(r'\bigth\b','19th'),(r'\broth century','10th century'),(r'\bsth-century','5th-century'),
+ (r'Asniéres','Asnières'),(r'\bFétes\b','Fêtes'),(r'\bFéte\b','Fête'),(r'\bféte\b','fête'),(r'\bchampétre\b','champêtre'),(r'\bChampétre\b','Champêtre'),
+ (r'Eugéne','Eugène'),(r'Gérome','Gérôme'),(r'Núnez','Núñez'),(r'Edinbureh','Edinburgh'),(r'Gér6éme','Gérôme'),(r'Mir6','Miró'),(r'Laoco6én','Laocoön'),(r'wkiyo-e','ukiyo-e'),(r'\bVelazquez','Velázquez'),(r'\bMiro(?=[’s])','Miró'),(r'\bDurer\b','Dürer'),(r'\bBocklin\b','Böcklin'),(r'\bCotan\b','Cotán'),(r'\bDali\b','Dalí'),(r'Gemaldegalerie','Gemäldegalerie'),(r'Nujiez','Núñez'),(r'Jean-Francois','Jean-François')]
+def post(s):
+    for a,b in POST: s=re.sub(a,b,s)
+    return s
 def fixq(s):
     if s.count('“')!=s.count('”'):
         s=s.replace('“','‘').replace('”','’')
     return s
 
 def endash(s):
-    s=re.sub(r'(?<=\d)-(?=\d)','–',s)
+    s=re.sub(r'\s*[-–]\s*—\s*|\s*—\s*-\s*','—',s)
+    s=re.sub(r'(?<=\d)\s?[-–—~]+\s?(?=\d)','–',s)
+    s=re.sub(r'(?<=[A-Za-z’])\s-\s(?=[A-Za-z‘])','—',s)
+    s=re.sub(r'(?<=\S)\s+—\s*(?=\S)|(?<=\S)\s*—\s+(?=\S)',' – ',s)
+    s=s.replace('—','–')
     return s
 
 DROP_LABELS=re.compile(r'^(IN DETAIL|TECHNIQUE|IN DETAIL ?\d*)$')
@@ -202,7 +244,7 @@ def find_title(L):
 def build_page(n,mode='entry'):
     vl,orph=page_lines(n)
     info=dict(issues=[],doubts=0)
-    DIFFS.clear()
+    DIFFS.clear(); DOUBTS.clear()
     lines=[clean_line(l) for l in vl]
     foot=[];body=[]
     ft=find_title(sorted([l for l in lines if l['y']<0.955],key=lambda l:(l['y'],l['x']))) if mode=='entry' else None
@@ -214,6 +256,7 @@ def build_page(n,mode='entry'):
         if l['y']>0.955 or (l['y']<0.012 and l['h']<0.012): foot.append(l); continue
         if DROP_LABELS.match(t): continue
         if l['c']<0.5 and not l['tl'] : continue
+        if mode=='entry' and not l['tl'] and not l['caps'] and len(t.split())<4 and not re.search(r'oil|tempera|canvas|panel|fresco|Museum|Gallery|Louvre|paper|bronze|cm',t): continue
         alpha=sum(c.isalpha() for c in t)
         if not l['caps'] and alpha<3: continue
         if l['c']<0.4 and alpha<8: continue
@@ -237,6 +280,8 @@ def build_page(n,mode='entry'):
         out.append('# '+title); out.append('[meta] '+art['t'].strip()); out.append('[meta] '+endash(fixdig(yr['t'].strip())))
         used=set(id(l) for l in tl)|{id(art),id(yr)}
         body=[l for l in body if id(l) not in used and not (l['y']<yr['y'] and l['x']<yr['x1']+0.3 and False)]
+    if mode=='entry' and not ft and sum(1 for l in body if not l['caps'] and len(l['txt'].split())>=4 and l['tl'])<2:
+        body=[]
     if not body and not ft and mode=='entry':
         return 'plate',['[page-type] plate'],info,orph
     # columns: anchors from non-caps lines
@@ -256,14 +301,27 @@ def build_page(n,mode='entry'):
     # merge multi-line headings
     items=[]
     b2=sorted(body,key=lambda l:(l['col'],l['y']))
+    def has_follow(l,b2):
+        for u in b2:
+            if u is l or u['col']!=l['col'] or u['caps']: continue
+            d=u['y']-l['y']
+            if 0<d<0.06 and abs(u['x']-l['x'])<0.08: return True
+        return False
+    # drop junk caps lines (pictures): caps, not followed by text, short
+    body=[l for l in body if not (mode=='entry' and not ft and l['caps'] and not has_follow(l,b2) and not any(u['caps'] and u is not l and u['col']==l['col'] and abs(u['y']-l['y'])<0.035 for u in b2))]
+    b2=sorted(body,key=lambda l:(l['col'],l['y']))
     i=0
     while i<len(b2):
         l=b2[i]
-        if mode=='entry' and l['caps'] and l['h']<0.03:
+        if mode=='entry' and not ft and l['caps'] and l['h']<0.03 and has_follow(l,b2):
             parts=[l]
             while i+1<len(b2) and b2[i+1]['caps'] and b2[i+1]['col']==l['col'] and abs(b2[i+1]['x']-l['x'])<0.03 and b2[i+1]['y']-parts[-1]['y']<0.032 and not TERM.search(parts[-1]['t'].strip()):
                 parts.append(b2[i+1]); i+=1
-            h=' '.join(re.sub(r'^\d{1,2}\s+','',p['txt'].strip()) for p in parts)
+            def sb(t):
+                t=t.strip(); t=re.sub(r'^\d{1,2}\s+','',t)
+                t=re.sub(r'^(?:[^\w\s]|[BCDEFGHIJKLMNOPQRSTUVWXYZ])\s+(?=[A-Z]{2,})','',t)
+                return t
+            h=' '.join(sb(p['txt']) for p in parts)
             items.append(dict(kind='H',col=l['col'],y=l['y'],x=l['x'],text=h,lines=parts,doubt=any(p['doubt'] for p in parts)))
         else:
             items.append(dict(kind='T',col=l['col'],y=l['y'],x=l['x'],line=l,lines=[l]))
@@ -323,7 +381,7 @@ def build_page(n,mode='entry'):
                     elif pre and nxt and (pre.group(1)+nxt.group(0)).lower() in DICT and not (pre.group(1).lower() in DICT and nxt.group(0).lower() in DICT and False): s=s[:-1]+t
                     else: s=s+t
                 else: s=s+' '+t
-            res.append(fixq(endash(s)))
+            res.append(post(fixq(endash(s))))
         return res
     if mode=='index':
         for b in sorted(blocks,key=lambda b:(b['col'],b['y'])):
@@ -347,9 +405,16 @@ def build_page(n,mode='entry'):
             for p in P:
                 out.append('')
                 out.append(('[caption] ' if b['caption'] else '')+p)
+    info['doublines']=[]
+    info['heads']=[]
     for b in blocks:
+        if b['head']:
+            for p in b['head']['lines']:
+                info['heads'].append(dict(x=p['x'],y=p['y'],w=p['w'],h=p['h'],txt=p['txt'],v1=p['t'],v2=p.get('t2'),tl=p['tl'],c=p['c']))
         for l in b['lines']:
-            if l['doubt']: info['doubts']+=1
+            if l['doubt']:
+                info['doubts']+=1
+                info['doublines'].append(dict(x=l['x'],y=l['y'],w=l['w'],h=l['h'],txt=l['txt'],v1=l['t'],v2=l.get('t2'),tl=l['tl']))
     res=[x for x in out]
     # collapse
     txt='\n'.join(res)
@@ -359,7 +424,7 @@ def build_page(n,mode='entry'):
     ls=['[page-type] '+typ]+txt.split('\n')
     if lastp and not TERM.search(lastp[-1].strip()) and not lastp[-1].startswith('[caption]'):
         ls.append('[continues]')
-    info['orphans']=orph; info['diffs']=list(DIFFS)
+    info['orphans']=orph; info['diffs']=list(DIFFS); info['dtok']=list(DOUBTS)
     return typ,ls,info,orph
 
 MODES={n:'text' for n in list(range(1,14))+[59,113,159,193,295,435,436,439,440]}

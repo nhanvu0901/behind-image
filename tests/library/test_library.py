@@ -175,8 +175,9 @@ def test_create_project_several_works_and_refuse_overwrite(tmp_path):
     d = tmp_path / "arn-test"
     assert json.loads((d / "project.json").read_text())["title"] == "The Arnolfini Portrait"
     assert (d / "source" / "payne_gae_002.txt").read_text().strip()
-    meta = json.loads((d / "source" / "hodge_aid_003.json").read_text())
-    assert meta["ocr"] is True
+    doc = json.loads((d / "source" / "dossier.json").read_text())
+    assert doc["totals"]["books"] == 2 and doc["sources"][1]["ocr"] is True
+    assert p["dossier"] == "source/dossier.json" and p["library_dossier"].startswith("library/dossiers/")
     assert not (d / "storyboard.json").exists()
     assert projects.infer_stage(d) == "selected"
     before = (d / "project.json").read_text()

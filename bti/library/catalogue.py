@@ -151,6 +151,30 @@ def apply_overrides(works: list[dict], overrides: dict) -> list[dict]:
 
 
 # ------------------------------------------------------------------ loaders
+def books_overrides_path() -> Path:
+    return config.LIB_DIR / "overrides" / "books.json"
+
+
+DEFAULT_TRUST = {b["id"]: {"trust": "normal", "trust_note": ""} for b in config.BOOKS}
+DEFAULT_TRUST["grovier_nws"] = {"trust": "low", "trust_note": config.TRUST_NOTE_LOW}
+
+
+def book_trust(book_id: str) -> dict:
+    """{trust: normal|low, trust_note} from library/overrides/books.json (human-editable), else the default."""
+    out = dict(DEFAULT_TRUST.get(book_id, {"trust": "normal", "trust_note": ""}))
+    f = books_overrides_path()
+    if f.is_file():
+        try:
+            o = (read_json(f) or {}).get(book_id) or {}
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            o = {}
+        if o.get("trust") in ("normal", "low"):
+            out["trust"] = o["trust"]
+        if isinstance(o.get("trust_note"), str):
+            out["trust_note"] = o["trust_note"]
+    return out
+
+
 def book_json(book_id: str) -> dict:
     return read_json(config.book_dir(book_id) / "book.json")
 
@@ -160,7 +184,7 @@ def load_books() -> list[dict]:
     for b in config.BOOKS:
         f = config.book_dir(b["id"]) / "book.json"
         if f.is_file():
-            out.append(read_json(f))
+            out.append({**read_json(f), **book_trust(b["id"])})
     return out
 
 
@@ -199,6 +223,10 @@ def build(only: list[str] | None = None, log=print) -> dict:
     (LIB / "overrides").mkdir(parents=True, exist_ok=True)
     all_works: dict[str, list[dict]] = {}
     summary: dict = {"books": {}, "unparsed": []}
+    if not books_overrides_path().exists():  # explicit values so a human can change them; never rewritten
+        write_json(books_overrides_path(), DEFAULT_TRUST)
+    if not artwork_overrides_path().exists():
+        artwork_overrides_path().write_text('{"merge": [], "split": []}\n', encoding="utf-8")
     for b in config.BOOKS:
         bid = b["id"]
         ovr_f = overrides_path(bid)
@@ -239,13 +267,61 @@ def build(only: list[str] | None = None, log=print) -> dict:
             "dasal_artcurious": "12 chương theo chủ đề (3 phần), không phải từng tác phẩm; tên chương lấy từ trang đầu chương.",
         }[bid]
         book = {"id": bid, "title": b["title"], "author": b["author"], "file": pdf.name, "pages": len(d),
-                "pdf_type": b["pdf_type"], "unit": b["unit"], "n_works": len(works), "notes": notes}
+                "pdf_type": b["pdf_type"], "unit": b["unit"], "n_works": len(works), "notes": notes,
+                **book_trust(bid)}
         write_json(config.book_dir(bid) / "book.json", book)
         summary["books"][bid] = len(works)
 
-    # cross-book index
+    for bid in config.BOOK_BY_ID:
+        if bid in all_works:
+            write_json(config.book_dir(bid) / "works.json", [_public(w) for w in apply_overrides(all_works[bid], load_overrides(bid))])
+    reg = regroup()
+    summary.update(reg)
+    for bid in config.BOOK_BY_ID:
+        for w in load_works(bid):
+            miss = [k for k in ("title", "artist", "year") if not w.get(k)]
+            if miss:
+                summary["unparsed"].append({"id": w["id"], "missing": miss, "title": w.get("title")})
+    write_json(config.LIB_DIR / "unparsed.json", summary["unparsed"])
+    return summary
+
+
+# ------------------------------------------------------------------ artwork overrides (forced merges / splits)
+def artwork_overrides_path() -> Path:
+    return config.LIB_DIR / "overrides" / "artworks.json"
+
+
+def load_artwork_overrides() -> dict:
+    f = artwork_overrides_path()
+    d = {}
+    if f.is_file():
+        try:
+            d = read_json(f)
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            d = {}
+    if not isinstance(d, dict):
+        d = {}
+    return {"merge": [list(g) for g in d.get("merge", []) if isinstance(g, list)],
+            "split": [x for x in d.get("split", []) if isinstance(x, str)]}
+
+
+def save_artwork_overrides(d: dict) -> None:
+    write_json(artwork_overrides_path(), {"merge": d.get("merge", []), "split": d.get("split", [])})
+
+
+def regroup(log=print) -> dict:
+    """Recompute artwork groups, keys and rights from works.json (no PDF access), honouring
+    library/overrides/artworks.json: `merge` = lists of work ids forced into one artwork, `split` = work ids that
+    stay alone (never auto-merged). Writes works.json and artworks.json."""
     order = [b["id"] for b in config.BOOKS]
-    flat = [(bid, w) for bid in order for w in all_works.get(bid, [])]
+    all_works = {bid: load_works(bid) for bid in order}
+    ovr = load_artwork_overrides()
+    splits = set(ovr["split"])
+    for ws in all_works.values():
+        for w in ws:
+            w["year_num"] = parse.year_num(w.get("year")) if w.get("year") else None
+            w.pop("year_from_group", None)
+    flat = [(bid, w) for bid in order for w in all_works[bid]]
     parent = {w["id"]: w["id"] for _, w in flat}
     group_books = {w["id"]: {bid} for bid, w in flat}
 
@@ -254,26 +330,32 @@ def build(only: list[str] | None = None, log=print) -> dict:
             parent[x] = parent[parent[x]]
             x = parent[x]
         return x
-    matchable = [(bid, w) for bid, w in flat if config.BOOK_BY_ID[bid]["unit"] != "themed_chapter"]
+
+    def union(x, y, strict=True):
+        rx, ry = find(x), find(y)
+        if rx == ry or (strict and group_books[rx] & group_books[ry]):
+            return
+        parent[ry] = rx
+        group_books[rx] |= group_books[ry]
+
+    matchable = [(bid, w) for bid, w in flat if config.BOOK_BY_ID[bid]["unit"] != "themed_chapter"
+                 and w["id"] not in splits]
     for i, (ba, wa) in enumerate(matchable):
         for bb, wb in matchable[i + 1:]:
-            if ba == bb:
-                continue
-            ra, rb = find(wa["id"]), find(wb["id"])
-            if ra == rb or group_books[ra] & group_books[rb]:
-                continue
-            if works_match(wa, wb):
-                parent[rb] = ra
-                group_books[ra] |= group_books[rb]
+            if ba != bb and works_match(wa, wb):
+                union(wa["id"], wb["id"])
+    for g in ovr["merge"]:
+        ids = [x for x in g if x in parent]
+        for x in ids[1:]:
+            union(ids[0], x, strict=False)
     groups: dict[str, list[tuple[str, dict]]] = {}
     for bid, w in flat:
         groups.setdefault(find(w["id"]), []).append((bid, w))
 
-    # death years known from Hodge's index are shared with the same artist in other books
     known = [w for w in all_works.get("hodge_aid", []) if w.get("artist_death") or w.get("artist_alive")]
     keys_used: dict[str, int] = {}
     artworks: dict[str, dict] = {}
-    for gid, members in groups.items():
+    for members in groups.values():
         ws = [w for _, w in members]
         rep = next((w for w in ws if w.get("artist")), ws[0])
         year = next((w["year"] for w in ws if w.get("year")), None)
@@ -298,35 +380,22 @@ def build(only: list[str] | None = None, log=print) -> dict:
                 if hit:
                     w["artist_death"], w["artist_alive"] = hit.get("artist_death"), hit.get("artist_alive", False)
             w["rights"] = estimate_rights(w)
-            if config.BOOK_BY_ID[w["id"].split("/")[0]]["unit"] == "themed_chapter":
+            if themed:
                 w["rights"] = {"status": "unknown", "basis": "chương theo chủ đề, không phải một tác phẩm"}
             w["rights"]["estimate"] = True
-    ordered = {}
     for bid in order:
-        ws = all_works.get(bid)
-        if ws is None:
-            continue
-        ws = apply_overrides(ws, load_overrides(bid))  # overrides win over generated artwork_key/rights
-        write_json(config.book_dir(bid) / "works.json", [_public(w) for w in ws])
-        for w in ws:
-            miss = [k for k in ("title", "artist", "year") if not w.get(k)]
-            if miss:
-                summary["unparsed"].append({"id": w["id"], "missing": miss, "title": w.get("title")})
-    # artworks.json: a corrected artwork_key moves the work between groups
-    for k, a in artworks.items():
-        ordered[k] = a
+        if all_works[bid]:
+            write_json(config.book_dir(bid) / "works.json",
+                       [_public(w) for w in apply_overrides(all_works[bid], load_overrides(bid))])
     rebuilt: dict[str, dict] = {}
     for bid in order:
-        for w in load_works(bid):
+        for w in load_works(bid):  # a per-work `artwork_key` override moves the work between groups
             k = w["artwork_key"]
             rebuilt.setdefault(k, {**artworks.get(k, {"title": w["title"], "artist": w.get("artist"),
                                                        "year": w.get("year")}), "works": []})["works"].append(w["id"])
     write_json(config.LIB_DIR / "artworks.json", rebuilt)
-    write_json(config.LIB_DIR / "unparsed.json", summary["unparsed"])
     multi = {k: a for k, a in rebuilt.items() if len({x.split("/")[0] for x in a["works"]}) >= 2}
-    summary["artworks"] = len(rebuilt)
-    summary["multi_book"] = {k: a["works"] for k, a in multi.items()}
-    return summary
+    return {"artworks": len(rebuilt), "multi_book": {k: a["works"] for k, a in multi.items()}}
 
 
 def _public(w: dict) -> dict:
