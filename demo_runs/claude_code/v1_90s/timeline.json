@@ -1,0 +1,2037 @@
+{
+ "final_demo": {
+  "duration_s": 81.05,
+  "resolution": "1920x1080",
+  "fps": 30,
+  "title_card_s": [
+   9.479,
+   12.079
+  ],
+  "atempo": 1.07,
+  "speech_rate_wpm_first_to_last_incl_pauses": 140.0,
+  "shots": [
+   {
+    "t0": 0,
+    "t1": 9.479,
+    "effect": "slow drift across couple + decelerating pull-back to matte",
+    "ids": [
+     "CAM-03",
+     "CAM-05",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "params": {
+     "drift": "z 0.4378->0.4728 over 4.9s",
+     "pull_back": "0.4728->0.172 (2.75x) 4.3s ease out_cubic",
+     "ref": "opening pull-back 3.0x/17.9s out"
+    },
+    "words": "Most people ... Look closer"
+   },
+   {
+    "t0": 9.479,
+    "t1": 12.079,
+    "effect": "title card",
+    "ids": [
+     "TXT-01"
+    ],
+    "image": "arnolfini_commons (blurred)",
+    "params": {
+     "blur_sigma": 30,
+     "text_fade": 0.35
+    },
+    "words": ""
+   },
+   {
+    "t0": 12.229,
+    "t1": 21.805,
+    "effect": "matte zoom-in to full-bleed then pan down dress",
+    "ids": [
+     "CAM-01",
+     "CAM-04",
+     "CAM-06",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "params": {
+     "zoom": "0.172->0.50 (2.9x) ease inout_cubic",
+     "pan": "cy 3600->4650 linear (103 px/s screen)",
+     "label": [
+      "Green wool gown @14.53",
+      "Squirrel-fur lining @17.16"
+     ],
+     "ref": "matte zoom-in 1.59x/4.9s ease-in; dress pan ~180 px/s"
+    },
+    "words": "Her green gown / The fur lining"
+   },
+   {
+    "t0": 21.835,
+    "t1": 29.874000000000002,
+    "effect": "hard cut-in to detail + slow push",
+    "ids": [
+     "TR-04",
+     "CAM-01",
+     "STATIC-08"
+    ],
+    "image": "arnolfini_commons",
+    "params": {
+     "zoom": "0.90->1.04 out_cubic"
+    },
+    "words": "The dog at her feet"
+   },
+   {
+    "t0": 29.854,
+    "t1": 37.218999999999994,
+    "effect": "hard cut to matte, year captions",
+    "ids": [
+     "STATIC-09",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "params": {
+     "text": "1433 @33.37, 1434 @36.23"
+    },
+    "words": "died in 1433 / finished"
+   },
+   {
+    "t0": 37.419,
+    "t1": 52.26,
+    "effect": "push-in to mirror + spotlight x2 + two circles",
+    "ids": [
+     "HI-01",
+     "CAM-05",
+     "AN-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "params": {
+     "zoom": "0.4378->1.12->1.30 (3.0x) inout",
+     "spotlight": "floor 0.35, ramp 0.5s @'mirror' 38.43 and @B3c 47.51",
+     "rings": "r=78 src px, 0.5s draw @'roundels' 43.95, fade 0.4s"
+    },
+    "words": "The convex mirror / Ten tiny roundels / Every scene"
+   },
+   {
+    "t0": 52.46,
+    "t1": 62.498,
+    "effect": "two-panel split-screen, slide-in of 2nd panel, synchronous push-ins on rugs",
+    "ids": [
+     "LAY-01",
+     "TR-02",
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons + paele_commons",
+    "params": {
+     "slide": "0.85s out_cubic from right edge @'Compare' 52.46",
+     "push": "L 0.1097->0.30, R 0.228->0.55"
+    },
+    "words": "Compare it / The same mastery"
+   },
+   {
+    "t0": 62.478,
+    "t1": 81.05,
+    "effect": "push to hands + spotlight, then long pull-back to matte, fade out",
+    "ids": [
+     "HI-01",
+     "CAM-05",
+     "CAM-03",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "params": {
+     "spotlight": "floor 0.35 ramp 0.5s @'holds' 66.63, release @B5a 71.26",
+     "pull_back": "0.95->0.172 (5.5x) 8.2s out_cubic",
+     "ref": "closing pull-out 5.8x/40s ease-out"
+    },
+    "words": "But the clue / Giovanni holds / Pull back / memorial"
+   }
+  ],
+  "beats": {
+   "B1a": {
+    "start": 0.35,
+    "end": 5.471,
+    "text": "Most people will tell you this is a wedding portrait of a pregnant bride.",
+    "words": [
+     {
+      "w": "Most",
+      "start": 0.35,
+      "end": 0.817,
+      "alignment": "whisper"
+     },
+     {
+      "w": "people",
+      "start": 0.817,
+      "end": 1.154,
+      "alignment": "whisper"
+     },
+     {
+      "w": "will",
+      "start": 1.154,
+      "end": 1.471,
+      "alignment": "whisper"
+     },
+     {
+      "w": "tell",
+      "start": 1.471,
+      "end": 1.696,
+      "alignment": "whisper"
+     },
+     {
+      "w": "you",
+      "start": 1.696,
+      "end": 2.032,
+      "alignment": "whisper"
+     },
+     {
+      "w": "this",
+      "start": 2.032,
+      "end": 2.462,
+      "alignment": "whisper"
+     },
+     {
+      "w": "is",
+      "start": 2.462,
+      "end": 2.668,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 2.668,
+      "end": 2.799,
+      "alignment": "whisper"
+     },
+     {
+      "w": "wedding",
+      "start": 2.799,
+      "end": 3.098,
+      "alignment": "whisper"
+     },
+     {
+      "w": "portrait",
+      "start": 3.098,
+      "end": 3.621,
+      "alignment": "whisper"
+     },
+     {
+      "w": "of",
+      "start": 3.621,
+      "end": 3.92,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 3.92,
+      "end": 4.182,
+      "alignment": "whisper"
+     },
+     {
+      "w": "pregnant",
+      "start": 4.182,
+      "end": 4.462,
+      "alignment": "whisper"
+     },
+     {
+      "w": "bride.",
+      "start": 4.462,
+      "end": 4.967,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B1b": {
+    "start": 5.751,
+    "end": 9.079,
+    "text": "Look closer, because it is probably neither.",
+    "words": [
+     {
+      "w": "Look",
+      "start": 6.032,
+      "end": 6.107,
+      "alignment": "whisper"
+     },
+     {
+      "w": "closer,",
+      "start": 6.107,
+      "end": 6.593,
+      "alignment": "whisper"
+     },
+     {
+      "w": "because",
+      "start": 6.854,
+      "end": 7.135,
+      "alignment": "whisper"
+     },
+     {
+      "w": "it",
+      "start": 7.135,
+      "end": 7.284,
+      "alignment": "whisper"
+     },
+     {
+      "w": "is",
+      "start": 7.284,
+      "end": 7.471,
+      "alignment": "whisper"
+     },
+     {
+      "w": "probably",
+      "start": 7.471,
+      "end": 7.882,
+      "alignment": "whisper"
+     },
+     {
+      "w": "neither.",
+      "start": 7.882,
+      "end": 8.78,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B2a": {
+    "start": 12.229,
+    "end": 16.528,
+    "text": "Her green gown was a stock fertility pose, not a sign of pregnancy.",
+    "words": [
+     {
+      "w": "Her",
+      "start": 12.416,
+      "end": 12.49,
+      "alignment": "whisper"
+     },
+     {
+      "w": "green",
+      "start": 12.49,
+      "end": 12.827,
+      "alignment": "whisper"
+     },
+     {
+      "w": "gown",
+      "start": 12.827,
+      "end": 13.126,
+      "alignment": "whisper"
+     },
+     {
+      "w": "was",
+      "start": 13.126,
+      "end": 13.387,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 13.387,
+      "end": 13.537,
+      "alignment": "whisper"
+     },
+     {
+      "w": "stock",
+      "start": 13.537,
+      "end": 13.78,
+      "alignment": "whisper"
+     },
+     {
+      "w": "fertility",
+      "start": 13.78,
+      "end": 14.191,
+      "alignment": "whisper"
+     },
+     {
+      "w": "pose,",
+      "start": 14.191,
+      "end": 14.752,
+      "alignment": "whisper"
+     },
+     {
+      "w": "not",
+      "start": 14.92,
+      "end": 15.144,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 15.144,
+      "end": 15.294,
+      "alignment": "whisper"
+     },
+     {
+      "w": "sign",
+      "start": 15.294,
+      "end": 15.537,
+      "alignment": "whisper"
+     },
+     {
+      "w": "of",
+      "start": 15.537,
+      "end": 15.705,
+      "alignment": "whisper"
+     },
+     {
+      "w": "pregnancy.",
+      "start": 15.705,
+      "end": 16.135,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B2b": {
+    "start": 16.808,
+    "end": 21.555,
+    "text": "The fur lining is a boast, a billboard for Bruges luxury.",
+    "words": [
+     {
+      "w": "The",
+      "start": 17.125,
+      "end": 17.406,
+      "alignment": "whisper"
+     },
+     {
+      "w": "fur",
+      "start": 17.406,
+      "end": 17.724,
+      "alignment": "whisper"
+     },
+     {
+      "w": "lining",
+      "start": 17.724,
+      "end": 18.06,
+      "alignment": "whisper"
+     },
+     {
+      "w": "is",
+      "start": 18.06,
+      "end": 18.434,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 18.434,
+      "end": 18.583,
+      "alignment": "whisper"
+     },
+     {
+      "w": "boast,",
+      "start": 18.583,
+      "end": 18.939,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 19.368,
+      "end": 19.462,
+      "alignment": "whisper"
+     },
+     {
+      "w": "billboard",
+      "start": 19.462,
+      "end": 19.985,
+      "alignment": "whisper"
+     },
+     {
+      "w": "for",
+      "start": 19.985,
+      "end": 20.415,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Bruges",
+      "start": 20.415,
+      "end": 20.808,
+      "alignment": "whisper"
+     },
+     {
+      "w": "luxury.",
+      "start": 20.808,
+      "end": 21.294,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B2c": {
+    "start": 21.835,
+    "end": 29.574,
+    "text": "The dog at her feet echoes medieval tombs, where dogs lay at a dead woman's feet to guide her into the afterlife.",
+    "words": [
+     {
+      "w": "The",
+      "start": 21.947,
+      "end": 22.097,
+      "alignment": "whisper"
+     },
+     {
+      "w": "dog",
+      "start": 22.097,
+      "end": 22.415,
+      "alignment": "whisper"
+     },
+     {
+      "w": "at",
+      "start": 22.415,
+      "end": 22.602,
+      "alignment": "whisper"
+     },
+     {
+      "w": "her",
+      "start": 22.602,
+      "end": 22.77,
+      "alignment": "whisper"
+     },
+     {
+      "w": "feet",
+      "start": 22.77,
+      "end": 23.069,
+      "alignment": "whisper"
+     },
+     {
+      "w": "echoes",
+      "start": 23.069,
+      "end": 23.555,
+      "alignment": "whisper"
+     },
+     {
+      "w": "medieval",
+      "start": 23.555,
+      "end": 24.097,
+      "alignment": "whisper"
+     },
+     {
+      "w": "tombs,",
+      "start": 24.097,
+      "end": 24.826,
+      "alignment": "whisper"
+     },
+     {
+      "w": "where",
+      "start": 24.901,
+      "end": 25.162,
+      "alignment": "whisper"
+     },
+     {
+      "w": "dogs",
+      "start": 25.162,
+      "end": 25.555,
+      "alignment": "whisper"
+     },
+     {
+      "w": "lay",
+      "start": 25.555,
+      "end": 25.891,
+      "alignment": "whisper"
+     },
+     {
+      "w": "at",
+      "start": 25.891,
+      "end": 26.116,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 26.116,
+      "end": 26.303,
+      "alignment": "whisper"
+     },
+     {
+      "w": "dead",
+      "start": 26.303,
+      "end": 26.546,
+      "alignment": "whisper"
+     },
+     {
+      "w": "woman's",
+      "start": 26.546,
+      "end": 27.088,
+      "alignment": "whisper"
+     },
+     {
+      "w": "feet",
+      "start": 27.088,
+      "end": 27.331,
+      "alignment": "whisper"
+     },
+     {
+      "w": "to",
+      "start": 27.331,
+      "end": 27.704,
+      "alignment": "whisper"
+     },
+     {
+      "w": "guide",
+      "start": 27.704,
+      "end": 27.985,
+      "alignment": "whisper"
+     },
+     {
+      "w": "her",
+      "start": 27.985,
+      "end": 28.265,
+      "alignment": "whisper"
+     },
+     {
+      "w": "into",
+      "start": 28.265,
+      "end": 28.527,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 28.527,
+      "end": 28.733,
+      "alignment": "whisper"
+     },
+     {
+      "w": "afterlife.",
+      "start": 28.733,
+      "end": 29.219,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B2d": {
+    "start": 29.854,
+    "end": 36.919,
+    "text": "And Costanza Trenta, the likely sitter, had died in 1433, a year before the painting was finished.",
+    "words": [
+     {
+      "w": "And",
+      "start": 29.872,
+      "end": 30.171,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Costanza",
+      "start": 30.171,
+      "end": 30.713,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Trenta,",
+      "start": 30.713,
+      "end": 31.256,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 31.517,
+      "end": 31.592,
+      "alignment": "whisper"
+     },
+     {
+      "w": "likely",
+      "start": 31.592,
+      "end": 31.928,
+      "alignment": "whisper"
+     },
+     {
+      "w": "sitter,",
+      "start": 31.928,
+      "end": 32.377,
+      "alignment": "whisper"
+     },
+     {
+      "w": "had",
+      "start": 32.601,
+      "end": 32.751,
+      "alignment": "whisper"
+     },
+     {
+      "w": "died",
+      "start": 32.751,
+      "end": 33.05,
+      "alignment": "whisper"
+     },
+     {
+      "w": "in",
+      "start": 33.05,
+      "end": 33.368,
+      "alignment": "whisper"
+     },
+     {
+      "w": "1433,",
+      "start": 33.368,
+      "end": 34.433,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 34.863,
+      "end": 34.975,
+      "alignment": "whisper"
+     },
+     {
+      "w": "year",
+      "start": 34.975,
+      "end": 35.218,
+      "alignment": "whisper"
+     },
+     {
+      "w": "before",
+      "start": 35.218,
+      "end": 35.573,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 35.573,
+      "end": 35.741,
+      "alignment": "whisper"
+     },
+     {
+      "w": "painting",
+      "start": 35.741,
+      "end": 35.966,
+      "alignment": "whisper"
+     },
+     {
+      "w": "was",
+      "start": 35.966,
+      "end": 36.227,
+      "alignment": "whisper"
+     },
+     {
+      "w": "finished.",
+      "start": 36.227,
+      "end": 36.657,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B3a": {
+    "start": 37.419,
+    "end": 42.578,
+    "text": "The convex mirror holds two visitors in the doorway, perhaps the painter himself.",
+    "words": [
+     {
+      "w": "The",
+      "start": 37.681,
+      "end": 37.905,
+      "alignment": "whisper"
+     },
+     {
+      "w": "convex",
+      "start": 37.905,
+      "end": 38.428,
+      "alignment": "whisper"
+     },
+     {
+      "w": "mirror",
+      "start": 38.428,
+      "end": 38.709,
+      "alignment": "whisper"
+     },
+     {
+      "w": "holds",
+      "start": 38.709,
+      "end": 39.12,
+      "alignment": "whisper"
+     },
+     {
+      "w": "two",
+      "start": 39.12,
+      "end": 39.419,
+      "alignment": "whisper"
+     },
+     {
+      "w": "visitors",
+      "start": 39.419,
+      "end": 39.756,
+      "alignment": "whisper"
+     },
+     {
+      "w": "in",
+      "start": 39.756,
+      "end": 40.017,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 40.017,
+      "end": 40.129,
+      "alignment": "whisper"
+     },
+     {
+      "w": "doorway,",
+      "start": 40.129,
+      "end": 40.447,
+      "alignment": "whisper"
+     },
+     {
+      "w": "perhaps",
+      "start": 40.896,
+      "end": 41.27,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 41.27,
+      "end": 41.531,
+      "alignment": "whisper"
+     },
+     {
+      "w": "painter",
+      "start": 41.531,
+      "end": 41.756,
+      "alignment": "whisper"
+     },
+     {
+      "w": "himself.",
+      "start": 41.756,
+      "end": 42.223,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B3b": {
+    "start": 42.858,
+    "end": 47.232,
+    "text": "Ten tiny roundels of Christ's Passion circle the glass.",
+    "words": [
+     {
+      "w": "Ten",
+      "start": 43.045,
+      "end": 43.269,
+      "alignment": "whisper"
+     },
+     {
+      "w": "tiny",
+      "start": 43.269,
+      "end": 43.849,
+      "alignment": "whisper"
+     },
+     {
+      "w": "roundels",
+      "start": 43.849,
+      "end": 44.503,
+      "alignment": "whisper"
+     },
+     {
+      "w": "of",
+      "start": 44.503,
+      "end": 44.708,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Christ's",
+      "start": 44.708,
+      "end": 45.307,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Passion",
+      "start": 45.307,
+      "end": 45.624,
+      "alignment": "whisper"
+     },
+     {
+      "w": "circle",
+      "start": 45.624,
+      "end": 46.204,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 46.204,
+      "end": 46.54,
+      "alignment": "whisper"
+     },
+     {
+      "w": "glass.",
+      "start": 46.54,
+      "end": 46.821,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B3c": {
+    "start": 47.512,
+    "end": 51.96,
+    "text": "Every scene after Christ's death sits on Costanza's side.",
+    "words": [
+     {
+      "w": "Every",
+      "start": 47.587,
+      "end": 47.979,
+      "alignment": "whisper"
+     },
+     {
+      "w": "scene",
+      "start": 47.979,
+      "end": 48.372,
+      "alignment": "whisper"
+     },
+     {
+      "w": "after",
+      "start": 48.372,
+      "end": 48.876,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Christ's",
+      "start": 48.876,
+      "end": 49.474,
+      "alignment": "whisper"
+     },
+     {
+      "w": "death",
+      "start": 49.474,
+      "end": 49.699,
+      "alignment": "whisper"
+     },
+     {
+      "w": "sits",
+      "start": 49.699,
+      "end": 50.147,
+      "alignment": "whisper"
+     },
+     {
+      "w": "on",
+      "start": 50.147,
+      "end": 50.484,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Costanza's",
+      "start": 50.484,
+      "end": 51.269,
+      "alignment": "whisper"
+     },
+     {
+      "w": "side.",
+      "start": 51.269,
+      "end": 51.643,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B4a": {
+    "start": 52.46,
+    "end": 57.47,
+    "text": "Compare it with Van Eyck's Canon van der Paele altarpiece, painted the same year.",
+    "words": [
+     {
+      "w": "Compare",
+      "start": 52.703,
+      "end": 52.965,
+      "alignment": "whisper"
+     },
+     {
+      "w": "it",
+      "start": 52.965,
+      "end": 53.208,
+      "alignment": "whisper"
+     },
+     {
+      "w": "with",
+      "start": 53.208,
+      "end": 53.395,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Van",
+      "start": 53.395,
+      "end": 53.582,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Eyck's",
+      "start": 53.582,
+      "end": 54.087,
+      "alignment": "whisper"
+     },
+     {
+      "w": "Canon",
+      "start": 54.087,
+      "end": 54.236,
+      "alignment": "whisper"
+     },
+     {
+      "w": "van",
+      "start": 54.236,
+      "end": 54.529,
+      "alignment": "interp"
+     },
+     {
+      "w": "der",
+      "start": 54.529,
+      "end": 54.822,
+      "alignment": "interp"
+     },
+     {
+      "w": "Paele",
+      "start": 54.822,
+      "end": 55.115,
+      "alignment": "interp"
+     },
+     {
+      "w": "altarpiece,",
+      "start": 55.115,
+      "end": 55.75,
+      "alignment": "whisper"
+     },
+     {
+      "w": "painted",
+      "start": 55.75,
+      "end": 56.404,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 56.404,
+      "end": 56.703,
+      "alignment": "whisper"
+     },
+     {
+      "w": "same",
+      "start": 56.703,
+      "end": 56.928,
+      "alignment": "whisper"
+     },
+     {
+      "w": "year.",
+      "start": 56.928,
+      "end": 57.227,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B4b": {
+    "start": 57.75,
+    "end": 62.198,
+    "text": "The same mastery of rugs and rich cloth runs through both.",
+    "words": [
+     {
+      "w": "The",
+      "start": 57.507,
+      "end": 58.049,
+      "alignment": "whisper"
+     },
+     {
+      "w": "same",
+      "start": 58.049,
+      "end": 58.479,
+      "alignment": "whisper"
+     },
+     {
+      "w": "mastery",
+      "start": 58.479,
+      "end": 59.002,
+      "alignment": "whisper"
+     },
+     {
+      "w": "of",
+      "start": 59.002,
+      "end": 59.264,
+      "alignment": "whisper"
+     },
+     {
+      "w": "rugs",
+      "start": 59.264,
+      "end": 59.712,
+      "alignment": "whisper"
+     },
+     {
+      "w": "and",
+      "start": 59.712,
+      "end": 59.955,
+      "alignment": "whisper"
+     },
+     {
+      "w": "rich",
+      "start": 59.955,
+      "end": 60.217,
+      "alignment": "whisper"
+     },
+     {
+      "w": "cloth",
+      "start": 60.217,
+      "end": 60.666,
+      "alignment": "whisper"
+     },
+     {
+      "w": "runs",
+      "start": 60.666,
+      "end": 61.189,
+      "alignment": "whisper"
+     },
+     {
+      "w": "through",
+      "start": 61.189,
+      "end": 61.544,
+      "alignment": "whisper"
+     },
+     {
+      "w": "both.",
+      "start": 61.544,
+      "end": 61.862,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B4c": {
+    "start": 62.478,
+    "end": 65.843,
+    "text": "But the clue that matters most is in the hands.",
+    "words": [
+     {
+      "w": "But",
+      "start": 62.254,
+      "end": 62.759,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 62.759,
+      "end": 62.946,
+      "alignment": "whisper"
+     },
+     {
+      "w": "clue",
+      "start": 62.946,
+      "end": 63.263,
+      "alignment": "whisper"
+     },
+     {
+      "w": "that",
+      "start": 63.263,
+      "end": 63.544,
+      "alignment": "whisper"
+     },
+     {
+      "w": "matters",
+      "start": 63.544,
+      "end": 63.899,
+      "alignment": "whisper"
+     },
+     {
+      "w": "most",
+      "start": 63.899,
+      "end": 64.31,
+      "alignment": "whisper"
+     },
+     {
+      "w": "is",
+      "start": 64.31,
+      "end": 64.703,
+      "alignment": "whisper"
+     },
+     {
+      "w": "in",
+      "start": 64.703,
+      "end": 64.927,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 64.927,
+      "end": 65.095,
+      "alignment": "whisper"
+     },
+     {
+      "w": "hands.",
+      "start": 65.095,
+      "end": 65.525,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B4d": {
+    "start": 66.123,
+    "end": 70.758,
+    "text": "Giovanni holds hers so lightly, as if she were already slipping away.",
+    "words": [
+     {
+      "w": "Giovanni",
+      "start": 66.627,
+      "end": 66.627,
+      "alignment": "whisper"
+     },
+     {
+      "w": "holds",
+      "start": 66.627,
+      "end": 67.113,
+      "alignment": "whisper"
+     },
+     {
+      "w": "hers",
+      "start": 67.113,
+      "end": 67.506,
+      "alignment": "whisper"
+     },
+     {
+      "w": "so",
+      "start": 67.506,
+      "end": 67.805,
+      "alignment": "whisper"
+     },
+     {
+      "w": "lightly,",
+      "start": 67.805,
+      "end": 68.272,
+      "alignment": "whisper"
+     },
+     {
+      "w": "as",
+      "start": 68.571,
+      "end": 68.74,
+      "alignment": "whisper"
+     },
+     {
+      "w": "if",
+      "start": 68.74,
+      "end": 68.889,
+      "alignment": "whisper"
+     },
+     {
+      "w": "she",
+      "start": 68.889,
+      "end": 69.057,
+      "alignment": "whisper"
+     },
+     {
+      "w": "were",
+      "start": 69.057,
+      "end": 69.207,
+      "alignment": "whisper"
+     },
+     {
+      "w": "already",
+      "start": 69.207,
+      "end": 69.599,
+      "alignment": "whisper"
+     },
+     {
+      "w": "slipping",
+      "start": 69.599,
+      "end": 70.048,
+      "alignment": "whisper"
+     },
+     {
+      "w": "away.",
+      "start": 70.048,
+      "end": 70.478,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B5a": {
+    "start": 71.258,
+    "end": 74.174,
+    "text": "Pull back, and the whole picture changes.",
+    "words": [
+     {
+      "w": "Pull",
+      "start": 71.296,
+      "end": 71.595,
+      "alignment": "whisper"
+     },
+     {
+      "w": "back,",
+      "start": 71.595,
+      "end": 71.95,
+      "alignment": "whisper"
+     },
+     {
+      "w": "and",
+      "start": 72.324,
+      "end": 72.529,
+      "alignment": "whisper"
+     },
+     {
+      "w": "the",
+      "start": 72.529,
+      "end": 72.641,
+      "alignment": "whisper"
+     },
+     {
+      "w": "whole",
+      "start": 72.641,
+      "end": 72.941,
+      "alignment": "whisper"
+     },
+     {
+      "w": "picture",
+      "start": 72.941,
+      "end": 73.277,
+      "alignment": "whisper"
+     },
+     {
+      "w": "changes.",
+      "start": 73.277,
+      "end": 73.744,
+      "alignment": "whisper"
+     }
+    ]
+   },
+   "B5b": {
+    "start": 74.454,
+    "end": 79.65,
+    "text": "It reads less like a wedding record than a memorial to a love that outlasts death.",
+    "words": [
+     {
+      "w": "It",
+      "start": 74.604,
+      "end": 74.791,
+      "alignment": "whisper"
+     },
+     {
+      "w": "reads",
+      "start": 74.791,
+      "end": 75.164,
+      "alignment": "whisper"
+     },
+     {
+      "w": "less",
+      "start": 75.164,
+      "end": 75.426,
+      "alignment": "whisper"
+     },
+     {
+      "w": "like",
+      "start": 75.426,
+      "end": 75.707,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 75.707,
+      "end": 75.837,
+      "alignment": "whisper"
+     },
+     {
+      "w": "wedding",
+      "start": 75.837,
+      "end": 76.062,
+      "alignment": "whisper"
+     },
+     {
+      "w": "record",
+      "start": 76.062,
+      "end": 76.473,
+      "alignment": "whisper"
+     },
+     {
+      "w": "than",
+      "start": 76.473,
+      "end": 76.865,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 76.865,
+      "end": 76.959,
+      "alignment": "whisper"
+     },
+     {
+      "w": "memorial",
+      "start": 76.959,
+      "end": 77.295,
+      "alignment": "whisper"
+     },
+     {
+      "w": "to",
+      "start": 77.295,
+      "end": 77.725,
+      "alignment": "whisper"
+     },
+     {
+      "w": "a",
+      "start": 77.725,
+      "end": 77.875,
+      "alignment": "whisper"
+     },
+     {
+      "w": "love",
+      "start": 77.875,
+      "end": 78.043,
+      "alignment": "whisper"
+     },
+     {
+      "w": "that",
+      "start": 78.043,
+      "end": 78.305,
+      "alignment": "whisper"
+     },
+     {
+      "w": "outlasts",
+      "start": 78.305,
+      "end": 78.959,
+      "alignment": "whisper"
+     },
+     {
+      "w": "death.",
+      "start": 78.959,
+      "end": 79.333,
+      "alignment": "whisper"
+     }
+    ]
+   }
+  },
+  "audio": {
+   "pass1": {
+    "input_i": "-16.43",
+    "input_tp": "0.02",
+    "input_lra": "2.80",
+    "input_thresh": "-27.37",
+    "output_i": "-15.23",
+    "output_tp": "-1.50",
+    "output_lra": "2.70",
+    "output_thresh": "-26.05",
+    "normalization_type": "dynamic",
+    "target_offset": "0.23"
+   },
+   "pass2_filter": "loudnorm=I=-15:TP=-1.5:LRA=11:measured_I=-16.43:measured_TP=0.02:measured_LRA=2.80:measured_thresh=-27.37:offset=0.23:linear=true:print_format=summary",
+   "music": "numpy-synthesised pad (Am-F-C-G sines) + low-passed noise room tone, generated by audio_job.py; -24 dB re voice, ducked -4 dB under speech"
+  }
+ },
+ "technique_reel": {
+  "resolution": "1920x1080",
+  "fps": 30,
+  "segments": [
+   {
+    "id": "CAM-01",
+    "name": "Push-in",
+    "t0": 0.0,
+    "t1": 6.0,
+    "render_s": 7.2,
+    "status": "done",
+    "method": "cv2.warpAffine cubic, log-zoom keyframes (lib/vfx.Cam)",
+    "reference": "push-in 1.142x/5.9 s, near-linear (.27/.55/.82)",
+    "used": "1.14x/6 s same easing"
+   },
+   {
+    "id": "CAM-02",
+    "name": "Layered relative motion",
+    "t0": 6.0,
+    "t1": 12.0,
+    "render_s": 22.4,
+    "status": "partial",
+    "method": "couple cut-out (GrabCut mask) vs room plate with opposite scale rates",
+    "reference": "layered scales (excerpt, +/-0.5 s)",
+    "used": "fg 1.30x vs bg 1.06x over 6 s"
+   },
+   {
+    "id": "CAM-03",
+    "name": "Pull-back",
+    "t0": 12.0,
+    "t1": 19.0,
+    "render_s": 9.0,
+    "status": "done",
+    "method": "warpAffine, ease-in/out-cubic",
+    "reference": "pull-back 0.762x/9.9 s ease-in (.17/.40/.71); opening 3.0x/17.9 s ease-out; closing 5.8x/40 s ease-out",
+    "used": "reel 1.31x/7 s ease-in; final 2.75x/4 s and 5.5x/8 s out_cubic"
+   },
+   {
+    "id": "CAM-04",
+    "name": "Pan up",
+    "t0": 19.0,
+    "t1": 25.0,
+    "render_s": 7.5,
+    "status": "done",
+    "method": "linear cy ramp",
+    "reference": "pan-up 19 px/s, 16.6 % height / 9.4 s, linear",
+    "used": "19 px/s equivalent, linear"
+   },
+   {
+    "id": "CAM-05",
+    "name": "Zoom and shift",
+    "t0": 25.0,
+    "t1": 31.0,
+    "render_s": 7.6,
+    "status": "done",
+    "method": "simultaneous pan+zoom keyframes",
+    "reference": "zoom+shift 1.51x/9.4 s, 15 % shift, linear; mirror push 3.57x ease-in-out",
+    "used": "1.30x/6 s + 11%/14% shift; final mirror 3.0x ease in-out"
+   },
+   {
+    "id": "CAM-06",
+    "name": "Hold + label reveal",
+    "t0": 31.0,
+    "t1": 37.0,
+    "render_s": 16.1,
+    "status": "done",
+    "method": "compose_matte + label_layer",
+    "reference": "hold, label pop in ~0.1 s",
+    "used": "label pops 0.08 s, held 3.2 s"
+   },
+   {
+    "id": "TR-01",
+    "name": "Dissolve",
+    "t0": 37.0,
+    "t1": 42.0,
+    "render_s": 18.4,
+    "status": "done",
+    "method": "linear cross-dissolve",
+    "reference": "dissolve 698.5-699.5 s ~1.0 s (excerpt); NO dissolves in the Arnolfini episode",
+    "used": "1.0 s"
+   },
+   {
+    "id": "TR-02",
+    "name": "Slide in / out",
+    "t0": 42.0,
+    "t1": 47.5,
+    "render_s": 8.5,
+    "status": "done",
+    "method": "panel translate, out_cubic 0.8 s",
+    "reference": "slide in/out ~0.8 s (excerpt, 1 fps tiles)",
+    "used": "0.8-0.85 s ease-out"
+   },
+   {
+    "id": "TR-03",
+    "name": "Panel opening",
+    "t0": 47.5,
+    "t1": 53.5,
+    "render_s": 25.0,
+    "status": "partial",
+    "method": "warpPerspective shutters (halves of Arnolfini) opening onto Van der Paele",
+    "reference": "panel opening ~4 s, 1 fps tiles only",
+    "used": "3.2 s, 84 deg hinge, 22 % perspective squeeze"
+   },
+   {
+    "id": "TR-04",
+    "name": "Hard cut: full to crop",
+    "t0": 53.5,
+    "t1": 58.5,
+    "render_s": 9.3,
+    "status": "done",
+    "method": "hard cut to detail crop",
+    "reference": "~04:40 cut, 0 transition frames measured at 1 fps",
+    "used": "hard cut"
+   },
+   {
+    "id": "LAY-01",
+    "name": "Two panels",
+    "t0": 58.5,
+    "t1": 63.5,
+    "render_s": 9.0,
+    "status": "done",
+    "method": "two panels + captions",
+    "reference": "two-up layout",
+    "used": "two 900x740 panels with captions"
+   },
+   {
+    "id": "LAY-02",
+    "name": "Four-tile grid",
+    "t0": 63.5,
+    "t1": 69.0,
+    "render_s": 10.5,
+    "status": "done",
+    "method": "2x2 tiles + animated connectors",
+    "reference": "static 4-up",
+    "used": "4 tiles, connectors drawn 1.2 s"
+   },
+   {
+    "id": "LAY-03",
+    "name": "Five-column comparison",
+    "t0": 69.0,
+    "t1": 74.0,
+    "render_s": 19.2,
+    "status": "partial",
+    "method": "five colour-state columns of one painting",
+    "reference": "five variants (static)",
+    "used": "5 columns (scan, print, grey, sepia, contrast)"
+   },
+   {
+    "id": "LAY-04",
+    "name": "Inset window",
+    "t0": 74.0,
+    "t1": 79.5,
+    "render_s": 7.7,
+    "status": "done",
+    "method": "inset window over crop",
+    "reference": "small footage window over crop",
+    "used": "560x315 inset with push"
+   },
+   {
+    "id": "LAY-05",
+    "name": "Subject held, background changes",
+    "t0": 79.5,
+    "t1": 85.5,
+    "render_s": 26.9,
+    "status": "partial",
+    "method": "GrabCut cut-out held, 4 backgrounds cross-faded",
+    "reference": "subject fixed while background changes",
+    "used": "1.5 s per background"
+   },
+   {
+    "id": "LAY-06",
+    "name": "Translucent vertical strips",
+    "t0": 85.5,
+    "t1": 91.0,
+    "render_s": 15.5,
+    "status": "done",
+    "method": "six translucent vertical strips drifting",
+    "reference": "semi-transparent strips",
+    "used": "72 % opacity strips"
+   },
+   {
+    "id": "LAY-07",
+    "name": "Grid with translucent overlay object",
+    "t0": 91.0,
+    "t1": 96.5,
+    "render_s": 24.7,
+    "status": "done",
+    "method": "grid of 4 + translucent overlay (mirror disc)",
+    "reference": "grid + semi-transparent object",
+    "used": "55 % overlay disc"
+   },
+   {
+    "id": "LAY-08",
+    "name": "Repeated symmetric motif",
+    "t0": 96.5,
+    "t1": 101.5,
+    "render_s": 6.6,
+    "status": "done",
+    "method": "mirror-flipped tiling of the mirror roundel",
+    "reference": "symmetric repeat",
+    "used": "4x2 reflected tiles"
+   },
+   {
+    "id": "HI-01",
+    "name": "Spotlight",
+    "t0": 101.5,
+    "t1": 107.5,
+    "render_s": 10.8,
+    "status": "done",
+    "method": "feathered ellipse mask, floor 0.35, 0.5 s inout_sine ramp (lib/vfx.spotlight)",
+    "reference": "spotlight dims surround (excerpt: surround about 15-25 % by eye), vignette on figure",
+    "used": "floor 0.35, ramp 0.5 s"
+   },
+   {
+    "id": "HI-02",
+    "name": "Hiding figures then group reveal",
+    "t0": 107.5,
+    "t1": 114.5,
+    "render_s": 47.0,
+    "status": "partial",
+    "method": "cut-outs slide in over a plate",
+    "reference": "figures appear over empty room 6.5-12 s, scale ~2.2x",
+    "used": "left/right group slide-in 1.4 s"
+   },
+   {
+    "id": "HI-03",
+    "name": "Colour kept on subject, rest grey",
+    "t0": 114.5,
+    "t1": 120.0,
+    "render_s": 21.0,
+    "status": "done",
+    "method": "mask-limited desaturation",
+    "reference": "couple in colour, rest grey",
+    "used": "1.0 s desaturate ramp"
+   },
+   {
+    "id": "AN-01",
+    "name": "Circle draw",
+    "t0": 120.0,
+    "t1": 125.5,
+    "render_s": 7.1,
+    "status": "done",
+    "method": "cv2.ellipse LINE_AA arc sweep (lib/vfx.ring)",
+    "reference": "two light-grey rings d=23.4 % W, stroke 0.7 % W, draw 0.5 s, hold 2 s, fade 0.4 s",
+    "used": "d=156 src px*zoom, stroke 9 px, 0.5 s draw, fade 0.4 s, alpha .75, grey 205"
+   },
+   {
+    "id": "AN-02",
+    "name": "Object outline",
+    "t0": 125.5,
+    "t1": 131.5,
+    "render_s": 13.5,
+    "status": "partial",
+    "method": "contour of GrabCut mask drawn progressively",
+    "reference": "white outline, progressive",
+    "used": "3 s draw along contour"
+   },
+   {
+    "id": "AN-03",
+    "name": "Perspective rays",
+    "t0": 131.5,
+    "t1": 137.5,
+    "render_s": 12.9,
+    "status": "done",
+    "method": "nine white rays converging, staggered 0.35 s",
+    "reference": "white converging lines",
+    "used": "4 px lines, 0.45 s each"
+   },
+   {
+    "id": "AN-04",
+    "name": "Map circle and arrow (stand-in map)",
+    "t0": 137.5,
+    "t1": 143.5,
+    "render_s": 24.7,
+    "status": "partial",
+    "method": "procedural grey map + red route + arrowhead",
+    "reference": "circle + arrow on satellite map",
+    "used": "route drawn 2.4 s"
+   },
+   {
+    "id": "AN-05",
+    "name": "Dimension ruler",
+    "t0": 143.5,
+    "t1": 149.5,
+    "render_s": 15.3,
+    "status": "done",
+    "method": "white rectangle-lines + figure text popping within 0.25 s",
+    "reference": "lines + 60cm/82cm pop within 0.2 s",
+    "used": "same, text 'OIL ON OAK PANEL' (own wording)"
+   },
+   {
+    "id": "AN-06",
+    "name": "Grid and geometric regions",
+    "t0": 149.5,
+    "t1": 155.5,
+    "render_s": 11.7,
+    "status": "done",
+    "method": "thirds grid + translucent triangle",
+    "reference": "static",
+    "used": "grid draws 1.2 s, 28 % triangle"
+   },
+   {
+    "id": "AN-07",
+    "name": "Dot field densifying",
+    "t0": 155.5,
+    "t1": 162.0,
+    "render_s": 18.3,
+    "status": "done",
+    "method": "dot field growing from 60 to 9000 dots, radius 70->3 px, colours sampled from painting",
+    "reference": "dots densify (excerpt)",
+    "used": "6.5 s, ends cross-fade into the painting"
+   },
+   {
+    "id": "TXT-01",
+    "name": "Chapter title card",
+    "t0": 162.0,
+    "t1": 166.5,
+    "render_s": 3.2,
+    "status": "done",
+    "method": "blurred artwork + tracked caps text",
+    "reference": "small serif/sans caps title, hard cut",
+    "used": "text fade 0.5 s"
+   },
+   {
+    "id": "TXT-02",
+    "name": "Sliding italic text",
+    "t0": 166.5,
+    "t1": 172.0,
+    "render_s": 39.0,
+    "status": "done",
+    "method": "serif italic lines translating across image (own text)",
+    "reference": "scrolling italic quotes",
+    "used": "520 px/s"
+   },
+   {
+    "id": "STATIC-01",
+    "name": "Black matte (designed gallery matte)",
+    "t0": 172.0,
+    "t1": 176.5,
+    "render_s": 11.6,
+    "status": "done",
+    "method": "designed near-black vignette matte + shadow",
+    "reference": "pure black matte",
+    "used": "#1e centre -> #06 edge"
+   },
+   {
+    "id": "STATIC-02",
+    "name": "Source label",
+    "t0": 176.5,
+    "t1": 181.5,
+    "render_s": 5.4,
+    "status": "done",
+    "method": "white 24 px source line",
+    "reference": "small white label lower-left",
+    "used": "24 px at x=36,y=H-62"
+   },
+   {
+    "id": "STATIC-04",
+    "name": "Quote over image",
+    "t0": 181.5,
+    "t1": 187.0,
+    "render_s": 6.5,
+    "status": "done",
+    "method": "own-wording quote over dimmed image",
+    "reference": "white quote over image",
+    "used": "serif italic 70 px"
+   },
+   {
+    "id": "STATIC-05",
+    "name": "Interviewee name tag (placeholder)",
+    "t0": 187.0,
+    "t1": 192.0,
+    "render_s": 5.9,
+    "status": "partial",
+    "method": "label strip with placeholder name",
+    "reference": "caption near interviewee",
+    "used": "placeholder text"
+   },
+   {
+    "id": "STATIC-06",
+    "name": "Map with route",
+    "t0": 192.0,
+    "t1": 197.5,
+    "render_s": 19.3,
+    "status": "partial",
+    "method": "procedural map + route",
+    "reference": "grey map + red route",
+    "used": "same generator as AN-04"
+   },
+   {
+    "id": "STATIC-07",
+    "name": "Multi-cell circular diagram",
+    "t0": 197.5,
+    "t1": 203.5,
+    "render_s": 72.8,
+    "status": "done",
+    "method": "six sectors with crops + labels",
+    "reference": "circular multi-cell diagram",
+    "used": "6 sectors, 0.35 s stagger"
+   },
+   {
+    "id": "STATIC-08",
+    "name": "Name labels on figures",
+    "t0": 203.5,
+    "t1": 209.0,
+    "render_s": 5.8,
+    "status": "partial",
+    "method": "name labels with leader lines",
+    "reference": "small names near figures",
+    "used": "32 px tracked caps"
+   },
+   {
+    "id": "STATIC-09",
+    "name": "Year centred over image",
+    "t0": 209.0,
+    "t1": 213.5,
+    "render_s": 2.9,
+    "status": "done",
+    "method": "centred year over blurred image",
+    "reference": "centred year",
+    "used": "190 px tracked"
+   },
+   {
+    "id": "DIA-01",
+    "name": "Grid + projecting rays (room perspective)",
+    "t0": 213.5,
+    "t1": 220.0,
+    "render_s": 6.2,
+    "status": "partial",
+    "method": "grid + projecting rays on Arnolfini crop",
+    "reference": "grid + rays on skull",
+    "used": "7 rays"
+   },
+   {
+    "id": "DIA-02",
+    "name": "Two views of one object (stand-in)",
+    "t0": 220.0,
+    "t1": 226.0,
+    "render_s": 8.8,
+    "status": "partial",
+    "method": "perspective-warped second view of the mirror",
+    "reference": "two views of skull",
+    "used": "warpPerspective 2.5 s"
+   },
+   {
+    "id": "DIA-03",
+    "name": "Cross-section and light rays (schematic)",
+    "t0": 226.0,
+    "t1": 232.5,
+    "render_s": 4.1,
+    "status": "partial",
+    "method": "schematic layered cross-section + bouncing gold rays",
+    "reference": "gold V rays on a real cross-section",
+    "used": "3 rays staggered"
+   },
+   {
+    "id": "DIA-04",
+    "name": "Figure and separated pieces",
+    "t0": 232.5,
+    "t1": 238.5,
+    "render_s": 20.7,
+    "status": "partial",
+    "method": "cut-outs separated on black",
+    "reference": "statue + separate pieces",
+    "used": "3 circular pieces drift 2 s"
+   },
+   {
+    "id": "DIA-05",
+    "name": "Silhouette process",
+    "t0": 238.5,
+    "t1": 244.5,
+    "render_s": 29.8,
+    "status": "partial",
+    "method": "silhouette fill -> outline -> painting",
+    "reference": "silhouette beside footage",
+    "used": "3 stages"
+   },
+   {
+    "id": "DIA-06",
+    "name": "Room model + UV-style image (simulated)",
+    "t0": 244.5,
+    "t1": 251.0,
+    "render_s": 7.8,
+    "status": "partial",
+    "method": "isometric room + false-colour crop (simulated)",
+    "reference": "room model + UV photo",
+    "used": "simulated, not real UV"
+   },
+   {
+    "id": "DIA-07",
+    "name": "Optical diagram (convex mirror)",
+    "t0": 251.0,
+    "t1": 257.0,
+    "render_s": 3.9,
+    "status": "partial",
+    "method": "ray diagram for a convex mirror",
+    "reference": "eye diagram",
+    "used": "3 rays"
+   },
+   {
+    "id": "CMP-01",
+    "name": "Grey and colour side by side",
+    "t0": 257.0,
+    "t1": 262.0,
+    "render_s": 7.1,
+    "status": "done",
+    "method": "grey vs colour crop",
+    "reference": "grey/colour pair",
+    "used": "1.0 s colour fade"
+   },
+   {
+    "id": "CMP-02",
+    "name": "Stages vs finished (simulated stages)",
+    "t0": 262.0,
+    "t1": 268.0,
+    "render_s": 13.3,
+    "status": "partial",
+    "method": "simulated stages beside finished crop",
+    "reference": "states left, final right",
+    "used": "3 simulated stages"
+   },
+   {
+    "id": "CMP-03",
+    "name": "White / sepia / colour versions",
+    "t0": 268.0,
+    "t1": 273.5,
+    "render_s": 8.3,
+    "status": "done",
+    "method": "grey / sepia / colour",
+    "reference": "white/colour versions",
+    "used": "3 panels"
+   },
+   {
+    "id": "CMP-04",
+    "name": "Colour blocks beside detail",
+    "t0": 273.5,
+    "t1": 279.0,
+    "render_s": 5.2,
+    "status": "done",
+    "method": "pixelated mosaic beside detail",
+    "reference": "colour blocks",
+    "used": "8->32 blocks"
+   },
+   {
+    "id": "CMP-05",
+    "name": "Two colour states (print vs scan)",
+    "t0": 279.0,
+    "t1": 285.0,
+    "render_s": 14.4,
+    "status": "done",
+    "method": "book-print vs museum-scan wipe (two real colour states)",
+    "reference": "two colour states",
+    "used": "wipe 3.5 s"
+   },
+   {
+    "id": "FOOT-01",
+    "name": "Material cards and palette (stand-in)",
+    "t0": 285.0,
+    "t1": 291.0,
+    "render_s": 12.4,
+    "status": "partial",
+    "method": "material cards + swatches",
+    "reference": "footage + palette",
+    "used": "4 cards"
+   },
+   {
+    "id": "SHORT-01",
+    "name": "Three horizontal strips (vertical)",
+    "t0": 291.0,
+    "t1": 297.0,
+    "render_s": 184.7,
+    "status": "done",
+    "method": "three strips in 9:16 panel on ambient fill",
+    "reference": "three strips",
+    "used": "3x356 px strips, swap every 2 s"
+   },
+   {
+    "id": "SHORT-02",
+    "name": "Changing view (vertical)",
+    "t0": 297.0,
+    "t1": 303.0,
+    "render_s": 162.7,
+    "status": "partial",
+    "method": "perspective change of mirror crop",
+    "reference": "skull changes view",
+    "used": "warp over 3 s"
+   },
+   {
+    "id": "SHORT-03",
+    "name": "Large type changes (vertical)",
+    "t0": 303.0,
+    "t1": 309.0,
+    "render_s": 162.2,
+    "status": "done",
+    "method": "big caps text changes",
+    "reference": "large white text",
+    "used": "130 px, 2 s each"
+   },
+   {
+    "id": "SHORT-04",
+    "name": "Yellow label box (vertical)",
+    "t0": 309.0,
+    "t1": 314.5,
+    "render_s": 148.2,
+    "status": "done",
+    "method": "small text on yellow box",
+    "reference": "yellow label",
+    "used": "1.0 s pop"
+   },
+   {
+    "id": "SHORT-05",
+    "name": "Colour wheel from palette (vertical)",
+    "t0": 314.5,
+    "t1": 320.5,
+    "render_s": 161.8,
+    "status": "partial",
+    "method": "8-sector colour wheel from k-means palette",
+    "reference": "colour wheel image",
+    "used": "sectors fill 0.3 s apart"
+   }
+  ]
+ },
+ "sources": {
+  "arnolfini_commons": {
+   "file": "assets/commons/arnolfini_commons.jpg",
+   "size": "4386x6000",
+   "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/3/33/Van_Eyck_-_Arnolfini_Portrait.jpg",
+   "licence": "Public domain (Wikimedia Commons: {{PD-Art}}, painting 1434)",
+   "downloaded_with": "curl, generic User-Agent"
+  },
+  "paele_commons": {
+   "file": "assets/commons/paele_commons.jpg",
+   "size": "4169x3249",
+   "url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_069.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Jan_van_Eyck_069.jpg",
+   "licence": "Public domain (Wikimedia Commons, painting 1434)",
+   "downloaded_with": "curl, generic User-Agent"
+  },
+  "pdf_images": {
+   "files": "assets/pdf_images/*.jpeg (8 images, p23,25,26,29,30,31,32,35)",
+   "licence": "Public-domain paintings extracted from the supplied book PDF (used in reel only: CMP-05 print-vs-scan, p25..); see manifest.json"
+  },
+  "music": {
+   "source": "numpy-synthesised pad generated locally by server/audio_job.py, no external files",
+   "licence": "n/a (generated)"
+  },
+  "voice": {
+   "engine": "local Chatterbox via stages.stage_4.chatterbox_tts.synthesize",
+   "reference": "assets/voices/machiavelli_ref.wav",
+   "settings": "exaggeration 0.35, cfg_weight 0.5, temperature 0.7 (module default), seed 42",
+   "atempo": 1.07
+  }
+ }
+}

@@ -1,0 +1,979 @@
+{
+  "dataset_version": "expanded_with_Seurat",
+  "baseline_metrics_path": "research_media/great-art-explained/narration-analysis/metrics-baseline.json",
+  "metadata_family_candidates": [
+    {
+      "label": "Pollock parts: same subject, not established duplicate",
+      "ids": [
+        "0sQ_cfZ8q9k",
+        "w6WGLvs8Mhg"
+      ],
+      "status": "parts only; similarity below threshold, both retained"
+    },
+    {
+      "label": "Mona Lisa full and short version",
+      "ids": [
+        "ElWG0_kjy_Y",
+        "T9JvUDrrXmY"
+      ],
+      "status": "title only; short-version transcript unavailable, overlap unverified"
+    }
+  ],
+  "scope": "documentary >=300s with segments and known duration; Cities excluded",
+  "manifest_count": 93,
+  "local_mp4_count": 86,
+  "json_transcript_count": 51,
+  "transcript_counts_by_type": {
+    "documentary": 40,
+    "cities": 7,
+    "shorts": 3,
+    "talk-live": 1
+  },
+  "manifest_counts_by_type": {
+    "documentary": 63,
+    "talk-live": 2,
+    "cities": 8,
+    "promotional": 1,
+    "shorts": 19
+  },
+  "missing_transcript_ids": [
+    "tEEq5DTRXr0",
+    "YXOlTjObWTw",
+    "3wfWuVne0LU",
+    "MChhmACZk1I",
+    "M4IUt7QZh6U",
+    "grxnTX9jm4E",
+    "dHEOSQjvIzc",
+    "lAjVuUB9AkI",
+    "c3NmCvrUYUA",
+    "TU3dRcqik3I",
+    "IUgNeCynVUU",
+    "83ggxS21mFM",
+    "z2hgtFBBbxk",
+    "d50FbuyswAU",
+    "fAGKicTlXgg",
+    "wgSBtXNJjhs",
+    "gA0RAPh2ZgU",
+    "t6vzJ6ceJqs",
+    "LQv3YqHisZc",
+    "wDjq2gPGIHk",
+    "lHePKNTRmdI",
+    "fsz6bkkIHzQ",
+    "fd-Me3EBGYY",
+    "LejFaCncuc4",
+    "yUq9qMm9NtI",
+    "T9JvUDrrXmY",
+    "y4tyypLxRpQ",
+    "UKjrMZSIhvg",
+    "44LZPWLDYOQ",
+    "_PEMXQeRD0s",
+    "gLBi9GtGXpg",
+    "l8EMN1Hu7aI",
+    "1ldE2ZjfxkE",
+    "y4raWGPCWpk",
+    "YPpMNzdH19o",
+    "TXYDSDmW1WE",
+    "peSkiWxZozA",
+    "oJ0VDKpzPRo",
+    "rxoETUQdrvo",
+    "qHF5ZNA_gCQ",
+    "RYacWFBPEzE",
+    "nSB3OgUlDIo"
+  ],
+  "families": [
+    [
+      "GLW9omJfAdk",
+      "XERSI8avqQQ",
+      "9JqS6HfsYIM"
+    ],
+    [
+      "vBG621XEegk",
+      "1pvxmqAKIDU",
+      "IYFtwTo50Gg",
+      "wFrztzzohJ8"
+    ]
+  ],
+  "similarity_pairs": [
+    {
+      "ids": [
+        "GLW9omJfAdk",
+        "XERSI8avqQQ"
+      ],
+      "shared_8word_shingles": 1789,
+      "containment_smaller": 0.724
+    },
+    {
+      "ids": [
+        "GLW9omJfAdk",
+        "9JqS6HfsYIM"
+      ],
+      "shared_8word_shingles": 1751,
+      "containment_smaller": 0.7796
+    },
+    {
+      "ids": [
+        "vBG621XEegk",
+        "1pvxmqAKIDU"
+      ],
+      "shared_8word_shingles": 2280,
+      "containment_smaller": 0.9295
+    },
+    {
+      "ids": [
+        "vBG621XEegk",
+        "IYFtwTo50Gg"
+      ],
+      "shared_8word_shingles": 2067,
+      "containment_smaller": 0.907
+    },
+    {
+      "ids": [
+        "vBG621XEegk",
+        "wFrztzzohJ8"
+      ],
+      "shared_8word_shingles": 2135,
+      "containment_smaller": 0.8469
+    }
+  ],
+  "all_target": {
+    "videos": 40,
+    "duration_seconds_total": 53349.11,
+    "duration_seconds_per_video": {
+      "n": 40,
+      "p50": 1096.88,
+      "p90": 1953.34,
+      "min": 733.61,
+      "max": 3070.4
+    },
+    "words_total": 124755,
+    "words_per_video": {
+      "n": 40,
+      "p50": 2545.5,
+      "p90": 4733.8,
+      "min": 1478,
+      "max": 7640
+    },
+    "whole_file_words_per_minute_pooled": 140.31,
+    "whole_file_words_per_minute_per_video": {
+      "n": 40,
+      "p50": 138.79,
+      "p90": 149.92,
+      "min": 120.88,
+      "max": 161.55
+    },
+    "segment_span_words_per_minute_pooled": 149.59,
+    "segment_span_words_per_minute_per_video": {
+      "n": 40,
+      "p50": 147.93,
+      "p90": 158.34,
+      "min": 135.89,
+      "max": 170.06
+    },
+    "sentences": 5930,
+    "sentence_words_p50": 17.0,
+    "sentence_words_p90": 36.0,
+    "sentence_share_over_25_words": 0.2329,
+    "heuristic_counts": {
+      "question_marks": 96,
+      "contrast": 1097,
+      "we": 945,
+      "you": 259,
+      "hedges": 329,
+      "visual_deictics": 3346
+    },
+    "heuristic_counts_per_1000_words": {
+      "question_marks": 0.77,
+      "contrast": 8.79,
+      "we": 7.57,
+      "you": 2.08,
+      "hedges": 2.64,
+      "visual_deictics": 26.82
+    }
+  },
+  "one_per_detected_family": {
+    "videos": 35,
+    "duration_seconds_total": 48407.51,
+    "duration_seconds_per_video": {
+      "n": 35,
+      "p50": 1213.7,
+      "p90": 1964.51,
+      "min": 733.61,
+      "max": 3070.4
+    },
+    "words_total": 112750,
+    "words_per_video": {
+      "n": 35,
+      "p50": 2851.0,
+      "p90": 4887.8,
+      "min": 1478,
+      "max": 7640
+    },
+    "whole_file_words_per_minute_pooled": 139.75,
+    "whole_file_words_per_minute_per_video": {
+      "n": 35,
+      "p50": 138.31,
+      "p90": 147.2,
+      "min": 120.88,
+      "max": 161.55
+    },
+    "segment_span_words_per_minute_pooled": 149.05,
+    "segment_span_words_per_minute_per_video": {
+      "n": 35,
+      "p50": 147.67,
+      "p90": 158.0,
+      "min": 135.89,
+      "max": 170.06
+    },
+    "sentences": 5406,
+    "sentence_words_p50": 17.0,
+    "sentence_words_p90": 36.0,
+    "sentence_share_over_25_words": 0.2349,
+    "heuristic_counts": {
+      "question_marks": 94,
+      "contrast": 1006,
+      "we": 817,
+      "you": 248,
+      "hedges": 298,
+      "visual_deictics": 2977
+    },
+    "heuristic_counts_per_1000_words": {
+      "question_marks": 0.83,
+      "contrast": 8.92,
+      "we": 7.25,
+      "you": 2.2,
+      "hedges": 2.64,
+      "visual_deictics": 26.4
+    }
+  },
+  "sensitivity_excluded_ids": [
+    "XERSI8avqQQ",
+    "9JqS6HfsYIM",
+    "1pvxmqAKIDU",
+    "IYFtwTo50Gg",
+    "wFrztzzohJ8"
+  ],
+  "patterns": {
+    "question_marks": "\\?",
+    "contrast": "\\b(?:but|however|although|though|yet|whereas|while|nevertheless)\\b",
+    "we": "\\b(?:we|us|our|ours|ourselves)\\b",
+    "you": "\\b(?:you|your|yours|yourself|yourselves)\\b",
+    "hedges": "\\b(?:perhaps|maybe|possibly|probably|might|may|seems?|appears?|suggests?)\\b",
+    "visual_deictics": "\\b(?:here|there|this|these|that|those|look|see|notice|above|below|left|right|foreground|background)\\b"
+  },
+  "per_video": {
+    "unla1jTwXdY": {
+      "words": 3319,
+      "segment_span_seconds_sum": 1417.662,
+      "segment_span_words_per_minute": 140.47,
+      "whole_file_words_per_minute": 133.49,
+      "counts": {
+        "question_marks": 7,
+        "contrast": 36,
+        "we": 37,
+        "you": 2,
+        "hedges": 8,
+        "visual_deictics": 91
+      }
+    },
+    "ceKSyMJjniU": {
+      "words": 3779,
+      "segment_span_seconds_sum": 1546.881,
+      "segment_span_words_per_minute": 146.58,
+      "whole_file_words_per_minute": 137.61,
+      "counts": {
+        "question_marks": 4,
+        "contrast": 41,
+        "we": 24,
+        "you": 26,
+        "hedges": 22,
+        "visual_deictics": 114
+      }
+    },
+    "crCPVoPsTtk": {
+      "words": 2851,
+      "segment_span_seconds_sum": 1143.314,
+      "segment_span_words_per_minute": 149.62,
+      "whole_file_words_per_minute": 140.94,
+      "counts": {
+        "question_marks": 3,
+        "contrast": 36,
+        "we": 24,
+        "you": 0,
+        "hedges": 11,
+        "visual_deictics": 94
+      }
+    },
+    "hiyCTfSoH9Q": {
+      "words": 3782,
+      "segment_span_seconds_sum": 1570.812,
+      "segment_span_words_per_minute": 144.46,
+      "whole_file_words_per_minute": 134.79,
+      "counts": {
+        "question_marks": 13,
+        "contrast": 27,
+        "we": 17,
+        "you": 15,
+        "hedges": 15,
+        "visual_deictics": 101
+      }
+    },
+    "DKTMkLZ_rr0": {
+      "words": 2231,
+      "segment_span_seconds_sum": 903.211,
+      "segment_span_words_per_minute": 148.2,
+      "whole_file_words_per_minute": 137.16,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 24,
+        "we": 6,
+        "you": 2,
+        "hedges": 6,
+        "visual_deictics": 51
+      }
+    },
+    "2zfjf4uD94s": {
+      "words": 3006,
+      "segment_span_seconds_sum": 1184.7,
+      "segment_span_words_per_minute": 152.24,
+      "whole_file_words_per_minute": 145.17,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 26,
+        "we": 16,
+        "you": 13,
+        "hedges": 8,
+        "visual_deictics": 86
+      }
+    },
+    "m-KLY4rmZlM": {
+      "words": 2382,
+      "segment_span_seconds_sum": 936.99,
+      "segment_span_words_per_minute": 152.53,
+      "whole_file_words_per_minute": 141.07,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 31,
+        "we": 27,
+        "you": 4,
+        "hedges": 9,
+        "visual_deictics": 55
+      }
+    },
+    "Bgo6H0tzszA": {
+      "words": 2997,
+      "segment_span_seconds_sum": 1323.3,
+      "segment_span_words_per_minute": 135.89,
+      "whole_file_words_per_minute": 128.01,
+      "counts": {
+        "question_marks": 3,
+        "contrast": 31,
+        "we": 10,
+        "you": 1,
+        "hedges": 2,
+        "visual_deictics": 49
+      }
+    },
+    "uLHZZmTXhPM": {
+      "words": 3081,
+      "segment_span_seconds_sum": 1350.133,
+      "segment_span_words_per_minute": 136.92,
+      "whole_file_words_per_minute": 124.57,
+      "counts": {
+        "question_marks": 5,
+        "contrast": 28,
+        "we": 18,
+        "you": 5,
+        "hedges": 6,
+        "visual_deictics": 63
+      }
+    },
+    "9x0tsuS4dk0": {
+      "words": 3175,
+      "segment_span_seconds_sum": 1380.166,
+      "segment_span_words_per_minute": 138.03,
+      "whole_file_words_per_minute": 132.53,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 25,
+        "we": 20,
+        "you": 1,
+        "hedges": 6,
+        "visual_deictics": 80
+      }
+    },
+    "w6WGLvs8Mhg": {
+      "words": 2369,
+      "segment_span_seconds_sum": 1024.071,
+      "segment_span_words_per_minute": 138.8,
+      "whole_file_words_per_minute": 131.38,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 21,
+        "we": 9,
+        "you": 7,
+        "hedges": 6,
+        "visual_deictics": 57
+      }
+    },
+    "0sQ_cfZ8q9k": {
+      "words": 3589,
+      "segment_span_seconds_sum": 1492.654,
+      "segment_span_words_per_minute": 144.27,
+      "whole_file_words_per_minute": 136.47,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 28,
+        "we": 34,
+        "you": 9,
+        "hedges": 9,
+        "visual_deictics": 98
+      }
+    },
+    "cE0BqbS2n6M": {
+      "words": 3684,
+      "segment_span_seconds_sum": 1496.869,
+      "segment_span_words_per_minute": 147.67,
+      "whole_file_words_per_minute": 134.71,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 25,
+        "we": 21,
+        "you": 17,
+        "hedges": 5,
+        "visual_deictics": 84
+      }
+    },
+    "mURqveHZWxc": {
+      "words": 3077,
+      "segment_span_seconds_sum": 1222.56,
+      "segment_span_words_per_minute": 151.01,
+      "whole_file_words_per_minute": 142.14,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 25,
+        "we": 19,
+        "you": 2,
+        "hedges": 12,
+        "visual_deictics": 102
+      }
+    },
+    "eKyYPSpiC9g": {
+      "words": 5424,
+      "segment_span_seconds_sum": 2065.489,
+      "segment_span_words_per_minute": 157.56,
+      "whole_file_words_per_minute": 149.89,
+      "counts": {
+        "question_marks": 5,
+        "contrast": 43,
+        "we": 36,
+        "you": 11,
+        "hedges": 11,
+        "visual_deictics": 137
+      }
+    },
+    "Bj7FJGrxtXY": {
+      "words": 3664,
+      "segment_span_seconds_sum": 1486.959,
+      "segment_span_words_per_minute": 147.85,
+      "whole_file_words_per_minute": 137.48,
+      "counts": {
+        "question_marks": 7,
+        "contrast": 33,
+        "we": 14,
+        "you": 12,
+        "hedges": 3,
+        "visual_deictics": 82
+      }
+    },
+    "YFI6cQF1ros": {
+      "words": 5011,
+      "segment_span_seconds_sum": 1767.92,
+      "segment_span_words_per_minute": 170.06,
+      "whole_file_words_per_minute": 161.55,
+      "counts": {
+        "question_marks": 6,
+        "contrast": 56,
+        "we": 44,
+        "you": 9,
+        "hedges": 13,
+        "visual_deictics": 132
+      }
+    },
+    "XKp6ahy2eBk": {
+      "words": 2044,
+      "segment_span_seconds_sum": 859.14,
+      "segment_span_words_per_minute": 142.75,
+      "whole_file_words_per_minute": 134.89,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 8,
+        "we": 13,
+        "you": 3,
+        "hedges": 3,
+        "visual_deictics": 54
+      }
+    },
+    "H8fGd3fCJbg": {
+      "words": 4174,
+      "segment_span_seconds_sum": 1716.14,
+      "segment_span_words_per_minute": 145.93,
+      "whole_file_words_per_minute": 138.75,
+      "counts": {
+        "question_marks": 3,
+        "contrast": 40,
+        "we": 23,
+        "you": 11,
+        "hedges": 7,
+        "visual_deictics": 100
+      }
+    },
+    "zTmq2hgzReQ": {
+      "words": 2110,
+      "segment_span_seconds_sum": 855.365,
+      "segment_span_words_per_minute": 148.01,
+      "whole_file_words_per_minute": 139.55,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 21,
+        "we": 5,
+        "you": 0,
+        "hedges": 8,
+        "visual_deictics": 55
+      }
+    },
+    "NZCE3ot6lf8": {
+      "words": 2637,
+      "segment_span_seconds_sum": 1065.267,
+      "segment_span_words_per_minute": 148.53,
+      "whole_file_words_per_minute": 141.31,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 16,
+        "we": 32,
+        "you": 2,
+        "hedges": 3,
+        "visual_deictics": 69
+      }
+    },
+    "MAF9LURl7bs": {
+      "words": 2388,
+      "segment_span_seconds_sum": 949.118,
+      "segment_span_words_per_minute": 150.96,
+      "whole_file_words_per_minute": 136.38,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 16,
+        "we": 16,
+        "you": 5,
+        "hedges": 2,
+        "visual_deictics": 55
+      }
+    },
+    "cuHgxPe3J7I": {
+      "words": 4703,
+      "segment_span_seconds_sum": 1823.292,
+      "segment_span_words_per_minute": 154.76,
+      "whole_file_words_per_minute": 144.63,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 45,
+        "we": 15,
+        "you": 10,
+        "hedges": 11,
+        "visual_deictics": 111
+      }
+    },
+    "AJr2T1ko3Is": {
+      "words": 2257,
+      "segment_span_seconds_sum": 839.726,
+      "segment_span_words_per_minute": 161.27,
+      "whole_file_words_per_minute": 146.46,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 20,
+        "we": 14,
+        "you": 3,
+        "hedges": 10,
+        "visual_deictics": 60
+      }
+    },
+    "GLW9omJfAdk": {
+      "words": 7558,
+      "segment_span_seconds_sum": 2857.02,
+      "segment_span_words_per_minute": 158.72,
+      "whole_file_words_per_minute": 147.69,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 56,
+        "we": 63,
+        "you": 6,
+        "hedges": 24,
+        "visual_deictics": 225
+      }
+    },
+    "GZc0P3Apfx4": {
+      "words": 2296,
+      "segment_span_seconds_sum": 865.164,
+      "segment_span_words_per_minute": 159.23,
+      "whole_file_words_per_minute": 148.88,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 22,
+        "we": 13,
+        "you": 4,
+        "hedges": 7,
+        "visual_deictics": 64
+      }
+    },
+    "XERSI8avqQQ": {
+      "words": 2478,
+      "segment_span_seconds_sum": 906.093,
+      "segment_span_words_per_minute": 164.09,
+      "whole_file_words_per_minute": 151.98,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 21,
+        "we": 31,
+        "you": 2,
+        "hedges": 12,
+        "visual_deictics": 91
+      }
+    },
+    "9JqS6HfsYIM": {
+      "words": 2253,
+      "segment_span_seconds_sum": 932.348,
+      "segment_span_words_per_minute": 144.99,
+      "whole_file_words_per_minute": 133.38,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 19,
+        "we": 13,
+        "you": 3,
+        "hedges": 3,
+        "visual_deictics": 48
+      }
+    },
+    "mQVC0qJGJ_c": {
+      "words": 1478,
+      "segment_span_seconds_sum": 603.986,
+      "segment_span_words_per_minute": 146.82,
+      "whole_file_words_per_minute": 120.88,
+      "counts": {
+        "question_marks": 5,
+        "contrast": 7,
+        "we": 12,
+        "you": 7,
+        "hedges": 4,
+        "visual_deictics": 45
+      }
+    },
+    "8liuFWolR88": {
+      "words": 2127,
+      "segment_span_seconds_sum": 877.228,
+      "segment_span_words_per_minute": 145.48,
+      "whole_file_words_per_minute": 138.6,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 12,
+        "we": 5,
+        "you": 1,
+        "hedges": 3,
+        "visual_deictics": 39
+      }
+    },
+    "f8OIYzV5Npo": {
+      "words": 3108,
+      "segment_span_seconds_sum": 1353.475,
+      "segment_span_words_per_minute": 137.78,
+      "whole_file_words_per_minute": 127.86,
+      "counts": {
+        "question_marks": 7,
+        "contrast": 15,
+        "we": 30,
+        "you": 19,
+        "hedges": 4,
+        "visual_deictics": 96
+      }
+    },
+    "DtaVAml0WcQ": {
+      "words": 2563,
+      "segment_span_seconds_sum": 1057.543,
+      "segment_span_words_per_minute": 145.41,
+      "whole_file_words_per_minute": 138.31,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 22,
+        "we": 19,
+        "you": 10,
+        "hedges": 8,
+        "visual_deictics": 74
+      }
+    },
+    "ACnM_063tsw": {
+      "words": 2361,
+      "segment_span_seconds_sum": 1043.145,
+      "segment_span_words_per_minute": 135.8,
+      "whole_file_words_per_minute": 126.13,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 21,
+        "we": 14,
+        "you": 2,
+        "hedges": 2,
+        "visual_deictics": 62
+      }
+    },
+    "ElWG0_kjy_Y": {
+      "words": 4306,
+      "segment_span_seconds_sum": 1837.88,
+      "segment_span_words_per_minute": 140.57,
+      "whole_file_words_per_minute": 130.92,
+      "counts": {
+        "question_marks": 6,
+        "contrast": 37,
+        "we": 61,
+        "you": 26,
+        "hedges": 11,
+        "visual_deictics": 174
+      }
+    },
+    "SNhmSdLDmto": {
+      "words": 2198,
+      "segment_span_seconds_sum": 862.162,
+      "segment_span_words_per_minute": 152.96,
+      "whole_file_words_per_minute": 144.8,
+      "counts": {
+        "question_marks": 3,
+        "contrast": 19,
+        "we": 18,
+        "you": 2,
+        "hedges": 8,
+        "visual_deictics": 43
+      }
+    },
+    "lKIbT-4UFaE": {
+      "words": 2082,
+      "segment_span_seconds_sum": 891.282,
+      "segment_span_words_per_minute": 140.16,
+      "whole_file_words_per_minute": 134.14,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 21,
+        "we": 26,
+        "you": 6,
+        "hedges": 15,
+        "visual_deictics": 58
+      }
+    },
+    "IBcB_dYtGUg": {
+      "words": 2358,
+      "segment_span_seconds_sum": 978.745,
+      "segment_span_words_per_minute": 144.55,
+      "whole_file_words_per_minute": 138.83,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 19,
+        "we": 11,
+        "you": 2,
+        "hedges": 3,
+        "visual_deictics": 66
+      }
+    },
+    "vBG621XEegk": {
+      "words": 7640,
+      "segment_span_seconds_sum": 2895.68,
+      "segment_span_words_per_minute": 158.3,
+      "whole_file_words_per_minute": 150.2,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 53,
+        "we": 85,
+        "you": 7,
+        "hedges": 15,
+        "visual_deictics": 238
+      }
+    },
+    "1pvxmqAKIDU": {
+      "words": 2460,
+      "segment_span_seconds_sum": 945.546,
+      "segment_span_words_per_minute": 156.1,
+      "whole_file_words_per_minute": 148.63,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 18,
+        "we": 29,
+        "you": 1,
+        "hedges": 7,
+        "visual_deictics": 77
+      }
+    },
+    "IYFtwTo50Gg": {
+      "words": 2286,
+      "segment_span_seconds_sum": 867.022,
+      "segment_span_words_per_minute": 158.2,
+      "whole_file_words_per_minute": 153.22,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 18,
+        "we": 21,
+        "you": 2,
+        "hedges": 6,
+        "visual_deictics": 79
+      }
+    },
+    "wFrztzzohJ8": {
+      "words": 2528,
+      "segment_span_seconds_sum": 999.332,
+      "segment_span_words_per_minute": 151.78,
+      "whole_file_words_per_minute": 142.88,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 15,
+        "we": 34,
+        "you": 3,
+        "hedges": 3,
+        "visual_deictics": 74
+      }
+    },
+    "Z4AEXRtDEEY": {
+      "words": 2271,
+      "segment_span_seconds_sum": 900.025,
+      "segment_span_words_per_minute": 151.4,
+      "whole_file_words_per_minute": 143.79,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 28,
+        "we": 10,
+        "you": 2,
+        "hedges": 9,
+        "visual_deictics": 50
+      }
+    },
+    "bu9Bm8aw_lI": {
+      "words": 1986,
+      "segment_span_seconds_sum": 857.816,
+      "segment_span_words_per_minute": 138.91,
+      "whole_file_words_per_minute": 131.37,
+      "counts": {
+        "question_marks": 5,
+        "contrast": 15,
+        "we": 8,
+        "you": 6,
+        "hedges": 6,
+        "visual_deictics": 31
+      }
+    },
+    "T15Kv6dtYO0": {
+      "words": 2207,
+      "segment_span_seconds_sum": 905.12,
+      "segment_span_words_per_minute": 146.3,
+      "whole_file_words_per_minute": 140.88,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 29,
+        "we": 23,
+        "you": 5,
+        "hedges": 7,
+        "visual_deictics": 70
+      }
+    },
+    "rxKR2cHmlPY": {
+      "words": 2011,
+      "segment_span_seconds_sum": 836.499,
+      "segment_span_words_per_minute": 144.24,
+      "whole_file_words_per_minute": 133.98,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 22,
+        "we": 9,
+        "you": 1,
+        "hedges": 0,
+        "visual_deictics": 46
+      }
+    },
+    "-e16DmKH01s": {
+      "words": 2007,
+      "segment_span_seconds_sum": 769.333,
+      "segment_span_words_per_minute": 156.53,
+      "whole_file_words_per_minute": 140.81,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 14,
+        "we": 13,
+        "you": 1,
+        "hedges": 2,
+        "visual_deictics": 46
+      }
+    },
+    "qJLH7JAsBHA": {
+      "words": 1860,
+      "segment_span_seconds_sum": 742.977,
+      "segment_span_words_per_minute": 150.21,
+      "whole_file_words_per_minute": 136.0,
+      "counts": {
+        "question_marks": 1,
+        "contrast": 11,
+        "we": 13,
+        "you": 7,
+        "hedges": 7,
+        "visual_deictics": 42
+      }
+    },
+    "3TMs2PwdV1E": {
+      "words": 207,
+      "segment_span_seconds_sum": 92.187,
+      "segment_span_words_per_minute": 134.73,
+      "whole_file_words_per_minute": 86.31,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 3,
+        "we": 0,
+        "you": 0,
+        "hedges": 0,
+        "visual_deictics": 3
+      }
+    },
+    "WHzRdV0dxbA": {
+      "words": 185,
+      "segment_span_seconds_sum": 70.22,
+      "segment_span_words_per_minute": 158.07,
+      "whole_file_words_per_minute": 147.91,
+      "counts": {
+        "question_marks": 2,
+        "contrast": 1,
+        "we": 3,
+        "you": 3,
+        "hedges": 0,
+        "visual_deictics": 2
+      }
+    },
+    "EFxxmc0EZTI": {
+      "words": 122,
+      "segment_span_seconds_sum": 53.74,
+      "segment_span_words_per_minute": 136.21,
+      "whole_file_words_per_minute": 134.55,
+      "counts": {
+        "question_marks": 0,
+        "contrast": 1,
+        "we": 0,
+        "you": 0,
+        "hedges": 0,
+        "visual_deictics": 2
+      }
+    },
+    "cgTvoB6XHdA": {
+      "words": 9598,
+      "segment_span_seconds_sum": 3464.489,
+      "segment_span_words_per_minute": 166.22,
+      "whole_file_words_per_minute": 161.23,
+      "counts": {
+        "question_marks": 21,
+        "contrast": 89,
+        "we": 31,
+        "you": 228,
+        "hedges": 12,
+        "visual_deictics": 387
+      }
+    }
+  }
+}

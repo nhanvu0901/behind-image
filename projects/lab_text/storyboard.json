@@ -1,0 +1,672 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "lab_text",
+ "title": "Lab text",
+ "style": "gae",
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": null,
+ "assets": {
+  "A": {
+   "file": "media/A.jpg",
+   "kind": "image",
+   "title": "The Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4386,
+   "height": 6000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {
+    "MIRROR": {
+     "x": 2220,
+     "y": 1790,
+     "rx": 440,
+     "ry": 440,
+     "label": "Mirror"
+    },
+    "HANDS": {
+     "x": 2420,
+     "y": 2540,
+     "rx": 360,
+     "ry": 270,
+     "label": "Joined hands"
+    },
+    "DOG": {
+     "x": 2098,
+     "y": 5446,
+     "rx": 330,
+     "ry": 330,
+     "label": "Dog"
+    },
+    "RUG": {
+     "x": 2388,
+     "y": 4200,
+     "label": "Carpet"
+    },
+    "INSCR": {
+     "x": 2220,
+     "y": 1390,
+     "rx": 420,
+     "ry": 120,
+     "label": "Latin inscription"
+    },
+    "R1": {
+     "x": 2474,
+     "y": 1690,
+     "rx": 82,
+     "ry": 82,
+     "label": "Roundel 1"
+    },
+    "R2": {
+     "x": 2466,
+     "y": 1870,
+     "rx": 82,
+     "ry": 82,
+     "label": "Roundel 2"
+    },
+    "LIT": {
+     "x": 1856,
+     "y": 420,
+     "rx": 215,
+     "ry": 215,
+     "label": "Lit candle"
+    },
+    "SNUF": {
+     "x": 2490,
+     "y": 500,
+     "rx": 215,
+     "ry": 215,
+     "label": "Snuffed-out candle"
+    },
+    "ORANGE": {
+     "x": 470,
+     "y": 2704,
+     "rx": 130,
+     "ry": 130,
+     "label": "Single orange"
+    },
+    "PATTENS": {
+     "x": 250,
+     "y": 5300,
+     "label": "Pattens"
+    },
+    "BOOTS": {
+     "x": 1200,
+     "y": 5150,
+     "label": "Boots"
+    },
+    "LION": {
+     "x": 2553,
+     "y": 2300,
+     "rx": 180,
+     "ry": 180,
+     "label": "Carved creature"
+    },
+    "STM": {
+     "x": 2824,
+     "y": 1190,
+     "label": "Saint Martha finial"
+    },
+    "BRUSH": {
+     "x": 2700,
+     "y": 1560,
+     "label": "Brush"
+    },
+    "AMBER": {
+     "x": 1810,
+     "y": 1650,
+     "label": "Amber beads"
+    },
+    "HAT": {
+     "x": 1246,
+     "y": 1000,
+     "label": "Straw hat"
+    },
+    "TABARD": {
+     "x": 1266,
+     "y": 2666,
+     "label": "Velvet tabard"
+    },
+    "FURSLEEVE": {
+     "x": 3500,
+     "y": 2700,
+     "label": "Fur sleeve"
+    },
+    "BLUESL": {
+     "x": 2900,
+     "y": 2330,
+     "label": "Blue underdress"
+    },
+    "RUFFLES": {
+     "x": 3500,
+     "y": 4000,
+     "label": "Ruffles"
+    },
+    "BEDP": {
+     "x": 3500,
+     "y": 1100,
+     "label": "Bed"
+    },
+    "COSFACE": {
+     "x": 3500,
+     "y": 1500,
+     "label": "Costanza's face"
+    },
+    "GIOFACE": {
+     "x": 1233,
+     "y": 1300,
+     "label": "Giovanni's face"
+    },
+    "FULL": {
+     "x": 2193,
+     "y": 3000,
+     "label": "Whole painting (centre)"
+    }
+   }
+  },
+  "M": {
+   "file": "media/mirror_pdf.jpg",
+   "kind": "image",
+   "title": "Mirror",
+   "artist": "x",
+   "year": "1434",
+   "width": 1415,
+   "height": 1600,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "VH": {
+   "file": "media/clip_h.mp4",
+   "kind": "video",
+   "title": "clip",
+   "width": 1280,
+   "height": 720,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "VV": {
+   "file": "media/clip_v.mp4",
+   "kind": "video",
+   "title": "clip",
+   "width": 540,
+   "height": 960,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  }
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "TXT-01",
+   "intent": "context",
+   "slots": {
+    "background": {
+     "asset": "M"
+    }
+   },
+   "params": {
+    "title": "THE MIRROR",
+    "blur_sigma": 34,
+    "darken": 0.45
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s02",
+   "start": {
+    "t": 5.0
+   },
+   "technique": "CAM-05",
+   "intent": "context",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2300,
+      "zoom": 0.37209302325581395,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2300,
+      "zoom": 0.37209302325581395,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "TXT-02",
+     "intent": "context",
+     "start": {
+      "t": 5.0
+     },
+     "dur": 5.5,
+     "params": {
+      "lines": [
+       "\u201cEvery detail has a story\u2026\u201d",
+       "\u201cRichly worked, quietly staged\u2026\u201d",
+       "\u201cA room built to impress\u2026\u201d"
+      ]
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s03",
+   "start": {
+    "t": 11.0
+   },
+   "technique": "CAM-05",
+   "intent": "context",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 4200,
+      "zoom": 0.3283173734610123,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 4200,
+      "zoom": 0.3283173734610123,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "STATIC-04",
+     "intent": "context",
+     "start": {
+      "t": 11.0
+     },
+     "dur": 5.5,
+     "params": {
+      "quote": "\u201cA memorial, not a wedding record.\u201d"
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s04",
+   "start": {
+    "t": 17.0
+   },
+   "technique": "CAM-05",
+   "intent": "context",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1233,
+      "cy": 1266,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1233,
+      "cy": 1266,
+      "zoom": 0.75,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "STATIC-05",
+     "intent": "context",
+     "start": {
+      "t": 18.0
+     },
+     "dur": 3.4,
+     "params": {
+      "name": "Speaker Name",
+      "role": "Curator, Example Museum (placeholder)"
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s05",
+   "start": {
+    "t": 22.0
+   },
+   "technique": "STATIC-07",
+   "intent": "context",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "labels": [
+     "DOG",
+     "MIRROR",
+     "HAND",
+     "CHANDELIER",
+     "FUR",
+     "RUG"
+    ],
+    "centers": [
+     "DOG",
+     "MIRROR",
+     [
+      1500,
+      2100
+     ],
+     [
+      2200,
+      800
+     ],
+     [
+      4300,
+      4900
+     ],
+     "RUG"
+    ],
+    "zooms": [
+     "0.8",
+     "0.8",
+     "0.7",
+     "0.8",
+     "0.8",
+     "0.8"
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s06",
+   "start": {
+    "t": 28.0
+   },
+   "technique": "X-CARD-03",
+   "intent": "context",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "credit_text": "Behind the Image  |  A film about looking",
+    "case": "upper"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s07",
+   "start": {
+    "t": 34.0
+   },
+   "technique": "X-CARD-04",
+   "intent": "context",
+   "slots": {},
+   "params": {
+    "text": "Why would a painter hide himself in a mirror?"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s08",
+   "start": {
+    "t": 40.0
+   },
+   "technique": "TXT-01",
+   "intent": "context",
+   "slots": {},
+   "params": {
+    "title": "Chapter Two",
+    "variant": "white_card",
+    "font_kind": "serif",
+    "tracking_px": 2,
+    "case": "as_typed"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s09",
+   "start": {
+    "t": 46.0
+   },
+   "technique": "FOOT-01",
+   "intent": "context",
+   "slots": {
+    "footage": {
+     "asset": "VH"
+    }
+   },
+   "params": {
+    "source_in_s": 0.2,
+    "end_behavior": "slow",
+    "push_zoom": 1.12,
+    "label": "Squirrel fur and wool",
+    "label_sub": "Studio footage",
+    "source_text": "Source: lab test clip"
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "STATIC-05",
+     "intent": "context",
+     "start": {
+      "t": 48.0
+     },
+     "dur": 3.0,
+     "params": {
+      "name": "Dr Test Person",
+      "role": "Conservator",
+      "y_pct": 56
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s10",
+   "start": {
+    "t": 52.0
+   },
+   "technique": "FOOT-01",
+   "intent": "context",
+   "slots": {
+    "footage": {
+     "asset": "VV"
+    }
+   },
+   "params": {
+    "fit": "contain",
+    "contain_bg": "blur",
+    "end_behavior": "loop",
+    "speed": 1.5,
+    "label": "Vertical clip, looped"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s11",
+   "start": {
+    "t": 58.0
+   },
+   "technique": "FOOT-01",
+   "intent": "context",
+   "slots": {
+    "footage": {
+     "asset": "VH"
+    }
+   },
+   "params": {
+    "end_behavior": "hold",
+    "fit": "contain",
+    "contain_pct": 80,
+    "push_zoom": 1.2,
+    "push_focus": [
+     900,
+     300
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "STATIC-04",
+     "intent": "context",
+     "start": {
+      "t": 58.5
+     },
+     "dur": 4.0,
+     "params": {
+      "quote": "The first thing you notice is the colour, then the fur.",
+      "attribution": "A conservator, 2019",
+      "max_width_pct": 60
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  },
+  {
+   "id": "s12",
+   "start": {
+    "t": 64.0
+   },
+   "technique": "X-CARD-04",
+   "intent": "context",
+   "slots": {},
+   "params": {
+    "text": ""
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": ""
+  }
+ ],
+ "end": {
+  "t": 70.0,
+  "fade_s": 0
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

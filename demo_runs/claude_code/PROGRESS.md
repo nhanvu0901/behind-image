@@ -1,0 +1,19 @@
+# PROGRESS
+- 2026-11-15T01:00:46Z START checkpoint1 / phase: research+reading
+- 2026-11-15T01:05:12Z phase research/measure done; start preflight
+- 2026-11-15T01:08:05Z checkpoint1 deliverables written
+- 2026-11-15T01:11:15Z approved; script v2 + start faster-whisper venv install
+- 2026-11-15T01:16:17Z TTS lock+launch
+- 2026-11-15T01:24:01Z TTS done (342.8s job); aligning
+- 2026-11-15T01:32:10Z preview render 47s ok, launching full
+- 2026-11-15T01:37:20Z final render done (155.7s render); launching reel
+- 2026-11-15T01:47:43Z reel attempt1 crashed at TXT-02 (text fully off-canvas), fixed, relaunch
+- 2026-11-15T02:14:41Z reel render done (1568.6s, attempt 2); QA + report done; END
+- 2026-11-15T02:46:32Z NEW TASK v2: long-form. v1 main deliverables moved to v1_90s/
+- 2026-11-15T02:58:48Z v2 checkpoint: script (1951 words), sources.md, plan ready; awaiting approval
+- 2026-11-15T03:00:32Z v2 approved; candle/blue fixes; starting TTS prep
+- 2026-11-15T03:52:50Z TTS J1-J3 done; aligning + timing
+- 2026-11-15T03:53:59Z timing2 done (atempo 1.0, 144.7 wpm, 13.7 min); launching preview render
+- 2026-11-15T03:58:22Z preview OK; chain render r1,r2,r3,fin launched
+- 2026-11-15T04:32:12Z render 1 QA: spotlight onset +0.40 s, easing/mirror-push shape fixes, stills hold 4.0 s -> full re-render (render 2)
+- 2026-11-15T05:05:31Z render 2 QA: highlights anchored on phrase start not naming word (onset up to 0.9 s early); re-anchored on target words -> render 3

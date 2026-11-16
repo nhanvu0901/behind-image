@@ -1,0 +1,448 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "title": "GAE techniques registry",
+ "type": "object",
+ "required": [
+  "techniques"
+ ],
+ "properties": {
+  "version": {
+   "type": "integer"
+  },
+  "generated": {
+   "type": "string"
+  },
+  "note": {
+   "type": "string"
+  },
+  "techniques": {
+   "type": "array",
+   "minItems": 1,
+   "uniqueItems": true,
+   "items": {
+    "$ref": "#/$defs/technique"
+   }
+  }
+ },
+ "$defs": {
+  "technique": {
+   "type": "object",
+   "additionalProperties": false,
+   "required": [
+    "id",
+    "key",
+    "name",
+    "label_vi",
+    "category",
+    "kind",
+    "intents",
+    "description",
+    "usage_rule",
+    "channel_usage",
+    "slots",
+    "params",
+    "timing",
+    "engine",
+    "preview",
+    "evidence"
+   ],
+   "properties": {
+    "id": {
+     "type": "string",
+     "pattern": "^([A-Z]+-\\d{2}|X-[A-Z]+-\\d{2})$"
+    },
+    "key": {
+     "type": "string",
+     "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "name": {
+     "type": "string",
+     "minLength": 1
+    },
+    "label_vi": {
+     "type": "string",
+     "minLength": 1
+    },
+    "category": {
+     "enum": [
+      "camera",
+      "transition",
+      "layout",
+      "highlight",
+      "annotation",
+      "text",
+      "static",
+      "diagram",
+      "compare",
+      "footage",
+      "card",
+      "shorts"
+     ]
+    },
+    "kind": {
+     "enum": [
+      "base",
+      "overlay",
+      "transition",
+      "card"
+     ]
+    },
+    "intents": {
+     "type": "array",
+     "minItems": 1,
+     "uniqueItems": true,
+     "items": {
+      "enum": [
+       "establish",
+       "explore",
+       "point_at",
+       "isolate",
+       "reveal",
+       "compare",
+       "context",
+       "quantify",
+       "explain_mechanism",
+       "quote",
+       "structure",
+       "transition"
+      ]
+     }
+    },
+    "description": {
+     "type": "string",
+     "minLength": 10
+    },
+    "usage_rule": {
+     "type": [
+      "string",
+      "null"
+     ]
+    },
+    "channel_usage": {
+     "enum": [
+      "core",
+      "occasional",
+      "rare",
+      "shorts_only",
+      "other_series"
+     ]
+    },
+    "slots": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "name",
+       "type",
+       "required",
+       "region"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "type": {
+        "enum": [
+         "image",
+         "video",
+         "text"
+        ]
+       },
+       "required": {
+        "type": "boolean"
+       },
+       "region": {
+        "type": "boolean"
+       }
+      }
+     }
+    },
+    "params": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+       "name",
+       "type",
+       "default",
+       "min",
+       "max",
+       "unit",
+       "values",
+       "measured"
+      ],
+      "properties": {
+       "name": {
+        "type": "string"
+       },
+       "type": {
+        "enum": [
+         "number",
+         "enum",
+         "bool",
+         "string",
+         "color",
+         "text",
+         "point",
+         "box",
+         "camera",
+         "asset",
+         "points",
+         "lines"
+        ]
+       },
+       "default": {},
+       "min": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "max": {
+        "type": [
+         "number",
+         "null"
+        ]
+       },
+       "unit": {
+        "type": [
+         "string",
+         "null"
+        ]
+       },
+       "values": {
+        "type": [
+         "array",
+         "null"
+        ],
+        "items": {
+         "type": "string"
+        }
+       },
+       "measured": {
+        "oneOf": [
+         {
+          "type": "null"
+         },
+         {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+           "value",
+           "source"
+          ],
+          "properties": {
+           "value": {},
+           "source": {
+            "type": "string",
+            "minLength": 1
+           }
+          }
+         }
+        ]
+       },
+       "required": {
+        "type": "boolean",
+        "description": "true: the param must be present and not null (its default is null because there is no sensible fixed value; default_params fills it)"
+       }
+      },
+      "allOf": [
+       {
+        "if": {
+         "properties": {
+          "type": {
+           "const": "enum"
+          }
+         }
+        },
+        "then": {
+         "properties": {
+          "values": {
+           "type": "array",
+           "minItems": 2
+          }
+         }
+        }
+       }
+      ]
+     }
+    },
+    "timing": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "default_s",
+      "min_s",
+      "max_s",
+      "anchor"
+     ],
+     "properties": {
+      "default_s": {
+       "type": [
+        "number",
+        "null"
+       ]
+      },
+      "min_s": {
+       "type": [
+        "number",
+        "null"
+       ]
+      },
+      "max_s": {
+       "type": [
+        "number",
+        "null"
+       ]
+      },
+      "anchor": {
+       "enum": [
+        "shot_start",
+        "word",
+        "none"
+       ]
+      }
+     }
+    },
+    "engine": {
+     "type": "object",
+     "additionalProperties": false,
+     "required": [
+      "status",
+      "available",
+      "impl",
+      "reason",
+      "notes"
+     ],
+     "properties": {
+      "status": {
+       "enum": [
+        "done",
+        "partial",
+        "missing"
+       ]
+      },
+      "impl": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "notes": {
+       "type": [
+        "string",
+        "null"
+       ]
+      },
+      "available": {
+       "type": "boolean",
+       "description": "true only when the new engine (bti.engine) can render this technique today"
+      },
+      "reason": {
+       "type": [
+        "string",
+        "null"
+       ],
+       "description": "why the technique is not available (shown greyed out in the gallery); null when available"
+      }
+     },
+     "allOf": [
+      {
+       "if": {
+        "properties": {
+         "status": {
+          "enum": [
+           "partial",
+           "missing"
+          ]
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "notes": {
+          "type": "string"
+         }
+        }
+       }
+      },
+      {
+       "if": {
+        "properties": {
+         "available": {
+          "const": true
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "impl": {
+          "type": "string",
+          "pattern": "^bti\\.engine\\."
+         }
+        }
+       }
+      },
+      {
+       "if": {
+        "properties": {
+         "available": {
+          "const": false
+         }
+        }
+       },
+       "then": {
+        "properties": {
+         "reason": {
+          "type": "string",
+          "minLength": 5
+         }
+        }
+       }
+      }
+     ]
+    },
+    "preview": {
+     "oneOf": [
+      {
+       "type": "null"
+      },
+      {
+       "type": "object",
+       "additionalProperties": false,
+       "required": [
+        "reel_start",
+        "reel_end",
+        "clip",
+        "thumb"
+       ],
+       "properties": {
+        "reel_start": {
+         "type": "number"
+        },
+        "reel_end": {
+         "type": "number"
+        },
+        "clip": {
+         "type": "string"
+        },
+        "thumb": {
+         "type": "string"
+        }
+       }
+      }
+     ]
+    },
+    "evidence": {
+     "type": "array",
+     "minItems": 1,
+     "items": {
+      "type": "string"
+     }
+    }
+   }
+  }
+ }
+}

@@ -1,0 +1,4 @@
+book chapter: source words 2056; 6-gram hits 0; longest shared run 5 words
+Wikipedia: Arnolfini Portrait: source words 4649; 6-gram hits 0; longest shared run 5 words
+National Gallery page: source words 5461; 6-gram hits 0; longest shared run 5 words
+RESULT: PASS (<=5 consecutive words with every source)

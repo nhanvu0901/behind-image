@@ -1,0 +1,49 @@
+# Environments, caches, scratch
+.venv*/
+venv_align/
+hf_cache/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+._*
+.scratch/
+.env
+.env.*
+
+# Source books and anything derived from their content (copyrighted, private)
+books/
+library/books/
+library/clean_text/
+library/text_audit/
+library/cache/
+library/artworks.json
+library/unparsed.json
+library/dossiers/
+projects/*/source/
+
+# Reference channel media
+research_media/
+
+# Heavy media and render outputs
+*.mp4
+*.mov
+*.m4a
+*.wav
+*.mp3
+*.tgz
+*.zip
+*.pdf
+demo_runs/**/assets/
+demo_runs/**/voice/
+demo_runs/**/ref/server/
+projects/*/media/
+projects/*/audio/
+projects/*/cache/
+projects/*/history/
+
+# Keep the small technique previews (jpg thumbnails); clips are covered by *.mp4 above
+
+# Other agents' benchmark outputs (not part of the pipeline)
+demo_runs/antigravity/
+demo_runs/codex/

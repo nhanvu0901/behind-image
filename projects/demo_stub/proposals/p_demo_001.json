@@ -1,0 +1,541 @@
+{
+ "id": "p_demo_001",
+ "created_at": "2026-11-16T10:00:00+0000",
+ "author": "agent:demo",
+ "summary": "Zoom in on the portrait, add a label, swap one technique, drop a shot, add a detail shot, and try to change the locked shot.",
+ "base_rev": "df0655cbe24b2f5df3a844d1275f239479bd21478ec004a563eefa64b2706489",
+ "storyboard": {
+  "schema": "bti.storyboard/1",
+  "project": "demo_stub",
+  "title": "Demo (stub) documentary",
+  "style": "gae",
+  "canvas": {
+   "w": 1920,
+   "h": 1080,
+   "fps": 30
+  },
+  "timing": "timing.json",
+  "audio": "audio/narration.m4a",
+  "assets": {
+   "A": {
+    "file": "media/a_portrait.jpg",
+    "kind": "image",
+    "title": "Demo portrait",
+    "artist": "Generated",
+    "year": "2026",
+    "width": 1200,
+    "height": 1600,
+    "credit": {
+     "source": "generated",
+     "source_url": "",
+     "author": "demo generator",
+     "licence": "CC0",
+     "licence_url": ""
+    },
+    "regions": {
+     "CENTRE": {
+      "x": 600,
+      "y": 500,
+      "rx": 200,
+      "ry": 200,
+      "label": "Centre"
+     }
+    }
+   },
+   "B": {
+    "file": "media/b_landscape.jpg",
+    "kind": "image",
+    "title": "Demo landscape",
+    "artist": "Generated",
+    "year": "2026",
+    "width": 1600,
+    "height": 1000,
+    "credit": {
+     "source": "generated",
+     "source_url": "",
+     "author": "demo generator",
+     "licence": "CC0",
+     "licence_url": ""
+    },
+    "regions": {}
+   },
+   "C": {
+    "file": "media/c_detail.jpg",
+    "kind": "image",
+    "title": "Demo detail",
+    "artist": "Generated",
+    "year": "2026",
+    "width": 1000,
+    "height": 1000,
+    "credit": {
+     "source": "generated",
+     "source_url": "",
+     "author": "demo generator",
+     "licence": "CC0",
+     "licence_url": ""
+    },
+    "regions": {}
+   },
+   "D": {
+    "file": "media/d_other.jpg",
+    "kind": "image",
+    "title": "Demo second work",
+    "artist": "Generated",
+    "year": "2026",
+    "width": 1200,
+    "height": 1500,
+    "credit": {
+     "source": "generated",
+     "source_url": "",
+     "author": "demo generator",
+     "licence": "CC0",
+     "licence_url": ""
+    },
+    "regions": {}
+   }
+  },
+  "shots": [
+   {
+    "id": "s0001",
+    "start": {
+     "w": 0,
+     "off": 0.0,
+     "text": "object"
+    },
+    "technique": "STATIC-01",
+    "intent": "establish",
+    "slots": {
+     "image": {
+      "asset": "A"
+     }
+    },
+    "params": {},
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0002",
+    "start": {
+     "w": 22,
+     "off": 0.0,
+     "text": "the"
+    },
+    "technique": "CAM-05",
+    "intent": "point_at",
+    "slots": {
+     "image": {
+      "asset": "A"
+     }
+    },
+    "params": {
+     "camera": [
+      {
+       "at": {
+        "rel": 0.0
+       },
+       "cx": 600.0,
+       "cy": 800.0,
+       "zoom": 0.675,
+       "ease": "inout_cubic"
+      },
+      {
+       "at": {
+        "rel": 1.0
+       },
+       "cx": 600.0,
+       "cy": 640.0,
+       "zoom": 1.62,
+       "ease": "linear"
+      }
+     ]
+    },
+    "transition_in": null,
+    "overlays": [
+     {
+      "id": "o1",
+      "technique": "HI-01",
+      "intent": "isolate",
+      "start": {
+       "w": 28,
+       "off": 0.0,
+       "text": "across"
+      },
+      "dur": 5.0,
+      "params": {
+       "at": "CENTRE",
+       "rx": 200,
+       "ry": 200,
+       "floor": 0.2,
+       "ramp_in": 0.5,
+       "ramp_out": 0.5
+      },
+      "locked": false,
+      "source": "import",
+      "note": ""
+     },
+     {
+      "id": "o2",
+      "technique": "AN-01",
+      "intent": "point_at",
+      "start": {
+       "w": 34,
+       "off": 0.0,
+       "text": "fabric"
+      },
+      "dur": 3.0,
+      "params": {
+       "at": "CENTRE",
+       "radius": 180,
+       "draw_s": 0.5,
+       "hold_s": 2.0,
+       "fade_s": 0.4
+      },
+      "locked": false,
+      "source": "import",
+      "note": ""
+     },
+     {
+      "id": "o3",
+      "technique": "X-ANN-01",
+      "intent": "point_at",
+      "start": {
+       "w": 38,
+       "off": 0.0,
+       "text": "the"
+      },
+      "dur": 1.2,
+      "params": {
+       "text": "LOOK HERE"
+      },
+      "locked": false,
+      "source": "import",
+      "note": ""
+     }
+    ],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0003",
+    "start": {
+     "w": 48,
+     "off": 0.0,
+     "text": "made"
+    },
+    "technique": "X-CARD-01",
+    "intent": "structure",
+    "slots": {},
+    "params": {
+     "title": "THE DETAILS"
+    },
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0004",
+    "start": {
+     "w": 62,
+     "off": 0.0,
+     "text": "that"
+    },
+    "technique": "CAM-03",
+    "intent": "explore",
+    "slots": {
+     "image": {
+      "asset": "B"
+     }
+    },
+    "params": {
+     "camera": [
+      {
+       "at": {
+        "rel": 0.0
+       },
+       "cx": 800.0,
+       "cy": 500.0,
+       "zoom": 1.512,
+       "ease": "inout_cubic"
+      },
+      {
+       "at": {
+        "rel": 1.0
+       },
+       "cx": 800.0,
+       "cy": 500.0,
+       "zoom": 1.08,
+       "ease": "linear"
+      }
+     ]
+    },
+    "transition_in": null,
+    "overlays": [
+     {
+      "id": "o1",
+      "technique": "STATIC-02",
+      "intent": "context",
+      "start": {
+       "w": 65,
+       "off": 0.0,
+       "text": "from"
+      },
+      "dur": 6.0,
+      "params": {
+       "text": "WINTER LANDSCAPE",
+       "size_px": 24
+      },
+      "locked": false,
+      "source": "import",
+      "note": ""
+     }
+    ],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0005",
+    "start": {
+     "w": 85,
+     "off": 0.0,
+     "text": "second"
+    },
+    "technique": "LAY-01",
+    "intent": "compare",
+    "slots": {
+     "left": {
+      "asset": "A"
+     },
+     "right": {
+      "asset": "D"
+     }
+    },
+    "params": {},
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0011",
+    "start": {
+     "w": 95,
+     "off": 0.0,
+     "text": "look"
+    },
+    "technique": "CAM-01",
+    "intent": "context",
+    "slots": {
+     "image": {
+      "asset": "C"
+     }
+    },
+    "params": {
+     "camera": [
+      {
+       "at": {
+        "rel": 0.0
+       },
+       "cx": 500.0,
+       "cy": 500.0,
+       "zoom": 1.08,
+       "ease": "inout_cubic"
+      },
+      {
+       "at": {
+        "rel": 1.0
+       },
+       "cx": 500.0,
+       "cy": 400.0,
+       "zoom": 1.242,
+       "ease": "linear"
+      }
+     ]
+    },
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "agent",
+    "note": ""
+   },
+   {
+    "id": "s0006",
+    "start": {
+     "w": 110,
+     "off": 0.0,
+     "text": "placed"
+    },
+    "technique": "CAM-01",
+    "intent": "explore",
+    "slots": {
+     "image": {
+      "asset": "C"
+     }
+    },
+    "params": {
+     "camera": [
+      {
+       "at": {
+        "rel": 0.0
+       },
+       "cx": 500.0,
+       "cy": 500.0,
+       "zoom": 1.08,
+       "ease": "inout_cubic"
+      },
+      {
+       "at": {
+        "rel": 1.0
+       },
+       "cx": 500.0,
+       "cy": 400.0,
+       "zoom": 1.404,
+       "ease": "linear"
+      }
+     ]
+    },
+    "transition_in": null,
+    "overlays": [
+     {
+      "id": "o1",
+      "technique": "X-ANN-01",
+      "intent": "point_at",
+      "start": {
+       "w": 115,
+       "off": 0.0,
+       "text": "made"
+      },
+      "dur": 4.0,
+      "params": {
+       "text": "RED GLAZE"
+      },
+      "locked": true,
+      "source": "human",
+      "note": ""
+     }
+    ],
+    "locked": true,
+    "source": "human",
+    "note": "Fixed by the editor; agents must not touch."
+   },
+   {
+    "id": "s0007",
+    "start": {
+     "w": 140,
+     "off": 0.0,
+     "text": "us"
+    },
+    "technique": "CAM-03",
+    "intent": "compare",
+    "slots": {
+     "image": {
+      "asset": "C"
+     }
+    },
+    "params": {
+     "camera": [
+      {
+       "at": {
+        "rel": 0.0
+       },
+       "cx": 500.0,
+       "cy": 500.0,
+       "zoom": 1.404,
+       "ease": "inout_cubic"
+      },
+      {
+       "at": {
+        "rel": 1.0
+       },
+       "cx": 500.0,
+       "cy": 500.0,
+       "zoom": 1.08,
+       "ease": "linear"
+      }
+     ]
+    },
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0009",
+    "start": {
+     "w": 200,
+     "off": 0.0,
+     "text": "within"
+    },
+    "technique": "X-LAY-01",
+    "intent": "context",
+    "slots": {
+     "image": {
+      "asset": "D"
+     }
+    },
+    "params": {
+     "camera": [
+      {
+       "at": {
+        "rel": 0.0
+       },
+       "cx": 600.0,
+       "cy": 750.0,
+       "zoom": 0.72,
+       "ease": "inout_cubic"
+      },
+      {
+       "at": {
+        "rel": 1.0
+       },
+       "cx": 600.0,
+       "cy": 600.0,
+       "zoom": 0.936,
+       "ease": "linear"
+      }
+     ]
+    },
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   },
+   {
+    "id": "s0010",
+    "start": {
+     "w": 226,
+     "off": 0.0,
+     "text": "us"
+    },
+    "technique": "STATIC-01",
+    "intent": "establish",
+    "slots": {
+     "image": {
+      "asset": "A"
+     }
+    },
+    "params": {},
+    "transition_in": null,
+    "overlays": [],
+    "locked": false,
+    "source": "import",
+    "note": ""
+   }
+  ],
+  "end": {
+   "t": 90.0
+  },
+  "approvals": {
+   "storyboard": null
+  }
+ }
+}

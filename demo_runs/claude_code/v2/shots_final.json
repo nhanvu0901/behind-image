@@ -1,0 +1,1601 @@
+[
+ {
+  "t0": 0.0,
+  "t1": 11.17,
+  "effect": "cold open: slow push-in on couple",
+  "ids": [
+   "CAM-01"
+  ],
+  "image": "A",
+  "params": {
+   "push": "1.14x, linear",
+   "overlays": []
+  },
+  "words": "Most people ... look at what is"
+ },
+ {
+  "t0": 11.17,
+  "t1": 29.17,
+  "effect": "opening pull-back 3.0x over 18 s ease-out_quad",
+  "ids": [
+   "CAM-03",
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "from_z": 0.49904240766073865,
+   "to_z": 0.16684,
+   "ratio": 2.99,
+   "dur_s": 18,
+   "ease": "out_cubic",
+   "overlays": []
+  },
+  "words": "But look at what is ... finished the Arnolfini Portrait"
+ },
+ {
+  "t0": 29.17,
+  "t1": 38.28,
+  "effect": "dimension annotation (AN-05) on the matte painting",
+  "ids": [
+   "AN-05",
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "hold_s": 4.5,
+   "overlays": [
+    {
+     "annotation": "AN-05 82 cm x 60 cm, OIL ON OAK PANEL",
+     "t0": 29.87,
+     "t1": 34.37
+    }
+   ]
+  },
+  "words": "It is small ... eighty-two centimetres tall and sixty wide"
+ },
+ {
+  "t0": 38.28,
+  "t1": 47.43,
+  "effect": "push to mirror then inscription with spotlights",
+  "ids": [
+   "CAM-05",
+   "HI-01"
+  ],
+  "image": "A",
+  "params": {
+   "floor": 0.2,
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2220,
+       1790
+      ],
+      440,
+      440
+     ],
+     "t0": 38.62,
+     "t1": 39.72,
+     "floor": 0.2
+    },
+    {
+     "spotlight": [
+      [
+       2220,
+       1390
+      ],
+      420,
+      120
+     ],
+     "t0": 40.36,
+     "t1": 47.43,
+     "floor": 0.2
+    },
+    {
+     "label": "Latin inscription",
+     "t": 40.48
+    }
+   ]
+  },
+  "words": "Notice the mirror ... the Latin words"
+ },
+ {
+  "t0": 47.43,
+  "t1": 57.17,
+  "effect": "slow drift from the inscription to the mirror",
+  "ids": [
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "A painter does not usually sign ... what exactly was he witnessing"
+ },
+ {
+  "t0": 57.17,
+  "t1": 64.03,
+  "effect": "hold on matte: what we can see",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Over the next few minutes ... what we can see with our own eyes"
+ },
+ {
+  "t0": 64.03,
+  "t1": 67.29,
+  "effect": "hard cut to the joined hands: what the documents say",
+  "ids": [
+   "TR-04",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "what the documents and historians actually tell us"
+ },
+ {
+  "t0": 67.29,
+  "t1": 74.31,
+  "effect": "hard cut to the mirror: how it might be read",
+  "ids": [
+   "TR-04",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "and how all of that might be read, bearing in mind that no painting has ever held only one meaning"
+ },
+ {
+  "t0": 74.31,
+  "t1": 77.21,
+  "effect": "title card (blurred artwork)",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "arnolfini_commons (blurred)",
+  "params": {
+   "blur_sigma": 30,
+   "fade_in_s": 0.35
+  },
+  "words": ""
+ },
+ {
+  "t0": 77.21,
+  "t1": 80.01,
+  "effect": "chapter card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "",
+  "params": {
+   "text": "THE MERCHANT CITY",
+   "bg": "black",
+   "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+   "y": "88 %"
+  },
+  "words": ""
+ },
+ {
+  "t0": 80.01,
+  "t1": 100.67,
+  "effect": "Bruges still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "bruges",
+  "params": {
+   "hold_s": 20.66,
+   "overlays": [
+    {
+     "label": "Grote Markt, Bruges / Etching, Rijksmuseum",
+     "t": 80.61
+    }
+   ]
+  },
+  "words": "To understand the couple ... Flanders"
+ },
+ {
+  "t0": 100.67,
+  "t1": 119.85,
+  "effect": "route map (procedural stand-in)",
+  "ids": [
+   "AN-04",
+   "STATIC-06"
+  ],
+  "image": "procedural map (stand-in)",
+  "params": {
+   "route_draw_s": 2.4
+  },
+  "words": ""
+ },
+ {
+  "t0": 119.85,
+  "t1": 133.46,
+  "effect": "back to the painting",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "As the merchants got richer"
+ },
+ {
+  "t0": 133.46,
+  "t1": 137.46,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "blue_cap",
+  "params": {
+   "hold_s": 4.0,
+   "overlays": [
+    {
+     "label": "Man in a Blue Chaperon / Jan van Eyck, c.1430",
+     "t": 134.06
+    }
+   ]
+  },
+  "words": "Jan van Eyck was a trailblazer ..."
+ },
+ {
+  "t0": 137.46,
+  "t1": 147.23,
+  "effect": "back to the painting after the still",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Jan van Eyck was a trailblazer ..."
+ },
+ {
+  "t0": 147.23,
+  "t1": 151.55,
+  "effect": "Ghent still with zoom-and-shift (CAM-05)",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "ghent",
+  "params": {
+   "hold_s": 4.32,
+   "overlays": [
+    {
+     "label": "Ghent Altarpiece / Jan van Eyck, 1432",
+     "t": 147.83
+    }
+   ]
+  },
+  "words": "where in 1432 he finished the enormous Ghent Altarpiece"
+ },
+ {
+  "t0": 151.55,
+  "t1": 157.32,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "turban",
+  "params": {
+   "hold_s": 5.77,
+   "overlays": [
+    {
+     "label": "Man in a Red Turban / Jan van Eyck, 1433",
+     "t": 152.15
+    }
+   ]
+  },
+  "words": "yet he kept accepting private clients"
+ },
+ {
+  "t0": 157.32,
+  "t1": 167.73,
+  "effect": "status symbol: painting on matte",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "So a portrait by Van Eyck was far more than a likeness"
+ },
+ {
+  "t0": 167.73,
+  "t1": 170.53,
+  "effect": "chapter card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "",
+  "params": {
+   "text": "THE ARNOLFINIS",
+   "bg": "black",
+   "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+   "y": "88 %"
+  },
+  "words": ""
+ },
+ {
+  "t0": 170.53,
+  "t1": 190.39,
+  "effect": "name labels near the figures",
+  "ids": [
+   "STATIC-08",
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "text": "GIOVANNI DI NICOLAO ARNOLFINI (?)",
+     "t0": 175.39
+    },
+    {
+     "text": "COSTANZA TRENTA (?)",
+     "t0": 178.95
+    }
+   ]
+  },
+  "words": "Who bought this one ... Costanza Trenta"
+ },
+ {
+  "t0": 190.39,
+  "t1": 199.92,
+  "effect": "year captions on matte",
+  "ids": [
+   "STATIC-09",
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "years": [
+      [
+       "1433",
+       326
+      ],
+      [
+       "1434",
+       1593
+      ]
+     ]
+    }
+   ]
+  },
+  "words": "Costanza was dead by 1433 ... finished this panel"
+ },
+ {
+  "t0": 199.92,
+  "t1": 209.31,
+  "effect": "matte hold, honest limits",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "We should be honest about the limits"
+ },
+ {
+  "t0": 209.31,
+  "t1": 213.31,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "giovanni_berlin",
+  "params": {
+   "hold_s": 4.0,
+   "overlays": [
+    {
+     "label": "Man in a Red Chaperon / Jan van Eyck, c.1438",
+     "t": 209.91
+    }
+   ]
+  },
+  "words": "a separate portrait of a man from this family, now in Berlin; the names are probable, not proven"
+ },
+ {
+  "t0": 213.31,
+  "t1": 219.46,
+  "effect": "back to the painting after the still",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "a separate portrait of a man from this family, now in Berlin; the names are probable, not proven"
+ },
+ {
+  "t0": 219.46,
+  "t1": 230.46,
+  "effect": "pan up the painting (CAM-04)",
+  "ids": [
+   "CAM-04"
+  ],
+  "image": "A",
+  "params": {
+   "pan": "legs to waist, linear, 11 s",
+   "overlays": []
+  },
+  "words": "What is certain is how unusual the picture is"
+ },
+ {
+  "t0": 230.46,
+  "t1": 240.78,
+  "effect": "hard cut to the faces (TR-04)",
+  "ids": [
+   "TR-04",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "two people who were neither royalty nor nobility, in their own home"
+ },
+ {
+  "t0": 240.78,
+  "t1": 244.45,
+  "effect": "mirror spotlight: witnesses",
+  "ids": [
+   "HI-01",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2220,
+       1790
+      ],
+      430,
+      430
+     ],
+     "t0": 241.58,
+     "t1": 244.45,
+     "floor": 0.2
+    }
+   ]
+  },
+  "words": "with the figures in the mirror acting as witnesses"
+ },
+ {
+  "t0": 244.45,
+  "t1": 255.66,
+  "effect": "memorial painting for Costanza: matte",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "But without any evidence ... more convincing of the two"
+ },
+ {
+  "t0": 255.66,
+  "t1": 264.61,
+  "effect": "dog detail with circle (AN-01) and label",
+  "ids": [
+   "CAM-05",
+   "AN-01",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "ring": [
+      2098,
+      5446
+     ],
+     "r_src": 330,
+     "t0": 256.87,
+     "draw_s": 0.5,
+     "hold_s": 2.0,
+     "fade_s": 0.4
+    },
+    {
+     "label": "Dog at her feet",
+     "t": 256.92
+    }
+   ]
+  },
+  "words": "Look down at the dog at her feet"
+ },
+ {
+  "t0": 264.61,
+  "t1": 273.86,
+  "effect": "tomb still with push to the dog (CAM-05)",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "tomb",
+  "params": {
+   "hold_s": 9.25,
+   "overlays": [
+    {
+     "label": "Tomb of Mary of Burgundy, Bruges / Late 15th century",
+     "t": 265.21
+    }
+   ]
+  },
+  "words": "Yet on late medieval tombs, sculptors often placed a dog by a woman's feet"
+ },
+ {
+  "t0": 273.86,
+  "t1": 289.08,
+  "effect": "push on Costanza's face: portraits of the dead",
+  "ids": [
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Portraits of the dead were not unusual either"
+ },
+ {
+  "t0": 289.08,
+  "t1": 296.34,
+  "effect": "pull-back to the matte",
+  "ids": [
+   "CAM-03"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Whatever else it does, this double portrait ..."
+ },
+ {
+  "t0": 296.34,
+  "t1": 299.14,
+  "effect": "chapter card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "",
+  "params": {
+   "text": "FASHIONS AND FABRICS",
+   "bg": "black",
+   "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+   "y": "88 %"
+  },
+  "words": ""
+ },
+ {
+  "t0": 299.14,
+  "t1": 303.14,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "rogier",
+  "params": {
+   "hold_s": 4.0,
+   "overlays": [
+    {
+     "label": "Portrait of a Woman / Rogier van der Weyden, c.1435",
+     "t": 299.74
+    }
+   ]
+  },
+  "words": "Clothes shape identity, then as now"
+ },
+ {
+  "t0": 303.14,
+  "t1": 321.93,
+  "effect": "matte to fill-width 1.59x/4.9 s ease-in (as ref), then push to the dress with label",
+  "ids": [
+   "CAM-01",
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "ratio": 2.63,
+   "dur_s": 4.9,
+   "overlays": [
+    {
+     "label": "Green wool gown",
+     "t": 308.31
+    }
+   ]
+  },
+  "words": "and here every thread is a statement ... that green dress"
+ },
+ {
+  "t0": 321.93,
+  "t1": 336.6,
+  "effect": "long pan down the dress (CAM-04)",
+  "ids": [
+   "CAM-04"
+  ],
+  "image": "A",
+  "params": {
+   "pan": "linear, ~180 px/s ref",
+   "overlays": []
+  },
+  "words": "The colour alone is an announcement"
+ },
+ {
+  "t0": 336.6,
+  "t1": 350.97,
+  "effect": "fur lining crop with label",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Miniver lining",
+     "t": 337.14
+    }
+   ]
+  },
+  "words": "Now look at the lining ... two thousand"
+ },
+ {
+  "t0": 350.97,
+  "t1": 366.14,
+  "effect": "blue underdress with label",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Blue underdress",
+     "t": 360.67
+    }
+   ]
+  },
+  "words": "Notice how carefully she handles blue"
+ },
+ {
+  "t0": 366.14,
+  "t1": 374.61,
+  "effect": "Giovanni dressed with the same care",
+  "ids": [
+   "CAM-05",
+   "TR-04"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Giovanni is dressed with the same care. His clothes are plum and black"
+ },
+ {
+  "t0": 374.61,
+  "t1": 379.17,
+  "effect": "hat crop with label (hard cut)",
+  "ids": [
+   "TR-04",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Straw hat",
+     "t": 375.19
+    }
+   ]
+  },
+  "words": "his hat is straw, woven in tiny plaits"
+ },
+ {
+  "t0": 379.17,
+  "t1": 389.73,
+  "effect": "tabard crop with label (hard cut)",
+  "ids": [
+   "TR-04",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Silk velvet tabard",
+     "t": 379.53
+    }
+   ]
+  },
+  "words": "and his velvet tabard ... pine martens from Russia"
+ },
+ {
+  "t0": 389.73,
+  "t1": 395.68,
+  "effect": "boots crop",
+  "ids": [
+   "CAM-05",
+   "TR-04"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "His boots are such supple leather"
+ },
+ {
+  "t0": 395.68,
+  "t1": 403.81,
+  "effect": "pattens with spotlight (HI-01) and label",
+  "ids": [
+   "HI-01",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       310,
+       5420
+      ],
+      480,
+      300
+     ],
+     "t0": 399.7,
+     "t1": 405.81,
+     "floor": 0.2
+    },
+    {
+     "label": "Pattens",
+     "t": 399.82
+    }
+   ]
+  },
+  "words": "the pointed overshoes called pattens"
+ },
+ {
+  "t0": 403.81,
+  "t1": 414.5,
+  "effect": "discarded shoes, a real room",
+  "ids": [
+   "CAM-03"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "An abandoned pair of shoes ... a real day"
+ },
+ {
+  "t0": 414.5,
+  "t1": 417.3,
+  "effect": "chapter card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "",
+  "params": {
+   "text": "THE ROOM",
+   "bg": "black",
+   "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+   "y": "88 %"
+  },
+  "words": ""
+ },
+ {
+  "t0": 417.3,
+  "t1": 429.44,
+  "effect": "the room: matte",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "The room will strike us as strange"
+ },
+ {
+  "t0": 429.44,
+  "t1": 437.22,
+  "effect": "pan up the bed (CAM-04) with label",
+  "ids": [
+   "CAM-04",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Bed",
+     "t": 429.92
+    }
+   ]
+  },
+  "words": "Look at the bed behind the couple"
+ },
+ {
+  "t0": 437.22,
+  "t1": 441.22,
+  "effect": "mirror cut-in with spotlight: two visitors (HI-01, TR-04)",
+  "ids": [
+   "HI-01",
+   "TR-04"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2220,
+       1790
+      ],
+      430,
+      430
+     ],
+     "t0": 437.52,
+     "t1": 441.02,
+     "floor": 0.2
+    }
+   ]
+  },
+  "words": "and the mirror shows two visitors being welcomed in"
+ },
+ {
+  "t0": 441.22,
+  "t1": 448.8,
+  "effect": "back to the bed: a reception room",
+  "ids": [
+   "TR-04",
+   "CAM-04"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "So this is a reception room ... purely to impress"
+ },
+ {
+  "t0": 448.8,
+  "t1": 469.76,
+  "effect": "settle with circle on the carved creature (AN-01)",
+  "ids": [
+   "CAM-05",
+   "AN-01",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Settle",
+     "t": 451.54
+    },
+    {
+     "ring": [
+      2553,
+      2300
+     ],
+     "r_src": 180,
+     "t0": 462.74,
+     "draw_s": 0.5,
+     "hold_s": 2.0,
+     "fade_s": 0.4
+    }
+   ]
+  },
+  "words": "Further back is a bench called a settle"
+ },
+ {
+  "t0": 469.76,
+  "t1": 483.2,
+  "effect": "chair and brush with circle",
+  "ids": [
+   "CAM-05",
+   "AN-01",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Saint Martha",
+     "t": 476.39
+    },
+    {
+     "ring": [
+      2700,
+      1580
+     ],
+     "r_src": 190,
+     "t0": 479.48,
+     "draw_s": 0.5,
+     "hold_s": 2.0,
+     "fade_s": 0.4
+    }
+   ]
+  },
+  "words": "a tall-backed chair, topped by a woman riding a dragon"
+ },
+ {
+  "t0": 483.2,
+  "t1": 501.92,
+  "effect": "rug crop push with label",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Oriental carpet",
+     "t": 491.32
+    }
+   ]
+  },
+  "words": "Now look at the floor ... oriental carpet"
+ },
+ {
+  "t0": 501.92,
+  "t1": 516.38,
+  "effect": "split-screen comparison, slide-in, synchronous push-ins",
+  "ids": [
+   "LAY-01",
+   "TR-02",
+   "CAM-05"
+  ],
+  "image": "arnolfini_commons + paele_commons",
+  "params": {
+   "slide_s": 0.85,
+   "push_L": "0.1097->0.30",
+   "push_R": "0.228->0.55"
+  },
+  "words": ""
+ },
+ {
+  "t0": 516.38,
+  "t1": 531.45,
+  "effect": "amber beads crop with label",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Amber prayer beads",
+     "t": 518.2
+    }
+   ]
+  },
+  "words": "Beside the mirror hangs a string of amber prayer beads"
+ },
+ {
+  "t0": 531.45,
+  "t1": 543.19,
+  "effect": "window pan down to the oranges (CAM-04)",
+  "ids": [
+   "CAM-04",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Oranges",
+     "t": 537.46
+    },
+    {
+     "ring": [
+      430,
+      3200
+     ],
+     "r_src": 190,
+     "t0": 537.41,
+     "draw_s": 0.5,
+     "hold_s": 3.0,
+     "fade_s": 0.4
+    }
+   ]
+  },
+  "words": "Finally, let your eye drift to the window"
+ },
+ {
+  "t0": 543.19,
+  "t1": 554.77,
+  "effect": "circle on the single orange (AN-01)",
+  "ids": [
+   "AN-01",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "ring": [
+      470,
+      2704
+     ],
+     "r_src": 130,
+     "t0": 544.12,
+     "draw_s": 0.5,
+     "hold_s": 3.4,
+     "fade_s": 0.4
+    }
+   ]
+  },
+  "words": "Study the single orange ... still life"
+ },
+ {
+  "t0": 554.77,
+  "t1": 557.57,
+  "effect": "chapter card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "",
+  "params": {
+   "text": "THE MIRROR",
+   "bg": "black",
+   "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+   "y": "88 %"
+  },
+  "words": ""
+ },
+ {
+  "t0": 557.57,
+  "t1": 572.63,
+  "effect": "mirror push 3.57x/11 s ease-in-out then drift; spotlight floor 0.20",
+  "ids": [
+   "CAM-05",
+   "HI-01"
+  ],
+  "image": "A",
+  "params": {
+   "ratio": 3.57,
+   "dur_s": 11,
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2220,
+       1790
+      ],
+      440,
+      440
+     ],
+     "t0": 561.74,
+     "t1": 572.63,
+     "floor": 0.2
+    }
+   ]
+  },
+  "words": "And now to the most intriguing object ... glass mirrors were high technology"
+ },
+ {
+  "t0": 572.63,
+  "t1": 576.63,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "matsys",
+  "params": {
+   "hold_s": 4.0,
+   "overlays": [
+    {
+     "label": "The Moneylender and his Wife / Quentin Massys, 1514",
+     "t": 573.23
+    }
+   ]
+  },
+  "words": "usually convex (a later convex mirror)"
+ },
+ {
+  "t0": 576.63,
+  "t1": 583.13,
+  "effect": "convex mirror optical diagram (stand-in)",
+  "ids": [
+   "DIA-07"
+  ],
+  "image": "procedural diagram",
+  "params": {},
+  "words": ""
+ },
+ {
+  "t0": 583.13,
+  "t1": 603.09,
+  "effect": "push into the reflection with label",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "zoom": "to 2.7",
+   "overlays": [
+    {
+     "label": "Reflection",
+     "t": 584.29
+    }
+   ]
+  },
+  "words": "Look closely at the reflection"
+ },
+ {
+  "t0": 603.09,
+  "t1": 613.72,
+  "effect": "pull out of reflection: purity",
+  "ids": [
+   "CAM-03"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Mirrors were also used in art to suggest purity"
+ },
+ {
+  "t0": 613.72,
+  "t1": 627.99,
+  "effect": "frame crop with two circles on roundels (AN-01)",
+  "ids": [
+   "AN-01",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Passion roundels",
+     "t": 616.52
+    },
+    {
+     "ring": [
+      2474,
+      1690
+     ],
+     "r_src": 82,
+     "t0": 616.47,
+     "draw_s": 0.5,
+     "hold_s": 2.6,
+     "fade_s": 0.4
+    },
+    {
+     "ring": [
+      2466,
+      1870
+     ],
+     "r_src": 82,
+     "t0": 616.47,
+     "draw_s": 0.5,
+     "hold_s": 2.6,
+     "fade_s": 0.4
+    }
+   ]
+  },
+  "words": "Now notice the frame. Ten tiny roundels"
+ },
+ {
+  "t0": 627.99,
+  "t1": 643.82,
+  "effect": "spotlight on Costanza's half of the ring (HI-01)",
+  "ids": [
+   "HI-01",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2435,
+       1790
+      ],
+      250,
+      420
+     ],
+     "t0": 634.03,
+     "t1": 643.72,
+     "floor": 0.2
+    }
+   ]
+  },
+  "words": "Their positions matter. Every episode ... beside Costanza"
+ },
+ {
+  "t0": 643.82,
+  "t1": 666.44,
+  "effect": "chandelier: circles on the lit and the snuffed-out candle (AN-01), push then drift",
+  "ids": [
+   "AN-01",
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "label": "Chandelier",
+     "t": 645.66
+    },
+    {
+     "ring": [
+      1856,
+      420
+     ],
+     "r_src": 215,
+     "t0": 649.62,
+     "draw_s": 0.5,
+     "hold_s": 3.0,
+     "fade_s": 0.4
+    },
+    {
+     "ring": [
+      2490,
+      500
+     ],
+     "r_src": 215,
+     "t0": 651.72,
+     "draw_s": 0.5,
+     "hold_s": 3.0,
+     "fade_s": 0.4
+    }
+   ]
+  },
+  "words": "And one more detail ... one candle is lit and another has been snuffed out"
+ },
+ {
+  "t0": 666.44,
+  "t1": 669.24,
+  "effect": "chapter card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "",
+  "params": {
+   "text": "THE ALCHEMIST",
+   "bg": "black",
+   "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+   "y": "88 %"
+  },
+  "words": ""
+ },
+ {
+  "t0": 669.24,
+  "t1": 678.28,
+  "effect": "one single meaning would be reckless: matte",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "Saying that a painting has one single meaning would be reckless"
+ },
+ {
+  "t0": 678.28,
+  "t1": 680.58,
+  "effect": "clue: the dog (hard cut)",
+  "ids": [
+   "TR-04",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "starting with the dog by her skirt"
+ },
+ {
+  "t0": 680.58,
+  "t1": 683.52,
+  "effect": "clue: roundels on her side",
+  "ids": [
+   "TR-04",
+   "HI-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2435,
+       1790
+      ],
+      250,
+      420
+     ],
+     "t0": 681.54,
+     "t1": 683.42,
+     "floor": 0.2
+    }
+   ]
+  },
+  "words": "then the small scenes on her half of the frame"
+ },
+ {
+  "t0": 683.52,
+  "t1": 691.86,
+  "effect": "clue: dark clothes (hard cut)",
+  "ids": [
+   "TR-04",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "and the chance that he is wearing mourning clothes"
+ },
+ {
+  "t0": 691.86,
+  "t1": 703.78,
+  "effect": "push to the joined hands with spotlight (HI-01), floor 0.20",
+  "ids": [
+   "CAM-05",
+   "HI-01",
+   "STATIC-02"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2420,
+       2540
+      ],
+      360,
+      270
+     ],
+     "t0": 697.07,
+     "t1": 707.78,
+     "floor": 0.2
+    },
+    {
+     "label": "Joined hands",
+     "t": 697.19
+    }
+   ]
+  },
+  "words": "Yet the strongest hint is the way Giovanni takes her hand"
+ },
+ {
+  "t0": 703.78,
+  "t1": 716.74,
+  "effect": "hands: both readings at once",
+  "ids": [
+   "HI-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": [
+    {
+     "spotlight": [
+      [
+       2420,
+       2540
+      ],
+      360,
+      270
+     ],
+     "t0": 702.78,
+     "t1": 716.54,
+     "floor": 0.2
+    }
+   ]
+  },
+  "words": "Then again, the same gesture has been read as a wedding vow"
+ },
+ {
+  "t0": 716.74,
+  "t1": 728.81,
+  "effect": "step into the mirrored world: push (CAM-05)",
+  "ids": [
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "The real marvel is how Van Eyck handles space"
+ },
+ {
+  "t0": 728.81,
+  "t1": 732.81,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "turban",
+  "params": {
+   "hold_s": 4.0,
+   "overlays": [
+    {
+     "label": "Man in a Red Turban / Jan van Eyck, 1433",
+     "t": 729.41
+    }
+   ]
+  },
+  "words": "His contemporaries called him an alchemist"
+ },
+ {
+  "t0": 732.81,
+  "t1": 739.0,
+  "effect": "back to the painting after the still",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "His contemporaries called him an alchemist"
+ },
+ {
+  "t0": 739.0,
+  "t1": 745.94,
+  "effect": "glaze crop on Costanza's veil and face: thin layers",
+  "ids": [
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "He knew that some pigments turn almost transparent in oil"
+ },
+ {
+  "t0": 745.94,
+  "t1": 756.11,
+  "effect": "hard cut: the smooth surface of the dress (TR-04)",
+  "ids": [
+   "TR-04",
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "which gives it a glow, and a surface so smooth that it looks untouched"
+ },
+ {
+  "t0": 756.11,
+  "t1": 759.62,
+  "effect": "close on the dog's shadow (thumbprint)",
+  "ids": [
+   "CAM-05"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "and there is even a thumbprint close to the dog's shadow"
+ },
+ {
+  "t0": 759.62,
+  "t1": 769.29,
+  "effect": "his reach: matte",
+  "ids": [
+   "STATIC-01"
+  ],
+  "image": "A",
+  "params": {
+   "overlays": []
+  },
+  "words": "His reach extended far past the Low Countries"
+ },
+ {
+  "t0": 769.29,
+  "t1": 774.15,
+  "effect": "context still (two-line label)",
+  "ids": [
+   "STATIC-02",
+   "TR-04"
+  ],
+  "image": "durer",
+  "params": {
+   "hold_s": 4.86,
+   "overlays": [
+    {
+     "label": "Self-Portrait / Albrecht D\u00fcrer, 1500",
+     "t": 769.89
+    }
+   ]
+  },
+  "words": "Albrecht Durer, whose self-portrait of 1500 shares that direct gaze"
+ },
+ {
+  "t0": 774.15,
+  "t1": 781.5300000000001,
+  "effect": "Las Meninas with push to its mirror (CAM-05)",
+  "ids": [
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "meninas",
+  "params": {
+   "hold_s": 4.08,
+   "overlays": [
+    {
+     "label": "Las Meninas / Diego Vel\u00e1zquez, 1656",
+     "t": 774.75
+    }
+   ]
+  },
+  "words": "Velazquez, whose Las Meninas has its own mirror at the back"
+ },
+ {
+  "t0": 781.5300000000001,
+  "t1": 820.8333,
+  "effect": "closing: recap labels (plain text, no strip) and 5.8x/40 s ease-out pull-out",
+  "ids": [
+   "CAM-03",
+   "STATIC-01",
+   "STATIC-08"
+  ],
+  "image": "A",
+  "params": {
+   "ratio": 5.8,
+   "dur_s": 40,
+   "ease": "out_quad",
+   "overlays": [
+    {
+     "text": "DOG",
+     "t0": 800.26
+    },
+    {
+     "text": "ROUNDELS",
+     "t0": 801.14
+    },
+    {
+     "text": "CANDLE",
+     "t0": 802.18
+    },
+    {
+     "text": "MOURNING DRESS?",
+     "t0": 803.02
+    }
+   ]
+  },
+  "words": "So let us return ... so that we would know"
+ }
+]

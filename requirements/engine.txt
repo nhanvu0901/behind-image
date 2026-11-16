@@ -1,0 +1,6 @@
+numpy>=1.26
+opencv-python>=4.9
+Pillow>=10
+pytest>=8
+jsonschema>=4   # tests only (registry schema check)
+# also needs ffmpeg with libx264 on PATH (render_range, audio extraction)

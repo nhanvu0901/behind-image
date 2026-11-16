@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biên tập video - Behind the Image</title>
+<link rel="stylesheet" href="css/app.css">
+<link rel="icon" href="data:,">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <div class="brand">Behind the Image</div>
+    <a href="library.html" class="badge" style="text-decoration:none;color:inherit" title="Thư viện sách: chọn tác phẩm, tạo dự án">Thư viện</a>
+    <select id="project-pick" title="Dự án"></select>
+    <button id="btn-save" class="primary" title="Lưu (Ctrl+S)">Lưu<span id="dirty-dot" class="dot" hidden></span></button>
+    <button id="btn-check" title="Kiểm tra storyboard">Kiểm tra <span id="issue-count" class="count">0</span></button>
+    <span class="sep"></span>
+    <button id="btn-undo" title="Hoàn tác (Ctrl+Z)">Hoàn tác</button>
+    <button id="btn-redo" title="Làm lại (Ctrl+Shift+Z)">Làm lại</button>
+    <span class="sep"></span>
+    <button id="btn-proposals" title="Đề xuất từ agent">Đề xuất <span id="prop-count" class="count" hidden>0</span></button>
+    <button id="btn-approve" title="Duyệt storyboard đã lưu (cần lưu trước, không còn lỗi)">Duyệt</button>
+    <span id="approve-state" class="badge" title="Trạng thái duyệt"></span>
+    <button id="btn-clip" title="Dựng clip 10 giây từ vị trí đầu phát">Xem thử 10 giây</button>
+    <span class="grow"></span>
+    <span id="status-msg" class="muted"></span>
+    <span id="health" class="badge" title="Tình trạng engine và media">...</span>
+  </header>
+  <main id="main">
+    <section id="preview-pane">
+      <div id="preview-tools">
+        <label class="chk"><input type="checkbox" id="view-source"> Ảnh gốc (xem toàn ảnh để kéo khung)</label>
+        <label class="chk"><input type="checkbox" id="view-regions"> Hiện vùng (region)</label>
+        <span class="muted" id="map-note"></span>
+        <span class="grow"></span>
+        <span class="muted" id="frame-state"></span>
+      </div>
+      <div id="stage"><div id="stage-box"><canvas id="frame"></canvas><svg id="handles"></svg></div></div>
+      <div id="transport">
+        <button id="t-prev" title="Shot trước ([)">&#9664;</button>
+        <button id="t-play" title="Phát/Dừng (Space)">&#9654;</button>
+        <button id="t-next" title="Shot sau (])">&#9654;&#9654;</button>
+        <span id="t-time" class="mono">0:00.00</span>
+        <span class="muted">/</span><span id="t-total" class="mono muted">0:00.00</span>
+        <span class="sep"></span>
+        <span class="muted">Từ:</span><span id="t-word" class="word-now">-</span>
+        <span class="grow"></span>
+        <span id="t-audio" class="muted" hidden>Không có âm thanh</span>
+        <span id="t-shot" class="muted"></span>
+      </div>
+    </section>
+    <aside id="inspector">
+      <nav id="tabs">
+        <button data-tab="shot" class="active">Shot</button>
+        <button data-tab="overlay">Lớp phủ</button>
+        <button data-tab="media">Hình</button>
+        <button data-tab="issues">Lỗi <span id="tab-issues-n" class="count" hidden>0</span></button>
+      </nav>
+      <div id="tab-body"></div>
+    </aside>
+  </main>
+  <section id="timeline-wrap">
+    <div id="tl-bar">
+      <button id="tl-split" title="Cắt tại đầu phát (S)">Cắt (S)</button>
+      <button id="tl-merge" title="Gộp với shot trước">Gộp trước</button>
+      <button id="tl-delete" title="Xóa shot (Delete)">Xóa</button>
+      <button id="tl-lock" title="Khóa/mở khóa (L)">Khóa (L)</button>
+      <span class="sep"></span>
+      <button id="tl-zout" title="Thu nhỏ">-</button>
+      <button id="tl-zin" title="Phóng to">+</button>
+      <button id="tl-fit" title="Vừa toàn bộ">Vừa</button>
+      <span class="muted" id="tl-hint">Alt khi kéo = đặt tự do (không bám từ) | Ctrl+cuộn = zoom | Shift+cuộn = kéo ngang</span>
+      <span class="grow"></span>
+      <span class="muted mono" id="tl-info"></span>
+    </div>
+    <div id="timeline"><canvas id="tl-canvas"></canvas></div>
+  </section>
+</div>
+<div id="modal-root"></div>
+<div id="toast-root"></div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+{
+  "selection": "Convenience sample: four documentaries at 60s and two shorts at 10s, 20s each; not representative",
+  "method": "ffmpeg mono 16k PCM RMS and silencedetect -35dB 0.3s, mixed soundtrack; timestamps relative to excerpt",
+  "samples": [
+    {
+      "id": "unla1jTwXdY",
+      "type": "documentary",
+      "file": "research_media/great-art-explained/unla1jTwXdY.mp4",
+      "start_seconds": 60,
+      "requested_duration_seconds": 20,
+      "actual_decoded_duration_seconds": 20.0,
+      "mono_rms_dbfs": -25.62,
+      "silence_threshold_dbfs": -35,
+      "silence_min_duration_seconds": 0.3,
+      "silence_events": [
+        {
+          "event": "start",
+          "seconds_in_clip": 6.305011
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 7.026463,
+          "duration_seconds": 0.721451
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 13.314331
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 13.968345,
+          "duration_seconds": 0.654014
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 17.473628
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 18.017687,
+          "duration_seconds": 0.544059
+        }
+      ]
+    },
+    {
+      "id": "9x0tsuS4dk0",
+      "type": "documentary",
+      "file": "research_media/great-art-explained/9x0tsuS4dk0.mp4",
+      "start_seconds": 60,
+      "requested_duration_seconds": 20,
+      "actual_decoded_duration_seconds": 20.0,
+      "mono_rms_dbfs": -22.48,
+      "silence_threshold_dbfs": -35,
+      "silence_min_duration_seconds": 0.3,
+      "silence_events": [
+        {
+          "event": "start",
+          "seconds_in_clip": 1.486479
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 1.911125,
+          "duration_seconds": 0.424646
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 3.459375
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 3.765104,
+          "duration_seconds": 0.305729
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 7.242
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 7.825875,
+          "duration_seconds": 0.583875
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 12.004938
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 12.640458,
+          "duration_seconds": 0.635521
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 18.218833
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 18.873396,
+          "duration_seconds": 0.654562
+        }
+      ]
+    },
+    {
+      "id": "crCPVoPsTtk",
+      "type": "documentary",
+      "file": "research_media/great-art-explained/crCPVoPsTtk.mp4",
+      "start_seconds": 60,
+      "requested_duration_seconds": 20,
+      "actual_decoded_duration_seconds": 20.0,
+      "mono_rms_dbfs": -24.74,
+      "silence_threshold_dbfs": -35,
+      "silence_min_duration_seconds": 0.3,
+      "silence_events": [
+        {
+          "event": "start",
+          "seconds_in_clip": 3.534854
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 3.943708,
+          "duration_seconds": 0.408854
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 7.670875
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 8.255417,
+          "duration_seconds": 0.584542
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 13.136104
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 13.640479,
+          "duration_seconds": 0.504375
+        }
+      ]
+    },
+    {
+      "id": "qJLH7JAsBHA",
+      "type": "documentary",
+      "file": "research_media/great-art-explained/qJLH7JAsBHA.mp4",
+      "start_seconds": 60,
+      "requested_duration_seconds": 20,
+      "actual_decoded_duration_seconds": 20.0,
+      "mono_rms_dbfs": -15.06,
+      "silence_threshold_dbfs": -35,
+      "silence_min_duration_seconds": 0.3,
+      "silence_events": []
+    },
+    {
+      "id": "EFxxmc0EZTI",
+      "type": "short",
+      "file": "research_media/great-art-explained/EFxxmc0EZTI.mp4",
+      "start_seconds": 10,
+      "requested_duration_seconds": 20,
+      "actual_decoded_duration_seconds": 20.0,
+      "mono_rms_dbfs": -17.89,
+      "silence_threshold_dbfs": -35,
+      "silence_min_duration_seconds": 0.3,
+      "silence_events": []
+    },
+    {
+      "id": "3TMs2PwdV1E",
+      "type": "short",
+      "file": "research_media/great-art-explained/3TMs2PwdV1E.mp4",
+      "start_seconds": 10,
+      "requested_duration_seconds": 20,
+      "actual_decoded_duration_seconds": 20.0,
+      "mono_rms_dbfs": -20.51,
+      "silence_threshold_dbfs": -35,
+      "silence_min_duration_seconds": 0.3,
+      "silence_events": [
+        {
+          "event": "start",
+          "seconds_in_clip": 10.86229
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 11.238549,
+          "duration_seconds": 0.376259
+        },
+        {
+          "event": "start",
+          "seconds_in_clip": 18.650431
+        },
+        {
+          "event": "end",
+          "seconds_in_clip": 19.255238,
+          "duration_seconds": 0.604807
+        }
+      ]
+    }
+  ]
+}

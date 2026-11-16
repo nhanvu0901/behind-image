@@ -1,0 +1,96 @@
+{
+ "atempo": 1.07,
+ "segments": [
+  {
+   "id": "B1a",
+   "raw_start": 0.0,
+   "raw_end": 5.48,
+   "final_start": 0.35
+  },
+  {
+   "id": "B1b",
+   "raw_start": 5.48,
+   "raw_end": 9.04,
+   "final_start": 5.751
+  },
+  {
+   "id": "B2a",
+   "raw_start": 9.04,
+   "raw_end": 13.64,
+   "final_start": 12.229
+  },
+  {
+   "id": "B2b",
+   "raw_start": 13.64,
+   "raw_end": 18.72,
+   "final_start": 16.808
+  },
+  {
+   "id": "B2c",
+   "raw_start": 18.72,
+   "raw_end": 27.0,
+   "final_start": 21.835
+  },
+  {
+   "id": "B2d",
+   "raw_start": 27.0,
+   "raw_end": 34.56,
+   "final_start": 29.854
+  },
+  {
+   "id": "B3a",
+   "raw_start": 34.56,
+   "raw_end": 40.08,
+   "final_start": 37.419
+  },
+  {
+   "id": "B3b",
+   "raw_start": 40.08,
+   "raw_end": 44.76,
+   "final_start": 42.858
+  },
+  {
+   "id": "B3c",
+   "raw_start": 44.76,
+   "raw_end": 49.52,
+   "final_start": 47.512
+  },
+  {
+   "id": "B4a",
+   "raw_start": 49.52,
+   "raw_end": 54.88,
+   "final_start": 52.46
+  },
+  {
+   "id": "B4b",
+   "raw_start": 54.88,
+   "raw_end": 59.64,
+   "final_start": 57.75
+  },
+  {
+   "id": "B4c",
+   "raw_start": 59.64,
+   "raw_end": 63.24,
+   "final_start": 62.478
+  },
+  {
+   "id": "B4d",
+   "raw_start": 63.24,
+   "raw_end": 68.2,
+   "final_start": 66.123
+  },
+  {
+   "id": "B5a",
+   "raw_start": 68.2,
+   "raw_end": 71.32,
+   "final_start": 71.258
+  },
+  {
+   "id": "B5b",
+   "raw_start": 71.32,
+   "raw_end": 76.88,
+   "final_start": 74.454
+  }
+ ],
+ "end": 81.05
+}

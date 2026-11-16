@@ -1,0 +1,12 @@
+# One environment for the engine, the editor and the media module (python3 -m venv .venv && .venv/bin/pip install -r requirements.txt)
+# also needs ffmpeg with libx264 on PATH (preview clips, waveform, audio slices)
+fastapi>=0.110
+uvicorn>=0.27
+python-multipart>=0.0.9
+httpx>=0.25
+numpy>=1.26
+opencv-python>=4.9
+Pillow>=10.1
+pytest>=8
+jsonschema>=4
+pymupdf

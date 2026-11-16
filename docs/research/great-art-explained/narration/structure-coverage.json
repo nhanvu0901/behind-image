@@ -1,0 +1,450 @@
+{
+  "schema_version": "1.0",
+  "scope": "Phân tích cấu trúc narration; 8 phim chọn chủ đích, không đại diện thống kê toàn kênh.",
+  "manifest": "docs/research/great-art-explained/corpus/manifest.json",
+  "report": "docs/research/great-art-explained/narration/structure-longform.md",
+  "method": "Đọc toàn bộ phần transcript có timestamp, không dùng info.json làm transcript; mốc timeline gần đúng, khoảng trống có thể không có lời.",
+  "audio_reviewed": false,
+  "video_reviewed": false,
+  "independent_historical_fact_check": false,
+  "verbatim_quote_words_by_video": 0,
+  "version_counting_rule": "Không đếm bản gốc và phiên bản ghép/mở rộng như quan sát độc lập; chưa đối chiếu đầy đủ bản gốc.",
+  "films": [
+    {
+      "id": "GLW9omJfAdk",
+      "subject": "Goya",
+      "manifest_duration_seconds": 3071,
+      "transcript_path": "research_media/great-art-explained/analysis-b/GLW9omJfAdk/transcript/GLW9omJfAdk.txt",
+      "transcript_sha256": "8e53539cff092fd5fe1176ac4dda4a85fa79cfd9b60a579e5039c7fd5281c211",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 78,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:51:01",
+      "timeline_interval_count": 10,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "02:18"
+        },
+        {
+          "start": "02:18",
+          "end": "07:38"
+        },
+        {
+          "start": "07:38",
+          "end": "15:56"
+        },
+        {
+          "start": "15:56",
+          "end": "20:48"
+        },
+        {
+          "start": "20:48",
+          "end": "24:42"
+        },
+        {
+          "start": "24:42",
+          "end": "27:39"
+        },
+        {
+          "start": "27:39",
+          "end": "35:34"
+        },
+        {
+          "start": "35:34",
+          "end": "41:36"
+        },
+        {
+          "start": "41:36",
+          "end": "48:22"
+        },
+        {
+          "start": "48:22",
+          "end": "51:10"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "compilation_plus_new",
+      "version_evidence": "research_media/great-art-explained/GLW9omJfAdk.description",
+      "version_note": "Mô tả: dùng hai phim trước, thêm khoảng 25 phút."
+    },
+    {
+      "id": "vBG621XEegk",
+      "subject": "Bosch",
+      "manifest_duration_seconds": 3052,
+      "transcript_path": "research_media/great-art-explained/analysis-b/vBG621XEegk/transcript/vBG621XEegk.txt",
+      "transcript_sha256": "63a5d563c15e992f340b28860e9e74eee9f048bb008a706faf036e508784a088",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 76,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:50:38",
+      "timeline_interval_count": 10,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "03:48"
+        },
+        {
+          "start": "03:48",
+          "end": "09:29"
+        },
+        {
+          "start": "09:29",
+          "end": "15:43"
+        },
+        {
+          "start": "15:43",
+          "end": "18:21"
+        },
+        {
+          "start": "18:21",
+          "end": "24:27"
+        },
+        {
+          "start": "24:27",
+          "end": "32:54"
+        },
+        {
+          "start": "32:54",
+          "end": "38:23"
+        },
+        {
+          "start": "38:23",
+          "end": "43:45"
+        },
+        {
+          "start": "43:45",
+          "end": "48:06"
+        },
+        {
+          "start": "48:06",
+          "end": "50:52"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "compilation_plus_new",
+      "version_evidence": "research_media/great-art-explained/vBG621XEegk.description",
+      "version_note": "Mô tả: ghép ba phim ngắn, bổ sung cảnh và biên tập lại."
+    },
+    {
+      "id": "ElWG0_kjy_Y",
+      "subject": "Mona Lisa",
+      "manifest_duration_seconds": 1974,
+      "transcript_path": "research_media/great-art-explained/analysis-b/ElWG0_kjy_Y/transcript/ElWG0_kjy_Y.txt",
+      "transcript_sha256": "593175d36bbea31dcb0b2cf6db26bcc55a8249a20f8f1f0863de307f7d89ef01",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 54,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:32:50",
+      "timeline_interval_count": 8,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "03:31"
+        },
+        {
+          "start": "03:31",
+          "end": "07:07"
+        },
+        {
+          "start": "07:07",
+          "end": "12:36"
+        },
+        {
+          "start": "12:36",
+          "end": "17:12"
+        },
+        {
+          "start": "17:12",
+          "end": "21:54"
+        },
+        {
+          "start": "21:54",
+          "end": "27:20"
+        },
+        {
+          "start": "27:20",
+          "end": "30:11"
+        },
+        {
+          "start": "30:11",
+          "end": "32:53"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "extended_reuse",
+      "version_evidence": "research_media/great-art-explained/ElWG0_kjy_Y.description",
+      "version_note": "Mô tả: bản mở rộng sử dụng một phần phim 15 phút trước."
+    },
+    {
+      "id": "eKyYPSpiC9g",
+      "subject": "The Last Supper",
+      "manifest_duration_seconds": 2172,
+      "transcript_path": "research_media/great-art-explained/analysis-b/eKyYPSpiC9g/transcript/eKyYPSpiC9g.txt",
+      "transcript_sha256": "ff2c5d1b005259c4e73e8a8822ca1808bcfea4265cda7d75e587fd56b268ab6a",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 54,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:36:00",
+      "timeline_interval_count": 10,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "01:55"
+        },
+        {
+          "start": "01:55",
+          "end": "04:44"
+        },
+        {
+          "start": "04:44",
+          "end": "08:14"
+        },
+        {
+          "start": "08:14",
+          "end": "10:21"
+        },
+        {
+          "start": "10:21",
+          "end": "14:08"
+        },
+        {
+          "start": "14:08",
+          "end": "17:12"
+        },
+        {
+          "start": "17:12",
+          "end": "23:04"
+        },
+        {
+          "start": "23:04",
+          "end": "28:41"
+        },
+        {
+          "start": "28:41",
+          "end": "33:35"
+        },
+        {
+          "start": "33:35",
+          "end": "36:11"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "not_established",
+      "version_evidence": "research_media/great-art-explained/eKyYPSpiC9g.description",
+      "version_note": "Không kết luận quan hệ phiên bản từ tài liệu đã đọc."
+    },
+    {
+      "id": "cuHgxPe3J7I",
+      "subject": "Sargent",
+      "manifest_duration_seconds": 1952,
+      "transcript_path": "research_media/great-art-explained/analysis-a/cuHgxPe3J7I/cuHgxPe3J7I.txt",
+      "transcript_sha256": "89903b55a40ca0dfdd784953b5a0305ae4f7cc7216603e62c28d28542dd558c7",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 49,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:32:19",
+      "timeline_interval_count": 9,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "01:27"
+        },
+        {
+          "start": "01:27",
+          "end": "04:46"
+        },
+        {
+          "start": "04:46",
+          "end": "07:39"
+        },
+        {
+          "start": "07:39",
+          "end": "12:26"
+        },
+        {
+          "start": "12:26",
+          "end": "18:37"
+        },
+        {
+          "start": "18:37",
+          "end": "23:23"
+        },
+        {
+          "start": "23:23",
+          "end": "25:55"
+        },
+        {
+          "start": "25:55",
+          "end": "27:26"
+        },
+        {
+          "start": "27:26",
+          "end": "32:31"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "full_length_unspecified",
+      "version_evidence": "research_media/great-art-explained/cuHgxPe3J7I.description",
+      "version_note": "Nhãn Full Length không tự chứng minh là phim ghép."
+    },
+    {
+      "id": "YFI6cQF1ros",
+      "subject": "Las Meninas",
+      "manifest_duration_seconds": 1862,
+      "transcript_path": "research_media/great-art-explained/analysis-b/YFI6cQF1ros/transcript/YFI6cQF1ros.txt",
+      "transcript_sha256": "1a921e6e305aaf05762686060ce6b1ed289fdca6414bd34bd8a3639db8f92f73",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 47,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:30:58",
+      "timeline_interval_count": 9,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "01:27"
+        },
+        {
+          "start": "01:27",
+          "end": "04:46"
+        },
+        {
+          "start": "04:46",
+          "end": "09:41"
+        },
+        {
+          "start": "09:41",
+          "end": "13:04"
+        },
+        {
+          "start": "13:04",
+          "end": "16:33"
+        },
+        {
+          "start": "16:33",
+          "end": "20:42"
+        },
+        {
+          "start": "20:42",
+          "end": "23:28"
+        },
+        {
+          "start": "23:28",
+          "end": "27:55"
+        },
+        {
+          "start": "27:55",
+          "end": "31:01"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "not_established",
+      "version_evidence": "research_media/great-art-explained/YFI6cQF1ros.description",
+      "version_note": "Không kết luận quan hệ phiên bản từ tài liệu đã đọc."
+    },
+    {
+      "id": "IBcB_dYtGUg",
+      "subject": "The Great Wave",
+      "manifest_duration_seconds": 1020,
+      "transcript_path": "research_media/great-art-explained/analysis-b/IBcB_dYtGUg/transcript/IBcB_dYtGUg.txt",
+      "transcript_sha256": "6c61ee234ec87aed7bddb866d4cee70f1a3d6fd4e7ec2f94d9a9a0f281b8a9c9",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 27,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:16:54",
+      "timeline_interval_count": 7,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "01:22"
+        },
+        {
+          "start": "01:22",
+          "end": "04:09"
+        },
+        {
+          "start": "04:09",
+          "end": "07:09"
+        },
+        {
+          "start": "07:09",
+          "end": "09:11"
+        },
+        {
+          "start": "09:11",
+          "end": "12:40"
+        },
+        {
+          "start": "12:40",
+          "end": "15:20"
+        },
+        {
+          "start": "15:20",
+          "end": "16:59"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "not_established",
+      "version_evidence": "research_media/great-art-explained/IBcB_dYtGUg.description",
+      "version_note": "Không kết luận quan hệ phiên bản từ tài liệu đã đọc."
+    },
+    {
+      "id": "qJLH7JAsBHA",
+      "subject": "Guernica",
+      "manifest_duration_seconds": 821,
+      "transcript_path": "research_media/great-art-explained/analysis-b/qJLH7JAsBHA/transcript/qJLH7JAsBHA.txt",
+      "transcript_sha256": "380fdc690c9dabbddf3c995b4a4959849c577ae96b731fa2155b254ca9d1a437",
+      "transcript_section": "SECTION 1: TIMESTAMPED TRANSCRIPT (VERBATIM)",
+      "transcript_read": "full_section",
+      "timestamped_blocks": 24,
+      "first_timestamp": "00:00:00",
+      "last_timestamp": "00:13:40",
+      "timeline_interval_count": 8,
+      "timeline_intervals": [
+        {
+          "start": "00:00",
+          "end": "01:43"
+        },
+        {
+          "start": "01:43",
+          "end": "03:06"
+        },
+        {
+          "start": "03:06",
+          "end": "04:34"
+        },
+        {
+          "start": "04:34",
+          "end": "06:43"
+        },
+        {
+          "start": "06:43",
+          "end": "09:54"
+        },
+        {
+          "start": "09:54",
+          "end": "10:41"
+        },
+        {
+          "start": "10:41",
+          "end": "12:27"
+        },
+        {
+          "start": "12:27",
+          "end": "13:40"
+        }
+      ],
+      "timeline_details_in_report": true,
+      "version_category": "not_established",
+      "version_evidence": "research_media/great-art-explained/qJLH7JAsBHA.description",
+      "version_note": "Không kết luận quan hệ phiên bản từ tài liệu đã đọc."
+    }
+  ]
+}

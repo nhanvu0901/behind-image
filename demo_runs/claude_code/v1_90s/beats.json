@@ -1,0 +1,250 @@
+{
+ "narration_starts_after_title_s": 3.5,
+ "beats": [
+  {
+   "id": "B1a",
+   "section": "1 Hook",
+   "text": "Most people will tell you this is a wedding portrait of a pregnant bride.",
+   "chars": 73,
+   "words": 14,
+   "est_start_s": 3.5,
+   "est_dur_s": 5.9,
+   "visuals": "Empty-room plate (figures removed by layer) on near-black gallery matte; figures slide in from both sides at larger scale (HI-02 figure reveal / CAM-02 relative motion)",
+   "catalogue_ids": [
+    "HI-02",
+    "CAM-02",
+    "STATIC-01"
+   ],
+   "highlight_sync": "Most (room visible), pregnant -> figures finish arriving ~ end of beat",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B1b",
+   "section": "1 Hook",
+   "text": "Look closer, because it is probably neither.",
+   "chars": 44,
+   "words": 7,
+   "est_start_s": 9.8,
+   "est_dur_s": 3.0,
+   "visuals": "Slow decelerating pull-back (0.33x over ~14s, ease-out) to the full vertical painting on matte",
+   "catalogue_ids": [
+    "CAM-03",
+    "STATIC-01"
+   ],
+   "highlight_sync": "Look -> pull-back starts at beat start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B2a",
+   "section": "2 Clue1 dress",
+   "text": "Her green gown, held up in bunches, was a stock fertility pose, not a sign of pregnancy.",
+   "chars": 88,
+   "words": 17,
+   "est_start_s": 13.1,
+   "est_dur_s": 7.2,
+   "visuals": "Matte full painting zooms in until it fills width (ease-in), then continues push into dress; label GREEN GOWN / Jan van Eyck, 1434",
+   "catalogue_ids": [
+    "CAM-01",
+    "CAM-06",
+    "STATIC-02"
+   ],
+   "highlight_sync": "Her -> push-in start; label pops ~0.6 s in",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B2b",
+   "section": "2 Clue1 dress",
+   "text": "The fur lining is a boast, a billboard for Bruges luxury and Arnolfini wealth.",
+   "chars": 78,
+   "words": 14,
+   "est_start_s": 20.6,
+   "est_dur_s": 5.9,
+   "visuals": "Continuing slow pan down the dress (linear ~3% frame-height/s) with zoom-out drift; label FUR LINING",
+   "catalogue_ids": [
+    "CAM-04",
+    "CAM-05",
+    "STATIC-02"
+   ],
+   "highlight_sync": "The fur -> label swap",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B2c",
+   "section": "2 Clue1 dress",
+   "text": "The little dog is a quiet echo of the pets carved beside women on medieval tombs.",
+   "chars": 81,
+   "words": 16,
+   "est_start_s": 26.9,
+   "est_dur_s": 6.8,
+   "visuals": "Cut-in (TR-04) to dog/hem crop (PDF p25 detail), slow push; label DOG",
+   "catalogue_ids": [
+    "TR-04",
+    "CAM-01",
+    "STATIC-08"
+   ],
+   "highlight_sync": "The little dog -> cut at beat start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B2d",
+   "section": "2 Clue1 dress",
+   "text": "And Costanza Trenta, the likely sitter, had died in 1433, a year before the painting was finished.",
+   "chars": 98,
+   "words": 17,
+   "est_start_s": 34.0,
+   "est_dur_s": 7.2,
+   "visuals": "Dissolve (TR-01) back to full painting on matte; centred year text 1433 (STATIC-09) over dimmed painting",
+   "catalogue_ids": [
+    "TR-01",
+    "STATIC-09"
+   ],
+   "highlight_sync": "And Costanza -> dissolve start; '1433' text pops at beat start +~6.0 s only if forced alignment is used, otherwise at beat start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B3a",
+   "section": "3 Clue2 mirror",
+   "text": "The convex mirror on the back wall holds two visitors in the doorway, perhaps the painter himself.",
+   "chars": 98,
+   "words": 17,
+   "est_start_s": 41.5,
+   "est_dur_s": 7.2,
+   "visuals": "SPOTLIGHT (HI-01) on mirror: surround dims to ~35% over 0.5 s starting at beat start, simultaneous push-in on mirror (CAM-05 zoom+shift, 3.5x)",
+   "catalogue_ids": [
+    "HI-01",
+    "CAM-05"
+   ],
+   "highlight_sync": "The convex mirror -> spotlight at beat start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B3b",
+   "section": "3 Clue2 mirror",
+   "text": "Ten tiny roundels of Christ's Passion circle the glass.",
+   "chars": 55,
+   "words": 9,
+   "est_start_s": 49.0,
+   "est_dur_s": 3.8,
+   "visuals": "Detail-label ART DETAIL 'PASSION ROUNDELS'; two circles drawn (AN-01) around two roundels, draw 0.5 s",
+   "catalogue_ids": [
+    "AN-01",
+    "STATIC-02"
+   ],
+   "highlight_sync": "Ten tiny roundels -> circles at beat start +0.3",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B3c",
+   "section": "3 Clue2 mirror",
+   "text": "Every scene that follows his death sits on Costanza's side.",
+   "chars": 59,
+   "words": 10,
+   "est_start_s": 53.2,
+   "est_dur_s": 4.2,
+   "visuals": "Pan to the right-hand half of the ring, spotlight shifts (HI-01 reposition); AN-02 outline of the roundels on her side",
+   "catalogue_ids": [
+    "HI-01",
+    "AN-02"
+   ],
+   "highlight_sync": "Every scene -> spotlight moves",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B4a",
+   "section": "4 Clue3 compare",
+   "text": "Compare it with Van Eyck's Canon van der Paele altarpiece, painted the same year.",
+   "chars": 81,
+   "words": 14,
+   "est_start_s": 57.8,
+   "est_dur_s": 5.9,
+   "visuals": "TR-02 slide-in of Van der Paele from right into LAY-01 two-panel split-screen; captions at bottom",
+   "catalogue_ids": [
+    "TR-02",
+    "LAY-01",
+    "STATIC-02"
+   ],
+   "highlight_sync": "Compare it -> slide-in starts at beat start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B4b",
+   "section": "4 Clue3 compare",
+   "text": "The same patient mastery of rugs and rich cloth runs through both.",
+   "chars": 66,
+   "words": 12,
+   "est_start_s": 64.0,
+   "est_dur_s": 5.1,
+   "visuals": "Both panels push in to the two rugs/cloth (CAM-05) with synced slow zoom",
+   "catalogue_ids": [
+    "CAM-05",
+    "LAY-01"
+   ],
+   "highlight_sync": "The same patient -> push start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B4c",
+   "section": "4 Clue3 hands",
+   "text": "But the clue that matters most is in the hands.",
+   "chars": 47,
+   "words": 10,
+   "est_start_s": 69.5,
+   "est_dur_s": 4.2,
+   "visuals": "Split dissolves out to full painting, push toward the joined hands; DIA-less",
+   "catalogue_ids": [
+    "TR-01",
+    "CAM-05"
+   ],
+   "highlight_sync": "But the clue -> move starts",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B4d",
+   "section": "4 Clue3 hands",
+   "text": "Giovanni holds hers so lightly, as if she were already slipping away.",
+   "chars": 69,
+   "words": 12,
+   "est_start_s": 74.0,
+   "est_dur_s": 5.1,
+   "visuals": "SPOTLIGHT on joined hands (HI-01) starting at beat start; hands crop (PDF p31 + Commons crop) slowly pushing; label 'HANDS'",
+   "catalogue_ids": [
+    "HI-01",
+    "CAM-01"
+   ],
+   "highlight_sync": "Giovanni holds -> spotlight at beat start",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B5a",
+   "section": "5 Closing",
+   "text": "Pull back, and the whole picture changes.",
+   "chars": 41,
+   "words": 7,
+   "est_start_s": 79.5,
+   "est_dur_s": 3.0,
+   "visuals": "Spotlight releases (0.5 s), long ease-out pull-back to full painting on matte (closing pull-out ref: 5.8x over 40 s, scaled to ~9 s)",
+   "catalogue_ids": [
+    "CAM-03",
+    "STATIC-01"
+   ],
+   "highlight_sync": "Pull back -> pull-back starts",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  },
+  {
+   "id": "B5b",
+   "section": "5 Closing",
+   "text": "It reads less like a wedding record, and more like a memorial to a love that outlasts death.",
+   "chars": 92,
+   "words": 18,
+   "est_start_s": 82.8,
+   "est_dur_s": 7.6,
+   "visuals": "Hold on full painting, slow fade to dark; end title",
+   "catalogue_ids": [
+    "STATIC-01"
+   ],
+   "highlight_sync": "It reads -> hold",
+   "sync_method": "each beat = separate Chatterbox call; visual events start at beat start (exact)"
+  }
+ ],
+ "est_total_s": 90.7
+}

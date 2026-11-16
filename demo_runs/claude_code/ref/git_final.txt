@@ -1,0 +1,6 @@
+?? .chatterbox-runtime-cache/
+?? assets/voices/arthur_ref.wav
+?? data/
+?? test_clip_1_1.py
+?? voice_samples/build_voice_variant_20261110.py
+?? voice_samples/machiavelli_20261110_status.json

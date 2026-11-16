@@ -1,0 +1,86 @@
+{
+ "proposal": {
+  "id": "p001",
+  "created_at": "2026-11-16T09:30:00Z",
+  "author": "gemini-draft",
+  "summary": "Thêm nhấn mạnh gương, đổi kỹ thuật shot 8, bỏ một lớp phủ",
+  "base_rev": "mockrev"
+ },
+ "changes": [
+  {
+   "id": "c1",
+   "op": "changed",
+   "path": "shots[s0008].technique",
+   "before": "CAM-05",
+   "after": "CAM-01",
+   "blocked_by_lock": false
+  },
+  {
+   "id": "c2",
+   "op": "added",
+   "path": "shots[s0002].overlays[o9]",
+   "before": null,
+   "after": {
+    "id": "o9",
+    "technique": "AN-01",
+    "intent": "point_at",
+    "start": {
+     "w": 93,
+     "off": 0.0,
+     "text": "back"
+    },
+    "dur": 2.5,
+    "params": {
+     "at": "MIRROR"
+    },
+    "locked": false,
+    "source": "agent",
+    "note": ""
+   },
+   "blocked_by_lock": false
+  },
+  {
+   "id": "c3",
+   "op": "removed",
+   "path": "shots[s0003].overlays[o4]",
+   "before": {
+    "id": "o4",
+    "technique": "AN-02",
+    "intent": "point_at",
+    "start": {
+     "w": 118,
+     "off": 0.0,
+     "text": "One"
+    },
+    "dur": 4.0,
+    "params": {
+     "at": [
+      2300,
+      1400
+     ]
+    },
+    "locked": true,
+    "source": "human",
+    "note": ""
+   },
+   "after": null,
+   "blocked_by_lock": true
+  },
+  {
+   "id": "c4",
+   "op": "changed",
+   "path": "shots[s0009].params.ray_count",
+   "before": 7,
+   "after": 9,
+   "blocked_by_lock": true
+  },
+  {
+   "id": "c5",
+   "op": "changed",
+   "path": "shots[s0010].intent",
+   "before": "compare",
+   "after": "reveal",
+   "blocked_by_lock": false
+  }
+ ]
+}

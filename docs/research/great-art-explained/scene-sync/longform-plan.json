@@ -1,0 +1,70 @@
+{
+  "status": "provisional_pending_dense_boundary_review",
+  "selection_method": "ASR SRT và contact sheet giải mã từ MP4 gốc ở 0,2 fps; sẽ chỉnh boundary sau khi kiểm tra dày hơn",
+  "cases": [
+    {
+      "case_id": "goya-continuous",
+      "video_id": "GLW9omJfAdk",
+      "start_source_pts_s": 1058,
+      "end_source_pts_s": 1215,
+      "ASRpath": "research_media/great-art-explained/analysis-b/GLW9omJfAdk/transcript/GLW9omJfAdk.srt",
+      "source_mp4": "research_media/great-art-explained/GLW9omJfAdk.mp4"
+    },
+    {
+      "case_id": "goya-micro",
+      "video_id": "GLW9omJfAdk",
+      "start_source_pts_s": 1080,
+      "end_source_pts_s": 1125,
+      "ASRpath": "research_media/great-art-explained/analysis-b/GLW9omJfAdk/transcript/GLW9omJfAdk.srt",
+      "source_mp4": "research_media/great-art-explained/GLW9omJfAdk.mp4"
+    },
+    {
+      "case_id": "bosch-continuous",
+      "video_id": "vBG621XEegk",
+      "start_source_pts_s": 700,
+      "end_source_pts_s": 860,
+      "ASRpath": "research_media/great-art-explained/analysis-b/vBG621XEegk/transcript/vBG621XEegk.srt",
+      "source_mp4": "research_media/great-art-explained/vBG621XEegk.mp4"
+    },
+    {
+      "case_id": "bosch-micro",
+      "video_id": "vBG621XEegk",
+      "start_source_pts_s": 723,
+      "end_source_pts_s": 765,
+      "ASRpath": "research_media/great-art-explained/analysis-b/vBG621XEegk/transcript/vBG621XEegk.srt",
+      "source_mp4": "research_media/great-art-explained/vBG621XEegk.mp4"
+    },
+    {
+      "case_id": "mona-continuous",
+      "video_id": "ElWG0_kjy_Y",
+      "start_source_pts_s": 427,
+      "end_source_pts_s": 583,
+      "ASRpath": "research_media/great-art-explained/analysis-b/ElWG0_kjy_Y/transcript/ElWG0_kjy_Y.srt",
+      "source_mp4": "research_media/great-art-explained/ElWG0_kjy_Y.mp4"
+    },
+    {
+      "case_id": "mona-micro",
+      "video_id": "ElWG0_kjy_Y",
+      "start_source_pts_s": 483,
+      "end_source_pts_s": 533,
+      "ASRpath": "research_media/great-art-explained/analysis-b/ElWG0_kjy_Y/transcript/ElWG0_kjy_Y.srt",
+      "source_mp4": "research_media/great-art-explained/ElWG0_kjy_Y.mp4"
+    },
+    {
+      "case_id": "supper-continuous",
+      "video_id": "eKyYPSpiC9g",
+      "start_source_pts_s": 1165,
+      "end_source_pts_s": 1325,
+      "ASRpath": "research_media/great-art-explained/analysis-b/eKyYPSpiC9g/transcript/eKyYPSpiC9g.srt",
+      "source_mp4": "research_media/great-art-explained/eKyYPSpiC9g.mp4"
+    },
+    {
+      "case_id": "supper-micro",
+      "video_id": "eKyYPSpiC9g",
+      "start_source_pts_s": 1190,
+      "end_source_pts_s": 1235,
+      "ASRpath": "research_media/great-art-explained/analysis-b/eKyYPSpiC9g/transcript/eKyYPSpiC9g.srt",
+      "source_mp4": "research_media/great-art-explained/eKyYPSpiC9g.mp4"
+    }
+  ]
+}

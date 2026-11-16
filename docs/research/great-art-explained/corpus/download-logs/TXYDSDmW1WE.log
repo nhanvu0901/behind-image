@@ -1,0 +1,30 @@
+
+--- Lượt thử tiếp ---
+[youtube] Extracting URL: https://www.youtube.com/watch?v=TXYDSDmW1WE
+[youtube] TXYDSDmW1WE: Downloading webpage
+WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
+[youtube] Sleeping 2.0 seconds ...
+[youtube] TXYDSDmW1WE: Downloading visionos player API JSON
+[youtube] Sleeping 2.0 seconds ...
+[youtube] TXYDSDmW1WE: Downloading m3u8 information
+WARNING: [youtube] TXYDSDmW1WE: Failed to download m3u8 information: <urllib3.connection.HTTPSConnection object at 0x10742b6d0>: Failed to resolve 'manifest.googlevideo.com' ([Errno 8] nodename nor servname provided, or not known)
+[info] TXYDSDmW1WE: Downloading 1 format(s): 396+140-11
+[info] Writing video description to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/TXYDSDmW1WE.description
+[info] Writing video metadata as JSON to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/TXYDSDmW1WE.info.json
+[download] Sleeping 4.27 seconds ...
+ERROR: 
+[download] Got error: (<urllib3.connection.HTTPSConnection object at 0x1073f56d0>, 'Connection to rr1---sn-cxaa5ap5ou-ti1es.googlevideo.com timed out. (connect timeout=20.0)')
+
+[download] Sleeping 3.03 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/TXYDSDmW1WE.f140-11.m4a
+
+[download]   0.2% of  462.04KiB at   59.30KiB/s ETA 00:07
+[download]   0.6% of  462.04KiB at  173.57KiB/s ETA 00:02
+[download]   1.5% of  462.04KiB at  199.67KiB/s ETA 00:02
+[download]   3.2% of  462.04KiB at  419.50KiB/s ETA 00:01
+[download]   6.7% of  462.04KiB at  859.53KiB/s ETA 00:00
+[download]  13.6% of  462.04KiB at    1.10MiB/s ETA 00:00
+[download]  27.5% of  462.04KiB at    1.50MiB/s ETA 00:00
+[download]  55.2% of  462.04KiB at    2.34MiB/s ETA 00:00
+[download] 100.0% of  462.04KiB at    3.45MiB/s ETA 00:00
+[download] 100% of  462.04KiB in 00:00:03 at 150.92KiB/s 

@@ -1,0 +1,925 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "lab_annot",
+ "title": "Lab: annotations, highlights, camera (T2)",
+ "style": "gae",
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": null,
+ "assets": {
+  "A": {
+   "file": "media/arnolfini.jpg",
+   "kind": "image",
+   "title": "The Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4386,
+   "height": 6000,
+   "credit": {
+    "source": "commons",
+    "source_url": "",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {
+    "HANDS": {
+     "x": 2420,
+     "y": 2540,
+     "rx": 360,
+     "ry": 270,
+     "label": "Joined hands"
+    },
+    "MIRROR": {
+     "x": 2220,
+     "y": 1790,
+     "rx": 440,
+     "ry": 440,
+     "label": "Mirror"
+    },
+    "DOG": {
+     "x": 2098,
+     "y": 5446,
+     "rx": 330,
+     "ry": 330,
+     "label": "Dog"
+    }
+   }
+  },
+  "PLATE": {
+   "file": "media/plate_standin.png",
+   "kind": "image",
+   "width": 4386,
+   "height": 6000,
+   "title": "Empty-room plate (stand-in)"
+  },
+  "MAP": {
+   "file": "media/map_standin.png",
+   "kind": "image",
+   "width": 1920,
+   "height": 1080,
+   "title": "Map (stand-in image)"
+  },
+  "COUPLE": {
+   "file": "media/couple_mask.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  },
+  "LEFT": {
+   "file": "media/couple_left.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  },
+  "RIGHT": {
+   "file": "media/couple_right.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  },
+  "G_MAN": {
+   "file": "media/grp_man.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  },
+  "G_WOMAN": {
+   "file": "media/grp_woman.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  },
+  "G_DOG": {
+   "file": "media/dog_mask.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  },
+  "G_MIRROR": {
+   "file": "media/grp_mirror.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  }
+ },
+ "shots": [
+  {
+   "id": "cam02",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "CAM-02",
+   "intent": "explore",
+   "slots": {
+    "foreground": {
+     "asset": "A"
+    },
+    "background": {
+     "asset": "PLATE"
+    },
+    "mask": {
+     "asset": "COUPLE"
+    }
+   },
+   "params": {
+    "fg_camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.4377564979480164,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2253,
+      "cy": 3380,
+      "zoom": 0.5690834473324213,
+      "ease": "linear"
+     }
+    ],
+    "bg_camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.4377564979480164,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.4640218878248974,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": "cam02"
+  },
+  {
+   "id": "cam06",
+   "start": {
+    "t": 6.0
+   },
+   "technique": "CAM-06",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": "cam06"
+  },
+  {
+   "id": "hi02",
+   "start": {
+    "t": 12.0
+   },
+   "technique": "HI-02",
+   "intent": "explore",
+   "slots": {
+    "room_plate": {
+     "asset": "PLATE"
+    },
+    "figure_groups": {
+     "asset": "A"
+    },
+    "mask_1": {
+     "asset": "LEFT"
+    },
+    "mask_2": {
+     "asset": "RIGHT"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2700,
+      "zoom": 0.3414500683994528,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2700,
+      "zoom": 0.3414500683994528,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": "hi02"
+  },
+  {
+   "id": "hi03",
+   "start": {
+    "t": 19.0
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-03",
+     "intent": "point_at",
+     "start": {
+      "t": 20.0
+     },
+     "dur": 4.5,
+     "params": {},
+     "slots": {
+      "mask": {
+       "asset": "COUPLE"
+      }
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "hi03"
+  },
+  {
+   "id": "an02",
+   "start": {
+    "t": 24.5
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-02",
+     "intent": "point_at",
+     "start": {
+      "t": 25.5
+     },
+     "dur": 5.0,
+     "params": {},
+     "slots": {
+      "mask": {
+       "asset": "COUPLE"
+      }
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "an02"
+  },
+  {
+   "id": "an03",
+   "start": {
+    "t": 30.5
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-03",
+     "intent": "point_at",
+     "start": {
+      "t": 31.1
+     },
+     "dur": 5.4,
+     "params": {
+      "vanishing_point": [
+       2307.21885,
+       2350
+      ]
+     },
+     "slots": {},
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "an03"
+  },
+  {
+   "id": "an04",
+   "start": {
+    "t": 36.5
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-04",
+     "intent": "point_at",
+     "start": {
+      "t": 36.5
+     },
+     "dur": 6.0,
+     "params": {
+      "background": "procedural"
+     },
+     "slots": {},
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "an04"
+  },
+  {
+   "id": "an06",
+   "start": {
+    "t": 42.5
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-06",
+     "intent": "point_at",
+     "start": {
+      "t": 43.3
+     },
+     "dur": 5.2,
+     "params": {
+      "grid_antialias": false
+     },
+     "slots": {},
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "an06"
+  },
+  {
+   "id": "an07",
+   "start": {
+    "t": 48.5
+   },
+   "technique": "AN-07",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "lab",
+   "note": "an07"
+  },
+  {
+   "id": "xhi01",
+   "start": {
+    "t": 55.0
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2600,
+      "zoom": 0.3,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2600,
+      "zoom": 0.33,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-HI-01",
+     "intent": "point_at",
+     "start": {
+      "t": 55.8
+     },
+     "dur": 4.4,
+     "params": {
+      "at": "HANDS",
+      "rx": 560,
+      "ry": 420,
+      "shape": "rect"
+     },
+     "slots": {},
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "xhi01"
+  },
+  {
+   "id": "xann04",
+   "start": {
+    "t": 61.0
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.178,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.178,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-04",
+     "intent": "point_at",
+     "start": {
+      "t": 61.5
+     },
+     "dur": 6.0,
+     "params": {
+      "group_count": 4
+     },
+     "slots": {
+      "mask_1": {
+       "asset": "G_MAN"
+      },
+      "mask_2": {
+       "asset": "G_WOMAN"
+      },
+      "mask_3": {
+       "asset": "G_MIRROR"
+      },
+      "mask_4": {
+       "asset": "G_DOG"
+      }
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "xann04"
+  },
+  {
+   "id": "xann05",
+   "start": {
+    "t": 68.0
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-05",
+     "intent": "point_at",
+     "start": {
+      "t": 68.0
+     },
+     "dur": 6.0,
+     "params": {
+      "background": "procedural",
+      "labels": [
+       "BRUGES",
+       "GHENT",
+       "ANTWERP",
+       "BRUSSELS",
+       "LEUVEN",
+       "MECHELEN"
+      ]
+     },
+     "slots": {},
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "xann05"
+  },
+  {
+   "id": "an04_img",
+   "start": {
+    "t": 74.0
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-04",
+     "intent": "point_at",
+     "start": {
+      "t": 74.0
+     },
+     "dur": 6.0,
+     "params": {},
+     "slots": {
+      "map": {
+       "asset": "MAP"
+      }
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "an04_img"
+  },
+  {
+   "id": "xann05_img",
+   "start": {
+    "t": 80.0
+   },
+   "technique": "CAM-05",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-05",
+     "intent": "point_at",
+     "start": {
+      "t": 80.0
+     },
+     "dur": 6.0,
+     "params": {},
+     "slots": {
+      "map": {
+       "asset": "MAP"
+      }
+     },
+     "locked": false,
+     "source": "lab",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "lab",
+   "note": "xann05_img"
+  }
+ ],
+ "end": {
+  "t": 86.0
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

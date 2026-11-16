@@ -1,0 +1,1206 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "lab_layouts",
+ "title": "Lab: layouts, comparisons, transitions",
+ "style": "gae",
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": null,
+ "assets": {
+  "A": {
+   "file": "media/arnolfini_commons.jpg",
+   "kind": "image",
+   "title": "The Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4386,
+   "height": 6000,
+   "credit": {
+    "source": "test",
+    "source_url": "",
+    "author": "x",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {
+    "MIRROR": {
+     "x": 2220,
+     "y": 1790,
+     "rx": 440,
+     "ry": 440,
+     "label": "Mirror"
+    },
+    "HANDS": {
+     "x": 2420,
+     "y": 2540,
+     "rx": 360,
+     "ry": 270,
+     "label": "Hands"
+    }
+   }
+  },
+  "V": {
+   "file": "media/paele_commons.jpg",
+   "kind": "image",
+   "title": "Virgin and Child with Canon van der Paele",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4169,
+   "height": 3249,
+   "credit": {
+    "source": "test",
+    "source_url": "",
+    "author": "x",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "PDF": {
+   "file": "media/pdf_full.jpg",
+   "kind": "image",
+   "title": "Print scan",
+   "artist": "",
+   "year": "",
+   "width": 1166,
+   "height": 1600,
+   "credit": {
+    "source": "test",
+    "source_url": "",
+    "author": "x",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "GRAD": {
+   "file": "media/grad_red.png",
+   "kind": "image",
+   "title": "Gradient",
+   "artist": "",
+   "year": "",
+   "width": 1920,
+   "height": 1080,
+   "credit": {
+    "source": "test",
+    "source_url": "",
+    "author": "x",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "M": {
+   "file": "media/couple.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "width": 1097,
+   "height": 1500
+  }
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "LAY-02",
+   "intent": "compare",
+   "slots": {
+    "tile_1": {
+     "asset": "A"
+    },
+    "tile_2": {
+     "asset": "A"
+    },
+    "tile_3": {
+     "asset": "A"
+    },
+    "tile_4": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera_1": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.5830000000000001,
+      "ease": "linear"
+     }
+    ],
+    "camera_2": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.636,
+      "ease": "linear"
+     }
+    ],
+    "camera_3": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2098,
+      "cy": 5446,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2098,
+      "cy": 5446,
+      "zoom": 0.6572,
+      "ease": "linear"
+     }
+    ],
+    "camera_4": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 880,
+      "zoom": 0.4,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 880,
+      "zoom": 0.42400000000000004,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s02",
+   "start": {
+    "t": 5.5
+   },
+   "technique": "LAY-03",
+   "intent": "compare",
+   "slots": {
+    "tile_1": {
+     "asset": "A"
+    },
+    "tile_2": {
+     "asset": "PDF"
+    },
+    "tile_3": {
+     "asset": "A"
+    },
+    "tile_4": {
+     "asset": "A"
+    },
+    "tile_5": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "fit": "stretch",
+    "treatment_3": "grey",
+    "treatment_4": "warm",
+    "treatment_5": "contrast"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s03",
+   "start": {
+    "t": 10.5
+   },
+   "technique": "LAY-04",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    },
+    "inset": {
+     "asset": "V"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2800,
+      "cy": 3900,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2800,
+      "cy": 3900,
+      "zoom": 0.651,
+      "ease": "linear"
+     }
+    ],
+    "inset_camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2085,
+      "cy": 2760,
+      "zoom": 0.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2085,
+      "cy": 2760,
+      "zoom": 0.3,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s04",
+   "start": {
+    "t": 16.0
+   },
+   "technique": "LAY-05",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    },
+    "mask": {
+     "asset": "M"
+    },
+    "background_1": {
+     "asset": "V"
+    },
+    "background_2": {
+     "asset": "A"
+    },
+    "background_3": {
+     "asset": "GRAD"
+    },
+    "background_4": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18404,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18404,
+      "ease": "linear"
+     }
+    ],
+    "camera_bg_1": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2085,
+      "cy": 1624,
+      "zoom": 0.4605420964260014,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2085,
+      "cy": 1624,
+      "zoom": 0.4605420964260014,
+      "ease": "linear"
+     }
+    ],
+    "camera_bg_2": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ],
+    "camera_bg_3": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 960,
+      "cy": 540,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 960,
+      "cy": 540,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "camera_bg_4": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2300,
+      "cy": 4400,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2300,
+      "cy": 4400,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s05",
+   "start": {
+    "t": 22.0
+   },
+   "technique": "LAY-06",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera_base": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2200,
+      "zoom": 0.3283173734610123,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2200,
+      "zoom": 0.3283173734610123,
+      "ease": "linear"
+     }
+    ],
+    "strip_start": [
+     2000,
+     1200
+    ],
+    "strip_step": [
+     400,
+     700
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s06",
+   "start": {
+    "t": 27.5
+   },
+   "technique": "LAY-07",
+   "intent": "compare",
+   "slots": {
+    "tile_1": {
+     "asset": "A"
+    },
+    "tile_2": {
+     "asset": "A"
+    },
+    "tile_3": {
+     "asset": "A"
+    },
+    "tile_4": {
+     "asset": "A"
+    },
+    "object": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera_1": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "camera_2": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2098,
+      "cy": 5446,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2098,
+      "cy": 5446,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "camera_3": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 880,
+      "zoom": 0.42,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 880,
+      "zoom": 0.42,
+      "ease": "linear"
+     }
+    ],
+    "camera_4": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2388,
+      "cy": 4200,
+      "zoom": 0.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2388,
+      "cy": 4200,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ],
+    "object_camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.55,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s07",
+   "start": {
+    "t": 33.0
+   },
+   "technique": "LAY-08",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1810,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1810,
+      "zoom": 0.75,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s08",
+   "start": {
+    "t": 38.0
+   },
+   "technique": "CMP-01",
+   "intent": "compare",
+   "slots": {
+    "colour": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1233,
+      "cy": 1300,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1233,
+      "cy": 1300,
+      "zoom": 0.75,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s09",
+   "start": {
+    "t": 43.0
+   },
+   "technique": "CMP-02",
+   "intent": "compare",
+   "slots": {
+    "finished": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "finished_camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.45,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ],
+    "stage_camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s10",
+   "start": {
+    "t": 49.0
+   },
+   "technique": "CMP-03",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2300,
+      "cy": 2300,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2300,
+      "cy": 2300,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s11",
+   "start": {
+    "t": 54.5
+   },
+   "technique": "CMP-04",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2300,
+      "cy": 3300,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2300,
+      "cy": 3300,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s12",
+   "start": {
+    "t": 60.0
+   },
+   "technique": "CMP-05",
+   "intent": "compare",
+   "slots": {
+    "state_a": {
+     "asset": "A"
+    },
+    "state_b": {
+     "asset": "PDF"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2900,
+      "zoom": 0.35020519835841313,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s13",
+   "start": {
+    "t": 66.0
+   },
+   "technique": "X-CMP-01",
+   "intent": "compare",
+   "slots": {
+    "anchor": {
+     "asset": "A"
+    },
+    "swap_1": {
+     "asset": "V"
+    },
+    "swap_2": {
+     "asset": "PDF"
+    },
+    "swap_3": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "seconds_per_swap": 3.0,
+    "swap_transition": "dissolve",
+    "anchor_caption": "THE ARNOLFINI PORTRAIT",
+    "anchor_caption_sub": "JAN VAN EYCK, 1434",
+    "swap_captions": [
+     "VIRGIN AND CHILD",
+     "THE PRINT SCAN",
+     "THE MIRROR"
+    ],
+    "swap_subs": [
+     "Jan van Eyck, 1434",
+     "Reproduction",
+     "Detail"
+    ],
+    "swap_focus": [
+     [
+      2084,
+      1624
+     ],
+     [
+      583,
+      800
+     ],
+     [
+      2220,
+      1790
+     ]
+    ],
+    "anchor_push": true,
+    "camera_anchor": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.11593333333333332,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.11593333333333332,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s14",
+   "start": {
+    "t": 75.0
+   },
+   "technique": "X-CMP-02",
+   "intent": "compare",
+   "slots": {
+    "state_a": {
+     "asset": "A"
+    },
+    "state_b": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2200,
+      "zoom": 0.45,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 2200,
+      "zoom": 0.45,
+      "ease": "linear"
+     }
+    ],
+    "state_b_treatment": "grey"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s15",
+   "start": {
+    "t": 81.0
+   },
+   "technique": "STATIC-01",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s16",
+   "start": {
+    "t": 84.0
+   },
+   "technique": "X-CMP-01",
+   "intent": "compare",
+   "slots": {
+    "anchor": {
+     "asset": "A"
+    },
+    "swap_1": {
+     "asset": "V"
+    }
+   },
+   "params": {
+    "seconds_per_swap": 5.0,
+    "anchor_caption": "THE ARNOLFINI PORTRAIT",
+    "anchor_caption_sub": "JAN VAN EYCK, 1434",
+    "swap_captions": [
+     "VIRGIN AND CHILD"
+    ],
+    "swap_subs": [
+     "Jan van Eyck, 1434"
+    ],
+    "swap_focus": [
+     [
+      2084,
+      1624
+     ]
+    ],
+    "caption_delay_s": 0.0,
+    "camera_anchor": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.11593333333333332,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.11593333333333332,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": {
+    "technique": "X-TR-02",
+    "dur": 3.6,
+    "params": {}
+   },
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s17",
+   "start": {
+    "t": 89.0
+   },
+   "technique": "STATIC-01",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s18",
+   "start": {
+    "t": 92.0
+   },
+   "technique": "CAM-05",
+   "intent": "compare",
+   "slots": {
+    "image": {
+     "asset": "V"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2085,
+      "cy": 1624,
+      "zoom": 0.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2085,
+      "cy": 1624,
+      "zoom": 0.3,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": {
+    "technique": "TR-03",
+    "dur": 3.2,
+    "params": {}
+   },
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  }
+ ],
+ "end": {
+  "t": 97.0,
+  "fade_s": 0.0
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

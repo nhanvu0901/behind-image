@@ -1,0 +1,44 @@
+FreeVirtualKB=20999808 FreePhysKB=23187280 TotalVisibleKB=31233060
+--- production-like processes (names only)
+12420 steamwebhelper.exe
+14436 steamwebhelper.exe
+14448 steamwebhelper.exe
+14548 steamwebhelper.exe
+14816 steamwebhelper.exe
+17280 steamwebhelper.exe
+--- port 8550 listener
+--- fonts
+arial.ttf
+arialbd.ttf
+arialbi.ttf
+ariali.ttf
+ARIALN.TTF
+ARIALNB.TTF
+ARIALNBI.TTF
+ARIALNI.TTF
+calibri.ttf
+calibrib.ttf
+calibrii.ttf
+calibril.ttf
+calibrili.ttf
+calibriz.ttf
+framd.ttf
+framdit.ttf
+GOTHIC.TTF
+GOTHICB.TTF
+GOTHICBI.TTF
+GOTHICI.TTF
+segoeui.ttf
+segoeuib.ttf
+segoeuii.ttf
+segoeuil.ttf
+segoeuisl.ttf
+segoeuiz.ttf
+trebuc.ttf
+trebucbd.ttf
+trebucbi.ttf
+trebucit.ttf
+--- bench
+True
+--- disk D free GB
+310.8

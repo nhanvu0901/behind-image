@@ -1,0 +1,12 @@
+DESKTOP-4V6D49N
+?? .chatterbox-runtime-cache/
+?? assets/voices/arthur_ref.wav
+?? data/
+?? test_clip_1_1.py
+?? voice_samples/build_voice_variant_20261110.py
+?? voice_samples/machiavelli_20261110_status.json
+---STATUSDONE 
+File Not Found
+---LOCK 
+NO LOCK
+ffmpeg version 8.1-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers

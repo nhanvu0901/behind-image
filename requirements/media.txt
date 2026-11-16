@@ -1,0 +1,4 @@
+# bti.media: the core is stdlib only. Everything below is optional.
+pytest>=8          # tests
+Pillow>=10         # image size sniffing fallback, contact sheets
+yt-dlp>=2026.08.19 # clips.py only; the module imports fine without it

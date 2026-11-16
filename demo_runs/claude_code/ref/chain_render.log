@@ -1,0 +1,19 @@
+23:58:23 GOT launched v2r1 pid=5992
+v2r1 released 00:10:08
+RENDER_DONE 8890 frames 694.5s
+EXIT=0 
+00:10:09 GOT launched v2r2 pid=5104
+v2r2 released 00:18:35
+RENDER_DONE 7753 frames 490.6s
+EXIT=0 
+00:18:36 GOT launched v2r3 pid=13328
+v2r3 released 00:26:47
+RENDER_DONE 7982 frames 479.9s
+EXIT=0 
+00:26:48 GOT launched v2fin pid=9016
+v2fin released 00:28:05
+AUDIO_OK
+EXIT=0 
+EXIT=0 
+EXIT=0 
+CHAIN_DONE

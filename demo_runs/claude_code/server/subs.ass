@@ -1,0 +1,32 @@
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1920
+PlayResY: 1080
+WrapStyle: 2
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Default,Century Gothic,46,&H00FFFFFF,&H000000FF,&H00000000,&H64000000,0,0,0,0,100,100,0.5,0,1,3,1.5,2,200,200,44,1
+
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+Dialogue: 0,0:00:00.30,0:00:05.59,Default,,0,0,0,,Most people will tell you this is a\Nwedding portrait of a pregnant bride.
+Dialogue: 0,0:00:05.70,0:00:09.20,Default,,0,0,0,,Look closer, because\Nit is probably neither.
+Dialogue: 0,0:00:12.18,0:00:16.65,Default,,0,0,0,,Her green gown was a stock fertility\Npose, not a sign of pregnancy.
+Dialogue: 0,0:00:16.76,0:00:21.68,Default,,0,0,0,,The fur lining is a boast, a\Nbillboard for Bruges luxury.
+Dialogue: 0,0:00:21.79,0:00:24.83,Default,,0,0,0,,The dog at her feet\Nechoes medieval tombs,
+Dialogue: 0,0:00:24.85,0:00:29.69,Default,,0,0,0,,where dogs lay at a dead woman's\Nfeet to guide her into the afterlife.
+Dialogue: 0,0:00:29.80,0:00:34.55,Default,,0,0,0,,And Costanza Trenta, the likely\Nsitter, had died in 1433,
+Dialogue: 0,0:00:34.81,0:00:37.04,Default,,0,0,0,,a year before the\Npainting was finished.
+Dialogue: 0,0:00:37.37,0:00:40.57,Default,,0,0,0,,The convex mirror holds two\Nvisitors in the doorway,
+Dialogue: 0,0:00:40.85,0:00:42.70,Default,,0,0,0,,perhaps the painter himself.
+Dialogue: 0,0:00:42.81,0:00:47.35,Default,,0,0,0,,Ten tiny roundels of Christ's\NPassion circle the glass.
+Dialogue: 0,0:00:47.46,0:00:52.08,Default,,0,0,0,,Every scene after Christ's\Ndeath sits on Costanza's side.
+Dialogue: 0,0:00:52.41,0:00:55.68,Default,,0,0,0,,Compare it with Van Eyck's\NCanon van der Paele altarpiece,
+Dialogue: 0,0:00:55.70,0:00:57.59,Default,,0,0,0,,painted the same year.
+Dialogue: 0,0:00:57.70,0:01:02.32,Default,,0,0,0,,The same mastery of rugs and\Nrich cloth runs through both.
+Dialogue: 0,0:01:02.43,0:01:05.96,Default,,0,0,0,,But the clue that matters\Nmost is in the hands.
+Dialogue: 0,0:01:06.07,0:01:10.88,Default,,0,0,0,,Giovanni holds hers so lightly, as\Nif she were already slipping away.
+Dialogue: 0,0:01:11.21,0:01:14.29,Default,,0,0,0,,Pull back, and the\Nwhole picture changes.
+Dialogue: 0,0:01:14.40,0:01:19.77,Default,,0,0,0,,It reads less like a wedding record than\Na memorial to a love that outlasts death.

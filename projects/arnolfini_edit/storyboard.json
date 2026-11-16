@@ -1,0 +1,5513 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "arnolfini",
+ "title": "The Arnolfini Portrait",
+ "style": "gae",
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": "audio/mix.m4a",
+ "assets": {
+  "A": {
+   "file": "media/arnolfini_commons.jpg",
+   "kind": "image",
+   "title": "The Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4386,
+   "height": 6000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {
+    "MIRROR": {
+     "x": 2220,
+     "y": 1790,
+     "rx": 440,
+     "ry": 440,
+     "label": "Mirror"
+    },
+    "HANDS": {
+     "x": 2420,
+     "y": 2540,
+     "rx": 360,
+     "ry": 270,
+     "label": "Joined hands"
+    },
+    "DOG": {
+     "x": 2098,
+     "y": 5446,
+     "rx": 330,
+     "ry": 330,
+     "label": "Dog"
+    },
+    "RUG": {
+     "x": 2388,
+     "y": 4200,
+     "label": "Carpet"
+    },
+    "INSCR": {
+     "x": 2220,
+     "y": 1390,
+     "rx": 420,
+     "ry": 120,
+     "label": "Latin inscription"
+    },
+    "R1": {
+     "x": 2474,
+     "y": 1690,
+     "rx": 82,
+     "ry": 82,
+     "label": "Roundel 1"
+    },
+    "R2": {
+     "x": 2466,
+     "y": 1870,
+     "rx": 82,
+     "ry": 82,
+     "label": "Roundel 2"
+    },
+    "LIT": {
+     "x": 1856,
+     "y": 420,
+     "rx": 215,
+     "ry": 215,
+     "label": "Lit candle"
+    },
+    "SNUF": {
+     "x": 2490,
+     "y": 500,
+     "rx": 215,
+     "ry": 215,
+     "label": "Snuffed-out candle"
+    },
+    "ORANGE": {
+     "x": 470,
+     "y": 2704,
+     "rx": 130,
+     "ry": 130,
+     "label": "Single orange"
+    },
+    "PATTENS": {
+     "x": 250,
+     "y": 5300,
+     "label": "Pattens"
+    },
+    "BOOTS": {
+     "x": 1200,
+     "y": 5150,
+     "label": "Boots"
+    },
+    "LION": {
+     "x": 2553,
+     "y": 2300,
+     "rx": 180,
+     "ry": 180,
+     "label": "Carved creature"
+    },
+    "STM": {
+     "x": 2824,
+     "y": 1190,
+     "label": "Saint Martha finial"
+    },
+    "BRUSH": {
+     "x": 2700,
+     "y": 1560,
+     "label": "Brush"
+    },
+    "AMBER": {
+     "x": 1810,
+     "y": 1650,
+     "label": "Amber beads"
+    },
+    "HAT": {
+     "x": 1246,
+     "y": 1000,
+     "label": "Straw hat"
+    },
+    "TABARD": {
+     "x": 1266,
+     "y": 2666,
+     "label": "Velvet tabard"
+    },
+    "FURSLEEVE": {
+     "x": 3500,
+     "y": 2700,
+     "label": "Fur sleeve"
+    },
+    "BLUESL": {
+     "x": 2900,
+     "y": 2330,
+     "label": "Blue underdress"
+    },
+    "RUFFLES": {
+     "x": 3500,
+     "y": 4000,
+     "label": "Ruffles"
+    },
+    "BEDP": {
+     "x": 3500,
+     "y": 1100,
+     "label": "Bed"
+    },
+    "COSFACE": {
+     "x": 3500,
+     "y": 1500,
+     "label": "Costanza's face"
+    },
+    "GIOFACE": {
+     "x": 1233,
+     "y": 1300,
+     "label": "Giovanni's face"
+    },
+    "FULL": {
+     "x": 2193,
+     "y": 3000,
+     "label": "Whole painting (centre)"
+    }
+   }
+  },
+  "V": {
+   "file": "media/paele_commons.jpg",
+   "kind": "image",
+   "title": "Virgin and Child with Canon van der Paele",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4169,
+   "height": 3249,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_069.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "blue_cap": {
+   "file": "media/blue_cap.jpg",
+   "kind": "image",
+   "title": "Man in a Blue Chaperon",
+   "artist": "Jan van Eyck",
+   "year": "c.1430",
+   "width": 4956,
+   "height": 7442,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_-_Man_in_a_Blue_Cap_(c.1430).jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "bruges": {
+   "file": "media/bruges.jpg",
+   "kind": "image",
+   "title": "Grote Markt, Bruges",
+   "artist": "Rijksmuseum (etching)",
+   "year": "",
+   "width": 3320,
+   "height": 2790,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Grote_Markt_in_Brugge,_RP-P-1943-188.jpg",
+    "author": "Rijksmuseum",
+    "licence": "CC0",
+    "licence_url": ""
+   }
+  },
+  "durer": {
+   "file": "media/durer.jpg",
+   "kind": "image",
+   "title": "Self-Portrait",
+   "artist": "Albrecht Dürer",
+   "year": "1500",
+   "width": 4130,
+   "height": 5710,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Albrecht_Dürer_-_1500_self-portrait_(High_resolution_and_detail).jpg",
+    "author": "Albrecht Dürer",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "ghent": {
+   "file": "media/ghent.jpg",
+   "kind": "image",
+   "title": "Ghent Altarpiece",
+   "artist": "Jan van Eyck",
+   "year": "1432",
+   "width": 6265,
+   "height": 4581,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Lamgods_open.jpg",
+    "author": "Jan van Eyck / Presumably Hubert van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "giovanni_berlin": {
+   "file": "media/giovanni_berlin.jpg",
+   "kind": "image",
+   "title": "Man in a Red Chaperon",
+   "artist": "Jan van Eyck",
+   "year": "c.1438",
+   "width": 2872,
+   "height": 4000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_(um_1390-1400_-_1441)_-_Portrait_of_a_man_(from_the_Arnolfini_family^)_Around_1440_-_523A_-_Gemäldegalerie.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "matsys": {
+   "file": "media/matsys.jpg",
+   "kind": "image",
+   "title": "The Moneylender and his Wife",
+   "artist": "Quentin Massys",
+   "year": "1514",
+   "width": 1680,
+   "height": 1581,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Massysm_Quentin_—_The_Moneylender_and_his_Wife_—_1514.jpg",
+    "author": "Quinten Metsys",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "meninas": {
+   "file": "media/meninas.jpg",
+   "kind": "image",
+   "title": "Las Meninas",
+   "artist": "Diego Velázquez",
+   "year": "1656",
+   "width": 3475,
+   "height": 4000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Las_Meninas_(1656),_by_Velazquez.jpg",
+    "author": "unknown",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "rogier": {
+   "file": "media/rogier.jpg",
+   "kind": "image",
+   "title": "Portrait of a Woman",
+   "artist": "Rogier van der Weyden",
+   "year": "c.1435",
+   "width": 4464,
+   "height": 6645,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Rogier_van_der_Weyden_-_Portrait_of_a_Woman_with_a_Winged_Bonnet_-_Google_Art_Project.jpg",
+    "author": "Rogier van der Weyden",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "tomb": {
+   "file": "media/tomb.jpg",
+   "kind": "image",
+   "title": "Tomb of Mary of Burgundy, Bruges",
+   "artist": "Jacob Jonghelinck / Jan Borreman II",
+   "year": "late 15th century",
+   "width": 5171,
+   "height": 3447,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Brügge-Liebfrauenkirche-Prunkgräber_DSC0166.jpg",
+    "author": "Jacob Jonghelinck / Jan Borreman II (sculptors of the tombs, 1500s; the photograph is marked public domain on Commons)",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "turban": {
+   "file": "media/turban.jpg",
+   "kind": "image",
+   "title": "Man in a Red Turban",
+   "artist": "Jan van Eyck",
+   "year": "1433",
+   "width": 2024,
+   "height": 2746,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Portrait_of_a_Man_in_a_Turban_(Jan_van_Eyck).jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  }
+ },
+ "shots": [
+  {
+   "id": "s0001",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 1750,
+      "zoom": 0.437756,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 1750,
+      "zoom": 0.499042,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "cold open: slow push-in on couple"
+  },
+  {
+   "id": "s0002",
+   "start": {
+    "w": 29,
+    "off": -1.0,
+    "text": "But"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 1750,
+      "zoom": 0.499042,
+      "ease": "out_quad"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.16684,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "opening pull-back 3.0x over 18 s ease-out_quad"
+  },
+  {
+   "id": "s0003",
+   "start": {
+    "w": 29,
+    "off": 17.0,
+    "text": "But"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.146819,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.151224,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-05",
+     "intent": "quantify",
+     "start": {
+      "w": 74,
+      "off": -0.3,
+      "text": "eighty-two"
+     },
+     "dur": 4.5,
+     "params": {
+      "frame_zoom": 0.1468192,
+      "width_label": "60 cm",
+      "height_label": "82 cm",
+      "medium_caption": "OIL ON OAK PANEL"
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "dimension annotation (AN-05) on the matte painting"
+  },
+  {
+   "id": "s0004",
+   "start": {
+    "w": 92,
+    "off": 0.0,
+    "text": "Notice"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1650,
+      "zoom": 0.72,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 99,
+       "off": 0.0,
+       "text": "and"
+      },
+      "cx": 2220,
+      "cy": 1620,
+      "zoom": 0.86,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1430,
+      "zoom": 1.25,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 94,
+      "off": -0.12,
+      "text": "mirror"
+     },
+     "dur": 1.1,
+     "params": {
+      "at": "MIRROR",
+      "rx": 440,
+      "ry": 440,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 101,
+      "off": -0.12,
+      "text": "Latin"
+     },
+     "dur": 7.07,
+     "params": {
+      "at": "INSCR",
+      "rx": 420,
+      "ry": 120,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o3",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 101,
+      "off": 0.0,
+      "text": "Latin"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Latin inscription",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "push to mirror then inscription with spotlights"
+  },
+  {
+   "id": "s0005",
+   "start": {
+    "w": 117,
+    "off": 0.0,
+    "text": "A"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1430,
+      "zoom": 1.25,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "slow drift from the inscription to the mirror"
+  },
+  {
+   "id": "s0006",
+   "start": {
+    "w": 139,
+    "off": 0.0,
+    "text": "Over"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1548,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1634,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "hold on matte: what we can see"
+  },
+  {
+   "id": "s0007",
+   "start": {
+    "w": 161,
+    "off": 0.0,
+    "text": "what"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.65,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "hard cut to the joined hands: what the documents say"
+  },
+  {
+   "id": "s0008",
+   "start": {
+    "w": 169,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "hard cut to the mirror: how it might be read"
+  },
+  {
+   "id": "s0009",
+   "start": {
+    "t": 74.31
+   },
+   "technique": "X-CARD-02",
+   "slots": {
+    "background": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "title": "THE ARNOLFINI PORTRAIT",
+    "artist": "JAN VAN EYCK",
+    "year": "1434"
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "title card (blurred artwork)"
+  },
+  {
+   "id": "s0010",
+   "start": {
+    "t": 77.21
+   },
+   "technique": "X-CARD-01",
+   "slots": {},
+   "params": {
+    "title": "THE MERCHANT CITY",
+    "text_width_pct": 50,
+    "text_fade_out_s": 0.1
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0011",
+   "start": {
+    "w": 189,
+    "off": -0.14,
+    "text": "To"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "bruges"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1660.0,
+      "cy": 1395.0,
+      "zoom": 0.363871,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1660.0,
+      "cy": 1395.0,
+      "zoom": 0.407535,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 189,
+      "off": 0.46,
+      "text": "To"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Grote Markt, Bruges",
+      "artist_year": "Etching, Rijksmuseum",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "Bruges still (two-line label)"
+  },
+  {
+   "id": "s0012",
+   "start": {
+    "w": 240,
+    "off": 0.0,
+    "text": "Bruges"
+   },
+   "technique": "STATIC-06",
+   "slots": {},
+   "params": {
+    "draw_delay_s": 12.75,
+    "route_color": "#d22828"
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "route map (procedural stand-in)"
+  },
+  {
+   "id": "s0013",
+   "start": {
+    "w": 282,
+    "off": 0.0,
+    "text": "As"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1634,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.17888,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "back to the painting"
+  },
+  {
+   "id": "s0014",
+   "start": {
+    "w": 317,
+    "off": 0.0,
+    "text": "Jan"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "blue_cap"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2478.0,
+      "cy": 3721.0,
+      "zoom": 0.136415,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2478.0,
+      "cy": 3721.0,
+      "zoom": 0.143236,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 317,
+      "off": 0.6,
+      "text": "Jan"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Man in a Blue Chaperon",
+      "artist_year": "Jan van Eyck, c.1430",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0015",
+   "start": {
+    "w": 317,
+    "off": 4.0,
+    "text": "Jan"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.16684,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.17888,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "back to the painting after the still"
+  },
+  {
+   "id": "s0016",
+   "start": {
+    "w": 351,
+    "off": 0.0,
+    "text": "where"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "ghent"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3132.5,
+      "cy": 2290.5,
+      "zoom": 0.221611,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 351,
+       "off": 1.5,
+       "text": "where"
+      },
+      "cx": 3132.5,
+      "cy": 2290.5,
+      "zoom": 0.221611,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3759.0,
+      "cy": 2061.4500000000003,
+      "zoom": 0.531866,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 351,
+      "off": 0.6,
+      "text": "where"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Ghent Altarpiece",
+      "artist_year": "Jan van Eyck, 1432",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "Ghent still with zoom-and-shift (CAM-05)"
+  },
+  {
+   "id": "s0017",
+   "start": {
+    "w": 360,
+    "off": 0.0,
+    "text": "yet"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "turban"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1012.0,
+      "cy": 1373.0,
+      "zoom": 0.369701,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1012.0,
+      "cy": 1373.0,
+      "zoom": 0.391883,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 360,
+      "off": 0.6,
+      "text": "yet"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Man in a Red Turban",
+      "artist_year": "Jan van Eyck, 1433",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0018",
+   "start": {
+    "w": 373,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 394,
+       "off": 1.09,
+       "text": "loudly."
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18576,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "status symbol: painting on matte"
+  },
+  {
+   "id": "s0019",
+   "start": {
+    "t": 167.73
+   },
+   "technique": "X-CARD-01",
+   "slots": {},
+   "params": {
+    "title": "THE ARNOLFINIS",
+    "text_width_pct": 50,
+    "text_fade_out_s": 0.1
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0020",
+   "start": {
+    "w": 395,
+    "off": -0.14,
+    "text": "Who"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1634,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1806,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "STATIC-08",
+     "intent": "point_at",
+     "start": {
+      "w": 408,
+      "off": 0.0,
+      "text": "Giovanni"
+     },
+     "dur": 3.6,
+     "params": {
+      "text": "GIOVANNI DI NICOLAO ARNOLFINI (?)",
+      "size_px": 34,
+      "fade_in_s": 0.1,
+      "fade_out_s": 0.15,
+      "at": "GIOFACE"
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "STATIC-08",
+     "intent": "point_at",
+     "start": {
+      "w": 415,
+      "off": 0.0,
+      "text": "Costanza"
+     },
+     "dur": 3.4,
+     "params": {
+      "text": "COSTANZA TRENTA (?)",
+      "size_px": 34,
+      "fade_in_s": 0.1,
+      "fade_out_s": 0.15,
+      "at": "COSFACE"
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "name labels near the figures"
+  },
+  {
+   "id": "s0021",
+   "start": {
+    "w": 437,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.17888,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "STATIC-09",
+     "intent": "context",
+     "start": {
+      "w": 448,
+      "off": -0.1,
+      "text": "1433,"
+     },
+     "dur": 2.46,
+     "params": {
+      "year": "1433",
+      "sub": "COSTANZA DIES",
+      "x_pct": 16.98
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "STATIC-09",
+     "intent": "context",
+     "start": {
+      "w": 455,
+      "off": 0.0,
+      "text": "finished"
+     },
+     "dur": 2.17,
+     "params": {
+      "year": "1434",
+      "sub": "PANEL FINISHED",
+      "x_pct": 82.97
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "year captions on matte"
+  },
+  {
+   "id": "s0022",
+   "start": {
+    "w": 458,
+    "off": 0.0,
+    "text": "We"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1806,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "matte hold, honest limits"
+  },
+  {
+   "id": "s0023",
+   "start": {
+    "w": 482,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "giovanni_berlin"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1436.0,
+      "cy": 2000.0,
+      "zoom": 0.2538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1436.0,
+      "cy": 2000.0,
+      "zoom": 0.271566,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 482,
+      "off": 0.6,
+      "text": "and"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Man in a Red Chaperon",
+      "artist_year": "Jan van Eyck, c.1438",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0024",
+   "start": {
+    "w": 482,
+    "off": 4.0,
+    "text": "and"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.16684,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.17888,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "back to the painting after the still"
+  },
+  {
+   "id": "s0025",
+   "start": {
+    "w": 508,
+    "off": 0.0,
+    "text": "What"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2300,
+      "cy": 4650,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2300,
+      "cy": 3300,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "pan up the painting (CAM-04)"
+  },
+  {
+   "id": "s0026",
+   "start": {
+    "w": 508,
+    "off": 11.0,
+    "text": "What"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1833,
+      "cy": 1700,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1833,
+      "cy": 1760,
+      "zoom": 0.7,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "hard cut to the faces (TR-04)"
+  },
+  {
+   "id": "s0027",
+   "start": {
+    "w": 563,
+    "off": 0.0,
+    "text": "with"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 1700,
+      "zoom": 0.393981,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.0,
+      "ease": "inout_cubic"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 567,
+      "off": -0.12,
+      "text": "the"
+     },
+     "dur": 2.87,
+     "params": {
+      "at": "MIRROR",
+      "rx": 430,
+      "ry": 430,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "mirror spotlight: witnesses"
+  },
+  {
+   "id": "s0028",
+   "start": {
+    "w": 572,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18232,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "memorial painting for Costanza: matte"
+  },
+  {
+   "id": "s0029",
+   "start": {
+    "w": 600,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2098,
+      "cy": 5186,
+      "zoom": 0.62,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2098,
+      "cy": 5366,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 604,
+      "off": -0.05,
+      "text": "dog"
+     },
+     "dur": 2.9,
+     "params": {
+      "at": "DOG",
+      "radius": 330,
+      "draw_s": 0.5,
+      "hold_s": 2.0,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 604,
+      "off": 0.0,
+      "text": "dog"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Dog at her feet",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "dog detail with circle (AN-01) and label"
+  },
+  {
+   "id": "s0030",
+   "start": {
+    "w": 623,
+    "off": 0.0,
+    "text": "Yet"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "tomb"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2585.5,
+      "cy": 1723.5,
+      "zoom": 0.294517,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 623,
+       "off": 2.0,
+       "text": "Yet"
+      },
+      "cx": 2585.5,
+      "cy": 1723.5,
+      "zoom": 0.294517,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 4300,
+      "cy": 1050,
+      "zoom": 0.765744,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 623,
+      "off": 0.6,
+      "text": "Yet"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Tomb of Mary of Burgundy, Bruges",
+      "artist_year": "Late 15th century",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "tomb still with push to the dog (CAM-05)"
+  },
+  {
+   "id": "s0031",
+   "start": {
+    "w": 648,
+    "off": 0.0,
+    "text": "Portraits"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3500,
+      "cy": 1750,
+      "zoom": 0.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3500,
+      "cy": 1800,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "push on Costanza's face: portraits of the dead"
+  },
+  {
+   "id": "s0032",
+   "start": {
+    "w": 681,
+    "off": 0.0,
+    "text": "Whatever"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3500,
+      "cy": 1800,
+      "zoom": 1.0,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 697,
+       "off": 1.09,
+       "text": "society."
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "pull-back to the matte"
+  },
+  {
+   "id": "s0033",
+   "start": {
+    "t": 296.34
+   },
+   "technique": "X-CARD-01",
+   "slots": {},
+   "params": {
+    "title": "FASHIONS AND FABRICS",
+    "text_width_pct": 50,
+    "text_fade_out_s": 0.1
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0034",
+   "start": {
+    "w": 698,
+    "off": 0.0,
+    "text": "Clothes"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "rogier"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2232.0,
+      "cy": 3322.5,
+      "zoom": 0.152777,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2232.0,
+      "cy": 3322.5,
+      "zoom": 0.160415,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 698,
+      "off": 0.6,
+      "text": "Clothes"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Portrait of a Woman",
+      "artist_year": "Rogier van der Weyden, c.1435",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0035",
+   "start": {
+    "w": 698,
+    "off": 4.0,
+    "text": "Clothes"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1634,
+      "ease": "in_quad"
+     },
+     {
+      "at": {
+       "w": 698,
+       "off": 8.9,
+       "text": "Clothes"
+      },
+      "cx": 2300,
+      "cy": 3100,
+      "zoom": 0.429001,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2900,
+      "cy": 3500,
+      "zoom": 0.62,
+      "ease": "inout_cubic"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 719,
+      "off": 0.0,
+      "text": "green"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Green wool gown",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "matte to fill-width 1.59x/4.9 s ease-in (as ref), then push to the dress with label"
+  },
+  {
+   "id": "s0036",
+   "start": {
+    "w": 752,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2900,
+      "cy": 3500,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2900,
+      "cy": 4650,
+      "zoom": 0.56,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "long pan down the dress (CAM-04)"
+  },
+  {
+   "id": "s0037",
+   "start": {
+    "w": 787,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3500,
+      "cy": 2800,
+      "zoom": 0.85,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3500,
+      "cy": 2860,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 791,
+      "off": 0.0,
+      "text": "lining."
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Miniver lining",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "fur lining crop with label"
+  },
+  {
+   "id": "s0038",
+   "start": {
+    "w": 827,
+    "off": 0.0,
+    "text": "Notice"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2900,
+      "cy": 2330,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2850,
+      "cy": 2360,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 852,
+      "off": 0.0,
+      "text": "underdress"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Blue underdress",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "blue underdress with label"
+  },
+  {
+   "id": "s0039",
+   "start": {
+    "w": 863,
+    "off": 0.0,
+    "text": "Giovanni"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1250,
+      "cy": 2200,
+      "zoom": 0.36,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1250,
+      "cy": 2000,
+      "zoom": 0.42,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "Giovanni dressed with the same care"
+  },
+  {
+   "id": "s0040",
+   "start": {
+    "w": 885,
+    "off": 0.0,
+    "text": "his"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1246,
+      "cy": 1080,
+      "zoom": 0.78,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1246,
+      "cy": 1100,
+      "zoom": 0.86,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 888,
+      "off": 0.0,
+      "text": "straw,"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Straw hat",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "hat crop with label (hard cut)"
+  },
+  {
+   "id": "s0041",
+   "start": {
+    "w": 899,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1266,
+      "cy": 2166,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1266,
+      "cy": 2316,
+      "zoom": 0.7,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 901,
+      "off": 0.0,
+      "text": "velvet"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Silk velvet tabard",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "tabard crop with label (hard cut)"
+  },
+  {
+   "id": "s0042",
+   "start": {
+    "w": 928,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1200,
+      "cy": 5150,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1080,
+      "cy": 5210,
+      "zoom": 0.72,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "boots crop"
+  },
+  {
+   "id": "s0043",
+   "start": {
+    "w": 942,
+    "off": 0.0,
+    "text": "And"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1010,
+      "cy": 5380,
+      "zoom": 0.95,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1010,
+      "cy": 5450,
+      "zoom": 1.05,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 955,
+      "off": -0.12,
+      "text": "pattens,"
+     },
+     "dur": 4.11,
+     "params": {
+      "at": [
+       310,
+       5420
+      ],
+      "rx": 480,
+      "ry": 300,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 955,
+      "off": 0.0,
+      "text": "pattens,"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Pattens",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "pattens with spotlight (HI-01) and label"
+  },
+  {
+   "id": "s0044",
+   "start": {
+    "w": 963,
+    "off": 0.0,
+    "text": "An"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1010,
+      "cy": 5450,
+      "zoom": 1.05,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 992,
+       "off": 0.99,
+       "text": "day."
+      },
+      "cx": 2193,
+      "cy": 4800,
+      "zoom": 0.437756,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "discarded shoes, a real room"
+  },
+  {
+   "id": "s0045",
+   "start": {
+    "t": 414.5
+   },
+   "technique": "X-CARD-01",
+   "slots": {},
+   "params": {
+    "title": "THE ROOM",
+    "text_width_pct": 50,
+    "text_fade_out_s": 0.1
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0046",
+   "start": {
+    "w": 993,
+    "off": 0.3,
+    "text": "The"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1892,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "the room: matte"
+  },
+  {
+   "id": "s0047",
+   "start": {
+    "w": 1020,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3300,
+      "cy": 2600,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3350,
+      "cy": 1500,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1023,
+      "off": 0.0,
+      "text": "bed"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Bed",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "pan up the bed (CAM-04) with label"
+  },
+  {
+   "id": "s0048",
+   "start": {
+    "w": 1039,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 1041,
+      "off": -0.12,
+      "text": "mirror"
+     },
+     "dur": 3.5,
+     "params": {
+      "at": "MIRROR",
+      "rx": 430,
+      "ry": 430,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "mirror cut-in with spotlight: two visitors (HI-01, TR-04)"
+  },
+  {
+   "id": "s0049",
+   "start": {
+    "w": 1039,
+    "off": 4.0,
+    "text": "and"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3400,
+      "cy": 1300,
+      "zoom": 0.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3400,
+      "cy": 800,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "back to the bed: a reception room"
+  },
+  {
+   "id": "s0050",
+   "start": {
+    "w": 1069,
+    "off": 0.0,
+    "text": "Further"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2553,
+      "cy": 2300,
+      "zoom": 0.85,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2553,
+      "cy": 2270,
+      "zoom": 0.98,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1076,
+      "off": 0.0,
+      "text": "settle,"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Settle",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1104,
+      "off": -0.05,
+      "text": "monsters,"
+     },
+     "dur": 2.9,
+     "params": {
+      "at": "LION",
+      "radius": 180,
+      "draw_s": 0.5,
+      "hold_s": 2.0,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "settle with circle on the carved creature (AN-01)"
+  },
+  {
+   "id": "s0051",
+   "start": {
+    "w": 1118,
+    "off": 0.0,
+    "text": "Beside"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2764,
+      "cy": 1340,
+      "zoom": 0.72,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2764,
+      "cy": 1440,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1135,
+      "off": 0.0,
+      "text": "Martha,"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Saint Martha",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1142,
+      "off": -0.05,
+      "text": "brush"
+     },
+     "dur": 2.9,
+     "params": {
+      "at": [
+       2700,
+       1580
+      ],
+      "radius": 190,
+      "draw_s": 0.5,
+      "hold_s": 2.0,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "chair and brush with circle"
+  },
+  {
+   "id": "s0052",
+   "start": {
+    "w": 1148,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2388,
+      "cy": 3900,
+      "zoom": 0.55,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2388,
+      "cy": 4100,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1172,
+      "off": 0.0,
+      "text": "oriental"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Oriental carpet",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "rug crop push with label"
+  },
+  {
+   "id": "s0053",
+   "start": {
+    "w": 1194,
+    "off": 0.0,
+    "text": "Set"
+   },
+   "technique": "LAY-01",
+   "slots": {
+    "left": {
+     "asset": "A"
+    },
+    "right": {
+     "asset": "V"
+    }
+   },
+   "params": {
+    "camera_left": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.115933,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1214,
+       "off": 0.0,
+       "text": "The"
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.115933,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2388,
+      "cy": 4200,
+      "zoom": 0.3,
+      "ease": "linear"
+     }
+    ],
+    "camera_right": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2084.5,
+      "cy": 1624.5,
+      "zoom": 0.227762,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1214,
+       "off": 0.0,
+       "text": "The"
+      },
+      "cx": 2084.5,
+      "cy": 1624.5,
+      "zoom": 0.227762,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2085,
+      "cy": 2780,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ],
+    "caption_left": "THE ARNOLFINI PORTRAIT",
+    "caption_left_sub": "JAN VAN EYCK, 1434",
+    "caption_right": "VIRGIN AND CHILD WITH CANON VAN DER PAELE",
+    "caption_right_sub": "JAN VAN EYCK, 1434",
+    "slide_delay_s": 0.1
+   },
+   "intent": "compare",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "split-screen comparison, slide-in, synchronous push-ins"
+  },
+  {
+   "id": "s0054",
+   "start": {
+    "w": 1230,
+    "off": 0.0,
+    "text": "Beside"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1990,
+      "cy": 1650,
+      "zoom": 0.85,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1960,
+      "cy": 1710,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1237,
+      "off": 0.0,
+      "text": "amber"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Amber prayer beads",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "amber beads crop with label"
+  },
+  {
+   "id": "s0055",
+   "start": {
+    "w": 1271,
+    "off": 0.0,
+    "text": "Finally,"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1070,
+      "cy": 1100,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1297,
+       "off": -0.8,
+       "text": "Study"
+      },
+      "cx": 1070,
+      "cy": 2880,
+      "zoom": 0.9,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1070,
+      "cy": 2900,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1284,
+      "off": 0.0,
+      "text": "oranges"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Oranges",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1284,
+      "off": -0.05,
+      "text": "oranges"
+     },
+     "dur": 3.9,
+     "params": {
+      "at": [
+       430,
+       3200
+      ],
+      "radius": 190,
+      "draw_s": 0.5,
+      "hold_s": 3.0,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "window pan down to the oranges (CAM-04)"
+  },
+  {
+   "id": "s0056",
+   "start": {
+    "w": 1297,
+    "off": 0.0,
+    "text": "Study"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1070,
+      "cy": 2900,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1329,
+       "off": 1.07,
+       "text": "subject."
+      },
+      "cx": 900,
+      "cy": 2900,
+      "zoom": 1.5,
+      "ease": "out_cubic"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1300,
+      "off": -0.05,
+      "text": "orange,"
+     },
+     "dur": 4.3,
+     "params": {
+      "at": "ORANGE",
+      "radius": 130,
+      "draw_s": 0.5,
+      "hold_s": 3.4,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "circle on the single orange (AN-01)"
+  },
+  {
+   "id": "s0057",
+   "start": {
+    "t": 554.77
+   },
+   "technique": "X-CARD-01",
+   "slots": {},
+   "params": {
+    "title": "THE MIRROR",
+    "text_width_pct": 50,
+    "text_fade_out_s": 0.1
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0058",
+   "start": {
+    "w": 1330,
+    "off": 0.0,
+    "text": "And"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 1750,
+      "zoom": 0.42,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 0.502,
+       "text": "And"
+      },
+      "cx": 2193.010264950311,
+      "cy": 1750.015207333794,
+      "zoom": 0.420203,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 0.753,
+       "text": "And"
+      },
+      "cx": 2193.0346442072996,
+      "cy": 1750.0513247515553,
+      "zoom": 0.420686,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 1.004,
+       "text": "And"
+      },
+      "cx": 2193.0821196024885,
+      "cy": 1750.121658670353,
+      "zoom": 0.421629,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 1.255,
+       "text": "And"
+      },
+      "cx": 2193.16038984861,
+      "cy": 1750.2376145905334,
+      "zoom": 0.423187,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 1.506,
+       "text": "And"
+      },
+      "cx": 2193.277153658398,
+      "cy": 1750.4105980124418,
+      "zoom": 0.425522,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 1.757,
+       "text": "And"
+      },
+      "cx": 2193.440109744586,
+      "cy": 1750.6520144364238,
+      "zoom": 0.428803,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 2.008,
+       "text": "And"
+      },
+      "cx": 2193.656956819907,
+      "cy": 1750.973269362825,
+      "zoom": 0.433208,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 2.259,
+       "text": "And"
+      },
+      "cx": 2193.935393597094,
+      "cy": 1751.385768291991,
+      "zoom": 0.438931,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 2.51,
+       "text": "And"
+      },
+      "cx": 2194.2831187888805,
+      "cy": 1751.9009167242675,
+      "zoom": 0.446184,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 2.761,
+       "text": "And"
+      },
+      "cx": 2194.707831108,
+      "cy": 1752.5301201599998,
+      "zoom": 0.455205,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 3.012,
+       "text": "And"
+      },
+      "cx": 2195.2172292671853,
+      "cy": 1753.284784099534,
+      "zoom": 0.466266,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 3.263,
+       "text": "And"
+      },
+      "cx": 2195.8190119791707,
+      "cy": 1754.1763140432158,
+      "zoom": 0.479681,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 3.514,
+       "text": "And"
+      },
+      "cx": 2196.5208779566883,
+      "cy": 1755.21611549139,
+      "zoom": 0.495814,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 3.765,
+       "text": "And"
+      },
+      "cx": 2197.330525912472,
+      "cy": 1756.4155939444026,
+      "zoom": 0.5151,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 4.016,
+       "text": "And"
+      },
+      "cx": 2198.2556545592547,
+      "cy": 1757.7861549025993,
+      "zoom": 0.538057,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 4.267,
+       "text": "And"
+      },
+      "cx": 2199.3039626097698,
+      "cy": 1759.3392038663258,
+      "zoom": 0.56531,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 4.518,
+       "text": "And"
+      },
+      "cx": 2200.4831487767515,
+      "cy": 1761.086146335928,
+      "zoom": 0.597618,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 4.769,
+       "text": "And"
+      },
+      "cx": 2201.8009117729316,
+      "cy": 1763.0383878117507,
+      "zoom": 0.635912,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 5.02,
+       "text": "And"
+      },
+      "cx": 2203.2649503110442,
+      "cy": 1765.2073337941397,
+      "zoom": 0.681341,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 5.271,
+       "text": "And"
+      },
+      "cx": 2204.8829631038225,
+      "cy": 1767.6043897834406,
+      "zoom": 0.735333,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 5.522,
+       "text": "And"
+      },
+      "cx": 2206.6613528639996,
+      "cy": 1770.2390412799994,
+      "zoom": 0.799625,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 5.773,
+       "text": "And"
+      },
+      "cx": 2208.412141048111,
+      "cy": 1772.8328015527575,
+      "zoom": 0.868407,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 6.024,
+       "text": "And"
+      },
+      "cx": 2210.002605839964,
+      "cy": 1775.1890456888354,
+      "zoom": 0.936007,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 6.275,
+       "text": "And"
+      },
+      "cx": 2211.4404459522916,
+      "cy": 1777.31917918858,
+      "zoom": 1.001637,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 6.526,
+       "text": "And"
+      },
+      "cx": 2212.733360097827,
+      "cy": 1779.2346075523362,
+      "zoom": 1.064573,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 6.777,
+       "text": "And"
+      },
+      "cx": 2213.889046989304,
+      "cy": 1780.9467362804503,
+      "zoom": 1.124168,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 7.028,
+       "text": "And"
+      },
+      "cx": 2214.915205339456,
+      "cy": 1782.4669708732683,
+      "zoom": 1.179875,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 7.279,
+       "text": "And"
+      },
+      "cx": 2215.8195338610158,
+      "cy": 1783.8067168311345,
+      "zoom": 1.231251,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 7.53,
+       "text": "And"
+      },
+      "cx": 2216.6097312667166,
+      "cy": 1784.977379654395,
+      "zoom": 1.277972,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 7.781,
+       "text": "And"
+      },
+      "cx": 2217.293496269292,
+      "cy": 1785.9903648433958,
+      "zoom": 1.319829,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 8.032,
+       "text": "And"
+      },
+      "cx": 2217.8785275814753,
+      "cy": 1786.8570778984822,
+      "zoom": 1.356728,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 8.283,
+       "text": "And"
+      },
+      "cx": 2218.372523916,
+      "cy": 1787.58892432,
+      "zoom": 1.388687,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 8.534,
+       "text": "And"
+      },
+      "cx": 2218.783183985599,
+      "cy": 1788.1973096082945,
+      "zoom": 1.415827,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 8.785,
+       "text": "And"
+      },
+      "cx": 2219.1182065030052,
+      "cy": 1788.6936392637115,
+      "zoom": 1.438361,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 9.036,
+       "text": "And"
+      },
+      "cx": 2219.385290180953,
+      "cy": 1789.0893187865966,
+      "zoom": 1.456582,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 9.287,
+       "text": "And"
+      },
+      "cx": 2219.5921337321743,
+      "cy": 1789.3957536772953,
+      "zoom": 1.470851,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 9.538,
+       "text": "And"
+      },
+      "cx": 2219.7464358694033,
+      "cy": 1789.6243494361534,
+      "zoom": 1.481587,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 9.789,
+       "text": "And"
+      },
+      "cx": 2219.8558953053735,
+      "cy": 1789.7865115635161,
+      "zoom": 1.489251,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 10.04,
+       "text": "And"
+      },
+      "cx": 2219.9282107528174,
+      "cy": 1789.8936455597295,
+      "zoom": 1.494335,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 10.291,
+       "text": "And"
+      },
+      "cx": 2219.971080924469,
+      "cy": 1789.957156925139,
+      "zoom": 1.497358,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 10.542,
+       "text": "And"
+      },
+      "cx": 2219.992204533061,
+      "cy": 1789.98845116009,
+      "zoom": 1.498849,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1330,
+       "off": 11.044,
+       "text": "And"
+      },
+      "cx": 2220.0658025922235,
+      "cy": 1790.0438683948155,
+      "zoom": 1.49986,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2226.0717846460616,
+      "cy": 1794.0478564307077,
+      "zoom": 1.542419,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 1341,
+      "off": -0.12,
+      "text": "mirror"
+     },
+     "dur": 10.89,
+     "params": {
+      "at": "MIRROR",
+      "rx": 440,
+      "ry": 440,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "mirror push 3.57x/11 s ease-in-out then drift; spotlight floor 0.20"
+  },
+  {
+   "id": "s0059",
+   "start": {
+    "w": 1365,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "matsys"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 840.0,
+      "cy": 790.5,
+      "zoom": 0.642125,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 840.0,
+      "cy": 790.5,
+      "zoom": 0.693495,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 1365,
+      "off": 0.6,
+      "text": "and"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "The Moneylender and his Wife",
+      "artist_year": "Quentin Massys, 1514",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0060",
+   "start": {
+    "w": 1365,
+    "off": 4.0,
+    "text": "and"
+   },
+   "technique": "DIA-07",
+   "slots": {},
+   "params": {},
+   "intent": "explain_mechanism",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "convex mirror optical diagram (stand-in)"
+  },
+  {
+   "id": "s0061",
+   "start": {
+    "w": 1390,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2241.7746759720835,
+      "cy": 1804.5164506480558,
+      "zoom": 1.659485,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 1390,
+       "off": 4.0,
+       "text": "Look"
+      },
+      "cx": 2210,
+      "cy": 1795,
+      "zoom": 2.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2210,
+      "cy": 1795,
+      "zoom": 2.9,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1394,
+      "off": 0.0,
+      "text": "reflection."
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Reflection",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "push into the reflection with label"
+  },
+  {
+   "id": "s0062",
+   "start": {
+    "w": 1445,
+    "off": 0.0,
+    "text": "Mirrors"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2210,
+      "cy": 1795,
+      "zoom": 2.9,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "pull out of reflection: purity"
+  },
+  {
+   "id": "s0063",
+   "start": {
+    "w": 1474,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 1.45,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2240,
+      "cy": 1790,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1480,
+      "off": 0.0,
+      "text": "roundels,"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Passion roundels",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1480,
+      "off": -0.05,
+      "text": "roundels,"
+     },
+     "dur": 3.5,
+     "params": {
+      "at": "R1",
+      "radius": 82,
+      "draw_s": 0.5,
+      "hold_s": 2.6,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o3",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1480,
+      "off": -0.05,
+      "text": "roundels,"
+     },
+     "dur": 3.5,
+     "params": {
+      "at": "R2",
+      "radius": 82,
+      "draw_s": 0.5,
+      "hold_s": 2.6,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "frame crop with two circles on roundels (AN-01)"
+  },
+  {
+   "id": "s0064",
+   "start": {
+    "w": 1504,
+    "off": 0.0,
+    "text": "Their"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2250,
+      "cy": 1790,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2360,
+      "cy": 1790,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 1519,
+      "off": -0.12,
+      "text": "Costanza:"
+     },
+     "dur": 9.69,
+     "params": {
+      "at": [
+       2435,
+       1790
+      ],
+      "rx": 250,
+      "ry": 420,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "spotlight on Costanza's half of the ring (HI-01)"
+  },
+  {
+   "id": "s0065",
+   "start": {
+    "w": 1541,
+    "off": 0.0,
+    "text": "And"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2150,
+      "cy": 700,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1553,
+       "off": -0.3,
+       "text": "one"
+      },
+      "cx": 2150,
+      "cy": 700,
+      "zoom": 0.62,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 1553,
+       "off": 3.0,
+       "text": "one"
+      },
+      "cx": 2160,
+      "cy": 600,
+      "zoom": 0.9238,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "w": 1596,
+       "off": 0.87,
+       "text": "dead."
+      },
+      "cx": 2400,
+      "cy": 560,
+      "zoom": 0.992,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1547,
+      "off": 0.0,
+      "text": "chandelier"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Chandelier",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1554,
+      "off": -0.05,
+      "text": "candle"
+     },
+     "dur": 3.9,
+     "params": {
+      "at": "LIT",
+      "radius": 215,
+      "draw_s": 0.5,
+      "hold_s": 3.0,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o3",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1561,
+      "off": -0.05,
+      "text": "snuffed"
+     },
+     "dur": 3.9,
+     "params": {
+      "at": "SNUF",
+      "radius": 215,
+      "draw_s": 0.5,
+      "hold_s": 3.0,
+      "fade_s": 0.4
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "chandelier: circles on the lit and the snuffed-out candle (AN-01), push then drift"
+  },
+  {
+   "id": "s0066",
+   "start": {
+    "t": 666.44
+   },
+   "technique": "X-CARD-01",
+   "slots": {},
+   "params": {
+    "title": "THE ALCHEMIST",
+    "text_width_pct": 50,
+    "text_fade_out_s": 0.1
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0067",
+   "start": {
+    "w": 1597,
+    "off": -0.22,
+    "text": "Saying"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18576,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "one single meaning would be reckless: matte"
+  },
+  {
+   "id": "s0068",
+   "start": {
+    "w": 1619,
+    "off": 0.0,
+    "text": "starting"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2098,
+      "cy": 5326,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2098,
+      "cy": 5356,
+      "zoom": 0.85,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "clue: the dog (hard cut)"
+  },
+  {
+   "id": "s0069",
+   "start": {
+    "w": 1626,
+    "off": 0.0,
+    "text": "then"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2360,
+      "cy": 1790,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2370,
+      "cy": 1790,
+      "zoom": 1.28,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 1629,
+      "off": -0.12,
+      "text": "scenes"
+     },
+     "dur": 1.88,
+     "params": {
+      "at": [
+       2435,
+       1790
+      ],
+      "rx": 250,
+      "ry": 420,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "clue: roundels on her side"
+  },
+  {
+   "id": "s0070",
+   "start": {
+    "w": 1636,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1266,
+      "cy": 2166,
+      "zoom": 0.62,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1266,
+      "cy": 2266,
+      "zoom": 0.68,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "clue: dark clothes (hard cut)"
+  },
+  {
+   "id": "s0071",
+   "start": {
+    "w": 1653,
+    "off": 0.0,
+    "text": "Yet"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2300,
+      "cy": 2400,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1664,
+       "off": 0.0,
+       "text": "Look"
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.8,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 1667,
+      "off": -0.12,
+      "text": "joined"
+     },
+     "dur": 6.71,
+     "params": {
+      "at": "HANDS",
+      "rx": 360,
+      "ry": 270,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 1667,
+      "off": 0.0,
+      "text": "joined"
+     },
+     "dur": 3.2,
+     "params": {
+      "text": "Joined hands",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "push to the joined hands with spotlight (HI-01), floor 0.20"
+  },
+  {
+   "id": "s0072",
+   "start": {
+    "w": 1688,
+    "off": 0.0,
+    "text": "Then"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 0.95,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 1688,
+      "off": 0.0,
+      "text": "Then"
+     },
+     "dur": 12.76,
+     "params": {
+      "at": "HANDS",
+      "rx": 360,
+      "ry": 270,
+      "floor": 0.2,
+      "ramp_in": 0.0,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "hands: both readings at once"
+  },
+  {
+   "id": "s0073",
+   "start": {
+    "w": 1718,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2120,
+      "cy": 1790,
+      "zoom": 0.7,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 2.2,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "step into the mirrored world: push (CAM-05)"
+  },
+  {
+   "id": "s0074",
+   "start": {
+    "w": 1747,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "turban"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1012.0,
+      "cy": 1373.0,
+      "zoom": 0.369701,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1012.0,
+      "cy": 1373.0,
+      "zoom": 0.391883,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 1747,
+      "off": 0.6,
+      "text": "His"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Man in a Red Turban",
+      "artist_year": "Jan van Eyck, 1433",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0075",
+   "start": {
+    "w": 1747,
+    "off": 4.0,
+    "text": "His"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.16684,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.17888,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "back to the painting after the still"
+  },
+  {
+   "id": "s0076",
+   "start": {
+    "w": 1769,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3500,
+      "cy": 1600,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3400,
+      "cy": 1650,
+      "zoom": 1.35,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "glaze crop on Costanza's veil and face: thin layers"
+  },
+  {
+   "id": "s0077",
+   "start": {
+    "w": 1788,
+    "off": 0.0,
+    "text": "which"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3000,
+      "cy": 3300,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3000,
+      "cy": 3500,
+      "zoom": 0.78,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "hard cut: the smooth surface of the dress (TR-04)"
+  },
+  {
+   "id": "s0078",
+   "start": {
+    "w": 1814,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2098,
+      "cy": 5386,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2098,
+      "cy": 5406,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "close on the dog's shadow (thumbprint)"
+  },
+  {
+   "id": "s0079",
+   "start": {
+    "w": 1825,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.1806,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": "his reach: matte"
+  },
+  {
+   "id": "s0080",
+   "start": {
+    "w": 1844,
+    "off": 0.0,
+    "text": "Albrecht"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "durer"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2065.0,
+      "cy": 2855.0,
+      "zoom": 0.177793,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2065.0,
+      "cy": 2855.0,
+      "zoom": 0.188461,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 1844,
+      "off": 0.6,
+      "text": "Albrecht"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Self-Portrait",
+      "artist_year": "Albrecht Dürer, 1500",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "context still (two-line label)"
+  },
+  {
+   "id": "s0081",
+   "start": {
+    "w": 1854,
+    "off": 0.0,
+    "text": "to"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "meninas"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1737.5,
+      "cy": 2000.0,
+      "zoom": 0.2538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1854,
+       "off": 1.5,
+       "text": "to"
+      },
+      "cx": 1737.5,
+      "cy": 2000.0,
+      "zoom": 0.2538,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 1866,
+       "off": 0.0,
+       "text": "and"
+      },
+      "cx": 1459.5,
+      "cy": 2300.0,
+      "zoom": 0.81216,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "start": {
+      "w": 1854,
+      "off": 0.6,
+      "text": "to"
+     },
+     "dur": 3.2,
+     "params": {
+      "title": "Las Meninas",
+      "artist_year": "Diego Velázquez, 1656",
+      "strip_y_top_pct": 79.0,
+      "strip_y_bottom_pct": 92.98,
+      "right_fade_pct": 22,
+      "fade_out_s": 0.12
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "Las Meninas with push to its mirror (CAM-05)"
+  },
+  {
+   "id": "s0082",
+   "start": {
+    "w": 1871,
+    "off": -0.3,
+    "text": "So"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2420,
+      "cy": 2540,
+      "zoom": 1.0,
+      "ease": "out_quad"
+     },
+     {
+      "at": {
+       "w": 1871,
+       "off": 39.8,
+       "text": "So"
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.172414,
+      "ease": "linear"
+     }
+    ]
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "X-ANN-03",
+     "intent": "reveal",
+     "start": {
+      "w": 1922,
+      "off": 0.0,
+      "text": "dog,"
+     },
+     "dur": 6.5,
+     "params": {
+      "text": "DOG",
+      "size_px": 46,
+      "fade_in_s": 0.1,
+      "fade_out_s": 0.15,
+      "at": [
+       2698,
+       5446
+      ]
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "X-ANN-03",
+     "intent": "reveal",
+     "start": {
+      "w": 1924,
+      "off": 0.0,
+      "text": "roundels,"
+     },
+     "dur": 6.0,
+     "params": {
+      "text": "ROUNDELS",
+      "size_px": 46,
+      "fade_in_s": 0.1,
+      "fade_out_s": 0.15,
+      "at": [
+       2774,
+       1690
+      ]
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o3",
+     "technique": "X-ANN-03",
+     "intent": "reveal",
+     "start": {
+      "w": 1926,
+      "off": 0.0,
+      "text": "candle,"
+     },
+     "dur": 5.5,
+     "params": {
+      "text": "CANDLE",
+      "size_px": 46,
+      "fade_in_s": 0.1,
+      "fade_out_s": 0.15,
+      "at": "LIT"
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o4",
+     "technique": "X-ANN-03",
+     "intent": "reveal",
+     "start": {
+      "w": 1928,
+      "off": 0.0,
+      "text": "dark"
+     },
+     "dur": 5.0,
+     "params": {
+      "text": "MOURNING DRESS?",
+      "size_px": 46,
+      "fade_in_s": 0.1,
+      "fade_out_s": 0.15,
+      "at": [
+       566,
+       2066
+      ]
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": "closing: recap labels (plain text, no strip) and 5.8x/40 s ease-out pull-out"
+  }
+ ],
+ "end": {
+  "t": 820.8333
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

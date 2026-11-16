@@ -1,0 +1,11 @@
+| Key | Work / use | Author (Commons) | Licence | Size | Source page |
+|---|---|---|---|---|---|
+| ghent | Ghent Altarpiece - JAN VAN EYCK, 1432 - Cold open / Merchant City | Jan van Eyck / Presumably Hubert van Eyck | Public domain | 6265x4581 | https://commons.wikimedia.org/wiki/File:Lamgods_open.jpg |
+| giovanni_berlin | Man In A Red Chaperon - JAN VAN EYCK, C.1438 - The Arnolfinis (later portrait of the man, Berlin Gemäldegalerie) | Jan van Eyck | Public domain | 2872x4000 | https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_(um_1390-1400_-_1441)_-_Portrait_of_a_man_(from_the_Arnolfini_family^)_Around_1440_-_523A_-_Gemäldegalerie.jpg |
+| durer | Self-Portrait - ALBRECHT DÜRER, 1500 - The Alchemist (influence) | Albrecht Dürer | Public domain | 4130x5710 | https://commons.wikimedia.org/wiki/File:Albrecht_Dürer_-_1500_self-portrait_(High_resolution_and_detail).jpg |
+| meninas | Las Meninas - DIEGO VELÁZQUEZ, 1656 - The Alchemist (influence) |  | Public domain | 3475x4000 | https://commons.wikimedia.org/wiki/File:Las_Meninas_(1656),_by_Velazquez.jpg |
+| blue_cap | Man In A Blue Chaperon - JAN VAN EYCK, C.1430 - Merchant City (Van Eyck portraits as status symbols) | Jan van Eyck | Public domain | 4956x7442 | https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_-_Man_in_a_Blue_Cap_(c.1430).jpg |
+| turban | Man In A Red Turban - JAN VAN EYCK, 1433 - Merchant City / The Alchemist (possible self-portrait; hedged) | Jan van Eyck | Public domain | 2024x2746 | https://commons.wikimedia.org/wiki/File:Portrait_of_a_Man_in_a_Turban_(Jan_van_Eyck).jpg |
+| rogier | Portrait Of A Woman With A Winged Bonnet - ROGIER VAN DER WEYDEN, C.1435 - Fashions and Fabrics (headdress and dress of the period) | Rogier van der Weyden | Public domain | 4464x6645 | https://commons.wikimedia.org/wiki/File:Rogier_van_der_Weyden_-_Portrait_of_a_Woman_with_a_Winged_Bonnet_-_Google_Art_Project.jpg |
+| matsys | The Moneylender And His Wife - QUENTIN MASSYS, 1514 - The Mirror (a later convex mirror in a Bruges-Antwerp interior) | Quinten Metsys | Public domain | 1680x1581 | https://commons.wikimedia.org/wiki/File:Massysm_Quentin_—_The_Moneylender_and_his_Wife_—_1514.jpg |
+| bruges | Bruges, Grote Markt - ETCHING, RIJKSMUSEUM - Merchant City | Rijksmuseum | CC0 | 3320x2790 | https://commons.wikimedia.org/wiki/File:Grote_Markt_in_Brugge,_RP-P-1943-188.jpg |

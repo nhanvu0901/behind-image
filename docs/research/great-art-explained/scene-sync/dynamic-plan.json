@@ -1,0 +1,61 @@
+{
+  "timebase": "seconds from source MP4 start; provisional boundaries; ASR segment-level timing only",
+  "cases": [
+    {
+      "case_id": "starry-landscape",
+      "videoID": "crCPVoPsTtk",
+      "sourceStart": 637,
+      "end": 765,
+      "ASRpath": "research_media/great-art-explained/crCPVoPsTtk.json"
+    },
+    {
+      "case_id": "starry-impasto",
+      "videoID": "crCPVoPsTtk",
+      "sourceStart": 792,
+      "end": 850,
+      "ASRpath": "research_media/great-art-explained/crCPVoPsTtk.json"
+    },
+    {
+      "case_id": "raphael-perspective",
+      "videoID": "9x0tsuS4dk0",
+      "sourceStart": 645,
+      "end": 765,
+      "ASRpath": "research_media/great-art-explained/9x0tsuS4dk0.json"
+    },
+    {
+      "case_id": "raphael-reveal",
+      "videoID": "9x0tsuS4dk0",
+      "sourceStart": 74,
+      "end": 129,
+      "ASRpath": "research_media/great-art-explained/9x0tsuS4dk0.json"
+    },
+    {
+      "case_id": "sargent-reviews",
+      "videoID": "cuHgxPe3J7I",
+      "sourceStart": 1082,
+      "end": 1213,
+      "ASRpath": "research_media/great-art-explained/analysis-a/cuHgxPe3J7I/cuHgxPe3J7I.json"
+    },
+    {
+      "case_id": "sargent-comparison",
+      "videoID": "cuHgxPe3J7I",
+      "sourceStart": 1881,
+      "end": 1939,
+      "ASRpath": "research_media/great-art-explained/analysis-a/cuHgxPe3J7I/cuHgxPe3J7I.json"
+    },
+    {
+      "case_id": "wave-comparison",
+      "videoID": "IBcB_dYtGUg",
+      "sourceStart": 574,
+      "end": 698,
+      "ASRpath": "research_media/great-art-explained/analysis-b/IBcB_dYtGUg/transcript/IBcB_dYtGUg.json"
+    },
+    {
+      "case_id": "wave-layers",
+      "videoID": "IBcB_dYtGUg",
+      "sourceStart": 45,
+      "end": 80,
+      "ASRpath": "research_media/great-art-explained/analysis-b/IBcB_dYtGUg/transcript/IBcB_dYtGUg.json"
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+param([string]$Job,[int]$Minutes=25)
+$lock='D:\bench\_heavy.lock'
+$o=Get-CimInstance Win32_OperatingSystem
+if ($o.FreeVirtualMemory -lt 12000000) { "LOWMEM $($o.FreeVirtualMemory)"; exit 2 }
+$busy=Get-CimInstance Win32_Process | Where-Object { ($_.Name -eq 'ffmpeg.exe' -and $_.CommandLine -notmatch 'bench') -or $_.CommandLine -match '_chatterbox_worker|stages\.stage_4|stages\.stage_5' }
+if ($busy) { "BUSY production-like process present"; exit 3 }
+cmd /c "mkdir D:\bench\_heavy.lock 2>nul"
+if ($LASTEXITCODE -ne 0) { $c=''; if (Test-Path "$lock\owner.txt") { $c=(Get-Content "$lock\owner.txt") }; "HELD $c"; exit 1 }
+"bti_engine_test job=$Job started=$(Get-Date -Format o) expected_end=$((Get-Date).AddMinutes($Minutes).ToString('o'))" | Set-Content "$lock\owner.txt"
+$r = Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{CommandLine="cmd.exe /c D:\bench\bti\$Job.bat"; CurrentDirectory='D:\bench\bti'}
+if ($r.ReturnValue -ne 0) { Remove-Item -Recurse -Force $lock; "LAUNCHFAIL $($r.ReturnValue)"; exit 4 }
+"GOT launched $Job pid=$($r.ProcessId)"

@@ -1,0 +1,223 @@
+
+## open: mean luminance, t(s) -> lum
+0.00:16.7 0.10:16.7 0.20:16.7 0.30:16.7 0.40:16.7 0.50:16.7 0.60:16.7 0.70:16.7 0.80:16.7 0.90:16.7 1.00:16.7 1.10:16.7 1.20:16.7 1.30:16.7 1.40:16.7 1.50:16.7 1.60:16.7 1.70:16.7 1.80:16.7 1.90:16.7
+
+## label strip: t -> (strip mean lum in x 0.80-1.0 [no text], max text lum, #white px)
+326.00: stripLum=3.9 aboveLum=5.0 whitePx=0
+326.10: stripLum=4.1 aboveLum=5.1 whitePx=0
+326.20: stripLum=4.4 aboveLum=5.3 whitePx=0
+326.30: stripLum=4.7 aboveLum=5.5 whitePx=0
+326.40: stripLum=5.0 aboveLum=5.7 whitePx=0
+326.50: stripLum=5.3 aboveLum=5.9 whitePx=0
+326.60: stripLum=5.5 aboveLum=6.2 whitePx=0
+326.70: stripLum=5.8 aboveLum=6.4 whitePx=0
+326.80: stripLum=6.0 aboveLum=6.7 whitePx=0
+326.90: stripLum=6.3 aboveLum=6.9 whitePx=0
+327.00: stripLum=6.6 aboveLum=7.2 whitePx=0
+327.10: stripLum=6.9 aboveLum=7.5 whitePx=0
+327.20: stripLum=7.1 aboveLum=7.8 whitePx=0
+327.30: stripLum=7.2 aboveLum=8.0 whitePx=0
+327.40: stripLum=7.3 aboveLum=8.3 whitePx=0
+327.50: stripLum=7.3 aboveLum=8.6 whitePx=110
+327.60: stripLum=7.3 aboveLum=8.9 whitePx=3737
+327.70: stripLum=7.3 aboveLum=9.2 whitePx=4079
+327.80: stripLum=7.5 aboveLum=9.6 whitePx=4085
+327.90: stripLum=7.8 aboveLum=9.9 whitePx=4086
+328.00: stripLum=8.1 aboveLum=10.3 whitePx=4091
+328.10: stripLum=8.3 aboveLum=10.8 whitePx=4091
+328.20: stripLum=8.6 aboveLum=11.3 whitePx=4089
+328.30: stripLum=8.9 aboveLum=11.9 whitePx=4090
+328.40: stripLum=9.2 aboveLum=12.5 whitePx=4090
+328.50: stripLum=9.7 aboveLum=13.1 whitePx=4089
+328.60: stripLum=10.2 aboveLum=13.8 whitePx=4092
+328.70: stripLum=10.7 aboveLum=14.5 whitePx=4094
+328.80: stripLum=11.2 aboveLum=15.1 whitePx=4093
+328.90: stripLum=11.8 aboveLum=15.8 whitePx=4094
+329.00: stripLum=12.4 aboveLum=16.6 whitePx=4097
+329.10: stripLum=12.9 aboveLum=17.4 whitePx=4094
+329.20: stripLum=13.8 aboveLum=18.3 whitePx=4099
+329.30: stripLum=14.4 aboveLum=19.2 whitePx=4100
+329.40: stripLum=15.1 aboveLum=20.2 whitePx=4096
+329.50: stripLum=15.9 aboveLum=21.2 whitePx=4102
+329.60: stripLum=16.7 aboveLum=22.2 whitePx=4083
+329.70: stripLum=17.6 aboveLum=23.3 whitePx=4089
+329.80: stripLum=18.4 aboveLum=24.4 whitePx=4102
+329.90: stripLum=19.3 aboveLum=25.6 whitePx=4101
+330.00: stripLum=20.4 aboveLum=26.9 whitePx=4101
+330.10: stripLum=21.5 aboveLum=28.4 whitePx=4097
+330.20: stripLum=22.7 aboveLum=29.8 whitePx=4103
+330.30: stripLum=24.3 aboveLum=31.3 whitePx=4112
+330.40: stripLum=25.9 aboveLum=32.8 whitePx=4112
+330.50: stripLum=27.9 aboveLum=34.7 whitePx=4113
+330.60: stripLum=30.3 aboveLum=36.8 whitePx=4106
+330.70: stripLum=33.3 aboveLum=39.5 whitePx=4106
+330.80: stripLum=37.5 aboveLum=42.6 whitePx=3856
+330.90: stripLum=41.9 aboveLum=46.0 whitePx=161
+331.01: stripLum=46.1 aboveLum=49.1 whitePx=0
+331.11: stripLum=49.8 aboveLum=52.2 whitePx=0
+331.21: stripLum=50.9 aboveLum=53.0 whitePx=0
+331.31: stripLum=51.5 aboveLum=54.0 whitePx=0
+331.41: stripLum=51.7 aboveLum=55.6 whitePx=0
+331.51: stripLum=52.2 aboveLum=57.8 whitePx=0
+331.61: stripLum=53.5 aboveLum=59.9 whitePx=0
+331.71: stripLum=55.3 aboveLum=61.3 whitePx=0
+331.81: stripLum=56.8 aboveLum=61.9 whitePx=0
+331.91: stripLum=58.0 aboveLum=61.8 whitePx=0
+332.01: stripLum=58.8 aboveLum=61.3 whitePx=0
+
+## chapter card: t -> mean lum, white px in text band
+178.00: lum=33.2 whitePx=1845
+178.10: lum=33.2 whitePx=1845
+178.20: lum=33.2 whitePx=1845
+178.30: lum=33.2 whitePx=1845
+178.40: lum=33.2 whitePx=1845
+178.50: lum=33.2 whitePx=1845
+178.60: lum=33.2 whitePx=1845
+178.70: lum=33.2 whitePx=1845
+178.80: lum=33.2 whitePx=1845
+178.90: lum=33.2 whitePx=1845
+179.00: lum=33.2 whitePx=1845
+179.10: lum=33.2 whitePx=1845
+179.20: lum=33.2 whitePx=1845
+179.30: lum=0.0 whitePx=0
+179.40: lum=1.0 whitePx=0
+179.50: lum=1.4 whitePx=15
+179.60: lum=1.8 whitePx=5106
+179.70: lum=1.9 whitePx=5406
+179.80: lum=1.9 whitePx=5406
+179.90: lum=1.9 whitePx=5407
+180.00: lum=1.9 whitePx=5407
+180.10: lum=1.9 whitePx=5407
+180.20: lum=1.9 whitePx=5407
+180.30: lum=1.9 whitePx=5407
+180.40: lum=1.9 whitePx=5407
+180.50: lum=1.9 whitePx=5407
+180.60: lum=1.9 whitePx=5407
+180.70: lum=1.9 whitePx=5407
+180.80: lum=1.9 whitePx=5407
+180.90: lum=1.9 whitePx=5407
+181.00: lum=1.8 whitePx=5127
+181.10: lum=1.3 whitePx=7
+181.20: lum=0.8 whitePx=0
+181.30: lum=114.2 whitePx=13210
+181.40: lum=114.3 whitePx=13352
+181.50: lum=114.3 whitePx=13307
+181.60: lum=114.3 whitePx=13352
+181.70: lum=114.3 whitePx=13338
+181.80: lum=114.4 whitePx=13353
+181.90: lum=114.3 whitePx=13309
+182.00: lum=114.4 whitePx=13381
+182.10: lum=114.4 whitePx=13342
+182.20: lum=114.5 whitePx=13315
+182.30: lum=114.5 whitePx=13310
+182.40: lum=114.6 whitePx=13290
+182.50: lum=114.7 whitePx=13343
+182.60: lum=114.9 whitePx=13418
+182.70: lum=114.9 whitePx=13428
+182.80: lum=114.9 whitePx=13386
+182.90: lum=115.0 whitePx=13326
+183.01: lum=115.0 whitePx=13337
+183.11: lum=115.1 whitePx=13270
+183.21: lum=115.2 whitePx=13301
+183.31: lum=115.3 whitePx=13364
+183.41: lum=115.3 whitePx=13349
+183.51: lum=115.3 whitePx=13258
+183.61: lum=115.4 whitePx=13163
+183.71: lum=115.4 whitePx=13116
+183.81: lum=115.6 whitePx=12925
+183.91: lum=115.6 whitePx=12638
+
+## annotation: t -> white px (>235) in frame
+173.50: whitePx=9
+173.60: whitePx=9
+173.70: whitePx=9
+173.80: whitePx=9
+173.90: whitePx=9
+174.00: whitePx=9
+174.10: whitePx=9
+174.20: whitePx=9
+174.30: whitePx=0
+174.40: whitePx=0
+174.50: whitePx=6
+174.60: whitePx=5
+174.70: whitePx=2
+174.80: whitePx=2
+174.90: whitePx=4
+175.00: whitePx=4
+175.10: whitePx=9
+175.20: whitePx=11
+175.30: whitePx=13
+175.40: whitePx=15
+175.50: whitePx=35
+175.60: whitePx=126
+175.70: whitePx=349
+175.80: whitePx=10729
+175.90: whitePx=13078
+176.00: whitePx=13779
+176.10: whitePx=13779
+176.20: whitePx=13995
+176.30: whitePx=13995
+176.40: whitePx=14052
+176.50: whitePx=14052
+176.60: whitePx=14054
+176.70: whitePx=14052
+176.80: whitePx=14052
+176.90: whitePx=14052
+
+## circles: t -> px with |diff vs frame0|>40 (ring pixels)
+661.50: diffPx=0
+661.60: diffPx=0
+661.70: diffPx=0
+661.80: diffPx=0
+661.90: diffPx=0
+662.00: diffPx=0
+662.10: diffPx=0
+662.20: diffPx=0
+662.30: diffPx=0
+662.40: diffPx=36
+662.50: diffPx=13106
+662.60: diffPx=18617
+662.70: diffPx=20075
+662.80: diffPx=20798
+662.90: diffPx=21302
+663.00: diffPx=21756
+663.10: diffPx=22067
+663.20: diffPx=22216
+663.30: diffPx=22562
+663.40: diffPx=22725
+663.50: diffPx=22943
+663.60: diffPx=23040
+663.70: diffPx=23169
+663.80: diffPx=23244
+663.90: diffPx=23415
+664.00: diffPx=23449
+664.10: diffPx=23566
+664.20: diffPx=23638
+664.30: diffPx=23706
+664.40: diffPx=23625
+664.50: diffPx=23340
+664.60: diffPx=23069
+664.70: diffPx=22836
+664.80: diffPx=27642
+664.90: diffPx=44152
+665.00: diffPx=59104
+665.10: diffPx=67580
+665.20: diffPx=60049
+665.30: diffPx=67991
+665.40: diffPx=74047
+665.50: diffPx=78642
+665.60: diffPx=83479
+665.70: diffPx=87600
+665.80: diffPx=92172
+665.90: diffPx=94904
+666.00: diffPx=96265
+666.10: diffPx=98429
+666.20: diffPx=101289
+666.30: diffPx=104069
+666.40: diffPx=105171
+666.51: diffPx=106562
+666.61: diffPx=107966
+666.71: diffPx=107824
+666.81: diffPx=106659
+666.91: diffPx=107006
+667.01: diffPx=108843

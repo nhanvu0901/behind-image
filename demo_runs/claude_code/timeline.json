@@ -1,0 +1,2383 @@
+{
+ "final_demo": {
+  "duration_s": 820.8333,
+  "resolution": "1920x1080",
+  "fps": 30,
+  "atempo": 1.0,
+  "wpm_first_to_last_incl_pauses_and_cards": 144.7,
+  "wpm_speech_only": 160.1,
+  "words": 1971,
+  "alignment": {
+   "tool": "faster-whisper small.en int8 CPU",
+   "matched": 1966,
+   "total": 1971,
+   "fake": false
+  },
+  "cards": [
+   {
+    "text": "__title__",
+    "t0": 74.31,
+    "t1": 76.91
+   },
+   {
+    "text": "THE MERCHANT CITY",
+    "t0": 77.21,
+    "t1": 79.21
+   },
+   {
+    "text": "THE ARNOLFINIS",
+    "t0": 167.73,
+    "t1": 169.73
+   },
+   {
+    "text": "FASHIONS AND FABRICS",
+    "t0": 296.34,
+    "t1": 298.34
+   },
+   {
+    "text": "THE ROOM",
+    "t0": 414.5,
+    "t1": 416.5
+   },
+   {
+    "text": "THE MIRROR",
+    "t0": 554.77,
+    "t1": 556.77
+   },
+   {
+    "text": "THE ALCHEMIST",
+    "t0": 666.44,
+    "t1": 668.44
+   }
+  ],
+  "shots": [
+   {
+    "start": 0.0,
+    "end": 11.17,
+    "duration_s": 11.17,
+    "effect": "cold open: slow push-in on couple",
+    "catalogue_ids": [
+     "CAM-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "push": "1.14x, linear",
+     "overlays": []
+    },
+    "synced_phrase": "Most people ... look at what is",
+    "narration_words": "Most people will tell you that this is a wedding portrait, and that the bride is pregnant. It is a lovely story, and guidebooks have repeated it for generations."
+   },
+   {
+    "start": 11.17,
+    "end": 29.17,
+    "duration_s": 18.0,
+    "effect": "opening pull-back 3.0x over 18 s ease-out_quad",
+    "catalogue_ids": [
+     "CAM-03",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "from_z": 0.49904240766073865,
+     "to_z": 0.16684,
+     "ratio": 2.99,
+     "dur_s": 18,
+     "ease": "out_cubic",
+     "overlays": []
+    },
+    "synced_phrase": "But look at what is ... finished the Arnolfini Portrait",
+    "narration_words": "But look at what is actually in front of us, because almost none of it holds up. Jan van Eyck finished the Arnolfini Portrait in 1434, and it has puzzled art historians ever since. It is small, an oil painting on an"
+   },
+   {
+    "start": 29.17,
+    "end": 38.28,
+    "duration_s": 9.11,
+    "effect": "dimension annotation (AN-05) on the matte painting",
+    "catalogue_ids": [
+     "AN-05",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "hold_s": 4.5,
+     "overlays": [
+      {
+       "annotation": "AN-05 82 cm x 60 cm, OIL ON OAK PANEL",
+       "t0": 29.87,
+       "t1": 34.37
+      }
+     ]
+    },
+    "synced_phrase": "It is small ... eighty-two centimetres tall and sixty wide",
+    "narration_words": "oak panel just eighty-two centimetres tall and sixty wide, yet it crams in more evidence than most rooms full of paintings."
+   },
+   {
+    "start": 38.28,
+    "end": 47.43,
+    "duration_s": 9.15,
+    "effect": "push to mirror then inscription with spotlights",
+    "catalogue_ids": [
+     "CAM-05",
+     "HI-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "floor": 0.2,
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2220,
+         1790
+        ],
+        440,
+        440
+       ],
+       "t0": 38.28,
+       "t1": 39.72,
+       "floor": 0.2
+      },
+      {
+       "spotlight": [
+        [
+         2220,
+         1390
+        ],
+        420,
+        120
+       ],
+       "t0": 39.92,
+       "t1": 47.43,
+       "floor": 0.2
+      },
+      {
+       "label": "Latin inscription",
+       "t": 40.12
+      }
+     ]
+    },
+    "synced_phrase": "Notice the mirror ... the Latin words",
+    "narration_words": "Notice the mirror on the back wall, and the Latin words painted just above it, which say that Jan van Eyck was here, in 1434."
+   },
+   {
+    "start": 47.43,
+    "end": 57.17,
+    "duration_s": 9.74,
+    "effect": "slow drift from the inscription to the mirror",
+    "catalogue_ids": [
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "A painter does not usually sign ... what exactly was he witnessing",
+    "narration_words": "A painter does not usually sign his name like a witness. So who was he watching, and what exactly was he witnessing?"
+   },
+   {
+    "start": 57.17,
+    "end": 64.03,
+    "duration_s": 6.86,
+    "effect": "hold on matte: what we can see",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Over the next few minutes ... what we can see with our own eyes",
+    "narration_words": "Over the next few minutes we will look at this picture in three layers: what we can see with our own eyes,"
+   },
+   {
+    "start": 64.03,
+    "end": 67.29,
+    "duration_s": 3.26,
+    "effect": "hard cut to the joined hands: what the documents say",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "what the documents and historians actually tell us",
+    "narration_words": "what the documents and historians actually tell us,"
+   },
+   {
+    "start": 67.29,
+    "end": 74.31,
+    "duration_s": 7.02,
+    "effect": "hard cut to the mirror: how it might be read",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "and how all of that might be read, bearing in mind that no painting has ever held only one meaning",
+    "narration_words": "and how all of that might be read, bearing in mind that no painting has ever held only one meaning."
+   },
+   {
+    "start": 74.31,
+    "end": 77.21,
+    "duration_s": 2.9,
+    "effect": "title card (blurred artwork)",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "arnolfini_commons (blurred)",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "blur_sigma": 30,
+     "fade_in_s": 0.35
+    },
+    "synced_phrase": "",
+    "narration_words": ""
+   },
+   {
+    "start": 77.21,
+    "end": 80.01,
+    "duration_s": 2.8,
+    "effect": "chapter card",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "text": "THE MERCHANT CITY",
+     "bg": "black",
+     "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+     "y": "88 %"
+    },
+    "synced_phrase": "",
+    "narration_words": ""
+   },
+   {
+    "start": 80.01,
+    "end": 100.67,
+    "duration_s": 20.66,
+    "effect": "Bruges still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "bruges",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Grote_Markt_in_Brugge,_RP-P-1943-188.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Grote_Markt_in_Brugge%2C_RP-P-1943-188.jpg",
+     "licence": "CC0",
+     "author": "Rijksmuseum",
+     "size": "3320x2790"
+    },
+    "parameters": {
+     "hold_s": 20.66,
+     "overlays": [
+      {
+       "label": "Grote Markt, Bruges / Etching, Rijksmuseum",
+       "t": 80.61
+      }
+     ]
+    },
+    "synced_phrase": "To understand the couple ... Flanders",
+    "narration_words": "To understand the couple, we first have to understand their city. In the early fifteenth century, booming trade produced a new rung on the social ladder, a class of rich and powerful merchants, and nowhere were they more at home than Bruges, in Flanders, which is today part of northern Belgium."
+   },
+   {
+    "start": 100.67,
+    "end": 119.85,
+    "duration_s": 19.18,
+    "effect": "route map (procedural stand-in)",
+    "catalogue_ids": [
+     "AN-04",
+     "STATIC-06"
+    ],
+    "image": "procedural map (stand-in)",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "route_draw_s": 2.4
+    },
+    "synced_phrase": "",
+    "narration_words": "Bruges was an international crossroads, where wool, spices, silk and furs arrived from every direction, and where ambitious people came from across the known world to make their fortunes. One of those families came from Lucca, in Tuscany, and was called Arnolfini."
+   },
+   {
+    "start": 119.85,
+    "end": 133.46,
+    "duration_s": 13.61,
+    "effect": "back to the painting",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "As the merchants got richer",
+    "narration_words": "As the merchants got richer, their hunger for prestige grew with them, and the surest sign that you had arrived was to be painted, which in the 1430s meant being painted by one particular man."
+   },
+   {
+    "start": 133.46,
+    "end": 137.46,
+    "duration_s": 4.0,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "blue_cap",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_-_Man_in_a_Blue_Cap_(c.1430).jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Jan_van_Eyck_-_Man_in_a_Blue_Cap_%28c.1430%29.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4956x7442"
+    },
+    "parameters": {
+     "hold_s": 4.0,
+     "overlays": [
+      {
+       "label": "Man in a Blue Chaperon / Jan van Eyck, c.1430",
+       "t": 134.06
+      }
+     ]
+    },
+    "synced_phrase": "Jan van Eyck was a trailblazer ...",
+    "narration_words": "Jan van Eyck was a trailblazer of Northern Renaissance painting."
+   },
+   {
+    "start": 137.46,
+    "end": 147.23,
+    "duration_s": 9.77,
+    "effect": "back to the painting after the still",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Jan van Eyck was a trailblazer ...",
+    "narration_words": "In 1425 he took a post as painter to Philip the Good, the Duke of Burgundy, and by 1431 he had settled in Bruges,"
+   },
+   {
+    "start": 147.23,
+    "end": 151.55,
+    "duration_s": 4.32,
+    "effect": "Ghent still with zoom-and-shift (CAM-05)",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "ghent",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Lamgods_open.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Lamgods_open.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck / Presumably Hubert van Eyck",
+     "size": "6265x4581"
+    },
+    "parameters": {
+     "hold_s": 4.32,
+     "overlays": [
+      {
+       "label": "Ghent Altarpiece / Jan van Eyck, 1432",
+       "t": 147.83
+      }
+     ]
+    },
+    "synced_phrase": "where in 1432 he finished the enormous Ghent Altarpiece",
+    "narration_words": "where in 1432 he finished the enormous Ghent Altarpiece,"
+   },
+   {
+    "start": 151.55,
+    "end": 157.32,
+    "duration_s": 5.77,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "turban",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Portrait_of_a_Man_in_a_Turban_(Jan_van_Eyck).jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_of_a_Man_in_a_Turban_%28Jan_van_Eyck%29.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "2024x2746"
+    },
+    "parameters": {
+     "hold_s": 5.77,
+     "overlays": [
+      {
+       "label": "Man in a Red Turban / Jan van Eyck, 1433",
+       "t": 152.15
+      }
+     ]
+    },
+    "synced_phrase": "yet he kept accepting private clients",
+    "narration_words": "yet he kept accepting private clients, and portraits remained central to his career."
+   },
+   {
+    "start": 157.32,
+    "end": 167.73,
+    "duration_s": 10.41,
+    "effect": "status symbol: painting on matte",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "So a portrait by Van Eyck was far more than a likeness",
+    "narration_words": "So a portrait by Van Eyck was far more than a likeness. In that decade, no purchase announced your success more loudly."
+   },
+   {
+    "start": 167.73,
+    "end": 170.53,
+    "duration_s": 2.8,
+    "effect": "chapter card",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "text": "THE ARNOLFINIS",
+     "bg": "black",
+     "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+     "y": "88 %"
+    },
+    "synced_phrase": "",
+    "narration_words": ""
+   },
+   {
+    "start": 170.53,
+    "end": 190.39,
+    "duration_s": 19.86,
+    "effect": "name labels near the figures",
+    "catalogue_ids": [
+     "STATIC-08",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "text": "GIOVANNI DI NICOLAO ARNOLFINI (?)",
+       "t0": 175.39
+      },
+      {
+       "text": "COSTANZA TRENTA (?)",
+       "t0": 178.95
+      }
+     ]
+    },
+    "synced_phrase": "Who bought this one ... Costanza Trenta",
+    "narration_words": "Who bought this one? A surviving inventory entry points to a merchant named Giovanni di Nicolao Arnolfini, who had taken Costanza Trenta as his wife in 1426. His fortune came from silks and other luxury cloth, along with tapestries and precious objects."
+   },
+   {
+    "start": 190.39,
+    "end": 199.92,
+    "duration_s": 9.53,
+    "effect": "year captions on matte",
+    "catalogue_ids": [
+     "STATIC-09",
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "years": [
+        [
+         "1433",
+         326
+        ],
+        [
+         "1434",
+         1593
+        ]
+       ]
+      }
+     ]
+    },
+    "synced_phrase": "Costanza was dead by 1433 ... finished this panel",
+    "narration_words": "The marriage produced no recorded children, and Costanza was dead by 1433, a full year before Van Eyck finished this panel."
+   },
+   {
+    "start": 199.92,
+    "end": 209.31,
+    "duration_s": 9.39,
+    "effect": "matte hold, honest limits",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "We should be honest about the limits",
+    "narration_words": "We should be honest about the limits here. Other scholars name a different Arnolfini, or doubt that the woman can be identified at all,"
+   },
+   {
+    "start": 209.31,
+    "end": 213.31,
+    "duration_s": 4.0,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "giovanni_berlin",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_(um_1390-1400_-_1441)_-_Portrait_of_a_man_(from_the_Arnolfini_family^)_Around_1440_-_523A_-_Gemäldegalerie.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Jan_van_Eyck_%28um_1390-1400_-_1441%29_-_Portrait_of_a_man_%28from_the_Arnolfini_family%5E%29_Around_1440_-_523A_-_Gem%C3%A4ldegalerie.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "2872x4000"
+    },
+    "parameters": {
+     "hold_s": 4.0,
+     "overlays": [
+      {
+       "label": "Man in a Red Chaperon / Jan van Eyck, c.1438",
+       "t": 209.91
+      }
+     ]
+    },
+    "synced_phrase": "a separate portrait of a man from this family, now in Berlin; the names are probable, not proven",
+    "narration_words": "and Van Eyck painted a separate portrait of a man from this family, now"
+   },
+   {
+    "start": 213.31,
+    "end": 219.46,
+    "duration_s": 6.15,
+    "effect": "back to the painting after the still",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "a separate portrait of a man from this family, now in Berlin; the names are probable, not proven",
+    "narration_words": "in Berlin, a few years later. The names are probable, not proven."
+   },
+   {
+    "start": 219.46,
+    "end": 230.46,
+    "duration_s": 11.0,
+    "effect": "pan up the painting (CAM-04)",
+    "catalogue_ids": [
+     "CAM-04"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "pan": "legs to waist, linear, 11 s",
+     "overlays": []
+    },
+    "synced_phrase": "What is certain is how unusual the picture is",
+    "narration_words": "What is certain is how unusual the picture is. It shows two people who were neither royalty nor nobility, in their own home, at a time when almost"
+   },
+   {
+    "start": 230.46,
+    "end": 240.78,
+    "duration_s": 10.32,
+    "effect": "hard cut to the faces (TR-04)",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "two people who were neither royalty nor nobility, in their own home",
+    "narration_words": "every such picture was made for a court or a church. For many years the picture was read as a marriage portrait, a kind of visual contract"
+   },
+   {
+    "start": 240.78,
+    "end": 244.45,
+    "duration_s": 3.67,
+    "effect": "mirror spotlight: witnesses",
+    "catalogue_ids": [
+     "HI-01",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2220,
+         1790
+        ],
+        430,
+        430
+       ],
+       "t0": 241.08,
+       "t1": 244.45,
+       "floor": 0.2
+      }
+     ]
+    },
+    "synced_phrase": "with the figures in the mirror acting as witnesses",
+    "narration_words": "with the figures in the mirror acting as witnesses."
+   },
+   {
+    "start": 244.45,
+    "end": 255.66,
+    "duration_s": 11.21,
+    "effect": "memorial painting for Costanza: matte",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "But without any evidence ... more convincing of the two",
+    "narration_words": "But without any evidence that Giovanni remarried, a memorial to Costanza starts to look like the stronger reading, and I find that the more convincing of the two."
+   },
+   {
+    "start": 255.66,
+    "end": 264.61,
+    "duration_s": 8.95,
+    "effect": "dog detail with circle (AN-01) and label",
+    "catalogue_ids": [
+     "CAM-05",
+     "AN-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "ring": [
+        2098,
+        5446
+       ],
+       "r_src": 330,
+       "t0": 256.46,
+       "draw_s": 0.5,
+       "hold_s": 2.0,
+       "fade_s": 0.4
+      },
+      {
+       "label": "Dog at her feet",
+       "t": 256.66
+      }
+     ]
+    },
+    "synced_phrase": "Look down at the dog at her feet",
+    "narration_words": "Look down at the dog at her feet. In art, dogs usually stand for loyalty, and that may be all this one means."
+   },
+   {
+    "start": 264.61,
+    "end": 273.86,
+    "duration_s": 9.25,
+    "effect": "tomb still with push to the dog (CAM-05)",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "tomb",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Brügge-Liebfrauenkirche-Prunkgräber_DSC0166.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Br%C3%BCgge-Liebfrauenkirche-Prunkgr%C3%A4ber_DSC0166.jpg",
+     "licence": "Public domain",
+     "author": "Jacob Jonghelinck / Jan Borreman II (sculptors of the tombs, 1500s; the photograph is marked public domain on Commons)",
+     "size": "5171x3447"
+    },
+    "parameters": {
+     "hold_s": 9.25,
+     "overlays": [
+      {
+       "label": "Tomb of Mary of Burgundy, Bruges / Late 15th century",
+       "t": 265.21
+      }
+     ]
+    },
+    "synced_phrase": "Yet on late medieval tombs, sculptors often placed a dog by a woman's feet",
+    "narration_words": "Yet on late medieval tombs, sculptors often placed a dog by a woman's feet, because people believed it would go with her into the afterlife."
+   },
+   {
+    "start": 273.86,
+    "end": 289.08,
+    "duration_s": 15.22,
+    "effect": "push on Costanza's face: portraits of the dead",
+    "catalogue_ids": [
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Portraits of the dead were not unusual either",
+    "narration_words": "Portraits of the dead were not unusual either. Titian, Holbein and Bronzino each painted some, relying on death masks, drawings, descriptions or older likenesses to capture a face that was no longer there."
+   },
+   {
+    "start": 289.08,
+    "end": 296.34,
+    "duration_s": 7.26,
+    "effect": "pull-back to the matte",
+    "catalogue_ids": [
+     "CAM-03"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Whatever else it does, this double portrait ...",
+    "narration_words": "Whatever else it does, this double portrait pins a prosperous couple firmly to their place in society."
+   },
+   {
+    "start": 296.34,
+    "end": 299.14,
+    "duration_s": 2.8,
+    "effect": "chapter card",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "text": "FASHIONS AND FABRICS",
+     "bg": "black",
+     "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+     "y": "88 %"
+    },
+    "synced_phrase": "",
+    "narration_words": ""
+   },
+   {
+    "start": 299.14,
+    "end": 303.14,
+    "duration_s": 4.0,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "rogier",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Rogier_van_der_Weyden_-_Portrait_of_a_Woman_with_a_Winged_Bonnet_-_Google_Art_Project.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/9/98/Rogier_van_der_Weyden_-_Portrait_of_a_Woman_with_a_Winged_Bonnet_-_Google_Art_Project.jpg",
+     "licence": "Public domain",
+     "author": "Rogier van der Weyden",
+     "size": "4464x6645"
+    },
+    "parameters": {
+     "hold_s": 4.0,
+     "overlays": [
+      {
+       "label": "Portrait of a Woman / Rogier van der Weyden, c.1435",
+       "t": 299.74
+      }
+     ]
+    },
+    "synced_phrase": "Clothes shape identity, then as now",
+    "narration_words": "Clothes shape identity, then as now, and here every"
+   },
+   {
+    "start": 303.14,
+    "end": 321.93,
+    "duration_s": 18.79,
+    "effect": "matte to fill-width 1.59x/4.9 s ease-in (as ref), then push to the dress with label",
+    "catalogue_ids": [
+     "CAM-01",
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "ratio": 2.63,
+     "dur_s": 4.9,
+     "overlays": [
+      {
+       "label": "Green wool gown",
+       "t": 308.07
+      }
+     ]
+    },
+    "synced_phrase": "and here every thread is a statement ... that green dress",
+    "narration_words": "thread is a statement. What strikes you first about Costanza is that green dress, bunched up in her hand at the front. People took that for pregnancy, but artists of the time used exactly this pose to signal fertility, which was prized in a wife."
+   },
+   {
+    "start": 321.93,
+    "end": 336.6,
+    "duration_s": 14.67,
+    "effect": "long pan down the dress (CAM-04)",
+    "catalogue_ids": [
+     "CAM-04"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "pan": "linear, ~180 px/s ref",
+     "overlays": []
+    },
+    "synced_phrase": "The colour alone is an announcement",
+    "narration_words": "The colour alone is an announcement. To get wool that deep and even, a team of dyers had to labour for weeks, combining plants, herbs and imported spices in a long series of chemical steps."
+   },
+   {
+    "start": 336.6,
+    "end": 350.97,
+    "duration_s": 14.37,
+    "effect": "fur lining crop with label",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Miniver lining",
+       "t": 337.2
+      }
+     ]
+    },
+    "synced_phrase": "Now look at the lining ... two thousand",
+    "narration_words": "Now look at the lining. Inside, the gown is faced with the pale belly fur of squirrels, called miniver, and where an ordinary woman's gown took around six hundred pelts, one of this size took as many as two thousand."
+   },
+   {
+    "start": 350.97,
+    "end": 366.14,
+    "duration_s": 15.17,
+    "effect": "blue underdress with label",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Blue underdress",
+       "t": 352.17
+      }
+     ]
+    },
+    "synced_phrase": "Notice how carefully she handles blue",
+    "narration_words": "Notice how carefully she handles blue. Because blue was so costly, it belonged to the Virgin Mary, so Costanza shows just a flash of blue underdress beneath the fur, which signals money without boasting about it."
+   },
+   {
+    "start": 366.14,
+    "end": 374.61,
+    "duration_s": 8.47,
+    "effect": "Giovanni dressed with the same care",
+    "catalogue_ids": [
+     "CAM-05",
+     "TR-04"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Giovanni is dressed with the same care. His clothes are plum and black",
+    "narration_words": "Giovanni is dressed with the same care. His clothes are plum and black, dyed by an even pricier process than the green,"
+   },
+   {
+    "start": 374.61,
+    "end": 379.17,
+    "duration_s": 4.56,
+    "effect": "hat crop with label (hard cut)",
+    "catalogue_ids": [
+     "TR-04",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Straw hat",
+       "t": 374.91
+      }
+     ]
+    },
+    "synced_phrase": "his hat is straw, woven in tiny plaits",
+    "narration_words": "his hat is straw, woven in tiny plaits, the newest fashion out of Italy,"
+   },
+   {
+    "start": 379.17,
+    "end": 389.73,
+    "duration_s": 10.56,
+    "effect": "tabard crop with label (hard cut)",
+    "catalogue_ids": [
+     "TR-04",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Silk velvet tabard",
+       "t": 379.47
+      }
+     ]
+    },
+    "synced_phrase": "and his velvet tabard ... pine martens from Russia",
+    "narration_words": "and his velvet tabard, made from silk, nods to the weavers of his home city, and is lined with the pelts of roughly a hundred pine martens from Russia."
+   },
+   {
+    "start": 389.73,
+    "end": 395.68,
+    "duration_s": 5.95,
+    "effect": "boots crop",
+    "catalogue_ids": [
+     "CAM-05",
+     "TR-04"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "His boots are such supple leather",
+    "narration_words": "His boots are such supple leather that they show the outline of each foot."
+   },
+   {
+    "start": 395.68,
+    "end": 403.81,
+    "duration_s": 8.13,
+    "effect": "pattens with spotlight (HI-01) and label",
+    "catalogue_ids": [
+     "HI-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         310,
+         5420
+        ],
+        480,
+        300
+       ],
+       "t0": 396.28,
+       "t1": 405.81,
+       "floor": 0.2
+      },
+      {
+       "label": "Pattens",
+       "t": 396.48
+      }
+     ]
+    },
+    "synced_phrase": "the pointed overshoes called pattens",
+    "narration_words": "And in the lower left corner, you can spot the pointed overshoes called pattens, caked with mud from a recent walk."
+   },
+   {
+    "start": 403.81,
+    "end": 414.5,
+    "duration_s": 10.69,
+    "effect": "discarded shoes, a real room",
+    "catalogue_ids": [
+     "CAM-03"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "An abandoned pair of shoes ... a real day",
+    "narration_words": "An abandoned pair of shoes was often read as a symbol of a sacred moment. But they also remind us that this is a real room, on a real day."
+   },
+   {
+    "start": 414.5,
+    "end": 417.3,
+    "duration_s": 2.8,
+    "effect": "chapter card",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "text": "THE ROOM",
+     "bg": "black",
+     "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+     "y": "88 %"
+    },
+    "synced_phrase": "",
+    "narration_words": "The"
+   },
+   {
+    "start": 417.3,
+    "end": 429.44,
+    "duration_s": 12.14,
+    "effect": "the room: matte",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "The room will strike us as strange",
+    "narration_words": "room will strike us as strange, and it is. Everything in it was picked to signal comfort and rank, without seeming too grand for a merchant."
+   },
+   {
+    "start": 429.44,
+    "end": 437.22,
+    "duration_s": 7.78,
+    "effect": "pan up the bed (CAM-04) with label",
+    "catalogue_ids": [
+     "CAM-04",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Bed",
+       "t": 430.04
+      }
+     ]
+    },
+    "synced_phrase": "Look at the bed behind the couple",
+    "narration_words": "Look at the bed behind the couple. A bed suggests a bedroom, yet bedrooms were private, almost holy places,"
+   },
+   {
+    "start": 437.22,
+    "end": 441.22,
+    "duration_s": 4.0,
+    "effect": "mirror cut-in with spotlight: two visitors (HI-01, TR-04)",
+    "catalogue_ids": [
+     "HI-01",
+     "TR-04"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2220,
+         1790
+        ],
+        430,
+        430
+       ],
+       "t0": 437.22,
+       "t1": 441.02,
+       "floor": 0.2
+      }
+     ]
+    },
+    "synced_phrase": "and the mirror shows two visitors being welcomed in",
+    "narration_words": "and the mirror shows two visitors being welcomed in."
+   },
+   {
+    "start": 441.22,
+    "end": 448.8,
+    "duration_s": 7.58,
+    "effect": "back to the bed: a reception room",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-04"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "So this is a reception room ... purely to impress",
+    "narration_words": "So this is a reception room, where a costly bed stood on show and was never slept in, purely to impress."
+   },
+   {
+    "start": 448.8,
+    "end": 469.76,
+    "duration_s": 20.96,
+    "effect": "settle with circle on the carved creature (AN-01)",
+    "catalogue_ids": [
+     "CAM-05",
+     "AN-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Settle",
+       "t": 449.3
+      },
+      {
+       "ring": [
+        2553,
+        2300
+       ],
+       "r_src": 180,
+       "t0": 462.19,
+       "draw_s": 0.5,
+       "hold_s": 2.0,
+       "fade_s": 0.4
+      }
+     ]
+    },
+    "synced_phrase": "Further back is a bench called a settle",
+    "narration_words": "Further back is a bench called a settle, carved with grotesque creatures, with a red velvet cushion on top. Comfort was rare in those days, so a cushion counted as a luxury, and the carved monsters, thought to frighten off evil spirits, sit right above the couple's joined hands."
+   },
+   {
+    "start": 469.76,
+    "end": 483.2,
+    "duration_s": 13.44,
+    "effect": "chair and brush with circle",
+    "catalogue_ids": [
+     "CAM-05",
+     "AN-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Saint Martha",
+       "t": 474.75
+      },
+      {
+       "ring": [
+        2700,
+        1580
+       ],
+       "r_src": 190,
+       "t0": 479.23,
+       "draw_s": 0.5,
+       "hold_s": 2.0,
+       "fade_s": 0.4
+      }
+     ]
+    },
+    "synced_phrase": "a tall-backed chair, topped by a woman riding a dragon",
+    "narration_words": "Beside it stands a tall-backed chair, topped by a woman riding a dragon. That could be Saint Martha, patron saint of housewives, and the brush hanging nearby is her emblem."
+   },
+   {
+    "start": 483.2,
+    "end": 501.92,
+    "duration_s": 18.72,
+    "effect": "rug crop push with label",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Oriental carpet",
+       "t": 491.1
+      }
+     ]
+    },
+    "synced_phrase": "Now look at the floor ... oriental carpet",
+    "narration_words": "Now look at the floor. Van Eyck loved painting rugs, because they let him show off his command of texture and pattern, and this oriental carpet is beautifully done. Such rugs often appear in pictures of the Virgin Mary, so it may hint at Costanza's piety."
+   },
+   {
+    "start": 501.92,
+    "end": 516.38,
+    "duration_s": 14.46,
+    "effect": "split-screen comparison, slide-in, synchronous push-ins",
+    "catalogue_ids": [
+     "LAY-01",
+     "TR-02",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons + paele_commons",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "slide_s": 0.85,
+     "push_L": "0.1097->0.30",
+     "push_R": "0.228->0.55"
+    },
+    "synced_phrase": "",
+    "narration_words": "Set it beside the carpet in the altarpiece he painted for Canon van der Paele, finished the very same year. The same patient looking runs through both, down to the way light settles in the pile."
+   },
+   {
+    "start": 516.38,
+    "end": 531.45,
+    "duration_s": 15.07,
+    "effect": "amber beads crop with label",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Amber prayer beads",
+       "t": 517.18
+      }
+     ]
+    },
+    "synced_phrase": "Beside the mirror hangs a string of amber prayer beads",
+    "narration_words": "Beside the mirror hangs a string of amber prayer beads, the sort of present a groom gave his bride, and each bead holds its own highlight, with a green silk thread, probably laid in with a one-hair brush, running through them."
+   },
+   {
+    "start": 531.45,
+    "end": 543.19,
+    "duration_s": 11.74,
+    "effect": "window pan down to the oranges (CAM-04)",
+    "catalogue_ids": [
+     "CAM-04",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Oranges",
+       "t": 537.52
+      },
+      {
+       "ring": [
+        430,
+        3200
+       ],
+       "r_src": 190,
+       "t0": 537.82,
+       "draw_s": 0.5,
+       "hold_s": 3.0,
+       "fade_s": 0.4
+      }
+     ]
+    },
+    "synced_phrase": "Finally, let your eye drift to the window",
+    "narration_words": "Finally, let your eye drift to the window. Glass was expensive, and the oranges on the sill were imports that only the very rich could buy."
+   },
+   {
+    "start": 543.19,
+    "end": 554.77,
+    "duration_s": 11.58,
+    "effect": "circle on the single orange (AN-01)",
+    "catalogue_ids": [
+     "AN-01",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "ring": [
+        470,
+        2704
+       ],
+       "r_src": 130,
+       "t0": 543.59,
+       "draw_s": 0.5,
+       "hold_s": 3.4,
+       "fade_s": 0.4
+      }
+     ]
+    },
+    "synced_phrase": "Study the single orange ... still life",
+    "narration_words": "Study the single orange, and you will find that it throws a shadow and is mirrored by the windowpane, a perfect still life painted before anyone thought of still life as a subject."
+   },
+   {
+    "start": 554.77,
+    "end": 557.57,
+    "duration_s": 2.8,
+    "effect": "chapter card",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "text": "THE MIRROR",
+     "bg": "black",
+     "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+     "y": "88 %"
+    },
+    "synced_phrase": "",
+    "narration_words": ""
+   },
+   {
+    "start": 557.57,
+    "end": 572.63,
+    "duration_s": 15.06,
+    "effect": "mirror push 3.57x/11 s ease-in-out then drift; spotlight floor 0.20",
+    "catalogue_ids": [
+     "CAM-05",
+     "HI-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "ratio": 3.57,
+     "dur_s": 11,
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2220,
+         1790
+        ],
+        440,
+        440
+       ],
+       "t0": 561.46,
+       "t1": 572.63,
+       "floor": 0.2
+      }
+     ]
+    },
+    "synced_phrase": "And now to the most intriguing object ... glass mirrors were high technology",
+    "narration_words": "And now to the most intriguing object in the picture. The mirror pulls the whole room together, adding depth and life to an otherwise quiet scene. In the fifteenth century glass mirrors were high technology,"
+   },
+   {
+    "start": 572.63,
+    "end": 576.63,
+    "duration_s": 4.0,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "matsys",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Massysm_Quentin_—_The_Moneylender_and_his_Wife_—_1514.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/6/64/Massysm_Quentin_%E2%80%94_The_Moneylender_and_his_Wife_%E2%80%94_1514.jpg",
+     "licence": "Public domain",
+     "author": "Quinten Metsys",
+     "size": "1680x1581"
+    },
+    "parameters": {
+     "hold_s": 4.0,
+     "overlays": [
+      {
+       "label": "The Moneylender and his Wife / Quentin Massys, 1514",
+       "t": 573.23
+      }
+     ]
+    },
+    "synced_phrase": "usually convex (a later convex mirror)",
+    "narration_words": "and they were usually convex, like this one. But a mirror"
+   },
+   {
+    "start": 576.63,
+    "end": 583.13,
+    "duration_s": 6.5,
+    "effect": "convex mirror optical diagram (stand-in)",
+    "catalogue_ids": [
+     "DIA-07"
+    ],
+    "image": "procedural diagram",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {},
+    "synced_phrase": "",
+    "narration_words": "so wide could not actually be made then, so Van Eyck simply enlarged it."
+   },
+   {
+    "start": 583.13,
+    "end": 603.09,
+    "duration_s": 19.96,
+    "effect": "push into the reflection with label",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "zoom": "to 2.7",
+     "overlays": [
+      {
+       "label": "Reflection",
+       "t": 584.13
+      }
+     ]
+    },
+    "synced_phrase": "Look closely at the reflection",
+    "narration_words": "Look closely at the reflection. There is the couple, seen from the back, and two more people stepping through a doorway that must lie on our side of the picture. One of them, dressed in blue, is sometimes said to be Van Eyck, though nobody can prove it, and the other could stand for us."
+   },
+   {
+    "start": 603.09,
+    "end": 613.72,
+    "duration_s": 10.63,
+    "effect": "pull out of reflection: purity",
+    "catalogue_ids": [
+     "CAM-03"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Mirrors were also used in art to suggest purity",
+    "narration_words": "Mirrors were also used in art to suggest purity, since a clean surface shows the truth, so this one may be there to underline the sanctity of the union."
+   },
+   {
+    "start": 613.72,
+    "end": 627.99,
+    "duration_s": 14.27,
+    "effect": "frame crop with two circles on roundels (AN-01)",
+    "catalogue_ids": [
+     "AN-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Passion roundels",
+       "t": 614.12
+      },
+      {
+       "ring": [
+        2474,
+        1690
+       ],
+       "r_src": 82,
+       "t0": 616.04,
+       "draw_s": 0.5,
+       "hold_s": 2.6,
+       "fade_s": 0.4
+      },
+      {
+       "ring": [
+        2466,
+        1870
+       ],
+       "r_src": 82,
+       "t0": 616.04,
+       "draw_s": 0.5,
+       "hold_s": 2.6,
+       "fade_s": 0.4
+      }
+     ]
+    },
+    "synced_phrase": "Now notice the frame. Ten tiny roundels",
+    "narration_words": "Now notice the frame. Ten tiny roundels, picturing the suffering and rising of Christ, are the picture's only explicit religious references, and even at that size the detail is remarkable."
+   },
+   {
+    "start": 627.99,
+    "end": 643.82,
+    "duration_s": 15.83,
+    "effect": "spotlight on Costanza's half of the ring (HI-01)",
+    "catalogue_ids": [
+     "HI-01",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2435,
+         1790
+        ],
+        250,
+        420
+       ],
+       "t0": 629.95,
+       "t1": 643.72,
+       "floor": 0.2
+      }
+     ]
+    },
+    "synced_phrase": "Their positions matter. Every episode ... beside Costanza",
+    "narration_words": "Their positions matter. Every episode that comes after the death of Christ is placed beside Costanza: he is lifted from the cross, laid in the tomb, rises again, and descends to free the souls waiting in limbo."
+   },
+   {
+    "start": 643.82,
+    "end": 666.44,
+    "duration_s": 22.62,
+    "effect": "chandelier: circles on the lit and the snuffed-out candle (AN-01), push then drift",
+    "catalogue_ids": [
+     "AN-01",
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "label": "Chandelier",
+       "t": 644.32
+      },
+      {
+       "ring": [
+        1856,
+        420
+       ],
+       "r_src": 215,
+       "t0": 649.41,
+       "draw_s": 0.5,
+       "hold_s": 3.0,
+       "fade_s": 0.4
+      },
+      {
+       "ring": [
+        2490,
+        500
+       ],
+       "r_src": 215,
+       "t0": 650.93,
+       "draw_s": 0.5,
+       "hold_s": 3.0,
+       "fade_s": 0.4
+      }
+     ]
+    },
+    "synced_phrase": "And one more detail ... one candle is lit and another has been snuffed out",
+    "narration_words": "And one more detail, from the chandelier above. Up in the chandelier, one candle is lit and another has been snuffed out, the dead one hanging above Costanza. Some read the flame as the eye of God, or as a wedding custom, but if you accept the memorial theory, it contrasts the living with the dead."
+   },
+   {
+    "start": 666.44,
+    "end": 669.24,
+    "duration_s": 2.8,
+    "effect": "chapter card",
+    "catalogue_ids": [
+     "TXT-01"
+    ],
+    "image": "",
+    "image_source": {
+     "note": "generated in code (no external image)"
+    },
+    "parameters": {
+     "text": "THE ALCHEMIST",
+     "bg": "black",
+     "pop": "0.1 s at +0.2 s, leaves at +1.7 s",
+     "y": "88 %"
+    },
+    "synced_phrase": "",
+    "narration_words": ""
+   },
+   {
+    "start": 669.24,
+    "end": 678.28,
+    "duration_s": 9.04,
+    "effect": "one single meaning would be reckless: matte",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "Saying that a painting has one single meaning would be reckless",
+    "narration_words": "Saying that a painting has one single meaning would be reckless, but a handful of clues do lean towards the memorial interpretation,"
+   },
+   {
+    "start": 678.28,
+    "end": 680.58,
+    "duration_s": 2.3,
+    "effect": "clue: the dog (hard cut)",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "starting with the dog by her skirt",
+    "narration_words": "starting with the dog by her skirt,"
+   },
+   {
+    "start": 680.58,
+    "end": 683.52,
+    "duration_s": 2.94,
+    "effect": "clue: roundels on her side",
+    "catalogue_ids": [
+     "TR-04",
+     "HI-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2435,
+         1790
+        ],
+        250,
+        420
+       ],
+       "t0": 680.68,
+       "t1": 683.42,
+       "floor": 0.2
+      }
+     ]
+    },
+    "synced_phrase": "then the small scenes on her half of the frame",
+    "narration_words": "then the small scenes on her half of the frame,"
+   },
+   {
+    "start": 683.52,
+    "end": 691.86,
+    "duration_s": 8.34,
+    "effect": "clue: dark clothes (hard cut)",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "and the chance that he is wearing mourning clothes",
+    "narration_words": "and the chance that he is wearing mourning clothes, though dark, costly cloth was also simply fashionable."
+   },
+   {
+    "start": 691.86,
+    "end": 703.78,
+    "duration_s": 11.92,
+    "effect": "push to the joined hands with spotlight (HI-01), floor 0.20",
+    "catalogue_ids": [
+     "CAM-05",
+     "HI-01",
+     "STATIC-02"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2420,
+         2540
+        ],
+        360,
+        270
+       ],
+       "t0": 696.81,
+       "t1": 707.78,
+       "floor": 0.2
+      },
+      {
+       "label": "Joined hands",
+       "t": 697.11
+      }
+     ]
+    },
+    "synced_phrase": "Yet the strongest hint is the way Giovanni takes her hand",
+    "narration_words": "Yet the strongest hint is the way Giovanni takes her hand. Look at the joined hands, and notice how light the grip is, as if she might at any moment slip out of his grasp."
+   },
+   {
+    "start": 703.78,
+    "end": 716.74,
+    "duration_s": 12.96,
+    "effect": "hands: both readings at once",
+    "catalogue_ids": [
+     "HI-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": [
+      {
+       "spotlight": [
+        [
+         2420,
+         2540
+        ],
+        360,
+        270
+       ],
+       "t0": 702.78,
+       "t1": 716.54,
+       "floor": 0.2
+      }
+     ]
+    },
+    "synced_phrase": "Then again, the same gesture has been read as a wedding vow",
+    "narration_words": "Then again, the same gesture has been read as a wedding vow. The painting can carry both readings at once, and perhaps that is why it still keeps us looking."
+   },
+   {
+    "start": 716.74,
+    "end": 728.81,
+    "duration_s": 12.07,
+    "effect": "step into the mirrored world: push (CAM-05)",
+    "catalogue_ids": [
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "The real marvel is how Van Eyck handles space",
+    "narration_words": "The real marvel is how Van Eyck handles space, depth, colour and texture, so that we feel we could step through the flat wooden panel into a mirrored world."
+   },
+   {
+    "start": 728.81,
+    "end": 732.81,
+    "duration_s": 4.0,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "turban",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Portrait_of_a_Man_in_a_Turban_(Jan_van_Eyck).jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_of_a_Man_in_a_Turban_%28Jan_van_Eyck%29.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "2024x2746"
+    },
+    "parameters": {
+     "hold_s": 4.0,
+     "overlays": [
+      {
+       "label": "Man in a Red Turban / Jan van Eyck, 1433",
+       "t": 729.41
+      }
+     ]
+    },
+    "synced_phrase": "His contemporaries called him an alchemist",
+    "narration_words": "His contemporaries called him an alchemist, and although he did not invent"
+   },
+   {
+    "start": 732.81,
+    "end": 739.0,
+    "duration_s": 6.19,
+    "effect": "back to the painting after the still",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "His contemporaries called him an alchemist",
+    "narration_words": "oil painting, as early writers believed, he certainly improved it."
+   },
+   {
+    "start": 739.0,
+    "end": 745.94,
+    "duration_s": 6.94,
+    "effect": "glaze crop on Costanza's veil and face: thin layers",
+    "catalogue_ids": [
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "He knew that some pigments turn almost transparent in oil",
+    "narration_words": "He knew that some pigments turn almost transparent in oil, so he built the picture from many thin layers,"
+   },
+   {
+    "start": 745.94,
+    "end": 756.11,
+    "duration_s": 10.17,
+    "effect": "hard cut: the smooth surface of the dress (TR-04)",
+    "catalogue_ids": [
+     "TR-04",
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "which gives it a glow, and a surface so smooth that it looks untouched",
+    "narration_words": "which gives it a glow, and a surface so smooth that it looks untouched. Technical studies show that in places the paint went on quite freely,"
+   },
+   {
+    "start": 756.11,
+    "end": 759.62,
+    "duration_s": 3.51,
+    "effect": "close on the dog's shadow (thumbprint)",
+    "catalogue_ids": [
+     "CAM-05"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "and there is even a thumbprint close to the dog's shadow",
+    "narration_words": "and there is even a thumbprint close to the dog's shadow."
+   },
+   {
+    "start": 759.62,
+    "end": 769.29,
+    "duration_s": 9.67,
+    "effect": "his reach: matte",
+    "catalogue_ids": [
+     "STATIC-01"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "overlays": []
+    },
+    "synced_phrase": "His reach extended far past the Low Countries",
+    "narration_words": "His reach extended far past the Low Countries, with patrons in England, France and Portugal. He inspired artists from"
+   },
+   {
+    "start": 769.29,
+    "end": 774.15,
+    "duration_s": 4.86,
+    "effect": "context still (two-line label)",
+    "catalogue_ids": [
+     "STATIC-02",
+     "TR-04"
+    ],
+    "image": "durer",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Albrecht_Dürer_-_1500_self-portrait_(High_resolution_and_detail).jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/d/dc/Albrecht_D%C3%BCrer_-_1500_self-portrait_%28High_resolution_and_detail%29.jpg",
+     "licence": "Public domain",
+     "author": "Albrecht Dürer",
+     "size": "4130x5710"
+    },
+    "parameters": {
+     "hold_s": 4.86,
+     "overlays": [
+      {
+       "label": "Self-Portrait / Albrecht Dürer, 1500",
+       "t": 769.89
+      }
+     ]
+    },
+    "synced_phrase": "Albrecht Durer, whose self-portrait of 1500 shares that direct gaze",
+    "narration_words": "Albrecht Durer, whose self-portrait of 1500 shares that direct gaze,"
+   },
+   {
+    "start": 774.15,
+    "end": 781.53,
+    "duration_s": 7.38,
+    "effect": "Las Meninas with push to its mirror (CAM-05)",
+    "catalogue_ids": [
+     "CAM-05",
+     "STATIC-02"
+    ],
+    "image": "meninas",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Las_Meninas_(1656),_by_Velazquez.jpg",
+     "download_url": "https://upload.wikimedia.org/wikipedia/commons/f/f8/Las_Meninas_%281656%29%2C_by_Velazquez.jpg",
+     "licence": "Public domain",
+     "author": "",
+     "size": "3475x4000"
+    },
+    "parameters": {
+     "hold_s": 4.08,
+     "overlays": [
+      {
+       "label": "Las Meninas / Diego Velázquez, 1656",
+       "t": 774.75
+      }
+     ]
+    },
+    "synced_phrase": "Velazquez, whose Las Meninas has its own mirror at the back",
+    "narration_words": "to Velazquez, whose Las Meninas has its own mirror at the back, and on to the Pre-Raphaelites."
+   },
+   {
+    "start": 781.53,
+    "end": 820.833,
+    "duration_s": 39.3,
+    "effect": "closing: recap labels (plain text, no strip) and 5.8x/40 s ease-out pull-out",
+    "catalogue_ids": [
+     "CAM-03",
+     "STATIC-01",
+     "STATIC-08"
+    ],
+    "image": "arnolfini_commons",
+    "image_source": {
+     "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+     "licence": "Public domain",
+     "author": "Jan van Eyck",
+     "size": "4386x6000"
+    },
+    "parameters": {
+     "ratio": 5.8,
+     "dur_s": 40,
+     "ease": "out_quad",
+     "overlays": [
+      {
+       "text": "DOG",
+       "t0": 800.26
+      },
+      {
+       "text": "ROUNDELS",
+       "t0": 801.14
+      },
+      {
+       "text": "CANDLE",
+       "t0": 802.18
+      },
+      {
+       "text": "MOURNING DRESS?",
+       "t0": 803.02
+      }
+     ]
+    },
+    "synced_phrase": "So let us return ... so that we would know",
+    "narration_words": "So let us return to the question we started with. Is this a wedding portrait of a pregnant bride? Almost certainly not. It may record a marriage, it may be a memorial, and perhaps it is a little of both, but if we follow the clues the painter left us, the dog, the roundels, the candle, the dark clothes and the grip of a hand, it begins to look like something deeper, a portrait of a love that outlasts death. And the man who was there to witness it signed his name above the mirror, so that we would know."
+   }
+  ]
+ },
+ "sources": {
+  "arnolfini_commons": {
+   "url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+   "licence": "Public domain",
+   "author": "Jan van Eyck",
+   "size": "4386x6000"
+  },
+  "paele_commons": {
+   "url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_069.jpg",
+   "licence": "Public domain",
+   "author": "Jan van Eyck",
+   "size": "4169x3249"
+  },
+  "ghent": {
+   "url": "https://commons.wikimedia.org/wiki/File:Lamgods_open.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/8/8c/Lamgods_open.jpg",
+   "licence": "Public domain",
+   "author": "Jan van Eyck / Presumably Hubert van Eyck",
+   "size": "6265x4581"
+  },
+  "giovanni_berlin": {
+   "url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_(um_1390-1400_-_1441)_-_Portrait_of_a_man_(from_the_Arnolfini_family^)_Around_1440_-_523A_-_Gemäldegalerie.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Jan_van_Eyck_%28um_1390-1400_-_1441%29_-_Portrait_of_a_man_%28from_the_Arnolfini_family%5E%29_Around_1440_-_523A_-_Gem%C3%A4ldegalerie.jpg",
+   "licence": "Public domain",
+   "author": "Jan van Eyck",
+   "size": "2872x4000"
+  },
+  "durer": {
+   "url": "https://commons.wikimedia.org/wiki/File:Albrecht_Dürer_-_1500_self-portrait_(High_resolution_and_detail).jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/d/dc/Albrecht_D%C3%BCrer_-_1500_self-portrait_%28High_resolution_and_detail%29.jpg",
+   "licence": "Public domain",
+   "author": "Albrecht Dürer",
+   "size": "4130x5710"
+  },
+  "meninas": {
+   "url": "https://commons.wikimedia.org/wiki/File:Las_Meninas_(1656),_by_Velazquez.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/f/f8/Las_Meninas_%281656%29%2C_by_Velazquez.jpg",
+   "licence": "Public domain",
+   "author": "",
+   "size": "3475x4000"
+  },
+  "blue_cap": {
+   "url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_-_Man_in_a_Blue_Cap_(c.1430).jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/c/cd/Jan_van_Eyck_-_Man_in_a_Blue_Cap_%28c.1430%29.jpg",
+   "licence": "Public domain",
+   "author": "Jan van Eyck",
+   "size": "4956x7442"
+  },
+  "turban": {
+   "url": "https://commons.wikimedia.org/wiki/File:Portrait_of_a_Man_in_a_Turban_(Jan_van_Eyck).jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/2/26/Portrait_of_a_Man_in_a_Turban_%28Jan_van_Eyck%29.jpg",
+   "licence": "Public domain",
+   "author": "Jan van Eyck",
+   "size": "2024x2746"
+  },
+  "rogier": {
+   "url": "https://commons.wikimedia.org/wiki/File:Rogier_van_der_Weyden_-_Portrait_of_a_Woman_with_a_Winged_Bonnet_-_Google_Art_Project.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/9/98/Rogier_van_der_Weyden_-_Portrait_of_a_Woman_with_a_Winged_Bonnet_-_Google_Art_Project.jpg",
+   "licence": "Public domain",
+   "author": "Rogier van der Weyden",
+   "size": "4464x6645"
+  },
+  "matsys": {
+   "url": "https://commons.wikimedia.org/wiki/File:Massysm_Quentin_—_The_Moneylender_and_his_Wife_—_1514.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/6/64/Massysm_Quentin_%E2%80%94_The_Moneylender_and_his_Wife_%E2%80%94_1514.jpg",
+   "licence": "Public domain",
+   "author": "Quinten Metsys",
+   "size": "1680x1581"
+  },
+  "bruges": {
+   "url": "https://commons.wikimedia.org/wiki/File:Grote_Markt_in_Brugge,_RP-P-1943-188.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/b/b8/Grote_Markt_in_Brugge%2C_RP-P-1943-188.jpg",
+   "licence": "CC0",
+   "author": "Rijksmuseum",
+   "size": "3320x2790"
+  },
+  "tomb": {
+   "url": "https://commons.wikimedia.org/wiki/File:Brügge-Liebfrauenkirche-Prunkgräber_DSC0166.jpg",
+   "download_url": "https://upload.wikimedia.org/wikipedia/commons/e/ef/Br%C3%BCgge-Liebfrauenkirche-Prunkgr%C3%A4ber_DSC0166.jpg",
+   "licence": "Public domain",
+   "author": "Jacob Jonghelinck / Jan Borreman II (sculptors of the tombs, 1500s; the photograph is marked public domain on Commons)",
+   "size": "5171x3447"
+  }
+ },
+ "music": "numpy-synthesised pad + low-passed noise room tone generated on the server by v2/server/audio_job2.py; no external file",
+ "voice": {
+  "engine": "local Chatterbox via stages.stage_4.chatterbox_tts.synthesize",
+  "reference": "machiavelli_ref.wav",
+  "settings": "exaggeration 0.35, cfg_weight 0.5, temperature 0.7 (module default), seed 42",
+  "jobs": 3
+ }
+}

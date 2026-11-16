@@ -1,0 +1,2646 @@
+{
+ "LAY-02": {
+  "params": [
+   {
+    "name": "tile_w_px",
+    "type": "number",
+    "default": 930,
+    "min": 100,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "tile_h_px",
+    "type": "number",
+    "default": 520,
+    "min": 100,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "margin_x_px",
+    "type": "number",
+    "default": 20,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "margin_y_px",
+    "type": "number",
+    "default": 15,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "gap_x_px",
+    "type": "number",
+    "default": 20,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "gap_y_px",
+    "type": "number",
+    "default": 10,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "default": "#0a0a0a",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stagger_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_1",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_2",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_3",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_4",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "connectors",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "connector_mode",
+    "type": "enum",
+    "default": "frame",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "frame",
+     "cross",
+     "all"
+    ],
+    "measured": null
+   },
+   {
+    "name": "connector_delay_s",
+    "type": "number",
+    "default": 1.8,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "connector_draw_s",
+    "type": "number",
+    "default": 1.2,
+    "min": 0,
+    "max": 4,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "connector_color",
+    "type": "color",
+    "default": "#f5f5f5",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "connector_px",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "tile_1",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "tile_2",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "tile_3",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "tile_4",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.FourGrid",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay02); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 63.5,
+   "reel_end": 69.0,
+   "clip": "previews/LAY-02.mp4",
+   "thumb": "previews/LAY-02.jpg"
+  }
+ },
+ "LAY-03": {
+  "params": [
+   {
+    "name": "columns",
+    "type": "number",
+    "default": 5,
+    "min": 2,
+    "max": 6,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "col_w_px",
+    "type": "number",
+    "default": 360,
+    "min": 100,
+    "max": 960,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "col_h_px",
+    "type": "number",
+    "default": 1000,
+    "min": 200,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "gap_px",
+    "type": "number",
+    "default": 24,
+    "min": 0,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "y_px",
+    "type": "number",
+    "default": 40,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "default": "#080808",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fit",
+    "type": "enum",
+    "default": "cover",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "cover",
+     "contain",
+     "stretch"
+    ],
+    "measured": null
+   },
+   {
+    "name": "stagger_s",
+    "type": "number",
+    "default": 0.25,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.35,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "treatment_1",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   },
+   {
+    "name": "treatment_2",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   },
+   {
+    "name": "treatment_3",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   },
+   {
+    "name": "treatment_4",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   },
+   {
+    "name": "treatment_5",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   },
+   {
+    "name": "treatment_6",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "tile_1",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "tile_2",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "tile_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_6",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.Columns",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay03); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 69.0,
+   "reel_end": 74.0,
+   "clip": "previews/LAY-03.mp4",
+   "thumb": "previews/LAY-03.jpg"
+  }
+ },
+ "LAY-04": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_w_px",
+    "type": "number",
+    "default": 560,
+    "min": 200,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_h_px",
+    "type": "number",
+    "default": 315,
+    "min": 100,
+    "max": 800,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_corner",
+    "type": "enum",
+    "default": "top_right",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "top_left",
+     "top_right",
+     "bottom_left",
+     "bottom_right"
+    ],
+    "measured": null
+   },
+   {
+    "name": "margin_x_px",
+    "type": "number",
+    "default": 70,
+    "min": 0,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "margin_y_px",
+    "type": "number",
+    "default": 60,
+    "min": 0,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_push",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inset_push_pct",
+    "type": "number",
+    "default": 35,
+    "min": 0,
+    "max": 200,
+    "unit": "%",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "video_offset_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 3600,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "border_px",
+    "type": "number",
+    "default": 4,
+    "min": 0,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "border_color",
+    "type": "color",
+    "default": "#f0f0f0",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "border_fades",
+    "type": "bool",
+    "default": false,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "inset",
+    "type": "video",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.InsetWindow",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay04); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 74.0,
+   "reel_end": 79.5,
+   "clip": "previews/LAY-04.mp4",
+   "thumb": "previews/LAY-04.jpg"
+  }
+ },
+ "LAY-05": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "seconds_per_background",
+    "type": "number",
+    "default": 1.5,
+    "min": 0.5,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dissolve_frac",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.05,
+    "max": 1.0,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background_dim",
+    "type": "number",
+    "default": 0.55,
+    "min": 0,
+    "max": 1,
+    "unit": "factor",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_bg_1",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_bg_2",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_bg_3",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_bg_4",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "background_1",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "background_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "background_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "background_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.HeldSubject",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay05); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 79.5,
+   "reel_end": 85.5,
+   "clip": "previews/LAY-05.mp4",
+   "thumb": "previews/LAY-05.jpg"
+  }
+ },
+ "LAY-06": {
+  "params": [
+   {
+    "name": "camera_base",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "base_mix",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 1,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_count",
+    "type": "number",
+    "default": 6,
+    "min": 2,
+    "max": 10,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_opacity",
+    "type": "number",
+    "default": 0.72,
+    "min": 0.2,
+    "max": 1.0,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_w_px",
+    "type": "number",
+    "default": 260,
+    "min": 60,
+    "max": 800,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "spacing_px",
+    "type": "number",
+    "default": 330,
+    "min": 0,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sway_px",
+    "type": "number",
+    "default": 120,
+    "min": 0,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sway_rate",
+    "type": "number",
+    "default": 0.9,
+    "min": 0,
+    "max": 10,
+    "unit": "rad/s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_start",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_step",
+    "type": "point",
+    "default": [
+     0,
+     0
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_zoom",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.02,
+    "max": 10,
+    "unit": "zoom",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom_wobble",
+    "type": "number",
+    "default": 0.1,
+    "min": 0,
+    "max": 1,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stagger_s",
+    "type": "number",
+    "default": 0.15,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "background",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.VerticalStrips",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay06); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 85.5,
+   "reel_end": 91.0,
+   "clip": "previews/LAY-06.mp4",
+   "thumb": "previews/LAY-06.jpg"
+  }
+ },
+ "LAY-07": {
+  "params": [
+   {
+    "name": "columns",
+    "type": "number",
+    "default": 2,
+    "min": 1,
+    "max": 4,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "default": "#0a0a0a",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_1",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_2",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_3",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_4",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_5",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera_6",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "object_camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "overlay_opacity",
+    "type": "number",
+    "default": 0.55,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "overlay_delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "overlay_fade_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "object_radius_px",
+    "type": "number",
+    "default": 360,
+    "min": 50,
+    "max": 1200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "object_feather_px",
+    "type": "number",
+    "default": 40,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "object_wobble",
+    "type": "number",
+    "default": 0.1,
+    "min": 0,
+    "max": 2,
+    "unit": "zoom",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "object_wobble_rate",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "rad/s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "tile_1",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "tile_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "tile_6",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "object",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.GridWithObject",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay07); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 91.0,
+   "reel_end": 96.5,
+   "clip": "previews/LAY-07.mp4",
+   "thumb": "previews/LAY-07.jpg"
+  }
+ },
+ "LAY-08": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "tiles",
+    "type": "string",
+    "default": "4x2",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "mirror",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom_wobble",
+    "type": "number",
+    "default": 0.06,
+    "min": 0,
+    "max": 1,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "wobble_rate",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "rad/s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.layouts_grid.MirroredMotif",
+   "reason": null,
+   "notes": "Ported from build_reel.py (lay08); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 96.5,
+   "reel_end": 101.5,
+   "clip": "previews/LAY-08.mp4",
+   "thumb": "previews/LAY-08.jpg"
+  }
+ },
+ "CMP-01": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_w_px",
+    "type": "number",
+    "default": 930,
+    "min": 100,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_h_px",
+    "type": "number",
+    "default": 800,
+    "min": 100,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_y_px",
+    "type": "number",
+    "default": 140,
+    "min": 0,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "left_x_px",
+    "type": "number",
+    "default": 20,
+    "min": 0,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "right_x_px",
+    "type": "number",
+    "default": 970,
+    "min": 0,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "colour_delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "colour_fade_s",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "caption_left",
+    "type": "string",
+    "default": "GREYSCALE",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "caption_right",
+    "type": "string",
+    "default": "COLOUR",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "caption_y_px",
+    "type": "number",
+    "default": 1000,
+    "min": 0,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "colour",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "grey",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.GreyToColour",
+   "reason": null,
+   "notes": "Ported from build_reel.py (cmp01); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 257.0,
+   "reel_end": 262.0,
+   "clip": "previews/CMP-01.mp4",
+   "thumb": "previews/CMP-01.jpg"
+  }
+ },
+ "CMP-02": {
+  "params": [
+   {
+    "name": "stages",
+    "type": "number",
+    "default": 3,
+    "min": 2,
+    "max": 6,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "finished_camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "finished_box",
+    "type": "box",
+    "default": [
+     520,
+     40,
+     1520,
+     1040
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_size_px",
+    "type": "number",
+    "default": 320,
+    "min": 60,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_pitch_px",
+    "type": "number",
+    "default": 340,
+    "min": 60,
+    "max": 700,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_x_px",
+    "type": "number",
+    "default": 80,
+    "min": 0,
+    "max": 1600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_y_px",
+    "type": "number",
+    "default": 40,
+    "min": 0,
+    "max": 800,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_delay_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_step_s",
+    "type": "number",
+    "default": 0.9,
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_fade_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "derive_px",
+    "type": "number",
+    "default": 600,
+    "min": 100,
+    "max": 1200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_blur",
+    "type": "string",
+    "default": "14,5,0",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_grey",
+    "type": "string",
+    "default": "1,0,0",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stage_gain",
+    "type": "string",
+    "default": "0.9,1,1",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "finished",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "stage_1",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "stage_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "stage_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "stage_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "stage_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "stage_6",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.StagesVsFinished",
+   "reason": null,
+   "notes": "Ported from build_reel.py (cmp02); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 262.0,
+   "reel_end": 268.0,
+   "clip": "previews/CMP-02.mp4",
+   "thumb": "previews/CMP-02.jpg"
+  }
+ },
+ "CMP-03": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "versions",
+    "type": "string",
+    "default": "white,sepia,colour",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_w_px",
+    "type": "number",
+    "default": 610,
+    "min": 100,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_h_px",
+    "type": "number",
+    "default": 900,
+    "min": 100,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_y_px",
+    "type": "number",
+    "default": 90,
+    "min": 0,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "x0_px",
+    "type": "number",
+    "default": 60,
+    "min": 0,
+    "max": 1800,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pitch_px",
+    "type": "number",
+    "default": 620,
+    "min": 100,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "delay_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "step_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "version_1",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "version_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "version_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "version_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "version_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.ColourVersions",
+   "reason": null,
+   "notes": "Ported from build_reel.py (cmp03); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 268.0,
+   "reel_end": 273.5,
+   "clip": "previews/CMP-03.mp4",
+   "thumb": "previews/CMP-03.jpg"
+  }
+ },
+ "CMP-04": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_w_px",
+    "type": "number",
+    "default": 900,
+    "min": 100,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_h_px",
+    "type": "number",
+    "default": 900,
+    "min": 100,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_y_px",
+    "type": "number",
+    "default": 90,
+    "min": 0,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "left_x_px",
+    "type": "number",
+    "default": 40,
+    "min": 0,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "right_x_px",
+    "type": "number",
+    "default": 980,
+    "min": 0,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "blocks_start",
+    "type": "number",
+    "default": 8,
+    "min": 2,
+    "max": 64,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "blocks_end",
+    "type": "number",
+    "default": 32,
+    "min": 4,
+    "max": 128,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grow_delay_s",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grow_s",
+    "type": "number",
+    "default": 2.0,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.ColourBlocks",
+   "reason": null,
+   "notes": "Ported from build_reel.py (cmp04); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 273.5,
+   "reel_end": 279.0,
+   "clip": "previews/CMP-04.mp4",
+   "thumb": "previews/CMP-04.jpg"
+  }
+ },
+ "CMP-05": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "wipe_s",
+    "type": "number",
+    "default": 3.5,
+    "min": 0.5,
+    "max": 8,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "wipe_delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "from_pct",
+    "type": "number",
+    "default": 0.1,
+    "min": 0,
+    "max": 1,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "to_pct",
+    "type": "number",
+    "default": 0.9,
+    "min": 0,
+    "max": 1,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_px",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "state_a",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "state_b",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.TwoStatesWipe",
+   "reason": null,
+   "notes": "Ported from build_reel.py (cmp05); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 279.0,
+   "reel_end": 285.0,
+   "clip": "previews/CMP-05.mp4",
+   "thumb": "previews/CMP-05.jpg"
+  }
+ },
+ "X-CMP-01": {
+  "params": [
+   {
+    "name": "anchor_side",
+    "type": "enum",
+    "default": "left",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "left",
+     "right"
+    ],
+    "measured": null
+   },
+   {
+    "name": "swap_transition",
+    "type": "enum",
+    "default": "cut",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "cut",
+     "dissolve",
+     "slide"
+    ],
+    "measured": null
+   },
+   {
+    "name": "seconds_per_swap",
+    "type": "number",
+    "default": 2.5,
+    "min": 1.0,
+    "max": 30,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dissolve_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.1,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "slide_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0.1,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "swap_push_pct",
+    "type": "number",
+    "default": 5,
+    "min": 0,
+    "max": 50,
+    "unit": "%",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "swap_focus",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "anchor_fit",
+    "type": "enum",
+    "default": "matte",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "matte",
+     "cover"
+    ],
+    "measured": null
+   },
+   {
+    "name": "camera_anchor",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "anchor_push",
+    "type": "bool",
+    "default": false,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "anchor_push_pct",
+    "type": "number",
+    "default": 4,
+    "min": 0,
+    "max": 50,
+    "unit": "%",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "anchor_caption",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "anchor_caption_sub",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "swap_captions",
+    "type": "lines",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "swap_subs",
+    "type": "lines",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "caption_delay_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_w_px",
+    "type": "number",
+    "default": 900,
+    "min": 100,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_h_px",
+    "type": "number",
+    "default": 740,
+    "min": 100,
+    "max": 1080,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "panel_y_px",
+    "type": "number",
+    "default": 36,
+    "min": 0,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "left_x_px",
+    "type": "number",
+    "default": 50,
+    "min": 0,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "right_x_px",
+    "type": "number",
+    "default": 970,
+    "min": 0,
+    "max": 1900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "anchor",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "swap_1",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "swap_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "swap_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "swap_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "swap_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "swap_6",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.SwapSplit",
+   "reason": null,
+   "notes": "New (no reel segment); built from the research description."
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6,
+   "clip": "previews/X-CMP-01.mp4",
+   "thumb": "previews/X-CMP-01.jpg"
+  }
+ },
+ "X-CMP-02": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "from_edge",
+    "type": "enum",
+    "default": "right",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "left",
+     "right"
+    ],
+    "measured": null
+   },
+   {
+    "name": "start_delay_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "wipe_s",
+    "type": "number",
+    "default": 2.5,
+    "min": 0.5,
+    "max": 8,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "split_pct",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.1,
+    "max": 0.9,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "hold_split_s",
+    "type": "number",
+    "default": 1.6,
+    "min": 0,
+    "max": 6,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "end_dissolve_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "state_b_treatment",
+    "type": "enum",
+    "default": "none",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "none",
+     "grey",
+     "white",
+     "sepia",
+     "warm",
+     "contrast"
+    ],
+    "measured": null
+   },
+   {
+    "name": "line_px",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "state_a",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "state_b",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.compare.WipeCompare",
+   "reason": null,
+   "notes": "New (no reel segment); built from the research description. CMP-05 is the reel version (a single wipe of two colour states)."
+  },
+  "preview": {
+   "reel_start": 279.0,
+   "reel_end": 285.0,
+   "clip": "previews/CMP-05.mp4",
+   "thumb": "previews/CMP-05.jpg"
+  }
+ },
+ "TR-03": {
+  "params": [
+   {
+    "name": "box",
+    "type": "box",
+    "default": [
+     360,
+     90,
+     1560,
+     990
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "hinge_angle_deg",
+    "type": "number",
+    "default": 84,
+    "min": 30,
+    "max": 90,
+    "unit": "deg",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "perspective_squeeze_pct",
+    "type": "number",
+    "default": 22,
+    "min": 0,
+    "max": 50,
+    "unit": "%",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inner_dim",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 1,
+    "unit": "factor",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "inner_fade_frac",
+    "type": "number",
+    "default": 0.9375,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "wing_fade_frac",
+    "type": "number",
+    "default": 0.12,
+    "min": 0,
+    "max": 0.5,
+    "unit": "fraction",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.transitions_extra.PanelOpening",
+   "reason": null,
+   "notes": "Ported from build_reel.py (tr03); content from slots/params."
+  },
+  "preview": {
+   "reel_start": 47.5,
+   "reel_end": 53.5,
+   "clip": "previews/TR-03.mp4",
+   "thumb": "previews/TR-03.jpg"
+  }
+ },
+ "X-TR-02": {
+  "params": [
+   {
+    "name": "slide_from",
+    "type": "enum",
+    "default": "bottom",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "bottom",
+     "top",
+     "left",
+     "right"
+    ],
+    "measured": null
+   },
+   {
+    "name": "split_to",
+    "type": "enum",
+    "default": "right",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "left",
+     "right"
+    ],
+    "measured": null
+   },
+   {
+    "name": "target_box",
+    "type": "box",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_px",
+    "type": "number",
+    "default": 420,
+    "min": 60,
+    "max": 1500,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "slide_s",
+    "type": "number",
+    "default": 0.9,
+    "min": 0.3,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "slide_ease",
+    "type": "enum",
+    "default": "out_cubic",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "expand_s",
+    "type": "number",
+    "default": 0.7,
+    "min": 0.1,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "hold_full_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 6,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "split_s",
+    "type": "number",
+    "default": 0.9,
+    "min": 0.1,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.transitions_extra.StripSplit",
+   "reason": null,
+   "notes": "New; works on the outgoing and incoming shot frames (the incoming shot is a split layout)."
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 5.6,
+   "clip": "previews/X-TR-02.mp4",
+   "thumb": "previews/X-TR-02.jpg"
+  }
+ }
+}

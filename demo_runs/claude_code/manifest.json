@@ -1,0 +1,126 @@
+{
+  "pdf": "/Users/nhanvu/Documents/code/behind-the-image/books/_OceanofPDF.com_Great_Art_Explained_-_James_Payne.pdf",
+  "pages": "23-35",
+  "images": [
+    {
+      "page": 23,
+      "file": "assets/pdf_images/p23_x850.jpeg",
+      "xref": 850,
+      "width": 1358,
+      "height": 1600,
+      "ext": "jpeg",
+      "page_rect": [
+        147.0,
+        162.0,
+        465.0,
+        537.0
+      ],
+      "caption_guess": "Jan van Eyck,  The Arnolfini Portrait  (detail), 1434. A LOVE THAT TRANSCENDS DEATH"
+    },
+    {
+      "page": 25,
+      "file": "assets/pdf_images/p25_x862.jpeg",
+      "xref": 862,
+      "width": 1422,
+      "height": 1400,
+      "ext": "jpeg",
+      "page_rect": [
+        107.25,
+        190.49996948242188,
+        504.7500305175781,
+        582.0
+      ],
+      "caption_guess": "The Arnolfini Portrait (dog and dress detail). THE ARNOLFINI \u2018BRAND\u2019 Fashion shapes identity in a multitude of ways; it can reflect one\u2019s culture, moral standards, economic status and social power, then and now. The couple are wearing products that not only made Bruges famous, but also"
+    },
+    {
+      "page": 26,
+      "file": "assets/pdf_images/p26_x864.jpeg",
+      "xref": 864,
+      "width": 1260,
+      "height": 1270,
+      "ext": "jpeg",
+      "page_rect": [
+        186.75,
+        417.7501220703125,
+        425.25,
+        658.5001220703125
+      ],
+      "caption_guess": "The Arnolfini Portrait (pattens detail)."
+    },
+    {
+      "page": 29,
+      "file": "assets/pdf_images/p29_x872.jpeg",
+      "xref": 872,
+      "width": 1557,
+      "height": 1200,
+      "ext": "jpeg",
+      "page_rect": [
+        107.25,
+        72.00021362304688,
+        504.7499694824219,
+        378.7502136230469
+      ],
+      "caption_guess": "Jan van Eyck,  Virgin and Child with Canon van der Paele , 1434. A similar rug appears in this work by Van Eyck."
+    },
+    {
+      "page": 30,
+      "file": "assets/pdf_images/p30_x874.jpeg",
+      "xref": 874,
+      "width": 1415,
+      "height": 1600,
+      "ext": "jpeg",
+      "page_rect": [
+        107.25,
+        72.0,
+        504.75,
+        522.0
+      ],
+      "caption_guess": "The Arnolfini Portrait (roundel and rosary detail). Reflective surfaces are often used in art to evoke the idea of purity"
+    },
+    {
+      "page": 31,
+      "file": "assets/pdf_images/p31_x876.jpeg",
+      "xref": 876,
+      "width": 1262,
+      "height": 1284,
+      "ext": "jpeg",
+      "page_rect": [
+        186.75,
+        156.0,
+        425.25,
+        399.0
+      ],
+      "caption_guess": "The Arnolfini Portrait (hands detail)."
+    },
+    {
+      "page": 32,
+      "file": "assets/pdf_images/p32_x878.jpeg",
+      "xref": 878,
+      "width": 823,
+      "height": 999,
+      "ext": "jpeg",
+      "page_rect": [
+        186.75,
+        72.0,
+        425.25,
+        361.5000305175781
+      ],
+      "caption_guess": "The Arnolfini Portrait (orange detail). At a time when glass windows were a luxury, those in the portrait feature semi-glazing, known as \u2018crown glass\u2019, a common element in paintings by Van Eyck. The oranges by the window would have been imported, and only the wealthiest could afford them. Again, Van Eyck\u2019s detailing is extraordinary, and if we focus on the single orange on the windowsill, we can see not only that it casts a shadow, but it is also reflected in the glass behind it. A perfect still life, before such a thing was considered a genre in its own right."
+    },
+    {
+      "page": 35,
+      "file": "assets/pdf_images/p35_x883.jpeg",
+      "xref": 883,
+      "width": 1166,
+      "height": 1600,
+      "ext": "jpeg",
+      "page_rect": [
+        107.25,
+        72.00042724609375,
+        504.7500305175781,
+        618.0004272460938
+      ],
+      "caption_guess": "Jan van Eyck,  The Arnolfini Portrait , 1434. OceanofPDF.com"
+    }
+  ]
+}

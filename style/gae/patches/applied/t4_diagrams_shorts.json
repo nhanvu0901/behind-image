@@ -1,0 +1,1779 @@
+{
+ "DIA-01": {
+  "params": [
+   {
+    "name": "focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.01,
+    "max": 20,
+    "unit": "screen px per source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_box",
+    "type": "box",
+    "default": [
+     60,
+     90,
+     960,
+     990
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_cols",
+    "type": "number",
+    "default": 6,
+    "min": 1,
+    "max": 26,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_rows",
+    "type": "number",
+    "default": 6,
+    "min": 1,
+    "max": 26,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_line_px",
+    "type": "number",
+    "default": 1,
+    "min": 1,
+    "max": 8,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "column_labels",
+    "type": "string",
+    "default": "ABCDEF",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "letter_px",
+    "type": "number",
+    "default": 28,
+    "min": 8,
+    "max": 120,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_level",
+    "type": "number",
+    "default": 8,
+    "min": 0,
+    "max": 255,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "axes_origin",
+    "type": "point",
+    "default": [
+     1020,
+     900
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "axes_end",
+    "type": "point",
+    "default": [
+     1860,
+     200
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_origin",
+    "type": "point",
+    "default": [
+     1020,
+     300
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_count",
+    "type": "number",
+    "default": 7,
+    "min": 2,
+    "max": 20,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_color",
+    "type": "color",
+    "default": "#ffbe3c",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_width_px",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 16,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_start_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_draw_s",
+    "type": "number",
+    "default": 3.5,
+    "min": 0.1,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_end_x",
+    "type": "number",
+    "default": 1840,
+    "min": 0,
+    "max": 1920,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_end_top",
+    "type": "number",
+    "default": 230,
+    "min": 0,
+    "max": 1080,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_end_bottom",
+    "type": "number",
+    "default": 860,
+    "min": 0,
+    "max": 1080,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.diagrams_t4.GridRays",
+   "reason": null,
+   "notes": "Mechanism ported: grid + lettered columns over a crop of any image, ray fan grown from one point. Still needs real material from a human to look like the channel: an anamorphic image (skull smear) in slot `image`; rays are straight lines to a fan, not computed from the anamorphosis."
+  },
+  "preview": {
+   "reel_start": 213.5,
+   "reel_end": 220.0,
+   "clip": "previews/DIA-01.mp4",
+   "thumb": "previews/DIA-01.jpg"
+  }
+ },
+ "DIA-02": {
+  "params": [
+   {
+    "name": "focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom",
+    "type": "number",
+    "default": 0.9,
+    "min": 0.01,
+    "max": 20,
+    "unit": "screen px per source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_a",
+    "type": "box",
+    "default": [
+     60,
+     90,
+     960,
+     990
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_b",
+    "type": "box",
+    "default": [
+     960,
+     90,
+     1860,
+     990
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_a",
+    "type": "string",
+    "default": "FRONTAL",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_b",
+    "type": "string",
+    "default": "OBLIQUE",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_gap_px",
+    "type": "number",
+    "default": 50,
+    "min": 0,
+    "max": 300,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "warp_delay_s",
+    "type": "number",
+    "default": 1.5,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "warp_s",
+    "type": "number",
+    "default": 2.5,
+    "min": 0.5,
+    "max": 12,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "from_quad",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "to_quad",
+    "type": "points",
+    "default": [
+     [
+      0.0,
+      0.094855
+     ],
+     [
+      0.45,
+      0.189711
+     ],
+     [
+      0.45,
+      0.810289
+     ],
+     [
+      0.0,
+      0.905145
+     ]
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.diagrams_t4.TwoViews",
+   "reason": null,
+   "notes": "Mechanism ported: one image flat and warped by a perspective quad (from_quad -> to_quad). Needs a human to supply the anamorphic image and tune to_quad to the real oblique angle; the benchmark used a mirror crop."
+  },
+  "preview": {
+   "reel_start": 220.0,
+   "reel_end": 226.0,
+   "clip": "previews/DIA-02.mp4",
+   "thumb": "previews/DIA-02.jpg"
+  }
+ },
+ "DIA-03": {
+  "params": [
+   {
+    "name": "layers",
+    "type": "lines",
+    "default": [
+     "OAK PANEL | #785a3c | 200",
+     "CHALK GROUND | #ebe6e6 | 70",
+     "IMPRIMATURA | #aa9678 | 60",
+     "PAINT LAYERS | #287828 | 160",
+     "VARNISH | #dcbe5a | 50"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "section_box",
+    "type": "box",
+    "default": [
+     200,
+     380,
+     1720,
+     920
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_level",
+    "type": "number",
+    "default": 14,
+    "min": 0,
+    "max": 255,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "band_start_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "band_stagger_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "band_fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.05,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_count",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 8,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_color",
+    "type": "color",
+    "default": "#ffbe28",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_start_s",
+    "type": "number",
+    "default": 2.2,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_stagger_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_draw_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.2,
+    "max": 6,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_x0",
+    "type": "number",
+    "default": 520,
+    "min": 0,
+    "max": 1920,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_pitch_px",
+    "type": "number",
+    "default": 360,
+    "min": 20,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_top_y",
+    "type": "number",
+    "default": 120,
+    "min": 0,
+    "max": 1080,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_hit_y",
+    "type": "number",
+    "default": 700,
+    "min": 0,
+    "max": 1080,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_half_width_px",
+    "type": "number",
+    "default": 100,
+    "min": 5,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ray_width_px",
+    "type": "number",
+    "default": 6,
+    "min": 1,
+    "max": 24,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_text",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_first_layer",
+    "type": "number",
+    "default": 1,
+    "min": 1,
+    "max": 20,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_last_layer",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 20,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_start_s",
+    "type": "number",
+    "default": 4.5,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_draw_s",
+    "type": "number",
+    "default": 0.8,
+    "min": 0.1,
+    "max": 6,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_gap_px",
+    "type": "number",
+    "default": 50,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "measure_text_dx_px",
+    "type": "number",
+    "default": 90,
+    "min": -400,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "cross_section",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.diagrams_t4.CrossSection",
+   "reason": null,
+   "notes": "Schematic bands from the `layers` param ('NAME | #rrggbb | height'); with a real cross-section/micrograph in slot `cross_section` the image is drawn and the names are overlaid. Needs a real cross-section image from a human to look like the channel. Optional measuring arrow via measure_text."
+  },
+  "preview": {
+   "reel_start": 226.0,
+   "reel_end": 232.5,
+   "clip": "previews/DIA-03.mp4",
+   "thumb": "previews/DIA-03.jpg"
+  }
+ },
+ "DIA-04": {
+  "params": [
+   {
+    "name": "figure_focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "figure_height_pct",
+    "type": "number",
+    "default": 82.18,
+    "min": 5,
+    "max": 300,
+    "unit": "% of frame height",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_level",
+    "type": "number",
+    "default": 6,
+    "min": 0,
+    "max": 255,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pieces",
+    "type": "lines",
+    "default": [
+     "MIRROR | 0.45 | 1450,80",
+     "DOG | 0.5 | 1450,620",
+     "2200,820 | 0.55 | 180,80"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "piece_px",
+    "type": "number",
+    "default": 380,
+    "min": 60,
+    "max": 900,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "drift_delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "drift_s",
+    "type": "number",
+    "default": 2.0,
+    "min": 0.5,
+    "max": 12,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "figure",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "mask",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "pieces",
+    "type": "image",
+    "required": false,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.diagrams_t4.ExplodedFigure",
+   "reason": null,
+   "notes": "Cut-out `figure` (+ `mask`, white = inside) and circular crops (`pieces` lines) drifting apart on black. Needs a human-made figure mask and the fragment crops (or fragment photos in slot `pieces`) for the real subject."
+  },
+  "preview": {
+   "reel_start": 232.5,
+   "reel_end": 238.5,
+   "clip": "previews/DIA-04.mp4",
+   "thumb": "previews/DIA-04.jpg"
+  }
+ },
+ "DIA-05": {
+  "params": [
+   {
+    "name": "focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "width_pct",
+    "type": "number",
+    "default": 80,
+    "min": 5,
+    "max": 400,
+    "unit": "% of frame width",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_level",
+    "type": "number",
+    "default": 12,
+    "min": 0,
+    "max": 255,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stages",
+    "type": "lines",
+    "default": [
+     "fill | #ffbe3c",
+     "outline | #ffffff | 1.5 | 1.0",
+     "image | | 3.2 | 1.2"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "footage",
+    "type": "video",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.diagrams_t4.ProcessSilhouette",
+   "reason": null,
+   "notes": "Fill -> outline -> image stages from `stages` lines; a `footage` video stage is supported. Needs a human-made silhouette `mask` and, for the channel look, real process footage; without footage the final stage is the reference image."
+  },
+  "preview": {
+   "reel_start": 238.5,
+   "reel_end": 244.5,
+   "clip": "previews/DIA-05.mp4",
+   "thumb": "previews/DIA-05.jpg"
+  }
+ },
+ "DIA-06": {
+  "params": [
+   {
+    "name": "room_box",
+    "type": "box",
+    "default": [
+     60,
+     140,
+     900,
+     900
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "room_center",
+    "type": "point",
+    "default": [
+     480,
+     560
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "room_scale",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.2,
+    "max": 3,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "painting_box",
+    "type": "box",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "painting_color",
+    "type": "color",
+    "default": "#ffbe3c",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "painting_start_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "painting_fade_s",
+    "type": "number",
+    "default": 1.4,
+    "min": 0.05,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "room_label",
+    "type": "string",
+    "default": "ROOM MODEL",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "room_label_pos",
+    "type": "point",
+    "default": [
+     480,
+     790
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "room_label_start_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "room_label_fade_s",
+    "type": "number",
+    "default": 1.4,
+    "min": 0.05,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_px",
+    "type": "number",
+    "default": 30,
+    "min": 8,
+    "max": 120,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_box",
+    "type": "box",
+    "default": [
+     940,
+     140,
+     1840,
+     900
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_start_s",
+    "type": "number",
+    "default": 2.0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_fade_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.05,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_label",
+    "type": "string",
+    "default": "UV",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_label_pos",
+    "type": "point",
+    "default": [
+     1390,
+     950
+    ],
+    "min": null,
+    "max": null,
+    "unit": "canvas px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_label_start_s",
+    "type": "number",
+    "default": 2.2,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "uv_label_fade_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.05,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "room",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "detail",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "uv_detail",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.diagrams_t4.RoomModelUV",
+   "reason": null,
+   "notes": "Room image slot (else a wireframe schematic), painting_box marker, and a detail image crossfading to a real UV photograph. Needs a real room render/photo and a real UV capture from a human; the benchmark simulated UV with a false-colour map (not part of the renderer)."
+  },
+  "preview": {
+   "reel_start": 244.5,
+   "reel_end": 251.0,
+   "clip": "previews/DIA-06.mp4",
+   "thumb": "previews/DIA-06.jpg"
+  }
+ },
+ "SHORT-01": {
+  "params": [
+   {
+    "name": "focus",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom",
+    "type": "number",
+    "default": 0.62,
+    "min": 0.01,
+    "max": 20,
+    "unit": "screen px per source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom_drift_per_s",
+    "type": "number",
+    "default": 0.04,
+    "min": 0,
+    "max": 0.5,
+    "unit": "per s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "swap_every_s",
+    "type": "number",
+    "default": 2.0,
+    "min": 0.5,
+    "max": 12,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 6,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ease",
+    "type": "enum",
+    "default": "inout_sine",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "in_quad",
+     "in_cubic",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "strip_gap_px",
+    "type": "number",
+    "default": 6,
+    "min": 0,
+    "max": 60,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "frame_aspect",
+    "type": "string",
+    "default": "9:16",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "strip_1",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "strip_2",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "strip_3",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.shorts.ThreeStrips",
+   "reason": null,
+   "notes": "Three strips from slots strip_1..3 (+ focus points) rotating and cross-fading. Content-complete once three images are chosen; ambient blur is cached from the first state. Footage strips are not supported (images only)."
+  },
+  "preview": {
+   "reel_start": 291.0,
+   "reel_end": 297.0,
+   "clip": "previews/SHORT-01.mp4",
+   "thumb": "previews/SHORT-01.jpg"
+  }
+ },
+ "SHORT-02": {
+  "params": [
+   {
+    "name": "focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom",
+    "type": "number",
+    "default": 0.6,
+    "min": 0.01,
+    "max": 20,
+    "unit": "screen px per source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "warp_delay_s",
+    "type": "number",
+    "default": 1.5,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "warp_s",
+    "type": "number",
+    "default": 3.0,
+    "min": 0.5,
+    "max": 12,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "to_quad",
+    "type": "points",
+    "default": [
+     [
+      0.0,
+      0.250232
+     ],
+     [
+      0.775,
+      0.450417
+     ],
+     [
+      0.775,
+      0.549583
+     ],
+     [
+      0.0,
+      0.749768
+     ]
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fill_color",
+    "type": "color",
+    "default": "#0e0e0e",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "frame_aspect",
+    "type": "string",
+    "default": "9:16",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.shorts.ChangingView",
+   "reason": null,
+   "notes": "Changing view of an image crop warped to `to_quad`; constant border (the benchmark's edge streaks are fixed). Needs a real anamorphic image in slot `image` to show a smear resolving; the quad is tuned by hand."
+  },
+  "preview": {
+   "reel_start": 297.0,
+   "reel_end": 303.0,
+   "clip": "previews/SHORT-02.mp4",
+   "thumb": "previews/SHORT-02.jpg"
+  }
+ },
+ "SHORT-03": {
+  "params": [
+   {
+    "name": "focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": "source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zoom",
+    "type": "number",
+    "default": 0.62,
+    "min": 0.01,
+    "max": 20,
+    "unit": "screen px per source px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 1,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "lines",
+    "type": "lines",
+    "default": [
+     "LOOK",
+     "CLOSER"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 130,
+    "min": 50,
+    "max": 300,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "tracking",
+    "type": "number",
+    "default": 6,
+    "min": 0,
+    "max": 60,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "text_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "seconds_per_line",
+    "type": "number",
+    "default": 2.0,
+    "min": 0.5,
+    "max": 8,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_in_s",
+    "type": "number",
+    "default": 0.2,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_out_s",
+    "type": "number",
+    "default": 0.25,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "max_width_pct",
+    "type": "number",
+    "default": 92,
+    "min": 30,
+    "max": 100,
+    "unit": "% of panel",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "frame_aspect",
+    "type": "string",
+    "default": "9:16",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "background",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.shorts.LargeType",
+   "reason": null,
+   "notes": "Large bold type over a dimmed image crop; `lines` change every seconds_per_line. Content-complete. Text longer than the panel is scaled down."
+  },
+  "preview": {
+   "reel_start": 303.0,
+   "reel_end": 309.0,
+   "clip": "previews/SHORT-03.mp4",
+   "thumb": "previews/SHORT-03.jpg"
+  }
+ },
+ "SHORT-04": {
+  "params": [
+   {
+    "name": "text",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_color",
+    "type": "color",
+    "default": "#f2c500",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "text_color",
+    "type": "color",
+    "default": "#141414",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 36,
+    "min": 8,
+    "max": 120,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "tracking",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "text_delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pop_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0.05,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_margin_px",
+    "type": "number",
+    "default": 30,
+    "min": 0,
+    "max": 300,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_height_px",
+    "type": "number",
+    "default": 80,
+    "min": 20,
+    "max": 300,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_bottom_px",
+    "type": "number",
+    "default": 70,
+    "min": 0,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "box_pad_px",
+    "type": "number",
+    "default": 16,
+    "min": 0,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "frame_aspect",
+    "type": "string",
+    "default": "9:16",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.shorts.YellowLabelBox",
+   "reason": null,
+   "notes": "Overlay: coloured box + label near the bottom of a 9:16 panel (put it on a SHORT-* shot). The benchmark's clipped label is fixed (text centred in the box). Content-complete; box_color defaults to the channel-measured yellow."
+  },
+  "preview": {
+   "reel_start": 309.0,
+   "reel_end": 314.5,
+   "clip": "previews/SHORT-04.mp4",
+   "thumb": "previews/SHORT-04.jpg"
+  }
+ },
+ "SHORT-05": {
+  "params": [
+   {
+    "name": "sectors",
+    "type": "number",
+    "default": 8,
+    "min": 3,
+    "max": 16,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sector_stagger_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 2,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sector_grow_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.05,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sector_start_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "radius_px",
+    "type": "number",
+    "default": 250,
+    "min": 20,
+    "max": 600,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "hole_px",
+    "type": "number",
+    "default": 100,
+    "min": 0,
+    "max": 500,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_level",
+    "type": "number",
+    "default": 14,
+    "min": 0,
+    "max": 255,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sample_px",
+    "type": "number",
+    "default": 64,
+    "min": 8,
+    "max": 256,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "seed",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 100000,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "sector_order",
+    "type": "enum",
+    "default": "cluster",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "cluster",
+     "hue",
+     "lightness"
+    ],
+    "measured": null
+   },
+   {
+    "name": "frame_aspect",
+    "type": "string",
+    "default": "9:16",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "palette",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "partial",
+   "available": true,
+   "impl": "bti.engine.techniques.shorts.ColourWheel",
+   "reason": null,
+   "notes": "Colour wheel from k-means colours of slot `palette` (seeded, cached). Only a still of this was seen on the channel, so the sector build-up animation is our own. A human should supply a palette/archive image that matches the topic."
+  },
+  "preview": {
+   "reel_start": 314.5,
+   "reel_end": 320.5,
+   "clip": "previews/SHORT-05.mp4",
+   "thumb": "previews/SHORT-05.jpg"
+  }
+ }
+}

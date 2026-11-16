@@ -1,0 +1,119 @@
+
+--- Lượt thử tiếp ---
+[youtube] Extracting URL: https://www.youtube.com/watch?v=SNhmSdLDmto
+[youtube] SNhmSdLDmto: Downloading webpage
+WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
+[youtube] Sleeping 2.0 seconds ...
+[youtube] SNhmSdLDmto: Downloading visionos player API JSON
+[youtube] Sleeping 2.0 seconds ...
+[youtube] SNhmSdLDmto: Downloading m3u8 information
+[info] SNhmSdLDmto: Downloading 1 format(s): 398+140-9
+[info] Writing video description to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.description
+[info] Writing video metadata as JSON to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.info.json
+[download] Sleeping 3.63 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.f398.mp4
+
+[download]   0.0% of   46.41MiB at  809.09KiB/s ETA 01:00
+[download]   0.0% of   46.41MiB at    1.29MiB/s ETA 00:36
+[download]   0.0% of   46.41MiB at    2.39MiB/s ETA 00:19
+[download]   0.0% of   46.41MiB at    4.46MiB/s ETA 00:10
+[download]   0.1% of   46.41MiB at    6.31MiB/s ETA 00:07
+[download]   0.1% of   46.41MiB at    5.92MiB/s ETA 00:07
+[download]   0.3% of   46.41MiB at    8.58MiB/s ETA 00:05
+[download]   0.5% of   46.41MiB at   11.84MiB/s ETA 00:03
+[download]   1.1% of   46.41MiB at   17.84MiB/s ETA 00:02
+[download]   2.2% of   46.41MiB at   16.43MiB/s ETA 00:02
+[download]   4.3% of   46.41MiB at   15.60MiB/s ETA 00:02
+[download]   8.6% of   46.41MiB at   13.93MiB/s ETA 00:03
+[download]  17.2% of   46.41MiB at   16.40MiB/s ETA 00:02
+[download]  20.6% of   46.41MiB at   15.77MiB/s ETA 00:02
+[download]  20.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  20.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  20.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  20.6% of   46.41MiB at   11.37MiB/s ETA 00:03  
+[download]  20.6% of   46.41MiB at   15.45MiB/s ETA 00:02
+[download]  20.7% of   46.41MiB at   23.20MiB/s ETA 00:01
+[download]  20.9% of   46.41MiB at   41.25MiB/s ETA 00:00
+[download]  21.1% of   46.41MiB at   72.60MiB/s ETA 00:00
+[download]  21.7% of   46.41MiB at  114.67MiB/s ETA 00:00
+[download]  22.7% of   46.41MiB at   92.56MiB/s ETA 00:00
+[download]  24.9% of   46.41MiB at   82.91MiB/s ETA 00:00
+[download]  29.2% of   46.41MiB at   17.95MiB/s ETA 00:01
+[download]  37.8% of   46.41MiB at   19.65MiB/s ETA 00:01
+[download]  41.9% of   46.41MiB at   21.78MiB/s ETA 00:01
+[download]  41.9% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  41.9% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  41.9% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  41.9% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  42.0% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  42.0% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  42.2% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  42.5% of   46.41MiB at  120.53MiB/s ETA 00:00  
+[download]  43.0% of   46.41MiB at   90.42MiB/s ETA 00:00
+[download]  44.1% of   46.41MiB at   10.27MiB/s ETA 00:02
+[download]  46.2% of   46.41MiB at   12.15MiB/s ETA 00:02
+[download]  50.5% of   46.41MiB at   17.99MiB/s ETA 00:01
+[download]  59.2% of   46.41MiB at   20.01MiB/s ETA 00:00
+[download]  63.3% of   46.41MiB at   16.61MiB/s ETA 00:01
+[download]  63.3% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  63.3% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  63.3% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  63.3% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  63.3% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  63.4% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  63.5% of   46.41MiB at  121.00MiB/s ETA 00:00  
+[download]  63.8% of   46.41MiB at   85.08MiB/s ETA 00:00
+[download]  64.3% of   46.41MiB at   83.81MiB/s ETA 00:00
+[download]  65.4% of   46.41MiB at   88.13MiB/s ETA 00:00
+[download]  67.6% of   46.41MiB at   96.65MiB/s ETA 00:00
+[download]  71.9% of   46.41MiB at   24.35MiB/s ETA 00:00
+[download]  80.5% of   46.41MiB at   22.18MiB/s ETA 00:00
+[download]  84.5% of   46.41MiB at   23.84MiB/s ETA 00:00
+[download]  84.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  84.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  84.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  84.6% of   46.41MiB at  Unknown B/s ETA Unknown
+[download]  84.6% of   46.41MiB at   26.46MiB/s ETA 00:00  
+[download]  84.7% of   46.41MiB at   31.04MiB/s ETA 00:00
+[download]  84.8% of   46.41MiB at   52.46MiB/s ETA 00:00
+[download]  85.1% of   46.41MiB at   71.64MiB/s ETA 00:00
+[download]  85.6% of   46.41MiB at  104.22MiB/s ETA 00:00
+[download]  86.7% of   46.41MiB at   13.36MiB/s ETA 00:00
+[download]  88.9% of   46.41MiB at   14.31MiB/s ETA 00:00
+[download]  93.2% of   46.41MiB at   19.34MiB/s ETA 00:00
+[download] 100.0% of   46.41MiB at   19.06MiB/s ETA 00:00
+[download] 100% of   46.41MiB in 00:00:02 at 17.62MiB/s  
+[download] Sleeping 4.62 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.f140-9.m4a
+
+[download]   0.0% of   14.06MiB at  360.34KiB/s ETA 00:40
+[download]   0.0% of   14.06MiB at 1005.91KiB/s ETA 00:14
+[download]   0.0% of   14.06MiB at    2.20MiB/s ETA 00:06
+[download]   0.1% of   14.06MiB at    4.55MiB/s ETA 00:03
+[download]   0.2% of   14.06MiB at    1.36MiB/s ETA 00:10
+[download]   0.4% of   14.06MiB at    1.77MiB/s ETA 00:07
+[download]   0.9% of   14.06MiB at    2.33MiB/s ETA 00:05
+[download]   1.8% of   14.06MiB at    3.31MiB/s ETA 00:04
+[download]   3.5% of   14.06MiB at    5.26MiB/s ETA 00:02
+[download]   7.1% of   14.06MiB at    8.65MiB/s ETA 00:01
+[download]  14.2% of   14.06MiB at    6.36MiB/s ETA 00:01
+[download]  28.4% of   14.06MiB at    8.96MiB/s ETA 00:01
+[download]  56.9% of   14.06MiB at   11.98MiB/s ETA 00:00
+[download]  71.0% of   14.06MiB at   12.49MiB/s ETA 00:00
+[download]  71.0% of   14.06MiB at  Unknown B/s ETA Unknown
+[download]  71.0% of   14.06MiB at  Unknown B/s ETA Unknown
+[download]  71.1% of   14.06MiB at  Unknown B/s ETA Unknown
+[download]  71.1% of   14.06MiB at  Unknown B/s ETA Unknown
+[download]  71.2% of   14.06MiB at  Unknown B/s ETA Unknown
+[download]  71.5% of   14.06MiB at  Unknown B/s ETA Unknown
+[download]  71.9% of   14.06MiB at   31.00MiB/s ETA 00:00  
+[download]  72.8% of   14.06MiB at   20.29MiB/s ETA 00:00
+[download]  74.6% of   14.06MiB at   16.60MiB/s ETA 00:00
+[download]  78.1% of   14.06MiB at   15.50MiB/s ETA 00:00
+[download]  85.2% of   14.06MiB at   15.17MiB/s ETA 00:00
+[download]  99.5% of   14.06MiB at   15.94MiB/s ETA 00:00
+[download] 100.0% of   14.06MiB at   16.21MiB/s ETA 00:00
+[download] 100% of   14.06MiB in 00:00:01 at 11.01MiB/s  
+[Merger] Merging formats into "/Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.mp4"
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.f398.mp4 (pass -k to keep)
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/SNhmSdLDmto.f140-9.m4a (pass -k to keep)

@@ -1,0 +1,2258 @@
+{
+ "CAM-02": {
+  "params": [
+   {
+    "name": "fg_zoom",
+    "type": "number",
+    "default": 1.3,
+    "min": 1.0,
+    "max": 3.0,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_zoom",
+    "type": "number",
+    "default": 1.06,
+    "min": 1.0,
+    "max": 3.0,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "easing",
+    "type": "enum",
+    "default": "inout_sine",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "in_quad",
+     "in_cubic",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "zoom_interp",
+    "type": "enum",
+    "default": "linear",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "log"
+    ],
+    "measured": null
+   },
+   {
+    "name": "fg_camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bg_camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "foreground",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "background",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.camera_extra.LayerRelativeMotion",
+   "reason": null,
+   "notes": "Foreground (image + aligned mask) and background each follow their own camera track; fg_zoom/bg_zoom/easing build a centred push only when a track is not given. Zoom interpolates linearly by default (benchmark); set zoom_interp log for the engine's other cameras. Needs a clean background plate registered to the foreground for a good result."
+  },
+  "preview": {
+   "reel_start": 6.0,
+   "reel_end": 12.0,
+   "clip": "previews/CAM-02.mp4",
+   "thumb": "previews/CAM-02.jpg"
+  }
+ },
+ "CAM-06": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_text",
+    "type": "string",
+    "default": "The Arnolfini Portrait",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_sub",
+    "type": "string",
+    "default": "Jan van Eyck, 1434",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_case",
+    "type": "enum",
+    "default": "upper",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "as_is",
+     "upper",
+     "upper_all"
+    ],
+    "measured": null
+   },
+   {
+    "name": "label_delay_s",
+    "type": "number",
+    "default": 2.0,
+    "min": 0,
+    "max": 30,
+    "unit": "s",
+    "values": null,
+    "measured": {
+     "value": 6.0,
+     "source": "lHePKNTRmdI 0-9.6 s: label about 6-7.2 s (EFFECTS_CATALOG)"
+    }
+   },
+   {
+    "name": "label_pop_s",
+    "type": "number",
+    "default": 0.08,
+    "min": 0.0,
+    "max": 1.0,
+    "unit": "s",
+    "values": null,
+    "measured": {
+     "value": 0.1,
+     "source": "detail label pop 327.5 s (measurements.md)"
+    }
+   },
+   {
+    "name": "label_hold_s",
+    "type": "number",
+    "default": 3.2,
+    "min": 0.3,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_fade_out_s",
+    "type": "number",
+    "default": 0.1,
+    "min": 0.0,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_y_top_pct",
+    "type": "number",
+    "default": 70.0,
+    "min": 0,
+    "max": 100,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_height_px",
+    "type": "number",
+    "default": 140,
+    "min": 20,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_opacity",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 1,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "text_x_pct",
+    "type": "number",
+    "default": 7.0,
+    "min": 0,
+    "max": 50,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "right_fade_pct",
+    "type": "number",
+    "default": 22,
+    "min": 0,
+    "max": 60,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_px",
+    "type": "number",
+    "default": 58,
+    "min": 10,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_sub_px",
+    "type": "number",
+    "default": 32,
+    "min": 8,
+    "max": 120,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.camera_extra.HoldAndLabel",
+   "reason": null,
+   "notes": "Matte shot (camera as CAM-01; default whole picture) with a label strip: pop in at label_delay_s, hold label_hold_s, fade. Text comes from params (no text slot). Registry defaults reproduce the benchmark strip (y 70 %); default_params uses the channel measurements from style.json (y 79.4-93.3 %)."
+  },
+  "preview": {
+   "reel_start": 31.0,
+   "reel_end": 37.0,
+   "clip": "previews/CAM-06.mp4",
+   "thumb": "previews/CAM-06.jpg"
+  }
+ },
+ "HI-02": {
+  "params": [
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "plate_dim",
+    "type": "number",
+    "default": 0.9,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "x brightness",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "first_group_delay_s",
+    "type": "number",
+    "default": 1.4,
+    "min": 0,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "group_stagger_s",
+    "type": "number",
+    "default": 1.2,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "group_slide_s",
+    "type": "number",
+    "default": 1.4,
+    "min": 0.3,
+    "max": 4.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "group_fade_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.1,
+    "max": 4.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "slide_px",
+    "type": "number",
+    "default": 900,
+    "min": 0,
+    "max": 2000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "slide_from",
+    "type": "lines",
+    "default": [
+     "left",
+     "right"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "figure_scale",
+    "type": "number",
+    "default": 1.0,
+    "min": 1.0,
+    "max": 3.0,
+    "unit": "x",
+    "values": null,
+    "measured": {
+     "value": 2.2,
+     "source": "T15Kv6dtYO0 6.5-12 s: ~2.2x (measurements.md)"
+    }
+   }
+  ],
+  "slots": [
+   {
+    "name": "room_plate",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "figure_groups",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask_1",
+    "type": "image",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "mask_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_6",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.highlights_extra.FigureReveal",
+   "reason": null,
+   "notes": "Base shot: plate (dimmed) with groups revealed through masks mask_1..mask_6, each fading in while sliding from slide_from[k] (left, right, top, bottom, none; cycled). Plate, figures and masks share one coordinate system; one camera track (compose over the matte). The benchmark's plate is an inpainted stand-in; supply a clean plate for a real result."
+  },
+  "preview": {
+   "reel_start": 107.5,
+   "reel_end": 114.5,
+   "clip": "previews/HI-02.mp4",
+   "thumb": "previews/HI-02.jpg"
+  }
+ },
+ "HI-03": {
+  "params": [
+   {
+    "name": "desaturate_ramp_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.2,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "outside_saturation",
+    "type": "number",
+    "default": 0.0,
+    "min": 0,
+    "max": 1,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "outside_brightness",
+    "type": "number",
+    "default": 0.75,
+    "min": 0,
+    "max": 1,
+    "unit": "x brightness",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "restore_s",
+    "type": "number",
+    "default": 0.0,
+    "min": 0.0,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask",
+    "type": "image",
+    "required": true,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.highlights_extra.ColourKeep",
+   "reason": null,
+   "notes": "Overlay: the frame goes monochrome outside the mask (slot mask, aligned to the shot image). restore_s 0 keeps it until the overlay ends."
+  },
+  "preview": {
+   "reel_start": 114.5,
+   "reel_end": 120.0,
+   "clip": "previews/HI-03.mp4",
+   "thumb": "previews/HI-03.jpg"
+  }
+ },
+ "X-HI-01": {
+  "params": [
+   {
+    "name": "at",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null,
+    "required": true
+   },
+   {
+    "name": "rx",
+    "type": "number",
+    "default": null,
+    "min": 5,
+    "max": 5000,
+    "unit": "src px",
+    "values": null,
+    "measured": null,
+    "required": true
+   },
+   {
+    "name": "ry",
+    "type": "number",
+    "default": null,
+    "min": 5,
+    "max": 5000,
+    "unit": "src px",
+    "values": null,
+    "measured": null,
+    "required": true
+   },
+   {
+    "name": "surround_floor",
+    "type": "number",
+    "default": 0.2,
+    "min": 0.05,
+    "max": 1.0,
+    "unit": "x brightness",
+    "values": null,
+    "measured": {
+     "value": "0.15-0.25 (estimated by eye)",
+     "source": "9x0tsuS4dk0 1352 s (measurements.md, by eye)"
+    }
+   },
+   {
+    "name": "ramp_in_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.1,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "hold_s",
+    "type": "number",
+    "default": null,
+    "min": 0.5,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ramp_out_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.1,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shape",
+    "type": "enum",
+    "default": "ellipse",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "ellipse",
+     "rect"
+    ],
+    "measured": null
+   },
+   {
+    "name": "feather",
+    "type": "number",
+    "default": 0.55,
+    "min": 0.05,
+    "max": 2,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.highlights_extra.DimIsolateRestore",
+   "reason": null,
+   "notes": "Full-frame dim to surround_floor around a soft ellipse or rounded rectangle at `at` (rx, ry in source px), explicit hold and restore. hold_s null: the restore ends at the overlay end; otherwise it starts ramp_in_s + hold_s after the start."
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6,
+   "clip": "previews/X-HI-01.mp4",
+   "thumb": "previews/X-HI-01.jpg"
+  }
+ },
+ "AN-02": {
+  "params": [
+   {
+    "name": "draw_s",
+    "type": "number",
+    "default": 3.0,
+    "min": 0.3,
+    "max": 8.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stroke_px",
+    "type": "number",
+    "default": 6,
+    "min": 1,
+    "max": 12,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "opacity",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 1,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.0,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ease",
+    "type": "enum",
+    "default": "inout_sine",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "in_quad",
+     "in_cubic",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "max_contours",
+    "type": "number",
+    "default": 2,
+    "min": 1,
+    "max": 10,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "closed",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_base",
+    "type": "number",
+    "default": 0.85,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "x brightness",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_ramp_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0.0,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.ObjectOutline",
+   "reason": null,
+   "notes": "Progressive outline: contours of the mask slot (longest max_contours) or the polyline `points` (source px). Fades out ending at the overlay end; dims the base to dim_base while it is shown (0.85 in the benchmark)."
+  },
+  "preview": {
+   "reel_start": 125.5,
+   "reel_end": 131.5,
+   "clip": "previews/AN-02.mp4",
+   "thumb": "previews/AN-02.jpg"
+  }
+ },
+ "AN-03": {
+  "params": [
+   {
+    "name": "vanishing_point",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null,
+    "required": true
+   },
+   {
+    "name": "origins",
+    "type": "points",
+    "default": [
+     [
+      0,
+      0.98
+     ],
+     [
+      0.12,
+      1
+     ],
+     [
+      0.3,
+      1
+     ],
+     [
+      0.62,
+      1
+     ],
+     [
+      0.83,
+      1
+     ],
+     [
+      0.98,
+      0.9
+     ],
+     [
+      0,
+      0.6
+     ],
+     [
+      1,
+      0.55
+     ],
+     [
+      0.98,
+      0.12
+     ]
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "origin_space",
+    "type": "enum",
+    "default": "frame",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "frame",
+     "source"
+    ],
+    "measured": null
+   },
+   {
+    "name": "ray_count",
+    "type": "number",
+    "default": 9,
+    "min": 1,
+    "max": 20,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stagger_s",
+    "type": "number",
+    "default": 0.35,
+    "min": 0.0,
+    "max": 1.5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "each_draw_s",
+    "type": "number",
+    "default": 0.45,
+    "min": 0.1,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_px",
+    "type": "number",
+    "default": 4,
+    "min": 1,
+    "max": 10,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "opacity",
+    "type": "number",
+    "default": 0.9,
+    "min": 0,
+    "max": 1,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.0,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_base",
+    "type": "number",
+    "default": 0.8,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "x brightness",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_ramp_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0.0,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.PerspectiveRays",
+   "reason": null,
+   "notes": "Rays drawn one by one from origins (fractions of the frame, or source px when origin_space=source) to the vanishing point (source px); ray_count uses the first N origins. dim_base default here is 0.8."
+  },
+  "preview": {
+   "reel_start": 131.5,
+   "reel_end": 137.5,
+   "clip": "previews/AN-03.mp4",
+   "thumb": "previews/AN-03.jpg"
+  }
+ },
+ "AN-04": {
+  "params": [
+   {
+    "name": "background",
+    "type": "enum",
+    "default": "auto",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "auto",
+     "base",
+     "image",
+     "procedural"
+    ],
+    "measured": null
+   },
+   {
+    "name": "seed",
+    "type": "number",
+    "default": 5,
+    "min": 0,
+    "max": 9999,
+    "unit": "seed",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "places",
+    "type": "points",
+    "default": [
+     [
+      520,
+      330
+     ],
+     [
+      1360,
+      790
+     ]
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "labels",
+    "type": "lines",
+    "default": [
+     "BRUGES",
+     "LUCCA"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "control",
+    "type": "point",
+    "default": [
+     860,
+     220
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "bend",
+    "type": "number",
+    "default": 0.25,
+    "min": -1,
+    "max": 1,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "route_draw_s",
+    "type": "number",
+    "default": 2.4,
+    "min": 0.5,
+    "max": 8.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "route_delay_s",
+    "type": "number",
+    "default": 1.4,
+    "min": 0,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "route_color",
+    "type": "color",
+    "default": "#d22828",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "route_px",
+    "type": "number",
+    "default": 7,
+    "min": 1,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dashed",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "arrow_px",
+    "type": "number",
+    "default": 26,
+    "min": 6,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "arrow_after",
+    "type": "number",
+    "default": 0.25,
+    "min": 0,
+    "max": 1,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ring_radius_px",
+    "type": "number",
+    "default": 22,
+    "min": 4,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ring_px",
+    "type": "number",
+    "default": 4,
+    "min": 1,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ring_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ring_delay_s",
+    "type": "number",
+    "default": 0.0,
+    "min": 0,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ring_fade_s",
+    "type": "number",
+    "default": 0.0,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_px",
+    "type": "number",
+    "default": 36,
+    "min": 8,
+    "max": 120,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_tracking",
+    "type": "number",
+    "default": 4,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_offset_px",
+    "type": "number",
+    "default": 60,
+    "min": 0,
+    "max": 300,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_delay_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_stagger_s",
+    "type": "number",
+    "default": 1.2,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_fade_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.0,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "map",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.MapCircleArrow",
+   "reason": null,
+   "notes": "Rings + labels on `places`, arrowed Bezier route from the first to the last (control point, or bend). background: auto = the `map` slot image if present (positions in map px), else the procedural stand-in map (canvas px); base = draw over the parent shot (source px). Defaults are canvas px of the procedural map."
+  },
+  "preview": {
+   "reel_start": 137.5,
+   "reel_end": 143.5,
+   "clip": "previews/AN-04.mp4",
+   "thumb": "previews/AN-04.jpg"
+  }
+ },
+ "X-ANN-05": {
+  "params": [
+   {
+    "name": "background",
+    "type": "enum",
+    "default": "auto",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "auto",
+     "base",
+     "image",
+     "procedural"
+    ],
+    "measured": null
+   },
+   {
+    "name": "seed",
+    "type": "number",
+    "default": 5,
+    "min": 0,
+    "max": 9999,
+    "unit": "seed",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points",
+    "type": "points",
+    "default": [
+     [
+      420,
+      300
+     ],
+     [
+      760,
+      520
+     ],
+     [
+      1100,
+      380
+     ],
+     [
+      1380,
+      640
+     ],
+     [
+      1620,
+      300
+     ],
+     [
+      980,
+      820
+     ]
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "labels",
+    "type": "lines",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "marker_count",
+    "type": "number",
+    "default": null,
+    "min": 1,
+    "max": 30,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stagger_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0.1,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "start_delay_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pop_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0.05,
+    "max": 2,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "radius_px",
+    "type": "number",
+    "default": 14,
+    "min": 3,
+    "max": 80,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#d02020",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "outline_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "outline_px",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 12,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pulse",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pulse_s",
+    "type": "number",
+    "default": 0.7,
+    "min": 0.1,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_px",
+    "type": "number",
+    "default": 30,
+    "min": 8,
+    "max": 120,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_tracking",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_offset_px",
+    "type": "number",
+    "default": 38,
+    "min": 0,
+    "max": 300,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_delay_s",
+    "type": "number",
+    "default": 0.15,
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_fade_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.0,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "map",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.MapMarkers",
+   "reason": null,
+   "notes": "Markers pop in one by one (stagger_s) with an optional pulse ring and label. Same background options as AN-04; marker_count null uses all points."
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6,
+   "clip": "previews/X-ANN-05.mp4",
+   "thumb": "previews/X-ANN-05.jpg"
+  }
+ },
+ "AN-06": {
+  "params": [
+   {
+    "name": "grid_draw_s",
+    "type": "number",
+    "default": 1.2,
+    "min": 0.0,
+    "max": 4.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "space",
+    "type": "enum",
+    "default": "frame",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "frame",
+     "image"
+    ],
+    "measured": null
+   },
+   {
+    "name": "grid_cols",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 12,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_rows",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 12,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_px",
+    "type": "number",
+    "default": 2,
+    "min": 1,
+    "max": 10,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_opacity",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 1,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "grid_antialias",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shape",
+    "type": "enum",
+    "default": "triangle",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "triangle",
+     "circle",
+     "rect"
+    ],
+    "measured": null
+   },
+   {
+    "name": "shape_points",
+    "type": "points",
+    "default": [
+     [
+      0.5,
+      0.06
+     ],
+     [
+      0.26,
+      0.96
+     ],
+     [
+      0.76,
+      0.96
+     ]
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "region_opacity",
+    "type": "number",
+    "default": 0.28,
+    "min": 0.05,
+    "max": 0.8,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "region_color",
+    "type": "color",
+    "default": "#ffa03c",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "region_delay_s",
+    "type": "number",
+    "default": 1.4,
+    "min": 0,
+    "max": 20,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "region_fade_s",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0.0,
+    "max": 2.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_base",
+    "type": "number",
+    "default": 0.85,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "x brightness",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_ramp_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0.0,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.GridGeometry",
+   "reason": null,
+   "notes": "Grid (cols x rows) and one translucent region. shape_points: triangle uses 3 points, rect 2 opposite corners, circle centre + a point on its edge; space frame = fractions of the canvas, image = source px. Fixes the benchmark, whose region blend also darkened the whole frame by region_opacity."
+  },
+  "preview": {
+   "reel_start": 149.5,
+   "reel_end": 155.5,
+   "clip": "previews/AN-06.mp4",
+   "thumb": "previews/AN-06.jpg"
+  }
+ },
+ "AN-07": {
+  "params": [
+   {
+    "name": "dots_start",
+    "type": "number",
+    "default": 60,
+    "min": 10,
+    "max": 500,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dots_end",
+    "type": "number",
+    "default": 9000,
+    "min": 1000,
+    "max": 40000,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "radius_start_px",
+    "type": "number",
+    "default": 70,
+    "min": 10,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "radius_end_px",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "crossfade_to_painting",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "camera",
+    "type": "camera",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "seed",
+    "type": "number",
+    "default": 2,
+    "min": 0,
+    "max": 9999,
+    "unit": "seed",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ease",
+    "type": "enum",
+    "default": "inout_sine",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "in_quad",
+     "in_cubic",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "densify_frac",
+    "type": "number",
+    "default": 0.8,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "count_curve",
+    "type": "number",
+    "default": 1.5,
+    "min": 0.2,
+    "max": 4,
+    "unit": "exp",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "radius_curve",
+    "type": "number",
+    "default": 1.6,
+    "min": 0.2,
+    "max": 4,
+    "unit": "exp",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "crossfade_start_frac",
+    "type": "number",
+    "default": 0.78,
+    "min": 0,
+    "max": 1,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "crossfade_frac",
+    "type": "number",
+    "default": 0.2,
+    "min": 0.01,
+    "max": 1,
+    "unit": "ratio",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "paper_level",
+    "type": "number",
+    "default": 245,
+    "min": 0,
+    "max": 255,
+    "unit": "0-255",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "colour_gain",
+    "type": "number",
+    "default": 1.8,
+    "min": 0.5,
+    "max": 3,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "colour_offset",
+    "type": "number",
+    "default": 12,
+    "min": -50,
+    "max": 100,
+    "unit": "0-255",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.DotField",
+   "reason": null,
+   "notes": "Base shot on the matte (camera as any matte shot): seeded dot positions, colours sampled from the live picture, count and radius follow the curves over densify_frac of the shot, then cross-fade to the picture."
+  },
+  "preview": {
+   "reel_start": 155.5,
+   "reel_end": 162.0,
+   "clip": "previews/AN-07.mp4",
+   "thumb": "previews/AN-07.jpg"
+  }
+ },
+ "X-ANN-04": {
+  "params": [
+   {
+    "name": "group_count",
+    "type": "number",
+    "default": 4,
+    "min": 0,
+    "max": 6,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "per_group_draw_s",
+    "type": "number",
+    "default": null,
+    "min": 0.3,
+    "max": 6.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "hold_s",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "gap_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0.0,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "after_hold",
+    "type": "enum",
+    "default": "keep",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "keep",
+     "clear"
+    ],
+    "measured": null
+   },
+   {
+    "name": "clear_all_at_end",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stroke_px",
+    "type": "number",
+    "default": 4,
+    "min": 1,
+    "max": 12,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "opacity",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 1,
+    "unit": "alpha",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "ease",
+    "type": "enum",
+    "default": "inout_sine",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "in_quad",
+     "in_cubic",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "max_contours",
+    "type": "number",
+    "default": 3,
+    "min": 1,
+    "max": 10,
+    "unit": "count",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_base",
+    "type": "number",
+    "default": 0.85,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "x brightness",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_ramp_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0.0,
+    "max": 3.0,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points_1",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points_2",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points_3",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points_4",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points_5",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "points_6",
+    "type": "points",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   },
+   {
+    "name": "mask_1",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_2",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_3",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_4",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_5",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "mask_6",
+    "type": "image",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.annotations_extra.SequentialGroupOutlines",
+   "reason": null,
+   "notes": "Outlines drawn group by group from slots mask_1..mask_6 (or params points_1..points_6). after_hold keep: outlines stay and (clear_all_at_end) all fade together ending at the overlay end; clear: each fades fade_s after hold_s. per_group_draw_s null spreads the groups over the overlay duration."
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6,
+   "clip": "previews/X-ANN-04.mp4",
+   "thumb": "previews/X-ANN-04.jpg"
+  }
+ }
+}

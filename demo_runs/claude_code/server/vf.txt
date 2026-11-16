@@ -1,0 +1,1 @@
+subtitles=filename=subs.ass:fontsdir='C\:/Windows/Fonts'

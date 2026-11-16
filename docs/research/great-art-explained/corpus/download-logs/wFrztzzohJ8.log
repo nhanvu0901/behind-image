@@ -1,0 +1,132 @@
+[youtube] Extracting URL: https://www.youtube.com/watch?v=wFrztzzohJ8
+[youtube] wFrztzzohJ8: Downloading webpage
+WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
+[youtube] Sleeping 2.0 seconds ...
+[youtube] wFrztzzohJ8: Downloading visionos player API JSON
+[youtube] Sleeping 2.0 seconds ...
+[youtube] wFrztzzohJ8: Downloading m3u8 information
+WARNING: [youtube] Invalid start time (1063 > 1062) for chapter "BY JAMES PAYNE"
+[info] wFrztzzohJ8: Downloading 1 format(s): 398+140-11
+[info] Writing video description to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.description
+[info] Writing video metadata as JSON to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.info.json
+[download] Sleeping 4.94 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.f398.mp4
+
+[download]   0.0% of   53.88MiB at  128.73KiB/s ETA 07:10
+[download]   0.0% of   53.88MiB at  338.98KiB/s ETA 02:42
+[download]   0.0% of   53.88MiB at  709.23KiB/s ETA 01:17
+[download]   0.0% of   53.88MiB at    1.41MiB/s ETA 00:38
+[download]   0.1% of   53.88MiB at  328.84KiB/s ETA 02:47
+[download]   0.1% of   53.88MiB at  372.73KiB/s ETA 02:27
+[download]   0.2% of   53.88MiB at  496.55KiB/s ETA 01:50
+[download]   0.5% of   53.88MiB at  743.04KiB/s ETA 01:13
+[download]   0.9% of   53.88MiB at    1.16MiB/s ETA 00:46
+[download]   1.9% of   53.88MiB at    1.93MiB/s ETA 00:27
+[download]   3.7% of   53.88MiB at    3.29MiB/s ETA 00:15
+[download]   7.4% of   53.88MiB at    5.54MiB/s ETA 00:08
+[download]  14.8% of   53.88MiB at    8.56MiB/s ETA 00:05
+[download]  18.4% of   53.88MiB at    9.61MiB/s ETA 00:04
+[download]  18.4% of   53.88MiB at   85.86KiB/s ETA 08:45
+[download]  18.5% of   53.88MiB at  238.97KiB/s ETA 03:08
+[download]  18.5% of   53.88MiB at  535.17KiB/s ETA 01:24
+[download]  18.5% of   53.88MiB at    1.08MiB/s ETA 00:40
+[download]  18.5% of   53.88MiB at  267.99KiB/s ETA 02:47
+[download]  18.6% of   53.88MiB at  274.02KiB/s ETA 02:44
+[download]  18.7% of   53.88MiB at  408.65KiB/s ETA 01:49
+[download]  18.9% of   53.88MiB at  628.88KiB/s ETA 01:11
+[download]  19.4% of   53.88MiB at 1016.58KiB/s ETA 00:43
+[download]  20.3% of   53.88MiB at    1.66MiB/s ETA 00:25
+[download]  22.2% of   53.88MiB at    2.85MiB/s ETA 00:14
+[download]  25.9% of   53.88MiB at    4.95MiB/s ETA 00:08
+[download]  33.3% of   53.88MiB at    7.86MiB/s ETA 00:04
+[download]  36.8% of   53.88MiB at    8.95MiB/s ETA 00:03
+[download]  36.8% of   53.88MiB at  Unknown B/s ETA Unknown
+[download]  36.8% of   53.88MiB at  Unknown B/s ETA Unknown
+[download]  36.9% of   53.88MiB at    4.67MiB/s ETA 00:07  
+[download]  36.9% of   53.88MiB at    7.57MiB/s ETA 00:04
+[download]  36.9% of   53.88MiB at    5.61MiB/s ETA 00:06
+[download]  37.0% of   53.88MiB at    5.98MiB/s ETA 00:05
+[download]  37.1% of   53.88MiB at    7.60MiB/s ETA 00:04
+[download]  37.3% of   53.88MiB at    3.38MiB/s ETA 00:09
+[download]  37.8% of   53.88MiB at    5.37MiB/s ETA 00:06
+[download]  38.7% of   53.88MiB at    7.52MiB/s ETA 00:04
+[download]  40.5% of   53.88MiB at    9.10MiB/s ETA 00:03
+[download]  44.3% of   53.88MiB at   11.00MiB/s ETA 00:02
+[download]  51.7% of   53.88MiB at   11.28MiB/s ETA 00:02
+[download]  55.2% of   53.88MiB at   11.70MiB/s ETA 00:02
+[download]  55.2% of   53.88MiB at  Unknown B/s ETA Unknown
+[download]  55.2% of   53.88MiB at  Unknown B/s ETA Unknown
+[download]  55.2% of   53.88MiB at    4.95MiB/s ETA 00:04  
+[download]  55.3% of   53.88MiB at    7.89MiB/s ETA 00:03
+[download]  55.3% of   53.88MiB at   12.95MiB/s ETA 00:01
+[download]  55.3% of   53.88MiB at   17.96MiB/s ETA 00:01
+[download]  55.5% of   53.88MiB at   18.36MiB/s ETA 00:01
+[download]  55.7% of   53.88MiB at   17.85MiB/s ETA 00:01
+[download]  56.2% of   53.88MiB at   17.53MiB/s ETA 00:01
+[download]  57.1% of   53.88MiB at   15.84MiB/s ETA 00:01
+[download]  58.9% of   53.88MiB at   15.04MiB/s ETA 00:01
+[download]  62.7% of   53.88MiB at   14.05MiB/s ETA 00:01
+[download]  70.1% of   53.88MiB at   12.76MiB/s ETA 00:01
+[download]  73.3% of   53.88MiB at   12.89MiB/s ETA 00:01
+[download]  73.3% of   53.88MiB at  127.45KiB/s ETA 01:56
+[download]  73.3% of   53.88MiB at  343.40KiB/s ETA 00:42
+[download]  73.3% of   53.88MiB at  755.69KiB/s ETA 00:19
+[download]  73.3% of   53.88MiB at    1.50MiB/s ETA 00:09
+[download]  73.3% of   53.88MiB at  323.17KiB/s ETA 00:45
+[download]  73.4% of   53.88MiB at  365.48KiB/s ETA 00:40
+[download]  73.5% of   53.88MiB at  490.00KiB/s ETA 00:29
+[download]  73.7% of   53.88MiB at  727.87KiB/s ETA 00:19
+[download]  74.2% of   53.88MiB at    1.14MiB/s ETA 00:12
+[download]  75.1% of   53.88MiB at    1.89MiB/s ETA 00:07
+[download]  77.0% of   53.88MiB at    3.23MiB/s ETA 00:03
+[download]  80.7% of   53.88MiB at    5.51MiB/s ETA 00:01
+[download]  88.1% of   53.88MiB at    7.52MiB/s ETA 00:00
+[download]  91.7% of   53.88MiB at    8.29MiB/s ETA 00:00
+[download]  91.7% of   53.88MiB at  Unknown B/s ETA Unknown
+[download]  91.7% of   53.88MiB at  Unknown B/s ETA Unknown
+[download]  91.7% of   53.88MiB at    4.62MiB/s ETA 00:00  
+[download]  91.7% of   53.88MiB at    7.65MiB/s ETA 00:00
+[download]  91.8% of   53.88MiB at    7.24MiB/s ETA 00:00
+[download]  91.8% of   53.88MiB at    6.16MiB/s ETA 00:00
+[download]  91.9% of   53.88MiB at    8.36MiB/s ETA 00:00
+[download]  92.2% of   53.88MiB at    7.10MiB/s ETA 00:00
+[download]  92.6% of   53.88MiB at    9.01MiB/s ETA 00:00
+[download]  93.6% of   53.88MiB at   10.85MiB/s ETA 00:00
+[download]  95.4% of   53.88MiB at   11.81MiB/s ETA 00:00
+[download]  99.1% of   53.88MiB at   12.95MiB/s ETA 00:00
+[download] 100.0% of   53.88MiB at   13.34MiB/s ETA 00:00
+[download] 100% of   53.88MiB in 00:00:07 at 7.01MiB/s   
+[download] Sleeping 5.07 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.f140-11.m4a
+
+[download]   0.0% of   16.39MiB at  206.48KiB/s ETA 01:21
+[download]   0.0% of   16.39MiB at  481.55KiB/s ETA 00:34
+[download]   0.0% of   16.39MiB at 1020.72KiB/s ETA 00:16
+[download]   0.1% of   16.39MiB at    2.00MiB/s ETA 00:08
+[download]   0.2% of   16.39MiB at    3.89MiB/s ETA 00:04
+[download]   0.4% of   16.39MiB at    3.22MiB/s ETA 00:05
+[download]   0.8% of   16.39MiB at    6.13MiB/s ETA 00:02
+[download]   1.5% of   16.39MiB at    7.74MiB/s ETA 00:02
+[download]   3.0% of   16.39MiB at    9.41MiB/s ETA 00:01
+[download]   6.1% of   16.39MiB at   11.55MiB/s ETA 00:01
+[download]  12.2% of   16.39MiB at   13.42MiB/s ETA 00:01
+[download]  24.4% of   16.39MiB at   14.64MiB/s ETA 00:00
+[download]  48.8% of   16.39MiB at   15.79MiB/s ETA 00:00
+[download]  58.3% of   16.39MiB at   14.61MiB/s ETA 00:00
+[download]  58.3% of   16.39MiB at  Unknown B/s ETA Unknown
+[download]  58.3% of   16.39MiB at    2.41MiB/s ETA 00:02  
+[download]  58.3% of   16.39MiB at    3.39MiB/s ETA 00:02
+[download]  58.4% of   16.39MiB at    6.23MiB/s ETA 00:01
+[download]  58.5% of   16.39MiB at   11.33MiB/s ETA 00:00
+[download]  58.7% of   16.39MiB at   14.49MiB/s ETA 00:00
+[download]  59.0% of   16.39MiB at   26.24MiB/s ETA 00:00
+[download]  59.8% of   16.39MiB at   20.35MiB/s ETA 00:00
+[download]  61.3% of   16.39MiB at    3.23MiB/s ETA 00:01
+[download]  64.4% of   16.39MiB at    5.30MiB/s ETA 00:01
+[download]  70.5% of   16.39MiB at    7.75MiB/s ETA 00:00
+[download]  82.7% of   16.39MiB at   10.85MiB/s ETA 00:00
+[download] 100.0% of   16.39MiB at   12.81MiB/s ETA 00:00
+[download] 100% of   16.39MiB in 00:00:01 at 11.81MiB/s  
+[Merger] Merging formats into "/Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.mp4"
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.f140-11.m4a (pass -k to keep)
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/wFrztzzohJ8.f398.mp4 (pass -k to keep)

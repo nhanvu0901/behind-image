@@ -1,0 +1,12 @@
+| highlight | word | expected onset (s) | measured onset in mp4 (s) | offset (s) | within +-0.25 |
+|---|---|---|---|---|---|
+| Spotlight on mirror (cold open) | Notice the mirror | 38.48 | 38.68 | +0.20 | yes |
+| Dimension annotation lines (AN-05) | eighty-two | 30.17 | 30.07 | -0.10 | yes |
+| Label GREEN WOOL GOWN | that green dress | 308.07 | 308.17 | +0.10 | yes |
+| Year caption 1433 | dead by 1433 | 193.97 | 194.14 | +0.17 | yes |
+| Spotlight on mirror (mirror chapter) | The mirror pulls | 561.46 | 561.56 | +0.10 | yes |
+| Two circles on roundels | Ten tiny roundels | 616.04 | 616.07 | +0.03 | yes |
+| Circle on the lit candle | one candle is lit | 649.41 | 649.34 | -0.07 | yes |
+| Spotlight on joined hands | Look at the joined hands | 696.81 | 696.94 | +0.13 | yes |
+
+8/8 within +-0.25 s

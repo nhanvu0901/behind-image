@@ -1,0 +1,47 @@
+
+--- Lượt thử tiếp ---
+[youtube] Extracting URL: https://www.youtube.com/watch?v=1ldE2ZjfxkE
+[youtube] 1ldE2ZjfxkE: Downloading webpage
+WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
+[youtube] Sleeping 2.0 seconds ...
+[youtube] 1ldE2ZjfxkE: Downloading visionos player API JSON
+[youtube] Sleeping 2.0 seconds ...
+[youtube] 1ldE2ZjfxkE: Downloading m3u8 information
+[info] 1ldE2ZjfxkE: Downloading 1 format(s): 396+140-7
+[info] Writing video description to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.description
+[info] Writing video metadata as JSON to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.info.json
+[download] Sleeping 5.59 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.f396.mp4
+
+[download]   0.0% of    2.24MiB at  Unknown B/s ETA Unknown
+[download]   0.1% of    2.24MiB at    2.15MiB/s ETA 00:01  
+[download]   0.3% of    2.24MiB at    4.17MiB/s ETA 00:00
+[download]   0.7% of    2.24MiB at    6.93MiB/s ETA 00:00
+[download]   1.4% of    2.24MiB at    6.24MiB/s ETA 00:00
+[download]   2.7% of    2.24MiB at    8.05MiB/s ETA 00:00
+[download]   5.5% of    2.24MiB at    7.77MiB/s ETA 00:00
+[download]  11.1% of    2.24MiB at   12.83MiB/s ETA 00:00
+[download]  22.3% of    2.24MiB at   12.91MiB/s ETA 00:00
+[download]  44.7% of    2.24MiB at   16.14MiB/s ETA 00:00
+[download]  89.3% of    2.24MiB at   15.47MiB/s ETA 00:00
+[download] 100.0% of    2.24MiB at    5.42MiB/s ETA 00:00
+[download] 100% of    2.24MiB in 00:00:00 at 3.40MiB/s   
+[download] Sleeping 4.72 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.f140-7.m4a
+
+[download]   0.0% of    2.18MiB at  Unknown B/s ETA Unknown
+[download]   0.1% of    2.18MiB at    1.66MiB/s ETA 00:01  
+[download]   0.3% of    2.18MiB at    2.94MiB/s ETA 00:00
+[download]   0.7% of    2.18MiB at    5.24MiB/s ETA 00:00
+[download]   1.4% of    2.18MiB at    8.02MiB/s ETA 00:00
+[download]   2.8% of    2.18MiB at   13.85MiB/s ETA 00:00
+[download]   5.7% of    2.18MiB at   24.68MiB/s ETA 00:00
+[download]  11.4% of    2.18MiB at   25.91MiB/s ETA 00:00
+[download]  22.9% of    2.18MiB at   11.53MiB/s ETA 00:00
+[download]  45.9% of    2.18MiB at    9.90MiB/s ETA 00:00
+[download]  91.8% of    2.18MiB at    9.00MiB/s ETA 00:00
+[download] 100.0% of    2.18MiB at    9.69MiB/s ETA 00:00
+[download] 100% of    2.18MiB in 00:00:00 at 3.73MiB/s   
+[Merger] Merging formats into "/Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.mp4"
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.f396.mp4 (pass -k to keep)
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/1ldE2ZjfxkE.f140-7.m4a (pass -k to keep)

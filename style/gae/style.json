@@ -1,0 +1,456 @@
+{
+ "canvas": {
+  "width": {
+   "value": 1920,
+   "source": "capabilities_report.md deliverables"
+  },
+  "height": {
+   "value": 1080,
+   "source": "capabilities_report.md deliverables"
+  },
+  "fps": {
+   "value": 30,
+   "source": "capabilities_report.md (reference episode is 29.97 fps, measurements.md)"
+  },
+  "reference_resolution": {
+   "value": "1280x720 AV1 29.97 fps",
+   "source": "demo_runs/claude_code/measurements.md"
+  }
+ },
+ "cut_policy": {
+  "default_transition": {
+   "value": "hard_cut",
+   "source": "demo_runs/claude_code/measurements.md: all sampled cuts hard, no dissolve at 179.3/181.3 s, no fade from black at start"
+  },
+  "dissolve_use": {
+   "value": "only in effect excerpts (TR-01, crCPVoPsTtk 698.5 s); not in the Arnolfini episode",
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "fade_from_black_at_start": {
+   "value": false,
+   "source": "demo_runs/claude_code/measurements.md"
+  }
+ },
+ "matte": {
+  "reference_color": {
+   "value": "#000000 pure black, no shadow or gradient",
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "matte_width_pct_of_frame": {
+   "value": 34,
+   "source": "demo_runs/claude_code/measurements.md (full-height vertical painting)"
+  },
+  "detail_crops": {
+   "value": "full-bleed 16:9, no matte",
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "benchmark_stand_in": {
+   "value": "#1e1e1e centre to #060606 edge radial gradient with grain and soft shadow",
+   "source": "capabilities_report.md (benchmark spec forbade raw bars; a departure from the channel)"
+  },
+  "painting_height_pct": {
+   "value": 95.5,
+   "source": "demo_runs/claude_code/build_v2.py ZF (benchmark value)"
+  },
+  "benchmark_painting_width_px": {
+   "value": 4386,
+   "source": "benchmark value: width of the Arnolfini source image the ported zoom defaults were tuned on (build_v2.py ZW)"
+  }
+ },
+ "label_strip": {
+  "y_top_pct": {
+   "value": 79.4,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "y_bottom_pct": {
+   "value": 93.3,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "opacity": {
+   "value": 0.8,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "text_x_pct": {
+   "value": 7.0,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "cap_height_pct_of_height": {
+   "value": 4.2,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "right_fade_pct_of_width": {
+   "value": 20,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "text_case": {
+   "value": "upper",
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "two_line": {
+   "value": "second smaller line: ARTIST, YEAR",
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "pop_in_s": {
+   "value": 0.1,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "hold_s": {
+   "value": 3.2,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "fade_out_s": {
+   "value": 0.2,
+   "source": "demo_runs/claude_code/measurements.md",
+   "note": "under 0.2 s"
+  },
+  "first_line_px_1080p": {
+   "value": 58,
+   "source": "lib/vfx.py label_layer (benchmark)"
+  },
+  "second_line_px_1080p": {
+   "value": 32,
+   "source": "lib/vfx.py label_layer (benchmark)"
+  },
+  "benchmark_final_variant": {
+   "value": "y 70-83 % so burned subtitles fit below",
+   "source": "capabilities_report.md Layout rule (not the channel layout)"
+  }
+ },
+ "fonts": {
+  "channel": {
+   "value": "geometric sans, Futura-like, all caps for labels",
+   "source": "demo_runs/claude_code/measurements.md Overlays/text; font name not confirmed in research (EFFECTS_CATALOG: no exact font inferred)"
+  },
+  "stand_in_label_mac": {
+   "value": "/System/Library/Fonts/Supplemental/Futura.ttc",
+   "source": "demo_runs/claude_code/lib/vfx.py _FONT_CANDIDATES"
+  },
+  "stand_in_label_windows": {
+   "value": "Century Gothic (GOTHIC.TTF)",
+   "source": "capabilities_report.md; lib/vfx.py"
+  },
+  "stand_in_bold": {
+   "value": "Arial Bold",
+   "source": "lib/vfx.py"
+  },
+  "quote_font": {
+   "value": "Georgia Italic (channel serif italic font unknown)",
+   "source": "capabilities_report.md TXT-02"
+  }
+ },
+ "cards": {
+  "chapter_card_duration_s": {
+   "value": 2.0,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_text_in_delay_s": {
+   "value": 0.2,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_text_pop_s": {
+   "value": 0.1,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_text_leave_at_s": {
+   "value": 1.7,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_text_fade_out_s": {
+   "value": 0.15,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_text_y_pct": {
+   "value": 88,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_text_width_pct": {
+   "value": 35,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chapter_background": {
+   "value": "#000000",
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "title_card_benchmark_duration_s": {
+   "value": 2.6,
+   "source": "capabilities_report.md Structure decisions (benchmark choice, not measured)"
+  },
+  "title_card_position": {
+   "value": "after the hook; the channel opens cold on the image",
+   "source": "capabilities_report.md Structure decisions; measurements.md Opening 0-35 s"
+  }
+ },
+ "spotlight": {
+  "surround_floor_reference": {
+   "value": "0.15-0.25 estimated by eye",
+   "source": "demo_runs/claude_code/measurements.md Spotlight"
+  },
+  "surround_floor_benchmark_final": {
+   "value": 0.2,
+   "source": "demo_runs/claude_code/build_v2.py SPOT_FLOOR"
+  },
+  "surround_floor_benchmark_reel": {
+   "value": 0.35,
+   "source": "capabilities_report.md HI-01"
+  },
+  "ramp_s": {
+   "value": 0.5,
+   "source": "capabilities_report.md HI-01 (brief example, not measured)"
+  },
+  "ease": {
+   "value": "inout_sine",
+   "source": "lib/vfx.py / build_v2.py Spot"
+  }
+ },
+ "ring": {
+  "diameter_pct_width": {
+   "value": 23.4,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "stroke_pct_width": {
+   "value": 0.7,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "stroke_px_720p": {
+   "value": 9,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "draw_s": {
+   "value": 0.5,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "hold_s": {
+   "value": 2.0,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "fade_s": {
+   "value": 0.4,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "opacity": {
+   "value": 0.75,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "grey_level_0_255": {
+   "value": 190,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "color_benchmark": {
+   "value": "#cdcdcd (205)",
+   "source": "lib/vfx.py ring"
+  },
+  "count_in_episode": {
+   "value": "two rings, appear one after another",
+   "source": "demo_runs/claude_code/measurements.md"
+  }
+ },
+ "still_sequence": {
+  "hold_s": {
+   "value": 4.0,
+   "source": "demo_runs/claude_code/measurements.md (cuts 181.3/185.3/189.3/193.3 s)"
+  }
+ },
+ "pacing": {
+  "median_shot_s": {
+   "value": 7.0,
+   "source": "demo_runs/claude_code/measurements.md (59 shots, thr 0.15)"
+  },
+  "p10_shot_s": {
+   "value": 4.0,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "p90_shot_s": {
+   "value": 37.6,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "mean_shot_s": {
+   "value": 15.9,
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "benchmark_final_median_shot_s": {
+   "value": 9.7,
+   "source": "ref/qa_pacing2.txt (for comparison; 79 shots, p10 2.9, p90 18.8)"
+  }
+ },
+ "camera_presets": {
+  "opening_pull_back": {
+   "value": {
+    "zoom_out_ratio": 3.0,
+    "duration_s": 17.9,
+    "ease": "out",
+    "progress_25_50_75": [
+     0.41,
+     0.67,
+     0.89
+    ],
+    "window": "12-30 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md Camera moves"
+  },
+  "matte_to_fill": {
+   "value": {
+    "zoom_in_ratio": 1.59,
+    "duration_s": 4.9,
+    "ease": "in",
+    "progress_25_50_75": [
+     0.1,
+     0.34,
+     0.65
+    ],
+    "window": "322.6-327.5 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "dress_pan": {
+   "value": {
+    "direction": "down",
+    "duration_s": 13,
+    "extent": "about 2 frame heights",
+    "speed": "~16-17 % of frame height per s",
+    "magnification_drift": "1.35 to 1.03",
+    "ease": "linear",
+    "window": "334-347 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "mirror_push": {
+   "value": {
+    "zoom_in_ratio": 3.57,
+    "duration_s": 11,
+    "ease": "in-out",
+    "progress": {
+     "2.1s": 0.08,
+     "5.1s": 0.32,
+     "8.1s": 0.69,
+     "10.1s": 0.95
+    },
+    "window": "590-601 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "mirror_drift": {
+   "value": {
+    "duration_s": 17,
+    "magnification": 1.0,
+    "pan_pct_per_s": 1.7,
+    "window": "601-618 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "chandelier_push": {
+   "value": {
+    "zoom_in_ratio": 1.49,
+    "duration_s": 3,
+    "then_lateral_pan_pct_width_per_s": 11.5,
+    "ease": "out",
+    "window": "666-669 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "closing_pull_out": {
+   "value": {
+    "zoom_out_ratio": 5.8,
+    "duration_s": 40,
+    "ease": "out",
+    "progress_25_50_75": [
+     0.45,
+     0.71,
+     0.9
+    ],
+    "window": "888-928 s"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "excerpt_push_in": {
+   "value": {
+    "zoom_in_ratio": 1.142,
+    "duration_s": 5.9,
+    "ease": "~linear"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "excerpt_pull_back": {
+   "value": {
+    "zoom_out_ratio": 1.312,
+    "duration_s": 9.9,
+    "ease": "in"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "excerpt_pan_up": {
+   "value": {
+    "speed_px_s_1080p": 19,
+    "extent_pct_height": 16.6,
+    "duration_s": 9.4,
+    "ease": "linear"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  },
+  "excerpt_zoom_shift": {
+   "value": {
+    "zoom_in_ratio": 1.51,
+    "shift_pct_width": 15,
+    "shift_pct_height": 14,
+    "duration_s": 9.4,
+    "ease": "~linear"
+   },
+   "source": "demo_runs/claude_code/measurements.md"
+  }
+ },
+ "narration": {
+  "target_words_per_minute": {
+   "value": 140.0,
+   "source": "capabilities_report.md Audio and sync (benchmark landed on the channel-like rate); video-study.md measured Starry 140.4 wpm and Raphael 132.3 wpm over whole-file duration incl. silences"
+  },
+  "channel_range_wpm": {
+   "value": [
+    132.3,
+    140.4
+   ],
+   "source": "docs/research/great-art-explained/video-study.md (two videos, ASR token count over whole duration)"
+  },
+  "loudness_target_lufs": {
+   "value": -15.0,
+   "source": "capabilities_report.md (benchmark target, not channel measurement)"
+  }
+ },
+ "sync": {
+  "highlight_onset_tolerance_s": {
+   "value": 0.25,
+   "source": "capabilities_report.md highlight onsets (benchmark acceptance)"
+  },
+  "channel_sync_note": {
+   "value": "figure cue and the narration segment overlap in time; cue onset cannot be assigned to a single word",
+   "source": "SYNCHRONIZATION_ANALYSIS.md Nhip loi va thoi diem hinh"
+  }
+ },
+ "labels_vi_note": "label_vi values in techniques.json are short Vietnamese UI labels",
+ "diagram": {
+  "label_size_px": {
+   "value": 28,
+   "source": "benchmark value: diagram label size, build_reel.py diagrams"
+  },
+  "label_tracking": {
+   "value": 5,
+   "source": "benchmark value: diagram label tracking px"
+  }
+ },
+ "shorts": {
+  "panel_w_px": {
+   "value": 608,
+   "source": "benchmark value: build_reel.py vpanel (9:16 panel width at 1080 high)"
+  },
+  "ambient_blur_sigma": {
+   "value": 38,
+   "source": "benchmark value: build_reel.py vpanel blur"
+  },
+  "ambient_darken": {
+   "value": 0.42,
+   "source": "benchmark value: build_reel.py vpanel darken"
+  },
+  "panel_shadow_alpha": {
+   "value": 0.5,
+   "source": "benchmark value: build_reel.py vpanel shadow"
+  }
+ }
+}

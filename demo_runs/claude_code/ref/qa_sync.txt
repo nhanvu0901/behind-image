@@ -1,0 +1,10 @@
+| highlight | word | word start (s) | visual onset measured in mp4 (s) | offset (s) | within +-0.25 |
+|---|---|---|---|---|---|
+| Spotlight on mirror (B3a) | mirror | 38.43 | 38.60 | +0.17 | yes |
+| Two circles (B3b) | roundels | 43.95 | 44.00 | +0.05 | yes |
+| Spotlight on joined hands (B4d) | holds | 66.63 | 66.47 | -0.16 | yes |
+| Van der Paele slide-in (B4a) | Compare | 52.78 | 52.57 | -0.22 | yes |
+| '1433' caption (B2d) | 1433 | 33.37 | 33.53 | +0.17 | yes |
+| '1434' caption (B2d) | finished | 36.23 | 36.37 | +0.14 | yes |
+
+6/6 within +-0.25 s

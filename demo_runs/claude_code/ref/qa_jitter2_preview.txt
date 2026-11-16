@@ -1,0 +1,8 @@
+mine: opening pull-back: frames=241 pairs=240  trans-resid x=0.088px y=0.038px (1080p-equiv)  scale-resid=0.074px at frame edge  mean|dx|=2.37px/f mean|dy|=0.57px/f mean ln-scale/f=-0.00248
+mine: matte to fill-width + push to dress: frames=211 pairs=210  trans-resid x=0.384px y=0.231px (1080p-equiv)  scale-resid=0.382px at frame edge  mean|dx|=4.98px/f mean|dy|=2.95px/f mean ln-scale/f=+0.00476
+mine: long pan down the dress: frames=240 pairs=239  trans-resid x=0.040px y=0.039px (1080p-equiv)  scale-resid=0.046px at frame edge  mean|dx|=0.23px/f mean|dy|=1.45px/f mean ln-scale/f=-0.00024
+mine: mirror push: frames=241 pairs=240  trans-resid x=0.112px y=0.071px (1080p-equiv)  scale-resid=0.111px at frame edge  mean|dx|=5.07px/f mean|dy|=2.93px/f mean ln-scale/f=+0.00516
+mine: closing pull-out: frames=360 pairs=359  trans-resid x=0.032px y=0.035px (1080p-equiv)  scale-resid=0.022px at frame edge  mean|dx|=2.34px/f mean|dy|=0.92px/f mean ln-scale/f=-0.00230
+REF excerpt pan-up: frames=255 pairs=254  trans-resid x=0.020px y=0.045px (1080p-equiv)  scale-resid=0.017px at frame edge  mean|dx|=0.02px/f mean|dy|=0.60px/f mean ln-scale/f=+0.00012
+REF excerpt push-in: frames=165 pairs=164  trans-resid x=0.032px y=0.019px (1080p-equiv)  scale-resid=0.021px at frame edge  mean|dx|=0.77px/f mean|dy|=0.03px/f mean ln-scale/f=+0.00075
+REF episode mirror push: frames=241 pairs=240  trans-resid x=0.029px y=0.028px (1080p-equiv)  scale-resid=0.025px at frame edge  mean|dx|=1.41px/f mean|dy|=1.92px/f mean ln-scale/f=+0.00354

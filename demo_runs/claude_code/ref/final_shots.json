@@ -1,0 +1,137 @@
+[
+ {
+  "t0": 0,
+  "t1": 9.479,
+  "effect": "slow drift across couple + decelerating pull-back to matte",
+  "ids": [
+   "CAM-03",
+   "CAM-05",
+   "STATIC-01"
+  ],
+  "image": "arnolfini_commons",
+  "params": {
+   "drift": "z 0.4378->0.4728 over 4.9s",
+   "pull_back": "0.4728->0.172 (2.75x) 4.3s ease out_cubic",
+   "ref": "opening pull-back 3.0x/17.9s out"
+  },
+  "words": "Most people ... Look closer"
+ },
+ {
+  "t0": 9.479,
+  "t1": 12.079,
+  "effect": "title card",
+  "ids": [
+   "TXT-01"
+  ],
+  "image": "arnolfini_commons (blurred)",
+  "params": {
+   "blur_sigma": 30,
+   "text_fade": 0.35
+  },
+  "words": ""
+ },
+ {
+  "t0": 12.229,
+  "t1": 21.805,
+  "effect": "matte zoom-in to full-bleed then pan down dress",
+  "ids": [
+   "CAM-01",
+   "CAM-04",
+   "CAM-06",
+   "STATIC-02"
+  ],
+  "image": "arnolfini_commons",
+  "params": {
+   "zoom": "0.172->0.50 (2.9x) ease inout_cubic",
+   "pan": "cy 3600->4650 linear (103 px/s screen)",
+   "label": [
+    "Green wool gown @14.53",
+    "Squirrel-fur lining @17.16"
+   ],
+   "ref": "matte zoom-in 1.59x/4.9s ease-in; dress pan ~180 px/s"
+  },
+  "words": "Her green gown / The fur lining"
+ },
+ {
+  "t0": 21.835,
+  "t1": 29.874000000000002,
+  "effect": "hard cut-in to detail + slow push",
+  "ids": [
+   "TR-04",
+   "CAM-01",
+   "STATIC-08"
+  ],
+  "image": "arnolfini_commons",
+  "params": {
+   "zoom": "0.90->1.04 out_cubic"
+  },
+  "words": "The dog at her feet"
+ },
+ {
+  "t0": 29.854,
+  "t1": 37.218999999999994,
+  "effect": "hard cut to matte, year captions",
+  "ids": [
+   "STATIC-09",
+   "STATIC-01"
+  ],
+  "image": "arnolfini_commons",
+  "params": {
+   "text": "1433 @33.37, 1434 @36.23"
+  },
+  "words": "died in 1433 / finished"
+ },
+ {
+  "t0": 37.419,
+  "t1": 52.26,
+  "effect": "push-in to mirror + spotlight x2 + two circles",
+  "ids": [
+   "HI-01",
+   "CAM-05",
+   "AN-01",
+   "STATIC-02"
+  ],
+  "image": "arnolfini_commons",
+  "params": {
+   "zoom": "0.4378->1.12->1.30 (3.0x) inout",
+   "spotlight": "floor 0.35, ramp 0.5s @'mirror' 38.43 and @B3c 47.51",
+   "rings": "r=78 src px, 0.5s draw @'roundels' 43.95, fade 0.4s"
+  },
+  "words": "The convex mirror / Ten tiny roundels / Every scene"
+ },
+ {
+  "t0": 52.46,
+  "t1": 62.498,
+  "effect": "two-panel split-screen, slide-in of 2nd panel, synchronous push-ins on rugs",
+  "ids": [
+   "LAY-01",
+   "TR-02",
+   "CAM-05",
+   "STATIC-02"
+  ],
+  "image": "arnolfini_commons + paele_commons",
+  "params": {
+   "slide": "0.85s out_cubic from right edge @'Compare' 52.46",
+   "push": "L 0.1097->0.30, R 0.228->0.55"
+  },
+  "words": "Compare it / The same mastery"
+ },
+ {
+  "t0": 62.478,
+  "t1": 81.05,
+  "effect": "push to hands + spotlight, then long pull-back to matte, fade out",
+  "ids": [
+   "HI-01",
+   "CAM-05",
+   "CAM-03",
+   "STATIC-01"
+  ],
+  "image": "arnolfini_commons",
+  "params": {
+   "spotlight": "floor 0.35 ramp 0.5s @'holds' 66.63, release @B5a 71.26",
+   "pull_back": "0.95->0.172 (5.5x) 8.2s out_cubic",
+   "ref": "closing pull-out 5.8x/40s ease-out"
+  },
+  "words": "But the clue / Giovanni holds / Pull back / memorial"
+ }
+]

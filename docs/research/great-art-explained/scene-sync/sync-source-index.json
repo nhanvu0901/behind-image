@@ -1,0 +1,479 @@
+{
+  "scope": "8 local source MP4 and raw ASR JSON; .info.json excluded",
+  "probe_command": "ffprobe -v error -show_format -show_streams -of json <source.mp4>",
+  "audio_offset_definition": "audio stream start_time minus video stream start_time; container timestamps, not proof of speech/ASR alignment",
+  "sources": [
+    {
+      "id": "GLW9omJfAdk",
+      "media_path": "research_media/great-art-explained/GLW9omJfAdk.mp4",
+      "asr_path": "research_media/great-art-explained/analysis-b/GLW9omJfAdk/transcript/GLW9omJfAdk.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "3070.397823"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/30000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 92110018,
+        "duration": "3070.333933",
+        "avg_frame_rate": "30000/1001",
+        "r_frame_rate": "30000/1001",
+        "nb_frames": "92018"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "aac",
+        "time_base": "1/44100",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 135404544,
+        "duration": "3070.397823",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "132231",
+        "sample_rate": "44100"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "GLW9omJfAdk.mp4",
+        "declared_duration_seconds": 3070.397823,
+        "segment_count": 520,
+        "segment_duration_min_seconds": 0.64,
+        "segment_duration_median_seconds": 5.38,
+        "segment_duration_max_seconds": 26.3,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.79999995,
+          "end": 4.72,
+          "text": "This video contains images which some viewers may find distressing."
+        },
+        "last_segment": {
+          "start": 3058.72,
+          "end": 3061.2,
+          "text": "we should look within ourselves."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "vBG621XEegk",
+      "media_path": "research_media/great-art-explained/vBG621XEegk.mp4",
+      "asr_path": "research_media/great-art-explained/analysis-b/vBG621XEegk/transcript/vBG621XEegk.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "3052.007619"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/30000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 91558467,
+        "duration": "3051.948900",
+        "avg_frame_rate": "30000/1001",
+        "r_frame_rate": "30000/1001",
+        "nb_frames": "91467"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "aac",
+        "time_base": "1/44100",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 134593536,
+        "duration": "3052.007619",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "131439",
+        "sample_rate": "44100"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "vBG621XEegk.mp4",
+        "declared_duration_seconds": 3052.007619,
+        "segment_count": 465,
+        "segment_duration_min_seconds": 1.02,
+        "segment_duration_median_seconds": 6.0,
+        "segment_duration_max_seconds": 24.56,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 18.26,
+          "text": "The Garden of Earthly Delights by Hieronymus Bosch has been interpreted in so many ways."
+        },
+        "last_segment": {
+          "start": 3036.28,
+          "end": 3038.86,
+          "text": "I'd love to hear about them in the comments."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "ElWG0_kjy_Y",
+      "media_path": "research_media/great-art-explained/ElWG0_kjy_Y.mp4",
+      "asr_path": "research_media/great-art-explained/analysis-b/ElWG0_kjy_Y/transcript/ElWG0_kjy_Y.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "1973.440726"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/60000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 118403285,
+        "duration": "1973.388083",
+        "avg_frame_rate": "60000/1001",
+        "r_frame_rate": "60000/1001",
+        "nb_frames": "118285"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "aac",
+        "time_base": "1/44100",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 87028736,
+        "duration": "1973.440726",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "84989",
+        "sample_rate": "44100"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "ElWG0_kjy_Y.mp4",
+        "declared_duration_seconds": 1973.440726,
+        "segment_count": 321,
+        "segment_duration_min_seconds": 1.2,
+        "segment_duration_median_seconds": 5.58,
+        "segment_duration_max_seconds": 28.64,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 7.0,
+          "text": "Some people are disappointed when they first see the most famous painting in the world."
+        },
+        "last_segment": {
+          "start": 1968.98038,
+          "end": 1970.26038,
+          "text": "Thank you."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "eKyYPSpiC9g",
+      "media_path": "research_media/great-art-explained/eKyYPSpiC9g.mp4",
+      "asr_path": "research_media/great-art-explained/analysis-b/eKyYPSpiC9g/transcript/eKyYPSpiC9g.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "2171.158639"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/30000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 65133068,
+        "duration": "2171.102267",
+        "avg_frame_rate": "30000/1001",
+        "r_frame_rate": "30000/1001",
+        "nb_frames": "65068"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "aac",
+        "time_base": "1/44100",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 95748096,
+        "duration": "2171.158639",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "93504",
+        "sample_rate": "44100"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "eKyYPSpiC9g.mp4",
+        "declared_duration_seconds": 2171.158639,
+        "segment_count": 336,
+        "segment_duration_min_seconds": 1.22,
+        "segment_duration_median_seconds": 5.91,
+        "segment_duration_max_seconds": 20.88,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 4.88,
+          "text": "Just a quick reminder that you can support this channel by joining my Patreon, where you can find"
+        },
+        "last_segment": {
+          "start": 2159.1289699999998,
+          "end": 2160.34897,
+          "text": "it would never be delivered."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "crCPVoPsTtk",
+      "media_path": "research_media/great-art-explained/crCPVoPsTtk.mp4",
+      "asr_path": "research_media/great-art-explained/crCPVoPsTtk.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "1213.701000"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/30000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 36410374,
+        "duration": "1213.679133",
+        "avg_frame_rate": "30000/1001",
+        "r_frame_rate": "30000/1001",
+        "nb_frames": "36374"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "opus",
+        "time_base": "1/48000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 58257648,
+        "duration": "1213.701000",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "60685",
+        "sample_rate": "48000"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "crCPVoPsTtk.mp4",
+        "declared_duration_seconds": 1213.701,
+        "segment_count": 183,
+        "segment_duration_min_seconds": 1.52,
+        "segment_duration_median_seconds": 6.0,
+        "segment_duration_max_seconds": 22.4,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 22.4,
+          "text": "On May the 8th 1889 Vincent van Gogh is admitted to a mental asylum outside Saint-Rémy in Provence."
+        },
+        "last_segment": {
+          "start": 1200.0,
+          "end": 1203.9599998,
+          "text": "Somehow, we are still looking out of that window with him."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "9x0tsuS4dk0",
+      "media_path": "research_media/great-art-explained/9x0tsuS4dk0.mp4",
+      "asr_path": "research_media/great-art-explained/9x0tsuS4dk0.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "1437.421000"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/30000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 43122079,
+        "duration": "1437.402633",
+        "avg_frame_rate": "30000/1001",
+        "r_frame_rate": "30000/1001",
+        "nb_frames": "43079"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "opus",
+        "time_base": "1/48000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 68996208,
+        "duration": "1437.421000",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "71871",
+        "sample_rate": "48000"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "9x0tsuS4dk0.mp4",
+        "declared_duration_seconds": 1437.421,
+        "segment_count": 210,
+        "segment_duration_min_seconds": 1.0,
+        "segment_duration_median_seconds": 6.38,
+        "segment_duration_max_seconds": 25.618,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 12.0,
+          "text": "In the early 1500s, two of the greatest artists of all time were working just a few rooms apart in the Vatican."
+        },
+        "last_segment": {
+          "start": 1427.59146,
+          "end": 1431.43147,
+          "text": "to recognise that difference need not mean division."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "cuHgxPe3J7I",
+      "media_path": "research_media/great-art-explained/cuHgxPe3J7I.mp4",
+      "asr_path": "research_media/great-art-explained/analysis-a/cuHgxPe3J7I/cuHgxPe3J7I.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "1951.103129"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/30000",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 58531473,
+        "duration": "1951.049100",
+        "avg_frame_rate": "30000/1001",
+        "r_frame_rate": "30000/1001",
+        "nb_frames": "58473"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "aac",
+        "time_base": "1/44100",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 86043648,
+        "duration": "1951.103129",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "84027",
+        "sample_rate": "44100"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "cuHgxPe3J7I.mp4",
+        "declared_duration_seconds": 1951.103129,
+        "segment_count": 379,
+        "segment_duration_min_seconds": 0.78,
+        "segment_duration_median_seconds": 4.52,
+        "segment_duration_max_seconds": 26.02,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 15.24,
+          "text": "John Singer Sargent was the most successful society portrait painter of the Belle Epoque"
+        },
+        "last_segment": {
+          "start": 1936.71155,
+          "end": 1939.71155,
+          "text": "and innovative art of his generation."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    },
+    {
+      "id": "IBcB_dYtGUg",
+      "media_path": "research_media/great-art-explained/IBcB_dYtGUg.mp4",
+      "asr_path": "research_media/great-art-explained/analysis-b/IBcB_dYtGUg/transcript/IBcB_dYtGUg.json",
+      "probe_format": {
+        "start_time": "0.000000",
+        "duration": "1019.100590"
+      },
+      "video": {
+        "index": 0,
+        "codec_name": "av1",
+        "time_base": "1/12800",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 13043712,
+        "duration": "1019.040000",
+        "avg_frame_rate": "25/1",
+        "r_frame_rate": "25/1",
+        "nb_frames": "25476"
+      },
+      "audio": {
+        "index": 1,
+        "codec_name": "aac",
+        "time_base": "1/44100",
+        "start_pts": 0,
+        "start_time": "0.000000",
+        "duration_ts": 44942336,
+        "duration": "1019.100590",
+        "avg_frame_rate": "0/0",
+        "r_frame_rate": "0/0",
+        "nb_frames": "43889",
+        "sample_rate": "44100"
+      },
+      "audio_minus_video_start_seconds": 0.0,
+      "asr": {
+        "model": "whisper-large-v3",
+        "declared_media_file": "IBcB_dYtGUg.mp4",
+        "declared_duration_seconds": 1019.10059,
+        "segment_count": 152,
+        "segment_duration_min_seconds": 1.64,
+        "segment_duration_median_seconds": 6.25,
+        "segment_duration_max_seconds": 20.3,
+        "segments_with_word_arrays": 0,
+        "segment_word_entries": 0,
+        "top_level_word_entries": 0,
+        "first_segment": {
+          "start": 0.0,
+          "end": 11.759999,
+          "text": "In 1639, Japan closed its borders and cut itself off from the outside world."
+        },
+        "last_segment": {
+          "start": 1009.14548,
+          "end": 1014.60547,
+          "text": "In my next video I discuss Starry Night by Vincent van Gogh."
+        },
+        "granularity": "segment",
+        "asr_time_origin_verified_against_media": false
+      }
+    }
+  ]
+}

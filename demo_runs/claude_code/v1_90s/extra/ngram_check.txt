@@ -1,0 +1,4 @@
+script words: 185; book words: 2056
+6-gram overlaps: 0
+longest shared run: 5 words -> 'the dog at her feet'
+RESULT: PASS (<=5 consecutive)

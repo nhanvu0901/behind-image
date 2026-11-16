@@ -1,0 +1,501 @@
+{
+  "method": "Bảng 1 fps toàn case; 5 fps một ranh giới mỗi case; thời gian từ đầu MP4; không word alignment",
+  "cases": [
+    {
+      "case_id": "starry-landscape",
+      "videoID": "crCPVoPsTtk",
+      "sourceStart": 637,
+      "end": 765,
+      "ASRpath": "research_media/great-art-explained/crCPVoPsTtk.json",
+      "groups": [
+        {
+          "start": 637,
+          "end": 643,
+          "visual_state": "Bốn phong cảnh chia ô; các đường chéo mảnh nối sườn đồi",
+          "asr_semantic_span": "637.2–645.2: các cảnh nhìn từ cửa sổ cùng đường đồi chéo",
+          "analysis": "So sánh nhiều tác phẩm; đường là chú giải hình học, gợi hướng đọc từ phải về trái; bằng chứng trực quan."
+        },
+        {
+          "start": 643,
+          "end": 657,
+          "visual_state": "Starry Night bên trái, ảnh qua song cửa bên phải; vòng tròn đánh dấu cây",
+          "asr_semantic_span": "645.2–660.6: cây thực nhỏ và xa, tranh đưa cây sát mặt phẳng",
+          "analysis": "Cùng khung giữ qua nhiều câu; ảnh thực làm đối chứng tỉ lệ và vị trí, vòng tròn hút mắt sang bên phải."
+        },
+        {
+          "start": 657,
+          "end": 661,
+          "visual_state": "Tranh vẫn bên trái; bản in Nhật thay ảnh bên phải",
+          "asr_semantic_span": "657.0–660.6: liên hệ cách cắt khuôn hình của tranh in Nhật",
+          "analysis": "Chuyển riêng ô phải, giữ điểm neo trái; so sánh thị giác là phép tương đồng, không chứng minh ảnh hưởng."
+        },
+        {
+          "start": 661,
+          "end": 669,
+          "visual_state": "Phong cảnh có bách rồi nghĩa trang với hàng bách",
+          "asr_semantic_span": "661.7–668.5: mô-típ mới và biểu tượng cái chết",
+          "analysis": "Tranh rồi ảnh tư liệu là bối cảnh cho diễn giải biểu tượng."
+        },
+        {
+          "start": 669,
+          "end": 675,
+          "visual_state": "Cận cây bách của Starry Night, khung đi dần lên xoáy trời",
+          "asr_semantic_span": "669.3–674.2: cây nối đất với trời",
+          "analysis": "Đường đứng đưa mắt từ thân cây lên trời; minh họa trực tiếp quan hệ hình học, ý nghĩa là diễn giải lời dẫn."
+        },
+        {
+          "start": 675,
+          "end": 685,
+          "visual_state": "Trang thư/bản vẽ cạnh tranh cây bách, chữ phủ giữa rồi giữ",
+          "asr_semantic_span": "674.9–688.5: so sánh cột tháp, vẻ đẹp và dải sương",
+          "analysis": "Tư liệu và tranh đặt cạnh là bối cảnh; lớp chữ ưu tiên trên hai ảnh; hình kéo dài sang nhịp sương."
+        },
+        {
+          "start": 685,
+          "end": 690,
+          "visual_state": "Trở lại Starry Night, phần trời tối dần để dải sáng trên đồi nổi lên",
+          "asr_semantic_span": "682.2–694.4: sương và việc đi bộ",
+          "analysis": "Tối ngoại vi hướng mắt tới dải sáng; chi tiết tranh là minh họa cho cách nhận diện sương có mức bất định."
+        },
+        {
+          "start": 690,
+          "end": 699,
+          "visual_state": "Phim người đi bộ nhỏ bên trái; bản vẽ phong cảnh hiện bên phải",
+          "asr_semantic_span": "688.5–700.3: được đi dạo và vẽ nhìn xuống làng",
+          "analysis": "Phim gợi bối cảnh, bản vẽ là tư liệu; hai lớp xuất hiện nối tiếp."
+        },
+        {
+          "start": 699,
+          "end": 710,
+          "visual_state": "Tranh cạnh bản vẽ rồi bản đồ vệ tinh có vòng và hướng",
+          "asr_semantic_span": "700.3–712.3: làng nằm hướng khác phòng và studio",
+          "analysis": "Chuyển từ so sánh tranh/bản vẽ sang bản đồ giải thích vị trí; nhãn định hướng là chú giải."
+        },
+        {
+          "start": 710,
+          "end": 715,
+          "visual_state": "Cận làng trong tranh rồi ảnh làng lịch sử",
+          "asr_semantic_span": "706.1–718.8: ít nhà hơn thực tế",
+          "analysis": "Đối chiếu lần lượt; bức ảnh cung cấp bối cảnh quy mô, không tự kiểm chứng con số."
+        },
+        {
+          "start": 715,
+          "end": 726,
+          "visual_state": "Bàn tay thêm điểm sáng vàng trên mô phỏng làng; trở lại crop làng giữ",
+          "asr_semantic_span": "712.3–725.6: đèn sáng cân bằng sao và làng lý tưởng hóa",
+          "analysis": "Tay và chấm sáng hút mắt trước, sau đó dwell vào toàn cảnh; thao tác minh họa, không phải bằng chứng quá trình gốc."
+        },
+        {
+          "start": 726,
+          "end": 741,
+          "visual_state": "Làng tranh trái, ảnh làng và ảnh hiện đại rồi tranh nhà thờ khác bên phải",
+          "asr_semantic_span": "725.6–741.0: làng không giống thật, nhà thờ mang dáng Bắc Âu",
+          "analysis": "So sánh thay đối tượng bên phải trong khi làng tranh neo trái; kiến trúc là bằng chứng trực quan cho luận điểm hình thức."
+        },
+        {
+          "start": 741,
+          "end": 765,
+          "visual_state": "Bản vẽ đêm sao, cửa sổ, cảnh cây, tranh vườn rồi trở lại Starry Night",
+          "asr_semantic_span": "741.0–755.3 và phần sau: tranh kết hợp ký ức, quan sát, biểu tượng, cảm xúc",
+          "analysis": "Chuỗi tư liệu nối tiếp làm bối cảnh cho lập luận tổng hợp; quay lại tác phẩm là callback, không đồng nhất từng ảnh với một nguồn ký ức."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/starry-landscape",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "starry-impasto",
+      "videoID": "crCPVoPsTtk",
+      "sourceStart": 792,
+      "end": 850,
+      "ASRpath": "research_media/great-art-explained/crCPVoPsTtk.json",
+      "groups": [
+        {
+          "start": 792,
+          "end": 810,
+          "visual_state": "Cận bề mặt tranh bên trái; video tay vẽ sao bên phải, chú giải nhỏ dưới",
+          "asr_semantic_span": "792.3–809.6: nét ngắn, sơn dày và kỹ thuật",
+          "analysis": "Giữ hai khung qua nhiều câu; tay vẽ là minh họa thao tác, crop gốc cho thấy kết cấu."
+        },
+        {
+          "start": 810,
+          "end": 822,
+          "visual_state": "Cận sao phủ kín màn hình; từ từ tiến gần",
+          "asr_semantic_span": "810.1–821.8: sơn nhô và bắt sáng",
+          "analysis": "Chuyển từ hai khung sang chi tiết, ưu tiên gờ sơn; hình hỗ trợ nhận biết kết cấu, không đo được độ dày."
+        },
+        {
+          "start": 822,
+          "end": 836,
+          "visual_state": "Ảnh kỹ thuật màu lục toàn tranh rồi crop các xoáy",
+          "asr_semantic_span": "822.2–837.3: nghiên cứu kỹ thuật, ít sửa và nét có kiểm soát",
+          "analysis": "Ảnh kỹ thuật là bối cảnh phân tích; bản thân hình không đủ chứng minh tốc độ."
+        },
+        {
+          "start": 836,
+          "end": 847,
+          "visual_state": "Tranh treo một mình rồi hòa sang phòng đông người",
+          "asr_semantic_span": "837.3–850.1: cảm giác sống động và hành động vẽ",
+          "analysis": "Đổi quy mô từ chi tiết sang tác phẩm và người xem; hình tạo bối cảnh tiếp nhận."
+        },
+        {
+          "start": 847,
+          "end": 850,
+          "visual_state": "Chuyển sang tĩnh vật khác, ảnh thứ hai bắt đầu vào",
+          "asr_semantic_span": "843.8–850.1: phân biệt nét dày với hậu ấn tượng khác",
+          "analysis": "Mở so sánh liên tác phẩm trước khi câu kết thúc."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/starry-impasto",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "raphael-perspective",
+      "videoID": "9x0tsuS4dk0",
+      "sourceStart": 645,
+      "end": 765,
+      "ASRpath": "research_media/great-art-explained/9x0tsuS4dk0.json",
+      "groups": [
+        {
+          "start": 645,
+          "end": 654,
+          "visual_state": "Chân dung khắc bên cạnh chi tiết tranh rồi cảnh giáo hoàng trong tranh lịch sử",
+          "asr_semantic_span": "trước 653.8–666.2: bối cảnh kiến trúc và câu hỏi La Mã hóa",
+          "analysis": "Hai tư liệu làm bối cảnh; không kết luận động cơ Raphael."
+        },
+        {
+          "start": 654,
+          "end": 670,
+          "visual_state": "Kiến trúc vòm trống, từ crop tới bố cục rộng; nhân vật hiện dần khoảng 669–670",
+          "asr_semantic_span": "653.8–672.2: kiến trúc nối cổ đại và Phục Hưng",
+          "analysis": "Lớp kiến trúc làm nền, nhân vật được thêm lên trên; nhịp hiện tạo phân cấp từ không gian đến con người."
+        },
+        {
+          "start": 670,
+          "end": 695,
+          "visual_state": "Toàn tranh, đường ngang và các đường hội tụ dần hiện trên tranh rồi biến mất",
+          "asr_semantic_span": "672.2–699.8: vòm, phối cảnh một điểm và hai nhân vật trung tâm",
+          "analysis": "Đường kẻ quy tụ mắt vào trung tâm; dùng hình để trình bày cấu trúc, onset không gán cho từ cụ thể."
+        },
+        {
+          "start": 695,
+          "end": 721,
+          "visual_state": "Đường chia dọc; tượng Plato cạnh nửa tranh rồi tượng Aristotle cạnh nửa còn lại",
+          "asr_semantic_span": "699.8–721.0: hai nửa và tương phản ý niệm/thực nghiệm",
+          "analysis": "Chia đôi trước, chân dung triết gia lớn làm điểm chú ý sau; bố cục là sơ đồ giải thích."
+        },
+        {
+          "start": 721,
+          "end": 747,
+          "visual_state": "Tranh tối đi, tượng Apollo phóng lớn, sau đó Athena và vùng tượng sáng",
+          "asr_semantic_span": "721.0–747: tượng thần củng cố hai phía",
+          "analysis": "Giảm sáng toàn cảnh để lần lượt cô lập tượng; chi tiết là điểm tựa cho diễn giải hai giác quan."
+        },
+        {
+          "start": 747,
+          "end": 765,
+          "visual_state": "Tranh sáng lại rồi tối và crop gương mặt tự họa hiện; sang thẻ chương",
+          "asr_semantic_span": "747–761.5: đối chiếu giác quan và tự họa bên phải",
+          "analysis": "Giữ tổng thể trước khi làm nổi chi tiết; thẻ chương kết thúc đoạn."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/raphael-perspective",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "raphael-reveal",
+      "videoID": "9x0tsuS4dk0",
+      "sourceStart": 74,
+      "end": 129,
+      "ASRpath": "research_media/great-art-explained/9x0tsuS4dk0.json",
+      "groups": [
+        {
+          "start": 74,
+          "end": 79,
+          "visual_state": "Kiến trúc tối và các mảnh bức tranh hiện qua không gian",
+          "asr_semantic_span": "74.1–80.5: tranh như sân khấu",
+          "analysis": "Tạo bối cảnh sân khấu trước phần giải thích."
+        },
+        {
+          "start": 79,
+          "end": 84,
+          "visual_state": "Kiến trúc sáng trống, trục trung tâm và sàn hội tụ",
+          "asr_semantic_span": "80.5–87.7: vòm, đạo cụ, trang phục và dàn nhân vật",
+          "analysis": "Giữ sân khấu không người, hướng mắt vào điểm giữa; hình dẫn sớm ý dàn nhân vật."
+        },
+        {
+          "start": 84,
+          "end": 91,
+          "visual_state": "Các nhân vật hiện dần từ trung tâm ra toàn tranh",
+          "asr_semantic_span": "80.5–95.1: dàn vai rồi mở chuyện Michelangelo",
+          "analysis": "Đọc ưu tiên nền trước, người sau; animation khoảng 84–89, dwell sau đó; minh họa ẩn dụ sân khấu."
+        },
+        {
+          "start": 91,
+          "end": 103,
+          "visual_state": "Bóng người trong nội thất rồi trần Sistine",
+          "asr_semantic_span": "95.1–108.3: truyền thuyết xem trần chưa hoàn thành",
+          "analysis": "Phim tái hiện và ảnh trần tạo bối cảnh, không xác minh truyền thuyết."
+        },
+        {
+          "start": 103,
+          "end": 121,
+          "visual_state": "Bản vẽ chuẩn bị sang chi tiết tranh có nhân vật ngồi xuất hiện dần",
+          "asr_semantic_span": "108.3–122.7: thêm chân dung Michelangelo trong vai Heraclitus",
+          "analysis": "Đặt bản vẽ và phiên bản màu theo trình tự; nhân vật foreground thành tâm điểm."
+        },
+        {
+          "start": 121,
+          "end": 129,
+          "visual_state": "Chân dung người trầm tư chiếm khung",
+          "asr_semantic_span": "115.6–129.4: triết gia và ý nghĩa cống hiến",
+          "analysis": "Hình là so sánh biểu tượng, không chứng minh danh tính hay ý định tác giả."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/raphael-reveal",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "sargent-reviews",
+      "videoID": "cuHgxPe3J7I",
+      "sourceStart": 1082,
+      "end": 1213,
+      "ASRpath": "research_media/great-art-explained/analysis-a/cuHgxPe3J7I/cuHgxPe3J7I.json",
+      "groups": [
+        {
+          "start": 1082,
+          "end": 1093,
+          "visual_state": "Cận tay trên tranh rồi footage người treo chân dung Pozzi trong bảo tàng",
+          "asr_semantic_span": "1082.9–1092.8: quyết định triển lãm ở London",
+          "analysis": "Footage bảo tàng là bối cảnh hiện tại, không phải ghi hình sự kiện lịch sử."
+        },
+        {
+          "start": 1093,
+          "end": 1103,
+          "visual_state": "Tranh đám đông triển lãm; chữ nhận xét lớn trượt ngang qua giữa",
+          "asr_semantic_span": "1093.5–1102.0: phản ứng phê bình thù địch",
+          "analysis": "Nền là bối cảnh công chúng, chữ là lớp đọc ưu tiên; onset khoảng 1096.8, chuyển động tiếp đến 1102."
+        },
+        {
+          "start": 1103,
+          "end": 1114,
+          "visual_state": "Chân dung Pozzi trên nền đen; Madame X vào bên phải",
+          "asr_semantic_span": "1102.9–1113.1: chê bai và so sánh hai tác phẩm",
+          "analysis": "Chân dung giữ qua hai câu; tranh thứ hai thêm sau để tạo cầu sang chương."
+        },
+        {
+          "start": 1114,
+          "end": 1130,
+          "visual_state": "Madame X đứng giữa; tiêu đề chương rồi ảnh giữ",
+          "asr_semantic_span": "1117.6–1126.6: tham vọng và bước ngoặt",
+          "analysis": "Chuyển tiêu điểm từ cặp sang một hình, dwell xuyên nhiều segment ASR."
+        },
+        {
+          "start": 1130,
+          "end": 1143,
+          "visual_state": "Madame X cạnh ảnh phụ nữ đen trắng, sau đó cảnh hội họa xã hội",
+          "asr_semantic_span": "1126.6–1147.9: danh tiếng Gautreau và Salon",
+          "analysis": "So sánh hình và tư liệu xã hội là bối cảnh nhận diện."
+        },
+        {
+          "start": 1143,
+          "end": 1161,
+          "visual_state": "Cận Pozzi, chân dung phụ nữ rồi tranh nâng ly",
+          "asr_semantic_span": "1137.8–1159.7: Pozzi liên quan lựa chọn và chủ ý hình ảnh sân khấu",
+          "analysis": "Chuỗi chân dung luân phiên cung cấp ví dụ thị giác, không xác lập động cơ độc lập."
+        },
+        {
+          "start": 1161,
+          "end": 1178,
+          "visual_state": "Ảnh Gautreau nghiêng, ảnh người cha, cảnh cưới và chân dung chồng",
+          "asr_semantic_span": "1161–1177.7: xuất thân, cha và hôn nhân",
+          "analysis": "Tư liệu theo trình tự tiểu sử; ảnh đám cưới là minh họa bối cảnh nếu không được xác nhận sự kiện."
+        },
+        {
+          "start": 1178,
+          "end": 1189,
+          "visual_state": "Ảnh Gautreau dọc trên nền đen dần phóng tới mặt",
+          "asr_semantic_span": "1178.6–1188.4: mô tả diện mạo",
+          "analysis": "Crop hướng mắt từ hình dáng tới gương mặt; ảnh hỗ trợ quan sát, nhận xét nhan sắc là lời kể."
+        },
+        {
+          "start": 1189,
+          "end": 1205,
+          "visual_state": "Phim múa, bìa báo, ảnh Pozzi",
+          "asr_semantic_span": "1189–1207.7: giới bohemian, báo chí và quan hệ",
+          "analysis": "Chuyển asset theo bối cảnh văn hóa và nhân vật; footage múa là liên tưởng."
+        },
+        {
+          "start": 1205,
+          "end": 1213,
+          "visual_state": "Tranh tiệc xã hội giữ gần như tĩnh",
+          "asr_semantic_span": "1207.7–1213.9: quy ước kín đáo trong xã hội Paris",
+          "analysis": "Tranh làm bối cảnh xuyên câu, không minh chứng độc lập cho quy tắc."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/sargent-reviews",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "sargent-comparison",
+      "videoID": "cuHgxPe3J7I",
+      "sourceStart": 1881,
+      "end": 1939,
+      "ASRpath": "research_media/great-art-explained/analysis-a/cuHgxPe3J7I/cuHgxPe3J7I.json",
+      "groups": [
+        {
+          "start": 1881,
+          "end": 1889,
+          "visual_state": "Cận chân dung nữ giữ",
+          "asr_semantic_span": "1881–1887.8: đương thời thấy nét trừu tượng cử chỉ",
+          "analysis": "Chi tiết chân dung là ví dụ; không có animation rõ ở độ phân giải mẫu."
+        },
+        {
+          "start": 1889,
+          "end": 1902,
+          "visual_state": "Tranh vũ nữ Jaleo; The Scream xuất hiện ở mép trái khoảng 1893, mở rộng vào ô trái, giữ rồi rút về trái khoảng 1899",
+          "asr_semantic_span": "1889.3–1900.5: giai đoạn chuyển biến và phê bình",
+          "analysis": "Hai tranh đồng thời so sánh; ảnh Munch đi vào từ mép trái, giữ bên trái Jaleo rồi rút về cùng mép. Đây là đối chiếu, không khẳng định ảnh hưởng."
+        },
+        {
+          "start": 1902,
+          "end": 1913,
+          "visual_state": "Tranh vẽ ngoài trời rồi chân dung Rockefeller",
+          "asr_semantic_span": "1900.6–1912.8: đánh giá lại họa sĩ và giới thượng lưu",
+          "analysis": "Đổi ví dụ theo lời khái quát; tranh là minh họa."
+        },
+        {
+          "start": 1913,
+          "end": 1923,
+          "visual_state": "Chân dung phụ nữ trên ghế, crop tiến gần",
+          "asr_semantic_span": "1912.8–1926.8: chiều sâu và vị trí người trong/ngoài",
+          "analysis": "Ảnh giữ xuyên hai nhịp lời; ưu tiên khuôn mặt thay cho cắt mỗi câu."
+        },
+        {
+          "start": 1923,
+          "end": 1939,
+          "visual_state": "Tự họa giữa nền đen; Pozzi và Madame X dần vào hai bên",
+          "asr_semantic_span": "1921.6–1939.7: góc nhìn người ngoài và di sản",
+          "analysis": "Trung tâm là họa sĩ, hai tác phẩm như callback hai bên; khung ba ảnh đọng cuối."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/sargent-comparison",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "wave-comparison",
+      "videoID": "IBcB_dYtGUg",
+      "sourceStart": 574,
+      "end": 698,
+      "ASRpath": "research_media/great-art-explained/analysis-b/IBcB_dYtGUg/transcript/IBcB_dYtGUg.json",
+      "groups": [
+        {
+          "start": 574,
+          "end": 585,
+          "visual_state": "Great Wave với thẻ chương rồi tranh toàn khung",
+          "asr_semantic_span": "574.8–585.0: hình Nhật mang kết hợp ý tưởng Nhật và châu Âu",
+          "analysis": "Đặt tác phẩm làm đối tượng chính trước luận điểm lai ghép."
+        },
+        {
+          "start": 585,
+          "end": 590,
+          "visual_state": "Hai người cầm bản in; mũi tên và kích thước ngang dọc hiện",
+          "asr_semantic_span": "585.0–590.1: kích thước bản in",
+          "analysis": "Vật thật và người làm thước tỉ lệ, đồ họa ghi số; không suy ra kích thước từ ảnh."
+        },
+        {
+          "start": 590,
+          "end": 602,
+          "visual_state": "Great Wave rồi tranh biển tối trượt ngang để đối chiếu, quay lại sóng",
+          "asr_semantic_span": "590.1–606.4: đường chân trời thấp và so sánh cảnh biển cũ",
+          "analysis": "Ảnh đối chứng tạm thời chiếm giữa rồi rời, sóng là neo; so sánh hình thức."
+        },
+        {
+          "start": 602,
+          "end": 607,
+          "visual_state": "Tranh sóng Nhật cũ trên nền đen",
+          "asr_semantic_span": "600–606.4: góc nhìn nổi của cảnh biển trước",
+          "analysis": "Ảnh so sánh thay toàn khung, minh họa luận điểm lịch sử hình thức."
+        },
+        {
+          "start": 607,
+          "end": 618,
+          "visual_state": "Great Wave giữ rồi tiến gần núi Fuji",
+          "asr_semantic_span": "607.5–619.6: đỉnh sáng, suy luận buổi sớm",
+          "analysis": "Crop đưa núi xa thành điểm chú ý; điều kiện sáng là suy luận của narration."
+        },
+        {
+          "start": 618,
+          "end": 630,
+          "visual_state": "Bản đồ khoanh vùng, trở lại tranh rồi bản in thuyền",
+          "asr_semantic_span": "619.6–632.1: Kanagawa và thuyền chở cá",
+          "analysis": "Bản đồ định vị, tranh thuyền làm tư liệu loại phương tiện."
+        },
+        {
+          "start": 630,
+          "end": 665,
+          "visual_state": "Great Wave crop từ toàn cảnh vào sóng/bọt rồi núi và thuyền",
+          "asr_semantic_span": "632.1–667.7: phối cảnh sâu, bọt như móng vuốt và khoảng cách",
+          "analysis": "Đường chú ý từ sóng lớn tiền cảnh đến Fuji nhỏ và thuyền; bọt là tương đồng hình dạng, cảm giác nguy hiểm là diễn giải."
+        },
+        {
+          "start": 665,
+          "end": 679,
+          "visual_state": "Hai bản sóng trước lần lượt chiếm màn hình",
+          "asr_semantic_span": "661.9–678.7: các phiên bản trước và nhận xét tĩnh",
+          "analysis": "So sánh theo trình tự, bản thứ hai giữ sang nhịp nhận xét."
+        },
+        {
+          "start": 679,
+          "end": 691,
+          "visual_state": "Great Wave vào từ phải bên cạnh sóng cũ rồi chiếm khung",
+          "asr_semantic_span": "678.7–691.3: năng lượng khoảnh khắc trước khi vỡ",
+          "analysis": "Hai tranh cùng tồn tại để so sánh; chuyển động trượt là chuyển bố cục, không chứng minh chuyển động vật lý trong tranh."
+        },
+        {
+          "start": 691,
+          "end": 698,
+          "visual_state": "Cận ngọn sóng và ô đề, chữ bắt đầu xuất hiện",
+          "asr_semantic_span": "691.7–698.9: tên tác phẩm trong ô đề",
+          "analysis": "Chuyển ưu tiên sang chữ trên bản in; không yêu cầu đọc chính xác từng chữ từ thumbnail."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/wave-comparison",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    },
+    {
+      "case_id": "wave-layers",
+      "videoID": "IBcB_dYtGUg",
+      "sourceStart": 45,
+      "end": 80,
+      "ASRpath": "research_media/great-art-explained/analysis-b/IBcB_dYtGUg/transcript/IBcB_dYtGUg.json",
+      "groups": [
+        {
+          "start": 45,
+          "end": 80,
+          "visual_state": "Cùng Great Wave xuyên đoạn; crop tiến gần, sóng tiền cảnh, thuyền và Fuji biến đổi vị trí tương đối",
+          "asr_semantic_span": "45.6–78.5: bề ngoài yên bình, nguy hiểm cho thuyền, rồi diễn giải bất an về Nhật Bản",
+          "analysis": "Một bố cục giữ qua nhiều câu; sóng tiền cảnh lớn dần, thuyền ở dưới và Fuji nhỏ phía xa; chuyển động tương đối giữa các thành phần quan sát được nhưng không kết luận kỹ thuật 3D. Chi tiết thuyền/sóng minh họa nguy cơ; ý nghĩa lịch sử là diễn giải của lời dẫn."
+        }
+      ],
+      "evidence_dir": "research_media/great-art-explained/scene-sync/dynamic/wave-layers",
+      "uncertainty": "Ranh giới nhóm xấp xỉ 1 giây từ bảng 1 fps có nhãn PTS nguồn; boundary.jpg lấy 5 fps quanh một chuyển động chọn lọc, nhãn xấp xỉ, không căn từng từ.",
+      "audio_status": "Clip chứa audio gốc; phân tích lời dựa JSON ASR, chưa nghe kiểm chứng.",
+      "timing_note": "Các khoảng ASR và hình ghi độc lập; chồng lấp chỉ thể hiện ở cấp segment, không kết luận đồng bộ từng từ."
+    }
+  ]
+}

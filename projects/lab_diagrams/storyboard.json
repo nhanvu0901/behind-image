@@ -1,0 +1,537 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "lab_diagrams",
+ "title": "Lab: diagrams and shorts",
+ "style": "gae",
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": null,
+ "assets": {
+  "A": {
+   "file": "media/a.jpg",
+   "kind": "image",
+   "title": "The Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4386,
+   "height": 6000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {
+    "MIRROR": {
+     "x": 2220,
+     "y": 1790,
+     "rx": 440,
+     "ry": 440,
+     "label": "Mirror"
+    },
+    "HANDS": {
+     "x": 2420,
+     "y": 2540,
+     "rx": 360,
+     "ry": 270,
+     "label": "Joined hands"
+    },
+    "DOG": {
+     "x": 2098,
+     "y": 5446,
+     "rx": 330,
+     "ry": 330,
+     "label": "Dog"
+    },
+    "RUG": {
+     "x": 2388,
+     "y": 4200,
+     "label": "Carpet"
+    },
+    "INSCR": {
+     "x": 2220,
+     "y": 1390,
+     "rx": 420,
+     "ry": 120,
+     "label": "Latin inscription"
+    },
+    "R1": {
+     "x": 2474,
+     "y": 1690,
+     "rx": 82,
+     "ry": 82,
+     "label": "Roundel 1"
+    },
+    "R2": {
+     "x": 2466,
+     "y": 1870,
+     "rx": 82,
+     "ry": 82,
+     "label": "Roundel 2"
+    },
+    "LIT": {
+     "x": 1856,
+     "y": 420,
+     "rx": 215,
+     "ry": 215,
+     "label": "Lit candle"
+    },
+    "SNUF": {
+     "x": 2490,
+     "y": 500,
+     "rx": 215,
+     "ry": 215,
+     "label": "Snuffed-out candle"
+    },
+    "ORANGE": {
+     "x": 470,
+     "y": 2704,
+     "rx": 130,
+     "ry": 130,
+     "label": "Single orange"
+    },
+    "PATTENS": {
+     "x": 250,
+     "y": 5300,
+     "label": "Pattens"
+    },
+    "BOOTS": {
+     "x": 1200,
+     "y": 5150,
+     "label": "Boots"
+    },
+    "LION": {
+     "x": 2553,
+     "y": 2300,
+     "rx": 180,
+     "ry": 180,
+     "label": "Carved creature"
+    },
+    "STM": {
+     "x": 2824,
+     "y": 1190,
+     "label": "Saint Martha finial"
+    },
+    "BRUSH": {
+     "x": 2700,
+     "y": 1560,
+     "label": "Brush"
+    },
+    "AMBER": {
+     "x": 1810,
+     "y": 1650,
+     "label": "Amber beads"
+    },
+    "HAT": {
+     "x": 1246,
+     "y": 1000,
+     "label": "Straw hat"
+    },
+    "TABARD": {
+     "x": 1266,
+     "y": 2666,
+     "label": "Velvet tabard"
+    },
+    "FURSLEEVE": {
+     "x": 3500,
+     "y": 2700,
+     "label": "Fur sleeve"
+    },
+    "BLUESL": {
+     "x": 2900,
+     "y": 2330,
+     "label": "Blue underdress"
+    },
+    "RUFFLES": {
+     "x": 3500,
+     "y": 4000,
+     "label": "Ruffles"
+    },
+    "BEDP": {
+     "x": 3500,
+     "y": 1100,
+     "label": "Bed"
+    },
+    "COSFACE": {
+     "x": 3500,
+     "y": 1500,
+     "label": "Costanza's face"
+    },
+    "GIOFACE": {
+     "x": 1233,
+     "y": 1300,
+     "label": "Giovanni's face"
+    },
+    "FULL": {
+     "x": 2193,
+     "y": 3000,
+     "label": "Whole painting (centre)"
+    }
+   }
+  },
+  "M": {
+   "file": "media/couple_mask.png",
+   "kind": "mask",
+   "aligned_to": "A",
+   "title": "couple mask",
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "D": {
+   "file": "media/detail_crop.png",
+   "kind": "image",
+   "title": "detail crop",
+   "width": 900,
+   "height": 760,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  },
+  "UV": {
+   "file": "media/detail_uvstyle.png",
+   "kind": "image",
+   "title": "false colour",
+   "width": 900,
+   "height": 760,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   }
+  }
+ },
+ "shots": [
+  {
+   "id": "s01",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "DIA-01",
+   "intent": "explain_mechanism",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "focus": [
+     1920,
+     2090
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s02",
+   "start": {
+    "t": 6.5
+   },
+   "technique": "DIA-02",
+   "intent": "explain_mechanism",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "focus": [
+     2220,
+     1790
+    ],
+    "from_quad": [
+     [
+      0,
+      0.250028
+     ],
+     [
+      1,
+      0.500056
+     ],
+     [
+      1,
+      0.499944
+     ],
+     [
+      0,
+      0.74997
+     ]
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s03",
+   "start": {
+    "t": 12.5
+   },
+   "technique": "DIA-03",
+   "intent": "explain_mechanism",
+   "slots": {},
+   "params": {},
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s04",
+   "start": {
+    "t": 19.0
+   },
+   "technique": "DIA-04",
+   "intent": "explain_mechanism",
+   "slots": {
+    "figure": {
+     "asset": "A"
+    },
+    "mask": {
+     "asset": "M"
+    }
+   },
+   "params": {},
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s05",
+   "start": {
+    "t": 25.0
+   },
+   "technique": "DIA-05",
+   "intent": "explain_mechanism",
+   "slots": {
+    "image": {
+     "asset": "A"
+    },
+    "mask": {
+     "asset": "M"
+    }
+   },
+   "params": {
+    "focus": [
+     2193,
+     2900
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s06",
+   "start": {
+    "t": 31.0
+   },
+   "technique": "DIA-06",
+   "intent": "explain_mechanism",
+   "slots": {
+    "detail": {
+     "asset": "D"
+    },
+    "uv_detail": {
+     "asset": "UV"
+    }
+   },
+   "params": {
+    "uv_label": "SIMULATED UV-STYLE VIEW"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s07",
+   "start": {
+    "t": 37.5
+   },
+   "technique": "SHORT-01",
+   "intent": "explain_mechanism",
+   "slots": {
+    "strip_1": {
+     "asset": "A"
+    },
+    "strip_2": {
+     "asset": "A"
+    },
+    "strip_3": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "focus": [
+     [
+      2220,
+      1790
+     ],
+     [
+      2420,
+      2540
+     ],
+     [
+      2098,
+      5446
+     ]
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s08",
+   "start": {
+    "t": 43.5
+   },
+   "technique": "SHORT-02",
+   "intent": "explain_mechanism",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "focus": [
+     2220,
+     1790
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s09",
+   "start": {
+    "t": 49.5
+   },
+   "technique": "SHORT-03",
+   "intent": "explain_mechanism",
+   "slots": {
+    "background": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "focus": [
+     2193,
+     2300
+    ],
+    "lines": [
+     "LOOK",
+     "CLOSER",
+     "1434"
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s10",
+   "start": {
+    "t": 55.5
+   },
+   "technique": "SHORT-02",
+   "intent": "explain_mechanism",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "focus": [
+     1233,
+     1500
+    ],
+    "zoom": 0.62,
+    "warp_delay_s": 60.0
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "SHORT-04",
+     "intent": "structure",
+     "start": {
+      "t": 55.5
+     },
+     "dur": 5.5,
+     "params": {
+      "text": "DETAIL LABEL",
+      "box_color": "#f5cd1e"
+     },
+     "locked": false,
+     "source": "manual",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  },
+  {
+   "id": "s11",
+   "start": {
+    "t": 61.0
+   },
+   "technique": "SHORT-05",
+   "intent": "explain_mechanism",
+   "slots": {
+    "palette": {
+     "asset": "A"
+    }
+   },
+   "params": {},
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "manual",
+   "note": ""
+  }
+ ],
+ "end": {
+  "t": 67.0,
+  "fade_s": 0.0
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

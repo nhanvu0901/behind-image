@@ -1,0 +1,50 @@
+{
+ "X-CARD-01": {
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6.0,
+   "clip": "previews/X-CARD-01.mp4",
+   "thumb": "previews/X-CARD-01.jpg"
+  }
+ },
+ "X-CARD-02": {
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6.0,
+   "clip": "previews/X-CARD-02.mp4",
+   "thumb": "previews/X-CARD-02.jpg"
+  }
+ },
+ "X-ANN-01": {
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 4.48,
+   "clip": "previews/X-ANN-01.mp4",
+   "thumb": "previews/X-ANN-01.jpg"
+  }
+ },
+ "X-ANN-02": {
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 5.67,
+   "clip": "previews/X-ANN-02.mp4",
+   "thumb": "previews/X-ANN-02.jpg"
+  }
+ },
+ "X-ANN-03": {
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 3.64,
+   "clip": "previews/X-ANN-03.mp4",
+   "thumb": "previews/X-ANN-03.jpg"
+  }
+ },
+ "X-LAY-01": {
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 5.77,
+   "clip": "previews/X-LAY-01.mp4",
+   "thumb": "previews/X-LAY-01.jpg"
+  }
+ }
+}

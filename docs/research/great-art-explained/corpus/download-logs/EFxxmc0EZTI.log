@@ -1,0 +1,44 @@
+
+--- Lượt thử tiếp ---
+[youtube] Extracting URL: https://www.youtube.com/watch?v=EFxxmc0EZTI
+[youtube] EFxxmc0EZTI: Downloading webpage
+WARNING: [youtube] No supported JavaScript runtime could be found. Only deno is enabled by default; to use another runtime add  --js-runtimes RUNTIME[:PATH]  to your command/config. YouTube extraction without a JS runtime has been deprecated, and some formats may be missing. See  https://github.com/yt-dlp/yt-dlp/wiki/EJS  for details on installing one
+[youtube] Sleeping 2.0 seconds ...
+[youtube] EFxxmc0EZTI: Downloading visionos player API JSON
+[youtube] Sleeping 2.0 seconds ...
+[youtube] EFxxmc0EZTI: Downloading m3u8 information
+[info] EFxxmc0EZTI: Downloading 1 format(s): 787+140-9
+[info] Writing video description to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.description
+[info] Writing video metadata as JSON to: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.info.json
+[download] Sleeping 4.53 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.f787.mp4
+
+[download]   0.1% of    1.23MiB at  937.27KiB/s ETA 00:01
+[download]   0.2% of    1.23MiB at    1.69MiB/s ETA 00:00
+[download]   0.6% of    1.23MiB at    3.09MiB/s ETA 00:00
+[download]   1.2% of    1.23MiB at    5.89MiB/s ETA 00:00
+[download]   2.5% of    1.23MiB at    5.07MiB/s ETA 00:00
+[download]   5.0% of    1.23MiB at    7.22MiB/s ETA 00:00
+[download]  10.1% of    1.23MiB at    8.78MiB/s ETA 00:00
+[download]  20.2% of    1.23MiB at   10.43MiB/s ETA 00:00
+[download]  40.5% of    1.23MiB at   15.78MiB/s ETA 00:00
+[download]  81.1% of    1.23MiB at   22.75MiB/s ETA 00:00
+[download] 100.0% of    1.23MiB at   25.57MiB/s ETA 00:00
+[download] 100% of    1.23MiB in 00:00:00 at 9.45MiB/s   
+[download] Sleeping 4.25 seconds ...
+[download] Destination: /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.f140-9.m4a
+
+[download]   0.1% of  860.64KiB at  Unknown B/s ETA Unknown
+[download]   0.3% of  860.64KiB at    2.89MiB/s ETA 00:00  
+[download]   0.8% of  860.64KiB at    5.29MiB/s ETA 00:00
+[download]   1.7% of  860.64KiB at    9.66MiB/s ETA 00:00
+[download]   3.6% of  860.64KiB at   17.11MiB/s ETA 00:00
+[download]   7.3% of  860.64KiB at   29.43MiB/s ETA 00:00
+[download]  14.8% of  860.64KiB at   29.11MiB/s ETA 00:00
+[download]  29.6% of  860.64KiB at   20.02MiB/s ETA 00:00
+[download]  59.4% of  860.64KiB at   11.06MiB/s ETA 00:00
+[download] 100.0% of  860.64KiB at    9.21MiB/s ETA 00:00
+[download] 100% of  860.64KiB in 00:00:00 at 1.99MiB/s   
+[Merger] Merging formats into "/Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.mp4"
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.f787.mp4 (pass -k to keep)
+Deleting original file /Users/nhanvu/Documents/code/behind-the-image/research_media/great-art-explained/EFxxmc0EZTI.f140-9.m4a (pass -k to keep)

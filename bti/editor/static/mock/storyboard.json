@@ -1,0 +1,650 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "arnolfini-mock",
+ "title": "The Arnolfini Portrait (mock)",
+ "style": "gae",
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": "audio/mix.m4a",
+ "assets": {
+  "A": {
+   "file": "media/arnolfini.jpg",
+   "kind": "image",
+   "title": "The Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 4386,
+   "height": 6000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {
+    "MIRROR": {
+     "x": 2220,
+     "y": 1790,
+     "rx": 440,
+     "ry": 440,
+     "label": "Mirror"
+    },
+    "HANDS": {
+     "x": 2100,
+     "y": 3300,
+     "rx": 520,
+     "ry": 300,
+     "label": "Hands"
+    }
+   }
+  },
+  "B": {
+   "file": "media/meninas.jpg",
+   "kind": "image",
+   "title": "Las Meninas",
+   "artist": "Diego Velazquez",
+   "year": "1656",
+   "width": 6000,
+   "height": 4000,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/",
+    "author": "Diego Velazquez",
+    "licence": "PD",
+    "licence_url": ""
+   },
+   "regions": {}
+  },
+  "C": {
+   "file": "media/xray.jpg",
+   "kind": "image",
+   "title": "X-ray detail",
+   "artist": "",
+   "year": "",
+   "width": 3000,
+   "height": 4000,
+   "credit": {
+    "source": "upload",
+    "source_url": "https://example.org/xray",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": ""
+   },
+   "regions": {}
+  }
+ },
+ "shots": [
+  {
+   "id": "s0000",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "X-CARD-02",
+   "intent": "structure",
+   "slots": {
+    "background": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "title": "The Arnolfini Portrait",
+    "artist": "Jan van Eyck",
+    "year": "1434"
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0001",
+   "start": {
+    "w": 5,
+    "off": 0.0,
+    "text": "most"
+   },
+   "technique": "CAM-03",
+   "intent": "establish",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2400,
+      "zoom": 0.34,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0002",
+   "start": {
+    "w": 55,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "intent": "point_at",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 90,
+       "off": 0.0,
+       "text": "mirror"
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.72,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "HI-01",
+     "intent": "isolate",
+     "start": {
+      "w": 90,
+      "off": 0.0,
+      "text": "mirror"
+     },
+     "dur": 5.0,
+     "params": {
+      "at": "MIRROR",
+      "rx": 440,
+      "ry": 440,
+      "floor": 0.2,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 91,
+      "off": 0.0,
+      "text": "on"
+     },
+     "dur": 3.5,
+     "params": {
+      "text": "The convex mirror"
+     },
+     "locked": false,
+     "source": "import",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "human",
+   "note": ""
+  },
+  {
+   "id": "s0003",
+   "start": {
+    "w": 99,
+    "off": 0.0,
+    "text": "Inside"
+   },
+   "technique": "CAM-01",
+   "intent": "isolate",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.72,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2220,
+      "cy": 1790,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o3",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 105,
+      "off": 0.0,
+      "text": "see"
+     },
+     "dur": 3.0,
+     "params": {
+      "at": [
+       2220,
+       1790
+      ],
+      "radius": 300,
+      "opacity": 0.9
+     },
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    },
+    {
+     "id": "o4",
+     "technique": "AN-02",
+     "intent": "point_at",
+     "start": {
+      "w": 118,
+      "off": 0.0,
+      "text": "One"
+     },
+     "dur": 4.0,
+     "params": {
+      "at": [
+       2300,
+       1400
+      ]
+     },
+     "locked": true,
+     "source": "human",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": ""
+  },
+  {
+   "id": "s0004",
+   "start": {
+    "w": 150,
+    "off": 0.0,
+    "text": "Chapter"
+   },
+   "technique": "LAY-01",
+   "intent": "compare",
+   "slots": {
+    "left": {
+     "asset": "A"
+    },
+    "right": {
+     "asset": "B"
+    }
+   },
+   "params": {
+    "caption_left": "Arnolfini, 1434",
+    "caption_right": "Las Meninas, 1656",
+    "panel_w_px": 900
+   },
+   "transition_in": {
+    "technique": "TR-01",
+    "dur": 1.0,
+    "params": {
+     "duration_s": 1.0
+    }
+   },
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0005",
+   "start": {
+    "w": 165,
+    "off": 0.0,
+    "text": "Oil"
+   },
+   "technique": "CAM-01",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "B"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 3000,
+      "cy": 2000,
+      "zoom": 0.32,
+      "ease": "inout_quad"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 3600,
+      "cy": 1500,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0006",
+   "start": {
+    "w": 181,
+    "off": 0.0,
+    "text": "X-ray"
+   },
+   "technique": "STATIC-01",
+   "intent": "establish",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.17,
+      "ease": "linear"
+     }
+    ],
+    "shadow": false
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0007",
+   "start": {
+    "w": 195,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-04",
+   "intent": "explore",
+   "slots": {
+    "image": {
+     "asset": "C"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1500,
+      "cy": 3400,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1500,
+      "cy": 900,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0008",
+   "start": {
+    "w": 222,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "intent": "point_at",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.2,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "w": 228,
+       "off": 0.0,
+       "text": "is"
+      },
+      "cx": 1700,
+      "cy": 3300,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o5",
+     "technique": "AN-01",
+     "intent": "point_at",
+     "start": {
+      "w": 226,
+      "off": 0.0,
+      "text": "the"
+     },
+     "dur": 3.0,
+     "params": {
+      "at": [
+       1700,
+       3300
+      ]
+     },
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0009",
+   "start": {
+    "w": 238,
+    "off": 0.0,
+    "text": "Compare"
+   },
+   "technique": "DIA-01",
+   "intent": "explain_mechanism",
+   "slots": {
+    "image": {
+     "asset": "C"
+    }
+   },
+   "params": {
+    "ray_count": 7,
+    "ray_draw_s": 1.2
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": true,
+   "source": "human",
+   "note": "Giữ nguyên, đã duyệt"
+  },
+  {
+   "id": "s0010",
+   "start": {
+    "w": 253,
+    "off": 0.0,
+    "text": "Where"
+   },
+   "technique": "CMP-01",
+   "intent": "compare",
+   "slots": {
+    "grey": {
+     "asset": "B"
+    },
+    "colour": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "colour_fade_s": 2.0
+   },
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o6",
+     "technique": "X-ANN-03",
+     "intent": "structure",
+     "start": {
+      "w": 256,
+      "off": 0.0,
+      "text": "with"
+     },
+     "dur": 3.0,
+     "params": {
+      "text": "Grey study vs colour"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  },
+  {
+   "id": "s0011",
+   "start": {
+    "w": 280,
+    "off": 0.0,
+    "text": "Today"
+   },
+   "technique": "CAM-03",
+   "intent": "establish",
+   "slots": {
+    "image": {
+     "asset": "A"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2193,
+      "cy": 2400,
+      "zoom": 0.4,
+      "ease": "inout_cubic"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2193,
+      "cy": 3000,
+      "zoom": 0.18,
+      "ease": "linear"
+     }
+    ]
+   },
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "import",
+   "note": ""
+  }
+ ],
+ "end": {
+  "t": 118.2
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

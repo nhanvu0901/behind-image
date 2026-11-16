@@ -1,0 +1,2461 @@
+{
+  "status": "sampled_audit",
+  "method": "MP4 gốc, 1fps continuous; 5fps boundary và chọn nội bộ; ASR chưa nghe kiểm. Mốc khoảng ±1s trừ khi ghi khác. Suy luận là của researcher.",
+  "cases": [
+    {
+      "case_id": "goya-continuous",
+      "video_id": "GLW9omJfAdk",
+      "start_source_pts_s": 1058,
+      "end_source_pts_s": 1215,
+      "ASRpath": "research_media/great-art-explained/analysis-b/GLW9omJfAdk/transcript/GLW9omJfAdk.srt",
+      "source_mp4": "research_media/great-art-explained/GLW9omJfAdk.mp4",
+      "states": [
+        {
+          "state_id": "goya-continuous-s01",
+          "source_pts_start_s": 1058,
+          "source_pts_end_s": 1066,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Bối cảnh hành quyết sau cuộc nổi dậy; hai nhóm người.",
+          "visual_composition_transition": "Toàn tranh; nhan đề hiện rồi mất; giữ hai phía trong cùng khung.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Thiết lập quan hệ đối đầu trước khi tách nhóm.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "182",
+              "start_s": 1058.66,
+              "end_s": 1062.82
+            },
+            {
+              "cue_id": "183",
+              "start_s": 1063.52,
+              "end_s": 1065.54
+            },
+            {
+              "cue_id": "184",
+              "start_s": 1065.94,
+              "end_s": 1069.46
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s02",
+          "source_pts_start_s": 1066,
+          "source_pts_end_s": 1077,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Đội xử bắn vô danh hòa thành một bộ máy chiến tranh.",
+          "visual_composition_transition": "Viền trắng được vẽ dần quanh nhóm lính bên phải, từ nòng súng qua thân; giữ rồi mất.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Đường bao gom nhiều cá thể thành một khối, làm luận điểm vô danh nhìn thấy được.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "184",
+              "start_s": 1065.94,
+              "end_s": 1069.46
+            },
+            {
+              "cue_id": "185",
+              "start_s": 1070.2,
+              "end_s": 1073.94
+            },
+            {
+              "cue_id": "186",
+              "start_s": 1073.94,
+              "end_s": 1079.38
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s03",
+          "source_pts_start_s": 1077,
+          "source_pts_end_s": 1081,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Không thấy mặt những người áp bức.",
+          "visual_composition_transition": "Cắt cận các lưng và mũ lính, rồi trả toàn tranh.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Cận cảnh cho phép kiểm tra việc khuôn mặt bị che.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "186",
+              "start_s": 1073.94,
+              "end_s": 1079.38
+            },
+            {
+              "cue_id": "187",
+              "start_s": 1079.38,
+              "end_s": 1087.84
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s04",
+          "source_pts_start_s": 1081,
+          "source_pts_end_s": 1088,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nạn nhân cầu xin tương phản với đội bắn lạnh lùng.",
+          "visual_composition_transition": "Toàn tranh; viền trắng vẽ quanh nhóm trái rồi tiếp tục nhóm phải.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Hai lần đánh dấu so sánh hai khối ngay trên cùng hệ tọa độ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "187",
+              "start_s": 1079.38,
+              "end_s": 1087.84
+            },
+            {
+              "cue_id": "188",
+              "start_s": 1087.84,
+              "end_s": 1094.9
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1082.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s05",
+          "source_pts_start_s": 1088,
+          "source_pts_end_s": 1109,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nhân vật áo trắng như người tử đạo; thi thể nằm dưới; áo trắng biểu thị sự vô tội.",
+          "visual_composition_transition": "Cắt cận người dang tay; vùng ngoài tối dần rồi sáng lại; khung mở rộng về đèn và lính.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Cô lập áo trắng để liên hệ biểu tượng với tư thế và thân thể xung quanh.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "188",
+              "start_s": 1087.84,
+              "end_s": 1094.9
+            },
+            {
+              "cue_id": "189",
+              "start_s": 1094.9,
+              "end_s": 1098.3
+            },
+            {
+              "cue_id": "190",
+              "start_s": 1098.3,
+              "end_s": 1103.5
+            },
+            {
+              "cue_id": "191",
+              "start_s": 1103.5,
+              "end_s": 1108.26
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1082.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s06",
+          "source_pts_start_s": 1109,
+          "source_pts_end_s": 1119,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Đèn đặt dưới đất chiếu sáng người chính; bàn tay gợi dấu đóng đinh.",
+          "visual_composition_transition": "Khung toàn hơn có đèn ở dưới; dissolve sang cận hai bàn tay và mặt.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Di chuyển chú ý từ nguồn sáng sang chi tiết tư thế.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "192",
+              "start_s": 1109.06,
+              "end_s": 1111.48
+            },
+            {
+              "cue_id": "193",
+              "start_s": 1111.48,
+              "end_s": 1115.48
+            },
+            {
+              "cue_id": "194",
+              "start_s": 1116.42,
+              "end_s": 1120.36
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s07",
+          "source_pts_start_s": 1119,
+          "source_pts_end_s": 1129,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Picasso tham chiếu dấu tay và tư thế trong Guernica.",
+          "visual_composition_transition": "Dải Guernica trượt từ dưới lên, thành ảnh đầy khung rồi tách sang phải để đặt cạnh Goya.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Đặt các tác phẩm cạnh nhau để người xem tự so tư thế; tương đồng không tự chứng minh nguồn ảnh hưởng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "194",
+              "start_s": 1116.42,
+              "end_s": 1120.36
+            },
+            {
+              "cue_id": "195",
+              "start_s": 1120.36,
+              "end_s": 1125.1
+            },
+            {
+              "cue_id": "196",
+              "start_s": 1125.1,
+              "end_s": 1128.38
+            },
+            {
+              "cue_id": "197",
+              "start_s": 1128.38,
+              "end_s": 1137.82
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s08",
+          "source_pts_start_s": 1129,
+          "source_pts_end_s": 1139,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Đèn và ánh sáng trong nghệ thuật Kitô giáo thường là ẩn dụ hiện diện của Chúa.",
+          "visual_composition_transition": "Cắt sang tranh Caravaggio có luồng sáng và nhóm người; nhãn tác phẩm.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Ví dụ bên ngoài tạo chuẩn so sánh cho cách diễn giải ánh sáng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "197",
+              "start_s": 1128.38,
+              "end_s": 1137.82
+            },
+            {
+              "cue_id": "198",
+              "start_s": 1137.82,
+              "end_s": 1146.04
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1130.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s09",
+          "source_pts_start_s": 1139,
+          "source_pts_end_s": 1155,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Trong tranh Goya đèn giúp đội bắn ngắm và buộc người xem chứng kiến; tác giả đảo nghĩa ánh sáng.",
+          "visual_composition_transition": "Trở lại toàn tranh Goya; tối dần quanh nhân vật sáng rồi phục hồi.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Việc làm tối mô phỏng lựa chọn thị giác để phân biệt hai cách hiểu ánh sáng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "198",
+              "start_s": 1137.82,
+              "end_s": 1146.04
+            },
+            {
+              "cue_id": "199",
+              "start_s": 1147.18,
+              "end_s": 1151.86
+            },
+            {
+              "cue_id": "200",
+              "start_s": 1151.86,
+              "end_s": 1160.48
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1130.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1154.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s10",
+          "source_pts_start_s": 1155,
+          "source_pts_end_s": 1167,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tranh chiến tranh không có anh hùng; nhà nước trừng phạt dân thường.",
+          "visual_composition_transition": "Giữ toàn cảnh sau khi phục hồi; bố cục nạn nhân trái và lính phải.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Giữ tổng thể để kiểm tra luận điểm trên cả hai phía.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "200",
+              "start_s": 1151.86,
+              "end_s": 1160.48
+            },
+            {
+              "cue_id": "201",
+              "start_s": 1161.02,
+              "end_s": 1165.42
+            },
+            {
+              "cue_id": "202",
+              "start_s": 1166.78,
+              "end_s": 1172.62
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1154.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s11",
+          "source_pts_start_s": 1167,
+          "source_pts_end_s": 1177,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tranh chiến tranh truyền thống thường tả quân đội và chiến thắng.",
+          "visual_composition_transition": "Cắt sang bức chiến trận nhiều ngựa và quân; nhãn ở góc.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Tác phẩm khác cung cấp đối chứng về quy ước anh hùng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "202",
+              "start_s": 1166.78,
+              "end_s": 1172.62
+            },
+            {
+              "cue_id": "203",
+              "start_s": 1173.32,
+              "end_s": 1177.06
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1154.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s12",
+          "source_pts_start_s": 1177,
+          "source_pts_end_s": 1192,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Người dân sợ hãi, máu thấm xuống đất; sự thật khó nhìn.",
+          "visual_composition_transition": "Chuỗi cắt cận mặt che tay, tu sĩ, súng và thi thể rồi trở lại toàn cảnh.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Chia đám đông thành chi tiết cảm xúc rồi ráp lại với tổng thể.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "203",
+              "start_s": 1173.32,
+              "end_s": 1177.06
+            },
+            {
+              "cue_id": "204",
+              "start_s": 1177.06,
+              "end_s": 1184.18
+            },
+            {
+              "cue_id": "205",
+              "start_s": 1184.18,
+              "end_s": 1191.9
+            },
+            {
+              "cue_id": "206",
+              "start_s": 1191.9,
+              "end_s": 1200.0
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1154.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1178.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s13",
+          "source_pts_start_s": 1192,
+          "source_pts_end_s": 1202,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Ferdinand trở về và tình hình Tây Ban Nha thay đổi xấu.",
+          "visual_composition_transition": "Cắt cảnh đón vua, lửa rồi tư liệu đen trắng đoàn quân.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Hình lửa có thể đọc như ẩn dụ chuyển tình thế; tư liệu không được gán là chính sự kiện 1813.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "206",
+              "start_s": 1191.9,
+              "end_s": 1200.0
+            },
+            {
+              "cue_id": "207",
+              "start_s": 1200.0,
+              "end_s": 1207.56
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1178.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s14",
+          "source_pts_start_s": 1202,
+          "source_pts_end_s": 1215,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Vua không chấp thuận hai bức tranh; chúng bị cất đi.",
+          "visual_composition_transition": "Tư liệu diễu hành, khách xem tranh, hành lang rồi chân dung Ferdinand.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Chuỗi hình đưa lời kể từ lịch sử chính trị về số phận tranh; các hình không đồng nghĩa bằng chứng trực tiếp cho việc cất tranh.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "207",
+              "start_s": 1200.0,
+              "end_s": 1207.56
+            },
+            {
+              "cue_id": "208",
+              "start_s": 1207.56,
+              "end_s": 1213.52
+            },
+            {
+              "cue_id": "209",
+              "start_s": 1213.52,
+              "end_s": 1220.56
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1202.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.033000",
+            "duration": "156.990167"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "157.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "157.023167"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1082.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1130.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1154.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1178.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1202.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/boundary-1058.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/boundary-1214.jpg"
+      ],
+      "viewed_dense_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/dense-1067.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-continuous/dense-1121.jpg"
+      ]
+    },
+    {
+      "case_id": "goya-micro",
+      "video_id": "GLW9omJfAdk",
+      "start_source_pts_s": 1080,
+      "end_source_pts_s": 1125,
+      "ASRpath": "research_media/great-art-explained/analysis-b/GLW9omJfAdk/transcript/GLW9omJfAdk.srt",
+      "source_mp4": "research_media/great-art-explained/GLW9omJfAdk.mp4",
+      "parent_case_id": "goya-continuous",
+      "states": [
+        {
+          "state_id": "goya-continuous-s03",
+          "source_pts_start_s": 1080,
+          "source_pts_end_s": 1081,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Không thấy mặt những người áp bức.",
+          "visual_composition_transition": "Cắt cận các lưng và mũ lính, rồi trả toàn tranh.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Cận cảnh cho phép kiểm tra việc khuôn mặt bị che.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "187",
+              "start_s": 1079.38,
+              "end_s": 1087.84
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s04",
+          "source_pts_start_s": 1081,
+          "source_pts_end_s": 1088,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nạn nhân cầu xin tương phản với đội bắn lạnh lùng.",
+          "visual_composition_transition": "Toàn tranh; viền trắng vẽ quanh nhóm trái rồi tiếp tục nhóm phải.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Hai lần đánh dấu so sánh hai khối ngay trên cùng hệ tọa độ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "187",
+              "start_s": 1079.38,
+              "end_s": 1087.84
+            },
+            {
+              "cue_id": "188",
+              "start_s": 1087.84,
+              "end_s": 1094.9
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1058.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1082.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s05",
+          "source_pts_start_s": 1088,
+          "source_pts_end_s": 1109,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nhân vật áo trắng như người tử đạo; thi thể nằm dưới; áo trắng biểu thị sự vô tội.",
+          "visual_composition_transition": "Cắt cận người dang tay; vùng ngoài tối dần rồi sáng lại; khung mở rộng về đèn và lính.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Cô lập áo trắng để liên hệ biểu tượng với tư thế và thân thể xung quanh.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "188",
+              "start_s": 1087.84,
+              "end_s": 1094.9
+            },
+            {
+              "cue_id": "189",
+              "start_s": 1094.9,
+              "end_s": 1098.3
+            },
+            {
+              "cue_id": "190",
+              "start_s": 1098.3,
+              "end_s": 1103.5
+            },
+            {
+              "cue_id": "191",
+              "start_s": 1103.5,
+              "end_s": 1108.26
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1082.jpg",
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s06",
+          "source_pts_start_s": 1109,
+          "source_pts_end_s": 1119,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Đèn đặt dưới đất chiếu sáng người chính; bàn tay gợi dấu đóng đinh.",
+          "visual_composition_transition": "Khung toàn hơn có đèn ở dưới; dissolve sang cận hai bàn tay và mặt.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Di chuyển chú ý từ nguồn sáng sang chi tiết tư thế.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "192",
+              "start_s": 1109.06,
+              "end_s": 1111.48
+            },
+            {
+              "cue_id": "193",
+              "start_s": 1111.48,
+              "end_s": 1115.48
+            },
+            {
+              "cue_id": "194",
+              "start_s": 1116.42,
+              "end_s": 1120.36
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg"
+          ]
+        },
+        {
+          "state_id": "goya-continuous-s07",
+          "source_pts_start_s": 1119,
+          "source_pts_end_s": 1125,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Picasso tham chiếu dấu tay và tư thế trong Guernica.",
+          "visual_composition_transition": "Dải Guernica trượt từ dưới lên, thành ảnh đầy khung rồi tách sang phải để đặt cạnh Goya.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Đặt các tác phẩm cạnh nhau để người xem tự so tư thế; tương đồng không tự chứng minh nguồn ảnh hưởng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "194",
+              "start_s": 1116.42,
+              "end_s": 1120.36
+            },
+            {
+              "cue_id": "195",
+              "start_s": 1120.36,
+              "end_s": 1125.1
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/goya-continuous/sheet-1106.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.000000",
+            "duration": "45.011633"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "45.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "45.011633"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/goya-micro/sheet-1080.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-micro/sheet-1104.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/goya-micro/boundary-1080.jpg",
+        "research_media/great-art-explained/scene-sync/longform/goya-micro/boundary-1124.jpg"
+      ],
+      "viewed_dense_sheets": []
+    },
+    {
+      "case_id": "bosch-continuous",
+      "video_id": "vBG621XEegk",
+      "start_source_pts_s": 700,
+      "end_source_pts_s": 860,
+      "ASRpath": "research_media/great-art-explained/analysis-b/vBG621XEegk/transcript/vBG621XEegk.srt",
+      "source_mp4": "research_media/great-art-explained/vBG621XEegk.mp4",
+      "states": [
+        {
+          "state_id": "bosch-continuous-s01",
+          "source_pts_start_s": 700,
+          "source_pts_end_s": 707,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Cánh tranh thờ mở trong dịp lễ, lộ cảnh tôn giáo.",
+          "visual_composition_transition": "Tranh thờ đóng chuyển thành mở; chính giữa khung.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Minh họa quy ước mở cánh trước trường hợp Bosch.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "112",
+              "start_s": 699.4,
+              "end_s": 702.76
+            },
+            {
+              "cue_id": "113",
+              "start_s": 702.76,
+              "end_s": 706.58
+            },
+            {
+              "cue_id": "114",
+              "start_s": 706.58,
+              "end_s": 712.48
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0700.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s02",
+          "source_pts_start_s": 707,
+          "source_pts_end_s": 717,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Hình dung Henry tiếp khách và kho đồ kỳ lạ.",
+          "visual_composition_transition": "Cảnh yến tiệc, thiên thạch, sau đó khách đang đứng trước Bosch.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Những hình liên tiếp dựng bối cảnh giả định, không chứng minh buổi tiếp khách thực sự.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "114",
+              "start_s": 706.58,
+              "end_s": 712.48
+            },
+            {
+              "cue_id": "115",
+              "start_s": 712.48,
+              "end_s": 720.06
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0700.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s03",
+          "source_pts_start_s": 717,
+          "source_pts_end_s": 736,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Mặt ngoài u tối không chuẩn bị người xem cho bên trong; kể việc mở cánh.",
+          "visual_composition_transition": "Toàn cảnh mặt ngoài xám đóng trên nền đen; giữ trung tâm.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Sự chờ kéo dài giúp so sánh hai trạng thái đóng và mở.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "115",
+              "start_s": 712.48,
+              "end_s": 720.06
+            },
+            {
+              "cue_id": "116",
+              "start_s": 721.04,
+              "end_s": 726.76
+            },
+            {
+              "cue_id": "117",
+              "start_s": 727.5,
+              "end_s": 734.66
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0700.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s04",
+          "source_pts_start_s": 736,
+          "source_pts_end_s": 744,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Bên trong gây kinh ngạc; được ví như điện ảnh thời đầu.",
+          "visual_composition_transition": "Hai cánh mở từ khe giữa ra hai bên; vệt màu đầu khoảng 736,8–737,0 theo mẫu 5fps; toàn tranh mở ổn định khoảng 742–744.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Chuyển động làm hành động mở thành một sự kiện nhìn được; so sánh điện ảnh là lời kể, không phải chứng cứ lịch sử.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "118",
+              "start_s": 736.58,
+              "end_s": 758.7
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s05",
+          "source_pts_start_s": 744,
+          "source_pts_end_s": 753,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tác phẩm có thể giữ người xem hàng giờ.",
+          "visual_composition_transition": "Cắt cận khu vườn đông nhân vật, đổi vùng bên trong trung tâm.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Cận cảnh cho thấy lượng chi tiết hỗ trợ lời kể về việc quan sát lâu.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "118",
+              "start_s": 736.58,
+              "end_s": 758.7
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s06",
+          "source_pts_start_s": 753,
+          "source_pts_end_s": 760,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nhà sử học Falkenburg xem đây là vật gợi chuyện.",
+          "visual_composition_transition": "Cắt sang người nói trước toàn bộ tranh, kèm tên.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Gắn cách diễn giải với người đưa ra thay vì biến nó thành sự thật vô chủ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "118",
+              "start_s": 736.58,
+              "end_s": 758.7
+            },
+            {
+              "cue_id": "119",
+              "start_s": 758.7,
+              "end_s": 764.88
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s07",
+          "source_pts_start_s": 760,
+          "source_pts_end_s": 785,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nhân vật chỉ trỏ và thì thầm; tranh phản chiếu người xem; ẩn dụ cho giới tinh hoa.",
+          "visual_composition_transition": "Chuỗi dissolve cận các nhóm mặt, quả, người trong vỏ, cú; rồi tiêu đề khu vườn.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Lần lượt cô lập những tương tác trong đám đông để người xem tìm được điều lời kể nhắc.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "119",
+              "start_s": 758.7,
+              "end_s": 764.88
+            },
+            {
+              "cue_id": "120",
+              "start_s": 764.88,
+              "end_s": 771.06
+            },
+            {
+              "cue_id": "121",
+              "start_s": 771.06,
+              "end_s": 777.22
+            },
+            {
+              "cue_id": "122",
+              "start_s": 777.22,
+              "end_s": 783.22
+            },
+            {
+              "cue_id": "123",
+              "start_s": 783.22,
+              "end_s": 790.9
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0772.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s08",
+          "source_pts_start_s": 785,
+          "source_pts_end_s": 797,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Mở cánh là mở thế giới ẩn dụ và vấn đề thần học.",
+          "visual_composition_transition": "Lặp hoạt ảnh đóng rồi mở bộ ba, trở về cảnh giữa.",
+          "semantic_relationship": "callback",
+          "attention_and_function_inference": "Lặp hình mở cánh để nối thao tác vật lý với cách đọc ẩn dụ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "123",
+              "start_s": 783.22,
+              "end_s": 790.9
+            },
+            {
+              "cue_id": "124",
+              "start_s": 790.9,
+              "end_s": 797.06
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0772.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0796.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s09",
+          "source_pts_start_s": 797,
+          "source_pts_end_s": 830,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Vườn đông người không phải cảnh trong Genesis: khi ấy chỉ có Adam và Eve.",
+          "visual_composition_transition": "Đặt tranh Bosch xen với hai hình Adam–Eve có chữ kinh thánh, quay về cận vườn.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Sự xen kẽ cho phép đối chiếu câu chuyện trong lời kể với sáng tạo của Bosch.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "124",
+              "start_s": 790.9,
+              "end_s": 797.06
+            },
+            {
+              "cue_id": "125",
+              "start_s": 797.06,
+              "end_s": 802.7
+            },
+            {
+              "cue_id": "126",
+              "start_s": 803.76,
+              "end_s": 809.62
+            },
+            {
+              "cue_id": "127",
+              "start_s": 809.62,
+              "end_s": 816.96
+            },
+            {
+              "cue_id": "128",
+              "start_s": 816.96,
+              "end_s": 823.84
+            },
+            {
+              "cue_id": "129",
+              "start_s": 823.84,
+              "end_s": 829.92
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0796.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0820.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s10",
+          "source_pts_start_s": 830,
+          "source_pts_end_s": 844,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Các nhân vật trần truồng như trước khi bị đuổi; vườn có hàm ý tính dục.",
+          "visual_composition_transition": "Cận cảnh nhân vật; chữ kinh hiện rồi cắt sang vườn cây thật.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Dùng cảnh trần truồng và hình vườn để chuyển từ mô tả sang bối cảnh biểu tượng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "130",
+              "start_s": 830.48,
+              "end_s": 836.4
+            },
+            {
+              "cue_id": "131",
+              "start_s": 836.4,
+              "end_s": 843.66
+            },
+            {
+              "cue_id": "132",
+              "start_s": 843.66,
+              "end_s": 848.72
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0820.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s11",
+          "source_pts_start_s": 844,
+          "source_pts_end_s": 860,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Văn học Romance of the Rose là tiền lệ về vườn tình yêu và biểu tượng.",
+          "visual_composition_transition": "Cắt bản thảo minh họa có nhãn rồi so với chi tiết đài phun trong tranh Bosch.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Liên tiếp đặt hai hình vườn để đề xuất mối liên hệ biểu tượng, không chứng minh ảnh hưởng trực tiếp.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "132",
+              "start_s": 843.66,
+              "end_s": 848.72
+            },
+            {
+              "cue_id": "133",
+              "start_s": 848.72,
+              "end_s": 855.56
+            },
+            {
+              "cue_id": "134",
+              "start_s": 855.56,
+              "end_s": 861.02
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0844.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.033000",
+            "duration": "159.993167"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "160.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "160.026167"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0700.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0772.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0796.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0820.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0844.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/boundary-0700.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/boundary-0859.jpg"
+      ],
+      "viewed_dense_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/bosch-continuous/dense-0737.jpg"
+      ]
+    },
+    {
+      "case_id": "bosch-micro",
+      "video_id": "vBG621XEegk",
+      "start_source_pts_s": 723,
+      "end_source_pts_s": 765,
+      "ASRpath": "research_media/great-art-explained/analysis-b/vBG621XEegk/transcript/vBG621XEegk.srt",
+      "source_mp4": "research_media/great-art-explained/vBG621XEegk.mp4",
+      "parent_case_id": "bosch-continuous",
+      "states": [
+        {
+          "state_id": "bosch-continuous-s03",
+          "source_pts_start_s": 723,
+          "source_pts_end_s": 736,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Mặt ngoài u tối không chuẩn bị người xem cho bên trong; kể việc mở cánh.",
+          "visual_composition_transition": "Toàn cảnh mặt ngoài xám đóng trên nền đen; giữ trung tâm.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Sự chờ kéo dài giúp so sánh hai trạng thái đóng và mở.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "116",
+              "start_s": 721.04,
+              "end_s": 726.76
+            },
+            {
+              "cue_id": "117",
+              "start_s": 727.5,
+              "end_s": 734.66
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0700.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s04",
+          "source_pts_start_s": 736,
+          "source_pts_end_s": 744,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Bên trong gây kinh ngạc; được ví như điện ảnh thời đầu.",
+          "visual_composition_transition": "Hai cánh mở từ khe giữa ra hai bên; vệt màu đầu khoảng 736,8–737,0 theo mẫu 5fps; toàn tranh mở ổn định khoảng 742–744.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Chuyển động làm hành động mở thành một sự kiện nhìn được; so sánh điện ảnh là lời kể, không phải chứng cứ lịch sử.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "118",
+              "start_s": 736.58,
+              "end_s": 758.7
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s05",
+          "source_pts_start_s": 744,
+          "source_pts_end_s": 753,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tác phẩm có thể giữ người xem hàng giờ.",
+          "visual_composition_transition": "Cắt cận khu vườn đông nhân vật, đổi vùng bên trong trung tâm.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Cận cảnh cho thấy lượng chi tiết hỗ trợ lời kể về việc quan sát lâu.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "118",
+              "start_s": 736.58,
+              "end_s": 758.7
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0724.jpg",
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s06",
+          "source_pts_start_s": 753,
+          "source_pts_end_s": 760,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nhà sử học Falkenburg xem đây là vật gợi chuyện.",
+          "visual_composition_transition": "Cắt sang người nói trước toàn bộ tranh, kèm tên.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Gắn cách diễn giải với người đưa ra thay vì biến nó thành sự thật vô chủ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "118",
+              "start_s": 736.58,
+              "end_s": 758.7
+            },
+            {
+              "cue_id": "119",
+              "start_s": 758.7,
+              "end_s": 764.88
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg"
+          ]
+        },
+        {
+          "state_id": "bosch-continuous-s07",
+          "source_pts_start_s": 760,
+          "source_pts_end_s": 765,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Nhân vật chỉ trỏ và thì thầm; tranh phản chiếu người xem; ẩn dụ cho giới tinh hoa.",
+          "visual_composition_transition": "Chuỗi dissolve cận các nhóm mặt, quả, người trong vỏ, cú; rồi tiêu đề khu vườn.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Lần lượt cô lập những tương tác trong đám đông để người xem tìm được điều lời kể nhắc.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "119",
+              "start_s": 758.7,
+              "end_s": 764.88
+            },
+            {
+              "cue_id": "120",
+              "start_s": 764.88,
+              "end_s": 771.06
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/bosch-continuous/sheet-0748.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.033000",
+            "duration": "41.975267"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "42.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "42.008267"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/bosch-micro/sheet-0723.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-micro/sheet-0747.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/bosch-micro/boundary-0723.jpg",
+        "research_media/great-art-explained/scene-sync/longform/bosch-micro/boundary-0764.jpg"
+      ],
+      "viewed_dense_sheets": []
+    },
+    {
+      "case_id": "mona-continuous",
+      "video_id": "ElWG0_kjy_Y",
+      "start_source_pts_s": 427,
+      "end_source_pts_s": 583,
+      "ASRpath": "research_media/great-art-explained/analysis-b/ElWG0_kjy_Y/transcript/ElWG0_kjy_Y.srt",
+      "source_mp4": "research_media/great-art-explained/ElWG0_kjy_Y.mp4",
+      "states": [
+        {
+          "state_id": "mona-continuous-s01",
+          "source_pts_start_s": 427,
+          "source_pts_end_s": 439,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Gỗ dương và lớp lót trắng chì tạo nền phản sáng.",
+          "visual_composition_transition": "Cảnh quét nền trắng; câu hỏi chữ hiện trên nền.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Minh họa vật liệu và thao tác làm nền bằng ví dụ thị giác.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "63",
+              "start_s": 427.48,
+              "end_s": 431.52
+            },
+            {
+              "cue_id": "64",
+              "start_s": 431.52,
+              "end_s": 433.88
+            },
+            {
+              "cue_id": "65",
+              "start_s": 433.88,
+              "end_s": 436.48
+            },
+            {
+              "cue_id": "66",
+              "start_s": 437.14,
+              "end_s": 438.66
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0427.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s02",
+          "source_pts_start_s": 439,
+          "source_pts_end_s": 456,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Pha ít sắc tố vào dầu để tạo lớp màu trong, phủ mỏng.",
+          "visual_composition_transition": "Cắt sang tay trộn màu, cận chất lỏng rồi phủ bằng cọ lên mẫu đen trắng.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Thao tác mẫu làm quy trình trừu tượng trở nên có thể quan sát.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "67",
+              "start_s": 439.68,
+              "end_s": 442.2
+            },
+            {
+              "cue_id": "68",
+              "start_s": 442.2,
+              "end_s": 458.68
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0427.jpg",
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0451.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s03",
+          "source_pts_start_s": 456,
+          "source_pts_end_s": 475,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Lớp phủ thống nhất tương phản, nền chì phản xạ ánh sáng qua các lớp.",
+          "visual_composition_transition": "Tiếp tục quét mẫu, chuyển cận bề mặt ánh sáng.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Trình diễn thay đổi sắc độ trên hai nền cạnh nhau; không phải tái hiện kỹ thuật chính xác của Leonardo.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "68",
+              "start_s": 442.2,
+              "end_s": 458.68
+            },
+            {
+              "cue_id": "69",
+              "start_s": 458.68,
+              "end_s": 464.44
+            },
+            {
+              "cue_id": "70",
+              "start_s": 464.44,
+              "end_s": 470.92
+            },
+            {
+              "cue_id": "71",
+              "start_s": 470.92,
+              "end_s": 476.52
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0451.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s04",
+          "source_pts_start_s": 475,
+          "source_pts_end_s": 483,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Ánh sáng thay đổi theo vị trí quan sát.",
+          "visual_composition_transition": "Cận bề mặt mẫu, thay đổi sáng tối rồi cắt thiết diện.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Cho người xem thấy hiệu ứng bề mặt trước giải thích cấu trúc.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "71",
+              "start_s": 470.92,
+              "end_s": 476.52
+            },
+            {
+              "cue_id": "72",
+              "start_s": 477.64,
+              "end_s": 481.24
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0475.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s05",
+          "source_pts_start_s": 483,
+          "source_pts_end_s": 490,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Thiết diện hiển vi lấy từ một tác phẩm Leonardo khác.",
+          "visual_composition_transition": "Dải thiết diện phóng ngang toàn khung; chữ lớp sơn.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Chỉ rõ đây là bằng chứng tham chiếu từ tác phẩm khác, không nhận là mẫu Mona Lisa.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "73",
+              "start_s": 483.8,
+              "end_s": 488.52
+            },
+            {
+              "cue_id": "74",
+              "start_s": 488.52,
+              "end_s": 496.76
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0475.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s06",
+          "source_pts_start_s": 490,
+          "source_pts_end_s": 499,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Lớp trắng chì và imprimatura tạo nền phản sáng.",
+          "visual_composition_transition": "Vùng trắng ở đáy được tô/ghi nhãn; sau đó nhãn imprimatura.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Nhãn neo thuật ngữ vào vị trí theo chiều sâu của thiết diện.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "74",
+              "start_s": 488.52,
+              "end_s": 496.76
+            },
+            {
+              "cue_id": "75",
+              "start_s": 496.76,
+              "end_s": 503.16
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0475.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s07",
+          "source_pts_start_s": 499,
+          "source_pts_end_s": 508,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Ánh sáng đi vào và phản xạ qua các lớp.",
+          "visual_composition_transition": "Tia vàng bắt đầu hiện khoảng 500,4–500,7 theo mẫu 5fps, tạo chữ V từ trên xuống đáy rồi phản lên, lặp nhiều tia; mất dần.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Sơ đồ giải thích đường đi ánh sáng; không là ảnh chụp tia thực tế.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "75",
+              "start_s": 496.76,
+              "end_s": 503.16
+            },
+            {
+              "cue_id": "76",
+              "start_s": 503.16,
+              "end_s": 508.68
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s08",
+          "source_pts_start_s": 508,
+          "source_pts_end_s": 517,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Lớp tối tiếp theo các lớp màu khác; phân tích khoa học cho thấy nhiều lớp mỏng.",
+          "visual_composition_transition": "Dải lớp đen trắng xuất hiện dần từ phải sang trái trên thiết diện rồi mờ đi.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Phân tách các lớp mà ảnh hiển vi khó đọc; hướng reveal không khẳng định thứ tự thi công.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "76",
+              "start_s": 503.16,
+              "end_s": 508.68
+            },
+            {
+              "cue_id": "77",
+              "start_s": 509.8,
+              "end_s": 515.72
+            },
+            {
+              "cue_id": "78",
+              "start_s": 516.6,
+              "end_s": 523.24
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s09",
+          "source_pts_start_s": 517,
+          "source_pts_end_s": 534,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tới 30 lớp và tổng 40 micromet, khoảng nửa bề rộng tóc.",
+          "visual_composition_transition": "Trở lại thiết diện; mũi tên thẳng đứng hai đầu cùng nhãn kích thước, sau đó cắt cận miệng.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Thước biểu thị bề dày được lời kể nêu; ảnh của tác phẩm khác chỉ minh họa.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "78",
+              "start_s": 516.6,
+              "end_s": 523.24
+            },
+            {
+              "cue_id": "79",
+              "start_s": 523.24,
+              "end_s": 531.5
+            },
+            {
+              "cue_id": "80",
+              "start_s": 531.5,
+              "end_s": 538.44
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg",
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0523.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s10",
+          "source_pts_start_s": 534,
+          "source_pts_end_s": 559,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Các lớp khúc xạ khác nhau; nét cọ rất nhỏ và da có nét không đều.",
+          "visual_composition_transition": "Cận miệng mở rộng tới mặt; khoảng 551,6–553,0 vùng đơn sắc đi vào từ mép phải, ranh dọc dịch sang trái tới gần giữa mặt; giữ tương đối cố định đến khoảng 557,0, sau đó màu trở lại qua hòa mờ khoảng 557–559. Không thấy ranh giới đảo chiều hoặc cắt ngay; 5fps, mốc ±0,2–0,4s.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Đưa lý thuyết từ thiết diện trở lại bề mặt chân dung; không đủ chứng cứ định danh ảnh đơn sắc ở đoạn này.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "80",
+              "start_s": 531.5,
+              "end_s": 538.44
+            },
+            {
+              "cue_id": "81",
+              "start_s": 538.96,
+              "end_s": 545.48
+            },
+            {
+              "cue_id": "82",
+              "start_s": 545.48,
+              "end_s": 552.98
+            },
+            {
+              "cue_id": "83",
+              "start_s": 552.98,
+              "end_s": 558.26
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0523.jpg",
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0547.jpg"
+          ],
+          "dense_transition_evidence": "research_media/great-art-explained/scene-sync/longform/mona-continuous/dense-0554.jpg"
+        },
+        {
+          "state_id": "mona-continuous-s11",
+          "source_pts_start_s": 559,
+          "source_pts_end_s": 578,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Kỹ thuật verdaccio dùng nền xanh để tạo sắc da; tác phẩm chưa hoàn thành làm ví dụ.",
+          "visual_composition_transition": "Cắt sang tranh chưa hoàn thành tông vàng xanh; khung mở rộng dần, có nhãn.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Hình khác đưa ví dụ cho lớp nền còn lộ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "84",
+              "start_s": 559.36,
+              "end_s": 565.72
+            },
+            {
+              "cue_id": "85",
+              "start_s": 566.6,
+              "end_s": 572.9
+            },
+            {
+              "cue_id": "86",
+              "start_s": 572.9,
+              "end_s": 579.98
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0547.jpg",
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0571.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s12",
+          "source_pts_start_s": 578,
+          "source_pts_end_s": 583,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Ảnh hồng ngoại Louvre năm 2004 cho biết thêm về kỹ thuật.",
+          "visual_composition_transition": "Cắt ảnh đơn sắc Mona Lisa, khung đi từ thân lên mặt.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Đổi chế độ hình để chỉ một phương thức quan sát khác; đoạn cuối cắt giữa câu ASR.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "86",
+              "start_s": 572.9,
+              "end_s": 579.98
+            },
+            {
+              "cue_id": "87",
+              "start_s": 579.98,
+              "end_s": 582.28
+            },
+            {
+              "cue_id": "88",
+              "start_s": 582.28,
+              "end_s": 584.38
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0571.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.016000",
+            "duration": "155.989167"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "156.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "156.005167"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0427.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0451.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0475.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0523.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0547.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0571.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/boundary-0427.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/boundary-0582.jpg"
+      ],
+      "viewed_dense_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/dense-0500.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/dense-0514.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-continuous/dense-0554.jpg"
+      ]
+    },
+    {
+      "case_id": "mona-micro",
+      "video_id": "ElWG0_kjy_Y",
+      "start_source_pts_s": 483,
+      "end_source_pts_s": 533,
+      "ASRpath": "research_media/great-art-explained/analysis-b/ElWG0_kjy_Y/transcript/ElWG0_kjy_Y.srt",
+      "source_mp4": "research_media/great-art-explained/ElWG0_kjy_Y.mp4",
+      "parent_case_id": "mona-continuous",
+      "states": [
+        {
+          "state_id": "mona-continuous-s05",
+          "source_pts_start_s": 483,
+          "source_pts_end_s": 490,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Thiết diện hiển vi lấy từ một tác phẩm Leonardo khác.",
+          "visual_composition_transition": "Dải thiết diện phóng ngang toàn khung; chữ lớp sơn.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Chỉ rõ đây là bằng chứng tham chiếu từ tác phẩm khác, không nhận là mẫu Mona Lisa.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "73",
+              "start_s": 483.8,
+              "end_s": 488.52
+            },
+            {
+              "cue_id": "74",
+              "start_s": 488.52,
+              "end_s": 496.76
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0475.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s06",
+          "source_pts_start_s": 490,
+          "source_pts_end_s": 499,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Lớp trắng chì và imprimatura tạo nền phản sáng.",
+          "visual_composition_transition": "Vùng trắng ở đáy được tô/ghi nhãn; sau đó nhãn imprimatura.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Nhãn neo thuật ngữ vào vị trí theo chiều sâu của thiết diện.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "74",
+              "start_s": 488.52,
+              "end_s": 496.76
+            },
+            {
+              "cue_id": "75",
+              "start_s": 496.76,
+              "end_s": 503.16
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0475.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s07",
+          "source_pts_start_s": 499,
+          "source_pts_end_s": 508,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Ánh sáng đi vào và phản xạ qua các lớp.",
+          "visual_composition_transition": "Tia vàng bắt đầu hiện khoảng 500,4–500,7 theo mẫu 5fps, tạo chữ V từ trên xuống đáy rồi phản lên, lặp nhiều tia; mất dần.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Sơ đồ giải thích đường đi ánh sáng; không là ảnh chụp tia thực tế.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "75",
+              "start_s": 496.76,
+              "end_s": 503.16
+            },
+            {
+              "cue_id": "76",
+              "start_s": 503.16,
+              "end_s": 508.68
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s08",
+          "source_pts_start_s": 508,
+          "source_pts_end_s": 517,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Lớp tối tiếp theo các lớp màu khác; phân tích khoa học cho thấy nhiều lớp mỏng.",
+          "visual_composition_transition": "Dải lớp đen trắng xuất hiện dần từ phải sang trái trên thiết diện rồi mờ đi.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Phân tách các lớp mà ảnh hiển vi khó đọc; hướng reveal không khẳng định thứ tự thi công.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "76",
+              "start_s": 503.16,
+              "end_s": 508.68
+            },
+            {
+              "cue_id": "77",
+              "start_s": 509.8,
+              "end_s": 515.72
+            },
+            {
+              "cue_id": "78",
+              "start_s": 516.6,
+              "end_s": 523.24
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg"
+          ]
+        },
+        {
+          "state_id": "mona-continuous-s09",
+          "source_pts_start_s": 517,
+          "source_pts_end_s": 533,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tới 30 lớp và tổng 40 micromet, khoảng nửa bề rộng tóc.",
+          "visual_composition_transition": "Trở lại thiết diện; mũi tên thẳng đứng hai đầu cùng nhãn kích thước, sau đó cắt cận miệng.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Thước biểu thị bề dày được lời kể nêu; ảnh của tác phẩm khác chỉ minh họa.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "78",
+              "start_s": 516.6,
+              "end_s": 523.24
+            },
+            {
+              "cue_id": "79",
+              "start_s": 523.24,
+              "end_s": 531.5
+            },
+            {
+              "cue_id": "80",
+              "start_s": 531.5,
+              "end_s": 538.44
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0499.jpg",
+            "research_media/great-art-explained/scene-sync/longform/mona-continuous/sheet-0523.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.016000",
+            "duration": "49.999950"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "50.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "50.015950"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/mona-micro/sheet-0483.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-micro/sheet-0507.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-micro/sheet-0531.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/mona-micro/boundary-0483.jpg",
+        "research_media/great-art-explained/scene-sync/longform/mona-micro/boundary-0532.jpg"
+      ],
+      "viewed_dense_sheets": []
+    },
+    {
+      "case_id": "supper-continuous",
+      "video_id": "eKyYPSpiC9g",
+      "start_source_pts_s": 1165,
+      "end_source_pts_s": 1325,
+      "ASRpath": "research_media/great-art-explained/analysis-b/eKyYPSpiC9g/transcript/eKyYPSpiC9g.srt",
+      "source_mp4": "research_media/great-art-explained/eKyYPSpiC9g.mp4",
+      "states": [
+        {
+          "state_id": "supper-continuous-s01",
+          "source_pts_start_s": 1165,
+          "source_pts_end_s": 1178,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Tranh trước Leonardo có chiều sâu nhưng nhân vật ít kịch tính.",
+          "visual_composition_transition": "Bố cục hai dải: toàn bích họa phía trên, chi tiết nhân vật phía dưới.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Toàn cảnh và cận cảnh đồng thời cho phép kiểm tra không gian lẫn nét mặt.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "173",
+              "start_s": 1163.7,
+              "end_s": 1169.24
+            },
+            {
+              "cue_id": "174",
+              "start_s": 1169.24,
+              "end_s": 1175.64
+            },
+            {
+              "cue_id": "175",
+              "start_s": 1175.64,
+              "end_s": 1181.82
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1165.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s02",
+          "source_pts_start_s": 1178,
+          "source_pts_end_s": 1190,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Các phiên bản khác xếp các tông đồ đều và thiếu biểu cảm.",
+          "visual_composition_transition": "Cắt sang mosaic trên nền đen; các nhân vật được lộ thêm dọc bàn.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Tách và bổ sung hình người biến sự đều đặn thành điều dễ nhận.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "175",
+              "start_s": 1175.64,
+              "end_s": 1181.82
+            },
+            {
+              "cue_id": "176",
+              "start_s": 1181.82,
+              "end_s": 1187.92
+            },
+            {
+              "cue_id": "177",
+              "start_s": 1187.92,
+              "end_s": 1193.86
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1165.jpg",
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s03",
+          "source_pts_start_s": 1190,
+          "source_pts_end_s": 1195,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Leonardo chọn căn phòng tiết chế phù hợp thẩm mỹ dòng Dominican.",
+          "visual_composition_transition": "Cắt nền phòng trống, bàn trắng kéo ngang; ba cửa sổ ở giữa.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Xóa nhân vật khỏi cảnh để cô lập không gian.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "177",
+              "start_s": 1187.92,
+              "end_s": 1193.86
+            },
+            {
+              "cue_id": "178",
+              "start_s": 1193.86,
+              "end_s": 1200.0
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s04",
+          "source_pts_start_s": 1195,
+          "source_pts_end_s": 1205,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Câu chuyện chuyển thành kịch tính và nghiên cứu tâm lý con người.",
+          "visual_composition_transition": "Christ bắt đầu mờ hiện khoảng 1194,8–1195,1 (mẫu độc lập 5fps); các nhóm tiếp tục hiện quanh bàn khoảng 1200–1205.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Dựng hình theo lớp cho thấy quan hệ nhân vật với sân khấu; suy luận về mục đích của dựng hình.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "178",
+              "start_s": 1193.86,
+              "end_s": 1200.0
+            },
+            {
+              "cue_id": "179",
+              "start_s": 1200.0,
+              "end_s": 1204.86
+            },
+            {
+              "cue_id": "180",
+              "start_s": 1204.86,
+              "end_s": 1210.44
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s05",
+          "source_pts_start_s": 1205,
+          "source_pts_end_s": 1237,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Sợ hãi, phản bội và mối đe dọa bao quanh bữa ăn.",
+          "visual_composition_transition": "Cắt sang lưới bốn cảnh phim, các ô thay đổi cảnh nhân vật và bữa ăn.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Dùng các diễn giải điện ảnh để cụ thể hóa cảm xúc; các ô là minh họa, không phải bằng chứng về người mẫu Leonardo.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "180",
+              "start_s": 1204.86,
+              "end_s": 1210.44
+            },
+            {
+              "cue_id": "181",
+              "start_s": 1210.44,
+              "end_s": 1216.62
+            },
+            {
+              "cue_id": "182",
+              "start_s": 1216.62,
+              "end_s": 1220.88
+            },
+            {
+              "cue_id": "183",
+              "start_s": 1220.88,
+              "end_s": 1226.1
+            },
+            {
+              "cue_id": "184",
+              "start_s": 1226.1,
+              "end_s": 1232.06
+            },
+            {
+              "cue_id": "185",
+              "start_s": 1232.44,
+              "end_s": 1239.04
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg",
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1213.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s06",
+          "source_pts_start_s": 1237,
+          "source_pts_end_s": 1248,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "So sánh hai bữa tối cách nhau khoảng hai thập kỷ cho thấy khác biệt kịch tính.",
+          "visual_composition_transition": "Hai bức tranh xếp trên dưới cùng cỡ ngang trên nền đen.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Giữ cả hai cùng hiện để so hình thể và bố cục.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "185",
+              "start_s": 1232.44,
+              "end_s": 1239.04
+            },
+            {
+              "cue_id": "186",
+              "start_s": 1239.28,
+              "end_s": 1245.14
+            },
+            {
+              "cue_id": "187",
+              "start_s": 1245.14,
+              "end_s": 1251.68
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1237.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s07",
+          "source_pts_start_s": 1248,
+          "source_pts_end_s": 1260,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Bản phác thảo thử bố trí truyền thống, Judas ở phía bên kia bàn.",
+          "visual_composition_transition": "Cắt tờ phác trên nền đen; dải phóng to cạnh phải, làm tối và khoanh sáng một vùng.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Chỉ vào vị trí đang bàn tới trong tư liệu chuẩn bị.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "187",
+              "start_s": 1245.14,
+              "end_s": 1251.68
+            },
+            {
+              "cue_id": "188",
+              "start_s": 1251.68,
+              "end_s": 1257.04
+            },
+            {
+              "cue_id": "189",
+              "start_s": 1257.62,
+              "end_s": 1263.88
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1237.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s08",
+          "source_pts_start_s": 1260,
+          "source_pts_end_s": 1271,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Leonardo dùng toán học và sân khấu để tổ chức cấu trúc.",
+          "visual_composition_transition": "Sơ đồ nét đen phối cảnh; cắt sang hình căn phòng với mạng đường chiếu.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Chuyển từ hình thức tác phẩm sang sơ đồ hình học trừu tượng.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "189",
+              "start_s": 1257.62,
+              "end_s": 1263.88
+            },
+            {
+              "cue_id": "190",
+              "start_s": 1263.88,
+              "end_s": 1270.48
+            },
+            {
+              "cue_id": "191",
+              "start_s": 1270.48,
+              "end_s": 1276.54
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1237.jpg",
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1261.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s09",
+          "source_pts_start_s": 1271,
+          "source_pts_end_s": 1285,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Phối cảnh và bốn nhóm ba tạo cấu trúc rõ; các hình chồng tạo chiều sâu.",
+          "visual_composition_transition": "Tranh với đường chéo hội tụ; nền tối; bốn nhóm được vẽ viền trắng tuần tự từ trái sang phải.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Đếm nhóm trực quan đồng thời vẫn giữ đường phối cảnh làm mốc.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "191",
+              "start_s": 1270.48,
+              "end_s": 1276.54
+            },
+            {
+              "cue_id": "192",
+              "start_s": 1276.54,
+              "end_s": 1282.88
+            },
+            {
+              "cue_id": "193",
+              "start_s": 1282.88,
+              "end_s": 1288.16
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1261.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s10",
+          "source_pts_start_s": 1285,
+          "source_pts_end_s": 1295,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Cấu trúc rõ cho phép tương tác và phản ứng trước lời báo phản bội.",
+          "visual_composition_transition": "Viền mất, toàn tranh; cắt cận hai nhóm tông đồ.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Đi từ sơ đồ tổng quát đến cử chỉ cụ thể để nối cấu trúc và kịch tính.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "193",
+              "start_s": 1282.88,
+              "end_s": 1288.16
+            },
+            {
+              "cue_id": "194",
+              "start_s": 1288.9,
+              "end_s": 1294.4
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1285.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s11",
+          "source_pts_start_s": 1295,
+          "source_pts_end_s": 1308,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Mặt và tay là phương tiện biểu đạt khi thân người bị bàn che.",
+          "visual_composition_transition": "Cận nhóm và mặt Christ; toàn tranh tối dần, mặt bàn còn sáng; cắt bản vẽ bàn tay.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Sự cô lập bàn và bản vẽ tay làm nổi bật giới hạn cơ thể thấy được và cử chỉ.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "195",
+              "start_s": 1295.62,
+              "end_s": 1302.04
+            },
+            {
+              "cue_id": "196",
+              "start_s": 1302.04,
+              "end_s": 1308.78
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1285.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s12",
+          "source_pts_start_s": 1308,
+          "source_pts_end_s": 1320,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Biểu cảm, cử chỉ và tư thế thể hiện cảm xúc bên trong.",
+          "visual_composition_transition": "Bản vẽ bàn tay lớn bên trái; lần lượt thêm và thay các nghiên cứu tay bên phải.",
+          "semantic_relationship": "comparison",
+          "attention_and_function_inference": "Chuỗi hình tay mở rộng luận điểm về cử chỉ; trạng thái nội tâm vẫn là cách diễn giải.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "196",
+              "start_s": 1302.04,
+              "end_s": 1308.78
+            },
+            {
+              "cue_id": "197",
+              "start_s": 1308.78,
+              "end_s": 1314.94
+            },
+            {
+              "cue_id": "198",
+              "start_s": 1314.94,
+              "end_s": 1318.94
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1285.jpg",
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1309.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s13",
+          "source_pts_start_s": 1320,
+          "source_pts_end_s": 1325,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Chuyển sang câu hỏi nhận diện từng nhân vật.",
+          "visual_composition_transition": "Toàn tranh làm mờ kèm tiêu đề rồi nét lại; các nhãn tên bắt đầu hiện.",
+          "semantic_relationship": "context",
+          "attention_and_function_inference": "Báo thay chương và chuẩn bị tra cứu danh tính.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "199",
+              "start_s": 1323.36,
+              "end_s": 1329.16
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1309.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.033000",
+            "duration": "159.993167"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "160.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "160.026167"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1165.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1213.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1237.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1261.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1285.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1309.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/boundary-1165.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/boundary-1324.jpg"
+      ],
+      "viewed_dense_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/dense-1197.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-continuous/dense-1276.jpg"
+      ]
+    },
+    {
+      "case_id": "supper-micro",
+      "video_id": "eKyYPSpiC9g",
+      "start_source_pts_s": 1190,
+      "end_source_pts_s": 1235,
+      "ASRpath": "research_media/great-art-explained/analysis-b/eKyYPSpiC9g/transcript/eKyYPSpiC9g.srt",
+      "source_mp4": "research_media/great-art-explained/eKyYPSpiC9g.mp4",
+      "parent_case_id": "supper-continuous",
+      "states": [
+        {
+          "state_id": "supper-continuous-s03",
+          "source_pts_start_s": 1190,
+          "source_pts_end_s": 1195,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Leonardo chọn căn phòng tiết chế phù hợp thẩm mỹ dòng Dominican.",
+          "visual_composition_transition": "Cắt nền phòng trống, bàn trắng kéo ngang; ba cửa sổ ở giữa.",
+          "semantic_relationship": "literal",
+          "attention_and_function_inference": "Xóa nhân vật khỏi cảnh để cô lập không gian.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "177",
+              "start_s": 1187.92,
+              "end_s": 1193.86
+            },
+            {
+              "cue_id": "178",
+              "start_s": 1193.86,
+              "end_s": 1200.0
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s04",
+          "source_pts_start_s": 1195,
+          "source_pts_end_s": 1205,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Câu chuyện chuyển thành kịch tính và nghiên cứu tâm lý con người.",
+          "visual_composition_transition": "Christ bắt đầu mờ hiện khoảng 1194,8–1195,1 (mẫu độc lập 5fps); các nhóm tiếp tục hiện quanh bàn khoảng 1200–1205.",
+          "semantic_relationship": "evidence",
+          "attention_and_function_inference": "Dựng hình theo lớp cho thấy quan hệ nhân vật với sân khấu; suy luận về mục đích của dựng hình.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "178",
+              "start_s": 1193.86,
+              "end_s": 1200.0
+            },
+            {
+              "cue_id": "179",
+              "start_s": 1200.0,
+              "end_s": 1204.86
+            },
+            {
+              "cue_id": "180",
+              "start_s": 1204.86,
+              "end_s": 1210.44
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg"
+          ]
+        },
+        {
+          "state_id": "supper-continuous-s05",
+          "source_pts_start_s": 1205,
+          "source_pts_end_s": 1235,
+          "uncertainty_s": 1.0,
+          "narration_paraphrase_vi": "Sợ hãi, phản bội và mối đe dọa bao quanh bữa ăn.",
+          "visual_composition_transition": "Cắt sang lưới bốn cảnh phim, các ô thay đổi cảnh nhân vật và bữa ăn.",
+          "semantic_relationship": "analogy",
+          "attention_and_function_inference": "Dùng các diễn giải điện ảnh để cụ thể hóa cảm xúc; các ô là minh họa, không phải bằng chứng về người mẫu Leonardo.",
+          "easing": "unknown",
+          "speech_image_offset": "không định lượng; ASR chưa nghe kiểm",
+          "asr_cues": [
+            {
+              "cue_id": "180",
+              "start_s": 1204.86,
+              "end_s": 1210.44
+            },
+            {
+              "cue_id": "181",
+              "start_s": 1210.44,
+              "end_s": 1216.62
+            },
+            {
+              "cue_id": "182",
+              "start_s": 1216.62,
+              "end_s": 1220.88
+            },
+            {
+              "cue_id": "183",
+              "start_s": 1220.88,
+              "end_s": 1226.1
+            },
+            {
+              "cue_id": "184",
+              "start_s": 1226.1,
+              "end_s": 1232.06
+            },
+            {
+              "cue_id": "185",
+              "start_s": 1232.44,
+              "end_s": 1239.04
+            }
+          ],
+          "frame_sheets": [
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1189.jpg",
+            "research_media/great-art-explained/scene-sync/longform/supper-continuous/sheet-1213.jpg"
+          ]
+        }
+      ],
+      "clip_probe": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_type": "video",
+            "start_time": "0.033000",
+            "duration": "44.978267"
+          },
+          {
+            "codec_type": "audio",
+            "start_time": "0.000000",
+            "duration": "45.000000"
+          }
+        ],
+        "format": {
+          "start_time": "0.000000",
+          "duration": "45.011267"
+        }
+      },
+      "viewed_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/supper-micro/sheet-1190.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-micro/sheet-1214.jpg"
+      ],
+      "viewed_boundary_sheets": [
+        "research_media/great-art-explained/scene-sync/longform/supper-micro/boundary-1190.jpg",
+        "research_media/great-art-explained/scene-sync/longform/supper-micro/boundary-1234.jpg"
+      ],
+      "viewed_dense_sheets": []
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+{
+ "COLD_OPEN": {
+  "words": 193,
+  "beats": 9
+ },
+ "THE MERCHANT CITY": {
+  "words": 195,
+  "beats": 9
+ },
+ "THE ARNOLFINIS": {
+  "words": 299,
+  "beats": 14
+ },
+ "FASHIONS AND FABRICS": {
+  "words": 295,
+  "beats": 13
+ },
+ "THE ROOM": {
+  "words": 347,
+  "beats": 16
+ },
+ "THE MIRROR": {
+  "words": 251,
+  "beats": 11
+ },
+ "THE ALCHEMIST": {
+  "words": 279,
+  "beats": 12
+ },
+ "CLOSING": {
+  "words": 100,
+  "beats": 5
+ }
+}

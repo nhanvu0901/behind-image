@@ -1,0 +1,35 @@
+{
+ "id": "arnolfini-from-books",
+ "title": "The Arnolfini Portrait",
+ "artist": "Jan Van Eyck",
+ "year": "1434",
+ "stage": "selected",
+ "created_at": "2026-11-16T12:51:42-04:00",
+ "sources": [
+  {
+   "work_id": "payne_gae/002",
+   "book_id": "payne_gae",
+   "pdf_pages": [
+    23,
+    35
+   ]
+  },
+  {
+   "work_id": "hodge_aid/003",
+   "book_id": "hodge_aid",
+   "pdf_pages": [
+    22,
+    25
+   ]
+  },
+  {
+   "work_id": "brookehitching_mad/011",
+   "book_id": "brookehitching_mad",
+   "pdf_pages": [
+    59,
+    61
+   ]
+  }
+ ],
+ "artwork_key": "eyck-the-arnolfini-portrait"
+}

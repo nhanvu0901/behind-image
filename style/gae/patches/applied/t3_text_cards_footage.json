@@ -1,0 +1,1772 @@
+{
+ "TXT-01": {
+  "params": [
+   {
+    "name": "title",
+    "type": "string",
+    "default": "TECHNIQUES",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "variant",
+    "type": "enum",
+    "default": "blurred_image",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "blurred_image",
+     "white_card"
+    ],
+    "measured": null
+   },
+   {
+    "name": "case",
+    "type": "enum",
+    "default": "upper",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "upper",
+     "as_typed"
+    ],
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 84,
+    "min": 20,
+    "max": 240,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "tracking_px",
+    "type": "number",
+    "default": 14,
+    "min": 0,
+    "max": 40,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "font_kind",
+    "type": "enum",
+    "default": "reg",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "text_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "y_pct",
+    "type": "number",
+    "default": 50,
+    "min": 5,
+    "max": 95,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "max_width_pct",
+    "type": "number",
+    "default": 90,
+    "min": 20,
+    "max": 100,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_gap",
+    "type": "number",
+    "default": 1.25,
+    "min": 0.8,
+    "max": 2.5,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "blur_sigma",
+    "type": "number",
+    "default": 34,
+    "min": 10,
+    "max": 80,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "darken",
+    "type": "number",
+    "default": 0.45,
+    "min": 0.1,
+    "max": 1.0,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "card_color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "card_text_color",
+    "type": "color",
+    "default": "#5a3a22",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "text_in_delay_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_in_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "leave_at_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 30,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_out_s",
+    "type": "number",
+    "default": 0.15,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "rule",
+    "type": "bool",
+    "default": false,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "rule_w_px",
+    "type": "number",
+    "default": 200,
+    "min": 20,
+    "max": 1200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "background",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "title",
+    "type": "text",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.text_extra.ChapterTitleBlur",
+   "reason": null,
+   "notes": "ported from build_reel txt01; variant white_card = brown text on a white card (no image needed)"
+  },
+  "preview": {
+   "reel_start": 162.0,
+   "reel_end": 166.5,
+   "clip": "previews/TXT-01.mp4",
+   "thumb": "previews/TXT-01.jpg"
+  }
+ },
+ "TXT-02": {
+  "params": [
+   {
+    "name": "lines",
+    "type": "lines",
+    "default": [
+     "First line of text",
+     "Second line of text",
+     "Third line of text"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "speed_px_s",
+    "type": "number",
+    "default": 520,
+    "min": 100,
+    "max": 1500,
+    "unit": "px/s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 76,
+    "min": 30,
+    "max": 160,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "direction",
+    "type": "enum",
+    "default": "right_to_left",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "left_to_right",
+     "right_to_left"
+    ],
+    "measured": null
+   },
+   {
+    "name": "alternate",
+    "type": "bool",
+    "default": false,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "font_kind",
+    "type": "enum",
+    "default": "serif_it",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "tracking_px",
+    "type": "number",
+    "default": 1,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "row_y_pct",
+    "type": "number",
+    "default": 30,
+    "min": 0,
+    "max": 100,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "row_step_pct",
+    "type": "number",
+    "default": 20,
+    "min": -50,
+    "max": 50,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "row_delay_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "row_offset_px",
+    "type": "number",
+    "default": 160,
+    "min": -1000,
+    "max": 1000,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "start_x_pct",
+    "type": "number",
+    "default": 160,
+    "min": -200,
+    "max": 300,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background_dim",
+    "type": "number",
+    "default": 0.55,
+    "min": 0,
+    "max": 1,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.text_extra.SlidingText",
+   "reason": null,
+   "notes": "ported from build_reel txt02; overlay: the picture is the shot's own image, dimmed by background_dim (brightness multiplier)"
+  },
+  "preview": {
+   "reel_start": 166.5,
+   "reel_end": 172.0,
+   "clip": "previews/TXT-02.mp4",
+   "thumb": "previews/TXT-02.jpg"
+  }
+ },
+ "STATIC-04": {
+  "params": [
+   {
+    "name": "quote",
+    "type": "text",
+    "default": "A short quotation goes here.",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "attribution",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 70,
+    "min": 30,
+    "max": 140,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "font_kind",
+    "type": "enum",
+    "default": "serif_it",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "tracking_px",
+    "type": "number",
+    "default": 1,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "max_width_pct",
+    "type": "number",
+    "default": 80,
+    "min": 20,
+    "max": 100,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_gap",
+    "type": "number",
+    "default": 1.25,
+    "min": 0.8,
+    "max": 2.5,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "x_pct",
+    "type": "number",
+    "default": 50,
+    "min": 0,
+    "max": 100,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "y_pct",
+    "type": "number",
+    "default": 50,
+    "min": 5,
+    "max": 95,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "attribution_size_px",
+    "type": "number",
+    "default": 36,
+    "min": 16,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "attribution_font_kind",
+    "type": "enum",
+    "default": "reg",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "attribution_tracking_px",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "attribution_color",
+    "type": "color",
+    "default": "#dcdcdc",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "attribution_gap_px",
+    "type": "number",
+    "default": 28,
+    "min": 0,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background_dim",
+    "type": "number",
+    "default": 0.38,
+    "min": 0,
+    "max": 1,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "dim_in_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "delay_s",
+    "type": "number",
+    "default": 1.0,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_in_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_out_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.text_extra.QuoteOverlay",
+   "reason": null,
+   "notes": "ported from build_reel st04; overlay over the shot's image (background_dim = brightness multiplier); auto-wrap plus attribution line"
+  },
+  "preview": {
+   "reel_start": 181.5,
+   "reel_end": 187.0,
+   "clip": "previews/STATIC-04.mp4",
+   "thumb": "previews/STATIC-04.jpg"
+  }
+ },
+ "STATIC-05": {
+  "params": [
+   {
+    "name": "name",
+    "type": "string",
+    "default": "Name Surname",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "role",
+    "type": "string",
+    "default": "Role, Institution",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "case",
+    "type": "enum",
+    "default": "upper",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "upper",
+     "as_typed"
+    ],
+    "measured": null
+   },
+   {
+    "name": "y_pct",
+    "type": "number",
+    "default": 76,
+    "min": 0,
+    "max": 95,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_height_px",
+    "type": "number",
+    "default": 140,
+    "min": 40,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 58,
+    "min": 16,
+    "max": 140,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "role_size_px",
+    "type": "number",
+    "default": 32,
+    "min": 12,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "text_x_pct",
+    "type": "number",
+    "default": 7,
+    "min": 0,
+    "max": 60,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "strip_opacity",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 1,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "right_fade_pct",
+    "type": "number",
+    "default": 22,
+    "min": 0,
+    "max": 60,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "pop_in_s",
+    "type": "number",
+    "default": 0.1,
+    "min": 0,
+    "max": 2,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_out_s",
+    "type": "number",
+    "default": 0.1,
+    "min": 0,
+    "max": 2,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.text_extra.IntervieweeTag",
+   "reason": null,
+   "notes": "ported from build_reel st05; overlay over footage (FOOT-01) or a still; appears at the overlay start, fades out ending at its end"
+  },
+  "preview": {
+   "reel_start": 187.0,
+   "reel_end": 192.0,
+   "clip": "previews/STATIC-05.mp4",
+   "thumb": "previews/STATIC-05.jpg"
+  }
+ },
+ "STATIC-07": {
+  "params": [
+   {
+    "name": "labels",
+    "type": "lines",
+    "default": [
+     "ONE",
+     "TWO",
+     "THREE",
+     "FOUR",
+     "FIVE",
+     "SIX"
+    ],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "centers",
+    "type": "points",
+    "default": [],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "zooms",
+    "type": "lines",
+    "default": [],
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "cell_zoom",
+    "type": "number",
+    "default": 0.8,
+    "min": 0.05,
+    "max": 5,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "radius_px",
+    "type": "number",
+    "default": 470,
+    "min": 100,
+    "max": 520,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "start_angle_deg",
+    "type": "number",
+    "default": -90,
+    "min": -360,
+    "max": 360,
+    "unit": "deg",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_size_px",
+    "type": "number",
+    "default": 34,
+    "min": 12,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_tracking_px",
+    "type": "number",
+    "default": 5,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "font_kind",
+    "type": "enum",
+    "default": "reg",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_gap_x_px",
+    "type": "number",
+    "default": 130,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_gap_y_px",
+    "type": "number",
+    "default": 70,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "appear_delay_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "stagger_s",
+    "type": "number",
+    "default": 0.35,
+    "min": 0,
+    "max": 1.5,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "default": "#0c0c0c",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "outline_px",
+    "type": "number",
+    "default": 3,
+    "min": 0,
+    "max": 20,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "edge_erode_px",
+    "type": "number",
+    "default": 5,
+    "min": 0,
+    "max": 15,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": true,
+    "region": true
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.static_extra.CircleDiagram",
+   "reason": null,
+   "notes": "ported from build_reel st07; sectors = max(len(labels), len(centers)); crops of the slot image"
+  },
+  "preview": {
+   "reel_start": 197.5,
+   "reel_end": 203.5,
+   "clip": "previews/STATIC-07.mp4",
+   "thumb": "previews/STATIC-07.jpg"
+  }
+ },
+ "X-CARD-03": {
+  "params": [
+   {
+    "name": "credit_text",
+    "type": "text",
+    "default": "Credit line",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "case",
+    "type": "enum",
+    "default": "as_typed",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "upper",
+     "as_typed"
+    ],
+    "measured": null
+   },
+   {
+    "name": "y_pct",
+    "type": "number",
+    "default": 92,
+    "min": 50,
+    "max": 98,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 30,
+    "min": 12,
+    "max": 100,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "tracking_px",
+    "type": "number",
+    "default": 4,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "font_kind",
+    "type": "enum",
+    "default": "reg",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "color",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": false,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "max_width_pct",
+    "type": "number",
+    "default": 80,
+    "min": 20,
+    "max": 100,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_gap",
+    "type": "number",
+    "default": 1.4,
+    "min": 0.8,
+    "max": 2.5,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "default": "#000000",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "use_matte",
+    "type": "bool",
+    "default": true,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "image_height_pct",
+    "type": "number",
+    "default": 82,
+    "min": 20,
+    "max": 100,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "delay_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_in_s",
+    "type": "number",
+    "default": 0.6,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "leave_at_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_out_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "image",
+    "type": "image",
+    "required": false,
+    "region": false
+   },
+   {
+    "name": "credit",
+    "type": "text",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.cards_extra.EndCredit",
+   "reason": null,
+   "notes": "built from R3/measurements.md description (centred bottom credit over the closing matte); wording, timing and font are estimates"
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6,
+   "clip": "previews/X-CARD-03.mp4",
+   "thumb": "previews/X-CARD-03.jpg"
+  }
+ },
+ "X-CARD-04": {
+  "params": [
+   {
+    "name": "text",
+    "type": "text",
+    "default": "What is this painting really about?",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "case",
+    "type": "enum",
+    "default": "as_typed",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "upper",
+     "as_typed"
+    ],
+    "measured": null
+   },
+   {
+    "name": "text_color",
+    "type": "color",
+    "default": "#5a3a22",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "background",
+    "type": "color",
+    "default": "#ffffff",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "size_px",
+    "type": "number",
+    "default": 84,
+    "min": 24,
+    "max": 200,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "font_kind",
+    "type": "enum",
+    "default": "serif",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "reg",
+     "bold",
+     "sans_bold",
+     "serif_it",
+     "serif"
+    ],
+    "measured": null
+   },
+   {
+    "name": "tracking_px",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 30,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "shadow",
+    "type": "bool",
+    "default": false,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "max_width_pct",
+    "type": "number",
+    "default": 70,
+    "min": 20,
+    "max": 100,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "line_gap",
+    "type": "number",
+    "default": 1.3,
+    "min": 0.8,
+    "max": 2.5,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "x_pct",
+    "type": "number",
+    "default": 50,
+    "min": 0,
+    "max": 100,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "y_pct",
+    "type": "number",
+    "default": 50,
+    "min": 5,
+    "max": 95,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "delay_s",
+    "type": "number",
+    "default": 0.2,
+    "min": 0,
+    "max": 10,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_in_s",
+    "type": "number",
+    "default": 0.5,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "leave_at_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "fade_out_s",
+    "type": "number",
+    "default": 0.15,
+    "min": 0,
+    "max": 3,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "text",
+    "type": "text",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.cards_extra.QuestionCardWhite",
+   "reason": null,
+   "notes": "built from R3 (A-T9-02 still frames): brown serif question on white; timing and animation are estimates"
+  },
+  "preview": {
+   "reel_start": 0,
+   "reel_end": 6,
+   "clip": "previews/X-CARD-04.mp4",
+   "thumb": "previews/X-CARD-04.jpg"
+  }
+ },
+ "FOOT-01": {
+  "params": [
+   {
+    "name": "source_in_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 36000,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "speed",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.05,
+    "max": 8,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "end_behavior",
+    "type": "enum",
+    "default": "hold",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "hold",
+     "loop",
+     "slow"
+    ],
+    "measured": null
+   },
+   {
+    "name": "fit",
+    "type": "enum",
+    "default": "cover",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "cover",
+     "contain"
+    ],
+    "measured": null
+   },
+   {
+    "name": "contain_pct",
+    "type": "number",
+    "default": 100,
+    "min": 20,
+    "max": 100,
+    "unit": "%",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "contain_bg",
+    "type": "enum",
+    "default": "matte",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "matte",
+     "black",
+     "blur"
+    ],
+    "measured": null
+   },
+   {
+    "name": "push_zoom",
+    "type": "number",
+    "default": 1.0,
+    "min": 0.5,
+    "max": 3,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "push_focus",
+    "type": "point",
+    "default": null,
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "push_ease",
+    "type": "enum",
+    "default": "inout_sine",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "linear",
+     "in_quad",
+     "in_cubic",
+     "out_cubic",
+     "out_quad",
+     "inout_cubic",
+     "inout_sine"
+    ],
+    "measured": null
+   },
+   {
+    "name": "label",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_sub",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_case",
+    "type": "enum",
+    "default": "upper",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": [
+     "upper",
+     "as_typed"
+    ],
+    "measured": null
+   },
+   {
+    "name": "label_in_s",
+    "type": "number",
+    "default": 0.4,
+    "min": 0,
+    "max": 30,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_hold_s",
+    "type": "number",
+    "default": 0,
+    "min": 0,
+    "max": 60,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_fade_in_s",
+    "type": "number",
+    "default": 0.1,
+    "min": 0,
+    "max": 2,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_fade_out_s",
+    "type": "number",
+    "default": 0.2,
+    "min": 0,
+    "max": 2,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_y_top_pct",
+    "type": "number",
+    "default": 79.4,
+    "min": 0,
+    "max": 98,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_y_bottom_pct",
+    "type": "number",
+    "default": 93.3,
+    "min": 2,
+    "max": 100,
+    "unit": "% H",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_size_px",
+    "type": "number",
+    "default": 58,
+    "min": 16,
+    "max": 140,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_sub_scale",
+    "type": "number",
+    "default": 0.55,
+    "min": 0.3,
+    "max": 1,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_text_x_pct",
+    "type": "number",
+    "default": 7,
+    "min": 0,
+    "max": 60,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_opacity",
+    "type": "number",
+    "default": 0.8,
+    "min": 0,
+    "max": 1,
+    "unit": "x",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "label_right_fade_pct",
+    "type": "number",
+    "default": 20,
+    "min": 0,
+    "max": 60,
+    "unit": "% W",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "source_text",
+    "type": "string",
+    "default": "",
+    "min": null,
+    "max": null,
+    "unit": null,
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "source_size_px",
+    "type": "number",
+    "default": 24,
+    "min": 12,
+    "max": 60,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "source_margin_left_px",
+    "type": "number",
+    "default": 36,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "source_margin_bottom_px",
+    "type": "number",
+    "default": 26,
+    "min": 0,
+    "max": 400,
+    "unit": "px",
+    "values": null,
+    "measured": null
+   },
+   {
+    "name": "source_in_delay_s",
+    "type": "number",
+    "default": 0.3,
+    "min": 0,
+    "max": 30,
+    "unit": "s",
+    "values": null,
+    "measured": null
+   }
+  ],
+  "slots": [
+   {
+    "name": "footage",
+    "type": "video",
+    "required": true,
+    "region": false
+   },
+   {
+    "name": "label",
+    "type": "text",
+    "required": false,
+    "region": false
+   }
+  ],
+  "engine": {
+   "status": "done",
+   "available": true,
+   "impl": "bti.engine.techniques.footage.MaterialFootage",
+   "reason": null,
+   "notes": "new: real footage (or still) full-frame with source in-point, speed, cover/contain, push, hold/loop/slow at the end, label strip and source line. The reel's 4-card stand-in is not reproduced"
+  },
+  "preview": {
+   "reel_start": 285.0,
+   "reel_end": 291.0,
+   "clip": "previews/FOOT-01.mp4",
+   "thumb": "previews/FOOT-01.jpg"
+  }
+ }
+}

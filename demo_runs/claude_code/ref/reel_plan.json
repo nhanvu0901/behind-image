@@ -1,0 +1,338 @@
+[
+ {
+  "id": "CAM-01",
+  "name": "Push-in",
+  "t0": 0,
+  "t1": 6.0
+ },
+ {
+  "id": "CAM-02",
+  "name": "Layered relative motion",
+  "t0": 6.0,
+  "t1": 12.0
+ },
+ {
+  "id": "CAM-03",
+  "name": "Pull-back",
+  "t0": 12.0,
+  "t1": 19.0
+ },
+ {
+  "id": "CAM-04",
+  "name": "Pan up",
+  "t0": 19.0,
+  "t1": 25.0
+ },
+ {
+  "id": "CAM-05",
+  "name": "Zoom and shift",
+  "t0": 25.0,
+  "t1": 31.0
+ },
+ {
+  "id": "CAM-06",
+  "name": "Hold + label reveal",
+  "t0": 31.0,
+  "t1": 37.0
+ },
+ {
+  "id": "TR-01",
+  "name": "Dissolve",
+  "t0": 37.0,
+  "t1": 42.0
+ },
+ {
+  "id": "TR-02",
+  "name": "Slide in / out",
+  "t0": 42.0,
+  "t1": 47.5
+ },
+ {
+  "id": "TR-03",
+  "name": "Panel opening",
+  "t0": 47.5,
+  "t1": 53.5
+ },
+ {
+  "id": "TR-04",
+  "name": "Hard cut: full to crop",
+  "t0": 53.5,
+  "t1": 58.5
+ },
+ {
+  "id": "LAY-01",
+  "name": "Two panels",
+  "t0": 58.5,
+  "t1": 63.5
+ },
+ {
+  "id": "LAY-02",
+  "name": "Four-tile grid",
+  "t0": 63.5,
+  "t1": 69.0
+ },
+ {
+  "id": "LAY-03",
+  "name": "Five-column comparison",
+  "t0": 69.0,
+  "t1": 74.0
+ },
+ {
+  "id": "LAY-04",
+  "name": "Inset window",
+  "t0": 74.0,
+  "t1": 79.5
+ },
+ {
+  "id": "LAY-05",
+  "name": "Subject held, background changes",
+  "t0": 79.5,
+  "t1": 85.5
+ },
+ {
+  "id": "LAY-06",
+  "name": "Translucent vertical strips",
+  "t0": 85.5,
+  "t1": 91.0
+ },
+ {
+  "id": "LAY-07",
+  "name": "Grid with translucent overlay object",
+  "t0": 91.0,
+  "t1": 96.5
+ },
+ {
+  "id": "LAY-08",
+  "name": "Repeated symmetric motif",
+  "t0": 96.5,
+  "t1": 101.5
+ },
+ {
+  "id": "HI-01",
+  "name": "Spotlight",
+  "t0": 101.5,
+  "t1": 107.5
+ },
+ {
+  "id": "HI-02",
+  "name": "Hiding figures then group reveal",
+  "t0": 107.5,
+  "t1": 114.5
+ },
+ {
+  "id": "HI-03",
+  "name": "Colour kept on subject, rest grey",
+  "t0": 114.5,
+  "t1": 120.0
+ },
+ {
+  "id": "AN-01",
+  "name": "Circle draw",
+  "t0": 120.0,
+  "t1": 125.5
+ },
+ {
+  "id": "AN-02",
+  "name": "Object outline",
+  "t0": 125.5,
+  "t1": 131.5
+ },
+ {
+  "id": "AN-03",
+  "name": "Perspective rays",
+  "t0": 131.5,
+  "t1": 137.5
+ },
+ {
+  "id": "AN-04",
+  "name": "Map circle and arrow (stand-in map)",
+  "t0": 137.5,
+  "t1": 143.5
+ },
+ {
+  "id": "AN-05",
+  "name": "Dimension ruler",
+  "t0": 143.5,
+  "t1": 149.5
+ },
+ {
+  "id": "AN-06",
+  "name": "Grid and geometric regions",
+  "t0": 149.5,
+  "t1": 155.5
+ },
+ {
+  "id": "AN-07",
+  "name": "Dot field densifying",
+  "t0": 155.5,
+  "t1": 162.0
+ },
+ {
+  "id": "TXT-01",
+  "name": "Chapter title card",
+  "t0": 162.0,
+  "t1": 166.5
+ },
+ {
+  "id": "TXT-02",
+  "name": "Sliding italic text",
+  "t0": 166.5,
+  "t1": 172.0
+ },
+ {
+  "id": "STATIC-01",
+  "name": "Black matte (designed gallery matte)",
+  "t0": 172.0,
+  "t1": 176.5
+ },
+ {
+  "id": "STATIC-02",
+  "name": "Source label",
+  "t0": 176.5,
+  "t1": 181.5
+ },
+ {
+  "id": "STATIC-04",
+  "name": "Quote over image",
+  "t0": 181.5,
+  "t1": 187.0
+ },
+ {
+  "id": "STATIC-05",
+  "name": "Interviewee name tag (placeholder)",
+  "t0": 187.0,
+  "t1": 192.0
+ },
+ {
+  "id": "STATIC-06",
+  "name": "Map with route",
+  "t0": 192.0,
+  "t1": 197.5
+ },
+ {
+  "id": "STATIC-07",
+  "name": "Multi-cell circular diagram",
+  "t0": 197.5,
+  "t1": 203.5
+ },
+ {
+  "id": "STATIC-08",
+  "name": "Name labels on figures",
+  "t0": 203.5,
+  "t1": 209.0
+ },
+ {
+  "id": "STATIC-09",
+  "name": "Year centred over image",
+  "t0": 209.0,
+  "t1": 213.5
+ },
+ {
+  "id": "DIA-01",
+  "name": "Grid + projecting rays (room perspective)",
+  "t0": 213.5,
+  "t1": 220.0
+ },
+ {
+  "id": "DIA-02",
+  "name": "Two views of one object (stand-in)",
+  "t0": 220.0,
+  "t1": 226.0
+ },
+ {
+  "id": "DIA-03",
+  "name": "Cross-section and light rays (schematic)",
+  "t0": 226.0,
+  "t1": 232.5
+ },
+ {
+  "id": "DIA-04",
+  "name": "Figure and separated pieces",
+  "t0": 232.5,
+  "t1": 238.5
+ },
+ {
+  "id": "DIA-05",
+  "name": "Silhouette process",
+  "t0": 238.5,
+  "t1": 244.5
+ },
+ {
+  "id": "DIA-06",
+  "name": "Room model + UV-style image (simulated)",
+  "t0": 244.5,
+  "t1": 251.0
+ },
+ {
+  "id": "DIA-07",
+  "name": "Optical diagram (convex mirror)",
+  "t0": 251.0,
+  "t1": 257.0
+ },
+ {
+  "id": "CMP-01",
+  "name": "Grey and colour side by side",
+  "t0": 257.0,
+  "t1": 262.0
+ },
+ {
+  "id": "CMP-02",
+  "name": "Stages vs finished (simulated stages)",
+  "t0": 262.0,
+  "t1": 268.0
+ },
+ {
+  "id": "CMP-03",
+  "name": "White / sepia / colour versions",
+  "t0": 268.0,
+  "t1": 273.5
+ },
+ {
+  "id": "CMP-04",
+  "name": "Colour blocks beside detail",
+  "t0": 273.5,
+  "t1": 279.0
+ },
+ {
+  "id": "CMP-05",
+  "name": "Two colour states (print vs scan)",
+  "t0": 279.0,
+  "t1": 285.0
+ },
+ {
+  "id": "FOOT-01",
+  "name": "Material cards and palette (stand-in)",
+  "t0": 285.0,
+  "t1": 291.0
+ },
+ {
+  "id": "SHORT-01",
+  "name": "Three horizontal strips (vertical)",
+  "t0": 291.0,
+  "t1": 297.0
+ },
+ {
+  "id": "SHORT-02",
+  "name": "Changing view (vertical)",
+  "t0": 297.0,
+  "t1": 303.0
+ },
+ {
+  "id": "SHORT-03",
+  "name": "Large type changes (vertical)",
+  "t0": 303.0,
+  "t1": 309.0
+ },
+ {
+  "id": "SHORT-04",
+  "name": "Yellow label box (vertical)",
+  "t0": 309.0,
+  "t1": 314.5
+ },
+ {
+  "id": "SHORT-05",
+  "name": "Colour wheel from palette (vertical)",
+  "t0": 314.5,
+  "t1": 320.5
+ }
+]

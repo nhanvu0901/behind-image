@@ -1,0 +1,112 @@
+{
+  "scope": "5 exemplars, not whole corpus",
+  "frame_method": "source-PTS-preserving decode, select one frame per 6 or 12 decoded frames; showinfo logs contain actual source PTS, sampled roughly every 0.2 s; bracket is observational and threshold-dependent",
+  "asr_limit": "segment timing estimated, no words, no independent speech alignment verification",
+  "cases": [
+    {
+      "case_id": "bosch-micro",
+      "video_id": "vBG621XEegk",
+      "visual_bracket": [
+        736.802733,
+        737.002933
+      ],
+      "visual_event": "dải màu giữa hai cánh bắt đầu nhìn thấy trong mẫu",
+      "segment": [
+        727.49999,
+        734.65999
+      ],
+      "cue": "two of his men would open the gloomy panels",
+      "observation": "Dải màu lộ ra giữa hai cánh sau đoạn ASR mô tả mở cánh; khớp ý, hình đi sau đoạn, không thể gán độ trễ tới từ open chính xác.",
+      "conditional_visual_minus_word_bounds_seconds": [
+        2.143,
+        9.503
+      ],
+      "visual_evidence": "research_media/great-art-explained/scene-sync/timing/bosch-dense.jpg",
+      "note": "Bounds conditional on ASR cue actually occurring within its ASR segment; no measured word timestamp."
+    },
+    {
+      "case_id": "mona-micro",
+      "video_id": "ElWG0_kjy_Y",
+      "visual_bracket": [
+        500.416583,
+        500.616783
+      ],
+      "visual_event": "nét vàng biểu diễn đường ánh sáng xuất hiện",
+      "segment": [
+        496.76,
+        503.16
+      ],
+      "cue": "light falling onto the painting to reflect",
+      "observation": "Nét vàng xuất hiện trên sơ đồ lớp sơn trong đoạn giải thích ánh sáng phản xạ; hợp ý, vị trí từ trong đoạn chưa biết, không chứng minh đồng thời.",
+      "conditional_visual_minus_word_bounds_seconds": [
+        -2.743,
+        3.857
+      ],
+      "visual_evidence": "research_media/great-art-explained/scene-sync/timing/mona-dense.jpg",
+      "note": "Bounds conditional on ASR cue actually occurring within its ASR segment; no measured word timestamp."
+    },
+    {
+      "case_id": "supper-micro",
+      "video_id": "eKyYPSpiC9g",
+      "visual_bracket": [
+        1194.826967,
+        1195.027167
+      ],
+      "visual_event": "nhân vật mờ dần hiện ở giữa phòng",
+      "segment": [
+        1193.86,
+        1200.0
+      ],
+      "cue": "in a fairly austere room ... making it a story of human",
+      "observation": "Phòng trống đã hiện trước khi nhân vật bắt đầu xuất hiện; lời mô tả phòng và câu chuyện con người phù hợp tổng thể, nhưng không chứng minh nhân vật là cue của một từ cụ thể.",
+      "conditional_visual_minus_word_bounds_seconds": [
+        -5.173,
+        1.167
+      ],
+      "visual_evidence": "research_media/great-art-explained/scene-sync/timing/supper-dense.jpg",
+      "note": "Bounds conditional on ASR cue actually occurring within its ASR segment; no measured word timestamp."
+    },
+    {
+      "case_id": "starry-landscape",
+      "video_id": "crCPVoPsTtk",
+      "visual_bracket": [
+        692.425067,
+        692.825467
+      ],
+      "visual_event": "vùng bản vẽ mờ dần xuất hiện bên phải cảnh người đi",
+      "segment": [
+        694.42,
+        700.26
+      ],
+      "cue": "on one of these walks he drew this bird's eye view of the village",
+      "observation": "Hình bản vẽ xuất hiện trước đoạn ASR giới thiệu bản vẽ; phù hợp ý liên quan chuyến đi/bản vẽ, nhưng không xác nhận danh tính bản vẽ hay chính xác từ nào được nhấn.",
+      "conditional_visual_minus_word_bounds_seconds": [
+        -7.835,
+        -1.595
+      ],
+      "visual_evidence": "research_media/great-art-explained/scene-sync/timing/starry-dense.jpg",
+      "note": "Bounds conditional on ASR cue actually occurring within its ASR segment; no measured word timestamp."
+    },
+    {
+      "case_id": "sargent-reviews",
+      "video_id": "cuHgxPe3J7I",
+      "visual_bracket": [
+        1096.628867,
+        1097.029267
+      ],
+      "visual_event": "dòng chữ trắng objectionably Parisian mờ dần vào trên hình",
+      "segment": [
+        1096.2,
+        1101.96
+      ],
+      "cue": "British critics found it objectionably Parisian, too decadent",
+      "observation": "Cụm chữ trùng cụm ASR trong cùng đoạn; nội đoạn chưa biết và sự xuất hiện được khoanh theo ngưỡng nhìn thấy, không xác định điểm đầu tuyệt đối.",
+      "conditional_visual_minus_word_bounds_seconds": [
+        -5.331,
+        0.829
+      ],
+      "visual_evidence": "research_media/great-art-explained/scene-sync/timing/sargent-dense.jpg",
+      "note": "Bounds conditional on ASR cue actually occurring within its ASR segment; no measured word timestamp."
+    }
+  ]
+}
