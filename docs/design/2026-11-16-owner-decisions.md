@@ -20,6 +20,16 @@ Answers given by the owner to the fourteen design questions. They override earli
 | 13 | Server schedule | Fine as proposed. |
 | 14 | Version control | Yes. Done: the repository was initialised and committed on 2026-11-16. |
 
+## Where it runs (owner's decision, 2026-11-16, later the same day)
+
+"Move all to the Windows." The whole pipeline runs on the Windows server: the web pages (library, script, editing), the Antigravity CLI calls, voice and rendering.
+
+- The Mac stays a development machine. Agents write and test code there, then deploy.
+- The server copy lives at `D:\code\behind-the-image\`, beside the comic repo and never inside it.
+- The server is still production for the comic channel. The comic repo stays read-only, and heavy jobs (voice, full renders) still check for production jobs and free memory first.
+- Opening a port to the network, adding a start-up task, or installing software on the server needs the owner's explicit yes each time.
+- Project and library data have one home, the server. After the cut-over the Mac copy is only test data.
+
 ## What changes in the build
 
 - **Licence gate becomes advisory.** It still reads and records the licence, author and source of every asset, because the video description needs the credits and the owner should see what each asset is. But it warns instead of blocking. An asset with a rejected or unknown licence can be imported; it is flagged in the project.

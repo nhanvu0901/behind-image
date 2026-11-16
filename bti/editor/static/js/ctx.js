@@ -6,6 +6,8 @@ const handlers = {};
 export const bus = {
   on(evt, fn) { (handlers[evt] ||= new Set()).add(fn); return () => handlers[evt].delete(fn); },
   emit(evt, data) { for (const fn of handlers[evt] || []) fn(data); },
+  /** Drop every subscriber (the editing view does this when it is left). */
+  clear() { for (const k of Object.keys(handlers)) delete handlers[k]; },
 };
 
 export const ctx = {
@@ -24,6 +26,11 @@ export const ctx = {
   duration() { return this.store.timing?.duration || this.store.draft?.end?.t || 0; },
   draftPlain() { return stripDerived(this.store.draft); },
   tech(id) { return this.reg.byId[id] || null; },
+  /** Forget everything about the project that was open (the style registry is kept). */
+  reset() {
+    this.pid = null; this.store.reset(); this.assetInfo = {}; this.issues = []; this.t = 0; this.playing = false;
+    this.proposalsCount = 0; this.pick = null; this.slotPick = null; this.noAudio = false;
+  },
 };
 
 export function setRegistry(styleBody) {

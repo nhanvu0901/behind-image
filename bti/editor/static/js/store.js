@@ -11,6 +11,11 @@ export class Store {
     this.version = 0;
     this.sel = { shot: null, overlay: null };
   }
+  reset() {
+    this.draft = null; this.timing = null; this.rev = null; this.undoStack = []; this.redoStack = [];
+    this.savedSnap = ''; this.lastKey = null; this.lastAt = 0; this.listeners.clear(); this.version = 0;
+    this.sel = { shot: null, overlay: null };
+  }
   on(fn) { this.listeners.add(fn); return () => this.listeners.delete(fn); }
   emit(kind = 'draft') { this.version++; for (const fn of this.listeners) fn(kind); }
   snap() { return JSON.stringify(stripDerived(this.draft)); }

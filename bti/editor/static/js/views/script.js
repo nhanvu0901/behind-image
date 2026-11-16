@@ -1,43 +1,37 @@
-// "Kịch bản" page: sources | outline | narration. Plain ES modules, no build step.
-import { h, $, toast, modal } from './util.js';
+// "Kịch bản" step: sources | outline | narration. Mounted by the shell at #/project/<id>/script.
+import { api } from '../api.js';
+import { h, toast, modal as uiModal, confirmDialog } from '../util.js';
+import { CODE, LEVEL } from '../labels.js';
+import { nextOpenable } from '../stepper.js';
+import { projectHash } from '../router.js';
 
+let root = null, scope = null, shell = null;     // the view root, its lifecycle scope and the shell (set by mount)
+const $ = (s) => root.querySelector(s);
+const modal = (o) => uiModal({ ...o, cls: (o.cls || '') + ' v-scr' });   // dialogs opened here carry the scope class of this view
 const S = { pid: null, brief: null, models: [], model: null, tab: null, search: '', hl: [], focus: 'narr' };
 const D = { outline: null, narr: null };                       // drafts (what is on screen)
 const R = { outline: null, narr: null };                       // saved revisions
 const ST = { outline: {}, narr: {} };                          // approved, stale, issues, last_paste
 const dirty = { outline: false, narr: false };
 const hist = { outline: { past: [], future: [], key: '', at: 0 }, narr: { past: [], future: [], key: '', at: 0 } };
-let jobPoll = null, currentJob = null;
+let jobPoll = null, currentJob = null, lastRun = null;
+function resetState() {
+  Object.assign(S, { pid: null, brief: null, models: [], model: null, tab: null, search: '', hl: [], focus: 'narr' });
+  D.outline = D.narr = null; R.outline = R.narr = null; ST.outline = {}; ST.narr = {};
+  dirty.outline = dirty.narr = false;
+  for (const k of ['outline', 'narr']) hist[k] = { past: [], future: [], key: '', at: 0 };
+  jobPoll = null; currentJob = null; lastRun = null;
+}
 
-const J = async (url, opts) => {
-  const r = await fetch(url, opts);
-  const text = await r.text();
-  let body = {};
-  try { body = JSON.parse(text); } catch { body = { detail: text.slice(0, 300) }; }
-  if (!r.ok) throw Object.assign(new Error(typeof body.detail === 'string' ? body.detail : JSON.stringify(body.detail)), { status: r.status, body });
-  return body;
-};
-const send = (method, url, body) => J(url, { method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(body ?? {}) });
+const J = (url) => api.get(url);
+const send = (method, url, body) => api.send(method, url, body);
+const pipeChanged = () => shell.refreshPipeline();       // saving, approving or pasting can move the stage of the project
 const P = () => `/api/projects/${S.pid}`;
 const words = (t) => (String(t).match(/\S*\w\S*/g) || []).length;
 const ids = (s) => String(s).split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const fit = (ta) => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight + 2, 520) + 'px'; };
-const fitAll = (root) => requestAnimationFrame(() => root.querySelectorAll('textarea:not(.big)').forEach(fit));
-
-// ------------------------------------------------------------------ messages for the validation codes (Vietnamese)
-const CODE = {
-  chapter_missing: 'Thiếu chương', empty_beat: 'Dòng trống', markup_in_text: 'Có ký hiệu trong lời đọc', words_under: 'Quá ngắn (dưới 70% mục tiêu)',
-  outline_stale: 'Dàn ý đã đổi sau khi duyệt', outline_not_approved: 'Dàn ý chưa duyệt', outline_missing: 'Chưa có dàn ý',
-  words_off_target: 'Lệch mục tiêu quá 15%', chapter_off_budget: 'Chương lệch ngân sách quá 30%', beat_too_long: 'Dòng quá dài (trên 90 từ)',
-  unknown_fact: 'Mã dữ kiện không có trong dàn ý', no_show: 'Dòng chưa có gợi ý hình', unknown_chapter: 'Chương không có trong dàn ý',
-  spoken_chars: 'Dấu câu giọng đọc không ngắt được', length: 'Độ dài', sentence_profile: 'Nhịp câu', source_share: 'Phần nguồn đã dùng',
-  overlap: 'Trùng với văn bản nguồn', no_thesis: 'Chưa có câu hỏi chính', no_chapters: 'Chưa có chương', duplicate_chapter: 'Trùng mã chương',
-  chapter_no_title: 'Chương chưa có tên', chapter_no_budget: 'Chương chưa có ngân sách từ', duplicate_fact: 'Trùng mã dữ kiện',
-  fact_no_source: 'Dữ kiện không dẫn đoạn nguồn', unknown_source_id: 'Mã đoạn nguồn không có trong tập sách', disputed_no_conflict: 'Dữ kiện tranh cãi chưa mô tả mâu thuẫn',
-  fact_unused: 'Dữ kiện chưa chương nào dùng', no_hook_choice: 'Chưa chọn câu mở', budget_sum: 'Tổng ngân sách lệch mục tiêu',
-};
-const LEVEL = { error: 'Lỗi', warning: 'Cảnh báo', info: 'Thông tin' };
+const fitAll = (root) => scope.raf(() => root.querySelectorAll('textarea:not(.big)').forEach(fit));
 
 // ------------------------------------------------------------------ history
 function mutate(kind, fn, key = '') {
@@ -75,6 +69,7 @@ async function saveKind(kind) {
   try {
     if (kind === 'outline') applyOutline(await send('PUT', `${P()}/outline`, { outline: D.outline, base_rev: R.outline }));
     else applyNarr(await send('PUT', `${P()}/narration`, { narration: D.narr, base_rev: R.narr }));
+    pipeChanged();
     return true;
   } catch (e) {
     if (e.status === 409) toast('Tệp đã đổi ở nơi khác. Tải lại trang rồi sửa lại.', 'err', 8000); else toast(e.message, 'err');
@@ -105,6 +100,9 @@ function refreshChrome() {
   $('#approve-state').className = 'badge' + (approvedFlag('narr') ? ' ok' : '');
   $('#btn-write').disabled = !!currentJob; $('#btn-outline').disabled = !!currentJob;
   renderStatus();
+  const nx = shell.pipeline && nextOpenable(shell.pipeline.steps, 'script'), bn = $('#btn-next');
+  bn.hidden = !(approvedFlag('narr') && nx);
+  if (nx) { bn.textContent = `Tiếp tục: ${nx.label}`; bn.title = nx.state === 'not_built' ? 'Bước kế tiếp chưa được xây dựng' : ''; bn.onclick = () => shell.go(projectHash(S.pid, nx.id)); }
 }
 
 // ------------------------------------------------------------------ sources column
@@ -197,7 +195,7 @@ function outBody() {
         h('input', { type: 'text', class: 'ttl', value: c.title, oninput: (e) => mutate('outline', () => { c.title = e.target.value; }, 'ct' + c.id) }),
         h('button', { class: 'small', text: '↑', disabled: i === 0, onclick: () => { mutate('outline', () => { [o.chapters[i - 1], o.chapters[i]] = [o.chapters[i], o.chapters[i - 1]]; }); outBody(); } }),
         h('button', { class: 'small', text: '↓', disabled: i === o.chapters.length - 1, onclick: () => { mutate('outline', () => { [o.chapters[i + 1], o.chapters[i]] = [o.chapters[i], o.chapters[i + 1]]; }); outBody(); } }),
-        h('button', { class: 'small danger', text: 'Xóa', onclick: () => { if (confirm(`Xóa chương ${c.id} khỏi dàn ý?`)) { mutate('outline', () => { o.chapters = o.chapters.filter((x) => x !== c); }); outBody(); } } })),
+        h('button', { class: 'small danger', text: 'Xóa', onclick: async () => { if (await confirmDialog(`Xóa chương ${c.id} khỏi dàn ý?`, { title: 'Xóa chương', ok: 'Xóa', danger: true })) { mutate('outline', () => { o.chapters = o.chapters.filter((x) => x !== c); }); outBody(); } } })),
       h('div', { class: 'r' }, h('label', { text: 'Vai trò' }),
         h('select', { onchange: (e) => mutate('outline', () => { c.role = e.target.value; }) }, ['cold_open', 'chapter', 'closing'].map((r) => h('option', { value: r, selected: c.role === r, text: { cold_open: 'mở đầu', chapter: 'chương', closing: 'kết' }[r] }))),
         h('label', { class: 'chk', style: { display: 'inline-flex', gap: '4px', width: 'auto', whiteSpace: 'nowrap' }, title: 'Hiện thẻ tiêu đề chương trong video' }, h('input', { type: 'checkbox', checked: c.card, onchange: (e) => mutate('outline', () => { c.card = e.target.checked; }) }), 'thẻ chương')),
@@ -296,9 +294,9 @@ async function doOp(op) {
   hist.narr.past.push(JSON.stringify(D.narr)); hist.narr.future = []; S.focus = 'narr';
   try {
     const r = await send('POST', `${P()}/narration/ops`, { base_rev: R.narr, ops: [op] });
-    applyNarr(r);
+    applyNarr(r); pipeChanged();
     const id = r.results?.[0]?.id;
-    if (id && op.op !== 'merge') setTimeout(() => { const t = document.querySelector(`#beat-${id} textarea`); t?.scrollIntoView({ block: 'center' }); t?.focus(); }, 30);
+    if (id && op.op !== 'merge') scope.timeout(() => { const t = document.querySelector(`#beat-${id} textarea`); t?.scrollIntoView({ block: 'center' }); t?.focus(); }, 30);
   } catch (e) { hist.narr.past.pop(); toast(e.message, 'err'); }
 }
 
@@ -333,7 +331,7 @@ async function startJob(kind, body) {
     const r = await send('POST', `${P()}/${kind}/generate`, { model: S.model, ...body });
     watch(r.job_id);
   } catch (e) {
-    if (e.status === 409 && e.body?.locked) { if (confirm('Có dòng đang khóa trong chương này. Vẫn viết lại và thay cả dòng khóa?')) return startJob(kind, { ...body, force: true }); }
+    if (e.status === 409 && e.body?.locked) { if (await confirmDialog('Có dòng đang khóa trong chương này. Vẫn viết lại và thay cả dòng khóa?', { title: 'Dòng đang khóa', ok: 'Viết lại cả dòng khóa', danger: true })) return startJob(kind, { ...body, force: true }); }
     else if (e.status === 409 && e.body?.job_id) watch(e.body.job_id);
     else toast(e.message, 'err', 8000);
   }
@@ -347,7 +345,7 @@ function watch(jid) {
       if (['done', 'error', 'cancelled'].includes(j.state)) { clearInterval(jobPoll); await jobEnded(j); }
     } catch (e) { clearInterval(jobPoll); currentJob = null; toast(e.message, 'err'); refreshChrome(); }
   };
-  jobPoll = setInterval(tick, 700); tick();
+  jobPoll = scope.interval(tick, 700); tick();
 }
 async function jobEnded(j) {
   applyOutline(await J(`${P()}/outline`), true); applyNarr(await J(`${P()}/narration`), true); renderAll();
@@ -361,14 +359,13 @@ async function jobEnded(j) {
     }
     if (j.error_kind === 'validation' || j.error_kind === 'parse') { if (D.narr || ST.narr.last_paste || ST.outline.last_paste) toast('Câu trả lời lỗi được giữ trong ô "Dán".', 'warn', 8000); }
   }
-  currentJob = null; refreshChrome();
+  currentJob = null; refreshChrome(); pipeChanged();
 }
-let lastRun = null;
 function retryLast(j) { if (lastRun) startJob(lastRun.kind, lastRun.body); }
 
 function runDialog(kind, chapters) {
   const model = S.models.find((m) => m.id === S.model);
-  if (!model || !model.enabled) return toast((model?.message || 'Chưa chọn mô hình') + ' (xem docs/SCRIPT_GUIDE.md). Có thể chọn "Mock" để thử.', 'err', 9000);
+  if (!model || !model.enabled) return toast((model?.message || 'Chưa chọn mô hình') + ' (xem docs/APP_GUIDE.md). Có thể chọn "Mock" để thử.', 'err', 9000);
   const chs = chapters ? [].concat(chapters) : null;
   const exists = kind === 'outline' ? !!D.outline : !!D.narr && !chs;
   const notes = h('textarea', { rows: 4, placeholder: kind === 'outline' ? 'Ví dụ: tập trung vào chiếc gương, bỏ phần giả kim thuật' : 'Ví dụ: ngắn hơn, bớt tiểu sử, thêm một cách đọc khác' });
@@ -377,7 +374,7 @@ function runDialog(kind, chapters) {
     h('p', null, 'Mô hình: ', h('b', { text: model.label })), exists ? h('p', { class: 'hint warn', text: kind === 'outline' ? 'Dàn ý hiện tại sẽ bị thay (bản cũ giữ ở outline.prev.json) và mất trạng thái duyệt.' : 'Lời dẫn hiện tại sẽ bị thay (bản cũ giữ ở narration.prev.json).' }) : null,
     chs ? null : null, h('label', { class: 'lb', text: 'Ghi chú cho mô hình (tùy chọn)' }), notes),
     footer: h('footer', null, h('button', { onclick: () => m.close(), text: 'Hủy' }), h('button', { class: 'primary', text: 'Chạy', onclick: () => { m.close(); lastRun = { kind, body: { notes: notes.value, ...(chs ? { chapters: chs } : {}) } }; startJob(kind, lastRun.body); } })) });
-  setTimeout(() => notes.focus(), 30);
+  scope.timeout(() => notes.focus(), 30);
 }
 
 // ------------------------------------------------------------------ copy prompt and paste dialogs
@@ -392,10 +389,9 @@ function copyDialog(phase = 'outline') {
     chap.style.display = ph === 'script' ? '' : 'none';
     try {
       const q = new URLSearchParams({ phase: ph, notes: notes.value, chapters: ph === 'script' ? chap.value : '' });
-      const r = await fetch(`${P()}/prompt?${q}`); const t = await r.text();
-      if (!r.ok) { let d = t; try { d = JSON.parse(t).detail; } catch {} box.value = ''; info.textContent = d; info.className = 'hint err'; return; }
+      const t = await api.get(`${P()}/prompt?${q}`);
       box.value = t; info.className = 'hint'; info.textContent = `${t.length} ký tự, ${words(t)} từ. Dán vào Gemini, rồi dán câu trả lời của nó vào nút "Dán".`;
-    } catch (e) { info.textContent = e.message; info.className = 'hint err'; }
+    } catch (e) { box.value = ''; info.textContent = e.message; info.className = 'hint err'; }
   };
   tabs.outline = h('button', { text: 'Prompt dàn ý', onclick: () => setPhase('outline') });
   tabs.script = h('button', { text: 'Prompt lời dẫn', onclick: () => setPhase('script') });
@@ -418,13 +414,13 @@ function pasteDialog(kind = 'outline') {
   tabs.outline = h('button', { text: 'Dán dàn ý', onclick: () => setKind('outline') }); tabs.narration = h('button', { text: 'Dán lời dẫn', onclick: () => setKind('narration') });
   const go = h('button', { class: 'primary', text: 'Phân tích và lưu', onclick: async () => {
     if (!ta.value.trim()) return;
-    if ((cur === 'outline' ? dirty.outline : dirty.narr) && !confirm('Bản đang sửa chưa lưu sẽ bị thay. Tiếp tục?')) return;
-    if ((cur === 'outline' ? D.outline : D.narr) && !confirm('Bản hiện có sẽ bị thay bằng bản dán (bản cũ giữ ở tệp .prev.json). Tiếp tục?')) return;
+    if ((cur === 'outline' ? dirty.outline : dirty.narr) && !(await confirmDialog('Bản đang sửa chưa lưu sẽ bị thay. Tiếp tục?', { title: 'Thay bản đang sửa', ok: 'Tiếp tục', danger: true }))) return;
+    if ((cur === 'outline' ? D.outline : D.narr) && !(await confirmDialog('Bản hiện có sẽ bị thay bằng bản dán (bản cũ giữ ở tệp .prev.json). Tiếp tục?', { title: 'Thay bằng bản dán', ok: 'Tiếp tục', danger: true }))) return;
     err.replaceChildren();
     try {
       const r = await send('POST', `${P()}/${cur}/import`, { text: ta.value, merge: cur === 'narration' && merge.checked });
       if (cur === 'outline') applyOutline(r); else applyNarr(r);
-      m.close(); toast('Đã đọc và lưu. ' + ((r.parse_issues || []).length ? `Có ${r.parse_issues.length} lưu ý, xem ở nút Kiểm tra.` : ''), 'ok', 5000);
+      pipeChanged(); m.close(); toast('Đã đọc và lưu. ' + ((r.parse_issues || []).length ? `Có ${r.parse_issues.length} lưu ý, xem ở nút Kiểm tra.` : ''), 'ok', 5000);
       if (r.parse_issues?.length) showParseIssues(r.parse_issues);
     } catch (e) {
       if (e.status === 422) { stuff[cur] = ta.value; if (cur === 'outline') ST.outline.last_paste = ta.value; else ST.narr.last_paste = ta.value; err.replaceChildren(h('div', { class: 'hint err', text: 'Không đọc được. Văn bản vừa dán đã được giữ lại, sẽ hiện lại khi tải trang. Không có gì bị ghi đè.' }), h('div', { class: 'pre', text: e.message })); }
@@ -433,7 +429,7 @@ function pasteDialog(kind = 'outline') {
   } });
   const m = modal({ title: 'Dán câu trả lời của mô hình', cls: 'wide', body: h('div', { class: 'body' }, h('div', { class: 'tabs' }, tabs.outline, tabs.narration), ta, h('div', { style: { margin: '6px 0' } }, mergeLbl), err), footer: h('footer', null, h('button', { onclick: () => { stuff[cur] = ta.value; m.close(); }, text: 'Đóng' }), go) });
   setKind(kind);
-  setTimeout(() => ta.focus(), 30);
+  scope.timeout(() => ta.focus(), 30);
 }
 function showParseIssues(list) {
   modal({ title: 'Lưu ý khi đọc bản dán', body: h('div', { class: 'body' }, ...list.map((i) => h('div', { class: 'issue-row' }, h('span', { class: 'lv ' + i.level, text: LEVEL[i.level] }), h('span', { text: i.message })))) });
@@ -458,42 +454,69 @@ async function approve() {
     const r = await send('POST', `${P()}/${kind === 'outline' ? 'outline' : 'narration'}/approve`, { rev: kind === 'outline' ? R.outline : R.narr });
     if (kind === 'outline') applyOutline(r); else applyNarr(r);
     toast(kind === 'outline' ? 'Đã duyệt dàn ý' : 'Đã duyệt lời dẫn', 'ok');
+    pipeChanged();
   } catch (e) {
     if (e.body?.issues) { if (kind === 'outline') ST.outline.issues = e.body.issues; else ST.narr.issues = e.body.issues; renderAll(); checkDialog(); }
     toast(e.message, 'err', 9000);
   }
 }
 
-// ------------------------------------------------------------------ boot
 function renderAll() { srcBody(); outBody(); narBody(); refreshChrome(); }
-async function boot() {
-  const projects = (await J('/api/projects')).filter((p) => p.sources || p.has_storyboard !== undefined);
-  const want = new URLSearchParams(location.search).get('project') || localStorage.getItem('bti.script.project');
-  S.pid = projects.find((p) => p.id === want)?.id || projects.find((p) => p.sources?.length)?.id || projects[0]?.id;
-  const pick = $('#project-pick');
-  pick.replaceChildren(...projects.map((p) => h('option', { value: p.id, text: p.title + ' (' + p.id + ')', selected: p.id === S.pid })));
-  pick.onchange = () => { localStorage.setItem('bti.script.project', pick.value); location.search = '?project=' + pick.value; };
-  if (!S.pid) return $('#smain').replaceChildren(h('div', { class: 'empty' }, 'Chưa có dự án. Vào Thư viện, chọn một tác phẩm và tạo dự án.'));
-  localStorage.setItem('bti.script.project', S.pid);
-  $('#lnk-editor').href = `/?project=${encodeURIComponent(S.pid)}`;
+
+// ------------------------------------------------------------------ mount
+const BAR = `
+  <div class="vbar" id="sbar">
+    <select id="model-pick" title="Mô hình dùng cho các nút bên dưới"></select>
+    <span class="sep"></span>
+    <button id="btn-outline" title="Mô hình viết dàn ý từ các đoạn sách đã đánh số">Lập dàn ý</button>
+    <button id="btn-write" title="Mô hình viết lời dẫn từng chương, theo dàn ý đã duyệt">Viết lời dẫn</button>
+    <button id="btn-copy" title="Lấy prompt để dán vào Gemini hoặc chat khác">Sao chép prompt</button>
+    <button id="btn-paste" title="Dán câu trả lời của mô hình (dàn ý hoặc lời dẫn)">Dán</button>
+    <span class="sep"></span>
+    <button id="btn-save" class="primary" title="Lưu (Ctrl+S)">Lưu<span id="dirty-dot" class="dot" hidden></span></button>
+    <button id="btn-undo" title="Hoàn tác (Ctrl+Z)">Hoàn tác</button>
+    <button id="btn-redo" title="Làm lại (Ctrl+Shift+Z)">Làm lại</button>
+    <button id="btn-check" title="Danh sách lỗi và cảnh báo">Kiểm tra <span id="issue-count" class="count">0</span></button>
+    <button id="btn-approve" title="Duyệt bản đã lưu (cần lưu trước, không còn lỗi)">Duyệt</button>
+    <span id="approve-state" class="badge" title="Trạng thái duyệt"></span>
+    <span class="grow"></span>
+    <button id="btn-next" class="primary" hidden></button>
+  </div>
+  <main id="smain">
+    <section class="col" id="col-src"><div class="col-h"><h2>Nguồn</h2><span class="muted" id="src-note"></span></div><div class="col-b" id="src-body"></div></section>
+    <section class="col" id="col-out"><div class="col-h"><h2>Dàn ý</h2><span id="out-badge" class="badge"></span></div><div class="col-b" id="out-body"></div></section>
+    <section class="col" id="col-nar"><div class="col-h"><h2>Lời dẫn</h2><span id="nar-badge" class="badge"></span></div><div class="col-b" id="nar-body"></div></section>
+  </main>
+  <footer id="sstatus">
+    <div id="st-totals" class="mono"></div>
+    <div id="st-bars"></div>
+    <div id="st-job"></div>
+  </footer>`;
+
+export async function mount(host, ctx) {
+  resetState();
+  scope = ctx.scope; shell = ctx.shell;
+  S.pid = ctx.pipeline.project;
+  root = h('div', { class: 'scr-root v-scr' });
+  root.innerHTML = BAR;
+  host.append(root);
   S.models = await J('/api/models');
   const saved = localStorage.getItem('bti.script.model');
   S.model = (S.models.find((m) => m.id === saved && m.enabled) || S.models.find((m) => m.default && m.enabled) || S.models.find((m) => m.enabled) || S.models[0])?.id;
   const mp = $('#model-pick');
   mp.replaceChildren(...S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })));
-  mp.onchange = () => { S.model = mp.value; localStorage.setItem('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (!m.enabled) toast(m.message || 'Mô hình này chưa dùng được. Xem docs/SCRIPT_GUIDE.md.', 'warn', 9000); if (m.paid) toast('Mô hình này tính tiền theo token.', 'warn', 5000); };
+  mp.onchange = () => { S.model = mp.value; localStorage.setItem('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (!m.enabled) toast(m.message || 'Mô hình này chưa dùng được. Xem docs/APP_GUIDE.md.', 'warn', 9000); if (m.paid) toast('Mô hình này tính tiền theo token.', 'warn', 5000); };
   $('#btn-outline').onclick = () => runDialog('outline');
   $('#btn-write').onclick = () => { if (!approvedFlag('outline')) return toast('Cần duyệt dàn ý trước khi viết lời dẫn.', 'warn'); runDialog('narration'); };
   $('#btn-copy').onclick = () => copyDialog(approvedFlag('outline') && D.outline ? 'script' : 'outline');
   $('#btn-paste').onclick = () => pasteDialog(D.outline && approvedFlag('outline') ? 'narration' : 'outline');
   $('#btn-save').onclick = saveAll; $('#btn-undo').onclick = () => undoRedo(-1); $('#btn-redo').onclick = () => undoRedo(1);
   $('#btn-check').onclick = checkDialog; $('#btn-approve').onclick = approve;
-  document.addEventListener('keydown', (e) => {
+  scope.on(document, 'keydown', (e) => {                 // removed when the view is left: Ctrl+S and Ctrl+Z never reach another view
     const mod = e.ctrlKey || e.metaKey;
     if (mod && e.key.toLowerCase() === 's') { e.preventDefault(); saveAll(); }
     else if (mod && e.key.toLowerCase() === 'z' && !(e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) { e.preventDefault(); undoRedo(e.shiftKey ? 1 : -1); }
   });
-  window.addEventListener('beforeunload', (e) => { if (dirty.outline || dirty.narr) { e.preventDefault(); e.returnValue = ''; } });
   await loadAll();
   const jobs = await J(`${P()}/script/jobs`).catch(() => []);
   const run = jobs.find((j) => ['queued', 'running'].includes(j.state));
@@ -501,5 +524,11 @@ async function boot() {
   if (ST.outline.last_paste && !D.outline) toast('Có bản dán dàn ý bị lỗi được giữ lại. Mở "Dán" để xem.', 'warn', 6000);
   if (ST.narr.last_paste) toast('Có bản dán lời dẫn bị lỗi được giữ lại. Mở "Dán" để xem.', 'warn', 6000);
   window.__scr = { S, D, R, ST, dirty, mutate, saveAll, doOp, pasteDialog, copyDialog, checkDialog, runDialog };
+  return {
+    isDirty: () => dirty.outline || dirty.narr,
+    save: saveAll,
+    dirtyMessage: () => `Kịch bản có chỗ sửa chưa lưu${dirty.outline ? ' (dàn ý)' : ''}${dirty.narr ? ' (lời dẫn)' : ''}.`,
+    pipelineChanged: () => refreshChrome(),
+    unmount() { window.__scr = null; root = null; },
+  };
 }
-boot().catch((e) => { document.body.prepend(h('pre', { class: 'pre', text: 'Lỗi tải trang: ' + e.message })); });

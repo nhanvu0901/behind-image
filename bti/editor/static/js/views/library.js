@@ -1,28 +1,29 @@
-// Library page: book shelf, works list, work detail, create-project dialog, projects view. Plain ES modules.
-import { h, $, toast, modal } from './util.js';
+// Library view: artworks, book shelf, works of a book, work detail, artwork dossier, create-project dialog.
+// Step 1 of a NEW video. Mounted by the shell at #/library[/books|/book/<id>|/work/<book>/<n>|/artwork/<key>].
+import { api } from '../api.js';
+import { h, toast, modal as uiModal, confirmDialog } from '../util.js';
+import { go } from '../nav.js';
+import { projectHash } from '../router.js';
+import { KIND, RIGHTS, STAGE, shortBook, LOW_TRUST as LOWTXT } from '../labels.js';
 
-const main = $('#lib-main');
-const J = async (url, opts) => {
-  const r = await fetch(url, opts);
-  const body = await r.json().catch(() => ({}));
-  if (!r.ok) throw Object.assign(new Error(body.detail || r.statusText), { status: r.status });
-  return body;
-};
-const KIND = { chapter_per_artwork: 'mỗi chương một tác phẩm', fixed_spread: 'mỗi tác phẩm một đoạn trang cố định', short_entries: 'mục ngắn', themed_chapter: 'chương theo chủ đề' };
-const RIGHTS = { pd_likely: 'Có thể hết bản quyền', copyright_likely: 'Có thể còn bản quyền', unknown: 'Chưa rõ bản quyền' };
-const STAGE = { selected: 'Đã chọn', outlined: 'Đã duyệt dàn ý', script: 'Có kịch bản', voiced: 'Có giọng đọc', storyboard: 'Có storyboard', approved: 'Đã duyệt', rendered: 'Đã dựng xong' };
+let root = null, scope = null;                  // the view root and its lifecycle scope (set by mount)
+const J = (url) => api.get(url);
+const post = (url, body) => api.post(url, body);
 const BOOKNAME = {};
 const esc = encodeURIComponent;
+const modal = (o) => uiModal({ ...o, cls: (o.cls || '') + ' v-lib' });   // dialogs opened here carry the scope class of this view
+const LIB = '#/library';
 
 const rightsTag = (r) => h('span', { class: 'tag ' + r.status, title: `Ước lượng tự động, chỉ để tham khảo. Căn cứ: ${r.basis}`, text: RIGHTS[r.status] + ' (ước lượng)' });
 const stageTag = (s) => h('span', { class: 'tag stage ' + s, text: STAGE[s] || s });
 const centuryLabel = (c) => (c === null || c === undefined ? '' : c <= 0 ? 'trước CN' : `TK ${c}`);
 const yearTxt = (w) => w.year || '';
 
+let mainEl = null;
 function nav(active) {
-  document.querySelectorAll('#lib-nav a').forEach((a) => a.classList.toggle('active', a.dataset.nav === active));
+  root.querySelectorAll('.lib-nav a').forEach((a) => a.classList.toggle('active', a.dataset.nav === active));
 }
-const setMain = (...k) => { main.replaceChildren(...k.filter(Boolean)); window.scrollTo(0, 0); };
+const setMain = (...k) => { mainEl.replaceChildren(...k.filter(Boolean)); root.scrollTop = 0; };
 const crumb = (...parts) => h('div', { class: 'crumb' }, ...parts.flatMap((p, i) => (i ? [' / ', p] : [p])));
 
 // ------------------------------------------------------------------ shelf
@@ -32,7 +33,7 @@ async function shelf() {
   books.forEach((b) => { BOOKNAME[b.id] = b.title; });
   setMain(h('h1', { class: 'lib-h', text: 'Kệ sách' }),
     h('div', { class: 'muted', text: 'Chọn một cuốn sách, mở một tác phẩm, rồi tạo dự án video từ nó.' }),
-    h('div', { class: 'shelf' }, books.map((b) => h('div', { class: 'book-card', onclick: () => { location.hash = `#/book/${b.id}`; } },
+    h('div', { class: 'shelf' }, books.map((b) => h('div', { class: 'book-card', onclick: () => { go(`#/library/book/${b.id}`); } },
       h('div', { class: 'cover' }, h('img', { src: b.cover_url, alt: b.title, loading: 'lazy' })),
       h('div', { class: 'meta' },
         h('h3', { text: b.title }),
@@ -63,7 +64,7 @@ async function worksList(bid) {
   let timer;
   async function refresh() {
     clearTimeout(timer);
-    timer = setTimeout(async () => {
+    timer = scope.timeout(async () => {
       const p = new URLSearchParams();
       if (f.q) p.set('q', f.q); if (f.century !== '') p.set('century', f.century); if (f.rights) p.set('rights', f.rights); if (f.multi) p.set('multi', 'true');
       let ws;
@@ -72,7 +73,7 @@ async function worksList(bid) {
       body.replaceChildren(ws.length ? worksTable(ws) : h('div', { class: 'empty', text: 'Không có mục nào khớp bộ lọc.' }));
     }, 120);
   }
-  setMain(crumb(h('a', { href: '#/books', text: 'Kệ sách' }), book.title),
+  setMain(crumb(h('a', { href: '#/library/books', text: 'Kệ sách' }), book.title),
     h('h1', { class: 'lib-h', text: book.title }), h('div', { class: 'muted', text: `${book.author} · ${book.pages} trang · ${book.pdf_type === 'scan' ? 'bản scan, văn bản qua OCR' : 'bản số'}` }),
     h('div', { class: 'sub', text: book.notes }),
     h('div', { class: 'toolbar' }, q, cen, rig, h('label', { class: 'chk' }, mul, 'Có trong từ 2 sách trở lên'), h('span', { class: 'grow' }), count),
@@ -84,24 +85,23 @@ function worksTable(ws) {
   return h('table', { class: 'works' },
     h('thead', null, h('tr', null, h('th'), h('th', { text: 'Tác phẩm' }), h('th', { text: 'Hoạ sĩ' }), h('th', { text: 'Năm' }),
       h('th', { class: 'num', text: 'Số từ' }), h('th', { text: 'Cũng có trong' }), h('th', { text: 'Bản quyền (ước lượng)' }), h('th', { text: 'Dự án' }))),
-    h('tbody', null, ws.map((w) => h('tr', { class: 'wrow', onclick: () => { location.hash = w.artwork_key ? `#/artwork/${w.artwork_key}` : `#/work/${w.book_id}/${w.n}`; } },
+    h('tbody', null, ws.map((w) => h('tr', { class: 'wrow', onclick: () => { go(w.artwork_key ? `#/library/artwork/${w.artwork_key}` : `#/library/work/${w.book_id}/${w.n}`); } },
       h('td', { class: 'thumb' }, h('img', { src: w.thumb_url, loading: 'lazy', alt: '' })),
       h('td', null, h('div', { class: 'ttl', text: `${w.n}. ${w.title}` }), w.headline ? h('div', { class: 'sub', text: w.headline }) : null,
         h('div', { class: 'sub', text: `trang PDF ${w.pdf_pages[0]}-${w.pdf_pages[1]}` })),
       h('td', { text: w.artist || '' }), h('td', { text: yearTxt(w) }), h('td', { class: 'num', text: w.words }),
       h('td', null, h('div', { class: 'badges' }, w.also_in.map((o) => h('span', { class: 'tag also', title: 'Mở mục này', text: shortBook(o.book_id),
-        onclick: (e) => { e.stopPropagation(); location.hash = `#/work/${o.book_id}/${o.n}`; } })))),
+        onclick: (e) => { e.stopPropagation(); go(`#/library/work/${o.book_id}/${o.n}`); } })))),
       h('td', null, rightsTag(w.rights)),
       h('td', null, w.projects.length ? w.projects.map((p) => stageTag(p.stage)) : h('span', { class: 'muted', text: '-' }))))));
 }
-const SHORT = { payne_gae: 'Payne', hodge_aid: 'Hodge', hagen_wgps: 'Hagen', grovier_nws: 'Grovier', brookehitching_mad: 'Brooke-Hitching', dasal_artcurious: 'Dasal' };
-const shortBook = (id) => SHORT[id] || id;
 
 // ------------------------------------------------------------------ work detail
 function lightbox(url) {
   const lb = h('div', { class: 'lightbox', onclick: () => lb.remove() }, h('img', { src: url }));
-  const k = (e) => { if (e.key === 'Escape') { lb.remove(); document.removeEventListener('keydown', k); } };
-  document.addEventListener('keydown', k);
+  const k = (e) => { if (e.key === 'Escape') lb.remove(); };
+  scope.on(document, 'keydown', k);
+  scope.add(() => lb.remove());
   document.body.append(lb);
 }
 
@@ -116,7 +116,7 @@ async function workDetail(bid, n) {
   const other = (o) => h('div', { class: 'alsoitem' }, h('img', { src: o.thumb_url, alt: '' }),
     h('div', { style: { flex: 1 } }, h('div', { class: 'ttl', text: BOOKNAME[o.book_id] || o.book_id }), h('div', { class: 'sub', text: `${o.title} · trang PDF ${o.pdf_pages[0]}-${o.pdf_pages[1]}` })),
     h('button', { class: 'small', text: 'Xem nhanh', onclick: () => showPreview(o) }),
-    h('button', { class: 'small', text: 'Mở', onclick: () => { location.hash = `#/work/${o.book_id}/${o.n}`; } }));
+    h('button', { class: 'small', text: 'Mở', onclick: () => { go(`#/library/work/${o.book_id}/${o.n}`); } }));
   async function showPreview(o) {
     preview.replaceChildren(h('div', { class: 'muted', text: 'Đang tải...' }));
     const d = await J(`/api/library/works/${o.book_id}/${o.n}`);
@@ -126,13 +126,13 @@ async function workDetail(bid, n) {
       h('pre', { class: 'text', text: d.text.slice(0, 2500) + (d.text.length > 2500 ? '\n...' : '') }));
   }
   const mine = w.projects || [];
-  setMain(crumb(h('a', { href: '#/books', text: 'Kệ sách' }), h('a', { href: `#/book/${bid}`, text: BOOKNAME[bid] || bid }), `${w.n}. ${w.title}`),
+  setMain(crumb(h('a', { href: '#/library/books', text: 'Kệ sách' }), h('a', { href: `#/library/book/${bid}`, text: BOOKNAME[bid] || bid }), `${w.n}. ${w.title}`),
     h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' } },
       h('h1', { class: 'lib-h', text: w.title }), h('span', { class: 'grow' }),
       h('button', { class: 'primary', text: 'Tạo dự án', onclick: () => createDialog(w, also) })),
     h('div', { class: 'muted', text: [w.artist, w.year, `trang PDF ${w.pdf_pages[0]}-${w.pdf_pages[1]}`, `${w.words} từ`].filter(Boolean).join(' · ') }),
     w.headline ? h('div', { class: 'sub', text: w.headline }) : null,
-    h('div', { class: 'tags', style: { margin: '8px 0' } }, rightsTag(w.rights), ...mine.map((p) => stageTag(p.stage)), h('a', { class: 'lnk', href: `#/artwork/${w.artwork_key}`, text: 'Xem hồ sơ tác phẩm (đã gộp các sách)' })),
+    h('div', { class: 'tags', style: { margin: '8px 0' } }, rightsTag(w.rights), ...mine.map((p) => stageTag(p.stage)), h('a', { class: 'lnk', href: `#/library/artwork/${w.artwork_key}`, text: 'Xem hồ sơ tác phẩm (đã gộp các sách)' })),
     h('div', { class: 'detail' },
       h('div', null,
         h('div', { class: 'panel' }, h('h4', { text: `Các trang của mục (${w.pages.length})` }),
@@ -159,8 +159,8 @@ function createDialog(w, also) {
     if (!ids.length) { err.textContent = 'Chọn ít nhất một sách.'; return; }
     create.disabled = true; err.textContent = '';
     try {
-      const p = await J('/api/library/projects', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ work_ids: ids, slug: slug.value.trim() || null }) });
-      m.close(); toast(`Đã tạo dự án ${p.id}`, 'ok'); location.hash = '#/projects';
+      const p = await post('/api/library/projects', { work_ids: ids, slug: slug.value.trim() || null });
+      m.close(); created(p);
     } catch (e) { err.textContent = e.message; create.disabled = false; }
   } });
   const m = modal({ title: 'Tạo dự án video từ tác phẩm này', cls: 'dlg',
@@ -171,31 +171,8 @@ function createDialog(w, also) {
     footer: h('footer', null, h('button', { text: 'Huỷ', onclick: () => m.close() }), create) });
 }
 
-// ------------------------------------------------------------------ projects
-async function projectsView() {
-  nav('projects');
-  const ps = await J('/api/projects');
-  const hasStory = ps.filter((p) => p.has_storyboard), none = ps.filter((p) => !p.has_storyboard);
-  const row = (p) => h('tr', null,
-    h('td', null, h('div', { class: 'ttl', text: p.title }), h('div', { class: 'sub mono', text: p.id })),
-    h('td', null, stageTag(p.stage)),
-    h('td', null, (p.sources || []).map((s) => h('span', { class: 'tag also', text: shortBook(s.book_id), onclick: () => { location.hash = `#/work/${s.work_id.split('/')[0]}/${Number(s.work_id.split('/')[1])}`; } }))),
-    h('td', null, (p.sources || []).length ? h('a', { class: 'lnk', href: `script.html?project=${esc(p.id)}`, text: 'Kịch bản', style: { marginRight: '12px' } }) : null, p.has_storyboard ? h('a', { class: 'lnk', href: `/?project=${esc(p.id)}`, text: 'Mở trong trình biên tập' })
-      : h('span', { class: 'nostory', text: 'Chưa có storyboard: bước giọng đọc chưa được xây dựng.' })),
-    h('td', { class: 'sub', text: (p.updated_at || '').slice(0, 16).replace('T', ' ') }));
-  const tbl = (rows) => h('table', { class: 'works' }, h('thead', null, h('tr', null, h('th', { text: 'Dự án' }), h('th', { text: 'Giai đoạn' }), h('th', { text: 'Nguồn sách' }), h('th', { text: 'Tiếp theo' }), h('th', { text: 'Cập nhật' }))),
-    h('tbody', null, rows.map(row)));
-  setMain(h('h1', { class: 'lib-h', text: 'Dự án' }), h('div', { class: 'muted', text: `${ps.length} dự án` }),
-    h('div', { class: 'panel', style: { marginTop: '12px' } }, h('h4', { text: 'Chưa có storyboard (mới chọn từ sách)' }), none.length ? tbl(none) : h('div', { class: 'muted', text: 'Không có.' })),
-    h('div', { class: 'panel' }, h('h4', { text: 'Đã có storyboard' }), hasStory.length ? tbl(hasStory) : h('div', { class: 'muted', text: 'Không có.' })));
-}
-
-
 // ------------------------------------------------------------------ artworks (default view)
-const goto = (h_) => { if (location.hash === h_) route(); else location.hash = h_; };
-const post = (url, body) => J(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
 const bookBadges = (books, low = []) => h('div', { class: 'badges' }, books.map((b) => h('span', { class: 'tag also' + (low.includes(b) ? ' lowtrust' : ''), title: low.includes(b) ? LOWTXT : '', text: shortBook(b) + (low.includes(b) ? ' (dịch máy)' : '') })));
-const LOWTXT = 'bản dịch máy, không dùng làm nguồn sự kiện';
 const lowTag = (title) => h('span', { class: 'tag lowtrust', title: title || LOWTXT, text: LOWTXT });
 const textTag = (t) => (t ? h('span', { class: 'tag ' + (t === 'clean' ? 'digital' : t === 'layer' ? 'scan' : ''), title: 'Nguồn văn bản: clean = đã làm sạch, layer = lớp chữ gốc của PDF', text: t }) : null);
 const FILTER = { q: '', sort: 'sources', century: '', project: '', multi: false, themes: false };
@@ -216,7 +193,7 @@ async function artworksView() {
   let timer;
   function refresh() {
     clearTimeout(timer);
-    timer = setTimeout(async () => {
+    timer = scope.timeout(async () => {
       const p = new URLSearchParams({ sort: f.sort, kind: f.themes ? '' : 'artwork' });
       if (f.q) p.set('q', f.q); if (f.century !== '') p.set('century', f.century); if (f.project) p.set('has_project', f.project); if (f.multi) p.set('min_sources', '2');
       let rows;
@@ -235,7 +212,7 @@ function artworksTable(rows) {
   return h('table', { class: 'works' },
     h('thead', null, h('tr', null, h('th'), h('th', { text: 'Tác phẩm' }), h('th', { text: 'Hoạ sĩ' }), h('th', { text: 'Năm' }), h('th', { text: 'Sách' }),
       h('th', { class: 'num', text: 'Số chữ' }), h('th', { text: 'Bản quyền (ước lượng)' }), h('th', { text: 'Dự án' }))),
-    h('tbody', null, rows.map((a) => h('tr', { class: 'wrow', onclick: () => { location.hash = `#/artwork/${a.artwork_key}`; } },
+    h('tbody', null, rows.map((a) => h('tr', { class: 'wrow', onclick: () => { go(`#/library/artwork/${a.artwork_key}`); } },
       h('td', { class: 'thumb' }, h('img', { src: a.thumb_url, loading: 'lazy', alt: '' })),
       h('td', null, h('div', { class: 'ttl', text: a.title }), a.n_conflicts ? h('div', { class: 'sub conflict', text: `${a.n_conflicts} chỗ các sách ghi khác nhau` }) : null),
       h('td', { text: a.artist || '' }), h('td', { text: a.year || '' }),
@@ -267,7 +244,7 @@ async function artworkDetail(key) {
       s.trust === 'low' ? h('div', { class: 'note lowbox', text: s.trust_note || LOWTXT }) : null,
       h('div', { class: 'tags', style: { margin: '6px 0' } }, h('span', { class: 'tag', text: `${s.words} chữ` }), s.trust === 'low' ? lowTag(s.trust_note) : null, textTag(s.text_source), s.ocr ? h('span', { class: 'tag scan', text: 'OCR' }) : null,
         s.headline ? h('span', { class: 'tag', text: s.headline }) : null, h('span', { class: 'tag', text: `trang PDF ${s.pdf_pages[0]}-${s.pdf_pages[1]}` }), h('span', { class: 'grow', style: { flex: 1 } }),
-        h('button', { class: 'small', text: 'Mở mục này', onclick: () => { location.hash = `#/work/${s.book_id}/${s.n}`; } }),
+        h('button', { class: 'small', text: 'Mở mục này', onclick: () => { go(`#/library/work/${s.book_id}/${s.n}`); } }),
         d.sources.length > 1 ? h('button', { class: 'small danger', text: 'Tách', title: 'Tách mục này thành tác phẩm riêng', onclick: () => splitDialog(s) }) : null),
       s.title !== idn.title || (s.artist && s.artist !== idn.artist) || (s.year && s.year !== idn.year) ? h('div', { class: 'sub' }, `Sách này ghi: ${[s.title, s.artist, s.year].filter(Boolean).join(' · ')}`) : null,
       h('div', { class: 'two' },
@@ -281,7 +258,7 @@ async function artworkDetail(key) {
   };
   d.sources.forEach((s, i) => tabs.append(h('button', { text: `${BOOKNAME[s.book_id] || s.book_id} (${s.words})${s.trust === 'low' ? ' ⚠' : ''}`, onclick: () => showTab(i) })));
   const mine = a.projects || [];
-  setMain(crumb(h('a', { href: '#/', text: 'Tác phẩm' }), idn.title),
+  setMain(crumb(h('a', { href: '#/library', text: 'Tác phẩm' }), idn.title),
     h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } }, h('h1', { class: 'lib-h', text: idn.title }), h('span', { class: 'grow' }),
       h('button', { text: 'Gộp với…', onclick: () => mergeDialog(a) }),
       h('button', { class: 'primary', text: 'Tạo dự án', onclick: () => createArtworkDialog(a) })),
@@ -309,7 +286,7 @@ function createArtworkDialog(a) {
     const ex = checks.filter((c) => !c.el.checked).map((c) => c.s.work_id);
     if (ex.length === checks.length) { err.textContent = 'Giữ lại ít nhất một nguồn.'; return; }
     go.disabled = true; err.textContent = '';
-    try { const p = await post('/api/library/projects', { artwork_key: a.artwork_key, exclude: ex, slug: slug.value.trim() || null }); m.close(); toast(`Đã tạo dự án ${p.id}`, 'ok'); location.hash = '#/projects'; }
+    try { const p = await post('/api/library/projects', { artwork_key: a.artwork_key, exclude: ex, slug: slug.value.trim() || null }); m.close(); created(p); }
     catch (e) { err.textContent = e.message; go.disabled = false; }
   } });
   const m = modal({ title: 'Tạo dự án video từ tác phẩm', cls: 'dlg', body: h('div', { class: 'body', style: { width: '560px' } },
@@ -324,13 +301,13 @@ function mergeDialog(a) {
   const err = h('div', { class: 'note' });
   const input = h('input', { type: 'search', placeholder: 'Tìm tác phẩm cần gộp vào...', style: { width: '100%' } });
   let timer;
-  const search = () => { clearTimeout(timer); timer = setTimeout(async () => {
+  const search = () => { clearTimeout(timer); timer = scope.timeout(async () => {
     const rows = await J(`/api/library/artworks?kind=&sort=title&q=${esc(input.value)}`);
     res.replaceChildren(...rows.filter((r) => r.artwork_key !== a.artwork_key).slice(0, 40).map((r) => h('div', { class: 'alsoitem' }, h('img', { src: r.thumb_url, alt: '' }),
       h('div', { style: { flex: 1 } }, h('div', { class: 'ttl', text: r.title }), h('div', { class: 'sub', text: `${r.artist || ''} ${r.year || ''} · ${r.books.map(shortBook).join(', ')}` })),
       h('button', { class: 'small primary', text: 'Gộp', onclick: async () => {
-        if (!confirm(`Gộp "${r.title}" vào "${a.dossier.identity.title}"?`)) return;
-        try { const o = await post('/api/library/artworks/merge', { key: a.artwork_key, with: r.artwork_key }); m.close(); toast('Đã gộp', 'ok'); goto(`#/artwork/${o.artwork_key}`); }
+        if (!(await confirmDialog(`Gộp "${r.title}" vào "${a.dossier.identity.title}"?`, { title: 'Gộp tác phẩm', ok: 'Gộp' }))) return;
+        try { const o = await post('/api/library/artworks/merge', { key: a.artwork_key, with: r.artwork_key }); m.close(); toast('Đã gộp', 'ok'); go(`#/library/artwork/${o.artwork_key}`); }
         catch (e) { err.textContent = e.message; } } }))));
   }, 150); };
   input.oninput = search;
@@ -340,26 +317,35 @@ function mergeDialog(a) {
   search();
 }
 
-function splitDialog(s) {
-  if (!confirm(`Tách "${BOOKNAME[s.book_id] || s.book_id}: ${s.title}" thành tác phẩm riêng?`)) return;
-  post('/api/library/artworks/split', { work_id: s.work_id }).then((o) => { toast('Đã tách', 'ok'); goto(`#/artwork/${o.artwork_key}`); }).catch((e) => toast(e.message, 'err'));
+async function splitDialog(s) {
+  if (!(await confirmDialog(`Tách "${BOOKNAME[s.book_id] || s.book_id}: ${s.title}" thành tác phẩm riêng?`, { title: 'Tách tác phẩm', ok: 'Tách' }))) return;
+  post('/api/library/artworks/split', { work_id: s.work_id }).then((o) => { toast('Đã tách', 'ok'); go(`#/library/artwork/${o.artwork_key}`); }).catch((e) => toast(e.message, 'err'));
 }
 
-// ------------------------------------------------------------------ router
-async function route() {
-  const hash = location.hash.replace(/^#/, '') || '/';
-  const parts = hash.split('/').filter(Boolean);
+// A project was created: it opens at the step its stage calls for (the script), and the frame learns about it.
+async function created(p) {
+  toast(`Đã tạo dự án ${p.id}`, 'ok');
+  await go(projectHash(p.id));
+}
+
+// ------------------------------------------------------------------ mount
+export async function mount(host, ctx) {
+  scope = ctx.scope;
+  root = h('div', { class: 'lib-root v-lib' },
+    h('div', { class: 'lib-main' },
+      h('nav', { class: 'lib-nav' }, h('a', { href: '#/library', 'data-nav': 'artworks', text: 'Tác phẩm' }), h('a', { href: '#/library/books', 'data-nav': 'shelf', text: 'Kệ sách' }),
+        h('span', { class: 'muted', style: { marginLeft: 'auto', alignSelf: 'center' }, text: 'Công cụ nội bộ, chỉ chạy trên máy này. Sách có bản quyền, không xuất bản.' })),
+      (mainEl = h('div', { class: 'lib-view' }))));
+  host.append(root);
+  const r = ctx.route;
   try {
-    if (!parts.length) await artworksView();
-    else if (parts[0] === 'books') await shelf();
-    else if (parts[0] === 'artwork' && parts[1]) await artworkDetail(parts.slice(1).join('/'));
-    else if (parts[0] === 'book' && parts[1]) await worksList(parts[1]);
-    else if (parts[0] === 'work' && parts[2]) await workDetail(parts[1], Number(parts[2]));
-    else if (parts[0] === 'projects') await projectsView();
+    if (r.sub === 'shelf') await shelf();
+    else if (r.sub === 'artwork') await artworkDetail(r.key);
+    else if (r.sub === 'book') await worksList(r.bid);
+    else if (r.sub === 'work') await workDetail(r.bid, r.n);
     else await artworksView();
   } catch (e) {
     setMain(h('div', { class: 'empty', text: 'Lỗi: ' + (e.message || e) }));
   }
+  return {};
 }
-window.addEventListener('hashchange', route);
-route();

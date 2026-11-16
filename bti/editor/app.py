@@ -521,6 +521,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
 
     from .library_api import make_router as _library_router
     app.include_router(_library_router(root))
+    from .pipeline_api import make_router as _pipeline_router
+    app.include_router(_pipeline_router(root))  # steps of a project (stepper, home) and delete-project
 
     # ------------------------------------------------------------ static (dynamic, so a late frontend works)
     @app.get("/{path:path}", include_in_schema=False)

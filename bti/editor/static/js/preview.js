@@ -7,8 +7,9 @@ import { cameraLists, cameraAt, engineFitCamera, cameraToBox, boxToCamera, fixAs
 import { setParam, commitShot } from './actions.js';
 import { paintAsset } from './placeholder.js';
 
-const canvasEl = $('#frame'), svgEl = $('#handles'), box = $('#stage-box'), stage = $('#stage');
-const sourceChk = $('#view-source'), regionsChk = $('#view-regions');
+// DOM is looked up when the view is mounted (initPreview), never at import time: the module outlives the view.
+let root = null, scope = null, alive = false;
+let canvasEl, svgEl, box, stage, sourceChk, regionsChk;
 let seq = 0, shown = 0, lastBitmap = null, W = 640, H = 360;
 let frozen = null; // mapping frozen during a drag
 let srcImg = null, srcImgKey = '';
@@ -24,11 +25,11 @@ function fit() {
 
 // ---- frame loading
 async function refresh() {
-  if (!ctx.store.draft) return;
+  if (!alive || !ctx.store.draft) return;
   const mySeq = ++seq;
   const t = ctx.t;
   if (sourceChk.checked) return drawBase();
-  const stateEl = $('#frame-state');
+  const stateEl = $('#frame-state', root);
   try {
     stateEl.textContent = 'đang dựng...';
     const blob = await api.frame(ctx.pid, t, 960, ctx.draftPlain());
@@ -235,27 +236,37 @@ function dragger(el, begin, move) {
     const mv = (ev) => move(st, (ev.clientX - x0) * sc, (ev.clientY - y0) * sc);
     const up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); frozen = null; drawHandles(); };
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
+    scope.add(() => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); });
   });
 }
 
-// pick mode: click on the preview to get a point (region name if inside one, Shift = raw x,y)
-svgEl.addEventListener('pointerdown', (e) => {
-  if (!ctx.pick) return;
-  const cm = currentMapping();
-  if (!cm?.m) { ctx.pick = null; drawHandles(); return; }
-  const r = svgEl.getBoundingClientRect();
-  const [x, y] = cm.m.toSource(((e.clientX - r.left) * W) / r.width, ((e.clientY - r.top) * H) / r.height);
-  let value = [Math.round(x), Math.round(y)];
-  if (!e.shiftKey) for (const [name, rg] of Object.entries(cm.pa.asset.regions || {})) if (((x - rg.x) / rg.rx) ** 2 + ((y - rg.y) / rg.ry) ** 2 <= 1) { value = name; break; }
-  const p = ctx.pick; ctx.pick = null; p.cb(value); drawHandles();
-});
-bus.on('pick', () => { if (ctx.pick && !sourceChk.checked && currentMapping()?.mode === 'none') sourceChk.checked = true; drawBase(); drawHandles(); });
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && ctx.pick) { ctx.pick = null; drawHandles(); } });
+function installPick() {
+  // pick mode: click on the preview to get a point (region name if inside one, Shift = raw x,y)
+  svgEl.addEventListener('pointerdown', (e) => {
+    if (!ctx.pick) return;
+    const cm = currentMapping();
+    if (!cm?.m) { ctx.pick = null; drawHandles(); return; }
+    const r = svgEl.getBoundingClientRect();
+    const [x, y] = cm.m.toSource(((e.clientX - r.left) * W) / r.width, ((e.clientY - r.top) * H) / r.height);
+    let value = [Math.round(x), Math.round(y)];
+    if (!e.shiftKey) for (const [name, rg] of Object.entries(cm.pa.asset.regions || {})) if (((x - rg.x) / rg.rx) ** 2 + ((y - rg.y) / rg.ry) ** 2 <= 1) { value = name; break; }
+    const p = ctx.pick; ctx.pick = null; p.cb(value); drawHandles();
+  });
+  bus.on('pick', () => { if (ctx.pick && !sourceChk.checked && currentMapping()?.mode === 'none') sourceChk.checked = true; drawBase(); drawHandles(); });
+  scope.on(document, 'keydown', (e) => { if (e.key === 'Escape' && ctx.pick) { ctx.pick = null; drawHandles(); } });
 
-export function initPreview() {
-  new ResizeObserver(fit).observe(stage);
-  sourceChk.addEventListener('change', () => { refresh(); drawBase(); drawHandles(); });
-  regionsChk.addEventListener('change', drawHandles);
+}
+
+export function initPreview(viewRoot, viewScope) {
+  root = viewRoot; scope = viewScope; alive = true;
+  canvasEl = $('#frame', root); svgEl = $('#handles', root); box = $('#stage-box', root); stage = $('#stage', root);
+  sourceChk = $('#view-source', root); regionsChk = $('#view-regions', root);
+  seq = 0; shown = 0; lastBitmap = null; frozen = null; srcImg = null; srcImgKey = ''; lastReq = 0;
+  scope.add(() => { alive = false; refreshDebounced.cancel(); });
+  installPick();
+  const ro = new ResizeObserver(fit); ro.observe(stage); scope.add(() => ro.disconnect());
+  scope.on(sourceChk, 'change', () => { refresh(); drawBase(); drawHandles(); });
+  scope.on(regionsChk, 'change', drawHandles);
   let lastSel = '';
   ctx.store.on((kind) => {
     const sig = ctx.store.sel.shot + '|' + ctx.store.sel.overlay;

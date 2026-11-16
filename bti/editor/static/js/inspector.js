@@ -14,12 +14,12 @@ import { seek } from './timeline.js';
 let tab = 'shot';
 let lastSig = '';
 let handle = null; // current form handle {sync}
-const body = $('#tab-body');
+let root = null, body = null;                 // looked up when the view is mounted (initInspector)
 export const currentTab = () => tab;
 
 export function setTab(t) {
   tab = t; lastSig = '';
-  $$('#tabs button').forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
+  $$('#tabs button', root).forEach((b) => b.classList.toggle('active', b.dataset.tab === t));
   render(true);
 }
 
@@ -191,10 +191,11 @@ export function selectIssue(i) {
   setTab(o ? 'overlay' : 'shot');
 }
 
-export function initInspector() {
-  $$('#tabs button').forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
+export function initInspector(viewRoot) {
+  root = viewRoot; body = $('#tab-body', root); tab = 'shot'; lastSig = ''; handle = null;
+  $$('#tabs button', root).forEach((b) => b.addEventListener('click', () => setTab(b.dataset.tab)));
   bus.on('tab', (t) => setTab(t));
-  bus.on('issues', () => { if (tab === 'issues') render(); const b = $('#tab-issues-n'); b.hidden = !ctx.issues.length; b.textContent = ctx.issues.length; });
+  bus.on('issues', () => { if (tab === 'issues') render(); const b = $('#tab-issues-n', root); b.hidden = !ctx.issues.length; b.textContent = ctx.issues.length; });
   bus.on('assets', () => { if (tab === 'media') render(true); });
   ctx.store.on((kind) => { if (kind === 'select' && tab === 'media' && !ctx.slotPick) { /* keep media tab */ } else render(); });
   render(true);

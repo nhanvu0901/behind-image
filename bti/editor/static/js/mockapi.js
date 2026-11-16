@@ -49,6 +49,16 @@ export const mockApi = {
   async health() { await init(); return { ok: true, engine: 'stub', media: 'stub', mock: true }; },
   async style() { await init(); return { style: await fx('style.json'), techniques: S.reg.techniques, intents: S.intents }; },
   async projects() { await init(); return [{ id: 'arnolfini-mock', title: S.sb.title, duration: S.timing.duration, updated_at: '2026-11-16T09:00:00Z' }, { id: 'empty-demo', title: 'Dự án trống (mock)', duration: 0, updated_at: '2026-11-10T09:00:00Z' }]; },
+  /** Same shape as GET /api/projects/{pid}/pipeline: in mock mode only the editing step has data. */
+  async pipeline(pid) {
+    await init();
+    const L = [['artwork', 'Tác phẩm'], ['script', 'Kịch bản'], ['voice', 'Giọng đọc'], ['picks', 'Chọn hình'], ['edit', 'Dựng hình'], ['export', 'Xuất video']];
+    const steps = L.map(([id, label], i) => ({ id, n: i + 1, label, detail: '', reason: id === 'edit' ? '' : (i < 4 ? 'Dự án này được nhập từ bản dựng trước, chưa có dữ liệu cho bước này.' : 'Bước này chưa được xây dựng.'),
+      state: id === 'edit' ? 'current' : i < 4 ? 'no_data' : 'not_built' }));
+    return { project: pid, title: pid === 'empty-demo' ? 'Dự án trống (mock)' : S.sb.title, painting: { title: S.sb.title, artist: 'Jan van Eyck', year: '1434' }, stage: 'storyboard', imported: true, protected: false, artwork_key: null, current: 'edit', steps, outputs: [] };
+  },
+  async pipelineTemplate() { return this.pipeline('mock'); },
+  async deleteProject() { throw new ApiError(403, { detail: 'Chế độ mock không xóa được dự án.' }, 'delete'); },
   async project(pid) { await init(); await delay(); return projectBody(); },
   async save(pid, storyboard, base_rev) {
     await init(); await delay(120);

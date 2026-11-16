@@ -6,7 +6,9 @@ import { timeToX, xToTime, wordIndexAt, clamp, shotIndexAt } from './logic.js';
 import * as E from './edit.js';
 import { toggleLock } from './actions.js';
 
-const wrap = $('#timeline'), cv = $('#tl-canvas');
+// DOM is looked up when the view is mounted (initTimeline), never at import time: the module outlives the view.
+let root = null, scope = null, alive = false;
+let wrap, cv;
 const R = { ruler: 20, chap: 18, shot: 58, lane: 15, lanes: 3, words: 16, wave: 40, mini: 22, gap: 3 };
 R.ovH = R.lane * R.lanes + 2;
 const Y = {};
@@ -28,7 +30,7 @@ const dur = () => Math.max(1, ctx.duration());
 const minPps = () => W / dur();
 const clampView = () => { view.pps = clamp(view.pps, minPps(), 500); view.t0 = clamp(view.t0, 0, Math.max(0, dur() - W / view.pps)); };
 const X = (t) => timeToX(t, view);
-export const requestDraw = () => { if (!drawQueued) { drawQueued = true; requestAnimationFrame(draw); } };
+export const requestDraw = () => { if (alive && !drawQueued) { drawQueued = true; requestAnimationFrame(draw); } };
 
 function resize() {
   const r = wrap.getBoundingClientRect();
@@ -230,81 +232,89 @@ function zoomAt(factor, ax) {
 
 let drag = null;
 function pos(e) { const r = cv.getBoundingClientRect(); return [e.clientX - r.left, e.clientY - r.top]; }
-cv.addEventListener('pointerdown', (e) => {
-  if (!ctx.store.draft || e.button !== 0) return;
-  const [x, y] = pos(e);
-  const b = band(y), st = ctx.store, shots = st.draft.shots;
-  cv.setPointerCapture(e.pointerId);
-  if (b === 'mini') {
-    const mk = (W - 8) / dur();
-    const center = (x - 4) / mk; view.t0 = center - W / view.pps / 2; clampView(); requestDraw();
-    drag = { kind: 'mini' }; return;
-  }
-  if (b === 'shot') {
-    const k = hitBoundary(x);
-    if (k > 0) { drag = { kind: 'boundary', idx: k, id: shots[k].id }; st.select(shots[k].id); return; }
-    const s = shots[shotIndexAt(shots, xToTime(x, view))];
-    st.select(s.id); seek(xToTime(x, view)); drag = { kind: 'scrub' }; return;
-  }
-  if (b === 'ov') {
-    const hit = hitOverlay(x, y);
-    if (hit) {
-      st.select(hit.shot.id, hit.ov.id); bus.emit('tab', 'overlay');
-      const edge = overlayEdge(x, hit);
-      if (edge) { drag = { kind: 'ovedge', id: hit.ov.id, shotId: hit.shot.id, edge }; return; }
-      drag = { kind: 'overlay', id: hit.ov.id, shotId: hit.shot.id, off: xToTime(x, view) - hit.ov._t0, x0: x, moved: false }; return;
+function installCanvas() {
+  cv.addEventListener('pointerdown', (e) => {
+    if (!ctx.store.draft || e.button !== 0) return;
+    const [x, y] = pos(e);
+    const b = band(y), st = ctx.store, shots = st.draft.shots;
+    cv.setPointerCapture(e.pointerId);
+    if (b === 'mini') {
+      const mk = (W - 8) / dur();
+      const center = (x - 4) / mk; view.t0 = center - W / view.pps / 2; clampView(); requestDraw();
+      drag = { kind: 'mini' }; return;
     }
-  }
-  seek(xToTime(x, view)); drag = { kind: 'scrub' };
-  const s = shots[shotIndexAt(shots, ctx.t)]; if (s && st.sel.shot !== s.id) st.select(s.id);
-});
-cv.addEventListener('pointermove', (e) => {
-  if (!ctx.store.draft) return;
-  const [x, y] = pos(e);
-  if (!drag) {
-    const b = band(y);
-    const oh = b === 'ov' ? hitOverlay(x, y) : null;
-    cv.style.cursor = b === 'shot' && hitBoundary(x) > 0 ? 'ew-resize' : oh ? (overlayEdge(x, oh) ? 'ew-resize' : 'grab') : 'default';
-    return;
-  }
-  const st = ctx.store, words = ctx.words();
-  if (drag.kind === 'mini') { const mk = (W - 8) / dur(); view.t0 = (x - 4) / mk - W / view.pps / 2; clampView(); requestDraw(); }
-  else if (drag.kind === 'scrub') { seek(xToTime(clamp(x, 0, W), view)); const s = st.draft.shots[shotIndexAt(st.draft.shots, ctx.t)]; if (s && st.sel.shot !== s.id) st.select(s.id); }
-  else if (drag.kind === 'boundary') {
-    const t = xToTime(x, view);
-    st.commit('Kéo ranh giới shot', (d) => E.moveBoundary(d, d.shots.findIndex((s) => s.id === drag.id), t, words, e.altKey), { coalesce: 'bd:' + drag.id });
-    guide = st.shotById(drag.id)?._t0 ?? null; requestDraw();
-  } else if (drag.kind === 'ovedge') {
-    const t = xToTime(x, view);
-    E.scope.shot = drag.shotId;
-    st.commit('Kéo cạnh lớp phủ', (d) => { const f = E.findOverlay(d, drag.id); if (f) E.resizeOverlay(d, f.shot, f.ov, drag.edge, t, words, e.altKey); }, { coalesce: 'oe:' + drag.shotId + drag.id });
-    guide = drag.edge === 'l' ? st.overlay?._t0 ?? null : st.overlay?._t1 ?? null; requestDraw();
-  } else if (drag.kind === 'overlay') {
-    if (!drag.moved && Math.abs(x - drag.x0) < 3) return;
-    drag.moved = true; cv.style.cursor = 'grabbing';
-    const t = xToTime(x, view) - drag.off;
-    E.scope.shot = drag.shotId;
-    st.commit('Kéo lớp phủ', (d) => { const f = E.findOverlay(d, drag.id); if (f) E.moveOverlay(d, f.shot, f.ov, t, words, e.altKey); }, { coalesce: 'ov:' + drag.shotId + drag.id });
-  }
-});
-const end = () => { drag = null; guide = null; requestDraw(); };
-cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
-cv.addEventListener('wheel', (e) => {
-  e.preventDefault();
-  const [x] = pos(e);
-  if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.0025), x);
-  else { view.t0 += (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) ? (e.deltaX || e.deltaY) : e.deltaY) / view.pps; clampView(); requestDraw(); }
-}, { passive: false });
-cv.addEventListener('dblclick', (e) => { const [x, y] = pos(e); if (band(y) === 'shot') bus.emit('tab', 'shot'); });
+    if (b === 'shot') {
+      const k = hitBoundary(x);
+      if (k > 0) { drag = { kind: 'boundary', idx: k, id: shots[k].id }; st.select(shots[k].id); return; }
+      const s = shots[shotIndexAt(shots, xToTime(x, view))];
+      st.select(s.id); seek(xToTime(x, view)); drag = { kind: 'scrub' }; return;
+    }
+    if (b === 'ov') {
+      const hit = hitOverlay(x, y);
+      if (hit) {
+        st.select(hit.shot.id, hit.ov.id); bus.emit('tab', 'overlay');
+        const edge = overlayEdge(x, hit);
+        if (edge) { drag = { kind: 'ovedge', id: hit.ov.id, shotId: hit.shot.id, edge }; return; }
+        drag = { kind: 'overlay', id: hit.ov.id, shotId: hit.shot.id, off: xToTime(x, view) - hit.ov._t0, x0: x, moved: false }; return;
+      }
+    }
+    seek(xToTime(x, view)); drag = { kind: 'scrub' };
+    const s = shots[shotIndexAt(shots, ctx.t)]; if (s && st.sel.shot !== s.id) st.select(s.id);
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!ctx.store.draft) return;
+    const [x, y] = pos(e);
+    if (!drag) {
+      const b = band(y);
+      const oh = b === 'ov' ? hitOverlay(x, y) : null;
+      cv.style.cursor = b === 'shot' && hitBoundary(x) > 0 ? 'ew-resize' : oh ? (overlayEdge(x, oh) ? 'ew-resize' : 'grab') : 'default';
+      return;
+    }
+    const st = ctx.store, words = ctx.words();
+    if (drag.kind === 'mini') { const mk = (W - 8) / dur(); view.t0 = (x - 4) / mk - W / view.pps / 2; clampView(); requestDraw(); }
+    else if (drag.kind === 'scrub') { seek(xToTime(clamp(x, 0, W), view)); const s = st.draft.shots[shotIndexAt(st.draft.shots, ctx.t)]; if (s && st.sel.shot !== s.id) st.select(s.id); }
+    else if (drag.kind === 'boundary') {
+      const t = xToTime(x, view);
+      st.commit('Kéo ranh giới shot', (d) => E.moveBoundary(d, d.shots.findIndex((s) => s.id === drag.id), t, words, e.altKey), { coalesce: 'bd:' + drag.id });
+      guide = st.shotById(drag.id)?._t0 ?? null; requestDraw();
+    } else if (drag.kind === 'ovedge') {
+      const t = xToTime(x, view);
+      E.scope.shot = drag.shotId;
+      st.commit('Kéo cạnh lớp phủ', (d) => { const f = E.findOverlay(d, drag.id); if (f) E.resizeOverlay(d, f.shot, f.ov, drag.edge, t, words, e.altKey); }, { coalesce: 'oe:' + drag.shotId + drag.id });
+      guide = drag.edge === 'l' ? st.overlay?._t0 ?? null : st.overlay?._t1 ?? null; requestDraw();
+    } else if (drag.kind === 'overlay') {
+      if (!drag.moved && Math.abs(x - drag.x0) < 3) return;
+      drag.moved = true; cv.style.cursor = 'grabbing';
+      const t = xToTime(x, view) - drag.off;
+      E.scope.shot = drag.shotId;
+      st.commit('Kéo lớp phủ', (d) => { const f = E.findOverlay(d, drag.id); if (f) E.moveOverlay(d, f.shot, f.ov, t, words, e.altKey); }, { coalesce: 'ov:' + drag.shotId + drag.id });
+    }
+  });
+  const end = () => { drag = null; guide = null; requestDraw(); };
+  cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+  cv.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const [x] = pos(e);
+    if (e.ctrlKey || e.metaKey) zoomAt(Math.exp(-e.deltaY * 0.0025), x);
+    else { view.t0 += (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) ? (e.deltaX || e.deltaY) : e.deltaY) / view.pps; clampView(); requestDraw(); }
+  }, { passive: false });
+  cv.addEventListener('dblclick', (e) => { const [x, y] = pos(e); if (band(y) === 'shot') bus.emit('tab', 'shot'); });
 
-export function initTimeline() {
+}
+
+export function initTimeline(viewRoot, viewScope) {
+  root = viewRoot; scope = viewScope; alive = true;
+  wrap = $('#timeline', root); cv = $('#tl-canvas', root);
+  drag = null; hover = null; guide = null; waves = null; drawQueued = false; laneCache = { v: -1, map: new Map() }; view.t0 = 0; view.pps = 10;
+  scope.add(() => { alive = false; });
+  installCanvas();
   window.__tl = { view, Y, R, X, drawNow: () => draw(), get W() { return W; } };
-  new ResizeObserver(resize).observe(wrap);
+  const ro = new ResizeObserver(resize); ro.observe(wrap); scope.add(() => ro.disconnect());
   ctx.store.on((kind) => { if (kind === 'load') { view.t0 = 0; view.pps = minPps(); clampView(); loadWave(); } requestDraw(); });
   bus.on('time', requestDraw); bus.on('tick', () => { ensureVisible(ctx.t); requestDraw(); });
-  $('#tl-zin').onclick = () => zoomAt(1.6, W / 2);
-  $('#tl-zout').onclick = () => zoomAt(1 / 1.6, W / 2);
-  $('#tl-fit').onclick = () => { view.pps = minPps(); view.t0 = 0; clampView(); requestDraw(); };
+  $('#tl-zin', root).onclick = () => zoomAt(1.6, W / 2);
+  $('#tl-zout', root).onclick = () => zoomAt(1 / 1.6, W / 2);
+  $('#tl-fit', root).onclick = () => { view.pps = minPps(); view.t0 = 0; clampView(); requestDraw(); };
   resize();
 }
 export function fitView() { view.pps = minPps(); view.t0 = 0; clampView(); requestDraw(); }
