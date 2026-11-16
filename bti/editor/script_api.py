@@ -75,7 +75,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             raise ApiError(404, "unknown model")
         pub = models_mod.public(spec)
         if not pub["enabled"]:
-            raise ApiError(409, f"the key {pub['missing_env']} is not set for this model", missing_env=pub["missing_env"])
+            raise ApiError(409, pub["message"] or "this model is not available", missing_env=pub["missing_env"])
         return spec
 
     def alternatives() -> list[str]:

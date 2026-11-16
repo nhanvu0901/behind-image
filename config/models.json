@@ -1,7 +1,6 @@
 [
- {"id": "gemini-4-argon", "label": "Gemini 4 Argon", "provider": "gemini",
-  "model": "gemini-4-argon", "key_env": "GEMINI_API_KEY", "default": true, "timeout": 300},
- {"id": "openrouter-claude", "label": "Claude (OpenRouter)", "provider": "openrouter",
+ {"id": "agy", "label": "Antigravity CLI", "provider": "antigravity", "default": true, "timeout": 900},
+ {"id": "openrouter-claude", "label": "Claude qua OpenRouter (trả tiền theo token)", "provider": "openrouter",
   "model": "anthropic/claude-sonnet-4.5", "key_env": "OPENROUTER_API_KEY", "timeout": 300},
  {"id": "mock", "label": "Mock (thử, không gọi mạng)", "provider": "mock",
   "model": "mock", "key_env": null}

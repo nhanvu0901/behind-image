@@ -12,7 +12,7 @@ sys.path.insert(0, str(HERE))
 
 REAL = REPO / "projects" / "arnolfini-from-books"
 
-from bti.script import env as env_mod  # noqa: E402
+from bti.script import env as env_mod, models as models_mod  # noqa: E402
 from bti.script.providers import mock as mock_mod, set_transport  # noqa: E402
 from script_helpers import make_project  # noqa: E402
 
@@ -21,6 +21,8 @@ from script_helpers import make_project  # noqa: E402
 def _isolation(tmp_path, monkeypatch):
     """No real .env, no real keys, no network, default models file."""
     monkeypatch.setenv("BTI_ENV_FILE", str(tmp_path / "no.env"))
+    monkeypatch.setenv("BTI_AGY_BIN", "")                      # the real agy is never reached from tests
+    models_mod.reset_cache()
     for k in ("GEMINI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(k, raising=False)
     env_mod._cache.clear()

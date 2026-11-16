@@ -7,6 +7,8 @@ from pathlib import Path
 
 from .brief import REPO_ROOT
 
+# The .env may be shared with other projects (the comic pipeline). Only these names are ever read from it.
+ALLOWED = ("OPENROUTER_API_KEY", "YDC_API_KEY", "GEMINI_API_KEY")
 _cache: dict[str, tuple[float, dict]] = {}
 
 
@@ -14,7 +16,8 @@ def env_path() -> Path:
     return Path(os.environ.get("BTI_ENV_FILE") or REPO_ROOT / ".env")
 
 
-def parse_env(text: str) -> dict[str, str]:
+def parse_env(text: str, only: tuple[str, ...] | None = ALLOWED) -> dict[str, str]:
+    """KEY=VALUE lines; with `only` (the default) every other line is ignored, not even kept in memory."""
     out = {}
     for line in text.splitlines():
         line = line.strip()
@@ -28,7 +31,7 @@ def parse_env(text: str) -> dict[str, str]:
             v = v[1:-1]
         elif " #" in v:
             v = v.split(" #", 1)[0].rstrip()
-        if k:
+        if k and (only is None or k in only):
             out[k] = v
     return out
 

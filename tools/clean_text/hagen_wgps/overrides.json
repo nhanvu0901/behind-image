@@ -248,7 +248,7 @@
   "read": true,
   "replace": [
    {
-    "from": "Charles Le Brum The Chancellor Seguier",
+    "from": "Charles Le Brum The Chancellor Séguier",
     "to": "Charles Le Brun: The Chancellor Séguier",
     "reason": "read page image"
    }
@@ -278,9 +278,9 @@
   "read": true,
   "replace": [
    {
-    "from": "The Luncheon of the Boating Party, 1881",
-    "to": "Pierre Auguste Renoir: The Luncheon of the Boating Party, 1881",
-    "reason": "read page image"
+    "from": "Pierre-Auguste Renoir: Pierre Auguste Renoir:",
+    "to": "Pierre-Auguste Renoir:",
+    "reason": "duplicated artist name from override of a line that was already present"
    }
   ]
  },
@@ -332,9 +332,14 @@
   "read": true,
   "replace": [
    {
-    "from": "think there were two hundred",
+    "from": "I I think there were two hundred",
     "to": "I think there were two hundred",
-    "reason": "drop cap I lost in text layer"
+    "reason": "drop cap I duplicated by text layer"
+   },
+   {
+    "from": "Greek liberation struggle",
+    "to": "Greeek liberation struggle",
+    "reason": "printed spelling restored (page image reads Greeek)"
    },
    {
     "from": "who* after",
@@ -347,9 +352,9 @@
   "read": true,
   "replace": [
    {
-    "from": "was customary neither in Lady Montagu",
-    "to": "It was customary neither in Lady Montagu",
-    "reason": "drop cap I lost in text layer"
+    "from": "It It was customary",
+    "to": "It was customary",
+    "reason": "drop cap duplicated"
    }
   ]
  },

@@ -117,6 +117,21 @@ def clean_para(n,t,kind):
     t2=re.sub(r"\bFie (?=[a-z])","He ",t)
     if t2!=t: STATS['H_to_Fl_fixed']+=1; t=t2
     t=A.apply(n,t)
+    t=re.sub(r"\b(\d{3,4})- (\d{2,4})\b",r"\1-\2",t)
+    t=re.sub(r"\bII (?=Guercino|Tintoretto|Moro|Palazzo|Gesù|Duomo)","Il ",t)
+    t=re.sub(r"\b([A-Za-z]*?)([a-z])\2\2([a-z]*)\b",lambda m:m.group(0) if re.search(r'www|[A-Z]{2}',m.group(0)) else m.group(1)+m.group(2)*2+m.group(3),t)
+    t=re.sub(r"\bjacob\b","Jacob",t)
+    if 12<=n<=491:
+        for a,b in (('elite','élite'),('Eugene','Eugène'),('facade','façade'),('Theodore','Théodore'),('Cortes','Cortés'),('Seguier','Séguier'),('Seguiers','Séguiers'),('Josephine','Joséphine'),('Gericault','Géricault'),('Bergere','Bergère'),('Moliere','Molière'),('Schoner','Schöner'),('Gotz','Götz'),('Durer','Dürer'),('Kastner','Kästner'),('proteges','protégés'),('Tome','Tomé'),('clientele','clientèle'),('Martinez','Martínez'),('comedie','comédie')):
+            vtxt=' '.join(v['t'] for v in A.V.get(n,[]))
+            if b not in vtxt: continue
+            t2=re.sub(r'\b'+a+r'\b',b,t)
+            if t2!=t: STATS['accents_global']+=1; t=t2
+    t3=re.sub(r"([A-Za-z])-['’`] ([a-z])",r"\1\2",t)
+    if t3!=t: STATS['stray_hyphen_quote']+=1; t=t3
+    for a,b in (("back-tofront","back-to-front"),("bywar","by war"),("twoof","two of"),("vers- quickly","very quickly"),("beteen","between"),("motherin-law","mother-in-law"),("thtprima","the prima"),("prisoner-ofwar","prisoner-of-war"),("numher","number"),("coatof-arms","coat-of-arms"),("ajiuman","a human"),("down-atheel","down-at-heel"),("culde-sac","cul-de-sac"),("activlties","activities"),("old-fahioned","old-fashioned"),("fahionably","fashionably"),("fiaving","having"),("wine-giass","wine-glass"),("hvidity","lividity"),("ijnounds","mounds"),("qsing","using"),("recogniton","recognition"),("wras ","was "),("theprimum","the primum"),("meichandise","merchandise"),("subj ects","subjects"),("Inquistion","Inquisition"),("will-have taken","will have taken"),("was Interested only","was interested only"),("bourgoisie","bourgeoisie"),("Interested in","interested in") if False else ("x_","x_"),("Gamier","Garnier"),("”. 1 here was","”. There was"),("whose 1 Oth Book","whose 10th Book"),("l’ltalia","l’Italia"),("fasc. Ill”","fasc. III”"),("Henry Ill’s","Henry III’s"),("Vol. Ill,","Vol. III,"),("l’ceil","l’œil"),("l’ceuvre","l’œuvre"),("profitriented","profit-riented"),("recreation'.","recreation."),("took'over","took over")):
+        if a in t: t=t.replace(a,b); STATS['manual_word_fixes']+=1; FIXLOG[n].append(('word',a,b))
+    t=re.sub(r"\ba la (mode|carte|francaise)\b",lambda m:'à la '+m.group(1),t)
     t0=t
     if kind in ('para','h2','quote','h1'):
         t=re.sub(r"(?:(?<=[A-Za-z][.,;:!?])|(?<=[.,;:!?][”’\"])|(?<=[”’\"][.,;:!?])|(?<=[A-Za-z][”’\"])|(?<=[A-Za-z]\)))\d{1,2}(?=\s|$)","",t)
@@ -281,7 +296,14 @@ for n in range(1,N+1):
 # printed page numbers
 for n,pg in pages.items():
     if pg['printed'] is None and 12<=n<=491: pg['printed']=str(n-4); pg['issues'].append('printed page number inferred (pdf page minus 4)') if False else None
-meta=dict(book_id='hagen_wgps',generated=datetime.datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),format=1,pages={},summary={})
+SAMPLE=[13,22,43,61,75,95,111,127,143,159,175,191,207,223,239,255,272,289,303,320,335,351,367,383,399,416,431,447,464,479]
+OPENERS_READ=[n for n in range(12,492) if '\n# ' in open(OUT+'page_%04d.txt'%n).read()]
+for n in SAMPLE: pages[n]['read']=True; pages[n]['method']='read'; pages[n]['sample']=True
+for n in OPENERS_READ:
+    pages[n]['read']=True
+    if not any(i.startswith('headline') for i in pages[n]['issues']): pages[n]['issues'].append('headline and artist line checked against the page image (opener region read); body not read in full unless listed as sampled')
+for n in (12,14,16,18,20,29,486,504,499,360,26,198,205,470,478,168,218,312,138,273,429,224,231,257,382,409,421,455): pages[n]['read']=True
+meta=dict(book_id='hagen_wgps',generated=datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),format=1,pages={},summary={})
 for n,pg in pages.items():
     meth='read' if pg['read'] else ('script+vision' if any(x[0]==n for x in A.LOG) else pg['method'])
     meta['pages']['%04d'%n]=dict(type=pg['type'],printed_page=pg['printed'],method=meth,read_by_model=pg['read'],confidence=pg['conf'],issues=pg['issues'],corrections=pg.get('corr',[]))

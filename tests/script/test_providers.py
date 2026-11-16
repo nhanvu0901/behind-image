@@ -21,16 +21,30 @@ def serve(handler):
 
 def test_env_parser_and_precedence(tmp_path, monkeypatch):
     f = tmp_path / "x.env"
-    f.write_text("# comment\nK1=abc\nexport K2 = \"quoted value\"\nK3='single'\nK4=val # trailing\nEMPTY=\n", encoding="utf-8")
-    assert env_mod.parse_env(f.read_text()) == {"K1": "abc", "K2": "quoted value", "K3": "single", "K4": "val", "EMPTY": ""}
+    f.write_text("# comment\nK1=abc\nexport OPENROUTER_API_KEY = \"quoted value\"\nYDC_API_KEY='single'\nGEMINI_API_KEY=val # trailing\nEMPTY=\n", encoding="utf-8")
+    assert env_mod.parse_env(f.read_text(), only=None) == {"K1": "abc", "OPENROUTER_API_KEY": "quoted value", "YDC_API_KEY": "single", "GEMINI_API_KEY": "val", "EMPTY": ""}
+    assert env_mod.parse_env(f.read_text()) == {"OPENROUTER_API_KEY": "quoted value", "YDC_API_KEY": "single", "GEMINI_API_KEY": "val"}
     monkeypatch.setenv("BTI_ENV_FILE", str(f))
     env_mod._cache.clear()
-    assert env_mod.get_key("K1") == "abc" and env_mod.get_key("EMPTY") is None and env_mod.get_key("NOPE") is None
-    monkeypatch.setenv("K1", "from-process")
-    assert env_mod.get_key("K1") == "from-process"                     # the process environment wins
+    assert env_mod.get_key("YDC_API_KEY") == "single" and env_mod.get_key("K1") is None and env_mod.get_key("NOPE") is None
+    monkeypatch.setenv("YDC_API_KEY", "from-process")
+    assert env_mod.get_key("YDC_API_KEY") == "from-process"            # the process environment wins
     import os
-    assert "K3" not in os.environ                                      # the loader never exports values
-    assert env_mod.redact("the key is from-process ok", "K1") == "the key is *** ok"
+    assert "GEMINI_API_KEY" not in os.environ                          # the loader never exports values
+    assert env_mod.redact("the key is from-process ok", "YDC_API_KEY") == "the key is *** ok"
+
+
+def test_env_loader_ignores_every_line_that_is_not_ours(tmp_path, monkeypatch):
+    f = tmp_path / "comic.env"
+    f.write_text("FFMPEG_PATH=/opt/ffmpeg\nTTS_PROVIDER=chatterbox\nMODEL_LIST=a,b,c\nOPENROUTER_API_KEY=sk-or-ONLYTHIS\nOTHER_SECRET=zzz\n", encoding="utf-8")
+    monkeypatch.setenv("BTI_ENV_FILE", str(f))
+    env_mod._cache.clear()
+    import os
+    before = dict(os.environ)
+    assert env_mod._dotenv() == {"OPENROUTER_API_KEY": "sk-or-ONLYTHIS"}      # nothing else is even held in memory
+    for name in ("FFMPEG_PATH", "TTS_PROVIDER", "MODEL_LIST", "OTHER_SECRET"):
+        assert env_mod.get_key(name) is None
+    assert dict(os.environ) == before                                          # and nothing was exported
 
 
 def test_models_listing_never_shows_keys(monkeypatch, tmp_path):
@@ -49,8 +63,9 @@ def test_models_listing_never_shows_keys(monkeypatch, tmp_path):
 
 def test_repo_models_file_is_valid():
     ms = models_mod.load_models()
-    assert {m["provider"] for m in ms} >= {"gemini", "openrouter", "mock"}
-    assert sum(1 for m in ms if m.get("default")) == 1
+    raw = models_mod.load_raw()
+    assert {m["provider"] for m in raw} == {"antigravity", "openrouter", "mock"}                # no Gemini API entry
+    assert [m["id"] for m in raw if m.get("default")] == ["agy"] and "trả tiền" in raw[1]["label"]
     assert all("key" not in m for m in ms)                              # only the NAME of the variable is stored
 
 

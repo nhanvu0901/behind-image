@@ -11,7 +11,7 @@ REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
 
 from bti.editor.app import create_app  # noqa: E402
-from bti.script import env as env_mod, store  # noqa: E402
+from bti.script import env as env_mod, models as models_mod, store  # noqa: E402
 from bti.script.providers import mock as mock_mod, set_transport  # noqa: E402
 
 REAL = REPO / "projects" / "arnolfini-from-books"
@@ -22,6 +22,8 @@ P = "/api/projects/arn"
 @pytest.fixture(autouse=True)
 def _isolation(tmp_path, monkeypatch):
     monkeypatch.setenv("BTI_ENV_FILE", str(tmp_path / "no.env"))
+    monkeypatch.setenv("BTI_AGY_BIN", "")
+    models_mod.reset_cache()
     for k in ("GEMINI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(k, raising=False)
     env_mod._cache.clear()
@@ -70,13 +72,15 @@ def narration_ready(c, notes=""):
 
 def test_models_and_missing_key(c, monkeypatch):
     ms = {m["id"]: m for m in c.get("/api/models").json()}
-    assert ms["mock"]["enabled"] and not ms["gemini-4-argon"]["enabled"] and ms["gemini-4-argon"]["missing_env"] == "GEMINI_API_KEY"
-    r = c.post(P + "/outline/generate", json={"model": "gemini-4-argon"})
-    assert r.status_code == 409 and r.json()["missing_env"] == "GEMINI_API_KEY"
+    assert ms["mock"]["enabled"] and ms["agy"]["enabled"] is False and "agy" in ms["agy"]["message"]     # agy absent in tests
+    assert not ms["openrouter-claude"]["enabled"] and ms["openrouter-claude"]["missing_env"] == "OPENROUTER_API_KEY" and ms["openrouter-claude"]["paid"]
+    assert "gemini-4-argon" not in ms
+    r = c.post(P + "/outline/generate", json={"model": "openrouter-claude"})
+    assert r.status_code == 409 and r.json()["missing_env"] == "OPENROUTER_API_KEY"
     assert c.post(P + "/outline/generate", json={"model": "nope"}).status_code == 404
-    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSECRET1234567890")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-or-SECRET1234567890")
     txt = c.get("/api/models").text
-    assert "AIzaSECRET" not in txt and {m["id"]: m for m in c.get("/api/models").json()}["gemini-4-argon"]["enabled"]
+    assert "sk-or-SECRET" not in txt and {m["id"]: m for m in c.get("/api/models").json()}["openrouter-claude"]["enabled"]
 
 
 def test_brief(c):
@@ -269,6 +273,6 @@ def test_ids_and_paths_are_validated(c):
 
 
 def test_no_key_value_is_ever_in_a_response(c, monkeypatch):
-    monkeypatch.setenv("GEMINI_API_KEY", "AIzaTOPSECRET0000000000")
+    monkeypatch.setenv("OPENROUTER_API_KEY", "AIzaTOPSECRET0000000000")
     for url in ("/api/models", P + "/brief", P + "/outline", P + "/narration"):
         assert "AIzaTOPSECRET" not in c.get(url).text

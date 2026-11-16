@@ -29,7 +29,7 @@ Bấm vào mã dữ kiện (`f03`) hoặc mã đoạn nguồn (`PAY-07`) ở c�
 
 | Nút | Việc làm |
 |---|---|
-| Ô dự án, ô mô hình | Chọn dự án. Chọn mô hình dùng cho hai nút "Lập dàn ý" và "Viết lời dẫn". Mô hình thiếu khóa vẫn hiện nhưng ghi "(thiếu TÊN_BIẾN)". |
+| Ô dự án, ô mô hình | Chọn dự án. Chọn mô hình dùng cho hai nút "Lập dàn ý" và "Viết lời dẫn". Mô hình chưa dùng được vẫn hiện, ghi "(không dùng được)", chọn vào sẽ có lời giải thích. |
 | **Lập dàn ý** | Mô hình viết dàn ý. Có ô ghi chú để dặn thêm. Dàn ý cũ được giữ ở `outline.prev.json`. |
 | **Viết lời dẫn** | Mô hình viết lời dẫn từng chương, cần dàn ý đã duyệt. Mỗi chương xong là được lưu ngay. |
 | **Sao chép prompt** | Mở hộp chứa prompt đầy đủ (dàn ý, hoặc lời dẫn cho tất cả hoặc một chương) trong ô văn bản luôn bôi đen được, kèm nút Sao chép. Nếu trình duyệt chặn bộ nhớ tạm, bấm Ctrl+C (Cmd+C) trên phần đã bôi đen. |
@@ -43,7 +43,7 @@ Bấm vào mã dữ kiện (`f03`) hoặc mã đoạn nguồn (`PAY-07`) ở c�
 
 ## 2. Đường 1: dùng nút bấm
 
-1. Chọn mô hình. Muốn thử mà chưa có khóa: chọn **Mock** (câu trả lời mẫu, không gọi mạng, nội dung không có giá trị thật).
+1. Chọn mô hình (mặc định là Antigravity CLI, Gemini 3.8 Flash High). Muốn thử mà không tốn hạn mức: chọn **Mock** (câu trả lời mẫu, không gọi mạng, nội dung không có giá trị thật).
 2. **Lập dàn ý**. Đọc, sửa, đặc biệt: câu hỏi chính, chọn câu mở, bảng dữ kiện (kiểm tra các mã nguồn), ngân sách từ của chương. Chỗ nào các sách mâu thuẫn, mô hình phải ghi ở cột "Mâu thuẫn"; bạn là người quyết định, hệ thống không tự chọn.
 3. Lưu, **Duyệt dàn ý**.
 4. **Viết lời dẫn**. Thanh dưới hiện từng chương: xanh dương đang chạy, xanh lá xong, đỏ lỗi. Chương nào không qua kiểm tra (có ký hiệu trong lời đọc, dòng trống, thiếu chương) được mô hình viết lại một lần, kèm thông báo lỗi của bộ kiểm tra. Nếu vẫn lỗi, tác vụ dừng, các chương đã xong được giữ, câu trả lời lỗi nằm ở ô "Dán".
@@ -62,7 +62,7 @@ Nếu mô hình hết thời gian hoặc bị giới hạn lượt gọi, hộp 
 
 ## 3. Đường 2: sao chép và dán
 
-1. **Sao chép prompt**, thẻ "Prompt dàn ý". Dán vào Gemini (nên bật tìm kiếm có căn cứ nếu muốn, nhưng prompt đã bảo mô hình chỉ dùng các đoạn sách).
+1. **Sao chép prompt**, thẻ "Prompt dàn ý". Dán vào Gemini hoặc chat bất kỳ (prompt đã bảo mô hình chỉ dùng các đoạn sách).
 2. Dán nguyên câu trả lời vào **Dán**, thẻ "Dán dàn ý", bấm "Phân tích và lưu". Không cần cắt bỏ phần mở đầu, danh sách câu mở hay bảng kiểm tra: bộ đọc lấy phần sau dòng `OUTLINE` cuối cùng.
 3. Sửa, duyệt dàn ý như ở trên.
 4. **Sao chép prompt**, thẻ "Prompt lời dẫn" (tất cả chương, hoặc chọn một chương). Dán vào Gemini, lấy câu trả lời, dán vào thẻ "Dán lời dẫn". Hộp có ô "Chỉ thay các chương có trong bản dán" để thay một chương mà giữ các chương khác.
@@ -74,26 +74,36 @@ Nếu mô hình hết thời gian hoặc bị giới hạn lượt gọi, hộp 
 - Lời dẫn: lấy phần sau dòng `FINAL SCRIPT` cuối cùng (không có thì lấy hết). Bỏ: hàng rào mã, danh sách câu mở, bảng, dòng đếm từ, các khối "Fact trace", "Audit", "Notes", "Sources"... (một khối như vậy sau lời dẫn kết thúc phần đọc). Dòng `## c02 TÊN CHƯƠNG` mở một chương, khớp với dàn ý theo mã, rồi theo tên (và theo thứ tự nếu bản dán không ghi mã). Mỗi đoạn là một dòng (beat). Dòng `>> facts: f03, f07 | show: cái gương; chữ phía trên` sau đoạn là thông tin phụ, không bắt buộc. Mã dữ kiện lạ được báo nhưng không làm hỏng việc đọc.
 - Dàn ý: lấy phần sau dòng `OUTLINE` cuối cùng. Các nhãn: `THESIS:`, `HOOKS` (`h1: ...`), `HOOK CHOICE:`, `FACTS` (mỗi dòng `f01 | established | PAY-07, HOD-02 | câu khẳng định | conflict: ...`), `CHAPTERS` (mỗi chương `## c01 TÊN` rồi `ROLE:`, `CARD:`, `BUDGET:`, `PURPOSE:`, `FACTS:`, `SHOW:`), `TARGET WORDS:`.
 
-## 4. Mô hình và khóa
+## 4. Mô hình: Antigravity CLI là mặc định
 
-Danh sách mô hình nằm ở `config/models.json`. Khóa **không** nằm trong tệp đó, chỉ có tên biến môi trường.
+Mặc định, máy chủ chạy **Antigravity CLI** (`agy`) ở chế độ không giao diện, theo gói đăng ký của bạn. **Không cần khóa API.**
 
-| Mô hình | Biến cần đặt |
+**Chuẩn bị một lần:** chạy lệnh `agy` trong Terminal và đăng nhập Google. Sau đó tải lại trang. Nếu `agy` chưa cài hoặc chưa đăng nhập, ô mô hình ghi "(không dùng được)" kèm lời nhắc chạy `agy` một lần trong Terminal.
+
+**Danh sách mô hình** lấy từ lệnh `agy models` (nhớ trong khoảng 10 phút), hiện thành `Antigravity CLI: <tên>`, mô hình mặc định của CLI đứng đầu. Hiện có: Gemini 3.8 Flash (High, Medium, Low), Claude Sonnet 4.6, Claude Opus 4.6, GPT-OSS 120B. Mỗi lần chạy tốn hạn mức của gói đăng ký.
+
+**Cách chạy (để bạn yên tâm):** mỗi lần gọi là một tiến trình `agy -p "<prompt>" --output-format json --sandbox --disable-slash-commands --settings {...}`:
+- chạy trong một thư mục tạm **trống**, nằm ngoài dự án, xóa sau khi xong, nên `agy` không thấy và không đụng được tệp nào của dự án;
+- chế độ quyền nghiêm nhất (`toolPermission: strict`, không ra ngoài thư mục làm việc, sandbox terminal), và không bao giờ dùng `--dangerously-skip-permissions`;
+- prompt dặn trả lời thẳng bằng chữ, không dùng công cụ, viết tiếng Anh dù có quy tắc nào khác (ví dụ "luôn trả lời tiếng Việt") và đúng bố cục;
+- kiểm tra kết quả: trạng thái phải là SUCCESS, đúng 1 lượt, không có thông báo bị từ chối công cụ, thư mục tạm vẫn trống. Có dấu hiệu dùng công cụ thì **bỏ kết quả** và báo lỗi.
+- mỗi lúc chỉ một lần gọi `agy`. Nút Hủy kết thúc cả nhóm tiến trình. Giới hạn mỗi lần gọi 15 phút (`timeout` trong `config/models.json`), mỗi tác vụ tối đa 30 phút.
+
+Lỗi thường gặp (thông báo hiện tiếng Việt): chưa đăng nhập (chạy `agy` một lần trong Terminal), hết hạn mức của gói (đợi hoặc đổi mô hình), tên mô hình lạ (tải lại trang), quá thời gian.
+
+**Hệ thống không bao giờ tự chuyển sang API trả tiền.** Muốn dùng thì chọn tay:
+
+| Mô hình | Cần |
 |---|---|
-| Gemini (`gemini-4-argon`) | `GEMINI_API_KEY` |
-| Claude qua OpenRouter (`openrouter-claude`) | `OPENROUTER_API_KEY` |
+| Antigravity CLI | `agy` đã cài và đăng nhập |
+| Claude qua OpenRouter (**trả tiền theo token**) | biến `OPENROUTER_API_KEY` |
 | Mock | không cần |
 
-Cách đặt khóa: sao chép `.env.example` thành `.env` ở thư mục gốc của dự án này (không phải của dự án truyện tranh), điền khóa vào đúng dòng. Hoặc đặt biến trong môi trường trước khi chạy máy chủ (`export GEMINI_API_KEY=...`). Tệp `.env` nằm trong `.gitignore`. Khóa không bao giờ xuất hiện trong nhật ký hay trong câu trả lời của máy chủ, chỉ có tên biến bị thiếu được hiển thị. Sau khi sửa `.env`, tải lại trang (không cần khởi động lại máy chủ).
+Mã của nhà cung cấp Gemini API vẫn còn trong dự án nhưng không có trong danh sách. Muốn dùng, thêm lại một dòng `provider: "gemini"` với `key_env: "GEMINI_API_KEY"` vào `config/models.json`.
 
-Thêm một mô hình: thêm một dòng vào `config/models.json`, ví dụ
+**Tệp `.env`** (có thể dùng chung với dự án truyện tranh): trang chỉ đọc đúng ba biến `OPENROUTER_API_KEY`, `YDC_API_KEY`, `GEMINI_API_KEY`. Mọi dòng khác (đường dẫn ffmpeg, TTS, danh sách mô hình...) bị bỏ qua và không được đưa vào tiến trình. Khóa không bao giờ xuất hiện trong nhật ký hay câu trả lời của máy chủ. Sửa `.env` thì chỉ cần tải lại trang.
 
-```json
-{"id": "gemini-flash", "label": "Gemini Flash", "provider": "gemini",
- "model": "tên-mô-hình-trên-API", "key_env": "GEMINI_API_KEY", "timeout": 300}
-```
-
-`provider` là `gemini`, `openrouter` hoặc `mock`. `model` là tên mô hình trên dịch vụ đó. `default: true` ở đúng một dòng để chọn sẵn. `timeout` là số giây tối đa cho mỗi lần gọi (mặc định 300). Mỗi tác vụ còn có giới hạn cứng 30 phút.
+Thêm một mô hình OpenRouter: thêm một dòng vào `config/models.json`, ví dụ `{"id": "or-x", "label": "X (trả tiền)", "provider": "openrouter", "model": "tên/trên-OpenRouter", "key_env": "OPENROUTER_API_KEY", "timeout": 300}`. Mô hình của Antigravity không cần thêm tay, chúng tự hiện từ `agy models`.
 
 ## 5. Ý nghĩa các thông báo kiểm tra
 
@@ -132,7 +142,7 @@ Thêm một mô hình: thêm một dòng vào `config/models.json`, ví dụ
 
 **Lưu ý khi đọc bản dán** (hiện sau khi dán thành công): "chương khớp theo vị trí", "chương xuất hiện hai lần", "mã dữ kiện lạ", "đoạn trước chương đầu bị bỏ", "dòng `>>` không có đoạn đi trước", "chương không có đoạn nào". Đều chỉ là lưu ý, văn bản đã được lưu.
 
-**Lỗi tác vụ mô hình**: `timeout` (không trả lời kịp, thử mô hình khác), `rate_limit` (hết lượt, thử mô hình khác), `auth` (khóa bị từ chối), `config` (chưa đặt khóa), `parse` / `validation` (câu trả lời không đọc được hoặc không qua kiểm tra, ngay cả sau một lần thử lại; câu trả lời được giữ ở ô Dán), `conflict` (dàn ý chưa duyệt).
+**Lỗi tác vụ mô hình**: `timeout` (không trả lời kịp, thử mô hình khác), `rate_limit` (hết hạn mức hoặc lượt, thử mô hình khác), `auth` (chưa đăng nhập `agy` hoặc khóa bị từ chối), `config` (chưa cài `agy`, chưa đặt khóa, hoặc tên mô hình lạ), `parse` / `validation` (câu trả lời không đọc được hoặc không qua kiểm tra, ngay cả sau một lần thử lại; câu trả lời được giữ ở ô Dán), `conflict` (dàn ý chưa duyệt).
 
 ## 6. Tệp được ghi
 

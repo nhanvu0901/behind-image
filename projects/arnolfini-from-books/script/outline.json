@@ -1,0 +1,526 @@
+{
+ "schema": "bti.outline/1",
+ "source": {
+  "kind": "model",
+  "model": "agy:gemini-3.8-flash-high",
+  "created_at": "2026-11-16T14:00:09-0400"
+ },
+ "thesis": "Does this enigmatic domestic interior record a living marriage ceremony staged to display merchant wealth, or is it a husband's sacred memorial to a wife who had already died?",
+ "hook_options": [
+  {
+   "id": "h1",
+   "text": "Look closely into the small convex mirror on the back wall, where two tiny figures enter a doorway to witness a scene that art historians still cannot agree on."
+  },
+  {
+   "id": "h2",
+   "text": "Notice the strange way the man holds the woman's hand, resting her palm so lightly in his own that she seems on the verge of slipping away."
+  },
+  {
+   "id": "h3",
+   "text": "Look up at the heavy brass chandelier hanging above the couple, where a single candle burns in full daylight."
+  }
+ ],
+ "hook_choice": "h1",
+ "chapters": [
+  {
+   "id": "c01",
+   "role": "cold_open",
+   "title": "THE VISITOR IN THE MIRROR",
+   "card": false,
+   "purpose": "Hook the viewer by leading the eye straight to the convex mirror and the unusual, delicate clasp of the couple's hands, establishing the central mystery of whether this is a wedding, a contract, or a memorial.",
+   "word_budget": 180,
+   "facts": [
+    "f01",
+    "f22",
+    "f27"
+   ],
+   "show": [
+    "D5",
+    "D2",
+    "the joined hands",
+    "wide view of the interior panel"
+   ]
+  },
+  {
+   "id": "c02",
+   "role": "chapter",
+   "title": "THE MERCHANT'S WARDROBE",
+   "card": true,
+   "purpose": "Ground the painting in 15th-century Bruges by analyzing the couple's extravagant clothes as a deliberate promotional showcase for Giovanni Arnolfini's luxury fabric trade.",
+   "word_budget": 270,
+   "facts": [
+    "f02",
+    "f07",
+    "f08",
+    "f09",
+    "f10",
+    "f29"
+   ],
+   "show": [
+    "D3",
+    "D12",
+    "Costanza's green gown and fur trim",
+    "Giovanni's plum tabard, plait straw hat, and leather boots"
+   ]
+  },
+  {
+   "id": "c03",
+   "role": "chapter",
+   "title": "THE LUXURY RECEPTION ROOM",
+   "card": true,
+   "purpose": "Lead the viewer through the furnishings of the room, explaining why an opulent bed sits in a formal reception space alongside exotic fruit, imported rugs, and carved gargoyles.",
+   "word_budget": 270,
+   "facts": [
+    "f14",
+    "f16",
+    "f17",
+    "f19",
+    "f20"
+   ],
+   "show": [
+    "D4",
+    "D8",
+    "the red curtained bed",
+    "the Anatolian carpet",
+    "the oranges on the windowsill",
+    "the cherry tree outside"
+   ]
+  },
+  {
+   "id": "c04",
+   "role": "chapter",
+   "title": "THE SACRED CEREMONY",
+   "card": true,
+   "purpose": "Present the traditional reading of the painting as a solemn marriage ceremony or legal contract, examining the single candle, discarded shoes, and legalistic signature.",
+   "word_budget": 300,
+   "facts": [
+    "f05",
+    "f11",
+    "f21",
+    "f26",
+    "f30"
+   ],
+   "show": [
+    "D7",
+    "D13",
+    "the single burning candle in the brass chandelier",
+    "the discarded pattens on the floor",
+    "the Latin signature above the mirror"
+   ]
+  },
+  {
+   "id": "c05",
+   "role": "chapter",
+   "title": "THE MEMORIAL IN DISGUISE",
+   "card": true,
+   "purpose": "Set the competing memorial interpretation directly against the wedding theory, examining the archival dates of Costanza Trenta's death, the funerary dog, the fertility symbols, and the carved chair.",
+   "word_budget": 330,
+   "facts": [
+    "f04",
+    "f06",
+    "f12",
+    "f13",
+    "f15",
+    "f27"
+   ],
+   "show": [
+    "D1",
+    "D9",
+    "the small dog at the feet",
+    "the carved chair finial",
+    "Costanza's bunched green fabric",
+    "Giovanni's tentative hand grasp"
+   ]
+  },
+  {
+   "id": "c06",
+   "role": "chapter",
+   "title": "PASSION ROUNDELS AND PARTED WORLDS",
+   "card": true,
+   "purpose": "Examine the mirror and its religious medallions in detail, showing how Van Eyck divided the room between the living and the dead through the Passion scenes, the rosary, and the doorway reflection.",
+   "word_budget": 320,
+   "facts": [
+    "f18",
+    "f23",
+    "f24",
+    "f25"
+   ],
+   "show": [
+    "D5",
+    "the ten carved Passion medallions encircling the mirror",
+    "the reflection of the doorway figures",
+    "the amber rosary beads"
+   ]
+  },
+  {
+   "id": "c07",
+   "role": "chapter",
+   "title": "THE ALCHEMY OF OIL AND LIGHT",
+   "card": true,
+   "purpose": "Explain the groundbreaking painterly technique of Jan van Eyck, showing how multiple translucent oil glazes created the illusion of real space, glistening metals, and soft textures.",
+   "word_budget": 210,
+   "facts": [
+    "f03",
+    "f28"
+   ],
+   "show": [
+    "D6",
+    "D10",
+    "D11",
+    "close-up of the polished brass chandelier",
+    "reflections in the amber beads",
+    "luminous brushwork on the fabrics"
+   ]
+  },
+  {
+   "id": "c08",
+   "role": "closing",
+   "title": "CLOSING: THE ENDURING IMAGE",
+   "card": false,
+   "purpose": "Resolve the video's central thesis by recognizing that Van Eyck's masterpiece transcends simple categorization, serving simultaneously as commercial pride, sacred vow, and enduring grief.",
+   "word_budget": 120,
+   "facts": [
+    "f01",
+    "f05",
+    "f27"
+   ],
+   "show": [
+    "D1",
+    "wide view of the whole painting slowly pulling back to reveal the entire frame"
+   ]
+  }
+ ],
+ "facts": [
+  {
+   "id": "f01",
+   "claim": "Jan van Eyck completed The Arnolfini Portrait in 1434, creating a small yet extraordinarily intricate oil painting on wooden panel that has puzzled viewers for centuries.",
+   "sources": [
+    "PAY-01",
+    "HOD-02",
+    "MAD-01"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f02",
+   "claim": "In the fifteenth century, Bruges in Flanders was a major international trade hub where an affluent merchant class asserted its social status by commissioning portraits from elite painters.",
+   "sources": [
+    "PAY-02",
+    "PAY-04",
+    "HOD-04",
+    "HOD-11"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f03",
+   "claim": "Jan van Eyck served as court artist and equerry with an annual salary under Philip the Good, Duke of Burgundy, undertook diplomatic missions, and completed prestigious private commissions.",
+   "sources": [
+    "PAY-03",
+    "HOD-01",
+    "HOD-02",
+    "PAY-28"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f04",
+   "claim": "The male subject is identified as the Lucchese merchant Giovanni di Nicolao Arnolfini, while the woman is identified either as his first wife Costanza Trenta or as an undocumented second wife.",
+   "sources": [
+    "PAY-05",
+    "HOD-03",
+    "MAD-03"
+   ],
+   "certainty": "disputed",
+   "conflict": "PAY-05 and HOD-03 identify the woman as Giovanni's first wife Costanza Trenta who died in 1433, whereas MAD-03 notes she might instead be an undocumented second wife married after Costanza's death."
+  },
+  {
+   "id": "f05",
+   "claim": "The portrait's primary purpose is contested between a legal record of a marriage ceremony, a commercial alliance displaying material wealth, and a posthumous memorial painting.",
+   "sources": [
+    "PAY-06",
+    "HOD-03",
+    "MAD-03",
+    "MAD-04"
+   ],
+   "certainty": "disputed",
+   "conflict": "MAD-04 cites Erwin Panofsky's theory of a formal marriage ceremony, HOD-03 stresses a commercial marriage and display of material status, while PAY-06 and MAD-03 point to the theory of a posthumous memorial painting."
+  },
+  {
+   "id": "f06",
+   "claim": "The woman is not pregnant, but clutches the bunched folds of her dress to her abdomen in accordance with contemporary fashion and prized symbols of fertility.",
+   "sources": [
+    "PAY-10",
+    "HOD-03",
+    "MAD-02"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f07",
+   "claim": "The woman's heavy green wool gown required an arduous, multi-stage dyeing process and is lined with up to two thousand pieces of white squirrel belly fur known as miniver.",
+   "sources": [
+    "PAY-11",
+    "HOD-11"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f08",
+   "claim": "Beneath her green outer gown, the woman wears a blue underdress trimmed with white fur, subtly signaling wealth through expensive blue dye associated with the Virgin Mary.",
+   "sources": [
+    "PAY-12",
+    "HOD-11"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f09",
+   "claim": "The woman's frilled white headdress indicates that she is a married woman, as unmarried women in the fifteenth century wore their hair loose.",
+   "sources": [
+    "HOD-11"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f10",
+   "claim": "The man wears a finely plaited Italian straw hat, soft dyed leather boots, and a silk velvet tabard lined with Russian pine marten fur dyed in expensive dark tones over a silk damask doublet.",
+   "sources": [
+    "PAY-13",
+    "PAY-14",
+    "HOD-11"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f11",
+   "claim": "The discarded wooden patten shoes on the floor symbolize holy ground, the sanctity of marriage, or divided gender spheres of life.",
+   "sources": [
+    "PAY-14",
+    "HOD-12",
+    "MAD-02"
+   ],
+   "certainty": "disputed",
+   "conflict": "PAY-14 associates discarded shoes with the sanctity of marriage, MAD-02 links them to standing on holy ground in Exodus 3:5, and HOD-12 interprets their directions as gendered roles with the husband facing the outside world and the wife facing the domestic home."
+  },
+  {
+   "id": "f12",
+   "claim": "A small, meticulously detailed dog stands at the woman's feet between the two figures.",
+   "sources": [
+    "PAY-07"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f13",
+   "claim": "The dog at the woman's feet represents marital fidelity or alludes to medieval tomb effigies where dogs accompany deceased women into the afterlife.",
+   "sources": [
+    "PAY-07"
+   ],
+   "certainty": "disputed",
+   "conflict": "PAY-07 notes that while dogs traditionally signify marital loyalty in art, here it may instead recall the medieval funerary custom of carving dogs at women's feet to guide them into the afterlife."
+  },
+  {
+   "id": "f14",
+   "claim": "The red curtained bed stands in an upstairs reception room as a luxury showpiece, a regional seating bench, or an emblem of a birthing chamber.",
+   "sources": [
+    "PAY-16",
+    "HOD-03",
+    "HOD-08"
+   ],
+   "certainty": "disputed",
+   "conflict": "PAY-16 describes the bed as an unused status display piece in a reception room, HOD-03 notes beds served as everyday seating in Burgundy, and HOD-08 suggests red-draped beds evoked birthing chambers where a woman might have died in labor."
+  },
+  {
+   "id": "f15",
+   "claim": "The carved wooden figure on the high-backed chair represents Saint Martha the patron saint of housewives or Saint Margaret the patron saint of childbirth.",
+   "sources": [
+    "PAY-17",
+    "HOD-08"
+   ],
+   "certainty": "disputed",
+   "conflict": "PAY-17 identifies the carved figure as Saint Martha the dragon-slayer, patron saint of housewives alongside her whisk broom emblem, whereas HOD-08 identifies the carving as Saint Margaret the patron saint of pregnancy and childbirth."
+  },
+  {
+   "id": "f16",
+   "claim": "The wooden settle bench behind the couple features a plush red velvet cushion and intricately carved gargoyles designed to ward off malevolent spirits.",
+   "sources": [
+    "PAY-17"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f17",
+   "claim": "An imported Oriental Anatolian carpet lies on the wooden floor beside the bed, showcasing rare luxury goods and Van Eyck's skill in rendering textile patterns.",
+   "sources": [
+    "PAY-18",
+    "HOD-03",
+    "HOD-11",
+    "MAD-01"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f18",
+   "claim": "A string of amber rosary beads hangs beside the mirror, advertising Baltic trade commodities while symbolizing Marian purity and religious devotion.",
+   "sources": [
+    "PAY-19",
+    "HOD-05",
+    "MAD-02"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f19",
+   "claim": "Fresh oranges rest on the windowsill and side table, serving as scarce luxury delicacies that demonstrate extreme wealth, love, and fertility.",
+   "sources": [
+    "PAY-20",
+    "HOD-07",
+    "MAD-01",
+    "MAD-02"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f20",
+   "claim": "A cherry tree bearing ripe fruit is visible through the window, indicating the early summer season and symbolizing love.",
+   "sources": [
+    "HOD-03",
+    "MAD-01"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f21",
+   "claim": "The ornate brass chandelier suspended above the couple holds only a single burning candle, traditionally read as the all-seeing eye of God.",
+   "sources": [
+    "MAD-02"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f22",
+   "claim": "A large convex glass mirror on the rear wall reflects the backs of the couple, the interior room, and two figures standing in the doorway.",
+   "sources": [
+    "PAY-21",
+    "HOD-05",
+    "MAD-01",
+    "MAD-05"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f23",
+   "claim": "The two figures reflected in the mirror represent Van Eyck and the viewer, or Van Eyck arriving with an assistant.",
+   "sources": [
+    "PAY-22",
+    "HOD-05",
+    "MAD-05"
+   ],
+   "certainty": "disputed",
+   "conflict": "PAY-22 suggests one doorway figure is Van Eyck and the second represents the viewer, MAD-05 proposes Van Eyck entering alongside an assistant, and HOD-05 states simply that one figure is probably Van Eyck."
+  },
+  {
+   "id": "f24",
+   "claim": "The circular wooden frame of the mirror contains ten tiny painted roundels depicting the Passion and Resurrection of Christ.",
+   "sources": [
+    "PAY-24",
+    "PAY-25",
+    "HOD-05",
+    "MAD-02"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f25",
+   "claim": "Every roundel depicting scenes after the death of Christ, including the Descent from the Cross and the Resurrection, is situated on the woman's side of the mirror.",
+   "sources": [
+    "PAY-25"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f26",
+   "claim": "The Latin inscription above the mirror functions as a formal legal witness statement or a witty artistic signature.",
+   "sources": [
+    "HOD-06",
+    "MAD-04"
+   ],
+   "certainty": "disputed",
+   "conflict": "MAD-04 views the signature above the mirror as written in the formal style of a legal document certifying an event, whereas HOD-06 treats it as one of Van Eyck's witty and playful personal flourishes."
+  },
+  {
+   "id": "f27",
+   "claim": "Giovanni Arnolfini holds the woman's right hand with a remarkably light and fragile touch, his fingers cupping her open palm.",
+   "sources": [
+    "PAY-26"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f28",
+   "claim": "Van Eyck transformed painting by mixing ground pigments with linseed oil, applying successive translucent glazes wet-in-wet and dry-brush to capture microscopic textures and light reflections.",
+   "sources": [
+    "PAY-27",
+    "HOD-02",
+    "HOD-09",
+    "HOD-10",
+    "HOD-13"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f29",
+   "claim": "The objects, clothing, fabrics, and imported furnishings throughout the room function as an overt showcase for Giovanni Arnolfini's merchant enterprises.",
+   "sources": [
+    "PAY-08",
+    "PAY-09",
+    "PAY-14",
+    "PAY-19",
+    "HOD-03",
+    "HOD-11"
+   ],
+   "certainty": "established",
+   "conflict": null
+  },
+  {
+   "id": "f30",
+   "claim": "Van Eyck frequently painted his personal motto Als Ich Can on his frames as a punning statement of artistic skill.",
+   "sources": [
+    "HOD-04"
+   ],
+   "certainty": "established",
+   "conflict": null
+  }
+ ],
+ "target_words": 2000,
+ "counters": {
+  "chapter": 8,
+  "fact": 30
+ },
+ "approval": {
+  "approved": false,
+  "sha1": null,
+  "approved_at": null
+ }
+}

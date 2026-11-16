@@ -12,7 +12,8 @@ Answers given by the owner to the fourteen design questions. They override earli
 | 6 | CC BY-SA images | Allowed. |
 | 7 | Extra media sources | Stock video (Pexels, Pixabay), YouTube clips under a Creative Commons licence, and OpenStreetMap maps are allowed. |
 | 8 | Review points and cadence | The owner confirms: the narration; what is on each scene; added scenes; cuts to the narration. Target: two videos a week. The script step works like the comic pipeline: the system returns an outline ("dàn ý"), the owner pastes it into Gemini, and pastes the whole narration back. |
-| 9 | How the model runs | A button in the UI writes the narration through an API, with a dropdown to choose the model, so the owner does not have to copy and paste. Copy and paste (export the outline and prompt, paste the narration back) stays available as a second path. Both paths must produce the same narration data. |
+| 9 | How the model runs | A button in the UI writes the narration, with a dropdown to choose the model, so the owner does not have to copy and paste. **The model is reached by spawning the Antigravity CLI (`agy`, headless) under the owner's subscription, not through the Gemini API.** Copy and paste stays available as a second path. Both paths must produce the same narration data. |
+| – | Keys | This project uses the same `.env` as the comic pipeline. It was copied to the project root on 2026-11-16 at the owner's instruction and is git-ignored. Code reads only the variables this project needs. |
 | 10 | Technique freedom | An agent drafting a storyboard may use all 71 techniques. |
 | 11 | You.com | Used to find more images and video for scenes, above all context and background scenes that today show a single image. |
 | 12 | Music | No preference. |

@@ -266,6 +266,7 @@ def assemble(n):
         if LINEFIX: l['t']=LINEFIX(n,l['t'],l['b'],W,p['h'])
         szs=[x[5] for x in l['sp'] if re.search('[A-Za-z]',x[0])]
         if szs and max(szs)<8.4 and not l['head'] and l['b'][2]-l['b'][0]<190 and l['b'][1]<770:
+            if len(l['t'])<12: continue
             flush(); items.append(dict(kind='quote',text=l['t'])); prev=l; continue
         if l['head']:
             if pend and prev is not None and prev['head'] and l['b'][1]-prev['b'][3]<14 and l['col']==prev['col']:

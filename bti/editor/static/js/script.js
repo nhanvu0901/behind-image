@@ -368,7 +368,7 @@ function retryLast(j) { if (lastRun) startJob(lastRun.kind, lastRun.body); }
 
 function runDialog(kind, chapters) {
   const model = S.models.find((m) => m.id === S.model);
-  if (!model || !model.enabled) return toast('Mô hình đang chọn chưa có khóa. Chọn "Mock" để thử, hoặc đặt biến ' + (model?.missing_env || 'khóa') + ' (xem docs/SCRIPT_GUIDE.md).', 'err', 9000);
+  if (!model || !model.enabled) return toast((model?.message || 'Chưa chọn mô hình') + ' (xem docs/SCRIPT_GUIDE.md). Có thể chọn "Mock" để thử.', 'err', 9000);
   const chs = chapters ? [].concat(chapters) : null;
   const exists = kind === 'outline' ? !!D.outline : !!D.narr && !chs;
   const notes = h('textarea', { rows: 4, placeholder: kind === 'outline' ? 'Ví dụ: tập trung vào chiếc gương, bỏ phần giả kim thuật' : 'Ví dụ: ngắn hơn, bớt tiểu sử, thêm một cách đọc khác' });
@@ -480,8 +480,8 @@ async function boot() {
   const saved = localStorage.getItem('bti.script.model');
   S.model = (S.models.find((m) => m.id === saved && m.enabled) || S.models.find((m) => m.default && m.enabled) || S.models.find((m) => m.enabled) || S.models[0])?.id;
   const mp = $('#model-pick');
-  mp.replaceChildren(...S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ` (thiếu ${m.missing_env})`) })));
-  mp.onchange = () => { S.model = mp.value; localStorage.setItem('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (!m.enabled) toast(`Mô hình này cần biến ${m.missing_env}. Xem docs/SCRIPT_GUIDE.md.`, 'warn', 7000); };
+  mp.replaceChildren(...S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })));
+  mp.onchange = () => { S.model = mp.value; localStorage.setItem('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (!m.enabled) toast(m.message || 'Mô hình này chưa dùng được. Xem docs/SCRIPT_GUIDE.md.', 'warn', 9000); if (m.paid) toast('Mô hình này tính tiền theo token.', 'warn', 5000); };
   $('#btn-outline').onclick = () => runDialog('outline');
   $('#btn-write').onclick = () => { if (!approvedFlag('outline')) return toast('Cần duyệt dàn ý trước khi viết lời dẫn.', 'warn'); runDialog('narration'); };
   $('#btn-copy').onclick = () => copyDialog(approvedFlag('outline') && D.outline ? 'script' : 'outline');
