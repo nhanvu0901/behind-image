@@ -1,10 +1,16 @@
 """python -m bti.editor [--host 127.0.0.1] [--port 8560]"""
 import argparse
+import sys
 
 import uvicorn
 
 
 def main() -> None:
+    for stream in (sys.stdout, sys.stderr):                  # logs go to a file on Windows (cp1252 by default)
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8560)

@@ -31,7 +31,7 @@ class Chunk:
     beat: str
     chapter: str
     gap: float = 0.0              # silence before this chunk, in seconds (set by `build_chunks`)
-    gap_kind: str = "sentence"    # lead | sentence | beat | chapter | card
+    gap_kind: str = "sentence"    # lead | sentence | beat | chapter | card | title
     first_in_beat: bool = False
     written: list[str] = field(default_factory=list)
 
@@ -130,7 +130,13 @@ def build_chunks(narration, table: dict | None, cfg: dict, settings_sig: str, se
     lo, hi = int(cfg["chunk"]["min_chars"]), int(cfg["chunk"]["max_chars"])
     seeds = seeds or {}
     out: list[Chunk] = []
-    for ch in narration.chapters:
+    cold = bool(narration.chapters) and narration.chapters[0].role == "cold_open"
+    title_at = None                       # the chapter whose lead holds the title card
+    if cold:
+        title_at = next((i for i, c in enumerate(narration.chapters) if i > 0 and c.beats and any(b.text.strip() for b in c.beats)), None)
+    elif narration.chapters:
+        title_at = 0
+    for ci, ch in enumerate(narration.chapters):
         first_of_chapter = True
         for beat in ch.beats:
             units = speak_units(beat.text, table)
@@ -141,9 +147,12 @@ def build_chunks(narration, table: dict | None, cfg: dict, settings_sig: str, se
                 c = Chunk(index=len(out), id=chunk_id(spoken, settings_sig, seed), th=th, seed=seed, spoken=spoken, units=group,
                           beat=beat.id, chapter=ch.id, first_in_beat=(gi == 0),
                           written=[w for u in group for w in u.written])
-                if not out:
-                    c.gap_kind = "lead"
-                    c.gap = float(sil["lead"]) + (float(sil["card"]) if ch.card else 0.0)
+                extra = float(sil["card"]) if ch.card else 0.0
+                if first_of_chapter and ci == title_at:
+                    # the title card: before the first chapter after a cold open, or at the very start without one
+                    c.gap_kind, c.gap = "title", float(sil["title"]) + extra
+                elif not out:
+                    c.gap_kind, c.gap = "lead", float(sil["lead"]) + extra
                 elif first_of_chapter:
                     c.gap_kind = "card" if ch.card else "chapter"
                     c.gap = float(sil["card"] if ch.card else sil["chapter"])

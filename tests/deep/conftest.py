@@ -30,8 +30,10 @@ BASE_PROJECTS = ("technique_lab", "arnolfini", "arnolfini-from-books", "lab_text
 def _clone(src: Path, dst: Path) -> None:
     if dst.exists():
         shutil.rmtree(dst)
-    r = subprocess.run(["cp", "-Rc", str(src), str(dst)], capture_output=True)   # APFS clone: cheap
-    if r.returncode != 0:
+    r = None
+    if sys.platform == "darwin":                                                 # APFS clone: cheap (no `cp` on Windows)
+        r = subprocess.run(["cp", "-Rc", str(src), str(dst)], capture_output=True)
+    if r is None or r.returncode != 0:
         shutil.copytree(src, dst, symlinks=True)
     for sub in ("cache", "history"):
         shutil.rmtree(dst / sub, ignore_errors=True)

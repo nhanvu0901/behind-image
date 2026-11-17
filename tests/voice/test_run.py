@@ -44,7 +44,12 @@ def test_full_run_produces_the_files_and_a_fresh_state(project, mgr, cfg):
         assert b["w0"] < b["w1"] and b["start"] == t["words"][b["w0"]]["s"] and b["end"] == t["words"][b["w1"] - 1]["e"]
     assert [c["id"] for c in t["chapters"]] == ["c1", "c2"] and t["chapters"][1]["card"] is True
     assert t["chapters"][0]["start"] == 0 and t["chapters"][-1]["end"] == t["duration"]
-    assert t["chapters"][1]["card_end"] - t["chapters"][1]["card_start"] > 2.0
+    c1, c2 = t["chapters"]
+    assert c1["lead"]["kind"] == "plain" and c1["lead"]["start"] == 0 and abs(c1["lead"]["end"] - c1["lead"]["start"] - cfg["silence"]["lead"]) < 0.01
+    assert c2["lead"]["kind"] == "title"
+    assert abs(c2["lead"]["end"] - c2["lead"]["start"] - (cfg["silence"]["title"] + cfg["silence"]["card"])) < 0.05
+    assert abs(c2["card_end"] - c2["card_start"] - 2.8) < 1e-6 and c2["card_end"] <= c2["lead"]["end"] + 1e-6
+    assert abs(c2["title_end"] - c2["title_start"] - 6.2) < 1e-6
     assert describe(project, cfg=cfg, server={}, provider_name="fake")["state"] == "done"
 
 

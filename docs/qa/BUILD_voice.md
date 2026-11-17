@@ -82,3 +82,9 @@ Bước 3 biến lời dẫn đã duyệt thành một tệp âm thanh (`audio/m
 7. Nếu máy chưa có máy đo từ, thời điểm từng từ được chia đều trong mỗi câu (trang ghi rõ); chỉ đầu và cuối mỗi câu là chính xác.
 
 Phụ đề không bao giờ được vẽ vào hình; bước này không đưa chữ lên màn hình.
+
+## Update 2026-11-16 (late): silences and cards, and the model load time
+- Silences (`config/voice.json`): sentence 0.20, beat 0.45, plain chapter 1.0, **chapter with `card: true` 3.2** (0.2 air + the 2.8 s card, none after), **title card 6.2** (`title`), `card_length` 2.8, lead 0.35. The title silence goes before the first chapter that follows a cold open (`role == "cold_open"`, the exact value in `bti/script/store.py` `ROLES`), or at the very start of the audio when the narration has no cold open. When that chapter also has `card: true`, the silence is title + card (9.4 s) and the lead kind is `title`.
+- `timing.json` chapters keep every old field and gain `lead: {kind: "title"|"card"|"plain", start, end}` (the silence before the first word); `card_start/card_end` = the last 2.8 s of the silence (card chapters); `title_start/title_end` = the first 6.2 s (title leads).
+- Model load: the real test took 269 s of synthesis part for 7.48 s of speech. The worker's lines do not let me split load from synthesis after the fact (the `ready` line was not logged; `sec` is audio length, not compute). The provider now logs `voice model ready after N s` and a `voice part: {load_s, total_s, chunks}` line to the job log, so the next real run gives the split. Until then the planner's `load_seconds: 60` is too low: treat load as up to about 4 minutes on this server (269 s total for two sentences, so load is at most 269 s and almost all of it) and keep one load inside each 20-minute part.
+- Tests on the server: 66 passed, 1 skipped.

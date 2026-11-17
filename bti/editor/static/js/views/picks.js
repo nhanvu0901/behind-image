@@ -11,46 +11,15 @@ import { api } from '../api.js';
 import { h, toast, errorToast, setStatus, modal, ask, confirmDialog, debounce } from '../util.js';
 import { makeSpaces } from '../coords.js';
 import { createQueue } from '../queue.js';
-import { describeError, jobErrorText } from '../errmsg.js';
+import { describeError, jobErrorText, STAGE_CODES } from '../errmsg.js';
+import { PICKS_LABELS } from '../labels.js';
 import { projectHash } from '../router.js';
 import * as L from './picks_logic.js';
 
 // ------------------------------------------------------------------ words
-const LBL = {
-  flag: { rejected: 'Giấy phép bị hạn chế', unknown: 'Chưa rõ giấy phép', small: 'Ảnh nhỏ' },
-  flagHelp: {
-    rejected: 'Giấy phép của ảnh này hạn chế việc dùng lại. Vẫn dùng được; hãy tự cân nhắc khi đăng video.',
-    unknown: 'Chưa rõ giấy phép của ảnh này. Vẫn dùng được; mô tả video sẽ ghi nguồn.',
-    small: 'Ảnh dưới 1200 px ở cạnh ngắn, có thể bị mờ khi phóng to. Vẫn dùng được.',
-  },
-  role: { main: 'Cả bức tranh', detail: 'Chi tiết', context: 'Bối cảnh', compare: 'So sánh', document: 'Tài liệu', map: 'Bản đồ', video: 'Video' },
-  tabs: { main: 'Tranh chính', search: 'Tìm kiếm', books: 'Sách', suggest: 'Gợi ý', upload: 'Tải lên' },
-  issue: {
-    no_main: 'Chưa chọn tranh chính.', asset_file_missing: (i) => `Thiếu tệp ảnh của hình ${i.asset}.`,
-    unknown_asset: (i) => `Dòng ${i.beat} dùng hình ${i.asset} không còn trong danh sách.`,
-    unknown_region: (i) => `Dòng ${i.beat} dùng vùng "${i.region}" của hình ${i.asset}, vùng này không còn.`,
-    beat_no_pick: (i) => `Dòng ${i.beat} chưa có hình: bản nháp sẽ dùng tranh chính ở đó.`,
-    beat_unknown: (i) => `Có hình cho dòng ${i.beat} nhưng dòng này không còn trong lời dẫn.`,
-    asset_flag: (i) => `Hình ${i.asset}: ${LBL.flag[i.flag] || i.flag}.`,
-  },
-  reason: { picks_edited: 'Chọn hình đã đổi sau khi duyệt.', narration_changed: 'Lời dẫn đã đổi sau khi duyệt hình.', narration_not_approved: 'Lời dẫn chưa được duyệt.' },
-};
-// error `code` of the picks routes -> sentence; anything else goes through errmsg.js
-const ERR = {
-  stale: 'Chọn hình đã đổi ở nơi khác (tab khác hoặc tác vụ nền). Đang tải lại bản mới nhất.',
-  source_unreachable: 'Nguồn ảnh đang bận hoặc không trả lời. Thử lại sau vài giây.',
-  source_error: 'Nguồn ảnh báo lỗi. Thử lại hoặc chọn nguồn khác.',
-  not_found: 'Không tìm thấy ảnh này ở nguồn.',
-  unknown_source: 'Nguồn ảnh này không có trong danh sách.',
-  query_required: 'Gõ từ khóa để tìm.',
-  narration_not_approved: 'Lời dẫn chưa được duyệt (hoặc đã đổi sau khi duyệt). Duyệt lời dẫn ở bước Kịch bản trước.',
-  picks_have_errors: 'Chọn hình còn lỗi nên chưa duyệt được. Bấm "Kiểm tra" để xem.',
-  image_empty: 'Tệp ảnh trống.', image_unreadable: 'Tệp này không phải ảnh đọc được.', image_truncated: 'Tệp ảnh bị cắt dở, không đọc hết được. Tải lại tệp đầy đủ.',
-  region_name: 'Tên vùng không hợp lệ (chữ, số, dấu cách, - hoặc _; tối đa 40 ký tự).', region_shape: 'Vùng không hợp lệ.', region_outside: 'Tâm vùng nằm ngoài bức ảnh.',
-  confirm_required: 'Cần bạn xác nhận chi phí trước khi chạy.', suggest_off: 'Gợi ý thêm đang tắt trong cấu hình.', suggest_no_key: 'Chưa có khóa You.com trên máy chủ.',
-  suggest_failed: 'You.com không trả lời được. Thử lại sau.', busy: 'Đang có một lượt gợi ý chạy cho dự án này.', too_many: 'Chọn tối đa 40 dòng một lần.',
-  longjob_missing: 'Bộ chạy việc dài chưa có trên máy chủ.',
-};
+const LBL = PICKS_LABELS;
+// error `code` of the picks routes -> sentence (errmsg.js); anything else goes through describeError
+const ERR = { ...STAGE_CODES.longjob, ...STAGE_CODES.picks };
 const failText = (e) => ERR[e?.body?.code] || describeError(e).text;
 const fail = (e, prefix = '') => { const t = ERR[e?.body?.code]; if (t) toast(prefix + t, 'err', 8000); else errorToast(e, prefix); };
 
@@ -401,7 +370,7 @@ function watch(id) {
       const j = await api.get(`/api/longjobs/${id}`);
       if (['queued', 'waiting', 'running'].includes(j.state)) { S.job = j; if (S.tab === 'suggest') paintRight(); return; }
       clearInterval(pollId); S.job = null;
-      if (j.state === 'error') toast(ERR[j.error_code] || jobErrorText(j), 'err', 9000);
+      if (j.state === 'error') toast(ERR[j.error_code] || jobErrorText(j).text, 'err', 9000);
       else if (j.state === 'cancelled') toast('Đã hủy.', 'warn');
       await loadSuggestions(); pipeChanged();
     } catch (e) { clearInterval(pollId); S.job = null; fail(e); }

@@ -18,6 +18,8 @@ Written by the WIN agent, phase 1 (2026-11-16). The server is `DESKTOP-4V6D49N` 
 | Deploy the working tree (code only) | `tools/deploy/deploy_windows.sh` |
 | Deploy and also send `books/`, `library/`, `projects/` (no `cache`/`history`) | `tools/deploy/deploy_windows.sh --data` |
 | Deploy and restart our app | `tools/deploy/deploy_windows.sh --restart` |
+| Deploy a snapshot instead of the working tree (when the tree is mid-edit): `git archive HEAD | tar -x -C DIR`, overlay your files, then | `tools/deploy/deploy_windows.sh --root DIR` |
+| Heavy pytest run under the heavy slot (lock folder, memory and production checks, 28 min limit, detached) | `scp tools/deploy/launch_heavy.ps1 winbox-lan:D:/code/behind-the-image/run/` then `ssh winbox-lan "powershell -NoProfile -ExecutionPolicy Bypass -File D:\code\behind-the-image\run\launch_heavy.ps1 -What \"what runs\" -Minutes 28 -PytestArgs \"tests/engine -m slow -q\""`; progress in `logs\heavy_run.log` (`LOCK TAKEN`, `LOCK RELEASED`, `EXIT=`) |
 | Deploy, then run pytest on the server | `tools/deploy/remote_test.sh tests/script -q -x` |
 | Run pytest without deploying | `tools/deploy/remote_test.sh --no-sync tests/editor -k name` |
 | Any one-off python check | `tools/deploy/remote_py.sh -c "import sys; print(sys.version)"` |
@@ -120,44 +122,58 @@ truststore==0.10.5
 typing_extensions==4.16.0
 ```
 
-## Suites on the server, 2026-11-16 (code of that afternoon, `-W ignore`, one suite at a time, no `slow`)
-| Suite | Result | Notes |
+## Suites on the server, phase 2 (2026-11-16, `-W ignore`, one suite at a time)
+Code on the server: HEAD `ba8ac37` plus the phase 2 changes below (deployed from a snapshot, `deploy_windows.sh --root DIR`, because another agent was editing `app.py` on the Mac).
+| Suite | Result |
+|---|---|
+| `tests/script tests/editor tests/library` | 574 passed, 6 skipped (6 min 1 s) |
+| `tests/media` | 106 passed (5 s) |
+| `tests/engine -m "not slow"` | 234 passed, 14 skipped, 136 deselected (1 min 36 s) |
+| `tests/deep -m "not timing"` | 1 failed on the first run (`test_sweep.py::test_technique[HI-02]`, a timing limit, fixed: see below), then 214 passed, 4 skipped, and HI-02 alone passes |
+| `tests/longjob` | 65 passed, 1 skipped (12 s) |
+| `tests/voice` | 64 passed, 1 skipped (48 s) |
+| `tests/picks` | 43 passed (6 s) |
+| `tests/draft` | 82 passed (1 min 17 s) |
+| `tests/export` | 92 passed, 2 skipped (22 s) |
+| `tests/engine -m slow` (heavy slot, `launch_heavy.ps1`) | 136 passed in 14 min 41 s; lock `D:\bench\_heavy.lock` taken at 19:09:28 and released at 19:24:11 server time, checks passed (no production process, memory above the floor). The first attempt failed at set-up in 72 s on `import resource` (POSIX only): `tests/engine/test_validate_draw_sweep.py` `_maxrss()` now uses the Windows peak working set. |
+Run each stage folder in its own pytest call (`tests/voice`, `tests/draft`, ...): their `conftest.py` files share the module name `conftest`, and `from conftest import ...` then finds the first one (collection errors when mixed). Skips are the ones that need `demo_runs` or the reel copies, the mode-000 tests (not possible on Windows) and a symlink test.
+
+## Portability failures of phase 1, and how each was fixed
+| Cause | Fix (file) |
+|---|---|
+| `#!/bin/sh` fake `agy` (`WinError 193`) | the fake is a Python script started through the interpreter: a `.cmd` launcher on Windows, a `#!python` script elsewhere (`tests/script/test_antigravity.py`, `tests/editor/test_round3_scanners.py`, `tests/deep/test_round3_backend.py`) |
+| prompt as `-p` argument over the 32 KB command line limit (`WinError 206`) | the stash version of the provider: prompt on standard input as one stream-json line (`bti/script/providers/antigravity.py`) |
+| `os.geteuid` | `tests/editor/test_round2_fixes.py:760`, `tests/deep/test_round3_backend.py:102`: not run on Windows (no mode-000 files there) |
+| `cp -Rc` | `tests/deep/conftest.py`: the clone copy only on macOS, `shutil.copytree` elsewhere |
+| book path over 260 characters | `bti/library/config.py` `long_path()`: `book_pdf()` returns the `\\?\` extended-length path on Windows when the path is 240 characters or longer; pymupdf opens it. No file renamed, no setting changed. |
+| timing limits | `tests/engine/test_t2_annot_highlight.py:357` 0.15 s to 0.75 s (5x; the Windows server needs 0.15 to 0.33 s; the limit only guards "a shot renders fast", a real slowdown is seconds); `tests/deep/sweep.py` `WARM_LIMIT_MS` 300 to 1500 (5x; measured 373 ms; a frame that is not cached takes seconds) and `tests/deep/test_sweep.py:54` uses it. `test_round3_scanners.py` had already been made a ratio by the round 3 fix. |
+| slow | `tests/engine/test_real_projects_draw.py`: the three-project test is marked `slow` (about 75 s on the server) |
+| `tests/media` | green now that the PICKS agent finished |
+Also from the stash: `bti/editor/__main__.py` (UTF-8 stdout and stderr), `bti/media/clips.py` (`bti/proc.py` for the process group and the tree kill), and `antigravity.py` keeps every round 2 and round 3 behaviour (lenient model list, `LIST_TIMEOUT_S = 8`, slug filter, duplicate removal) while adding: `find_agy` for `%LOCALAPPDATA%\agy\bin` and `PATHEXT`, a Windows environment whitelist, `check_cli` (refuses an `agy` without `--settings` and `--input-format`), stream-json in and out, process-tree kill. The stream-json event shapes (`init`, `step_update`, `result`) are those the stash author wrote; they are NOT verified against a real `agy` run (no prompt may be run from here, and `agy` is not signed in on the server). The first real script run must check them.
+
+## Parallel draw check (measurement only, no product change)
+Scratch scripts `tools/deploy/probe_parallel.py` and `probe_parallel_cold.py` (through `remote_py.sh`; copy to `run\` first): the 300 samples of the draw check of `arnolfini` (82 shots, 320 px), drawn with `scene.frame_at` from a thread pool; every frame is hashed and compared with the serial result.
+| Run | Wall time | Frames identical to serial |
 |---|---|---|
-| `tests/script tests/editor tests/library` | 485 passed, 26 failed, 6 skipped (4 min 41 s) | 1 of the 26 (the styles preview test) passed after the preview clips were added to the deploy, so 25 remain. A second full run finished: 25 failed, 486 passed, 6 skipped in 4 min 33 s (the 25 are the table below). |
-| `tests/media` | 85 passed, 5 failed (1 s) | not platform problems (see table) |
-| `tests/engine -m "not slow"` without `test_real_projects_draw.py` | 231 passed, 1 failed, 14 skipped, 133 deselected (1 min 41 s) | skips: reel copies, `.scratch/r1`, lab projects that are not on the server |
-| `tests/engine/test_real_projects_draw.py` (not marked `slow`) | 3 real projects pass (see "Why tests were slow") | about 23 to 29 s each on the server (about 6 s on the Mac); computing, not waiting |
-| `tests/deep -m "not timing"` | 0 passed: 1 collection error, 194 setup errors | the suite cannot start on Windows (below) |
+| serial (cold process, includes the cv2 and asset warm-up) | 23 s | reference |
+| serial, warm | 17 to 19 s (CPU 27 s) | reference |
+| 4 threads, first thing in the process | 9.3 s | 300 of 300 |
+| 8 threads, first thing in the process | 7.1 s | 300 of 300 |
+| 4 / 8 threads after a serial pass (warm caches) | 6.6 s / 5.2 s | 300 of 300 |
+| 16 threads, OpenCV single-threaded, warm | 4.9 s (CPU 41 s) | 300 of 300 |
+So frames are drawn correctly in parallel (byte for byte), and 4 threads give about 2.5 times, 8 threads about 3.3 times from a cold start. Threads share the scene object; no error or difference appeared in 300 samples, but that is evidence, not a proof of thread safety of every technique (caches inside `scene` are the place to review before a change). The engine was not changed.
 
-## Portability failures
-| Test(s) | Class | Cause (file:line) | What phase 2 should do |
-|---|---|---|---|
-| 17 in `tests/script/test_antigravity.py` (`test_success_reads_the_json_envelope`, `..._empty_temp_folder...`, `test_failures_are_refused_with_a_kind[*]` x9, `test_prompt_states_english_and_no_tools`, `test_hard_timeout`, `test_one_call_at_a_time`, `test_models_listing_...`, `test_no_fallback_to_a_paid_api`, `test_cancel_kills_agy_and_its_children`) | POSIX-only fake program | the fake `agy` is a `#!/bin/sh` file made executable (`tests/script/test_antigravity.py:57`); `CreateProcess` answers `[WinError 193] %1 is not a valid Win32 application` at `bti/script/providers/antigravity.py:105` | apply the stash version of `antigravity.py` and `test_antigravity.py`, make the fake a `.cmd` or a tiny python launcher |
-| `test_a_60000_character_prompt_reaches_the_cli_whole` | Windows command-line limit | the prompt is a `-p` argument (`antigravity.py:69/105`); `CreateProcess` allows about 32,767 characters: `[WinError 206]` | the stash moves the prompt to stdin (stream-json); keep that |
-| `tests/editor/test_round3_scanners.py::test_valid_rows_with_odd_bytes_and_duplicates`, `::test_slug_is_checked_against_a_fresh_list`, `::test_no_lock_is_held_while_the_cli_runs` | POSIX-only fake program | `#!/bin/sh` script written at `test_round3_scanners.py:99-100` | same as above |
-| `tests/editor/test_round3_scanners.py::test_depth_scan_is_linear_and_still_right` | timing | `test_round3_scanners.py:29`: 0.113 s against a 0.05 s limit on 2 MB (the server is slower than the Mac) | widen the limit or mark `timing` |
-| `tests/editor/test_round2_fixes.py::test_project_files_of_the_wrong_shape_or_kind_are_409_and_recover` | POSIX-only call | `os.geteuid()` at `test_round2_fixes.py:760` (and the mode-000 file trick after it) | `skipif(os.name == "nt")` |
-| `tests/deep/test_round3_backend.py` (whole `tests/deep` run aborts) | POSIX-only call | `os.geteuid()` at module level, `test_round3_backend.py:102`: collection error; use `--continue-on-collection-errors` to see the rest | `getattr(os, "geteuid", lambda: 1)()` |
-| all 194 tests of `tests/deep` | POSIX-only program | `tests/deep/conftest.py:33` clones projects with `cp -Rc` (APFS); there is no `cp` on Windows: `[WinError 2]` | `shutil.copytree` fallback |
-| `tests/library/test_library.py::test_counts[hagen_wgps-80]`, `::test_hagen_layout` | path length (MAX_PATH 260) | the book file name is about 230 characters; `D:\code\behind-the-image\books\<name>` is over 260, so `os.path.exists` is False although the directory listing shows it; `pymupdf.open(f)` at `bti/library/extract.py:25` (`config.book_pdf`, `bti/library/config.py:33-38`) raises `no such file`. Other books pass. | open the file through Python with a `\\?\` prefix and give pymupdf the bytes, or a short alias; do not enable long paths system-wide (a system change) |
-| `tests/media/test_api.py` (`test_search_candidate_shape_and_licence_flags`:27, `test_import_rejects_licence_before_download`:75, `test_import_too_small`:85, `test_met_non_pd_rejected`:106, `test_add_upload_requires_fields_and_licence`:122) | real (not platform) | the tests expect the old blocking licence gate and key set; the PICKS agent was changing `bti/media` and its tests while the suite ran (the test file itself says "CHANGED (advisory gate...)"). Fake opener raises `unexpected URL`. I did not run the Mac side to compare (not allowed). | PICKS to settle; re-run |
-| `tests/engine/test_t2_annot_highlight.py::test_lab_project_validates_and_every_shot_renders_fast_and_deterministically` | timing | `test_t2_annot_highlight.py:357`: six shots took 0.15 to 0.33 s against the fast-render limit | widen the limit on Windows |
-| `tests/editor/test_integration_real.py::test_styles_are_merged_registry_with_preview_fallback` | deploy gap, fixed | the 70 preview `.mp4` clips under `style/gae/previews` are git-ignored, so a deploy that sends only non-ignored files lacked them; `deploy_windows.sh` now sends ignored files under `style/` | none |
+## Scheduled task `bti-editor` (prepared, NOT created)
+Why: `agy` is signed in at the server's desktop; a process started over ssh or `Win32_Process Create` cannot see that sign-in. A task that runs in the desktop session can. This is a system change. I was told the owner approved it, but that reached me only through the coordinator agent, not from the owner or the permission system, so I did NOT create it. Everything is prepared and nothing else changes until someone with the owner's yes runs the one command:
+- Create (once, on the server, as `admin`): `powershell -NoProfile -ExecutionPolicy Bypass -File D:\code\behind-the-image\tools\deploy\create_task.ps1`. It registers one task `bti-editor` for the current user, interactive logon, normal privileges, NO trigger, action `powershell -WindowStyle Hidden -File tools\deploy\task_app.ps1` (which starts `run\app.bat` hidden and writes `run\app.pid`). The owner sees at most a brief flash of a window.
+- `start_app.ps1` already uses it when the task exists and a user is at the console (`schtasks /run /tn bti-editor`, waits for port 8560, prints the session id); otherwise it prints one line, "starting WITHOUT the desktop session: agy will not be available", and starts the old way. `stop_app.ps1` is unchanged (pid in `run\app.pid`, command line checked).
+- Remove: `schtasks /delete /tn bti-editor /f`.
+- Proof to run after creating it: stop the running app, `start_app.ps1`, then `GET /api/models?refresh=1` through the tunnel must list the Antigravity models with `agy.ok` true, and `Get-Process -Id <pid> | Select SessionId` must show the console session (`query user`).
 
-Not seen as failures but known: path separators (the code uses `pathlib` and passed), encodings (`PYTHONUTF8=1` is set for every run and for the app; Vietnamese text in test data passed), fonts (Century Gothic is on the server, Futura is not: layout differs about 6 %; no test failed on it).
-
-Other things learned
-- Test files that need a real `agy`, the network or `demo_runs` were skipped or failed as listed; no test started anything heavy.
-- Earlier text in this file claimed some runs took 10 to 25 minutes while idle. That was WRONG: it came from my own waiting (tool timers), not from the clock. See "Why tests were slow".
-- `_deploy\` still holds old files from the first attempt (`code.tgz`, `data.tgz` 669 MB, helper `.ps1`). They are ours; safe to delete when space matters.
-- `pymupdf` 2.1 installs `onnxruntime` and `pymupdf4llm`: heavy but harmless.
-
-## What is left for phase 2 (after round 3 is committed)
-1. Apply the stash for the four tracked files: `bti/editor/__main__.py` (UTF-8 streams), `bti/media/clips.py` (uses `bti/proc.py`), `bti/script/providers/antigravity.py` (stdin, Windows `agy` lookup) and `tests/script/test_antigravity.py`; rewrite the POSIX fakes as portable ones.
-2. Fix the portability table above: `geteuid` (2 files), `cp -Rc` in `tests/deep/conftest.py`, MAX_PATH for the Hagen book, the three timing limits, the `slow` marker on `test_real_projects_draw.py`.
-3. `agy` is not signed in over ssh (see design section 9): the owner decides how the app runs in the desktop session.
-4. The heavy-job lock (`D:\bench\_heavy.lock`, memory and production checks) is not coded in `bti/`; the long-job runner (CORE) must take it for voice and render.
-5. Per-agent folders: all agents share one tree and one `.venv`; deploys replace the whole tree, so two agents should not edit different branches' code at once. If that becomes a problem, give each agent its own `BTI_REMOTE` folder (the scripts honour `BTI_REMOTE`, but each would need its own `.venv`).
+## For CORE
+- Nothing in your files failed on Windows. Mid-edit states do fail (`app.py` passing `longjobs=` to a `pipeline_api.make_router` that did not take it yet): agents who test on the server should deploy a snapshot (`--root`) of HEAD plus their own files while the tree is mid-edit.
+- The stage test folders must be run one per pytest call (the shared module name `conftest`); renaming the shared helpers (for example `tests/draft/conftest.py` helpers imported by `tests/voice` and `tests/export`) or `--import-mode=importlib` would remove that rule. Left as it is.
+- `bti/draft/workspace.py` already writes `.cmd` wrappers on Windows; `agy.py` has Windows lookup. `config/server.json` `windows.lock_dir` is the real `D:/bench/_heavy.lock`: any test that builds the default `HeavySlot` on the server would take the REAL lock; tests must pass a fake lock folder (they do today).
 
 ## Comic repo check (must be identical before and after)
 `git -C D:\code\comic-book-pipeline status --short` before and after phase 1 (6 lines each, identical):

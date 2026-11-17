@@ -1,6 +1,7 @@
 // "Hình" tab: assets, region manager, licence-aware search, import and upload.
 import { h, svg, toast, ask, errorToast, errorInto } from './util.js';
 import { licenceText } from './errmsg.js';
+import { flagLabel, FLAG_HELP } from './labels.js';
 import { ctx, bus, assetThumbUrl } from './ctx.js';
 import { api } from './api.js';
 import { clone } from './logic.js';
@@ -50,9 +51,9 @@ export function renderMedia(body) {
   }
   // assets
   put(root, h('div', { class: 'sect' }, h('h4', null, p ? `Hình loại ${KIND_VI[p.kind] || p.kind} (${entries.length})` : `Hình của dự án (${Object.keys(d.assets).length})`),
-    entries.length ? h('div', { class: 'media-cols' }, ...entries.map(([k, a]) => h('div', { class: 'asset-card' + (k === selKey ? ' sel' : ''), title: `${a.title || ''}\n${a.credit?.licence || ''}`,
+    entries.length ? h('div', { class: 'media-cols' }, ...entries.map(([k, a]) => h('div', { class: 'asset-card' + (k === selKey ? ' sel' : ''), title: `${a.title || ''}\n${a.credit?.licence || ''}${a.credit?.flag ? '\n' + flagLabel(a.credit.flag) : ''}`,
       onclick: () => { if (ctx.slotPick) assign(k); else { selKey = k; bus.emit('assets'); } } },
-      h('img', { src: assetThumbUrl(k, api), alt: k }), h('div', { class: 't', text: `${k}: ${a.title || a.file}` }))))
+      h('img', { src: assetThumbUrl(k, api), alt: k }), h('div', { class: 't', text: `${k}: ${a.title || a.file}` }), a.credit?.flag ? h('span', { class: 'chip missing', title: FLAG_HELP[a.credit.flag] || '', text: flagLabel(a.credit.flag) }) : null)))
       : h('div', { class: 'empty', text: p ? `Dự án chưa có hình loại ${KIND_VI[p.kind] || p.kind}. Nhập hoặc tải lên bên dưới.` : 'Dự án chưa có hình nào.' })));
   if (selKey && !p) put(root, assetDetail(selKey, d.assets[selKey]));
   put(root, searchSection(), uploadSection());
@@ -64,7 +65,8 @@ function assetDetail(key, a) {
   const wrap = h('div', { class: 'sect' }, h('h4', null, `Hình ${key}`));
   put(wrap, h('div', { class: 'hint', text: `${a.width || '?'} x ${a.height || '?'} px | ${a.kind} | ${a.file}` }),
     h('div', { class: 'hint', text: `Nguồn: ${c.source || '?'} | Tác giả: ${c.author || '?'} | Giấy phép: ${c.licence || '?'}` }),
-    c.source_url ? h('a', { href: c.source_url, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)', fontSize: '11px' }, text: c.source_url }) : null);
+    c.source_url ? h('a', { href: c.source_url, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)', fontSize: '11px' }, text: c.source_url }) : null,
+    c.flag ? h('div', { class: 'hint warn', text: `${flagLabel(c.flag)}: ${FLAG_HELP[c.flag] || ''}` }) : null);
   if (a.width && a.height && a.kind !== 'video') put(wrap, regionManager(key, a));
   return wrap;
 }
@@ -183,7 +185,9 @@ function regionManager(key, a) {
 const scopeTimeout = (fn, ms) => setTimeout(fn, ms);
 
 function licChip(c) {
-  return h('span', { class: 'chip ' + (c.licence_ok ? 'ok' : 'missing'), title: c.licence_reason ? licenceText(c.licence_reason).text : '', text: `${c.licence || 'không rõ'}${c.licence_ok ? '' : ' (bị chặn)'}` });
+  // advisory: the flag is information, an image is never refused for it
+  const tip = [c.licence_reason ? licenceText(c.licence_reason).text : '', FLAG_HELP[c.flag] || ''].filter(Boolean).join(' ');
+  return h('span', { class: 'chip ' + (c.licence_ok && !c.flag ? 'ok' : 'missing'), title: tip, text: `${c.licence || 'không rõ'}${c.flag ? ` (${flagLabel(c.flag)})` : ''}` });
 }
 
 function searchSection() {
@@ -202,22 +206,22 @@ function searchSection() {
     if (state.results === null) return;
     if (!state.results.length) out.append(h('div', { class: 'empty', text: 'Không có kết quả.' }));
     for (const c of state.results) {
-      const imp = h('button', { class: 'small primary', text: 'Nhập', disabled: !c.licence_ok, title: c.licence_ok ? 'Tải về dự án' : licenceText(c.licence_reason).text, onclick: async () => {
+      const imp = h('button', { class: 'small primary', text: 'Nhập', title: c.flag ? `Nhập được; ${flagLabel(c.flag)}. Nguồn và giấy phép được ghi lại.` : 'Tải về dự án', onclick: async () => {
         imp.disabled = true; imp.textContent = '...';
         try {
           const r = await api.importAsset(ctx.pid, c.source, c.source_id);
           addAsset(r.asset_key, r.asset, c.thumb_url); toast(`Đã nhập ${r.asset_key}`, 'ok');
           if (ctx.slotPick) await assign(r.asset_key); else { selKey = r.asset_key; bus.emit('assets'); }
-        } catch (e) { errorToast(e, e.status === 422 ? 'Giấy phép bị từ chối: ' : 'Nhập thất bại: ', 6000); imp.disabled = false; imp.textContent = 'Nhập'; }
+        } catch (e) { errorToast(e, 'Nhập thất bại: ', 6000); imp.disabled = false; imp.textContent = 'Nhập'; }
       } });
       out.append(h('div', { class: 'cand' }, h('img', { src: api.url(c.thumb_url), alt: '' }), h('div', { class: 'info' },
         h('div', { class: 't', title: c.title, text: c.title }), h('div', { class: 'hint', text: `${c.author || '?'} | ${c.width || '?'}x${c.height || '?'} | ${c.mime || ''}` }),
         h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' } }, licChip(c), c.page_url ? h('a', { href: c.page_url, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)', fontSize: '11px' }, text: 'trang gốc' }) : null),
-        !c.licence_ok && c.licence_reason ? h('div', { class: 'hint err', text: licenceText(c.licence_reason).text }) : null), imp));
+        c.flag ? h('div', { class: 'hint', text: FLAG_HELP[c.flag] || '' }) : null), imp));
     }
   };
   q.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
-  const sec = h('div', { class: 'sect' }, h('h4', null, 'Tìm hình (chỉ giấy phép PD, CC0, CC BY, CC BY-SA)'), h('div', { class: 'row' }, q, h('button', { class: 'primary small', text: 'Tìm', onclick: go })),
+  const sec = h('div', { class: 'sect' }, h('h4', null, 'Tìm hình (nguồn và giấy phép được ghi lại; hình có hạn chế chỉ bị gắn cờ, không bị chặn)'), h('div', { class: 'row' }, q, h('button', { class: 'primary small', text: 'Tìm', onclick: go })),
     h('div', { class: 'row' }, src, kind), out);
   paint();
   return sec;
@@ -227,14 +231,13 @@ function uploadSection() {
   const f = {};
   const inp = (k, label, extra = {}) => { f[k] = h('input', { type: 'text', ...extra }); return h('div', null, h('label', { text: label }), f[k]); };
   f.file = h('input', { type: 'file', accept: 'image/*,video/*' });
-  f.licence = h('select', null, ...['PD', 'CC0', 'CC BY', 'CC BY-SA'].map((l) => h('option', { value: l, text: l })));
+  f.licence = h('select', null, h('option', { value: '', text: 'Chưa rõ' }), ...['PD', 'CC0', 'CC BY', 'CC BY-SA'].map((l) => h('option', { value: l, text: l })));
   const msg = h('div', { class: 'hint' });
   const form = h('div', { class: 'form-grid' },
     h('div', { class: 'full' }, h('label', { text: 'Tệp' }), f.file), inp('title', 'Tiêu đề'), inp('artist', 'Họa sĩ'), inp('year', 'Năm'), h('div', null, h('label', { text: 'Giấy phép' }), f.licence),
-    h('div', { class: 'full' }, inp('source_url', 'Địa chỉ trang nguồn (bắt buộc)', { placeholder: 'https://...' })), h('div', { class: 'full' }, inp('author', 'Tác giả (hoặc "unknown, PD")')),
+    h('div', { class: 'full' }, inp('source_url', 'Địa chỉ trang nguồn (không bắt buộc)', { placeholder: 'https://...' })), h('div', { class: 'full' }, inp('author', 'Tác giả (không bắt buộc)')),
     h('div', { class: 'full' }, h('button', { class: 'primary', text: 'Tải lên', onclick: async () => {
       if (!f.file.files[0]) return (msg.textContent = 'Chọn tệp trước.');
-      if (!f.source_url.value || !f.author.value) return (msg.textContent = 'Cần điền địa chỉ nguồn và tác giả của hình.');
       const fd = new FormData(); fd.append('file', f.file.files[0]);
       for (const k of ['title', 'artist', 'year', 'licence', 'source_url', 'author']) fd.append(k, f[k].value);
       msg.textContent = 'Đang tải...';

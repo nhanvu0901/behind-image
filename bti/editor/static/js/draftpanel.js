@@ -2,35 +2,13 @@
 // Mounted by the storyboard view into a container element it owns:
 //   const unmount = mountDraftPanel(container, { pid, scope, onProposal: (proposalId) => openProposals(onApplied, proposalId) });
 // The panel is self contained: it talks to /api/projects/{pid}/draft and /api/longjobs/{id} through the generic verbs of api.js.
-// The Vietnamese words are in TEXT below; errors go through errmsg.js (describeError via errorToast / errorInto).
+// The Vietnamese words are in labels.js (DRAFT_LABELS, used here as TEXT); errors go through errmsg.js (stageErrorText / errorInto).
 import { api } from './api.js';
-import { h, errorToast, errorInto, confirmDialog } from './util.js';
-import { jobErrorText } from './errmsg.js';
+import { h, toast, errorInto, confirmDialog } from './util.js';
+import { stageJobErrorText, stageErrorText } from './errmsg.js';
+import { DRAFT_LABELS } from './labels.js';
 
-const TEXT = {
-  title: 'Bản nháp storyboard',
-  intro: 'Agent đọc lời dẫn đã có giọng đọc và các hình bạn đã chọn, rồi dựng sẵn từng cảnh. Kết quả là một đề xuất: bạn xem và chấp nhận từng thay đổi, không có gì tự đổi.',
-  voice: 'Giọng đọc',
-  picks: 'Chọn hình',
-  model: 'Mô hình',
-  modelDefault: 'Mặc định',
-  start: 'Dựng bản nháp',
-  startAuto: 'Dựng tự động (không dùng agent)',
-  cancel: 'Dừng',
-  open: 'Mở đề xuất',
-  running: 'Đang dựng bản nháp...',
-  waiting: 'Đang chờ...',
-  notReady: 'Chưa đủ dữ liệu: xong bước Giọng đọc và Chọn hình trước.',
-  confirmReplace: 'Dự án đã có storyboard. Bản nháp mới chỉ là một đề xuất, không ghi đè gì cho đến khi bạn chấp nhận. Dựng bản nháp?',
-  stale: 'Bản nháp này dựng từ giọng đọc hoặc danh sách hình đã đổi.',
-  last: 'Lần dựng gần nhất',
-  tampered: 'Lần dựng bị bỏ vì agent đã đổi tệp ngoài thư mục làm việc.',
-  doneNote: 'Xong. Có %n cảnh.',
-  issues: '%n mục còn dở, xem trong đề xuất.',
-  loadingModels: 'Đang tải danh sách mô hình...',
-  noModels: 'Chưa lấy được danh sách mô hình (agy chưa đăng nhập?). Dùng mô hình mặc định.',
-  partState: { queued: 'chờ', waiting: 'chờ máy', running: 'đang chạy', done: 'xong', error: 'lỗi', cancelled: 'đã dừng', interrupted: 'bị ngắt' },
-};
+const TEXT = DRAFT_LABELS;
 const ACTIVE = new Set(['queued', 'waiting', 'running']);
 
 export function mountDraftPanel(container, { pid, scope = null, onProposal = null } = {}) {
@@ -75,11 +53,11 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
     try {
       const r = await api.post(`/api/projects/${encodeURIComponent(pid)}/draft/start`, body);
       jobId = r.job_id; job = null; render(); tick();
-    } catch (e) { errorToast(e, 'Không bắt đầu được: '); }
+    } catch (e) { toast('Không bắt đầu được: ' + stageErrorText('draft', e).text, 'err', 9000); }
   }
   async function cancel() {
     if (!jobId) return;
-    try { await api.post(`/api/longjobs/${encodeURIComponent(jobId)}/cancel`, {}); tick(); } catch (e) { errorToast(e, 'Không dừng được: '); }
+    try { await api.post(`/api/longjobs/${encodeURIComponent(jobId)}/cancel`, {}); tick(); } catch (e) { toast('Không dừng được: ' + stageErrorText('draft', e).text, 'err', 9000); }
   }
 
   function readyRow(label, r) {
@@ -104,7 +82,7 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
           h('button', { class: 'small', text: TEXT.startAuto, disabled: !info.ready.ok, onclick: () => start('auto') })),
         info.ready.ok ? null : h('div', { class: 'hint warn', text: TEXT.notReady }));
       const lr = info.last_run;
-      if (job && job.state === 'error') kids.push(h('div', { class: 'banner warn', text: jobErrorText(job).text }));
+      if (job && job.state === 'error') kids.push(h('div', { class: 'banner warn', text: stageJobErrorText('draft', job).text }));
       if (lr && lr.status === 'tampered') kids.push(h('div', { class: 'banner warn', text: TEXT.tampered }));
       if (st.proposal) {
         const note = lr && lr.status === 'done' ? [TEXT.doneNote.replace('%n', lr.n_shots), (lr.errors_left || lr.incomplete) ? ' ' + TEXT.issues.replace('%n', (lr.errors_left || 0) + (lr.incomplete || 0)) : ''].join('') : st.detail;

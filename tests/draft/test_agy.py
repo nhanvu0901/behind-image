@@ -69,7 +69,7 @@ def checker(ws):
 def test_normal_run_command_line_prompt_and_events(fake, ws, proj):
     seen = []
     r = agy.run(ws.root, model="some-model", timeout=60, check=checker(ws), on_progress=seen.append, python=sys.executable,
-                transcript_path=ws.root.parent / "events.jsonl", guard=Guard(proj, extra=lambda: None))
+                transcript_path=ws.root.parent / "events.jsonl", guard=Guard(proj, extra=lambda: None, repo_root=proj.parent))
     assert r.status == "ok" and r.turns == 1 and r.steps == 3 and r.last_action == "view_file" and r.conversation_id == "conv-1"
     a = fake.calls()[0]["argv"]
     assert a[:1] == ["--dangerously-skip-permissions"] and a[a.index("--model") + 1] == "some-model"
@@ -157,25 +157,49 @@ def _alive(pid):
 
 def test_tampering_is_detected(fake, ws, proj):
     fake.mode("tamper")
-    r = agy.run(ws.root, timeout=60, guard=Guard(proj, extra=lambda: None))
+    r = agy.run(ws.root, timeout=60, guard=Guard(proj, extra=lambda: None, repo_root=proj.parent))
     assert r.status == "tampered" and r.tampered == ["changed timing.json"]
 
 
-def test_an_unrelated_change_in_cache_is_not_tampering(fake, ws, proj):
-    g = Guard(proj, extra=lambda: None)
+def test_the_owners_own_work_is_not_tampering(proj):
+    g = Guard(proj, extra=lambda: None, repo_root=proj.parent)
     g.before()
-    (proj / "cache").mkdir()
-    (proj / "cache" / "x.json").write_text("{}")
-    (proj / "proposals").mkdir()
-    (proj / "proposals" / "p.json").write_text("{}")
+    for d in ("cache", "proposals", "history", "script", "voice", "export"):
+        (proj / d).mkdir()
+        (proj / d / "x.json").write_text("{}")
+    (proj / "storyboard.json").write_text("{}")
+    (proj / "picks.json").write_text("{}")                          # saved or edited by the owner during the run
+    (proj / "media" / "new_upload.jpg").write_bytes(b"x")           # an upload: a new file under media/
     assert g.after() == []
-    (proj / "picks.json").write_text("{}")
-    assert g.after() == ["changed picks.json"]
+
+
+def test_changing_or_deleting_an_existing_media_file_or_timing_is_tampering(proj):
+    g = Guard(proj, extra=lambda: None, repo_root=proj.parent)
+    g.before()
+    (proj / "media" / "a.jpg").write_bytes(b"changed")
+    (proj / "media" / "b.jpg").unlink()
+    (proj / "timing.json").write_text("{}")
+    assert sorted(g.after()) == ["changed media/a.jpg", "changed timing.json", "removed media/b.jpg"]
+
+
+def test_a_change_in_the_repository_folders_is_tampering(tmp_path, proj):
+    repo = tmp_path / "repo"
+    for d in ("bti", "style", "config", "prompts", "skills"):
+        (repo / d).mkdir(parents=True)
+        (repo / d / "f.txt").write_text("1")
+    (repo / "bti" / "__pycache__").mkdir()
+    g = Guard(proj, extra=lambda: None, repo_root=repo)
+    g.before()
+    (repo / "bti" / "__pycache__" / "x.pyc").write_text("p")        # the app compiling a module is not tampering
+    assert g.after() == []
+    (repo / "skills" / "f.txt").write_text("22")
+    (repo / "config" / "new.json").write_text("{}")
+    assert sorted(g.after()) == ["repository added config/new.json", "repository changed skills/f.txt"]
 
 
 def test_guard_reports_extra_status_changes(proj):
     state = {"v": "a"}
-    g = Guard(proj, extra=lambda: state["v"])
+    g = Guard(proj, extra=lambda: state["v"], repo_root=proj.parent)
     g.before()
     state["v"] = "b"
     assert "comic repository" in g.after()[0]

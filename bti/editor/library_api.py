@@ -335,6 +335,6 @@ def _jpeg(book_id: str, pdf_page: int, w: int):
     return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 
-def stage_of(d: Path) -> str:
+def stage_of(d: Path, states: dict | None = None) -> str:
     from bti.script.stage import bump_stage   # adds `outlined` / `script` from the approved script files
-    return bump_stage(libprojects.infer_stage(d), d)
+    return bump_stage(libprojects.infer_stage(d, states), d)

@@ -757,7 +757,7 @@ def test_project_files_of_the_wrong_shape_or_kind_are_409_and_recover(client):
     assert r.status_code == 409 and r.json()["data_error"] == "project"
     doc["sources"] = keep; pj.write_text(json.dumps(doc))
     assert client.get(f"{B}/pipeline").status_code == 200
-    if os.geteuid() != 0:
+    if os.name != "nt" and os.geteuid() != 0:                                    # no mode-000 files on Windows
         paste = d / "script" / "last_paste.txt"
         paste.write_text("x"); os.chmod(paste, 0)
         try:

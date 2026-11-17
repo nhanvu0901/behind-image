@@ -184,10 +184,28 @@ class _Compiler:
         for k, c in enumerate(chs):
             z = {"id": c["id"], "name": c["name"], "w0": c["w0"], "w1": c["w1"], "start": c["start"], "end": c["end"],
                  "card": None, "title": None, "kept_cards": []}
+            lead = c.get("lead")
             if self.edit:       # edit mode: the cards of the saved storyboard stay exactly as they are
                 for cc in self.cur:
                     if D.is_card(self.bundle, cc["shot"]) and prev_end - EPS <= cc["t0"] <= c["start"] + EPS:
                         z["kept_cards"].append(cc)
+            elif lead and lead["kind"] in ("title", "card", "plain"):
+                # the voice says what the silence before the first word is for: place the cards from it
+                end, gap = lead["end"], lead["end"] - lead["start"]
+                want_card = lead["kind"] == "card" or (lead["kind"] == "title" and c["card"])
+                cd = min(CARD_S, gap) if want_card else 0.0
+                if want_card and cd >= MIN_CARD_S:
+                    z["card"] = {"start": end - cd, "dur": cd}
+                elif want_card:
+                    self.base_issues.append(S.problem("card_no_room", c["id"], None, "the silence before the chapter is only %.1f s: no card was placed" % gap, level="warn"))
+                    cd = 0.0
+                if lead["kind"] == "title" and not title_done:
+                    td = min(TITLE_CARD_S, gap - cd)
+                    if td >= MIN_CARD_S:
+                        z["title"] = {"start": end - cd - td, "dur": td}
+                        title_done = True
+                if z["card"] or z["title"]:
+                    z["start"] = end                    # the first shot starts where the cards end
             elif c["card"]:
                 if c["card_start"] is not None and c["card_end"] is not None and c["card_end"] > c["card_start"]:
                     cs, cd = c["card_start"], c["card_end"] - c["card_start"]
@@ -202,6 +220,10 @@ class _Compiler:
                         title_done = True
                 else:
                     self.base_issues.append(S.problem("card_no_room", c["id"], None, "the chapter has a card but the silence before it is only %.1f s: no card was placed" % max(0.0, c["start"] - prev_end), level="warn"))
+            if k == 0 and (z["title"] or z["card"]) and not self.edit:      # the first picture of the video starts at 0
+                f = z["title"] or z["card"]
+                f["dur"] += f["start"]
+                f["start"] = 0.0
             z["zone_start"] = min([x["t0"] for x in z["kept_cards"]] + [(z["title"] or z["card"] or {"start": c["start"]})["start"]])
             if k == 0:
                 z["zone_start"] = 0.0
@@ -419,8 +441,15 @@ class _Compiler:
             last_t = t0
         return recs
 
+    def locked_card_near(self, t: float) -> bool:
+        return any(c["locked"] and D.is_card(self.bundle, c["shot"]) and abs(c["t0"] - t) < 0.75 for c in self.cur)
+
     def card_recs(self, zone) -> list:
         out = []
+        if zone["title"] and self.locked_card_near(zone["title"]["start"]):
+            zone["title"] = None
+        if zone["card"] and self.locked_card_near(zone["card"]["start"]):
+            zone["card"] = None
         if zone["title"]:
             info = self.info(self.main)
             shot = {"technique": "X-CARD-02", "slots": {"background": {"asset": self.main}}, "intent": "structure", "transition_in": None,

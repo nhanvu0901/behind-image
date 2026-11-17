@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import wave
 from pathlib import Path
 
@@ -30,6 +31,7 @@ class ChatterboxProvider:
 
     def __init__(self, worker: dict):
         self.w = worker
+        self.timing: dict = {}
 
     def command(self, job_file: Path) -> list[str]:
         return [self.w["python"], "-B", self.w["worker"], str(job_file)]
@@ -56,6 +58,8 @@ class ChatterboxProvider:
         job_file.write_text(json.dumps(self.job(chunks, out_dir), ensure_ascii=False), encoding="utf-8")
         errors: dict[int, str] = {}
         done = {"n": 0}
+        t0 = time.monotonic()
+        self.timing = {"load_s": None, "total_s": None, "chunks": 0}
 
         def on_line(line: str) -> None:
             line = (line or "").strip()
@@ -67,6 +71,10 @@ class ChatterboxProvider:
                 return
             if not isinstance(d, dict):
                 return
+            if d.get("ready"):
+                self.timing["load_s"] = round(time.monotonic() - t0, 1)
+                ctx.log("voice model ready after %.1f s" % self.timing["load_s"])
+                return
             if "error" in d and isinstance(d.get("i"), int):
                 errors[d["i"]] = str(d["error"])[:300]
                 done["n"] += 1
@@ -77,6 +85,9 @@ class ChatterboxProvider:
             ctx.progress(min(done["n"] / max(len(chunks), 1), 1.0), f"{done['n']}/{len(chunks)}")
 
         rc = ctx.run_process(self.command(job_file), cwd=str(work), on_line=on_line)
+        self.timing["total_s"] = round(time.monotonic() - t0, 1)
+        self.timing["chunks"] = done["n"]
+        ctx.log("voice part: %s" % json.dumps(self.timing))
         res: dict[str, dict] = {}
         for i, c in enumerate(chunks):
             src = out_dir / f"chunk_{i:05d}.wav"

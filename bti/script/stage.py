@@ -5,7 +5,7 @@ from pathlib import Path
 
 from .store import DocumentCorrupt, load_narration, load_outline, narration_approval
 
-ORDER = ["selected", "outlined", "script", "voiced", "storyboard", "approved", "rendered"]
+ORDER = ["selected", "outlined", "script", "voiced", "picked", "storyboard", "approved", "rendered"]
 
 
 def script_stage(pdir: Path) -> str | None:

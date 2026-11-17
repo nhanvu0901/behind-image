@@ -22,6 +22,7 @@ def _copy(name, tmp_path):
     return open_project(d)
 
 
+@pytest.mark.slow                                  # about 25 s per real project on the Windows server (6 s on the Mac)
 @pytest.mark.parametrize("name", ["arnolfini", "arnolfini_edit", "technique_lab"])
 def test_draw_check_of_a_real_project_is_clean(name, tmp_path):
     p = _copy(name, tmp_path)

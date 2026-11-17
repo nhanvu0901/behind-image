@@ -15,6 +15,8 @@ from fastapi import APIRouter, Query
 
 from bti.script.store import DocumentCorrupt, forget_lock, read_object, script_lock
 
+from bti.library import projects as projects_mod
+
 from .common import ApiError, forget_save_lock, read_json, save_lock, storyboard_approval, valid_pid
 
 DELETE_WAIT_S = 2.0          # how long DELETE waits for a save in flight before it answers 409
@@ -45,18 +47,35 @@ STEPS = [
     ("edit", "Dựng hình"),
     ("export", "Xuất video"),
 ]
-NOT_BUILT = ("voice", "picks", "export")
-STATES = ("done", "current", "available", "locked", "not_built", "no_data")
+STATES = ("done", "current", "available", "locked", "not_built", "no_data")     # `not_built` is kept for old clients; no step is in it now
 
 R_IMPORTED = "Dự án này được nhập từ bản dựng trước, chưa có dữ liệu cho bước này."
-R_NOT_BUILT = "Bước này chưa được xây dựng."
-R_NO_STORYBOARD = ("Chưa có storyboard. Storyboard được tạo sau hai bước Giọng đọc và Chọn hình, "
-                   "hai bước này chưa được xây dựng.")
+R_NEEDS_NARRATION = "Cần duyệt lời dẫn ở bước Kịch bản trước."
+R_NO_STORYBOARD = "Chưa có storyboard. Xong hai bước Giọng đọc và Chọn hình để dựng bản nháp storyboard."
+R_NO_STORYBOARD_VOICE = "Chưa có storyboard. Còn thiếu bước Giọng đọc để dựng bản nháp."
+R_NO_STORYBOARD_PICKS = "Chưa có storyboard. Còn thiếu bước Chọn hình để dựng bản nháp."
+R_NEEDS_APPROVED = "Cần duyệt storyboard ở bước Dựng hình trước khi xuất video."
 R_NO_PROJECT = "Chọn một tác phẩm và tạo dự án trước."
 
 
-def _step(i: int, sid: str, label: str, state: str, reason: str = "", detail: str = "") -> dict:
-    return {"id": sid, "n": i + 1, "label": label, "state": state, "reason": reason, "detail": detail}
+def _step(i: int, sid: str, label: str, state: str, reason: str = "", detail: str = "", work: str | None = None) -> dict:
+    """`work` is the stage package's own state (none|running|stale|done) for the steps that have one, so the stepper can say
+    "Đang chạy" or "Cần làm lại" next to the step's state."""
+    out = {"id": sid, "n": i + 1, "label": label, "state": state, "reason": reason, "detail": detail}
+    if work is not None:
+        out["work"] = work
+    return out
+
+
+def _stage_step(i: int, sid: str, label: str, st: dict, unlocked: bool, locked_reason: str) -> dict:
+    """A step run by a stage package (voice, picks, export): done when the package says done, else open or locked."""
+    work = st.get("state", "none")
+    detail = str(st.get("detail") or "")
+    if work == "done":
+        return _step(i, sid, label, "done", detail=detail, work=work)
+    if not unlocked:
+        return _step(i, sid, label, "locked", locked_reason, detail=detail, work=work)
+    return _step(i, sid, label, "available", detail=detail, work=work)
 
 
 def outputs_of(d: Path) -> list[dict]:
@@ -154,6 +173,11 @@ def compute(root: Path, pid: str) -> dict:
             title = read_json(d / "storyboard.json").get("title")
         except Exception:
             pass
+    sts = projects_mod.stage_states(d)
+    script_st, script_det = _script_state(d) if not imported else ("no_data", "")
+    narration_ok = script_st == "done"
+    sb_state, sb_det = _storyboard_state(d)
+    voice_done, picks_done = sts["voice"]["state"] == "done", sts["picks"]["state"] == "done"
     steps: list[dict] = []
     for i, (sid, label) in enumerate(STEPS):
         if sid in ("artwork", "script", "voice", "picks") and imported:
@@ -165,29 +189,38 @@ def compute(root: Path, pid: str) -> dict:
             n = len(srcs or [])
             steps.append(_step(i, sid, label, "done", detail=f"{n} nguồn sách" if n else "Đã chọn tác phẩm"))
         elif sid == "script":
-            st, det = _script_state(d)
-            steps.append(_step(i, sid, label, st, detail=det))
+            steps.append(_step(i, sid, label, script_st, detail=script_det))
+        elif sid in ("voice", "picks"):
+            # steps 3 and 4 both open when the narration is approved, in either order or at the same time
+            steps.append(_stage_step(i, sid, label, sts[sid], narration_ok, R_NEEDS_NARRATION))
         elif sid == "edit":
-            st, det = _storyboard_state(d)
-            steps.append(_step(i, sid, label, st, R_NO_STORYBOARD if st == "locked" else "", det))
-        else:  # voice, picks, export
-            det = ""
-            if sid == "export" and outputs:
-                det = f"Đã có {len(outputs)} tệp video dựng sẵn"
-            steps.append(_step(i, sid, label, "not_built", R_NOT_BUILT, det))
+            if has_sb:
+                steps.append(_step(i, sid, label, sb_state, "", sb_det))
+            elif voice_done and picks_done:
+                dr = projects_mod._safe_state("bti.draft", d)           # the draft panel is what step 5 shows without a storyboard
+                steps.append(_step(i, sid, label, "available", detail=str(dr.get("detail") or "Dựng bản nháp storyboard từ giọng đọc và hình đã chọn"),
+                                   work=dr.get("state")))
+            else:
+                why = R_NO_STORYBOARD_VOICE if picks_done else R_NO_STORYBOARD_PICKS if voice_done else R_NO_STORYBOARD
+                steps.append(_step(i, sid, label, "locked", why))
+        else:  # export: opens when the storyboard approval is fresh; an old video file is shown as a detail
+            st = dict(sts["export"])
+            if st.get("state") == "none" and outputs:
+                st["detail"] = f"Đã có {len(outputs)} tệp video dựng sẵn"
+            steps.append(_stage_step(i, sid, label, st, sb_state == "done", R_NEEDS_APPROVED))
 
     # the step the stage calls for: the first one that is neither done nor without data nor locked
     current = next((s["id"] for s in steps if s["state"] in ("available", "current", "not_built")), steps[-1]["id"])
     for s in steps:
         if s["id"] == current and s["state"] == "available":
             s["state"] = "current"
-    return {"project": pid, "title": title or pid, "painting": _painting(d, pj), "stage": stage_of(d),
-            "imported": imported, "protected": is_protected(d), "artwork_key": pj.get("artwork_key"), "current": current, "steps": steps,
+    return {"project": pid, "title": title or pid, "painting": _painting(d, pj), "stage": stage_of(d, sts),
+            "imported": imported, "has_storyboard": has_sb, "protected": is_protected(d), "artwork_key": pj.get("artwork_key"), "current": current, "steps": steps,
             "outputs": outputs}
 
 
-def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, on_delete=None) -> APIRouter:
-    """`script_jobs` / `preview_jobs`: the job registries (a project with a running job cannot be deleted);
+def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, longjobs=None, on_delete=None) -> APIRouter:
+    """`script_jobs` / `preview_jobs` / `longjobs`: the job registries (a project with a running job cannot be deleted);
     `on_delete(pid)`: called after the folder is gone, to drop cached engine objects."""
     r = APIRouter(prefix="/api")
     root = Path(projects_root)
@@ -252,6 +285,10 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, on_
                 if busy is not None:
                     raise ApiError(409, "a model job is running for this project; cancel it first (POST /api/jobs/{id}/cancel)",
                                    job_id=busy.id)
+                lj = longjobs.active(pid) if longjobs is not None else None
+                if lj is not None:
+                    raise ApiError(409, "a long job (voice, draft, export...) is running for this project; cancel it first "
+                                        "(POST /api/longjobs/{id}/cancel)", code="longjob_running", job_id=lj["id"], kind=lj["kind"])
                 if preview_jobs is not None and preview_jobs.running(pid):
                     raise ApiError(409, "a preview is being rendered for this project; wait for it to finish")
                 trash = root / f".deleting-{pid}-{uuid.uuid4().hex[:8]}"
@@ -267,6 +304,11 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, on_
             sl.release()
         forget_lock(d)
         forget_save_lock(d)
+        try:
+            from bti.picks.doc import forget_lock as forget_picks_lock
+            forget_picks_lock(d)
+        except Exception:          # noqa: BLE001 - only frees one lock object
+            pass
         if on_delete is not None:
             on_delete(pid)
         remove_tree(trash)

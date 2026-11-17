@@ -45,7 +45,7 @@ export async function mount(host, { shell, scope }) {
       h('div', null, h('div', null, h('span', { class: 'tag', text: stageLabel(p.stage) }), pl?.imported ? h('span', { class: 'tag', style: { marginLeft: '6px' }, title: 'Không đi qua các bước từ thư viện', text: 'nhập từ bản cũ' }) : null),
         pl ? h('div', { class: 'minisb', title: pl.steps.map((s) => `${s.n}. ${s.label}`).join('  |  ') }, pl.steps.map((s) => h('i', { class: `st-${s.state}` + (s.id === pl.current ? ' at' : '') }))) : null),
       h('div', null, cur ? h('div', null, 'Tiếp theo: ', h('b', { text: `${cur.n}. ${cur.label}` })) : null,
-        h('div', { class: 'sub', text: (cur?.detail || '') + (cur && cur.state === 'not_built' ? ' Bước này chưa được xây dựng.' : '') }),
+        h('div', { class: 'sub', text: (cur?.detail || '') }),
         p.updated_at ? h('div', { class: 'sub', text: 'Cập nhật ' + when(p.updated_at) }) : null),
       h('div', { class: 'acts' }, del,
         h('button', { class: 'primary', text: 'Tiếp tục', title: cur ? `Mở bước ${cur.label}` : 'Mở dự án', onclick: () => shell.go(projectHash(p.id)) })));

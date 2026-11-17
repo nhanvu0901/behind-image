@@ -126,8 +126,118 @@ export function rawDetail(status, body) {
   return '';
 }
 
+// ---------------------------------------------------------------- codes of the long-job runner and of the stage routes
+// Answers carry `{detail, code}`; the sentence comes from the code, never from `detail`. One table per stage because a few codes
+// (busy, stale, not_found) mean different things in different stages; the views ask `stageErrorText(stage, e)`. Codes that are
+// unique to one stage are also found by describeHttp, so any other view that meets them still speaks Vietnamese.
+const LONGJOB_CODES = {
+  longjob_missing: 'Máy chủ thiếu bộ chạy việc dài.',
+  longjob_not_found: 'Không tìm thấy việc này (có thể máy chủ đã khởi động lại).',
+  longjob_running: 'Dự án đang có một việc dài chạy (giọng đọc, bản nháp, xuất video...). Chờ xong hoặc bấm Hủy rồi thử lại.',
+  part_timeout: 'Một bước chạy quá lâu nên bị dừng. Bấm chạy lại để làm tiếp, phần đã xong được giữ lại.',
+  part_failed: 'Một bước bị lỗi bất ngờ. Bấm chạy lại để thử tiếp.',
+  part_stuck: 'Một bước không dừng lại được. Bấm chạy lại sau ít phút.',
+  interrupted: 'Máy chủ đã khởi động lại giữa chừng. Bấm chạy lại để làm tiếp, phần đã xong được giữ lại.',
+  heavy_unavailable: 'Máy đang bận việc khác nên chưa chạy được. Hãy báo cho chủ máy nếu việc này kéo dài.',
+  project_gone: 'Dự án đã bị xóa.',
+  longjob_internal: 'Việc bị lỗi không mong đợi trên máy chủ.',
+  accept_all_required: 'Dự án chưa có storyboard: chỉ chấp nhận được cả đề xuất, không chọn từng thay đổi.',
+};
+export const STAGE_CODES = {
+  longjob: LONGJOB_CODES,
+  voice: {
+    narration_missing: 'Chưa có lời dẫn. Hãy làm bước Kịch bản trước.',
+    narration_not_approved: 'Lời dẫn chưa được duyệt. Hãy duyệt ở bước Kịch bản rồi quay lại.',
+    nothing_to_say: 'Lời dẫn chưa có câu nào để đọc.',
+    voice_not_configured: 'Máy này chưa cài giọng đọc. Hãy dùng máy chủ giọng đọc (Windows).',
+    voice_busy: 'Giọng đọc của dự án này đang chạy rồi. Chờ nó xong hoặc bấm Hủy.',
+    voice_worker_failed: 'Máy đọc giọng bị dừng giữa chừng. Bấm tạo lại để đọc tiếp, các câu đã đọc được giữ lại.',
+    voice_chunks_failed: 'Có câu máy chưa đọc được. Bấm tạo lại để thử tiếp.',
+    voice_chunks_missing: 'Lời dẫn đã đổi trong lúc đọc. Hãy chạy lại để đọc phần mới.',
+    voice_assemble_failed: 'Không ghép được tệp âm thanh.',
+    voice_align_failed: 'Không đo được thời điểm từng từ.',
+    no_voice: 'Chưa có tệp âm thanh để nghe.',
+    no_chunk: 'Câu này chưa được đọc.',
+    bad_scope: 'Yêu cầu đọc không hợp lệ.',
+    bad_tempo: 'Tốc độ phải nằm trong khoảng cho phép.',
+    bad_pad: 'Nhạc nền chỉ có bật hoặc tắt.',
+    bad_pronounce: 'Bảng phát âm có dòng không hợp lệ (cần chữ viết và cách đọc, mỗi ô không quá dài).',
+  },
+  picks: {
+    stale: 'Chọn hình đã đổi ở nơi khác (tab khác hoặc tác vụ nền). Đang tải lại bản mới nhất.',
+    source_unreachable: 'Nguồn ảnh đang bận hoặc không trả lời. Thử lại sau vài giây.',
+    source_error: 'Nguồn ảnh báo lỗi. Thử lại hoặc chọn nguồn khác.',
+    not_found: 'Không tìm thấy ảnh này ở nguồn.',
+    unknown_source: 'Nguồn ảnh này không có trong danh sách.',
+    query_required: 'Gõ từ khóa để tìm.',
+    narration_not_approved: 'Lời dẫn chưa được duyệt (hoặc đã đổi sau khi duyệt). Duyệt lời dẫn ở bước Kịch bản trước.',
+    picks_have_errors: 'Chọn hình còn lỗi nên chưa duyệt được. Bấm "Kiểm tra" để xem.',
+    image_empty: 'Tệp ảnh trống.', image_unreadable: 'Tệp này không phải ảnh đọc được.', image_truncated: 'Tệp ảnh bị cắt dở, không đọc hết được. Tải lại tệp đầy đủ.',
+    region_name: 'Tên vùng không hợp lệ (chữ, số, dấu cách, - hoặc _; tối đa 40 ký tự).', region_shape: 'Vùng không hợp lệ.', region_outside: 'Tâm vùng nằm ngoài bức ảnh.',
+    confirm_required: 'Cần bạn xác nhận chi phí trước khi chạy.', suggest_off: 'Gợi ý thêm đang tắt trong cấu hình.', suggest_no_key: 'Chưa có khóa You.com trên máy chủ.',
+    suggest_failed: 'You.com không trả lời được. Thử lại sau.', busy: 'Đang có một lượt gợi ý chạy cho dự án này.', too_many: 'Chọn tối đa 40 dòng một lần.',
+  },
+  export: {
+    no_storyboard: 'Chưa có storyboard. Hãy dựng hình ở bước "Dựng hình" trước.',
+    not_approved: 'Storyboard chưa được duyệt. Mở bước "Dựng hình" và bấm Duyệt.',
+    approval_stale: 'Storyboard đã đổi sau khi duyệt. Mở bước "Dựng hình" và duyệt lại.',
+    storyboard_unreadable: 'Không đọc được tệp storyboard của dự án.',
+    no_audio: 'Chưa có tệp giọng đọc. Hãy làm bước "Giọng đọc" trước.',
+    no_timing: 'Chưa có tệp thời điểm của từng từ (timing). Hãy làm bước "Giọng đọc" trước.',
+    no_subtitles: 'Không tạo được phụ đề từ tệp thời điểm của từng từ.',
+    busy: 'Dự án này đang xuất video rồi. Chờ xong hoặc bấm Hủy.',
+    render_failed: 'Dựng hình bị dừng giữa chừng. Bấm "Xuất video" lần nữa để làm tiếp: những đoạn đã dựng xong được giữ lại.',
+    frames_mismatch: 'Số khung hình của video không đúng với kế hoạch, nên đã dừng để không tạo ra tệp sai.',
+    join_failed: 'Không ghép được các đoạn video lại với nhau.',
+    part_missing: 'Thiếu một đoạn video đã dựng. Bấm "Xuất video" lần nữa.',
+    mux_failed: 'Không ghép được tiếng, phụ đề và mục lục vào video.',
+    plan_failed: 'Không lên được kế hoạch xuất. Storyboard có thể đang có lỗi: thử mở bước "Dựng hình".',
+  },
+  draft: {
+    draft_not_ready: 'Chưa đủ dữ liệu để dựng bản nháp: xong bước Giọng đọc và Chọn hình trước.',
+    agy_missing: 'Máy này chưa có chương trình agy hoặc chưa đăng nhập. Dùng "Dựng tự động" hoặc cài và đăng nhập agy.',
+    scope_needs_storyboard: 'Dựng lại một chương cần storyboard có sẵn. Hãy dựng cả video trước.',
+    bad_provider: 'Cách dựng bản nháp không hợp lệ.',
+    bad_model: 'Mô hình này không có trong danh sách.',
+    bad_chapters: 'Danh sách chương không hợp lệ.',
+    unknown_chapter: 'Có chương không nằm trong lời dẫn.',
+    busy: 'Dự án này đang dựng bản nháp rồi. Chờ xong hoặc bấm Dừng.',
+    picks_missing: 'Chưa có danh sách hình đã duyệt. Làm bước Chọn hình trước.',
+    timing_missing: 'Chưa có tệp thời điểm từng từ. Làm bước Giọng đọc trước.',
+    picks_no_main: 'Chưa chọn tranh chính ở bước Chọn hình.',
+    draft_tampered: 'Lần dựng bị bỏ vì agent đã đổi tệp ngoài thư mục làm việc của nó. Không có gì được lấy từ lần đó.',
+    draft_no_output: 'Agent không viết ra tệp nào để dùng. Thử dựng lại hoặc dùng "Dựng tự động".',
+    agy_auth: 'Chương trình agy chưa đăng nhập. Đăng nhập agy trên máy chủ (trong phiên làm việc của bạn) rồi thử lại.',
+    agy_busy: 'Agent đang bận với một lần dựng khác. Chờ xong rồi thử lại.',
+    agy_config: 'Chương trình agy trên máy này quá cũ hoặc thiếu tùy chọn cần dùng.',
+    agy_error: 'Agent báo lỗi khi dựng. Thử lại, hoặc dùng "Dựng tự động".',
+    agy_model: 'Mô hình đã chọn không dùng được. Chọn mô hình khác.',
+    agy_no_result: 'Agent kết thúc mà không trả kết quả. Xem bản ghi của lần chạy rồi thử lại.',
+    agy_rate_limit: 'Agent bị giới hạn lượt dùng hoặc hết hạn mức. Thử lại sau.',
+    agy_timeout: 'Agent chạy quá thời gian cho phép nên bị dừng. Thử dựng từng chương.',
+  },
+};
+const AMBIGUOUS = new Set(['busy', 'stale', 'not_found']);
+const UNIQUE_CODES = (() => {
+  const out = {};
+  for (const table of Object.values(STAGE_CODES)) for (const [k, v] of Object.entries(table)) if (!AMBIGUOUS.has(k) && !(k in out)) out[k] = () => v;
+  return out;
+})();
+/** The Vietnamese sentence of an error of stage `stage` (voice | picks | export | draft) by its `code`; other errors go through describeError. */
+export function stageErrorText(stage, e) {
+  const code = e?.body && typeof e.body === 'object' ? e.body.code : null;
+  const t = typeof code === 'string' ? STAGE_CODES[stage]?.[code] || LONGJOB_CODES[code] : null;
+  return t ? { text: t, detail: '' } : describeError(e);
+}
+/** The same for a failed long job (`job.error_code`); falls back to jobErrorText. */
+export function stageJobErrorText(stage, job) {
+  const t = job?.error_code && (STAGE_CODES[stage]?.[job.error_code] || LONGJOB_CODES[job.error_code]);
+  return t ? { text: t, detail: '' } : jobErrorText(job);
+}
+
 /** Vietnamese message for an HTTP error. Never returns an empty text. */
 const BY_CODE_HTTP = {
+  ...UNIQUE_CODES,
   too_large: () => 'Dữ liệu gửi lên quá lớn (trên 8 MB) nên máy chủ không nhận. Thu nhỏ tệp hoặc bớt nội dung rồi thử lại.',
   project_busy: () => 'Dự án đang được lưu hoặc xử lý ở chỗ khác nên chưa xóa được. Đợi vài giây rồi thử lại.',
   too_deep: () => 'Dữ liệu gửi lên có cấu trúc lồng quá sâu nên máy chủ từ chối.',
@@ -142,7 +252,7 @@ export function renderFailText(b) {
   if (b?.asset) return `Không dựng được hình của ${where}${asset}: tệp ảnh bị hỏng hoặc không đọc được. Thay bằng ảnh khác ở tab Hình.`;
   return `Không dựng được hình của ${where}${b?.technique ? ` (kỹ thuật ${b.technique})` : ''} với các giá trị hiện tại. Sửa tham số của nó hoặc đổi sang kỹ thuật khác.`;
 }
-const DATA_ERROR = { project: 'Tệp project.json của dự án bị hỏng hoặc sai dạng.', source: 'Văn bản nguồn của dự án bị hỏng hoặc không đọc được (không phải UTF-8).', library: 'Một tệp của thư viện sách bị hỏng.', timing: 'Tệp thời gian (timing) của dự án bị thiếu hoặc hỏng.', storyboard: 'Tệp storyboard của dự án bị hỏng hoặc thiếu.', script: 'Tệp dàn ý hoặc lời dẫn của dự án bị hỏng. Bản dán gần nhất (nếu có) vẫn được giữ.', style: 'Không đọc được kiểu (style) mà dự án dùng.' };
+const DATA_ERROR = { project: 'Tệp project.json của dự án bị hỏng hoặc sai dạng.', source: 'Văn bản nguồn của dự án bị hỏng hoặc không đọc được (không phải UTF-8).', library: 'Một tệp của thư viện sách bị hỏng.', timing: 'Tệp thời gian (timing) của dự án bị thiếu hoặc hỏng.', storyboard: 'Tệp storyboard của dự án bị hỏng hoặc thiếu.', script: 'Tệp dàn ý hoặc lời dẫn của dự án bị hỏng. Bản dán gần nhất (nếu có) vẫn được giữ.', voice: 'Tệp giọng đọc của dự án bị hỏng.', picks: 'Tệp chọn hình (picks.json) của dự án bị hỏng.', export: 'Tệp kết quả xuất video của dự án bị hỏng.', draft: 'Tệp bản nháp của dự án bị hỏng.', style: 'Không đọc được kiểu (style) mà dự án dùng.' };
 export function describeHttp(status, body) {
   const raw = rawDetail(status, body);
   const s = unquote(raw);
@@ -287,12 +397,12 @@ export function licenceText(raw) {
   const s = String(raw || ''), name = (/licen[cs]e '(.*?)'/i.exec(s) || [])[1];
   const q = name ? ` "${name}"` : '';
   let text;
-  if (/licence is missing/i.test(s)) text = 'Hình này không ghi giấy phép, nên không dùng được.';
-  else if (/non-commercial/i.test(s)) text = `Giấy phép${q} không cho dùng thương mại, nên không nhập được.`;
-  else if (/no-derivatives/i.test(s)) text = `Giấy phép${q} cấm sửa đổi, nên không nhập được.`;
-  else if (/not public domain/i.test(s)) text = 'Tác phẩm này không thuộc phạm vi công cộng, nên không nhập được.';
-  else if (/allow-list/i.test(s)) text = `Giấy phép${q} chưa nằm trong danh sách được phép (điều khoản hạn chế hoặc không rõ).`;
-  else text = isVietnamese(s) ? s : 'Giấy phép của hình này không được chấp nhận.';
+  if (/licence is missing/i.test(s)) text = 'Hình này không ghi giấy phép. Vẫn dùng được; hãy ghi nguồn khi đăng.';
+  else if (/non-commercial/i.test(s)) text = `Giấy phép${q} không cho dùng thương mại. Vẫn nhập được; hãy tự cân nhắc khi đăng.`;
+  else if (/no-derivatives/i.test(s)) text = `Giấy phép${q} cấm sửa đổi. Vẫn nhập được; hãy tự cân nhắc khi đăng.`;
+  else if (/not public domain/i.test(s)) text = 'Tác phẩm này không thuộc phạm vi công cộng. Vẫn nhập được; hãy tự cân nhắc khi đăng.';
+  else if (/allow-list/i.test(s)) text = `Giấy phép${q} chưa nằm trong danh sách ưu tiên (điều khoản hạn chế hoặc không rõ). Vẫn dùng được.`;
+  else text = isVietnamese(s) ? s : 'Giấy phép của hình này có hạn chế. Vẫn dùng được.';
   return { text, detail: s !== text ? s : '' };
 }
 

@@ -42,11 +42,11 @@ TEXTS = {
 }
 
 
-def make_narration(texts=None, card_second=True) -> store.Narration:
+def make_narration(texts=None, card_second=True, role_first="cold_open") -> store.Narration:
     texts = texts or TEXTS
     chs = []
     for i, (cid, beats) in enumerate(texts.items()):
-        chs.append(store.NChapter(cid, "cold_open" if i == 0 else "chapter", f"Chapter {cid}", card_second and i == 1,
+        chs.append(store.NChapter(cid, role_first if i == 0 else "chapter", f"Chapter {cid}", card_second and i == 1,
                                   [store.Beat(bid, t) for bid, t in beats]))
     n = store.Narration(project="p", title="T", chapters=chs)
     n.counters = {"beat": 10}

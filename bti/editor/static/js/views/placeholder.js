@@ -1,11 +1,8 @@
-// Steps that have nothing to edit: imported projects (no data), steps that are not built yet (honest placeholder), locked steps.
+// Steps that have nothing to open: imported projects (no data) and locked steps.
 // No fake controls: the only buttons here are real navigation.
 import { h } from '../util.js';
-import { PLANNED } from '../labels.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
-
-const mb = (n) => (n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB');
 
 export async function mount(host, { shell, kind, step, pipeline }) {
   const pid = pipeline.project;
@@ -29,18 +26,6 @@ export async function mount(host, { shell, kind, step, pipeline }) {
     root.append(h('h1', { text: `${step.n}. ${step.label}` }), h('div', { class: 'box warn' }, h('b', { text: 'Bước này đang khóa. ' }), step.reason), acts);
     return {};
   }
-  const pl = PLANNED[step.id] || { title: step.label, will: [], meanwhile: '' };
-  root.append(h('h1', { text: `${step.n}. ${pl.title}` }),
-    h('div', { class: 'box warn' }, h('b', { text: 'Bước này chưa được xây dựng. ' }), 'Chưa có gì để làm hoặc để bấm ở đây.'),
-    h('div', { class: 'box' }, h('h4', { text: 'Khi xây xong, bước này sẽ' }), h('ul', null, pl.will.map((t) => h('li', { text: t })))),
-    h('div', { class: 'muted', text: pl.meanwhile }));
-  if (step.id === 'export') {
-    const out = pipeline.outputs || [];
-    root.append(h('div', { class: 'box' }, h('h4', { text: 'Tệp video đã có' }),
-      out.length ? h('div', { class: 'files' }, out.map((o) => h('div', { class: 'file' }, h('code', { text: `projects/${pid}/${o.path}` }), h('span', { class: 'muted', text: mb(o.size) }),
-        h('a', { class: 'lnk', href: o.url, target: '_blank', rel: 'noopener', text: 'Mở tệp' }))))
-        : h('div', { class: 'muted', text: 'Dự án này chưa có tệp video dựng sẵn.' })));
-  }
-  root.append(acts);
+  root.append(h('h1', { text: `${step.n}. ${step.label}` }), h('div', { class: 'box warn' }, step.reason || 'Bước này chưa mở được.'), acts);
   return {};
 }

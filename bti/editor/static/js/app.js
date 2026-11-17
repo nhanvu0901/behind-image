@@ -20,6 +20,9 @@ const VIEWS = {
   script: () => import('./views/script.js'),
   info: () => import('./views/placeholder.js'),
   storyboard: () => import('./views/storyboard.js'),
+  voice: () => import('./views/voice.js'),
+  picks: () => import('./views/picks.js'),
+  export: () => import('./views/export.js'),
 };
 const here = () => location.pathname + location.search;
 
@@ -133,8 +136,7 @@ function pickView(route, pipeline) {
   const step = pipeline.steps.find((s) => s.id === route.step);
   if (step.state === 'no_data') return { mod: 'info', kind: 'nodata', step };
   if (step.state === 'locked') return { mod: 'info', kind: 'locked', step };
-  if (step.state === 'not_built') return { mod: 'info', kind: 'planned', step };
-  return { mod: { artwork: 'artwork', script: 'script', edit: 'storyboard' }[step.id], step };
+  return { mod: { artwork: 'artwork', script: 'script', voice: 'voice', picks: 'picks', edit: 'storyboard', export: 'export' }[step.id], step };
 }
 
 async function mountView(route, pipeline, seq) {

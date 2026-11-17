@@ -25,6 +25,8 @@ from PIL import Image
 from bti.engine import limits
 from bti.engine.errors import DataError, RenderError
 from bti.library.catalogue import LibraryDataError
+from bti.longjob import manager as longjob_manager
+from bti.longjob.api import router as longjob_router
 from bti.script.runner import ScriptJobs
 from bti.script.store import DocumentCorrupt, ProjectGone, forget_lock, make_parent, read_file_text, script_lock
 
@@ -36,8 +38,12 @@ from .common import (ApiError, DepthLimitMiddleware, ITEM_RE, REPO_ROOT, STYLE_R
                      forget_save_lock, id_field, now_iso, quarantine, read_json, safe_join, save_lock as storyboard_lock,
                      scrub_paths, segment_ok, storyboard_approval, storyboard_shape_problem, strip_derived, text_field, valid_pid, write_json_atomic)
 from . import engine_adapter as engine_adapter_mod
+from .draft_api import router as draft_router
 from .engine_adapter import ENGINE_LOCK, EngineAdapter
+from .export_api import router as export_router
 from .media_adapter import LicenceRejected, MediaAdapter
+from .picks_api import router as picks_router
+from .voice_api import router as voice_router
 
 PLACEHOLDER = """<!doctype html><meta charset="utf-8"><title>BTI editor</title>
 <body style="font-family:sans-serif;margin:3em"><h1>BTI editor backend is running</h1>
@@ -65,11 +71,16 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     media = MediaAdapter(root, media_module)
     jobs = jobs_mod.JobManager(workers, root)
     script_jobs = ScriptJobs(projects_root=root)          # one registry, shared by the script router and by delete-project
+    longjob_manager.configure(projects_root=root)         # the long-job runner (voice, draft, export, picks suggestions): one per process
     rev_cache: dict[str, tuple[tuple, str]] = {}
     readable: dict[str, tuple] = {}                        # pid -> (mtime_ns, size) of a storyboard.json known to load
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
+        try:
+            longjob_manager.startup()       # release a heavy lock of ours whose process died with the last run
+        except Exception:                   # noqa: BLE001 - the lock folder may not exist on this machine
+            logging.getLogger("bti.editor").warning("heavy-slot start-up check failed", exc_info=True)
         yield
         jobs.shutdown()
 
@@ -766,7 +777,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         """`{items: [...], skipped: [{file, reason}]}`: a file that cannot be read never breaks the list and never vanishes
         silently; it is named here with the reason."""
         d = pdir(pid) / "proposals"
-        saved = saved_storyboard(pid)
+        saved = saved_storyboard(pid) if has_storyboard(pid) else {}      # no storyboard yet: every item of a proposal is an addition
         out, skipped = [], []
         if d.is_dir():
             for f in sorted(d.glob("*.json")):
@@ -785,21 +796,65 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                 except Exception as e:      # noqa: BLE001 - a shape the checks did not foresee: skip it, say so
                     skipped.append({"file": f.name, "reason": f"unreadable ({type(e).__name__})"})
                     continue
-                out.append({"id": doc["id"], "created_at": doc.get("created_at"), "author": doc.get("author"),
-                            "summary": doc.get("summary"), "n_changes": n})
+                item = {"id": doc["id"], "created_at": doc.get("created_at"), "author": doc.get("author"),
+                        "summary": doc.get("summary"), "n_changes": n}
+                if isinstance(doc.get("issues_left"), list):
+                    item["n_issues_left"] = len(doc["issues_left"])
+                out.append(item)
         out.sort(key=lambda x: x.get("created_at") or "", reverse=True)
         return {"items": out, "skipped": skipped}
 
     @app.get("/api/projects/{pid}/proposals/{prop_id}")
     def get_proposal(pid: str, prop_id: str):
         doc = load_proposal(pid, prop_id)
+        if not has_storyboard(pid):
+            # the first draft of a project: nothing to compare with, so it is never stale and the whole document is the change
+            return {"proposal": {**doc, "stale": False, "first": True}, "changes": prop_mod.diff({}, doc["storyboard"])}
         saved = saved_storyboard(pid)
         changes = prop_mod.diff(saved, doc["storyboard"])
         return {"proposal": {**doc, "stale": doc.get("base_rev") != compute_rev(saved)}, "changes": changes}
 
+    def has_storyboard(pid: str) -> bool:
+        return (pdir(pid) / "storyboard.json").is_file()
+
+    def adopt_first_draft(pid: str, doc: dict, accept: Any) -> dict:
+        """`apply` on a project that has no storyboard yet: the proposal's document becomes the first storyboard.json. Only
+        `accept: "all"` makes sense (there is nothing to pick changes against). It is validated like any save: when it has errors
+        nothing stays on disk."""
+        if accept != "all":
+            raise ApiError(422, 'this project has no storyboard yet: accept the whole proposal (accept: "all")',
+                           code="accept_all_required")
+        d = pdir(pid)
+        new = prop_mod.adopt(doc["storyboard"])
+        with slock(pid):
+            if (d / "storyboard.json").is_file():          # somebody saved one while this request waited for the lock
+                raise ApiError(409, "a storyboard was saved in the meantime; open the proposal again", code="stale")
+            from bti.engine import storyboard as SB
+            SB.save(d, new, [])                             # atomic write; the validation below decides whether it stays
+            engine.forget(pid)
+            readable.pop(pid, None)
+            try:
+                p = engine.project(pid)
+                with ENGINE_LOCK:
+                    issues = p.validate()
+            except BaseException:
+                (d / "storyboard.json").unlink(missing_ok=True)
+                engine.forget(pid)
+                raise
+            errors = [i for i in issues if i["level"] == "error"]
+            if errors:
+                (d / "storyboard.json").unlink(missing_ok=True)
+                engine.forget(pid)
+                rev_cache.pop(pid, None)
+                raise ApiError(422, "the proposal's storyboard has errors and was not adopted", issues=issues)
+            out = save_result(pid, p)
+        return {**out, "applied": ["first_draft"], "skipped_locked": []}
+
     @app.post("/api/projects/{pid}/proposals/{prop_id}/apply")
     def apply_proposal(pid: str, prop_id: str, body: dict = Body(...)):
         doc = load_proposal(pid, prop_id)
+        if not has_storyboard(pid):
+            return adopt_first_draft(pid, doc, body.get("accept"))
         p = project(pid)
         with slock(pid):
             saved = saved_storyboard(pid)
@@ -818,8 +873,15 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
 
     from .library_api import make_router as _library_router
     app.include_router(_library_router(root))
+    # the four stages and the long-job routes. They MUST come before the GET catch-all `/{path:path}` at the end of this
+    # function: a router included after it never answers a GET.
+    app.include_router(longjob_router)
+    app.include_router(voice_router)
+    app.include_router(picks_router)
+    app.include_router(draft_router)
+    app.include_router(export_router)
     from .pipeline_api import make_router as _pipeline_router
-    app.include_router(_pipeline_router(root, script_jobs=script_jobs, preview_jobs=jobs, on_delete=forget_project))  # steps of a project (stepper, home) and delete-project
+    app.include_router(_pipeline_router(root, script_jobs=script_jobs, preview_jobs=jobs, longjobs=longjob_manager, on_delete=forget_project))  # steps of a project (stepper, home) and delete-project
 
     # ------------------------------------------------------------ static (dynamic, so a late frontend works)
     @app.get("/{path:path}", include_in_schema=False)

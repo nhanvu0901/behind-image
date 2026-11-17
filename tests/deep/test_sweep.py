@@ -51,7 +51,7 @@ def test_technique(client, lab_state, tid):
         problems = [p for p in problems if "changes nothing" not in p]   # B-007 has its own test
     assert not problems, problems
     assert rec["errors"] == []
-    assert all(v[1] <= 300 for k, v in rec["timings_ms"].items() if k != "defaults"), rec["timings_ms"]
+    assert all(v[1] <= sweep.WARM_LIMIT_MS for k, v in rec["timings_ms"].items() if k != "defaults"), rec["timings_ms"]
     if tid in PREVIEW_SAMPLE:
         pv = sweep.preview_one(client, tech, sb, rs, rec, pid="sweep_lab")
         assert "error" not in pv, pv

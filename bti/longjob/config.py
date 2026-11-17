@@ -40,6 +40,7 @@ class ServerConfig:
     production_patterns: tuple[str, ...] = ()
     voice: VoiceCfg | None = None
     aligner: AlignerCfg | None = None
+    comic_repo: str | None = None          # the comic repository (read-only): the draft compares `git status` before and after a run
     render_threads: int = 4
     part_seconds: int = 240
     raw: dict = field(default_factory=dict, compare=False, repr=False)
@@ -90,7 +91,7 @@ def parse_block(platform: str, b: dict) -> ServerConfig:
         lock_dir=str(lock) if lock else None,
         memory_floor_kb=max(0, _int(b.get("memory_floor_kb"), 0)),
         production_patterns=tuple(str(p) for p in pats) if isinstance(pats, list) else (),
-        voice=voice, aligner=aligner,
+        voice=voice, aligner=aligner, comic_repo=str(b["comic_repo"]) if b.get("comic_repo") else None,
         render_threads=max(1, _int(b.get("render_threads"), 4)),
         part_seconds=max(10, _int(b.get("part_seconds"), 240)),
         raw=b)

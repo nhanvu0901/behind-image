@@ -108,6 +108,21 @@ def diff(saved: dict, proposed: dict) -> list[dict]:
     return changes
 
 
+def adopt(proposed: dict) -> dict:
+    """The first storyboard of a project, from a proposal: the whole document, every shot and overlay marked `source: "agent"`
+    and not locked, and an empty approval."""
+    doc = strip_derived(copy.deepcopy(proposed))
+    for s in doc.get("shots") or []:
+        if not isinstance(s, dict):
+            continue
+        s["source"], s["locked"] = "agent", False
+        for o in s.get("overlays") or []:
+            if isinstance(o, dict):
+                o["source"], o["locked"] = "agent", False
+    doc["approvals"] = {"storyboard": None}
+    return doc
+
+
 def apply(saved: dict, proposed: dict, accept: Any) -> tuple[dict, list[str], list[str]]:
     """Return (new storyboard, applied ids, skipped-by-lock ids)."""
     saved, proposed = strip_derived(saved), strip_derived(proposed)

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
+import sys
 import time
 
 import pytest
@@ -105,9 +107,15 @@ def fake_agy(tmp_path, monkeypatch):
     monkeypatch.setenv("BTI_MODELS_FILE", str(mf))
 
     def make(script: str):
-        exe = tmp_path / "agy"
-        exe.write_text("#!/bin/sh\n" + script + "\n")
-        exe.chmod(0o755)
+        py = tmp_path / "fake_agy.py"                      # a python script started through the interpreter, both systems
+        py.write_text("import sys, time\n" + script + "\n", encoding="utf-8")
+        if os.name == "nt":
+            exe = tmp_path / "agy.cmd"
+            exe.write_text(f'@"{sys.executable}" "{py}" %*\r\n', encoding="utf-8")
+        else:
+            exe = tmp_path / "agy"
+            exe.write_text(f"#!{sys.executable}\n" + py.read_text(encoding="utf-8"), encoding="utf-8")
+            exe.chmod(0o755)
         monkeypatch.setenv("BTI_AGY_BIN", str(exe))
         models_mod.reset_cache()
         return exe
@@ -116,7 +124,7 @@ def fake_agy(tmp_path, monkeypatch):
 
 
 def test_non_utf8_output_is_a_failure_answer_not_an_exception(fake_agy):
-    fake_agy("printf '\\366\\377\\n'")
+    fake_agy("sys.stdout.buffer.write(b'\\xf6\\xff\\n')")
     ms = models_mod.public_models()
     agy = next(m for m in ms if m["provider"] == "antigravity")
     assert agy["agy"]["ok"] is False
@@ -126,14 +134,14 @@ def test_non_utf8_output_is_a_failure_answer_not_an_exception(fake_agy):
 
 
 def test_valid_rows_with_odd_bytes_and_duplicates(fake_agy):
-    fake_agy("printf 'a\\tA \\366\\nb\\tB\\na\\tdup\\n../x\\tbad\\n'")
+    fake_agy("sys.stdout.buffer.write(b'a\\tA \\xf6\\nb\\tB\\na\\tdup\\n../x\\tbad\\n')")
     rows, err = models_mod.agy_models()
     assert err is None and [r["slug"] for r in rows] == ["a", "b"]
 
 
 def test_a_mock_job_never_calls_the_cli(fake_agy, tmp_path):
     marker = tmp_path / "called"
-    fake_agy(f"touch {marker}; sleep 3; printf 'x\\tX\\n'")
+    fake_agy(f"open({str(marker)!r}, 'w').close(); time.sleep(3); print('x\\tX')")
     t = time.time()
     assert models_mod.resolve("mock")["id"] == "mock"
     assert models_mod.get_model("mock")["provider"] == "mock"
@@ -143,7 +151,7 @@ def test_a_mock_job_never_calls_the_cli(fake_agy, tmp_path):
 
 
 def test_slug_is_checked_against_a_fresh_list(fake_agy):
-    fake_agy("printf 'x\\tX\\n'")
+    fake_agy("print('x\\tX')")
     models_mod.agy_models()
     assert models_mod.resolve("agy:x")["model"] == "x"
     assert models_mod.resolve("agy:zzz") is None
@@ -151,7 +159,7 @@ def test_slug_is_checked_against_a_fresh_list(fake_agy):
 
 def test_no_lock_is_held_while_the_cli_runs(fake_agy):
     import threading
-    fake_agy("sleep 2; printf 'x\\tX\\n'")
+    fake_agy("time.sleep(2); print('x\\tX')")
     th = threading.Thread(target=models_mod.agy_models)
     th.start()
     time.sleep(0.4)

@@ -157,34 +157,57 @@ class Context:
         return self._job.cancel.is_set() or self._run.timed_out
 
     def run_process(self, cmd: list[str], cwd: str | Path | None = None, env: dict | None = None,
-                    on_line: Callable[[str], None] | None = None) -> int:
-        """Run a child in its own process group, feed each output line (stdout and stderr together) to `on_line` and to the log,
-        and return its exit code. If the job is cancelled or the part overruns, the whole process tree is killed first (the
-        child is gone when this returns). `env`, when given, is the complete environment of the child."""
+                    on_line: Callable[[str], None] | None = None, *, stdin: str | bytes | None = None,
+                    on_start: Callable[["ProcessHandle"], None] | None = None, separate_stderr: bool = False,
+                    on_stderr: Callable[[str], None] | None = None) -> int:
+        """Run a child in its own process group, feed each output line to `on_line` and to the log, and return its exit code.
+        If the job is cancelled or the part overruns, the whole process tree is killed first (the child is gone when this
+        returns). `env`, when given, is the complete environment of the child.
+
+        Optional, for programs that are talked to:
+        - `stdin`: text (or bytes) written to the child's standard input. It is then closed, unless `on_start` is given.
+        - `on_start(handle)`: called once the child runs, with a handle (`write(text)`, `close_stdin()`, `pid`) so the caller can
+          send more input later, from the part's own thread or from `on_line`; standard input stays open until `close_stdin()`
+          or the end of the child.
+        - `separate_stderr`: the child's standard error is not mixed into `on_line`; each of its lines goes to `on_stderr` (and to
+          the log, marked with "[stderr] "). Without it both streams arrive, in order, at `on_line`."""
         if self.cancelled():
             return -1
-        proc = subprocess.Popen([str(c) for c in cmd], cwd=str(cwd) if cwd else None, env=env, stdin=subprocess.DEVNULL,
-                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, encoding="utf-8",
-                                errors="replace", bufsize=1, **group_kwargs())
+        use_stdin = stdin is not None or on_start is not None
+        proc = subprocess.Popen([str(c) for c in cmd], cwd=str(cwd) if cwd else None, env=env,
+                                stdin=subprocess.PIPE if use_stdin else subprocess.DEVNULL,
+                                stdout=subprocess.PIPE, stderr=subprocess.PIPE if separate_stderr else subprocess.STDOUT,
+                                text=True, encoding="utf-8", errors="replace", bufsize=1, **group_kwargs())
+        handle = ProcessHandle(proc) if use_stdin else None
         with self._run.lock:
             self._run.children.add(proc)
 
-        def pump() -> None:
+        def pump(stream, callback, tag: str) -> None:
             try:
-                for line in proc.stdout:            # type: ignore[union-attr]
+                for line in stream:
                     line = line.rstrip("\r\n")
-                    self._job.log(line)
-                    if on_line is not None:
+                    self._job.log(tag + line)
+                    if callback is not None:
                         try:
-                            on_line(line)
+                            callback(line)
                         except Exception:           # noqa: BLE001 - a broken line parser must not kill the child
                             pass
             except (OSError, ValueError):
                 pass
 
-        reader = threading.Thread(target=pump, daemon=True)
-        reader.start()
+        readers = [threading.Thread(target=pump, args=(proc.stdout, on_line, ""), daemon=True)]
+        if separate_stderr:
+            readers.append(threading.Thread(target=pump, args=(proc.stderr, on_stderr, "[stderr] "), daemon=True))
+        for r in readers:
+            r.start()
         try:
+            if handle is not None:
+                if stdin is not None:
+                    handle.write(stdin.decode("utf-8", "replace") if isinstance(stdin, bytes) else stdin)
+                if on_start is None:
+                    handle.close_stdin()
+                else:
+                    on_start(handle)
             while True:
                 try:
                     proc.wait(timeout=0.05)
@@ -196,15 +219,44 @@ class Context:
         finally:
             if proc.poll() is None:
                 kill_tree(proc)
-            reader.join(timeout=5)
-            try:
-                proc.stdout.close()                 # type: ignore[union-attr]
-            except (OSError, ValueError):
-                pass
+            for r in readers:
+                r.join(timeout=5)
+            for st in (proc.stdout, proc.stderr, proc.stdin):
+                try:
+                    if st is not None:
+                        st.close()
+                except (OSError, ValueError):
+                    pass
             with self._run.lock:
                 self._run.children.discard(proc)
         rc = proc.returncode
         return -1 if rc is None else int(rc)
+
+
+class ProcessHandle:
+    """What `on_start` receives: a way to talk to the child's standard input. Writes after the child ended are ignored."""
+
+    def __init__(self, proc: subprocess.Popen):
+        self._proc = proc
+        self.pid = proc.pid
+
+    def write(self, text: str) -> bool:
+        try:
+            self._proc.stdin.write(text)            # type: ignore[union-attr]
+            self._proc.stdin.flush()                # type: ignore[union-attr]
+            return True
+        except (OSError, ValueError):
+            return False
+
+    def close_stdin(self) -> None:
+        try:
+            self._proc.stdin.close()                # type: ignore[union-attr]
+        except (OSError, ValueError, AttributeError):
+            pass
+
+    @property
+    def alive(self) -> bool:
+        return self._proc.poll() is None
 
 
 class _Job:

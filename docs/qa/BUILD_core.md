@@ -77,3 +77,24 @@ Interpretations of section 4 worth knowing:
 
 - Should `start` return only the id? I return the record (a dict with `id`); `get/cancel/wait` take either. Say if the other agents expect a bare string.
 - Real probes (`SystemProbes` on Windows) are untested until the server run; they only matter when `lock_dir` is set.
+
+
+## Phase 2: integration (done)
+
+Wired:
+- `bti/editor/app.py`: the long-job router and the four stage routers are included in `create_app` before the GET catch-all; `manager.configure(projects_root=root)`; the heavy-slot start-up check runs in the lifespan; `apply` on a project without `storyboard.json` adopts the proposal (`adopt_first_draft`): only `accept: "all"` (else 422 `accept_all_required`), the document gets `source: "agent"`, `locked: false`, empty approval, is validated like a save, and nothing stays on disk when it has errors. The proposals list shows `n_issues_left`; the detail of a first draft is never stale and carries `first: true`.
+- `bti/editor/proposals.py`: `adopt()`.
+- `bti/library/projects.py`: `stage_states(d)` (what `bti.voice`, `bti.picks`, `bti.export` say, never raising) and `infer_stage(d, states)`; stage `picked` added (also in `bti/script/stage.py` ORDER). `bti/editor/library_api.stage_of(d, states)`.
+- `bti/editor/pipeline_api.py`: steps from the stage states (see "How steps and the stage are computed"); steps carry `work` (none|running|stale|done); the pipeline answer has `has_storyboard`; delete is refused (409 `longjob_running`) while any long job of the project runs, and the picks lock is forgotten on delete.
+- `bti/editor/media_adapter.py` stub path and the storyboard view's media tab follow the advisory licence rule (`credit.flag`, no refusal, upload needs no licence, source or author).
+- Longjob: `ctx.run_process(..., stdin=, on_start=, separate_stderr=, on_stderr=)` (see the docstring); `ProcessHandle`; `comic_repo` in the Windows block of `config/server.json` and `ServerConfig.comic_repo`.
+- Front end: `app.js` mounts `views/voice.js`, `views/picks.js`, `views/export.js`; the three placeholders (`PLANNED`, "planned" kind) are gone; `index.html` links the three style sheets; step 5 without a storyboard shows `mountDraftPanel` instead of the editor (and its "Áp dụng" adopts the first draft, then the view reloads as the editor); with a storyboard a "Bản nháp" button opens the same panel in a dialog; the stepper shows `work` ("Đang chạy", "Cần làm lại").
+- Words: the local tables moved into `labels.js` (`VOICE_LABELS`, `PICKS_LABELS`, `DRAFT_LABELS`, `EXPORT_LABELS`, `FLAG`, `STEP_WORK`) and `errmsg.js` (`STAGE_CODES` by stage, `stageErrorText`, `stageJobErrorText`; codes unique to one stage are also known to `describeHttp`; `DATA_ERROR.voice|picks|export|draft`). The views import them; the duplicates are removed.
+- `docs/APP_GUIDE.md`: sections 3, 6 (voice, picks), 7 (draft), 8 (export, new) and 11 updated; old sections renumbered.
+
+How steps and the stage are computed (the home list, `/pipeline` and the stepper use the same function, `stage_states` + `infer_stage`):
+- step 3 and 4: `locked` until the narration is approved ("Cần duyệt lời dẫn ở bước Kịch bản trước."), then open in either order; `done` when the package's state is `done`; `work` carries running/stale.
+- step 5: unchanged when `storyboard.json` exists; without one it is `available` only when voice and picks are both done (the draft panel), else `locked` with the missing step named.
+- step 6: `available` when the storyboard approval is fresh, else `locked`; `done` when the export is fresh.
+- stage: selected < script < voiced < picked < storyboard < approved < rendered; `voiced` = voice fresh (or, for old projects with `audio/` or `timing.json` and no `voice/voice.json`, the old meaning); `picked` = voiced and picks fresh; a storyboard file always gives at least `storyboard`; `rendered` = fresh export or an old video file.
+- Projects without voice or picks (imported `arnolfini`, the labs): steps 1 to 4 stay `no_data`, step 5 as today, step 6 `locked` until the storyboard is approved (it was "not built" before), stage from the files as before.

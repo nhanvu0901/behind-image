@@ -234,3 +234,68 @@ def test_auto_specs_compile_clean_with_draw(proj):
     inp = load_inputs(proj)
     res = compile_specs(inp, {c: clean_spec(s, c) for c, s in auto.draft(inp).items()}, draw=True)
     assert not res.errors, summary_text(res)
+
+
+def _shift_timing(proj, by, leads):
+    t = json.loads((proj / "timing.json").read_text())
+    for w in t["words"]:
+        w["s"], w["e"] = round(w["s"] + by, 3), round(w["e"] + by, 3)
+    for b in t["beats"]:
+        b["start"], b["end"] = round(b["start"] + by, 3), round(b["end"] + by, 3)
+    for i, c in enumerate(t["chapters"]):
+        if i:
+            c["start"] = round(c["start"] + by, 3)
+        c["end"] = round(c["end"] + by, 3)
+        if leads.get(c["id"]):
+            c["lead"] = leads[c["id"]]
+    t["duration"] += by
+    (proj / "timing.json").write_text(json.dumps(t))
+
+
+def test_cards_are_placed_from_the_lead_of_the_timing(proj):
+    t = json.loads((proj / "timing.json").read_text())
+    w30 = t["words"][30]["s"]
+    c1_end = t["chapters"][0]["end"]
+    t["chapters"][1]["lead"] = {"kind": "card", "start": round(c1_end + 0.2, 3), "end": round(w30 - 0.1, 3)}
+    t["chapters"][1]["card"] = False                      # the lead decides, not the flag
+    (proj / "timing.json").write_text(json.dumps(t))
+    inp = load_inputs(proj)
+    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    assert not res.errors, summary_text(res)
+    lead_end = round(w30 - 0.1, 3)
+    cards = [s for s in res.storyboard["shots"] if s["technique"] == "X-CARD-01"]
+    assert len(cards) == 1 and cards[0]["start"]["t"] == pytest.approx(lead_end - 2.8, abs=0.01)
+    ts = times(inp, res.storyboard)
+    i = res.storyboard["shots"].index(cards[0])
+    assert ts[i + 1] == pytest.approx(lead_end, abs=0.01)
+
+
+def test_title_lead_at_the_very_start_gives_a_title_card_first(proj):
+    _shift_timing(proj, 6.0, {"c01": {"kind": "title", "start": 0.0, "end": 6.4}})
+    inp = load_inputs(proj)
+    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    assert not res.errors, summary_text(res)
+    sh = res.storyboard["shots"]
+    assert sh[0]["technique"] == "X-CARD-02" and sh[0]["start"]["t"] == 0.0
+    assert times(inp, res.storyboard)[1] == pytest.approx(6.4, abs=0.01)
+
+
+def test_plain_lead_places_no_card(proj):
+    t = json.loads((proj / "timing.json").read_text())
+    t["chapters"][1]["lead"] = {"kind": "plain", "start": t["chapters"][0]["end"], "end": round(t["words"][30]["s"] - 0.1, 3)}
+    t["chapters"][1]["card"] = False
+    (proj / "timing.json").write_text(json.dumps(t))
+    res = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    assert not [s for s in res.storyboard["shots"] if s["technique"].startswith("X-CARD")]
+
+
+def test_a_locked_card_is_never_regenerated(proj):
+    inp, specs = good(proj)
+    cur = compile_specs(inp, specs, draw=False).storyboard
+    card = next(s for s in cur["shots"] if s["technique"] == "X-CARD-01")
+    card["locked"] = True
+    card["params"]["title"] = "OWNER TITLE"
+    (proj / "storyboard.json").write_text(json.dumps(cur), encoding="utf-8")
+    res = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    cards = [s for s in res.storyboard["shots"] if s["technique"] == "X-CARD-01"]
+    assert len(cards) == 1 and clean(cards[0]) == clean(card)

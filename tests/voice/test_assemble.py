@@ -61,10 +61,10 @@ def test_assemble_end_to_end(project, cfg, tmp_path, tempo, pad):
     spans = res["spans"]
     assert len(spans) == len(plan.chunks)
     assert all(a["end"] <= b["start"] for a, b in zip(spans, spans[1:]))
-    # the silence before the card chapter is 3.0 s and the first sentence starts after the lead
-    first_card = next(i for i, c in enumerate(plan.chunks) if c.gap_kind == "card")
+    # the silence before the first chapter after the cold open holds the title card and the chapter card and the first sentence starts after the lead
+    first_card = next(i for i, c in enumerate(plan.chunks) if c.gap_kind == "title")
     gap = spans[first_card]["start"] - spans[first_card - 1]["end"]
-    assert abs(gap - cfg["silence"]["card"]) < 0.01
+    assert abs(gap - (cfg["silence"]["title"] + cfg["silence"]["card"])) < 0.01
     assert abs(spans[0]["start"] - cfg["silence"]["lead"]) < 0.01
     with wave.open(str(files.dry_path(project))) as wf:
         assert wf.getframerate() == 48000 and wf.getnchannels() == 1

@@ -23,6 +23,7 @@ import tempfile
 from pathlib import Path
 
 from . import assets as _assets
+from ..proc import group_kwargs, kill_tree
 from .errors import LicenceRejected, MediaError
 from .licence import check_licence
 
@@ -69,21 +70,13 @@ def _ffprobe() -> str:
 
 
 def _kill_tree(proc: subprocess.Popen) -> None:
-    try:
-        import signal
-        os.killpg(proc.pid, signal.SIGKILL)
-    except (OSError, ProcessLookupError, AttributeError):
-        pass
-    try:
-        proc.kill()
-    except OSError:
-        pass
+    kill_tree(proc, grace=0)
 
 
 def _run_capture(cmd: list[str], *, timeout: float | None) -> subprocess.CompletedProcess:
     """subprocess with a real timeout that kills the whole process tree."""
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                            encoding="utf-8", errors="replace", start_new_session=True)
+                            encoding="utf-8", errors="replace", **group_kwargs())
     try:
         out, err = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:

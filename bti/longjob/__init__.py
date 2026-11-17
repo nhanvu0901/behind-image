@@ -6,9 +6,9 @@
 `router` (FastAPI, three routes) is imported on first use so that this package does not need FastAPI to be imported."""
 from .config import ServerConfig, load as load_config
 from .heavy import Cancelled, HeavySlot
-from .manager import Busy, Context, LongJobManager, Part, PartError, ProjectGone, manager
+from .manager import Busy, Context, LongJobManager, Part, PartError, ProcessHandle, ProjectGone, manager
 
-__all__ = ["manager", "Part", "Context", "Busy", "PartError", "ProjectGone", "LongJobManager", "HeavySlot", "Cancelled",
+__all__ = ["manager", "Part", "Context", "ProcessHandle", "Busy", "PartError", "ProjectGone", "LongJobManager", "HeavySlot", "Cancelled",
            "ServerConfig", "load_config", "router"]
 
 

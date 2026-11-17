@@ -1,10 +1,10 @@
 // "Giọng đọc" step (step 3): approved narration -> audio/mix.m4a + timing.json. Mounted by the shell at #/project/<id>/voice.
-// Everything the owner reads is Vietnamese. Errors that carry a `code` of this stage are translated by the local table CODE_TEXT
-// until CORE merges the entries into errmsg.js / labels.js (see docs/qa/BUILD_voice.md, "Needs another agent").
+// Everything the owner reads is Vietnamese. Words come from labels.js (VOICE_LABELS) and the sentences of error codes from errmsg.js (STAGE_CODES).
 import { api } from '../api.js';
 import { h, toast, errorToast, confirmDialog, setStatus } from '../util.js';
 import { createQueue } from '../queue.js';
-import { errorText, jobErrorText } from '../errmsg.js';
+import { errorText, jobErrorText, STAGE_CODES } from '../errmsg.js';
+import { VOICE_LABELS } from '../labels.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
 
@@ -12,39 +12,8 @@ let root = null, scope = null, shell = null;
 const S = { pid: null, d: null, job: null, table: null, tableDirty: false, playing: null };
 let Q = createQueue(), poll = null, audio = null;
 
-// ---- local labels (to be merged into labels.js)
-const STATE_TEXT = { none: 'Chưa tạo', running: 'Đang chạy', stale: 'Cần làm lại', done: 'Xong' };
-const JOB_STATE = { queued: 'Đang chờ', waiting: 'Chờ máy rảnh', running: 'Đang chạy', done: 'Xong', error: 'Lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn' };
-const CODE_TEXT = {
-  narration_missing: 'Chưa có lời dẫn. Hãy làm bước Kịch bản trước.',
-  narration_not_approved: 'Lời dẫn chưa được duyệt. Hãy duyệt ở bước Kịch bản rồi quay lại.',
-  nothing_to_say: 'Lời dẫn chưa có câu nào để đọc.',
-  voice_not_configured: 'Máy này chưa cài giọng đọc. Hãy dùng máy chủ giọng đọc (Windows).',
-  voice_busy: 'Giọng đọc của dự án này đang chạy rồi. Chờ nó xong hoặc bấm Hủy.',
-  voice_worker_failed: 'Máy đọc giọng bị dừng giữa chừng. Bấm tạo lại để đọc tiếp, các câu đã đọc được giữ lại.',
-  voice_chunks_failed: 'Có câu máy chưa đọc được. Bấm tạo lại để thử tiếp.',
-  voice_chunks_missing: 'Lời dẫn đã đổi trong lúc đọc. Hãy chạy lại để đọc phần mới.',
-  voice_assemble_failed: 'Không ghép được tệp âm thanh.',
-  voice_align_failed: 'Không đo được thời điểm từng từ.',
-  no_voice: 'Chưa có tệp âm thanh để nghe.',
-  no_chunk: 'Câu này chưa được đọc.',
-  bad_scope: 'Yêu cầu đọc không hợp lệ.',
-  bad_tempo: 'Tốc độ phải nằm trong khoảng cho phép.',
-  bad_pad: 'Nhạc nền chỉ có bật hoặc tắt.',
-  bad_pronounce: 'Bảng phát âm có dòng không hợp lệ (cần chữ viết và cách đọc, mỗi ô không quá dài).',
-  longjob_missing: 'Máy chủ thiếu bộ chạy việc dài.',
-  part_timeout: 'Một phần chạy quá lâu nên bị dừng. Bấm tạo lại để đọc tiếp.',
-  part_failed: 'Một phần bị lỗi bất ngờ. Bấm tạo lại để thử tiếp.',
-  interrupted: 'Máy chủ đã khởi động lại giữa chừng. Bấm tạo lại để đọc tiếp, các câu đã đọc được giữ lại.',
-  heavy_unavailable: 'Máy đang bận việc khác nên chưa đọc được.',
-};
-const REASON_TEXT = {
-  never_built: 'Chưa tạo giọng đọc cho lời dẫn này.',
-  narration_changed: 'Lời dẫn đã đổi sau lần đọc trước. Chỉ các câu đã đổi sẽ được đọc lại.',
-  voice_changed: 'Cài đặt giọng đã đổi, nên phải đọc lại.',
-  mix_settings_changed: 'Tốc độ hoặc nhạc nền đã đổi. Chỉ cần ghép lại, không đọc lại.',
-  files_missing: 'Thiếu tệp âm thanh hoặc tệp thời gian. Bấm tạo lại.',
-};
+const { state: STATE_TEXT, job: JOB_STATE, reason: REASON_TEXT } = VOICE_LABELS;
+const CODE_TEXT = { ...STAGE_CODES.longjob, ...STAGE_CODES.voice };
 const codeText = (e) => (e?.body && typeof e.body === 'object' && CODE_TEXT[e.body.code]) || null;
 const fail = (e, prefix = '') => { const t = codeText(e); if (t) toast((prefix ? prefix + ' ' : '') + t, 'error', 9000); else errorToast(e, prefix); };
 
@@ -76,7 +45,7 @@ function watch(id) {
     if (!['queued', 'waiting', 'running'].includes(j.state)) {
       clearInterval(poll); poll = null;
       if (j.state === 'done') toast('Giọng đọc đã xong.', 'ok');
-      else if (j.state === 'error' || j.state === 'interrupted') toast(CODE_TEXT[j.error_code] || jobErrorText(j), 'error', 9000);
+      else if (j.state === 'error' || j.state === 'interrupted') toast(CODE_TEXT[j.error_code] || jobErrorText(j).text, 'error', 9000);
       await load(); shell?.refreshPipeline();
     }
   };
@@ -154,7 +123,7 @@ function paintJob() {
   const bar = (p) => h('div', { class: 'vc-bar' }, h('i', { style: { width: Math.round((p || 0) * 100) + '%' } }));
   if (live) box.append(bar(j.progress));
   for (const p of j.parts || []) box.append(h('div', { class: `vc-part vc-p-${p.state}` }, h('span', { text: p.title }), h('span', { class: 'muted', text: p.state === 'running' ? `${Math.round((p.progress || 0) * 100)}% ${p.note || ''}` : (JOB_STATE[p.state] || p.state) + (p.state === 'waiting' && p.note ? ` — ${p.note}` : '') })));
-  if (j.state === 'error' || j.state === 'interrupted') box.append(h('div', { class: 'box err', text: CODE_TEXT[j.error_code] || jobErrorText(j) }));
+  if (j.state === 'error' || j.state === 'interrupted') box.append(h('div', { class: 'box err', text: CODE_TEXT[j.error_code] || jobErrorText(j).text }));
   if (j.result?.low_match) box.append(h('div', { class: 'box warn', text: 'Máy đo từ khớp ít với lời dẫn. Nghe lại vài câu để kiểm tra.' }));
   if (live) setStatus('đang tạo giọng đọc...'); else setStatus('');
 }

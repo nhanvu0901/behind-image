@@ -6,6 +6,8 @@ export const stageLabel = (s) => STAGE[s] || s || '';
 
 /** Short state of a step of the stepper. */
 export const STEP_STATE = { done: 'Xong', current: 'Hiện tại', available: 'Mở được', locked: 'Khóa', not_built: 'Chưa xây dựng', no_data: 'Không có dữ liệu' };
+/** What a stage package says about its step (`step.work`), shown beside the state when it needs attention. */
+export const STEP_WORK = { running: 'Đang chạy', stale: 'Cần làm lại' };
 
 export const RIGHTS = { pd_likely: 'Có thể hết bản quyền', copyright_likely: 'Có thể còn bản quyền', unknown: 'Chưa rõ bản quyền' };
 export const KIND = { chapter_per_artwork: 'mỗi chương một tác phẩm', fixed_spread: 'mỗi tác phẩm một đoạn trang cố định', short_entries: 'mục ngắn', themed_chapter: 'chương theo chủ đề' };
@@ -26,38 +28,6 @@ export const CODE = {
   fact_unused: 'Dữ kiện chưa chương nào dùng', no_hook_choice: 'Chưa chọn câu mở', budget_sum: 'Tổng ngân sách lệch mục tiêu',
 };
 export const LEVEL = { error: 'Lỗi', warning: 'Cảnh báo', info: 'Thông tin' };
-
-/** What each step that is not built yet will do. Shown as an honest placeholder, with no controls. */
-export const PLANNED = {
-  voice: {
-    title: 'Giọng đọc',
-    will: [
-      'Máy chủ giọng đọc đọc lời dẫn đã duyệt ở bước Kịch bản, từng dòng một.',
-      'Bạn nghe thử từng dòng, chọn lại giọng hoặc đọc lại dòng chưa vừa ý.',
-      'Kết quả là một tệp âm thanh duy nhất (`audio/mix.m4a`) và `timing.json` ghi thời điểm của từng từ.',
-      'Duyệt xong, dự án chuyển sang giai đoạn "Có giọng đọc".',
-    ],
-    meanwhile: 'Hiện chưa có gì để bấm ở đây. Dự án chỉ có giọng đọc nếu được nhập từ bản dựng trước.',
-  },
-  picks: {
-    title: 'Chọn hình',
-    will: [
-      'Với mỗi dòng lời dẫn, bạn chọn thứ sẽ hiện trên hình (gợi ý nằm ở ô "cho xem" của bước Kịch bản) và thêm cảnh.',
-      'Hình lấy từ thư viện của dự án, Wikimedia Commons hoặc The Met, theo giấy phép.',
-      'Duyệt xong, hệ thống soạn một đề xuất storyboard để bạn sửa tiếp ở bước Dựng hình.',
-    ],
-    meanwhile: 'Hiện chưa có gì để bấm ở đây. Hình vẫn có thể được chọn tay trong bước Dựng hình (tab Hình), với dự án đã có storyboard.',
-  },
-  export: {
-    title: 'Xuất video',
-    will: [
-      'Máy chủ dựng video cuối chất lượng cao từ storyboard đã duyệt và giọng đọc.',
-      'Bạn xem tiến độ, xem lại tệp đã dựng và biết tệp nằm ở đâu.',
-      'Dự án chuyển sang giai đoạn "Đã dựng xong".',
-    ],
-    meanwhile: 'Hiện chưa có nút dựng bản cuối. "Xem thử 10 giây" ở bước Dựng hình vẫn dùng được để kiểm tra từng đoạn.',
-  },
-};
 
 // ---------------------------------------------------------------- storyboard: intents, eases, sources, enum values
 /** What a shot is for (`intent`). The raw id stays available as a tooltip. */
@@ -118,3 +88,76 @@ export function dropdownOptions(values, current, labelOf = String) {
   if (!list.some((o) => o.value === cur)) list.unshift({ value: cur, text: `${labelOf(current)} ${NOT_IN_LIST}`, title: cur, state: 'foreign' });
   return { options: list, selected: cur };
 }
+
+// ---------------------------------------------------------------- the stages: voice (3), picks (4), draft (5), export (6)
+export const VOICE_LABELS = {
+  state: { none: 'Chưa tạo', running: 'Đang chạy', stale: 'Cần làm lại', done: 'Xong' },
+  job: { queued: 'Đang chờ', waiting: 'Chờ máy rảnh', running: 'Đang chạy', done: 'Xong', error: 'Lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn' },
+  reason: {
+  never_built: 'Chưa tạo giọng đọc cho lời dẫn này.',
+  narration_changed: 'Lời dẫn đã đổi sau lần đọc trước. Chỉ các câu đã đổi sẽ được đọc lại.',
+  voice_changed: 'Cài đặt giọng đã đổi, nên phải đọc lại.',
+  mix_settings_changed: 'Tốc độ hoặc nhạc nền đã đổi. Chỉ cần ghép lại, không đọc lại.',
+  files_missing: 'Thiếu tệp âm thanh hoặc tệp thời gian. Bấm tạo lại.',
+},
+};
+export const PICKS_LABELS = {
+  flag: { rejected: 'Giấy phép bị hạn chế', unknown: 'Chưa rõ giấy phép', small: 'Ảnh nhỏ' },
+  flagHelp: {
+    rejected: 'Giấy phép của ảnh này hạn chế việc dùng lại. Vẫn dùng được; hãy tự cân nhắc khi đăng video.',
+    unknown: 'Chưa rõ giấy phép của ảnh này. Vẫn dùng được; mô tả video sẽ ghi nguồn.',
+    small: 'Ảnh dưới 1200 px ở cạnh ngắn, có thể bị mờ khi phóng to. Vẫn dùng được.',
+  },
+  role: { main: 'Cả bức tranh', detail: 'Chi tiết', context: 'Bối cảnh', compare: 'So sánh', document: 'Tài liệu', map: 'Bản đồ', video: 'Video' },
+  tabs: { main: 'Tranh chính', search: 'Tìm kiếm', books: 'Sách', suggest: 'Gợi ý', upload: 'Tải lên' },
+  issue: {
+    no_main: 'Chưa chọn tranh chính.', asset_file_missing: (i) => `Thiếu tệp ảnh của hình ${i.asset}.`,
+    unknown_asset: (i) => `Dòng ${i.beat} dùng hình ${i.asset} không còn trong danh sách.`,
+    unknown_region: (i) => `Dòng ${i.beat} dùng vùng "${i.region}" của hình ${i.asset}, vùng này không còn.`,
+    beat_no_pick: (i) => `Dòng ${i.beat} chưa có hình: bản nháp sẽ dùng tranh chính ở đó.`,
+    beat_unknown: (i) => `Có hình cho dòng ${i.beat} nhưng dòng này không còn trong lời dẫn.`,
+    asset_flag: (i) => `Hình ${i.asset}: ${PICKS_LABELS.flag[i.flag] || i.flag}.`,
+  },
+  reason: { picks_edited: 'Chọn hình đã đổi sau khi duyệt.', narration_changed: 'Lời dẫn đã đổi sau khi duyệt hình.', narration_not_approved: 'Lời dẫn chưa được duyệt.' },
+};
+export const FLAG = PICKS_LABELS.flag;          // advisory flags of an image: rejected | unknown | small
+export const flagLabel = (f) => FLAG[f] || '';
+export const FLAG_HELP = PICKS_LABELS.flagHelp;
+export const DRAFT_LABELS = {
+  title: 'Bản nháp storyboard',
+  intro: 'Agent đọc lời dẫn đã có giọng đọc và các hình bạn đã chọn, rồi dựng sẵn từng cảnh. Kết quả là một đề xuất: bạn xem và chấp nhận từng thay đổi, không có gì tự đổi.',
+  voice: 'Giọng đọc',
+  picks: 'Chọn hình',
+  model: 'Mô hình',
+  modelDefault: 'Mặc định',
+  start: 'Dựng bản nháp',
+  startAuto: 'Dựng tự động (không dùng agent)',
+  cancel: 'Dừng',
+  open: 'Mở đề xuất',
+  running: 'Đang dựng bản nháp...',
+  waiting: 'Đang chờ...',
+  notReady: 'Chưa đủ dữ liệu: xong bước Giọng đọc và Chọn hình trước.',
+  confirmReplace: 'Dự án đã có storyboard. Bản nháp mới chỉ là một đề xuất, không ghi đè gì cho đến khi bạn chấp nhận. Dựng bản nháp?',
+  stale: 'Bản nháp này dựng từ giọng đọc hoặc danh sách hình đã đổi.',
+  last: 'Lần dựng gần nhất',
+  tampered: 'Lần dựng bị bỏ vì agent đã đổi tệp ngoài thư mục làm việc.',
+  doneNote: 'Xong. Có %n cảnh.',
+  issues: '%n mục còn dở, xem trong đề xuất.',
+  loadingModels: 'Đang tải danh sách mô hình...',
+  noModels: 'Chưa lấy được danh sách mô hình (agy chưa đăng nhập?). Dùng mô hình mặc định.',
+  partState: { queued: 'chờ', waiting: 'chờ máy', running: 'đang chạy', done: 'xong', error: 'lỗi', cancelled: 'đã dừng', interrupted: 'bị ngắt' },
+};
+export const EXPORT_LABELS = {
+  parts: { queued: 'Chờ', waiting: 'Chờ máy rảnh', running: 'Đang chạy', done: 'Xong', error: 'Lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn' },
+  job: { queued: 'Đang chờ', waiting: 'Đang chờ máy rảnh', running: 'Đang xuất', done: 'Đã xong', error: 'Bị lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn vì máy chủ khởi động lại' },
+  report: {
+    video: 'Loại video', audio_length: 'Độ dài tiếng đọc (giây)', chapters_merged: 'Mục lục ngắn đã gộp (dưới 10 giây)', duration: 'Độ dài (giây)', frames: 'Số khung hình', audio: 'Âm thanh', loudness: 'Độ lớn tiếng (LUFS)',
+    true_peak: 'Đỉnh âm lớn nhất (dB)', subtitles: 'Phụ đề trong tệp', cues: 'Số dòng phụ đề', chapters: 'Số mục lục', size: 'Dung lượng',
+  },
+  reportHelp: {
+    frames: 'phải bằng độ dài nhân 30', audio_length: 'phải khớp độ dài video (lệch tối đa 0,5 giây)', chapters_merged: 'chỉ gộp trong tệp mục lục và mô tả', loudness: 'mục tiêu khoảng -15', true_peak: 'nên dưới -1', subtitles: 'phải có (mov_text)', chapters: 'từ 2 mục trở lên',
+  },
+  status: { ok: 'Đạt', warn: 'Xem lại', fail: 'Lỗi' },
+  stale: { storyboard: 'Storyboard đã đổi sau lần xuất trước, nên video này không còn khớp.', audio: 'Giọng đọc đã đổi sau lần xuất trước, nên video này không còn khớp.', files: 'Một số tệp của lần xuất trước không còn nữa.' },
+  files: { video: 'Video (MP4, có phụ đề bên trong)', subtitles: 'Phụ đề (.srt)', description: 'Mô tả video', chapters: 'Mục lục (chapters.txt)' },
+};

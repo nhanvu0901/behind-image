@@ -12,37 +12,50 @@ from bti.script import generate, models as models_mod, store
 from bti.script.providers import ProviderError, antigravity, get_provider
 from bti.script.runner import ScriptJobs
 
-FAKE = '''#!{py}
-import json, os, sys, time
+FAKE = '''import json, os, sys, time
 here = os.path.dirname(os.path.abspath(__file__))
 mode = open(os.path.join(here, "mode")).read().strip()
 args = sys.argv[1:]
+if args[:1] == ["--help"]:
+    print("Usage of agy:\\n  --output-format  Output format" + ("" if mode == "old_cli" else "\\n  --input-format  Input\\n  --settings  Settings JSON"))
+    sys.exit(0)
 if args[:1] == ["models"]:
     if mode == "models_auth":
         sys.stderr.write("authentication required\\n"); sys.exit(1)
     print("Fetching available models...")
     print("gemini-x-high\\tGemini X (High)"); print("claude-y\\tClaude Y (Thinking)"); sys.exit(0)
-prompt = args[args.index("-p") + 1]
-open(os.path.join(here, "calls.jsonl"), "a").write(json.dumps({{"argv": [a for a in args if a != prompt], "prompt_len": len(prompt),
-    "prompt_head": prompt[:60], "prompt_tail": prompt[-80:], "cwd": os.getcwd(), "stdin_tty": sys.stdin.isatty()}}) + "\\n")
+line = sys.stdin.readline()
+msg = json.loads(line)
+assert msg["event"] == "user", msg
+prompt = msg["message"]["content"]
+open(os.path.join(here, "calls.jsonl"), "a", encoding="utf-8").write(json.dumps({{"argv": args, "prompt_len": len(prompt),
+    "prompt_head": prompt[:60], "prompt_tail": prompt[-80:], "cwd": os.getcwd(), "line_len": len(line),
+    "rest_of_stdin": sys.stdin.read(), "prompt_has_nonascii": any(ord(c) > 127 for c in prompt)}}) + "\\n")
+def out(res):
+    print(json.dumps({{"event": "init", "conversation_id": "c", "init": {{"cwd": os.getcwd(), "tools": ["run_command", "view_file"]}}}}))
+    print(json.dumps({{"event": "step_update", "step_update": {{"step_index": 0, "state": "DONE", "step_type": "user_input"}}}}))
+    for st in res.pop("steps", []):
+        print(json.dumps({{"event": "step_update", "step_update": {{"step_index": 1, "state": "DONE", "step_type": st}}}}))
+    print(json.dumps({{"event": "result", "result": res}}))
 def env(**kw):
     d = {{"conversation_id": "c", "status": "SUCCESS", "response": "FINAL SCRIPT\\n\\n## c01 COLD OPEN\\nHello there.\\n", "duration_seconds": 1.0,
           "num_turns": 1, "usage": {{"input_tokens": 5, "output_tokens": 5, "total_tokens": 10}}}}
-    d.update(kw); return json.dumps(d)
-if mode == "ok": print(env())
-elif mode == "status_error": print(env(status="ERROR", response="", error="something broke")); sys.exit(1)
-elif mode == "canceled": print(env(status="CANCELED", response=""))
-elif mode == "tools": print(env(num_turns=4))
-elif mode == "denied": sys.stderr.write("notice: tool run_command was denied (needs approval)\\n"); print(env())
-elif mode == "writes": open("leak.txt", "w").write("x"); print(env())
+    d.update(kw); return d
+if mode == "ok": out(env())
+elif mode == "status_error": out(env(status="ERROR", response="", error="something broke")); sys.exit(1)
+elif mode == "canceled": out(env(status="CANCELED", response=""))
+elif mode == "tools": out(env(num_turns=4))
+elif mode == "toolstep": out(env(steps=["run_command"]))
+elif mode == "denied": sys.stderr.write("notice: tool run_command was denied (needs approval)\\n"); out(env())
+elif mode == "writes": open("leak.txt", "w").write("x"); out(env())
 elif mode == "auth": sys.stderr.write("Error: authentication required. Run agy to log in.\\n"); sys.exit(1)
-elif mode == "quota": print(env(status="ERROR", response="", error="429 RESOURCE_EXHAUSTED: quota exceeded")); sys.exit(1)
-elif mode == "badmodel": print(env(status="ERROR", response="", error="unknown model 'zzz'")); sys.exit(1)
-elif mode == "empty": print(env(response="  "))
+elif mode == "quota": out(env(status="ERROR", response="", error="429 RESOURCE_EXHAUSTED: quota exceeded")); sys.exit(1)
+elif mode == "badmodel": out(env(status="ERROR", response="", error="unknown model 'zzz'")); sys.exit(1)
+elif mode == "empty": out(env(response="  "))
 elif mode == "garbage": print("not json at all")
 elif mode == "slow":
     import subprocess
-    child = subprocess.Popen(["sleep", "60"])
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
     open(os.path.join(here, "pids"), "w").write(f"{{os.getpid()}} {{child.pid}}")
     time.sleep(60)
 '''
@@ -52,10 +65,17 @@ elif mode == "slow":
 def fake(tmp_path, monkeypatch):
     d = tmp_path / "bin"
     d.mkdir()
-    exe = d / "agy"
-    exe.write_text(FAKE.format(py=sys.executable))
-    exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
+    script = d / "fake_agy.py"
+    script.write_text(FAKE.format(), encoding="utf-8")
+    if os.name == "nt":                                                             # no shebang there: a .cmd launcher
+        exe = d / "agy.cmd"
+        exe.write_text(f'@"{sys.executable}" "{script}" %*\r\n', encoding="utf-8")
+    else:
+        exe = d / "agy"
+        exe.write_text(f"#!{sys.executable}\n" + FAKE.format(), encoding="utf-8")
+        exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("BTI_AGY_BIN", str(exe))
+    antigravity._HELP_OK.clear()
     models_mod.reset_cache()
 
     class F:
@@ -66,7 +86,7 @@ def fake(tmp_path, monkeypatch):
 
         def calls(self):
             p = d / "calls.jsonl"
-            return [json.loads(x) for x in p.read_text().splitlines()] if p.is_file() else []
+            return [json.loads(x) for x in p.read_text(encoding="utf-8").splitlines()] if p.is_file() else []
     f = F()
     f.mode("ok")
     return f
@@ -83,7 +103,9 @@ def test_success_reads_the_json_envelope(fake):
     assert call().startswith("FINAL SCRIPT")
     c = fake.calls()[0]
     a = c["argv"]
-    assert a[a.index("--output-format") + 1] == "json" and "--sandbox" in a and "--disable-slash-commands" in a
+    assert a[a.index("--output-format") + 1] == "stream-json" and a[a.index("--input-format") + 1] == "stream-json"
+    assert "--sandbox" in a and "--disable-slash-commands" in a
+    assert "-p" not in a and "--print" not in a and "--prompt" not in a and not any("USER TEXT" in x for x in a)   # never in argv
     assert a[a.index("--model") + 1] == "gemini-x-high" and a[a.index("--print-timeout") + 1].endswith("s")
     assert "--dangerously-skip-permissions" not in a
     st = json.loads(a[a.index("--settings") + 1])
@@ -99,7 +121,7 @@ def test_runs_in_an_empty_temp_folder_outside_the_repo_and_removes_it(fake):
     assert not os.path.exists(cwd)                                                 # removed afterwards
 
 
-@pytest.mark.parametrize("mode,kind", [("status_error", "http"), ("canceled", "http"), ("tools", "http"), ("denied", "http"),
+@pytest.mark.parametrize("mode,kind", [("toolstep", "http"), ("status_error", "http"), ("canceled", "http"), ("tools", "http"), ("denied", "http"),
                                        ("writes", "http"), ("auth", "auth"), ("quota", "rate_limit"), ("badmodel", "config"),
                                        ("empty", "empty"), ("garbage", "empty")])
 def test_failures_are_refused_with_a_kind(fake, mode, kind):
@@ -119,6 +141,14 @@ def test_failures_are_refused_with_a_kind(fake, mode, kind):
         assert "tệp" in e.value.message
 
 
+def test_an_old_cli_without_settings_is_refused_and_never_run(fake):
+    fake.mode("old_cli")
+    with pytest.raises(ProviderError) as e:
+        call()
+    assert e.value.kind == "config" and "--settings" in e.value.message and "agy update" in e.value.message
+    assert fake.calls() == []                                                      # the prompt never reached it
+
+
 def _pids(fake):
     p = fake.dir / "pids"
     for _ in range(100):
@@ -129,6 +159,10 @@ def _pids(fake):
 
 
 def alive(pid):
+    if os.name == "nt":                                                            # os.kill(pid, 0) is a Ctrl+C there
+        import subprocess
+        r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True)
+        return str(pid) in r.stdout
     try:
         os.kill(pid, 0)
         return True
@@ -176,11 +210,12 @@ def test_hard_timeout(fake, monkeypatch):
 
 
 def test_a_60000_character_prompt_reaches_the_cli_whole(fake):
-    big = "word " * 12000                                                            # 60,000 characters
+    big = "word é " * 12000                                                         # 72,000 characters, non-ASCII too
     out = get_provider("antigravity")(SPEC, "SYS", big, timeout=20)
     assert out
     c = fake.calls()[0]
-    assert c["prompt_len"] > 60000 and "Follow the output layout" in c["prompt_tail"]
+    assert c["prompt_len"] > 60000 and "Follow the output layout" in c["prompt_tail"] and c["prompt_has_nonascii"]
+    assert c["rest_of_stdin"] == "" and max(len(x) for x in c["argv"]) < 1000      # one stdin line; argv stays short
 
 
 def test_one_call_at_a_time(fake):

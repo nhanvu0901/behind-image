@@ -1,0 +1,11 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, both, sleep, go, settle, pipeline, leftovers, clickExact } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const PID = process.argv[2];
+const br = await openBrowser(); const p = await br.newPage();
+await go(p, base, `#/project/${PID}/edit`);
+await clickExact(p, 'Mở đề xuất'); await sleep(2500);
+await both(p, 'p15-proposal');
+console.log((await p.eval(`document.querySelector('.modal, dialog')?.innerText`))?.slice(0,1500));
+console.log(await p.eval(`Array.from(document.querySelectorAll('.modal button, dialog button')).map(e=>e.textContent.trim().slice(0,40)).join(' | ')`));
+console.log(await leftovers(p), p.logs.slice(-3), p.bad());
+br.close();

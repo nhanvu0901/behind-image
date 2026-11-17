@@ -1,7 +1,7 @@
 // The stepper across the top: one chip per step of the pipeline. The states come from the server
 // (GET /api/projects/{pid}/pipeline); this file only decides how a state looks and what a click does.
 import { h } from './util.js';
-import { STEP_STATE } from './labels.js';
+import { STEP_STATE, STEP_WORK } from './labels.js';
 
 /** What a step looks like and whether it opens. `active` = the step whose view is open. */
 export function stepView(step, { active = false, current = null } = {}) {
@@ -9,7 +9,8 @@ export function stepView(step, { active = false, current = null } = {}) {
   const openable = step.state !== 'locked';
   const cls = ['step', 'st-' + step.state, active ? 'active' : '', at ? 'at' : '', openable ? '' : 'disabled'].filter(Boolean).join(' ');
   const state = step.state === 'available' && at ? 'current' : step.state;
-  const tag = at && step.state === 'not_built' ? `${STEP_STATE.not_built}, ở đây` : STEP_STATE[state] || state;
+  let tag = at && step.state === 'not_built' ? `${STEP_STATE.not_built}, ở đây` : STEP_STATE[state] || state;
+  if (STEP_WORK[step.work] && step.state !== 'locked' && !(step.work === 'stale' && step.state === 'done')) tag = STEP_WORK[step.work];   // a stage package that is running or out of date says so
   const title = [step.label, step.reason || step.detail].filter(Boolean).join(': ');
   return { cls, openable, tag, title };
 }

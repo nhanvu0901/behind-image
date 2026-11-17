@@ -10,7 +10,7 @@ from pathlib import Path
 from . import catalogue, config, dossiers
 
 PID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
-STAGES = ["selected", "script", "voiced", "storyboard", "approved", "rendered"]
+STAGES = ["selected", "script", "voiced", "picked", "storyboard", "approved", "rendered"]
 
 
 class ProjectError(ValueError):
@@ -110,16 +110,47 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
     return proj
 
 
-def infer_stage(d: Path) -> str:
-    """selected < script < voiced < storyboard < approved < rendered, from which files exist. `approved` only while the
-    storyboard approval names the current revision (a stale approval leaves the stage at `storyboard`)."""
+def _safe_state(module: str, d: Path) -> dict:
+    """`state(project_dir)` of a stage package, never raising: {"state": "none"|"running"|"stale"|"done", "detail": str, ...}."""
+    try:
+        import importlib
+        out = importlib.import_module(module).state(d)
+        if isinstance(out, dict) and out.get("state") in ("none", "running", "stale", "done"):
+            return out
+    except Exception:           # noqa: BLE001 - a stage that cannot answer must not break the home list
+        pass
+    return {"state": "none", "detail": ""}
+
+
+def stage_states(d: Path) -> dict:
+    """What each stage package says about the project, computed once and shared by the stage and the pipeline:
+    {"voice": {...}, "picks": {...}, "export": {...}} (the draft's own state is not needed for steps or the stage)."""
+    return {"voice": _safe_state("bti.voice", d), "picks": _safe_state("bti.picks", d), "export": _safe_state("bti.export", d)}
+
+
+def infer_stage(d: Path, states: dict | None = None) -> str:
+    """selected < script < voiced < picked < storyboard < approved < rendered: the furthest step for which every earlier step
+    is done (design section 2).
+
+    voiced   = the voice is fresh (`bti.voice.state` is done). A project that has `audio/` or `timing.json` but no voice manifest
+               (an imported one) keeps its old meaning: those files are the voice.
+    picked   = voiced and the picks approval is fresh.
+    storyboard = a storyboard.json exists (an imported project has one without voice or picks: it still counts).
+    approved = the storyboard approval names the current revision (a stale one leaves the stage at `storyboard`).
+    rendered = a fresh export, or (old projects) a video file in render/, output/, out/ or the project folder."""
     import json
+    st = states if states is not None else stage_states(d)
     stage = "selected"
     if any((d / n).is_file() for n in ("script.md", "script.txt", "script.json")):
         stage = "script"
     audio = d / "audio"
-    if (d / "timing.json").is_file() or (audio.is_dir() and any(audio.iterdir())):
+    legacy_voice = (d / "timing.json").is_file() or (audio.is_dir() and any(audio.iterdir()))
+    has_manifest = (d / "voice" / "voice.json").is_file()
+    voiced = st["voice"]["state"] == "done" or (legacy_voice and not has_manifest)
+    if voiced:
         stage = "voiced"
+        if st["picks"]["state"] == "done":
+            stage = "picked"
     sbf = d / "storyboard.json"
     if sbf.is_file():
         stage = "storyboard"
@@ -133,6 +164,6 @@ def infer_stage(d: Path) -> str:
             p = d / sub
             if p.is_dir() and any(p.glob("*.mp4")):
                 stage = "rendered"
-        if any(d.glob("*.mp4")):
+        if any(d.glob("*.mp4")) or st["export"]["state"] == "done":
             stage = "rendered"
     return stage

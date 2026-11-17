@@ -7,6 +7,7 @@ import itertools
 import json
 import os
 import shutil
+import sys
 import threading
 import time
 
@@ -99,7 +100,7 @@ def test_R3B_004_project_json_sources_not_a_list_is_not_a_500(client, projects_r
     assert r.status_code < 500, r.text[:120]
 
 
-@pytest.mark.skipif(os.geteuid() == 0, reason="root can read a mode 000 file")
+@pytest.mark.skipif(os.name == "nt" or os.geteuid() == 0, reason="root (and Windows) can read a mode 000 file")
 @pytest.mark.parametrize("rel,url", [
     ("source/*.txt", "/outline"), ("source/*.txt", "/brief"), ("source/*.txt", "/narration"),
     ("script/last_paste.txt", "/narration"),
@@ -228,9 +229,15 @@ def test_R3B_011_upload_whose_folder_vanishes_while_it_is_checked_answers_404(cl
 
 # ------------------------------------------------------------------ R3B-012, R3B-013 model list
 def _fake_agy(tmp_path, monkeypatch, body):
-    p = tmp_path / "agy"
-    p.write_text("#!/bin/sh\n" + body + "\n")
-    p.chmod(0o755)
+    py = tmp_path / "fake_agy.py"                          # python code, started through the interpreter on both systems
+    py.write_text("import sys, time\n" + body + "\n", encoding="utf-8")
+    if os.name == "nt":
+        p = tmp_path / "agy.cmd"
+        p.write_text(f'@"{sys.executable}" "{py}" %*\r\n', encoding="utf-8")
+    else:
+        p = tmp_path / "agy"
+        p.write_text(f"#!{sys.executable}\n" + py.read_text(encoding="utf-8"), encoding="utf-8")
+        p.chmod(0o755)
     monkeypatch.setenv("BTI_AGY_BIN", str(p))
     from bti.script import models as M
     M.reset_cache()
@@ -238,7 +245,7 @@ def _fake_agy(tmp_path, monkeypatch, body):
 
 
 def test_R3B_012_models_answers_200_when_the_cli_prints_bytes_that_are_not_utf8(client, tmp_path, monkeypatch):
-    M = _fake_agy(tmp_path, monkeypatch, "printf 'ab\\366\\377\\tLabel\\n'; printf '\\366\\377' >&2; exit 0")
+    M = _fake_agy(tmp_path, monkeypatch, "sys.stdout.buffer.write(b'ab\\xf6\\xff\\tLabel\\n'); sys.stderr.buffer.write(b'\\xf6\\xff')")
     try:
         r = client.get("/api/models")
         assert r.status_code == 200, f"{r.status_code} {r.text[:100]}"
@@ -248,7 +255,7 @@ def test_R3B_012_models_answers_200_when_the_cli_prints_bytes_that_are_not_utf8(
 
 
 def test_R3B_013_starting_a_mock_job_does_not_wait_for_agy_models(client, tmp_path, monkeypatch, flow_pid):
-    M = _fake_agy(tmp_path, monkeypatch, "sleep 4; printf 'g1\\tOne\\n'")
+    M = _fake_agy(tmp_path, monkeypatch, "time.sleep(4); print('g1\\tOne')")
     try:
         t = time.time()
         r = client.post(P(flow_pid) + "/outline/generate", json={"model": "mock"})

@@ -14,6 +14,7 @@ import { initTimeline, seek, ensureVisible, fitView, zoomToShowWords } from '../
 import { initInspector, setTab } from '../inspector.js';
 import { openGallery } from '../gallery.js';
 import { openProposals } from '../proposals.js';
+import { mountDraftPanel } from '../draftpanel.js';
 import * as A from '../actions.js';
 import { shotIndexAt, wordIndexAt, clone } from '../logic.js';
 import * as E from '../edit.js';
@@ -35,6 +36,7 @@ const HTML = `
     <button id="btn-undo" title="Hoàn tác (Ctrl+Z)">Hoàn tác</button>
     <button id="btn-redo" title="Làm lại (Ctrl+Shift+Z)">Làm lại</button>
     <span class="sep"></span>
+    <button id="btn-draft" title="Dựng bản nháp storyboard từ giọng đọc và hình đã chọn">Bản nháp</button>
     <button id="btn-proposals" title="Đề xuất từ agent">Đề xuất <span id="prop-count" class="count" hidden>0</span></button>
     <button id="btn-approve" title="Duyệt storyboard đã lưu (cần lưu trước, không còn lỗi)">Duyệt</button>
     <span id="approve-state" class="badge" title="Trạng thái duyệt"></span>
@@ -94,9 +96,25 @@ const HTML = `
   </section>`;
 
 // ---------- mount
+/** Step 5 of a project that has no storyboard yet (the usual case after steps 3 and 4): the draft panel instead of an empty editor.
+ *  The proposal it makes is adopted as the first storyboard by "Áp dụng"; then the view is opened again as the editor. */
+function mountFirstDraft(host, mctx) {
+  const pid = mctx.pipeline.project, sc = mctx.scope, sh = mctx.shell;
+  const box = h('div', { class: 'draft-first', style: { maxWidth: '760px', margin: '24px auto', padding: '0 16px' } });
+  const slot = h('div');
+  box.append(h('h1', { text: `${mctx.step.n}. ${mctx.step.label}` }),
+    h('p', { class: 'muted', text: 'Dự án chưa có storyboard. Dựng một bản nháp từ giọng đọc và hình đã chọn: kết quả là một đề xuất, bạn xem rồi bấm "Áp dụng" để nó thành storyboard đầu tiên, sau đó sửa tiếp ở đây.' }),
+    slot);
+  host.append(box);
+  const reopen = () => { sh.refreshPipeline(); sh.go(projectHash(pid, 'edit')); };
+  mountDraftPanel(slot, { pid, scope: sc, onProposal: (id) => { ctx.reset(); ctx.pid = pid; openProposals(reopen, id); } });
+  return {};
+}
+
 export async function mount(host, mctx) {
   scope = mctx.scope; shell = mctx.shell;
   const pid = mctx.pipeline.project;
+  if (mctx.pipeline.has_storyboard === false) return mountFirstDraft(host, mctx);
   root = h('div', { class: 'edit-root' });
   root.innerHTML = HTML;
   host.append(root);
@@ -303,6 +321,12 @@ function wireTopbar() {
   $('#incomplete-state').onclick = () => showIncomplete();
   $('#btn-undo').onclick = () => st.undo(); $('#btn-redo').onclick = () => st.redo();
   $('#btn-proposals').onclick = () => openProposals(applied);
+  $('#btn-draft').onclick = () => {
+    const slot = h('div', { class: 'body', style: { width: 'min(640px, 92vw)', minHeight: '240px' } });
+    let off = null;
+    const dlg = modal({ title: 'Bản nháp storyboard', body: slot, onClose: () => off?.() });
+    off = mountDraftPanel(slot, { pid: ctx.pid, scope, onProposal: (id) => { dlg.close(); openProposals(applied, id); } });
+  };
   $('#btn-clip').onclick = previewClip;
   $('#t-prev').onclick = () => stepShot(-1); $('#t-next').onclick = () => stepShot(1);
   $('#t-play').onclick = () => togglePlay();

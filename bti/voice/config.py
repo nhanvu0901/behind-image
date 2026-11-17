@@ -24,7 +24,7 @@ TEMPO_KEYS = ("tempo",)
 DEFAULT_SYNTH = {"exaggeration": 0.35, "cfg_weight": 0.5, "temperature": 0.7, "device": "cpu"}
 
 _BUILTIN = {
-    "silence": {"sentence": 0.20, "beat": 0.45, "chapter": 1.0, "card": 3.0, "lead": 0.35, "tail": 2.5},
+    "silence": {"sentence": 0.20, "beat": 0.45, "chapter": 1.0, "card": 3.2, "card_length": 2.8, "title": 6.2, "lead": 0.35, "tail": 2.5},
     "tempo": 1.0, "tempo_range": [1.0, 1.2],
     "pad": {"enabled": True, "level_db": -24, "duck": 0.37, "chord_seconds": 10},
     "chunk": {"min_chars": 40, "max_chars": 280},

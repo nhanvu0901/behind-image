@@ -24,7 +24,7 @@ def finish(mgr, rec, timeout=120):
 
 
 def gf(d):
-    return Guard(d, extra=lambda: None)
+    return Guard(d, extra=lambda: None, repo_root=d.parent)
 
 
 def test_readiness_and_state(proj):

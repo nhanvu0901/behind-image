@@ -235,7 +235,7 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 return summary_text(res) if res.errors else None
 
             r.cache.mkdir(parents=True, exist_ok=True)
-            r.agy = agy.run(r.ws.root, model=model, timeout=agent_timeout, check=check, cancel=ctx.cancelled, on_progress=on_progress,
+            r.agy = agy.run(r.ws.root, model=model, timeout=agent_timeout, check=check, cancel=ctx.cancelled, runner=ctx.run_process, on_progress=on_progress,
                             transcript_path=r.cache / "events.jsonl", guard=guard, python=python)
         except DraftError as e:
             raise fail(e)

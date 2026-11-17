@@ -67,7 +67,7 @@ def test_steps_are_ordered_and_complete(c):
         body = c.get(f"/api/projects/{pid}/pipeline").json()
         assert [s["id"] for s in body["steps"]] == IDS
         assert [s["n"] for s in body["steps"]] == [1, 2, 3, 4, 5, 6]
-        assert all(s["state"] in ("done", "current", "available", "locked", "not_built", "no_data") for s in body["steps"])
+        assert all(s["state"] in ("done", "current", "available", "locked", "no_data") for s in body["steps"])
         assert body["current"] in IDS and body["project"] == pid and body["protected"] is False
 
 
@@ -77,11 +77,13 @@ def test_new_project_lands_on_script(c):
     assert b["imported"] is False and b["stage"] == "selected" and b["current"] == "script"
     assert st["artwork"]["state"] == "done"
     assert st["script"]["state"] == "current" and st["script"]["detail"] == "Chưa có dàn ý"
-    assert st["voice"]["state"] == "not_built" and st["picks"]["state"] == "not_built" and st["export"]["state"] == "not_built"
+    # steps 3 and 4 wait for the approved narration; the export waits for an approved storyboard
+    assert st["voice"]["state"] == "locked" and st["picks"]["state"] == "locked" and st["export"]["state"] == "locked"
+    assert "lời dẫn" in st["voice"]["reason"] and "lời dẫn" in st["picks"]["reason"] and "duyệt storyboard" in st["export"]["reason"]
     assert st["edit"]["state"] == "locked" and "storyboard" in st["edit"]["reason"].lower()
     assert b["painting"]["title"] and b["artwork_key"]
     # every step that cannot be opened says why
-    assert all(s["reason"] for s in b["steps"] if s["state"] in ("locked", "not_built", "no_data"))
+    assert all(s["reason"] for s in b["steps"] if s["state"] in ("locked", "no_data"))
 
 
 def test_imported_project_has_no_data_for_steps_1_to_4_and_edit_works(c):
@@ -91,7 +93,7 @@ def test_imported_project_has_no_data_for_steps_1_to_4_and_edit_works(c):
     for sid in ("artwork", "script", "voice", "picks"):
         assert st[sid]["state"] == "no_data" and "nhập từ bản dựng trước" in st[sid]["reason"]
     assert st["edit"]["state"] == "current" and st["edit"]["reason"] == ""
-    assert st["export"]["state"] == "not_built"
+    assert st["export"]["state"] == "locked" and "duyệt storyboard" in st["export"]["reason"]      # not approved yet
 
 
 def test_script_progress_moves_the_current_step(c):
@@ -111,8 +113,8 @@ def test_script_progress_moves_the_current_step(c):
     b = c.get(P + "/pipeline").json()
     st = steps(b)
     assert b["stage"] == "script" and st["script"]["state"] == "done"
-    assert b["current"] == "voice"            # the stage calls for the voice step, which is not built yet
-    assert st["voice"]["state"] == "not_built" and st["edit"]["state"] == "locked"
+    assert b["current"] == "voice"            # the stage calls for the voice step; the picks step is open beside it
+    assert st["voice"]["state"] == "current" and st["picks"]["state"] == "available" and st["edit"]["state"] == "locked"
     # editing the narration after the approval makes the approval stale: the script step is open again
     doc = n["narration"]
     doc["chapters"][0]["beats"][0]["text"] += " Once more."
@@ -143,7 +145,7 @@ def test_export_step_shows_rendered_files(c):
     (d / "render" / "final.mp4").write_bytes(b"x" * 2048)
     b = c.get("/api/projects/imp/pipeline").json()
     assert b["outputs"] == [{"path": "render/final.mp4", "size": 2048, "url": "/api/projects/imp/files/render/final.mp4"}]
-    assert steps(b)["export"]["state"] == "not_built" and "1 tệp" in steps(b)["export"]["detail"]
+    assert steps(b)["export"]["state"] == "locked" and "1 tệp" in steps(b)["export"]["detail"]
     assert c.get(b["outputs"][0]["url"]).status_code == 200
     assert b["stage"] == "rendered"
 

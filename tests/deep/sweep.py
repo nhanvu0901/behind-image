@@ -15,6 +15,8 @@ from PIL import Image
 PID = "technique_lab"
 
 
+WARM_LIMIT_MS = 1500        # was 300 (the Mac); the Windows server measured 373 ms. 5 x the old limit: a frame that is not cached takes seconds
+
 def strip(o):
     if isinstance(o, dict):
         return {k: strip(v) for k, v in o.items() if not k.startswith("_")}
@@ -140,7 +142,7 @@ def sweep_one(client, tech: dict, sb: dict, rs: dict, pid: str = PID, width: int
         frames.append((t_, a))
         if uniform(a):
             rec["problems"].append(f"uniform/blank frame at t={t_} (std {a.std():.2f})")
-        if warm > 300:
+        if warm > WARM_LIMIT_MS:
             rec["problems"].append(f"warm still {warm:.0f} ms at t={t_} (width {width})")
         if r2.content != r.content:
             rec["problems"].append(f"non-deterministic frame at t={t_}")

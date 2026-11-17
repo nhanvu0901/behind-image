@@ -139,71 +139,6 @@ def check_cli(agy: str, env: dict) -> None:
         raise DraftError("agy_config", err)
 
 
-class _Proc:
-    """The child, with a thread that reads its events into a queue and a thread that keeps the tail of its error output."""
-
-    def __init__(self, cmd: list[str], cwd: Path, env: dict, transcript):
-        self.p = subprocess.Popen(cmd, cwd=str(cwd), env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                  text=True, encoding="utf-8", errors="replace", bufsize=1, **group_kwargs())
-        self.q: queue.Queue = queue.Queue()
-        self.err = ""
-        self.transcript = transcript
-        threading.Thread(target=self._read_out, daemon=True).start()
-        threading.Thread(target=self._read_err, daemon=True).start()
-
-    def _read_out(self):
-        try:
-            for line in self.p.stdout:
-                line = line.strip()
-                if not line:
-                    continue
-                if self.transcript is not None:
-                    try:
-                        self.transcript.write(line + "\n")
-                        self.transcript.flush()
-                    except (OSError, ValueError):
-                        pass
-                if line.startswith("{"):
-                    try:
-                        ev = json.loads(line)
-                    except ValueError:
-                        continue
-                    if isinstance(ev, dict):
-                        self.q.put(("ev", ev))
-        except (OSError, ValueError):
-            pass
-        self.q.put(("eof", None))
-
-    def _read_err(self):
-        try:
-            for line in self.p.stderr:
-                self.err = (self.err + line)[-20000:]
-        except (OSError, ValueError):
-            pass
-
-    def send(self, text: str) -> bool:
-        try:
-            self.p.stdin.write(text)
-            self.p.stdin.flush()
-            return True
-        except (OSError, ValueError):
-            return False
-
-    def alive(self) -> bool:
-        return self.p.poll() is None
-
-    def finish(self, grace: float = EXIT_WAIT_S) -> None:
-        try:
-            self.p.stdin.close()
-        except (OSError, ValueError):
-            pass
-        end = time.time() + grace
-        while self.alive() and time.time() < end:
-            time.sleep(0.05)
-        if self.alive():
-            kill_tree(self.p)
-
-
 def _cancel_fn(cancel):
     if cancel is None:
         return lambda: False
@@ -212,11 +147,77 @@ def _cancel_fn(cancel):
     return cancel
 
 
+class DefaultRunner:
+    """`run_process` for use outside a long job (tests, a command line): the same interface as `Context.run_process` of bti.longjob
+    (stdin, on_start with a handle, separate stderr), with the process tree killed on cancel. Inside a job the runner of the
+    job is passed to `run` instead, so that cancel, the part limit and the tree kill are the job's."""
+
+    def __init__(self, cancelled):
+        self.cancelled = cancelled
+
+    def run_process(self, cmd, cwd=None, env=None, on_line=None, *, stdin=None, on_start=None, separate_stderr=False, on_stderr=None) -> int:
+        from bti.longjob.manager import ProcessHandle
+        if self.cancelled():
+            return -1
+        proc = subprocess.Popen([str(c) for c in cmd], cwd=str(cwd) if cwd else None, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=subprocess.PIPE if separate_stderr else subprocess.STDOUT, text=True, encoding="utf-8",
+                                errors="replace", bufsize=1, **group_kwargs())
+        handle = ProcessHandle(proc)
+
+        def pump(stream, cb):
+            try:
+                for line in stream:
+                    if cb is not None:
+                        try:
+                            cb(line.rstrip("\r\n"))
+                        except Exception:       # noqa: BLE001
+                            pass
+            except (OSError, ValueError):
+                pass
+        readers = [threading.Thread(target=pump, args=(proc.stdout, on_line), daemon=True)]
+        if separate_stderr:
+            readers.append(threading.Thread(target=pump, args=(proc.stderr, on_stderr), daemon=True))
+        for r in readers:
+            r.start()
+        try:
+            if stdin is not None:
+                handle.write(stdin)
+            if on_start is None:
+                handle.close_stdin()
+            else:
+                on_start(handle)
+            while True:
+                try:
+                    proc.wait(timeout=0.05)
+                    break
+                except subprocess.TimeoutExpired:
+                    if self.cancelled():
+                        kill_tree(proc)
+                        break
+        finally:
+            if proc.poll() is None:
+                kill_tree(proc)
+            for r in readers:
+                r.join(timeout=5)
+            for st in (proc.stdout, proc.stderr, proc.stdin):
+                try:
+                    if st is not None:
+                        st.close()
+                except (OSError, ValueError):
+                    pass
+        return -1 if proc.returncode is None else int(proc.returncode)
+
+
 def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max_repairs: int = 2, check=None, cancel=None,
         on_progress=None, transcript_path: Path | None = None, guard=None, prompt: str = PROMPT, python: str | None = None,
-        agy: str | None = None, out_dir_name: str = "out") -> AgyResult:
-    """Run the agent. Raises DraftError before the program starts (not installed, too old, another run in progress); once it has
-    started, everything is reported in the returned AgyResult (never raised)."""
+        agy: str | None = None, out_dir_name: str = "out", runner=None) -> AgyResult:
+    """Run the agent. `runner` is `ctx.run_process` of the long job (cancel, the part limit and the process-tree kill are then the
+    job's); without it a `DefaultRunner` is used. Raises DraftError before the program starts (not installed, too old, another
+    run in progress); once it has started, everything is reported in the returned AgyResult (never raised).
+
+    Own work, because the runner offers no way to do it: the 30 minute limit of the whole run kills the tree through bti.proc
+    (`kill_tree` on the handle's process) and keeps the partial result."""
+    import types
     agy = agy or find_agy()
     if not agy:
         raise DraftError("agy_missing", "agy (the Antigravity CLI) is not installed on this machine")
@@ -226,10 +227,110 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
         raise DraftError("agy_busy", "another agent run is in progress")
     res = AgyResult()
     cancelled = _cancel_fn(cancel)
-    proc = None
+    runner = runner or DefaultRunner(cancelled).run_process
+    S = types.SimpleNamespace(handle=None, pending=None, final=False, timed_out=False, err="", respawns=0, last_tick=0.0)
+    seen_steps: set = set()
     tf = None
     t0 = time.time()
-    seen_steps: set = set()
+    done = threading.Event()
+    out_dir = Path(ws_root) / out_dir_name
+
+    def tick(force=False):
+        if on_progress and (force or time.time() - S.last_tick >= 1.0):
+            S.last_tick = time.time()
+            try:
+                n_out = len(list(out_dir.glob("*.json"))) if out_dir.is_dir() else 0
+            except OSError:
+                n_out = 0
+            on_progress({"steps": res.steps, "last_action": res.last_action, "turn": res.turns, "out_files": n_out, "elapsed": time.time() - t0})
+
+    def finish(status=None, code=None, message=""):
+        if status:
+            res.status = status
+        if code:
+            res.error_code, res.error_message = code, message
+        S.final = True
+        if S.handle is not None:
+            S.handle.close_stdin()
+
+    def on_err(line):
+        S.err = (S.err + line + "\n")[-20000:]
+
+    def handle_event(ev):
+        res.n_events += 1
+        name = ev.get("event")
+        if name == "step_update" and isinstance(ev.get("step_update"), dict):
+            su = ev["step_update"]
+            idx = su.get("step_index")
+            if idx is None or idx not in seen_steps:
+                res.steps += 1
+                if idx is not None:
+                    seen_steps.add(idx)
+            if su.get("step_type"):
+                res.last_action = str(su["step_type"])
+            tick()
+        elif name == "init":
+            if isinstance(ev.get("conversation_id"), str):
+                res.conversation_id = ev["conversation_id"]
+        elif name == "result" and isinstance(ev.get("result"), dict):
+            r = ev["result"]
+            S.pending = None
+            if isinstance(r.get("conversation_id"), str):
+                res.conversation_id = r["conversation_id"]
+            status = str(r.get("status") or "")
+            res.response = str(r.get("response") or "")
+            if status == "CANCELED":
+                return finish("cancelled")
+            if status != "SUCCESS":
+                code, msg = classify("%s %s" % (r.get("error") or "", S.err))
+                return finish("error", code, msg)
+            problems = check(res.turns) if check is not None else None
+            if problems and res.repairs < max_repairs:
+                res.repairs += 1
+                res.turns += 1
+                S.pending = user_line(repair_text(problems))
+                if S.handle is not None:
+                    S.handle.write(S.pending)           # when the program already ended the write is ignored: it is restarted below
+                tick(True)
+                return None
+            return finish("ok")
+        else:
+            tick()
+        return None
+
+    def on_line(line):
+        if tf is not None:
+            try:
+                tf.write(line + "\n")
+                tf.flush()
+            except (OSError, ValueError):
+                pass
+        line = line.strip()
+        if not line.startswith("{") or S.final:
+            return
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            return
+        if isinstance(ev, dict):
+            try:
+                handle_event(ev)
+            except Exception as e:      # noqa: BLE001 - a failure of our own check must not hang the run
+                finish("error", "agy_error", "the run could not go on (%s)" % type(e).__name__)
+
+    def on_start(h):
+        S.handle = h
+
+    def watchdog():
+        while not done.wait(0.5):
+            if time.time() - t0 > timeout and not S.final:
+                S.timed_out = True
+                h = S.handle
+                if h is not None:
+                    h.close_stdin()
+                    kill_tree(h._proc)      # the runner has no kill of its own; this is the one place bti.proc is used directly
+                return
+
     try:
         if transcript_path is not None:
             Path(transcript_path).parent.mkdir(parents=True, exist_ok=True)
@@ -237,113 +338,38 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
         if guard is not None:
             guard.before()
         cmd = build_command(agy, model)
-        try:
-            proc = _Proc(cmd, Path(ws_root), env, tf)
-        except OSError as e:
-            raise DraftError("agy_config", "agy could not be started: %s" % type(e).__name__)
-        proc.send(user_line(prompt))
         res.turns = 1
-        awaiting = True
-        last_msg = None                      # the repair text last sent, kept so that it can be sent once more to a restarted program
-        resent = False
-        last_tick = 0.0
-        out_dir = Path(ws_root) / out_dir_name
-
-        def tick(force=False):
-            nonlocal last_tick
-            if on_progress and (force or time.time() - last_tick >= 1.0):
-                last_tick = time.time()
-                try:
-                    n_out = len(list(out_dir.glob("*.json"))) if out_dir.is_dir() else 0
-                except OSError:
-                    n_out = 0
-                on_progress({"steps": res.steps, "last_action": res.last_action, "turn": res.turns, "out_files": n_out,
-                             "elapsed": time.time() - t0})
-
+        threading.Thread(target=watchdog, daemon=True).start()
+        first, extra = user_line(prompt), []
         while True:
-            if cancelled():
-                res.status = "cancelled"
-                break
-            if time.time() - t0 > timeout:
-                res.status = "timeout"
-                res.error_code = "agy_timeout"
-                res.error_message = "the agent did not finish within %d seconds" % int(timeout)
-                break
             try:
-                kind, ev = proc.q.get(timeout=0.2)
-            except queue.Empty:
-                tick()
+                rc = runner(cmd + extra, cwd=Path(ws_root), env=env, on_line=on_line, stdin=first, on_start=on_start,
+                            separate_stderr=True, on_stderr=on_err)
+            except OSError as e:
+                raise DraftError("agy_config", "agy could not be started: %s" % type(e).__name__)
+            res.returncode = rc
+            S.handle = None
+            if S.final or S.timed_out or cancelled():
+                break
+            if S.pending and res.conversation_id and S.respawns <= max_repairs:
+                S.respawns += 1                          # the program ended after its turn: continue the same conversation
+                extra, first = ["--conversation", res.conversation_id], S.pending
                 continue
-            if kind == "eof":
-                if awaiting and last_msg is not None and not resent and res.conversation_id and not cancelled():
-                    resent = True                    # the program ended just as the repair turn arrived: continue the conversation in a new one
-                    proc.finish(1.0)
-                    proc = _Proc(cmd + ["--conversation", res.conversation_id], Path(ws_root), env, tf)
-                    if proc.send(last_msg):
-                        continue
-                if awaiting:
-                    code, msg = classify(proc.err)
-                    res.status, res.error_code = "error", code if proc.err.strip() else "agy_no_result"
-                    res.error_message = msg if proc.err.strip() else "agy ended without a result"
-                break
-            res.n_events += 1
-            name = ev.get("event")
-            if name == "step_update" and isinstance(ev.get("step_update"), dict):
-                su = ev["step_update"]
-                idx = su.get("step_index")
-                if idx is None or idx not in seen_steps:
-                    res.steps += 1
-                    if idx is not None:
-                        seen_steps.add(idx)
-                if su.get("step_type"):
-                    res.last_action = str(su["step_type"])
-                tick()
-            elif name == "init":
-                if isinstance(ev.get("conversation_id"), str):
-                    res.conversation_id = ev["conversation_id"]
-            elif name == "result" and isinstance(ev.get("result"), dict):
-                r = ev["result"]
-                awaiting, last_msg, resent = False, None, False
-                if isinstance(r.get("conversation_id"), str):
-                    res.conversation_id = r["conversation_id"]
-                status = str(r.get("status") or "")
-                res.response = str(r.get("response") or "")
-                if status == "CANCELED":
-                    res.status = "cancelled"
-                    break
-                if status != "SUCCESS":
-                    res.status = "error"
-                    res.error_code, res.error_message = classify("%s %s" % (r.get("error") or "", proc.err))
-                    break
-                problems = check(res.turns) if check is not None else None
-                if problems and res.repairs < max_repairs:
-                    res.repairs += 1
-                    res.turns += 1
-                    msg = user_line(repair_text(problems))
-                    sent = proc.alive() and proc.send(msg)
-                    if not sent and res.conversation_id:             # the program ended after its turn: continue the same conversation
-                        proc.finish(1.0)
-                        proc = _Proc(cmd + ["--conversation", res.conversation_id], Path(ws_root), env, tf)
-                        sent = proc.send(msg)
-                    if not sent:
-                        res.status, res.error_code, res.error_message = "error", "agy_no_result", "the repair turn could not be sent"
-                        break
-                    last_msg = msg
-                    awaiting = True
-                    tick(True)
-                    continue
-                res.status = "ok"
-                break
+            code, msg = classify(S.err)
+            if S.err.strip():
+                finish("error", code, msg)
             else:
-                tick()
+                finish("error", "agy_no_result", "agy ended without a result")
+            break
+        if S.timed_out and res.status != "ok":
+            res.status, res.error_code = "timeout", "agy_timeout"
+            res.error_message = "the agent did not finish within %d seconds" % int(timeout)
+        elif cancelled() and res.status != "ok":
+            res.status = "cancelled"
         tick(True)
     finally:
-        if proc is not None:
-            if res.status in ("cancelled", "timeout"):
-                kill_tree(proc.p)
-            proc.finish(EXIT_WAIT_S if res.status == "ok" else 2.0)
-            res.returncode = proc.p.returncode
-            res.stderr_tail = proc.err[-2000:]
+        done.set()
+        res.stderr_tail = S.err[-2000:]
         if tf is not None:
             try:
                 tf.close()

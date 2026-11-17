@@ -35,15 +35,28 @@ _CANDS = [
 
 
 def _licence_ok(lic: str) -> tuple[bool, str, str]:
+    """(on the allow list?, licence name, why not). Advisory: it only decides the flag, nothing is refused."""
     name = (lic or "").strip()
     low = name.lower()
     if not low:
         return False, "", "licence missing"
     if re.search(r"\b(nc|nd)\b|non-?commercial|no-?deriv|fair use", low):
-        return False, name, f"licence {name} is not allowed (NC, ND or fair use)"
+        return False, name, f"licence {name} is restricted (NC, ND or fair use)"
     if low.startswith(ALLOWED) or low == "pd":
         return True, name, "allowed"
     return False, name, f"licence {name!r} is not on the allow list"
+
+
+def _flag(lic: str, w: int = 0, h: int = 0) -> str | None:
+    """The advisory flag of an asset, like `bti.media.licence`: rejected | unknown | small | None."""
+    ok, name, reason = _licence_ok(lic)
+    if not ok:
+        flag = "unknown" if not name else "rejected"
+    elif min(w, h) and min(w, h) < 1200:
+        flag = "small"
+    else:
+        flag = None
+    return flag
 
 
 def _placeholder(path: Path, label: str, w: int = 1200, h: int = 1600) -> None:
@@ -107,7 +120,7 @@ class MediaAdapter:
                         "thumb_url": f"/api/media/stub-thumb/{re.sub(r'[^A-Za-z0-9]', '_', sid)}.jpg",
                         "page_url": f"https://example.invalid/{sid}", "width": w, "height": h,
                         "mime": "image/png" if sid.endswith(".png") else "image/jpeg", "author": author,
-                        "licence": lic, "licence_ok": ok, "licence_reason": reason})
+                        "licence": lic, "licence_ok": ok, "licence_reason": reason, "flag": _flag(lic, w, h)})
         return out[:limit]
 
     # ----- import / upload -----
@@ -135,16 +148,14 @@ class MediaAdapter:
         if cand is None:
             raise ApiError(404, "unknown candidate")
         _, _, title, author, lic, _, w, h = cand
-        ok, name, reason = _licence_ok(lic)
-        if not ok:
-            raise LicenceRejected(reason)
+        ok, name, reason = _licence_ok(lic)         # advisory: a restricted or unknown licence is flagged, never refused
         key = self._next_key(project_dir)
         fname = f"media/stub_{re.sub(r'[^A-Za-z0-9]', '_', source_id)}.jpg"
         _placeholder(project_dir / fname, title, 1200, round(1200 * h / w))
         asset = {"file": fname, "kind": "image", "title": title, "artist": author, "year": "",
                  "width": 1200, "height": round(1200 * h / w),
                  "credit": {"source": source, "source_url": f"https://example.invalid/{source_id}",
-                            "author": author, "licence": name, "licence_url": ""}, "regions": {}}
+                            "author": author, "licence": name, "licence_url": "", "flag": _flag(lic, 1200, round(1200 * h / w))}, "regions": {}}
         return {"asset_key": key, "asset": asset}
 
     def add_upload(self, project_dir: Path, file_path: Path, meta: dict) -> dict:
@@ -153,11 +164,7 @@ class MediaAdapter:
                 return self.module.add_upload(project_dir, file_path, meta, require_root=True)
             except Exception as e:  # noqa: BLE001
                 raise _translate(e)
-        ok, name, reason = _licence_ok(meta.get("licence", ""))
-        if not ok:
-            raise LicenceRejected(reason)
-        if not meta.get("source_url") or not meta.get("author"):
-            raise LicenceRejected("source_url and author are required (author may be 'unknown, PD')")
+        ok, name, reason = _licence_ok(meta.get("licence", ""))         # advisory: no licence, source or author is required
         try:
             with Image.open(file_path) as im:
                 w, h = im.size
@@ -174,8 +181,8 @@ class MediaAdapter:
         shutil.copyfile(file_path, dest)
         asset = {"file": rel, "kind": "image", "title": meta.get("title") or "", "artist": meta.get("artist") or "",
                  "year": meta.get("year") or "", "width": w, "height": h,
-                 "credit": {"source": "upload", "source_url": meta["source_url"], "author": meta["author"],
-                            "licence": name, "licence_url": ""}, "regions": {}}
+                 "credit": {"source": "upload", "source_url": meta.get("source_url") or "", "author": meta.get("author") or "",
+                            "licence": name, "licence_url": "", "flag": _flag(meta.get("licence", ""), w, h)}, "regions": {}}
         return {"asset_key": key, "asset": asset}
 
     def stub_thumb(self, name: str) -> bytes:

@@ -69,16 +69,33 @@ def test_reseed_changes_only_that_sentence():
     assert next_seed(5) == next_seed(5)
 
 
-def test_gaps():
-    n = make_narration()
+def test_gaps_with_a_cold_open():
+    n = make_narration()                      # c1 is the cold open, c2 has a card
     cs = build_chunks(n, {}, CFG, "s")
-    kinds = [c.gap_kind for c in cs]
-    assert kinds[0] == "lead"
-    assert "beat" in kinds and "card" in kinds
-    card = next(c for c in cs if c.gap_kind == "card")
-    assert card.gap == CFG["silence"]["card"] and card.chapter == "c2"
-    sent = [c for c in cs if c.gap_kind == "sentence"]
-    assert all(c.gap == CFG["silence"]["sentence"] for c in sent)
+    sil = CFG["silence"]
+    assert cs[0].gap_kind == "lead" and cs[0].gap == sil["lead"]
+    title = next(c for c in cs if c.gap_kind == "title")
+    assert title.chapter == "c2" and title.gap == sil["title"] + sil["card"]       # title card, then the chapter's own card
+    assert sil["title"] == 6.2 and sil["card"] == 3.2
+    assert "beat" in [c.gap_kind for c in cs]
+    assert all(c.gap == sil["sentence"] for c in cs if c.gap_kind == "sentence")
+
+
+def test_gaps_without_a_cold_open_title_comes_first():
+    n = make_narration(role_first="chapter", card_second=True)
+    cs = build_chunks(n, {}, CFG, "s")
+    assert cs[0].gap_kind == "title" and cs[0].gap == CFG["silence"]["title"]
+    c2 = next(c for c in cs if c.chapter == "c2" and c.first_in_beat and c.gap_kind not in ("sentence", "beat"))
+    assert c2.gap_kind == "card" and c2.gap == CFG["silence"]["card"]
+
+
+def test_plain_chapters_keep_one_second():
+    n = make_narration({"c1": [("b0001", "A long enough opening sentence for the cold open to stand alone here.")],
+                        "c2": [("b0002", "Second chapter has its own long enough sentence to stand alone here.")],
+                        "c3": [("b0003", "Third chapter has another long enough sentence to stand alone here too.")]}, card_second=False)
+    cs = build_chunks(n, {}, CFG, "s")
+    assert [c.gap_kind for c in cs] == ["lead", "title", "chapter"]
+    assert cs[2].gap == CFG["silence"]["chapter"] == 1.0
 
 
 def test_chunks_never_cross_a_beat_and_keep_written_words():

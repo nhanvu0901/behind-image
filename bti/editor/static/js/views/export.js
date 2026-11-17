@@ -3,44 +3,16 @@
 // the entries below that errmsg.js and labels.js do not have yet are kept in the local tables EXPORT_ERRORS / EXPORT_LABELS
 // until CORE merges them (docs/qa/BUILD_export.md, "Needs another agent").
 import { api } from '../api.js';
-import { describeError, isVietnamese } from '../errmsg.js';
+import { describeError, isVietnamese, STAGE_CODES } from '../errmsg.js';
+import { EXPORT_LABELS } from '../labels.js';
 import { h, toast, errorToast, errorInto, detailFold, confirmDialog } from '../util.js';
 import { projectHash } from '../router.js';
 
 const POLL_MS = 2000;
 
 // ------------------------------------------------------------------ local tables
-export const EXPORT_ERRORS = {
-  no_storyboard: 'Chưa có storyboard. Hãy dựng hình ở bước "Dựng hình" trước.',
-  not_approved: 'Storyboard chưa được duyệt. Mở bước "Dựng hình" và bấm Duyệt.',
-  approval_stale: 'Storyboard đã đổi sau khi duyệt. Mở bước "Dựng hình" và duyệt lại.',
-  storyboard_unreadable: 'Không đọc được tệp storyboard của dự án.',
-  no_audio: 'Chưa có tệp giọng đọc. Hãy làm bước "Giọng đọc" trước.',
-  no_timing: 'Chưa có tệp thời điểm của từng từ (timing). Hãy làm bước "Giọng đọc" trước.',
-  no_subtitles: 'Không tạo được phụ đề từ tệp thời điểm của từng từ.',
-  busy: 'Dự án này đang xuất video rồi. Chờ xong hoặc bấm Hủy.',
-  render_failed: 'Dựng hình bị dừng giữa chừng. Bấm "Xuất video" lần nữa để làm tiếp: những đoạn đã dựng xong được giữ lại.',
-  frames_mismatch: 'Số khung hình của video không đúng với kế hoạch, nên đã dừng để không tạo ra tệp sai.',
-  join_failed: 'Không ghép được các đoạn video lại với nhau.',
-  part_missing: 'Thiếu một đoạn video đã dựng. Bấm "Xuất video" lần nữa.',
-  mux_failed: 'Không ghép được tiếng, phụ đề và mục lục vào video.',
-  plan_failed: 'Không lên được kế hoạch xuất. Storyboard có thể đang có lỗi: thử mở bước "Dựng hình".',
-  project_gone: 'Dự án đã bị xóa.',
-};
-export const EXPORT_LABELS = {
-  parts: { queued: 'Chờ', waiting: 'Chờ máy rảnh', running: 'Đang chạy', done: 'Xong', error: 'Lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn' },
-  job: { queued: 'Đang chờ', waiting: 'Đang chờ máy rảnh', running: 'Đang xuất', done: 'Đã xong', error: 'Bị lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn vì máy chủ khởi động lại' },
-  report: {
-    video: 'Loại video', audio_length: 'Độ dài tiếng đọc (giây)', chapters_merged: 'Mục lục ngắn đã gộp (dưới 10 giây)', duration: 'Độ dài (giây)', frames: 'Số khung hình', audio: 'Âm thanh', loudness: 'Độ lớn tiếng (LUFS)',
-    true_peak: 'Đỉnh âm lớn nhất (dB)', subtitles: 'Phụ đề trong tệp', cues: 'Số dòng phụ đề', chapters: 'Số mục lục', size: 'Dung lượng',
-  },
-  reportHelp: {
-    frames: 'phải bằng độ dài nhân 30', audio_length: 'phải khớp độ dài video (lệch tối đa 0,5 giây)', chapters_merged: 'chỉ gộp trong tệp mục lục và mô tả', loudness: 'mục tiêu khoảng -15', true_peak: 'nên dưới -1', subtitles: 'phải có (mov_text)', chapters: 'từ 2 mục trở lên',
-  },
-  status: { ok: 'Đạt', warn: 'Xem lại', fail: 'Lỗi' },
-  stale: { storyboard: 'Storyboard đã đổi sau lần xuất trước, nên video này không còn khớp.', audio: 'Giọng đọc đã đổi sau lần xuất trước, nên video này không còn khớp.', files: 'Một số tệp của lần xuất trước không còn nữa.' },
-  files: { video: 'Video (MP4, có phụ đề bên trong)', subtitles: 'Phụ đề (.srt)', description: 'Mô tả video', chapters: 'Mục lục (chapters.txt)' },
-};
+export const EXPORT_ERRORS = { ...STAGE_CODES.longjob, ...STAGE_CODES.export };
+export { EXPORT_LABELS };
 
 export function errText(e) {
   const c = e?.body?.code;
@@ -135,7 +107,7 @@ async function start() {
     startPolling();
     shell?.refreshPipeline?.();
   } catch (e) {
-    errorToast(e);
+    toast(errText(e).text, 'err', 9000);
     if (btn) btn.disabled = false;
     if (e?.body?.code) await load().catch(() => {});
   }
@@ -145,7 +117,7 @@ async function cancel() {
   if (!S.job) return;
   const ok = await confirmDialog('Dừng việc xuất video? Những đoạn đã dựng xong được giữ lại, lần sau sẽ làm tiếp từ chỗ đó.', { title: 'Hủy xuất video', ok: 'Dừng lại', cancel: 'Tiếp tục xuất', danger: true });
   if (!ok) return;
-  try { await api.post(`/api/longjobs/${encodeURIComponent(S.job.id)}/cancel`, {}); toast('Đang dừng...', 'warn'); poll(); } catch (e) { errorToast(e); }
+  try { await api.post(`/api/longjobs/${encodeURIComponent(S.job.id)}/cancel`, {}); toast('Đang dừng...', 'warn'); poll(); } catch (e) { toast(errText(e).text, 'err', 9000); }
 }
 
 async function copyText(text, btn) {

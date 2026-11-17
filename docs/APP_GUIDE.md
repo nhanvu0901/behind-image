@@ -51,10 +51,10 @@ Các địa chỉ cũ vẫn dùng được và tự chuyển vào ứng dụng: 
 |---|---|
 | 1. Tác phẩm | Hồ sơ của tác phẩm đã chọn và các nguồn sách đang dùng. Với video mới, đây là thư viện: tác phẩm, kệ sách, hồ sơ, tạo dự án. |
 | 2. Kịch bản | Nguồn, dàn ý, lời dẫn. |
-| 3. Giọng đọc | Chưa xây dựng. |
-| 4. Chọn hình | Chưa xây dựng. |
-| 5. Dựng hình | Trình biên tập storyboard. |
-| 6. Xuất video | Chưa xây dựng. Nếu dự án đã có tệp video dựng sẵn, màn hình chỉ rõ tệp nằm ở đâu. |
+| 3. Giọng đọc | Máy đọc lời dẫn đã duyệt thành tệp âm thanh và đo thời điểm từng từ (mục 6). |
+| 4. Chọn hình | Chọn tranh chính, vùng chi tiết và hình cho từng dòng lời dẫn (mục 6). |
+| 5. Dựng hình | Dựng bản nháp storyboard rồi sửa trong trình biên tập (mục 7). |
+| 6. Xuất video | Máy dựng video hoàn chỉnh, phụ đề, mô tả và mục lục (mục 9). |
 
 Mỗi bước trên thanh các bước có một trạng thái, do máy chủ tính (`GET /api/projects/<id>/pipeline`):
 
@@ -63,11 +63,12 @@ Mỗi bước trên thanh các bước có một trạng thái, do máy chủ t�
 | **Xong** (dấu tích xanh) | Bước đã hoàn thành (ví dụ lời dẫn đã duyệt và còn khớp, storyboard đã duyệt). |
 | **Hiện tại** | Bước mà giai đoạn của dự án cần làm tiếp. Mở dự án là vào thẳng bước này. |
 | **Mở được** | Bước mở được nhưng chưa phải bước kế tiếp. |
-| **Khóa** | Chưa mở được. Rê chuột hoặc bấm vào bước sẽ thấy lý do (ví dụ "Chưa có storyboard"). |
-| **Chưa xây dựng** | Bước chưa có trong ứng dụng. Vẫn mở được để xem bước đó sẽ làm gì, nhưng không có nút giả nào. |
-| **Không có dữ liệu** | Dự án nhập từ bản dựng trước, không có dữ liệu cho bước này (mục 8). |
+| **Khóa** | Chưa mở được. Rê chuột hoặc bấm vào bước sẽ thấy lý do (ví dụ "Cần duyệt lời dẫn ở bước Kịch bản trước"). |
+| **Không có dữ liệu** | Dự án nhập từ bản dựng trước, không có dữ liệu cho bước này (mục 9). |
 
-Bước đang mở được gạch chân màu xanh. Bước mà giai đoạn của dự án cần làm tiếp có dấu "Hiện tại" (hoặc "ở đây" với bước chưa xây dựng). Sau khi duyệt xong một bước, nút **Tiếp tục: <tên bước>** dẫn tới bước kế tiếp mở được (bước khóa bị bỏ qua, bước chưa xây dựng thì không). Nút này có ở bước Kịch bản (sau khi lời dẫn đã duyệt), bước Dựng hình (sau khi storyboard đã duyệt), và ở cuối các màn hình thông báo.
+**Thứ tự mở bước.** Bước 3 (Giọng đọc) và bước 4 (Chọn hình) cùng mở khi lời dẫn đã duyệt; làm cái nào trước cũng được, hoặc làm cùng lúc (máy đọc mất chừng 50 phút trong khi bạn chọn hình). Bước 5 mở khi cả hai đã xong: lúc đó nó cho dựng bản nháp storyboard. Bước 6 mở khi storyboard đã duyệt và còn khớp. Giai đoạn của dự án là bước xa nhất mà mọi bước trước nó đều xong: *Đã chọn tác phẩm*, *Có kịch bản*, *Có giọng đọc*, *Đã chọn hình*, *Có storyboard*, *Đã duyệt storyboard*, *Đã dựng xong*. Dự án nhập từ bản dựng trước (mục 9) không có bước 1 đến 4 nhưng có storyboard, nên vẫn mở bước 5 và, sau khi duyệt, bước 6.
+
+Bước đang mở được gạch chân màu xanh. Bước mà giai đoạn của dự án cần làm tiếp có dấu "Hiện tại". Bước giọng đọc, chọn hình, bản nháp hoặc xuất video đang chạy hiện "Đang chạy"; bước đã xong nhưng dữ liệu đã đổi sau đó hiện "Cần làm lại". Sau khi duyệt xong một bước, nút **Tiếp tục: <tên bước>** dẫn tới bước kế tiếp mở được (bước khóa bị bỏ qua). Nút này có ở bước Kịch bản (sau khi lời dẫn đã duyệt), bước Dựng hình (sau khi storyboard đã duyệt), và ở cuối các màn hình thông báo.
 
 ## 4. Bước 1: Tác phẩm và thư viện
 
@@ -257,15 +258,45 @@ Chọn mô hình **Mock**. Trong ô ghi chú có thể gõ các dấu hiệu đ�
 - Hộp thoại: Tab xoay vòng trong hộp, Esc đóng hộp trên cùng, Enter trong ô chữ bấm nút chính (nút xanh). Trang phía sau bị khóa khi có hộp. Hộp có chữ bạn dán không đóng khi bấm ra ngoài.
 - Tìm kiếm (thư viện, trong sách) không phân biệt dấu và chữ hoa: "duc" khớp "Đức", "Durer" khớp "Dürer". Bộ đếm từ tính chữ của mọi bảng chữ cái, khớp với máy chủ.
 
-## 6. Bước 3, 4 và 6: chưa xây dựng
+## 6. Bước 3 và 4: Giọng đọc và Chọn hình
 
-Ba bước này hiện chỉ là màn hình thông báo trung thực, không có nút giả:
+### Giọng đọc
 
-- **Giọng đọc** sẽ cho máy chủ giọng đọc đọc lời dẫn đã duyệt, cho bạn nghe thử và chọn lại từng dòng, và tạo `audio/mix.m4a` cùng `timing.json`.
-- **Chọn hình** sẽ cho bạn chọn, với mỗi dòng lời dẫn, thứ hiện trên hình và thêm cảnh, rồi soạn một đề xuất storyboard để sửa ở bước Dựng hình.
-- **Xuất video** sẽ dựng video cuối chất lượng cao từ storyboard đã duyệt và giọng đọc. Nếu dự án đã có tệp `.mp4` dựng sẵn (trong `render/`, `output/`, `out/` hoặc thư mục dự án), màn hình liệt kê đường dẫn và nút mở tệp.
+Bước 3 biến lời dẫn đã duyệt thành một tệp âm thanh (`audio/mix.m4a`) và một tệp ghi thời điểm từng từ (`timing.json`). Bước này mở khi bạn đã duyệt lời dẫn ở bước Kịch bản, và bạn có thể chọn hình (bước 4) trong lúc máy đọc.
 
-Vì chưa có hai bước đầu, một dự án tạo từ thư viện chưa có storyboard: bước Dựng hình ở trạng thái **Khóa** với lý do ghi rõ, cho tới khi các bước đó được xây.
+1. Mở bước "Giọng đọc". Trang cho biết còn bao nhiêu câu chưa đọc và máy cần khoảng bao lâu (một video 12 phút mất chừng 50 phút máy chạy, chia thành các phần khoảng 20 phút).
+2. Bấm "Tạo giọng đọc". Bạn có thể rời trang, máy vẫn chạy. Trang hiện từng phần đang chạy; phần nào chờ máy rảnh sẽ ghi "Chờ máy rảnh". Bấm "Hủy" để dừng; các câu đã đọc xong được giữ lại, bấm tạo lại sẽ đọc tiếp từ chỗ dở.
+3. Khi xong, bấm nút nghe để nghe cả bài, hoặc nghe từng câu ở danh sách lời dẫn theo chương. Câu nào chưa vừa ý, bấm "Đọc lại câu này" để máy đọc lại bằng một lần đọc khác.
+4. Con số, năm, thế kỷ, tiền, phần trăm, chữ viết tắt và số La Mã (vua, giáo hoàng) được đọc thành chữ tự động. Từ nào máy đọc sai (thường là tên riêng), thêm vào "Bảng phát âm": chữ viết bên trái, cách đọc bên phải, rồi bấm "Lưu bảng phát âm". Chỉ những câu có từ đó phải đọc lại.
+5. "Tốc độ đọc" (1.00 đến 1.20) và "Nhạc nền nhẹ" chỉ cần ghép lại, không phải đọc lại (vài phút).
+6. Nếu bạn sửa lời dẫn sau khi đã có giọng đọc, trang báo "Lời dẫn đã đổi" và chỉ những câu đã đổi được đọc lại. Các shot của storyboard neo vào từ nào sẽ được kiểm tra lại ở bước Dựng hình.
+7. Nếu máy chưa có máy đo từ, thời điểm từng từ được chia đều trong mỗi câu (trang ghi rõ); chỉ đầu và cuối mỗi câu là chính xác.
+
+Phụ đề không bao giờ được vẽ vào hình; bước này không đưa chữ lên màn hình.
+
+## Update 2026-11-16 (late): silences and cards, and the model load time
+- Silences (`config/voice.json`): sentence 0.20, beat 0.45, plain chapter 1.0, **chapter with `card: true` 3.2** (0.2 air + the 2.8 s card, none after), **title card 6.2** (`title`), `card_length` 2.8, lead 0.35. The title silence goes before the first chapter that follows a cold open (`role == "cold_open"`, the exact value in `bti/script/store.py` `ROLES`), or at the very start of the audio when the narration has no cold open. When that chapter also has `card: true`, the silence is title + card (9.4 s) and the lead kind is `title`.
+- `timing.json` chapters keep every old field and gain `lead: {kind: "title"|"card"|"plain", start, end}` (the silence before the first word); `card_start/card_end` = the last 2.8 s of the silence (card chapters); `title_start/title_end` = the first 6.2 s (title leads).
+- Model load: the real test took 269 s of synthesis part for 7.48 s of speech. The worker's lines do not let me split load from synthesis after the fact (the `ready` line was not logged; `sec` is audio length, not compute). The provider now logs `voice model ready after N s` and a `voice part: {load_s, total_s, chunks}` line to the job log, so the next real run gives the split. Until then the planner's `load_seconds: 60` is too low: treat load as up to about 4 minutes on this server (269 s total for two sentences, so load is at most 269 s and almost all of it) and keep one load inside each 20-minute part.
+- Tests on the server: 66 passed, 1 skipped.
+
+### Chọn hình
+
+**Chọn hình là gì?** Sau khi lời dẫn được duyệt, bạn quyết định mỗi dòng lời dẫn sẽ cho xem hình gì: bức tranh chính, một chi tiết của nó, hay một hình khác. Bước này nằm giữa Kịch bản và Dựng hình.
+
+**1. Chọn tranh chính (làm đầu tiên).** Mở tab "Tranh chính" ở cột bên phải. Ô tìm đã có sẵn tên tranh và tác giả; bấm "Tìm". Kết quả lấy từ Wikimedia Commons và The Met, mỗi ảnh cho biết kích thước và giấy phép. Bấm "Làm tranh chính" ở ảnh bạn muốn. Cũng có thể lấy ảnh từ sách (tab "Sách") hoặc tải ảnh của bạn lên (tab "Tải lên").
+
+**2. Cờ cảnh báo.** Ảnh có thể mang một cờ: "Giấy phép bị hạn chế", "Chưa rõ giấy phép" hoặc "Ảnh nhỏ" (dưới 1200 px). Cờ chỉ để bạn biết: ảnh vẫn dùng được và không bao giờ bị từ chối. Nguồn và giấy phép luôn được ghi lại để điền vào phần mô tả video.
+
+**3. Vẽ vùng chi tiết.** Bấm "Vùng trên tranh". Bấm vào tâm của chi tiết trên tranh rồi kéo ra tới mép, đặt tên (D1, D2... là các chi tiết trong hồ sơ tác phẩm, hoặc tên tùy ý), bấm "Thêm vùng này", rồi "Lưu các vùng". Vùng dùng được ở mọi dòng.
+
+**4. Chọn hình cho từng dòng.** Cột trái là các dòng lời dẫn theo chương, số bên phải là số hình đã chọn. Chọn một dòng: cột giữa hiện lời dẫn, các từ gợi ý hình (bấm vào để tìm), và "khay" hình của dòng. Thêm "cả tranh chính" hoặc một vùng bằng các nút nhỏ, hoặc bấm "Thêm vào dòng" ở một kết quả tìm. Mỗi hình có ô chọn vùng, vai trò (cả bức tranh, chi tiết, bối cảnh, so sánh, tài liệu, bản đồ, video), ghi chú, và nút đổi thứ tự hoặc bỏ. Dòng không cần hình riêng thì để trống: bản nháp sẽ dùng tranh chính ở đó. Dòng bạn không muốn tính là thiếu thì tick "Bỏ qua dòng này". Mọi thay đổi tự lưu sau chưa đến một giây.
+
+**5. Tìm thêm.** Tab "Tìm kiếm": gõ từ khóa, hoặc bấm "Dùng chữ gợi ý của dòng này". Tab "Sách": ảnh và trang trong chính các cuốn sách của dự án. Tab "Gợi ý": nút "Gợi ý thêm" hỏi You.com nên cho xem gì. **Nút này tốn tiền**, chỉ chạy khi bạn bấm và xác nhận, tính cho từng dòng. Kết quả được giữ lại, bấm lại cho dòng đã có thì không tốn thêm.
+
+**6. Duyệt.** Bấm "Kiểm tra" để xem lỗi (phải sửa: chưa có tranh chính, hình hoặc vùng không còn) và cảnh báo (không chặn: dòng chưa có hình, ảnh có cờ). Rồi bấm "Duyệt chọn hình". Chỉ duyệt được khi lời dẫn đã duyệt. Nếu sau đó bạn sửa hình hoặc sửa lời dẫn, bước này cần duyệt lại và bước Dựng hình sẽ nói bản nháp cũ không còn khớp.
+
+**Nếu có sự cố.** "Nguồn ảnh đang bận": đợi vài giây rồi tìm lại, hoặc bỏ tick một nguồn. "Tệp ảnh bị cắt dở": tải lại tệp đầy đủ. "Chọn hình đã đổi ở nơi khác": trang tự tải lại bản mới nhất; phần bạn vừa sửa chưa lưu sẽ mất.
 
 ## 7. Bước 5: Dựng hình (trình biên tập storyboard)
 
@@ -322,9 +353,20 @@ Trên timeline: nhấp vào shot luôn chọn shot đó và dời đầu phát t
 - **Lưu** gửi bản nháp kèm `base_rev`. Chỉ phần đã gửi được coi là đã lưu: nếu bạn gõ thêm trong lúc đang lưu, phần đó vẫn giữ nguyên và dấu "chưa lưu" vẫn bật cho tới lần lưu sau. Vùng (region) là một phần của bản nháp: tạo, đổi tên, dời, xóa vùng đều Hoàn tác được và chỉ ghi lên đĩa khi Lưu; vùng đang được lớp phủ dùng thì không xóa được (trang nói rõ mục nào dùng), đổi tên thì hỏi có cập nhật các tham chiếu không. Đổi hình của slot mà các lớp phủ đang trỏ vùng của hình cũ thì trang hỏi: giữ tên vùng (sẽ báo lỗi) hoặc đổi thành tọa độ. Nếu server đã đổi (409) trang hỏi giữ nháp hay tải lại. Nếu còn lỗi (422) trang không lưu và mở tab *Lỗi*; bấm vào một lỗi để chọn đúng mục.
 - **Duyệt** chỉ chạy khi đã lưu, không còn lỗi và không còn mục chưa đủ (nếu còn, bấm Duyệt sẽ mở danh sách các mục đó). Trạng thái: *Chưa duyệt*, *Đã duyệt*, *Duyệt cũ (đã sửa)*. Duyệt gắn với phiên bản (`rev`), sửa xong lưu lại thì phải duyệt lại.
 
+### Bản nháp storyboard
+
+Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard, bước Dựng hình không mở một bảng trống: nó hiện khung **Bản nháp storyboard**. Khi đã có storyboard, nút **Bản nháp** trên thanh công cụ mở cùng khung đó.
+
+1. Khung cho biết giọng đọc và chọn hình đã xong chưa. Chọn mô hình trong ô *Mô hình* (mặc định "Orchestrator (Argon)", chạy qua chương trình agy) rồi bấm **Dựng bản nháp**. Nút **Dựng tự động (không dùng agent)** làm mỗi dòng lời dẫn một cảnh từ hình bạn đã chọn, không gọi mô hình nào: dùng khi agy chưa đăng nhập, hoặc để so sánh.
+2. Bạn có thể rời trang; khung hiện số bước và việc agent đang làm. **Dừng** dừng agent ngay.
+3. Kết quả không bao giờ tự ghi vào dự án. Nó là một **đề xuất**; bấm **Mở đề xuất** để xem. Với dự án chưa có storyboard, bấm **Áp dụng** (chấp nhận cả đề xuất) biến nó thành storyboard đầu tiên; chọn từng thay đổi chưa dùng được ở bước này. Mục nào còn dở được ghi trong đề xuất để bạn sửa tiếp.
+4. Dựng lại sau này: cảnh bạn đã khóa không bao giờ bị đổi. Nếu giọng đọc hoặc danh sách hình đã đổi sau khi dựng, khung báo "dựng từ giọng đọc hoặc danh sách hình đã đổi" và đề xuất cũ vẫn xem được.
+5. Agent chỉ làm việc trong một thư mục tạm chứa bản sao; trước và sau lần chạy, ứng dụng so thư mục dự án (và, trên máy chủ, kho truyện tranh). Nếu có gì bị đổi, lần dựng bị bỏ và trang báo.
+6. Dùng agy trên máy chủ cần agy đã đăng nhập trong phiên làm việc của chủ máy; nếu chưa, trang báo rõ và bạn vẫn dùng được "Dựng tự động".
+
 ### Đề xuất của agent
 
-Agent ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu. Đề xuất soạn trên một bản đã cũ (storyboard đã lưu thêm kể từ đó) có dải cảnh báo "dựa trên bản cũ" và hỏi lại trước khi áp dụng. Áp dụng khi bản nháp chưa lưu cũng hỏi (hộp thoại của ứng dụng, không dùng hộp thoại của trình duyệt).
+Agent ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu (trừ bản nháp đầu tiên của dự án chưa có storyboard, xem trên). Đề xuất soạn trên một bản đã cũ (storyboard đã lưu thêm kể từ đó) có dải cảnh báo "dựa trên bản cũ" và hỏi lại trước khi áp dụng. Áp dụng khi bản nháp chưa lưu cũng hỏi (hộp thoại của ứng dụng, không dùng hộp thoại của trình duyệt).
 
 ### Xem thử 10 giây
 
@@ -332,33 +374,51 @@ Dựng clip 10 giây từ đầu phát (kèm âm thanh) bằng bản nháp hiệ
 
 ### Tìm và nhập hình
 
-Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met, chỉ nhận giấy phép PD, CC0, CC BY, CC BY-SA. Bấm *Nhập* để tải về `media/` của dự án (nên dùng bản sao, không dùng `arnolfini`). Nếu bấm "Chọn" ở slot thì hình mới được gán vào slot ngay. Nhập xong phải *Lưu* để hình nằm trong storyboard. Nếu nguồn trả 429/503, trang báo thử lại sau vài giây.
+Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy phép luôn được ghi lại; hình có giấy phép hạn chế, chưa rõ hoặc nhỏ hơn 1200 px chỉ bị gắn **cờ** (không bao giờ bị từ chối), và tải lên không còn bắt buộc điền giấy phép, nguồn hay tác giả. Bấm *Nhập* để tải về `media/` của dự án (nên dùng bản sao, không dùng `arnolfini`). Nếu bấm "Chọn" ở slot thì hình mới được gán vào slot ngay. Nhập xong phải *Lưu* để hình nằm trong storyboard. Nếu nguồn trả 429/503, trang báo thử lại sau vài giây.
 
 ### Chưa có
 
 - Camera của kỹ thuật có nhiều camera (ví dụ `camera_left`/`camera_right` của LAY-01) chỉ sửa được bằng ô số, chưa kéo khung được.
 - Chỉ Wikimedia Commons và The Met (chưa có AIC, Rijksmuseum, Europeana).
 - Cả 71 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 60 `done`, 11 `partial` ở chip "Engine"). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
-- Chưa có chỉnh âm thanh, TTS, dựng bản cuối chất lượng cao.
+- Chưa có chỉnh âm thanh trong trình biên tập (giọng đọc và tốc độ nằm ở bước 3; bản cuối ở bước 6).
 - Lịch sử hoàn tác chỉ nằm trong trình duyệt, mất khi tải lại trang. Bản lưu cũ nằm trong `history/`.
 
-## 8. Dự án nhập từ bản dựng trước
+## 8. Bước 6: Xuất video
 
-`arnolfini`, `arnolfini_edit`, `technique_lab` (và các dự án `lab_*`, `demo_*`) chỉ có storyboard, không có thư mục `source/` hay kịch bản. Các bước 1 đến 4 của chúng ghi rõ: "Dự án này được nhập từ bản dựng trước, chưa có dữ liệu cho bước này", cùng nút mở bước Dựng hình. Bước Dựng hình dùng bình thường.
+**Xuất video** là bước cuối: máy dựng bản video hoàn chỉnh từ storyboard đã duyệt và giọng đọc.
 
-## 9. Thay đổi chưa lưu
+1. Vào bước **Xuất video**. Nếu trang báo "Chưa xuất được", làm theo nút bên dưới (thường là duyệt storyboard ở bước Dựng hình, hoặc làm xong Giọng đọc).
+2. Hộp **Sẽ làm ra** cho biết video dài bao lâu, chia thành mấy đoạn và khoảng bao lâu máy làm xong (máy chủ dựng bằng bộ xử lý nên khoảng 2 phút cho mỗi phút video; video 12 phút mất chừng nửa tiếng).
+3. Bấm **Xuất video**. Bạn có thể đóng trang, máy vẫn làm. Trang hiện từng đoạn đang chạy. Nếu máy đang bận việc khác, đoạn sẽ ở trạng thái "Chờ máy rảnh".
+4. Bấm **Hủy** nếu muốn dừng. Những đoạn đã dựng xong được giữ lại; bấm **Xuất video** lần nữa sẽ làm tiếp, không dựng lại từ đầu. Việc này cũng đúng khi máy chủ khởi động lại giữa chừng.
+5. Khi xong, bạn có: video để xem ngay trên trang, **phiếu kiểm tra** (độ dài, số khung hình, độ lớn tiếng, có phụ đề trong tệp, số dòng phụ đề, mục lục), **mô tả video** (có nút Chép mô tả: gồm mục lục, sách đã dùng, nguồn và giấy phép của từng hình) và các tệp để tải về: video MP4, phụ đề .srt, mô tả, mục lục.
+6. Phụ đề không bao giờ bị vẽ lên hình: có một tệp .srt riêng và một dòng phụ đề bật/tắt được nằm trong tệp MP4.
+7. Nếu bạn sửa storyboard hoặc giọng đọc sau khi xuất, trang báo "Cần xuất lại". Bản cũ vẫn xem được cho đến khi xuất bản mới.
+8. Hình nào chưa rõ giấy phép sẽ có ghi chú trong mô tả để bạn kiểm tra trước khi đăng; việc xuất không bị chặn.
+
+## 9. Dự án nhập từ bản dựng trước
+
+`arnolfini`, `arnolfini_edit`, `technique_lab` (và các dự án `lab_*`, `demo_*`) chỉ có storyboard, không có thư mục `source/` hay kịch bản. Các bước 1 đến 4 của chúng ghi rõ: "Dự án này được nhập từ bản dựng trước, chưa có dữ liệu cho bước này", cùng nút mở bước Dựng hình. Bước Dựng hình dùng bình thường, và bước Xuất video mở sau khi storyboard đã duyệt.
+
+## 10. Thay đổi chưa lưu
 
 Rời một màn hình còn thay đổi chưa lưu (dàn ý hoặc lời dẫn ở bước Kịch bản, storyboard ở bước Dựng hình) luôn hỏi trước, dù bạn bấm thanh các bước, ô chọn dự án, một liên kết, hay nút Quay lại: **Ở lại**, **Bỏ thay đổi và rời đi**, hoặc **Lưu rồi rời đi**. Đóng hoặc tải lại tab cũng hỏi. Khi bạn rời một màn hình, mọi thứ nó đã bật đều tắt: bộ đếm giờ, phát âm thanh, hộp thoại đang mở, yêu cầu đang chờ. Phím tắt của màn hình này không bao giờ chạy ở màn hình khác.
 
 Nút Quay lại của trình duyệt đã đổi địa chỉ trước khi ứng dụng kịp hỏi; nếu bạn chọn Ở lại, ứng dụng trả địa chỉ về chỗ cũ (có thể để lại một mục lịch sử trùng).
 
-## 10. Tệp được ghi
+## 11. Tệp được ghi
 
 | Nơi | Nội dung |
 |---|---|
 | `projects/<dự-án>/project.json`, `source/` | Dự án tạo từ thư viện: bản sao hồ sơ và văn bản nguồn. |
 | `projects/<dự-án>/script/` | Kịch bản (bảng dưới). |
 | `projects/<dự-án>/storyboard.json`, `history/` | Storyboard và các bản lưu cũ. |
+| `projects/<dự-án>/voice/`, `audio/`, `timing.json` | Giọng đọc: từng câu đã đọc, bảng phát âm, tệp ghép `audio/mix.m4a`, thời điểm từng từ. |
+| `projects/<dự-án>/picks.json`, `media/` | Chọn hình và các ảnh đã nhập. |
+| `projects/<dự-án>/proposals/` | Đề xuất (kể cả bản nháp do agent dựng). |
+| `projects/<dự-án>/export/` | Video, phụ đề, mô tả, mục lục và `export.json`. |
+| `projects/<dự-án>/cache/longjobs/` | Bản ghi và nhật ký các việc dài (giọng đọc, bản nháp, xuất video); xóa được, mất thì chỉ mất lịch sử. |
 | `library/overrides/artworks.json` | Gộp và tách tác phẩm. |
 
 Trong `projects/<dự-án>/script/`:

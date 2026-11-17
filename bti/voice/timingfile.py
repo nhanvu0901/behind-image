@@ -37,10 +37,16 @@ def build_timing(plan, spans: list[dict], words: list[dict], ranges: list[tuple[
         gap = chunks[i].gap
         start = 0.0 if k == 0 else round(sp["start"] - gap, 4)
         end = duration if k == len(ordered) - 1 else round(spans[first_chunk[ordered[k + 1].id]]["start"] - chunks[first_chunk[ordered[k + 1].id]].gap, 4)
-        item = {"id": ch.id, "name": ch.title or ch.id, "start": start, "end": round(end, 4), "card": bool(ch.card)}
-        if ch.card:      # the silence the voice left for the chapter card
-            item["card_start"] = round(sp["start"] - gap + 0.3, 4)
-            item["card_end"] = round(sp["start"] - 0.3, 4)
+        kind = {"title": "title", "card": "card"}.get(chunks[i].gap_kind, "plain")
+        first_w = words[ranges[i][0]]["s"] if ranges[i][0] < len(words) else sp["start"]
+        lead = {"kind": kind, "start": round(sp["start"] - gap, 4), "end": round(max(first_w, sp["start"]), 4)}
+        item = {"id": ch.id, "name": ch.title or ch.id, "start": start, "end": round(end, 4), "card": bool(ch.card), "lead": lead}
+        if ch.card:      # the chapter card sits at the end of the silence, 2.8 s (0.2 s of air before it, none after)
+            item["card_start"] = round(sp["start"] - float(cfg["silence"]["card_length"]), 4)
+            item["card_end"] = round(sp["start"], 4)
+        if kind == "title":
+            item["title_start"] = lead["start"]
+            item["title_end"] = round(lead["start"] + float(cfg["silence"]["title"]), 4)
         chapters.append(item)
     timing = {"duration": round(duration, 4), "words": words, "beats": beats, "chapters": chapters}
     problem = shape_problem(timing)

@@ -493,3 +493,66 @@ def test_routes(mgr, root):
     mgr.wait(job, 20)
     assert c.get(f"/api/longjobs/{job['id']}").json()["state"] == "cancelled"
     assert c.post("/api/longjobs/0123456789abcdef/cancel").status_code == 404
+
+
+# ---- talking to a child: stdin, interactive handle, separate stderr
+
+ECHO = ("import sys\n"
+        "for line in sys.stdin:\n"
+        "    print('got:' + line.strip(), flush=True)\n"
+        "    print('err:' + line.strip(), file=sys.stderr, flush=True)\n")
+
+
+def test_run_process_stdin_text_then_closed(mgr, root):
+    out, err = [], []
+
+    def run(ctx):
+        rc = ctx.run_process([sys.executable, "-c", ECHO], stdin="hello\nworld\n", on_line=out.append,
+                             separate_stderr=True, on_stderr=err.append)
+        return {"rc": rc}
+
+    rec = mgr.wait(mgr.start("k", "p1", root / "p1", [Part("a", "A", run)]))
+    assert rec["result"] == {"rc": 0}
+    assert out == ["got:hello", "got:world"] and err == ["err:hello", "err:world"]      # the two streams stay apart
+    assert "[stderr] err:hello" in rec["log_tail"] and "got:hello" in rec["log_tail"]
+
+
+def test_run_process_stderr_is_merged_by_default(mgr, root):
+    lines = []
+    rec = mgr.wait(mgr.start("k", "p1", root / "p1", [Part("a", "A", lambda c: c.run_process(
+        [sys.executable, "-c", ECHO], stdin="x\n", on_line=lines.append))]))
+    assert rec["state"] == "done" and sorted(lines) == ["err:x", "got:x"]
+
+
+def test_run_process_interactive_handle_sends_more_input_later(mgr, root):
+    lines, handles = [], []
+
+    def on_line(line):
+        lines.append(line)
+        if line == "got:one" and handles:
+            handles[0].write("two\n")                  # the next turn is sent from the reader, after the first answer
+        if line == "got:two":
+            handles[0].close_stdin()
+
+    def run(ctx):
+        return {"rc": ctx.run_process([sys.executable, "-c", ECHO], stdin="one\n", on_start=handles.append, on_line=on_line,
+                                          separate_stderr=True)}
+
+    rec = mgr.wait(mgr.start("k", "p1", root / "p1", [Part("a", "A", run)]), 20)
+    assert rec["result"] == {"rc": 0} and lines == ["got:one", "got:two"]
+    assert handles[0].pid and handles[0].alive is False
+
+
+def test_cancel_kills_an_interactive_child(mgr, root):
+    pids, got = [], threading.Event()
+    code = "import os,sys,time;print(os.getpid(),flush=True);sys.stdin.read()"
+
+    def run(ctx):
+        ctx.run_process([sys.executable, "-c", code], stdin="", on_start=lambda h: None,
+                        on_line=lambda l: (pids.append(int(l)), got.set()))
+
+    job = mgr.start("k", "p1", root / "p1", [Part("a", "A", run)])
+    assert got.wait(15)
+    mgr.cancel(job)
+    assert mgr.wait(job, 20)["state"] == "cancelled"
+    until(lambda: not alive(pids[0]), 10)

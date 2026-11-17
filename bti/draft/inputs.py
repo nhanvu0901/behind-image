@@ -80,7 +80,11 @@ def normalize_timing(raw: dict, narration: dict | None = None) -> dict:
         if not CHAPTER_ID_RE.fullmatch(cid):
             raise DraftError("timing_shape", "chapter id %r is not usable (letters, digits, - _ . only)" % cid)
         card = c.get("card")
-        chapters.append({"id": cid, "name": str(c.get("name") or c.get("title") or cid),
+        ld = c.get("lead")
+        lead = ({"kind": ld["kind"], "start": float(ld["start"]), "end": float(ld["end"])}
+                if isinstance(ld, dict) and ld.get("kind") in ("title", "card", "plain") and _num(ld.get("start")) and _num(ld.get("end"))
+                and ld["end"] > ld["start"] else None)
+        chapters.append({"lead": lead, "id": cid, "name": str(c.get("name") or c.get("title") or cid),
                          "start": float(c["start"]) if _num(c.get("start")) else None,
                          "end": float(c["end"]) if _num(c.get("end")) else None,
                          "card": bool(card), "card_start": float(card["start"]) if isinstance(card, dict) and _num(card.get("start")) else None,
@@ -108,7 +112,7 @@ def normalize_timing(raw: dict, narration: dict | None = None) -> dict:
         raise DraftError("timing_shape", "two beats of timing.json share an id")
     beats.sort(key=lambda b: b["w0"])
     if not chapters:
-        chapters = [{"id": "c01", "name": "c01", "start": None, "end": None, "card": False, "card_start": None, "card_end": None}]
+        chapters = [{"id": "c01", "name": "c01", "start": None, "end": None, "card": False, "card_start": None, "card_end": None, "lead": None}]
     # a beat without a (known) chapter belongs to the chapter whose time range holds it, else the last one started before it
     for b in beats:
         if b["chapter"] is None:

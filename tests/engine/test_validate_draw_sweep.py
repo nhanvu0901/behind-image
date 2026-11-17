@@ -15,6 +15,7 @@ from __future__ import annotations
 import copy
 import json
 import shutil
+import os
 import sys
 from pathlib import Path
 
@@ -33,6 +34,23 @@ CURRENT = None
 
 
 def _maxrss() -> int:
+    if os.name == "nt":                                          # no `resource` module there: the peak working set, in bytes
+        import ctypes
+        from ctypes import wintypes
+
+        class _PMC(ctypes.Structure):
+            _fields_ = [("cb", wintypes.DWORD), ("PageFaultCount", wintypes.DWORD), ("PeakWorkingSetSize", ctypes.c_size_t),
+                        ("WorkingSetSize", ctypes.c_size_t), ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaPagedPoolUsage", ctypes.c_size_t), ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                        ("QuotaNonPagedPoolUsage", ctypes.c_size_t), ("PagefileUsage", ctypes.c_size_t),
+                        ("PeakPagefileUsage", ctypes.c_size_t)]
+        pmc = _PMC()
+        pmc.cb = ctypes.sizeof(_PMC)
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        k32.GetCurrentProcess.restype = wintypes.HANDLE
+        k32.K32GetProcessMemoryInfo.argtypes = [wintypes.HANDLE, ctypes.POINTER(_PMC), wintypes.DWORD]
+        k32.K32GetProcessMemoryInfo(k32.GetCurrentProcess(), ctypes.byref(pmc), pmc.cb)
+        return int(pmc.PeakWorkingSetSize)
     import resource
     r = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     return r if sys.platform == "darwin" else r * 1024          # bytes on macOS, kilobytes on Linux

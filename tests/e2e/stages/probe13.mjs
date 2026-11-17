@@ -1,0 +1,12 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, both, sleep, go, settle, pipeline, leftovers, clickExact, stepsOf } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const PID = process.argv[2];
+const br = await openBrowser(); const p = await br.newPage();
+await go(p, base, `#/project/${PID}/edit`);
+await sleep(2000);
+await both(p, 'p13-draft-after');
+console.log((await bodyText(p)).split('\n').slice(24,70).join(' | '));
+console.log(await p.eval(`Array.from(document.querySelectorAll('button')).filter(e=>e.offsetParent).map(e=>e.textContent.trim().slice(0,40)).join(' | ')`));
+console.log(JSON.stringify((await pipeline(api, PID)).steps.map(s=>[s.id,s.state,s.work,s.detail])));
+console.log(await leftovers(p), p.logs.slice(-3), p.bad());
+br.close();
