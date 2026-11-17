@@ -7,10 +7,28 @@ anything: every piece of content comes from the storyboard, every default from `
 python -m bti.engine still    projects/arnolfini 310 --width 960 -o out.png
 python -m bti.engine render   projects/arnolfini --t0 300 --t1 310 -o out.mp4 --width 640 --fps 15
 python -m bti.engine validate projects/arnolfini
-python -m pytest tests/engine -q                      # use .venv-engine/bin/python
+python -m pytest tests/engine -q                      # use .venv-engine/bin/python (includes the validate/draw sweep)
 python tests/engine/equivalence_check.py              # new engine vs the benchmark frame_at (writes equivalence_report.md)
 python tools/export_arnolfini.py                      # rebuild projects/arnolfini from demo_runs/claude_code
 ```
+
+### Command line rules
+
+Limits come from `bti/engine/limits.py` (the same constants the editor's HTTP API uses). Times are finite and `>= 0`; `render` needs
+`--t1 > --t0`; `--t0` / `t` must be before the end of the storyboard; `--width` 64..1920; `--fps` 1..30; `--threads` 0 (automatic, the
+default) or 1..64. `0` is a value, not "not given". Exit codes: 0 success, 1 run-time failure (missing project, unreadable storyboard,
+unwritable output, ffmpeg failed, a technique cannot draw, `validate` found errors), 2 usage error. A failure prints one line on stderr;
+the traceback only with `--debug`. A failed `render` leaves no partial output file.
+
+### Validate, draw and the registry
+
+`Project.validate` reports every issue with `level`, `path`, `message`, `code` and `args` (`bti.engine.storyboard.ISSUE_CODES` lists the
+codes). The rule behind the registry is: whatever `validate` accepts without an error can be drawn. Param definitions therefore carry
+`min`/`max` (every number has both), `pattern` + `pattern_hint` (string/text/lines; the Vietnamese hint says what to type),
+`min_items`/`max_items` (points/lines) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
+frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
+`RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 71 techniques and all twelve param types.
 
 ## Layout
 

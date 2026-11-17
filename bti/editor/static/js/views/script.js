@@ -9,6 +9,7 @@
 //  - While a model job writes a document, saving that document is held (the job writes it too); the draft stays on the page
 //    and is merged with the job's result when the job ends.
 import { api } from '../api.js';
+import { agyProblem } from '../labels.js';
 import { h, toast, errorToast, errorInto, detailFold, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
 import { LEVEL } from '../labels.js';
 import { nextOpenable } from '../stepper.js';
@@ -219,6 +220,31 @@ const saveAll = ({ quiet = false } = {}) => Q.run(async () => {
 
 // ------------------------------------------------------------------ top bar
 const approvedFlag = (k) => !!ST[k].approved && !dirty[k];
+/** Why a recorded approval of the narration no longer stands (`approval_reason` of the server), in words. */
+const WHY = {
+  outline_changed: { badge: 'dàn ý đã đổi, cần duyệt lại', text: 'Lời dẫn này đã được duyệt cho một bản dàn ý cũ. Dàn ý đã đổi sau đó nên phải duyệt lại lời dẫn. Thường chỉ cần kiểm tra lại các chương rồi bấm Duyệt, không phải viết lại.' },
+  narration_edited: { badge: 'đã sửa sau khi duyệt', text: 'Lời dẫn đã được sửa sau lần duyệt trước. Đọc lại rồi bấm Duyệt lời dẫn để chốt.' },
+  outline_not_approved: { badge: 'chờ duyệt dàn ý', text: 'Dàn ý chưa được duyệt (hoặc đã sửa sau khi duyệt), nên lời dẫn chưa duyệt được. Hãy duyệt dàn ý trước.' },
+};
+const approvalWhy = (st) => (!st.approved && st.approval_reason ? WHY[st.approval_reason] || null : null);
+const diffList = (ids) => (ids || []).join(', ');
+/** Chapters the narration and the outline do not share (`chapter_diff`); empty when they match. */
+function diffLines(d) {
+  const out = [];
+  if (d?.not_in_outline?.length) out.push(`Có trong lời dẫn nhưng không có trong dàn ý: ${diffList(d.not_in_outline)}. Xóa chương đó khỏi lời dẫn hoặc thêm nó vào dàn ý.`);
+  if (d?.missing_in_narration?.length) out.push(`Có trong dàn ý nhưng chưa có lời dẫn: ${diffList(d.missing_in_narration)}. Viết các chương còn thiếu hoặc bỏ chúng khỏi dàn ý.`);
+  return out;
+}
+/** The note above the narration: why it is not approved (when it was before), what changed in the outline, which chapters differ. */
+function approvalNote() {
+  const st = ST.narr, w = approvalWhy(st), diff = diffLines(st.chapter_diff);
+  const lines = [];
+  if (w) lines.push(h('div', { text: w.text }));
+  if (st.stale && !w) lines.push(h('div', { class: 'hint', text: 'Dàn ý đã đổi kể từ lúc lời dẫn này được viết. Chỉ để bạn biết, vẫn lưu và duyệt được.' }));
+  for (const l of diff) lines.push(h('div', { text: l }));
+  return lines.length ? h('div', { class: 'banner warn approval-note', style: { flexDirection: 'column', alignItems: 'flex-start' } }, ...lines) : null;
+}
+
 function refreshChrome() {
   if (!root) return;
   $('#dirty-dot').hidden = !(dirty.outline || dirty.narr);
@@ -229,7 +255,8 @@ function refreshChrome() {
     if (!D[k]) { el.textContent = 'chưa có'; el.className = 'badge none'; return; }
     if (dirty[k]) { el.textContent = jobBlocks(k) ? 'đang sửa, chưa lưu (đang chờ tác vụ)' : 'đang sửa, chưa lưu'; el.className = 'badge warn'; }
     else if (st.approved) { el.textContent = 'đã duyệt'; el.className = 'badge ok'; }
-    else if (st.stale) { el.textContent = 'duyệt đã cũ'; el.className = 'badge warn'; }
+    else if (k === 'narr' && approvalWhy(st)) { const w = approvalWhy(st); el.textContent = w.badge; el.title = w.text; el.className = 'badge warn'; }
+    else if (st.stale && k !== 'narr') { el.textContent = 'duyệt đã cũ'; el.className = 'badge warn'; }
     else { el.textContent = 'chưa duyệt'; el.className = 'badge'; }
   };
   badge($('#out-badge'), 'outline'); badge($('#nar-badge'), 'narr');
@@ -345,7 +372,7 @@ const factChips = (list) => h('div', { class: 'chips' }, list.map((f) => chip(D.
 function issueFor(kind, pred) { return (ST[kind].issues || []).filter((i) => i.level !== 'info' && pred(i)); }
 let beatIssues = new Map();                       // beat id -> its issues (one pass per drawing, not one pass per line)
 const indexBeatIssues = () => { beatIssues = new Map(); for (const i of ST.narr.issues || []) if (i.beat && i.level !== 'info') { if (!beatIssues.has(i.beat)) beatIssues.set(i.beat, []); beatIssues.get(i.beat).push(i); } };
-const issueHint = (is) => (is.length ? h('div', { class: 'hint warn', title: is.map((x) => x.message).join('\n'), text: is.map((x) => issueText(x).text).join(' ') }) : null);
+const issueHint = (is) => (is.length ? h('div', { class: 'hint warn', text: is.map((x) => issueText(x).text).join(' ') }) : null);
 
 function outBody() {
   const body = $('#out-body'), o = D.outline;
@@ -415,7 +442,7 @@ function narBody() {
       h('button', { class: 'primary', onclick: () => runDialog('narration'), disabled: !approvedFlag('outline'), text: 'Viết lời dẫn' }), h('button', { onclick: () => pasteDialog('narration'), text: 'Dán lời dẫn' })));
     return;
   }
-  const kids = [];
+  const kids = [approvalNote()].filter(Boolean);
   indexBeatIssues();
   for (const ch of n.chapters) {
     kids.push(h('div', { class: 'chap', id: 'chap-' + ch.id },
@@ -461,7 +488,7 @@ function beatEl(ch, b, i) {
       h('span', { class: 'l', text: 'cho xem' }), h('input', { type: 'text', value: b.show.join('; '), title: 'Ngăn cách bằng dấu ;', onchange: (e) => mutate('narr', () => { b.show = e.target.value.split(';').map((x) => x.trim()).filter(Boolean); }) })),
     b.facts.length ? factChips(b.facts) : null,
     h('div', { class: 'meta' }, h('span', { class: 'l', text: 'ghi chú' }), h('input', { type: 'text', value: b.note, placeholder: 'ghi chú riêng, không đọc lên', oninput: (e) => mutate('narr', () => { b.note = e.target.value; }, 'bn' + b.id) })),
-    ...is.map((x) => h('div', { class: 'iss ' + (x.level === 'error' ? 'e' : ''), title: x.message, text: issueText(x).text })));
+    ...is.map((x) => h('div', { class: 'iss ' + (x.level === 'error' ? 'e' : ''), text: issueText(x).text })));
   if (b.facts.length) el.querySelector('.chips')?.classList.add('flat');
   upd();
   return el;
@@ -723,7 +750,7 @@ function showParseIssues(list) {
 function issueRow(i, extra) {
   const t = issueText(i);
   return h('div', { class: 'issue-row' }, h('span', { class: 'lv ' + i.level, text: LEVEL[i.level] || i.level }),
-    h('span', { title: i.message }, t.text, t.generic && t.detail ? detailFold(t.detail) : null, extra || null));
+    h('span', null, t.text, t.generic && t.detail ? detailFold(t.detail) : null, extra || null));
 }
 
 // ------------------------------------------------------------------ check list and approve
@@ -776,7 +803,12 @@ function approve() {
       pipeChanged();
     } catch (e) {
       if (e.status === 409 && !e.body?.issues && /changed|rev/i.test(String(e.body?.detail || ''))) return void (await recoverStale(kk, false));
-      if (e.body?.issues) { ST[kk].issues = e.body.issues; renderAll(); checkDialog(); }
+      if (e.body?.chapter_diff) {                          // refused because the chapters differ: list them
+        ST.narr.chapter_diff = e.body.chapter_diff; renderAll();
+        const lines = diffLines(e.body.chapter_diff);
+        if (lines.length) modal({ title: 'Chưa duyệt được lời dẫn: chương không khớp dàn ý', body: h('div', { class: 'body', style: { maxWidth: '520px' } }, h('p', { text: 'Lời dẫn và dàn ý phải có cùng các chương. Sửa chỗ khác nhau dưới đây rồi duyệt lại:' }), ...lines.map((l) => h('p', { text: l }))) });
+      }
+      if (e.body?.issues) { ST[kk].issues = e.body.issues; renderAll(); if (!e.body?.chapter_diff) checkDialog(); }
       errorToast(e, '', 9000);
     }
   });
@@ -792,7 +824,7 @@ function renderAll() {
 // ------------------------------------------------------------------ mount
 const BAR = `
   <div class="vbar" id="sbar">
-    <select id="model-pick" title="Mô hình dùng cho các nút bên dưới" aria-label="Mô hình"></select>
+    <select id="model-pick" title="Mô hình dùng cho các nút bên dưới" aria-label="Mô hình"></select><span id="model-note" class="hint warn" hidden></span>
     <span class="sep"></span>
     <button id="btn-outline" title="Mô hình viết dàn ý từ các đoạn sách đã đánh số">Lập dàn ý</button>
     <button id="btn-write" title="Mô hình viết lời dẫn từng chương, theo dàn ý đã duyệt">Viết lời dẫn</button>
@@ -824,6 +856,20 @@ const store = {
   set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private window: the choice is simply not remembered */ } },
 };
 
+/** The dropdown of models, and a note when the Antigravity command did not answer (the entry then carries `agy: {ok: false, reason}`). */
+function paintModels() {
+  const mp = $('#model-pick'), note = $('#model-note');
+  if (!mp) return;
+  mp.replaceChildren(...(S.models.length ? S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })) : [h('option', { value: '', text: '(chưa có mô hình)' })]));
+  const why = agyProblem(S.models);
+  note.hidden = !why;
+  note.replaceChildren(...(why ? [`Lệnh Antigravity ${why}, nên danh sách mô hình có thể chưa đủ. `, h('button', { class: 'small', id: 'btn-models-retry', text: 'Thử lại', onclick: async (e) => {
+    e.target.disabled = true; e.target.textContent = 'Đang thử...';
+    try { S.models = await J('/api/models?refresh=1'); if (!S.models.some((m) => m.id === S.model)) S.model = (S.models.find((m) => m.enabled) || S.models[0])?.id || null; paintModels(); if (!agyProblem(S.models)) toast('Lệnh Antigravity đã trả lời.', 'ok', 2500); }
+    catch (err) { errorToast(err, 'Không tải lại được danh sách mô hình: '); e.target.disabled = false; e.target.textContent = 'Thử lại'; }
+  } })] : []));
+}
+
 export async function mount(host, ctx) {
   resetState();
   scope = ctx.scope; shell = ctx.shell;
@@ -835,7 +881,7 @@ export async function mount(host, ctx) {
   const saved = store.get('bti.script.model');
   S.model = (S.models.find((m) => m.id === saved && m.enabled) || S.models.find((m) => m.default && m.enabled) || S.models.find((m) => m.enabled) || S.models[0])?.id || null;
   const mp = $('#model-pick');
-  mp.replaceChildren(...(S.models.length ? S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })) : [h('option', { value: '', text: '(chưa có mô hình)' })]));
+  paintModels();
   mp.onchange = () => { S.model = mp.value || null; if (S.model) store.set('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (m && !m.enabled) toast(m.message || 'Mô hình này chưa dùng được. Xem docs/APP_GUIDE.md.', 'warn', 9000); if (m?.paid) toast('Mô hình này tính tiền theo token.', 'warn', 5000); };
   $('#btn-outline').onclick = () => runDialog('outline');
   $('#btn-write').onclick = () => { if (!approvedFlag('outline')) return toast('Cần duyệt dàn ý trước khi viết lời dẫn.', 'warn'); runDialog('narration'); };

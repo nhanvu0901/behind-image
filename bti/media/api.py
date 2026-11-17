@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 
 from . import assets as _assets
+from . import http as _http
 from .errors import ImageTooSmall, LicenceRejected, MediaError, NotFound  # noqa: F401
 from .imageinfo import image_size, readable_problem
 from .licence import check_licence as _check_licence, check_text
@@ -55,12 +56,23 @@ def search(query: str, source: str = "commons", kind: str = "image", limit: int 
 
 
 def import_candidate(project_dir: Path, source: str, source_id: str, *,
-                     min_short_side: int | None = None) -> dict:
+                     min_short_side: int | None = None, require_root: bool = False) -> dict:
     """Download one item into `<project>/media/` and return `{"asset_key", "asset"}`.
 
     Raises LicenceRejected (before downloading) and ImageTooSmall. Importing the same
-    item again returns the same key without downloading."""
+    item again returns the same key without downloading. `require_root`: the project folder must already exist
+    and no folder above `media/` is ever created (FileNotFoundError when the project was deleted meanwhile)."""
     project_dir = Path(project_dir)
+    if require_root:
+        token = _http.NO_NEW_PARENTS.set(True)
+        try:
+            return _import(project_dir, source, source_id, min_short_side, True)
+        finally:
+            _http.NO_NEW_PARENTS.reset(token)
+    return _import(project_dir, source, source_id, min_short_side, False)
+
+
+def _import(project_dir: Path, source: str, source_id: str, min_short_side: int | None, require_root: bool) -> dict:
     src = get_source(source)
     ident = f"{source}:{source_id}"
     idx = _assets.load_index(project_dir)
@@ -74,7 +86,7 @@ def import_candidate(project_dir: Path, source: str, source_id: str, *,
         raise LicenceRejected(reason, name)
     kind = meta.get("kind", "image")
     key = _assets.make_key(meta.get("title") or source_id, ident, _assets.taken_keys(project_dir, idx))
-    media = _assets.media_dir(project_dir)
+    media = _assets.media_dir(project_dir, require_root)
     dest = media / f"{key}{ext_for(meta)}"
     floor = MIN_SHORT_SIDE if min_short_side is None else min_short_side
     src.download(meta, dest, min_short_side=floor)
@@ -84,11 +96,11 @@ def import_candidate(project_dir: Path, source: str, source_id: str, *,
     asset = _assets.build_asset(
         f"media/{dest.name}", kind, meta.get("title", ""), meta.get("author", ""),
         _assets.year_of(meta.get("year") or meta.get("date") or ""), w, h, src.credit(meta))
-    _assets.register(project_dir, ident, key, asset)
+    _assets.register(project_dir, ident, key, asset, require_root)
     return {"asset_key": key, "asset": asset}
 
 
-def add_upload(project_dir: Path, file_path: Path, meta: dict) -> dict:
+def add_upload(project_dir: Path, file_path: Path, meta: dict, *, require_root: bool = False) -> dict:
     """Add a human-supplied file. `meta` needs licence, source_url, author (or
     "unknown, PD"); optional title, artist, year. The licence gate applies."""
     project_dir, file_path = Path(project_dir), Path(file_path)
@@ -104,18 +116,24 @@ def add_upload(project_dir: Path, file_path: Path, meta: dict) -> dict:
         problem = readable_problem(file_path)
         if problem:
             raise ValueError(problem)
-    title = (meta.get("title") or file_path.stem).strip()
+    # no title: the stem of the file's own name (`original_name`, when the caller has it), never a temp file's name
+    original = Path(str(meta.get("original_name") or "")).stem
+    title = (str(meta.get("title") or "").strip() or original or file_path.stem).strip()
     ident = f"upload:{file_path.name}:{file_path.stat().st_size}"
     idx = _assets.load_index(project_dir)
     key = _assets.make_key(title, ident, _assets.taken_keys(project_dir, idx))
     ext = file_path.suffix.lower() or ".bin"
-    dest = _assets.media_dir(project_dir) / f"{key}{ext}"
-    shutil.copyfile(file_path, dest)
-    kind = "video" if ext in _VIDEO_EXT else "image"
-    w, h = image_size(dest) if kind == "image" else (int(meta.get("width") or 0), int(meta.get("height") or 0))
-    credit = {"source": "upload", "source_url": meta["source_url"], "author": meta["author"],
-              "licence": name, "licence_url": meta.get("licence_url", "")}
-    asset = _assets.build_asset(f"media/{dest.name}", kind, title, meta.get("artist", ""),
-                                str(meta.get("year", "")), w, h, credit)
-    _assets.register(project_dir, ident, key, asset)
+    dest = _assets.media_dir(project_dir, require_root) / f"{key}{ext}"
+    try:
+        shutil.copyfile(file_path, dest)
+        kind = "video" if ext in _VIDEO_EXT else "image"
+        w, h = image_size(dest) if kind == "image" else (int(meta.get("width") or 0), int(meta.get("height") or 0))
+        credit = {"source": "upload", "source_url": meta["source_url"], "author": meta["author"],
+                  "licence": name, "licence_url": meta.get("licence_url", "")}
+        asset = _assets.build_asset(f"media/{dest.name}", kind, title, meta.get("artist", ""),
+                                    str(meta.get("year", "")), w, h, credit)
+        _assets.register(project_dir, ident, key, asset, require_root)
+    except BaseException:
+        dest.unlink(missing_ok=True)          # what this call wrote is removed when it fails
+        raise
     return {"asset_key": key, "asset": asset}

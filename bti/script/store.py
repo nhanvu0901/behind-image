@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
+import re
 import tempfile
 import threading
 import time
@@ -21,8 +23,28 @@ SCHEMA_OUTLINE = "bti.outline/1"
 SCHEMA_NARRATION = "bti.narration/1"
 CERTAINTY = ("established", "likely", "disputed")
 ROLES = ("cold_open", "chapter", "closing")
+# The ids the rest of the code can read back. A chapter id is what the narration parser finds in a heading (`parse.CH_ID_RE`
+# is built from this source); a beat id is what `Narration.new_beat_id` makes. Anything else is refused, never coerced.
+CHAPTER_ID_SRC = r"c\d{1,6}"
+CHAPTER_ID_RE = re.compile(CHAPTER_ID_SRC)
+BEAT_ID_RE = re.compile(r"b\d{1,8}")
+FACT_ID_RE = re.compile(r"f\d{1,8}")
+HOOK_ID_RE = re.compile(r"h\d{1,6}")
 
 
+# ---------------------------------------------------------------- locks
+# LOCK ORDER (every code path that takes more than one of these takes them in this order, and releases in the reverse):
+#
+#     1. script_lock(project)      this module: outline.json, narration.json and everything under script/
+#     2. storyboard lock(project)  bti.editor.common.save_lock(): storyboard.json, history/, approvals
+#     3. ENGINE_LOCK               bti.editor.engine_adapter: one engine call at a time (process wide)
+#
+# Who takes what: the script routes and the model job (when it finishes a chapter) take 1 only. The storyboard routes (save,
+# approve, restore, regions, proposals apply) take 2, and inside it 3. DELETE of a project takes 1 then 2 (then 3 through
+# `forget`), each with a 2 second limit: if it cannot get both, nothing is removed and the answer is 409. Previews hold their
+# own per-project render lock, never 1 or 2. Nothing holds 3 and then asks for 1 or 2.
+# Every writer, after it has its lock, checks that the project still exists (404 if not), and the write helpers never create
+# a project folder (`make_parent`), so a writer that lost the race to a delete cannot bring the folder back.
 _LOCKS: dict[str, threading.RLock] = {}
 _LOCKS_GUARD = threading.Lock()
 
@@ -35,12 +57,68 @@ def script_lock(pdir: Path) -> threading.RLock:
         return _LOCKS.setdefault(key, threading.RLock())
 
 
+def forget_lock(pdir: Path) -> None:
+    """Drop the lock object of a project that was deleted (a later project with the same slug gets a new one)."""
+    with _LOCKS_GUARD:
+        _LOCKS.pop(str(Path(pdir).resolve()), None)
+
+
 class StaleRevision(Exception):
     """The caller's revision is not the current one."""
 
 
+class ProjectGone(FileNotFoundError):
+    """A write was refused because the project folder (or the folder it belongs in) does not exist any more."""
+
+
 class DocumentCorrupt(Exception):
-    """A script document on disk is not readable (not UTF-8, not JSON, or not an object). The message names the file."""
+    """A file of a project is not readable (not UTF-8, not JSON, or not an object). The message names the file; `what` is the
+    stable code the page translates (`data_error` in the 409 answer): "script", "project", "source", "library"."""
+
+    def __init__(self, message: str, what: str = "script"):
+        super().__init__(message)
+        self.what = what
+
+
+def make_parent(path: Path, levels: int = 1) -> None:
+    """Make the folder of `path` when at most `levels` folders are missing, and never more: the project folder itself is
+    never re-created by a write (it would bring back a deleted project). `levels=1` suits `<project>/script/x.json`;
+    `<project>/cache/previews/x.mp4` needs 2."""
+    parent = Path(path).parent
+    missing = 0
+    probe = parent
+    while not probe.exists():
+        missing += 1
+        if missing > levels or probe.parent == probe:
+            raise ProjectGone(f"cannot write {Path(path).name}: the project folder is gone")
+        probe = probe.parent
+    if missing:
+        try:
+            parent.mkdir(parents=True, exist_ok=True)
+        except FileNotFoundError:
+            raise ProjectGone(f"cannot write {Path(path).name}: the project folder is gone")
+
+
+def read_object(path: Path, what: str = "script") -> dict | None:
+    """The JSON object in `path`; None when there is no such file; DocumentCorrupt (naming the file) when it is there but is not
+    UTF-8, not JSON, or not an object. Nothing is replaced silently."""
+    try:
+        if not path.is_file():
+            return None
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, ValueError, RecursionError) as e:
+        raise DocumentCorrupt("%s is corrupt: %s" % (path.name, str(e)[:120]), what)
+    if not isinstance(d, dict):
+        raise DocumentCorrupt("%s is corrupt: the top level must be an object" % path.name, what)
+    return d
+
+
+def read_text_strict(path: Path, what: str = "source") -> str:
+    """UTF-8 text of `path`; DocumentCorrupt naming the file when it is not UTF-8 (no silent replacement of characters)."""
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as e:
+        raise DocumentCorrupt("%s is not UTF-8 text: %s" % (path.name, str(e)[:100]), what)
 
 
 def now_iso() -> str:
@@ -56,8 +134,8 @@ def revision(doc: dict) -> str:
     return hashlib.sha1(canonical_json(doc).encode("utf-8")).hexdigest()
 
 
-def write_json_atomic(path: Path, data: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+def write_json_atomic(path: Path, data: Any, levels: int = 1) -> None:
+    make_parent(path, levels)
     fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -73,8 +151,8 @@ def write_json_atomic(path: Path, data: Any) -> None:
         raise
 
 
-def write_text_atomic(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
+def write_text_atomic(path: Path, text: str, levels: int = 1) -> None:
+    make_parent(path, levels)
     fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
@@ -103,13 +181,18 @@ def _strs(v: Any) -> list[str]:
 def _int(v: Any, default: int = 0) -> int:
     try:
         return int(round(float(v)))
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
 
 
 def _approval(a: Any) -> dict:
+    """`sha1` is the revision of the document that was approved. A narration approval also keeps `outline_sha1`: the revision
+    of the outline it was approved against (see `narration_approval`)."""
     a = a if isinstance(a, dict) else {}
-    return {"approved": bool(a.get("approved")), "sha1": a.get("sha1"), "approved_at": a.get("approved_at")}
+    out = {"approved": bool(a.get("approved")), "sha1": a.get("sha1"), "approved_at": a.get("approved_at")}
+    if a.get("outline_sha1"):
+        out["outline_sha1"] = a["outline_sha1"]
+    return out
 
 
 def _source(s: Any, kind: str = "manual") -> dict:
@@ -308,7 +391,40 @@ class Narration:
         return None
 
     def approved_fresh(self) -> bool:
+        """The narration's OWN hash still matches its approval. Whether the approval still counts also depends on the outline:
+        use `narration_approval(narration, outline)` for that."""
         return bool(self.approval.get("approved")) and self.approval.get("sha1") == self.rev()
+
+
+def narration_approval(n: "Narration | None", o: "Outline | None") -> dict:
+    """THE one place that decides whether a narration approval stands (stage, pipeline step, home list, `GET /narration`).
+
+    `{"approved": bool, "reason": str | None}`. `reason` says why a recorded approval does NOT stand:
+      - "narration_edited"       the narration changed after it was approved (its hash differs);
+      - "outline_not_approved"   the outline is missing, edited since its approval, or not approved;
+      - "outline_changed"        the outline is approved, but it is not the outline this narration was approved against
+                                 (the approval record holds the outline's hash; an old record without it never stands).
+    `reason` is None when nothing was approved, or when the approval stands."""
+    ap = n.approval if n is not None else {}
+    if n is None or not ap.get("approved"):
+        return {"approved": False, "reason": None}
+    if ap.get("sha1") != n.rev():
+        return {"approved": False, "reason": "narration_edited"}
+    if o is None or not o.approved_fresh():
+        return {"approved": False, "reason": "outline_not_approved"}
+    if ap.get("outline_sha1") != o.rev():
+        return {"approved": False, "reason": "outline_changed"}
+    return {"approved": True, "reason": None}
+
+
+def chapter_diff(n: "Narration | None", o: "Outline | None") -> dict:
+    """The chapter ids of the narration against the outline: `not_in_outline` (the narration has them, the outline does not)
+    and `missing_in_narration` (an outline chapter with no beats in the narration)."""
+    if n is None or o is None:
+        return {"not_in_outline": [], "missing_in_narration": []}
+    have = {c.id for c in n.chapters if c.beats}
+    return {"not_in_outline": [c.id for c in n.chapters if o.chapter(c.id) is None],
+            "missing_in_narration": [c.id for c in o.chapters if c.id not in have]}
 
 
 # ---------------------------------------------------------------- shape check of a document sent by a client
@@ -317,37 +433,55 @@ def _is_str_list(v) -> bool:
 
 
 def _is_num(v) -> bool:
-    return isinstance(v, (int, float)) and not isinstance(v, bool)
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _id_problem(p: str, v, rx: re.Pattern, what: str, required: bool = True) -> str | None:
+    if v is None or v == "":
+        return None if not required else f"{p}.id must be {what}"
+    if not isinstance(v, str):
+        return f"{p}.id must be a string ({what})"
+    if not rx.fullmatch(v):
+        return f"{p}.id {v[:40]!r} is not valid: it must be {what}"
+    return None
 
 
 def doc_problem(kind: str, d) -> str | None:
     """None when `d` is a plausible outline/narration document, else what is wrong. `from_dict` is forgiving by design
-    (it reads files written by older code); a document a client SENDS must have the right shape instead of being coerced."""
+    (it reads files written by older code); a document a client SENDS must have the right shape instead of being coerced:
+    ids match the patterns the parsers read back and are unique, every enum (`role`, `certainty`) is one of its values, every
+    flag (`card`, `locked`) is a boolean, every text is a string, every number is finite."""
     name = "outline" if kind == "outline" else "narration"
     if not isinstance(d, dict):
         return f"{name} (object) is required"
     chs = d.get("chapters")
     if not isinstance(chs, list):
         return f"{name}.chapters must be a list"
-    seen = set()
+    seen: set[str] = set()
+    seen_beats: set[str] = set()
     for i, c in enumerate(chs):
         p = f"{name}.chapters[{i}]"
         if not isinstance(c, dict):
             return f"{p} must be an object"
-        if not isinstance(c.get("id"), str) or not c["id"].strip():
-            return f"{p}.id must be a non-empty string"
+        bad = _id_problem(p, c.get("id"), CHAPTER_ID_RE, "c followed by digits, like c01")
+        if bad:
+            return bad
         if c["id"] in seen:
             return f"{p}.id {c['id']!r} is used twice"
         seen.add(c["id"])
         for k in ("title", "role", "purpose"):
             if k in c and not isinstance(c[k], str):
                 return f"{p}.{k} must be a string"
+        if "role" in c and c["role"] not in ROLES:
+            return f"{p}.role must be one of {', '.join(ROLES)}"
+        if "card" in c and not isinstance(c["card"], bool):
+            return f"{p}.card must be true or false"
         if kind == "outline":
             for k in ("facts", "show"):
                 if k in c and not _is_str_list(c[k]):
                     return f"{p}.{k} must be a list of strings"
             if "word_budget" in c and not _is_num(c["word_budget"]):
-                return f"{p}.word_budget must be a number"
+                return f"{p}.word_budget must be a finite number"
         else:
             beats = c.get("beats", [])
             if not isinstance(beats, list):
@@ -356,7 +490,14 @@ def doc_problem(kind: str, d) -> str | None:
                 bp = f"{p}.beats[{j}]"
                 if not isinstance(b, dict):
                     return f"{bp} must be an object"
-                for k in ("id", "text", "note"):
+                bad = _id_problem(bp, b.get("id"), BEAT_ID_RE, "b followed by digits, like b0001", required=False)
+                if bad:
+                    return bad
+                if b.get("id"):
+                    if b["id"] in seen_beats:
+                        return f"{bp}.id {b['id']!r} is used twice (beat ids are unique in the whole narration)"
+                    seen_beats.add(b["id"])
+                for k in ("text", "note"):
                     if k in b and b[k] is not None and not isinstance(b[k], str):
                         return f"{bp}.{k} must be a string"
                 for k in ("facts", "show"):
@@ -371,7 +512,29 @@ def doc_problem(kind: str, d) -> str | None:
             if k in d and not (isinstance(d[k], list) and all(isinstance(x, dict) for x in d[k])):
                 return f"{name}.{k} must be a list of objects"
         if "target_words" in d and not _is_num(d["target_words"]):
-            return f"{name}.target_words must be a number"
+            return f"{name}.target_words must be a finite number"
+        fseen: set[str] = set()
+        for i, f in enumerate(d.get("facts") or []):
+            fp = f"{name}.facts[{i}]"
+            for k in ("id", "claim"):
+                if k in f and not isinstance(f[k], str):
+                    return f"{fp}.{k} must be a string"
+            if "sources" in f and not _is_str_list(f["sources"]):
+                return f"{fp}.sources must be a list of strings"
+            if "certainty" in f and f["certainty"] not in CERTAINTY:
+                return f"{fp}.certainty must be one of {', '.join(CERTAINTY)}"
+            if "conflict" in f and f["conflict"] is not None and not isinstance(f["conflict"], str):
+                return f"{fp}.conflict must be a string or null"
+        for i, h in enumerate(d.get("hook_options") or []):
+            for k in ("id", "text"):
+                if k in h and not isinstance(h[k], str):
+                    return f"{name}.hook_options[{i}].{k} must be a string"
+        if d.get("hook_choice") is not None and not isinstance(d.get("hook_choice"), str):
+            return f"{name}.hook_choice must be a string or null"
+    else:
+        for k in ("project", "title", "language"):
+            if k in d and d[k] is not None and not isinstance(d[k], str):
+                return f"{name}.{k} must be a string"
     return None
 
 
@@ -381,15 +544,7 @@ def script_dir(pdir: Path) -> Path:
 
 
 def _load(path: Path) -> dict | None:
-    if not path.is_file():
-        return None
-    try:
-        d = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, ValueError) as e:
-        raise DocumentCorrupt("%s is corrupt: %s" % (path.name, str(e)[:120]))
-    if not isinstance(d, dict):
-        raise DocumentCorrupt("%s is corrupt: the top level must be an object" % path.name)
-    return d
+    return read_object(path, "script")
 
 
 def load_outline(pdir: Path) -> Outline | None:
@@ -435,7 +590,8 @@ def disk_rev(path: Path, kind: str = "narration") -> str | None:
 
 
 def approve(pdir: Path, kind: str, rev: str) -> dict:
-    """Stamp the approval of the saved file `kind` ("outline" | "narration"); `rev` must be its current revision."""
+    """Stamp the approval of the saved file `kind` ("outline" | "narration"); `rev` must be its current revision.
+    A narration approval also records the revision of the outline file it is approved against (`outline_sha1`)."""
     path = script_dir(pdir) / f"{kind}.json"
     d = _load(path)
     if d is None:
@@ -443,7 +599,11 @@ def approve(pdir: Path, kind: str, rev: str) -> dict:
     cur = (Outline if kind == "outline" else Narration).from_dict(d).rev()
     if cur != rev:
         raise StaleRevision(cur)
-    d["approval"] = {"approved": True, "sha1": cur, "approved_at": now_iso()}
+    ap = {"approved": True, "sha1": cur, "approved_at": now_iso()}
+    if kind == "narration":
+        o = load_outline(pdir)
+        ap["outline_sha1"] = o.rev() if o is not None else None
+    d["approval"] = ap
     write_json_atomic(path, d)
     return d["approval"]
 

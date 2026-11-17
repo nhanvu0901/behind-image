@@ -32,8 +32,36 @@ export function stepFor(min, max) {
   return 1;
 }
 
+/** A registry `pattern` (Python regex, whole value must match) as a JS RegExp; null when JS cannot read it (the server still checks). */
+export function patternRegex(src) { try { return new RegExp('^(?:' + src + ')$'); } catch { return null; } }
+const oneLine = (s) => String(s).replace(/\s*[\r\n]+\s*/g, ' ');
+const BAD_FORM = 'chưa đúng dạng cần nhập';
+/** Count limits of a list param (`min_items` / `max_items`). */
+export function countProblem(d, n) {
+  const lo = d.min_items ?? null, hi = d.max_items ?? null;
+  if (lo !== null && lo === hi && n !== lo) return `cần đúng ${lo} mục (hiện có ${n})`;
+  if (lo !== null && n < lo) return `cần ít nhất ${lo} mục (hiện có ${n})`;
+  if (hi !== null && n > hi) return `cần nhiều nhất ${hi} mục (hiện có ${n})`;
+  return null;
+}
+const isPoint = (x) => Array.isArray(x) && x.length === 2 && x.every((n) => typeof n === 'number' && Number.isFinite(n));
+
 export function validateValue(d, v) {
   if (v === null || v === undefined) return null;
+  if ((d.type === 'string' || d.type === 'text') && d.pattern && typeof v === 'string') {
+    const re = patternRegex(d.pattern);
+    if (re && !re.test(oneLine(v))) return d.pattern_hint || BAD_FORM;
+  }
+  if (d.type === 'lines' && Array.isArray(v)) {
+    const c = countProblem(d, v.length); if (c) return c;
+    const re = d.pattern ? patternRegex(d.pattern) : null;
+    if (re) { const i = v.findIndex((x) => !re.test(oneLine(x))); if (i >= 0) return `dòng ${i + 1}: ${d.pattern_hint || BAD_FORM}`; }
+  }
+  if (d.type === 'points' && Array.isArray(v)) {
+    const c = countProblem(d, v.length); if (c) return c;
+    if (d.numeric_only && v.some((x) => !isPoint(x))) return 'chỉ nhập hai số x, y, không dùng tên vùng';
+  }
+  if (d.type === 'point' && d.numeric_only && !isPoint(v)) return 'chỉ nhập hai số x, y, không dùng tên vùng';
   if (d.type === 'number') {
     if (typeof v !== 'number' || Number.isNaN(v)) return 'không phải số';
     if (d.min != null && v < d.min) return `nhỏ hơn ${d.min}`;
@@ -41,6 +69,10 @@ export function validateValue(d, v) {
   }
   if (d.type === 'enum' && d.values && !d.values.includes(v)) return 'giá trị không có trong danh sách';
   if (d.type === 'box' && !boxToRect(v)) return 'khung phải là [x0, y0, x1, y1]';
+  if (d.type === 'box' && Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === 'number')) {
+    const [x0, y0, x1, y1] = v;
+    if (!(x0 >= 0 && y0 >= 0 && x1 <= 1920 && y1 <= 1080 && x1 - x0 >= 16 && y1 - y0 >= 16)) return 'khung phải nằm trong khung hình 1920 x 1080 và mỗi cạnh dài ít nhất 16 px';
+  }
   return null;
 }
 

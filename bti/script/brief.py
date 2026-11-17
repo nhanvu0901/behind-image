@@ -7,10 +7,11 @@ Source text files hold body text only: `# ` title, `## ` section headings, `> ` 
 from __future__ import annotations
 
 import json
+import math
 import re
 from pathlib import Path
 
-from .store import now_iso, script_dir, write_json_atomic
+from .store import DocumentCorrupt, now_iso, read_object, read_text_strict, script_dir, write_json_atomic
 from .. import textfold
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -24,11 +25,10 @@ PARA_ID_RE = re.compile(r"\b([A-Z]{3})-(\d{2,3})\b")
 _TAGGED = re.compile(r"^\[(meta|caption|credit|note|page-type|continues)\]", re.I)
 
 
-def _read_json(p: Path):
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return None
+def _read_json(p: Path, what: str = "script") -> dict:
+    """The JSON object in `p`, {} when the file does not exist. A file that is there but unreadable or not an object raises
+    DocumentCorrupt naming it (409 for the page): a damaged input is never replaced by defaults without a word."""
+    return read_object(p, what) or {}
 
 
 def src_code(book_id: str, taken: set[str]) -> str:
@@ -65,12 +65,12 @@ def parse_source_text(text: str) -> dict:
 
 
 def _book_info(book_id: str, lib: Path) -> dict:
-    j = _read_json(lib / "books" / book_id / "book.json") or {}
+    j = _read_json(lib / "books" / book_id / "book.json", "library")
     return {"title": j.get("title") or book_id, "author": j.get("author") or ""}
 
 
 def _trust_table(lib: Path) -> dict:
-    return _read_json(lib / "overrides" / "books.json") or {}
+    return _read_json(lib / "overrides" / "books.json", "library")
 
 
 def _resolve_dossier(pdir: Path, proj: dict) -> tuple[dict | None, Path | None]:
@@ -78,17 +78,32 @@ def _resolve_dossier(pdir: Path, proj: dict) -> tuple[dict | None, Path | None]:
         if cand and not Path(str(cand)).is_absolute():
             p = pdir / str(cand)
             if p.is_file():
-                d = _read_json(p)
-                if isinstance(d, dict):
-                    return d, p
+                d = _read_json(p, "source")
+                _need_shape(d, p.name, "source", [("identity", dict), ("sources", list), ("conflicts", list)],
+                            [("sources", dict), ("conflicts", dict)])
+                return d, p
     return None, None
 
 
+def _need_shape(d: dict, name: str, what: str, kinds: list, items: list) -> None:
+    """The fields of `d` that the brief reads have the type it expects (a list of objects, not a list of numbers...)."""
+    for k, t in kinds:
+        if d.get(k) is not None and not isinstance(d[k], t):
+            raise DocumentCorrupt(f"{name} is corrupt: {k} must be {'an object' if t is dict else 'a list'}", what)
+    for k, t in items:
+        if any(not isinstance(x, t) for x in d.get(k) or []):
+            raise DocumentCorrupt(f"{name} is corrupt: every entry of {k} must be an object", what)
+
+
 def load_options(pdir: Path) -> dict:
-    o = _read_json(script_dir(pdir) / "brief_options.json") or {}
+    return _options_from(_read_json(script_dir(pdir) / "brief_options.json"))
+
+
+def _options_from(o: dict) -> dict:
     tw = o.get("target_words")
-    return {"include_low": [str(x) for x in (o.get("include_low") or [])],
-            "target_words": int(tw) if isinstance(tw, (int, float)) and tw > 0 else DEFAULT_TARGET,
+    low = o.get("include_low")
+    return {"include_low": [str(x) for x in low if isinstance(x, (str, int))] if isinstance(low, list) else [],
+            "target_words": int(tw) if isinstance(tw, (int, float)) and not isinstance(tw, bool) and math.isfinite(tw) and tw > 0 else DEFAULT_TARGET,
             "notes": str(o.get("notes") or ""),
             "wps": float(o["wps"]) if isinstance(o.get("wps"), (int, float)) and 0.5 <= o["wps"] <= 6 else DEFAULT_WPS}
 
@@ -128,7 +143,10 @@ def check_options(opts: dict) -> dict:
 
 def save_options(pdir: Path, opts: dict) -> dict:
     new = check_options(opts)           # raises OptionsError before anything is written
-    cur = load_options(pdir)
+    try:
+        cur = load_options(pdir)
+    except DocumentCorrupt:             # a damaged file is replaced by a whole, valid one: this is how the owner repairs it
+        cur = _options_from({})
     cur.update(new)
     write_json_atomic(script_dir(pdir) / "brief_options.json", cur)
     return cur
@@ -164,9 +182,19 @@ def _source_entries(pdir: Path, proj: dict, dossier: dict | None) -> list[dict]:
 
 
 def build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None) -> dict:
+    try:
+        return _build_brief(pdir, library_root=library_root, include_low=include_low)
+    except (AttributeError, TypeError, KeyError, IndexError, ValueError) as e:      # a field of the wrong type deep inside a data file
+        if isinstance(e, DocumentCorrupt):
+            raise
+        raise DocumentCorrupt(f"the data files of project {Path(pdir).name!r} are malformed ({type(e).__name__}: {str(e)[:80]})", "project")
+
+
+def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None) -> dict:
     pdir = Path(pdir)
     lib = Path(library_root) if library_root else REPO_ROOT / "library"
-    proj = _read_json(pdir / "project.json") or {}
+    proj = _read_json(pdir / "project.json", "project")
+    _need_shape(proj, "project.json", "project", [("sources", list)], [("sources", dict)])
     dossier, _ = _resolve_dossier(pdir, proj)
     opts = load_options(pdir)
     ticked = set(include_low if include_low is not None else opts["include_low"])
@@ -182,7 +210,7 @@ def build_brief(pdir: Path, *, library_root: Path | None = None, include_low: li
         code = src_code(e["book_id"], taken)
         taken.add(code)
         code_map[code] = e["work_id"]
-        parsed = parse_source_text((pdir / "source" / e["file"]).read_text(encoding="utf-8"))
+        parsed = parse_source_text(read_text_strict(pdir / "source" / e["file"]))
         trust = e["trust"] or (trust_tbl.get(e["book_id"]) or {}).get("trust") or "normal"
         note = e["trust_note"] or (trust_tbl.get(e["book_id"]) or {}).get("trust_note") or ""
         low = trust == "low"

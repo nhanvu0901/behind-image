@@ -12,6 +12,7 @@ All camera motion is sub-pixel: cv2.warpAffine with a float matrix + INTER_CUBIC
 import math, os, sys
 import cv2, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from .guard import check_pixels, unlimited
 
 W, H = 1920, 1080
 cv2.setNumThreads(int(os.environ.get("CV_THREADS", "4")))
@@ -121,7 +122,8 @@ class Img:
         self.levels = [a]
         while min(self.levels[-1].shape[:2]) // 2 >= 256:
             p = self.levels[-1]
-            self.levels.append(cv2.resize(p, (p.shape[1] // 2, p.shape[0] // 2), interpolation=cv2.INTER_AREA))
+            with unlimited():                      # sized by the source file, not by the storyboard
+                self.levels.append(cv2.resize(p, (p.shape[1] // 2, p.shape[0] // 2), interpolation=cv2.INTER_AREA))
         self.h, self.w = a.shape[:2]
 
     def rect(self, cx, cy, zoom, ow=W, oh=H):
@@ -131,6 +133,7 @@ class Img:
     def view(self, cx, cy, zoom, ow=W, oh=H, bg=None, region=None):
         """Render the source into an ow x oh canvas. (cx,cy)=source point at canvas centre, zoom=out px per source px.
         Returns (frame BGR, alpha float32 ow x oh x1).  Outside the source, frame is `bg` (or 0) and alpha 0."""
+        check_pixels(ow, oh, "view")
         k = int(round(math.log2(1.0 / zoom))) if zoom < 1 else 0
         k = max(0, min(k, len(self.levels) - 1))
         s = zoom * (2 ** k)
@@ -286,6 +289,7 @@ def label_layer(title, sub=None, y0=.70, h=140, x_text=.07, w=W, hh=H, opacity=0
 
 def text_layer(text, cx, cy, size=90, kind="reg", tracking=6, color=(255, 255, 255), sub=None, subsize=30, w=W, h=H, shadow=True):
     """Centred text (and optional sub line) on a transparent full-frame layer, cropped to its bbox."""
+    check_pixels(w, h, "text layer")
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     ft = font(kind, size)

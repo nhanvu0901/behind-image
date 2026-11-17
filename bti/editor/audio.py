@@ -11,6 +11,8 @@ from pathlib import Path
 
 import numpy as np
 
+from bti.script.store import make_parent
+
 from .common import ApiError, file_signature, read_json, write_json_atomic
 
 SR = 8000
@@ -46,7 +48,7 @@ def peaks_for(samples: np.ndarray, bins: int) -> list[float]:
 
 
 def waveform(audio: Path, cache_dir: Path, bins: int) -> dict:
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    make_parent(cache_dir / "x", 1)        # <project>/cache; never re-creates the project folder
     cp = cache_dir / f"wave_{file_signature(audio)}_{bins}.json"
     if cp.is_file():
         try:

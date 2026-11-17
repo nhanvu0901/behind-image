@@ -265,11 +265,11 @@ JSON unless stated. The server binds to `127.0.0.1:8560`. Port 8550 belongs to t
 | Method and path | Purpose |
 |---|---|
 | `GET /api/projects` | `[{id, title, duration, updated_at}]` |
-| `GET /api/projects/{pid}` | `{storyboard (resolved), timing, issues, rev, render_key}`; `render_key` covers storyboard, timing, style and media and is what `frame`/`thumb` take as `rev` to be immutable; 409 `{detail, data_error}` when timing or the storyboard file is unusable |
+| `GET /api/projects/{pid}` | `{storyboard (resolved), timing, issues, rev, render_key}`; `render_key` covers storyboard, timing, style and media and is what `frame`/`thumb` take as `rev` to be immutable; 409 `{detail, data_error}` when timing or the storyboard file is unusable (`data_error`: `timing`, `storyboard`, `script`, `style`, `project` (project.json), `source` (a source text or dossier), `library`); `GET /api/projects` lists a damaged folder as a row `{id, title: <folder>, data_error, stage: null}`; a `RenderError` on `/frame`, `/thumb` and in a preview job is 422 `{detail, code: "render_failed", shot, overlay, technique}` (never 500); a JSON body nested deeper than 40 levels is 422 `code: "too_deep"`; `DELETE` is 409 `code: "project_busy"` when a save holds the project for more than 2 s |
 | `PUT /api/projects/{pid}/storyboard` | body `{storyboard, base_rev}`; returns `{rev, storyboard (resolved), issues}`; 409 if `base_rev` is not the saved revision; 422 with `issues` if there are errors |
 | `POST /api/projects/{pid}/validate` | body `{storyboard}`; returns `{issues}` |
 | `POST /api/projects/{pid}/defaults` | body `{technique, context}`; returns `{params, slots}` |
-| `POST /api/projects/{pid}/approve` | body `{rev}`; returns `{approvals}`; refused if there are error issues or `incomplete` warnings |
+| `POST /api/projects/{pid}/approve` | body `{rev}`; returns `{approvals}`; refused if there are error issues or `incomplete` warnings, or if `draw_check` finds an `undrawable` shot or overlay (422, `issues` listed, `undrawable: true`) |
 
 **Frames, audio and previews**
 

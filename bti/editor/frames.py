@@ -2,15 +2,20 @@
 from __future__ import annotations
 
 import io
-import math
 from pathlib import Path
 
 import numpy as np
 from PIL import Image
 
 from bti.engine.errors import DataError
+from bti.script.store import ProjectGone, make_parent
 
-from .common import ApiError
+from bti.engine import limits
+
+from .common import ApiError, finite_number
+
+# The engine's limits file has no time range; this one is the editor's own (a day), named here so it is not a loose number.
+T_MAX_SECONDS = 86400
 from .engine_adapter import ENGINE_LOCK
 
 JPEG_QUALITY = 85
@@ -27,24 +32,24 @@ def to_jpeg(frame: np.ndarray, quality: int = JPEG_QUALITY) -> bytes:
     return b.getvalue()
 
 
-def clean_t(t, duration: float | None = None) -> float:
+def clean_t(t, name: str = "t") -> float:
+    """A time in seconds: a finite number from 0 to 86400 (a string, a boolean, NaN, infinity or a whole number too large for a
+    float is a 422, never a 500)."""
     try:
-        t = float(t)
-    except (TypeError, ValueError):
-        raise ApiError(422, "t must be a number")
-    if not math.isfinite(t) or t < 0 or t > 86400:
-        raise ApiError(422, "t out of range")
-    return t
+        return float(finite_number(t, name, 0, T_MAX_SECONDS))
+    except ApiError as e:
+        if name != "t":
+            raise ApiError(422, f"t0 and t1 must be numbers from 0 to {T_MAX_SECONDS}")
+        raise ApiError(422, "t must be a number" if "number" in e.detail and "between" not in e.detail
+                       and "from" not in e.detail and "finite" not in e.detail else "t out of range")
 
 
 def clean_width(width, default: int = 960) -> int:
     try:
-        w = int(width if width is not None else default)
-    except (TypeError, ValueError):
-        raise ApiError(422, "width must be an integer")
-    if not 64 <= w <= 1920:
-        raise ApiError(422, "width must be between 64 and 1920")
-    return w
+        return int(finite_number(width, "width", limits.FRAME_WIDTH_MIN, limits.FRAME_WIDTH_MAX, integer=True, default=default))
+    except ApiError as e:
+        raise ApiError(422, "width must be an integer" if "an integer" in e.detail and "from" not in e.detail
+                       else f"width must be between {limits.FRAME_WIDTH_MIN} and {limits.FRAME_WIDTH_MAX}")
 
 
 def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> bytes:
@@ -71,7 +76,10 @@ def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> byt
 
 def cached_jpeg(project, cache_dir: Path, rev: str, t: float, width: int, tag: str = "f") -> bytes:
     """`rev` is the RENDER key (storyboard + timing + style + media), not the storyboard revision alone."""
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        make_parent(cache_dir / "x", 2)       # <project>/cache/frames: never re-creates a deleted project folder
+    except ProjectGone:
+        raise ApiError(404, "project not found")
     p = cache_dir / f"{tag}_{rev[:16]}_{int(round(t * 1000))}_{width}.jpg"
     try:
         return p.read_bytes()

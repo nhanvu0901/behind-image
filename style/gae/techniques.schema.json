@@ -246,6 +246,28 @@
        "required": {
         "type": "boolean",
         "description": "true: the param must be present and not null (its default is null because there is no sensible fixed value; default_params fills it)"
+       },
+       "pattern": {
+        "type": "string",
+        "description": "string/text/lines params: a regular expression the whole value (each item for lines, line breaks collapsed) must match"
+       },
+       "pattern_hint": {
+        "type": "string",
+        "description": "one Vietnamese sentence that says what to type; shown under the field and as the validation message"
+       },
+       "min_items": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "points/lines params: fewest items"
+       },
+       "max_items": {
+        "type": "integer",
+        "minimum": 0,
+        "description": "points/lines params: most items"
+       },
+       "numeric_only": {
+        "type": "boolean",
+        "description": "point/points params: only [x, y] numbers are accepted, a region name is not (the coordinates are canvas pixels or the renderer does not look regions up)"
        }
       },
       "allOf": [

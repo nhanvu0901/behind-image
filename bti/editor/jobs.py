@@ -14,7 +14,9 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Callable
 
+from bti.engine.errors import RenderError
 from bti.script.runner import RESTART_MESSAGE, find_record, job_file, write_record
+from bti.script.store import ProjectGone, make_parent
 
 from .common import ApiError, safe_join
 
@@ -39,7 +41,10 @@ class JobManager:
 
     @staticmethod
     def _public(j: dict) -> dict:
-        return {"state": j["state"], "progress": j["progress"], "result_url": j["result_url"], "error": j["error"]}
+        out = {"state": j["state"], "progress": j["progress"], "result_url": j["result_url"], "error": j["error"]}
+        if j.get("error_code"):       # a technique could not draw: the page names the shot (code render_failed)
+            out.update({k: j.get(k) for k in ("error_code", "shot", "overlay", "technique")})
+        return out
 
     def submit(self, pid: str, fn: Callable[[Callable[[float], None]], str]) -> str:
         """`fn(progress_cb)` returns the result_url."""
@@ -64,6 +69,9 @@ class JobManager:
                 job["result_url"] = url
                 job["progress"] = 1.0
                 job["state"] = "done"
+            except RenderError as e:
+                job.update(error=e.message, error_code="render_failed", shot=e.shot, overlay=e.overlay, technique=e.technique,
+                           state="error")
             except ApiError as e:
                 job["error"] = e.detail
                 job["state"] = "error"
@@ -82,7 +90,8 @@ class JobManager:
             rec = find_record(self.projects_root, jid) if self.projects_root else None
             if rec is None or "kind" in rec:      # records of script jobs are served by the script router
                 return None
-            return {k: rec.get(k) for k in ("state", "progress", "result_url", "error")}
+            return {k: rec.get(k) for k in ("state", "progress", "result_url", "error", "error_code", "shot", "overlay", "technique")
+                    if k in ("state", "progress", "result_url", "error") or rec.get(k)}
         return self._public(j)
 
     def shutdown(self) -> None:
@@ -108,7 +117,7 @@ def render_preview(project, project_dir: Path, audio: Path | None, t0: float, t1
     previews of that project among themselves. Stills and validation never wait for a preview."""
     lock = lock or threading.RLock()
     pdir = project_dir / "cache" / "previews"
-    pdir.mkdir(parents=True, exist_ok=True)
+    make_parent(pdir / "x", 2)                  # never re-creates the project folder itself (ProjectGone if it was deleted)
     uid = uuid.uuid4().hex[:8]
     silent = pdir / f"tmp_{uid}.mp4"
     final = pdir / f"pv_{int(t0 * 1000)}_{int(t1 * 1000)}_{uid}.mp4"

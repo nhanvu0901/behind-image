@@ -63,6 +63,18 @@ export class Store {
     this.emit('saved');
     return { edited };
   }
+  /** The server has a newer version (`theirsBoard`, `rev`). The draft becomes `merged` (an edit the owner can undo) and the saved
+   * baseline becomes the server's version, so the next save is "my draft on top of what the server has". */
+  rebase(merged, theirsBoard, rev, label = 'Ghép với bản khác') {
+    const before = this.snap();
+    this.draft = clone(merged);
+    this.draft.approvals = clone(theirsBoard.approvals);
+    derive(this.draft, this.timing);
+    if (this.snap() !== before) { this.undoStack.push({ label, snap: before }); if (this.undoStack.length > this.limit) this.undoStack.shift(); this.redoStack = []; }
+    this.rev = rev; this.savedSnap = snapOf(theirsBoard); this.lastKey = null;
+    this.editVersion++;
+    this.emit('draft');
+  }
   /** Only the server-owned approvals changed (Duyệt): the content, and so the unsaved marker, is untouched. */
   setApprovals(approvals) {
     this.draft.approvals = clone(approvals);

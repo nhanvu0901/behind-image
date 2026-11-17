@@ -52,9 +52,12 @@ def aspect_wh(text, ph=1080):
     """'9:16' -> panel (pw, ph) with ph fixed to the canvas height."""
     try:
         a, b = str(text).replace("/", ":").split(":")
-        return max(2, int(ph * float(a) / float(b) + 0.5)), ph
+        r = float(a) / float(b)
+        if 0.25 <= r <= 4:                  # a panel more extreme than 1:4 or 4:1 is nonsense (and a huge ambient fill)
+            return max(2, int(ph * r + 0.5)), ph
     except Exception:
-        return int(ph * 9 / 16 + 0.5), ph
+        pass
+    return int(ph * 9 / 16 + 0.5), ph
 
 
 def luminance(bgr):

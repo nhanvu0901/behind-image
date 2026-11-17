@@ -58,3 +58,44 @@ export const PLANNED = {
     meanwhile: 'Hiện chưa có nút dựng bản cuối. "Xem thử 10 giây" ở bước Dựng hình vẫn dùng được để kiểm tra từng đoạn.',
   },
 };
+
+// ---------------------------------------------------------------- storyboard: intents, eases, sources, enum values
+/** What a shot is for (`intent`). The raw id stays available as a tooltip. */
+export const INTENT = {
+  establish: 'Giới thiệu bối cảnh', explore: 'Khám phá bức tranh', point_at: 'Chỉ vào một chi tiết', isolate: 'Tách riêng một phần', reveal: 'Hé lộ',
+  compare: 'So sánh', explain_mechanism: 'Giải thích cách hoạt động', quote: 'Trích lời', context: 'Bối cảnh', quantify: 'Nêu con số', structure: 'Nêu cấu trúc', transition: 'Chuyển ý',
+};
+export const intentLabel = (v) => INTENT[v] || (v ? String(v).replace(/_/g, ' ') : '');
+
+/** Who wrote an item of the storyboard (`source`). */
+export const SOURCE = { import: 'nhập từ bản cũ', agent: 'đề xuất tự động', human: 'bạn sửa tay' };
+export const sourceLabel = (v) => SOURCE[v || 'import'] || String(v);
+
+/** Trust of the text taken from a book page (`text_source`): the library shows these. */
+export const TEXT_SOURCE = { clean: 'đã làm sạch', layer: 'lớp chữ gốc của PDF', mixed: 'lẫn hai loại' };
+export const textSourceLabel = (v) => TEXT_SOURCE[v] || String(v || '');
+
+/** Words of the enum params of the technique registry. A few words mean different things in different params: PARAM_VALUE says so. */
+export const EASE = { linear: 'Đều', in_quad: 'Chậm rồi nhanh (nhẹ)', out_quad: 'Nhanh rồi chậm (nhẹ)', in_cubic: 'Chậm rồi nhanh', out_cubic: 'Nhanh rồi chậm', inout_sine: 'Mượt hai đầu (nhẹ)', inout_cubic: 'Mượt hai đầu' };
+export const VALUE = {
+  ...EASE,
+  log: 'Theo tỉ lệ (log)', upper_all: 'In hoa toàn bộ', upper: 'In hoa', as_is: 'Giữ nguyên', as_typed: 'Như đã gõ',
+  right: 'Phải', left: 'Trái', top: 'Trên', bottom: 'Dưới',
+  all: 'Tất cả', cross: 'Chữ thập', frame: 'Khung hình', cover: 'Phủ kín (cắt bớt)', stretch: 'Kéo giãn', contain: 'Vừa trong khung',
+  none: 'Không', contrast: 'Tương phản', white: 'Trắng', sepia: 'Nâu cũ', grey: 'Xám', warm: 'Ấm',
+  bottom_left: 'Góc dưới trái', bottom_right: 'Góc dưới phải', top_left: 'Góc trên trái', top_right: 'Góc trên phải',
+  source: 'Ảnh gốc', procedural: 'Nền tự vẽ', image: 'Ảnh', auto: 'Tự chọn', base: 'Nền của shot',
+  rect: 'Chữ nhật', circle: 'Tròn', ellipse: 'Elip', triangle: 'Tam giác', white_card: 'Thẻ trắng', blurred_image: 'Ảnh mờ',
+  sans_bold: 'Không chân, đậm', bold: 'Đậm', serif: 'Có chân', serif_it: 'Có chân, nghiêng', reg: 'Thường',
+  left_to_right: 'Từ trái sang phải', right_to_left: 'Từ phải sang trái', slow: 'Chậm dần', hold: 'Giữ nguyên', loop: 'Lặp lại',
+  black: 'Đen', matte: 'Nền mờ tối', blur: 'Ảnh mờ', lightness: 'Theo độ sáng', cluster: 'Theo nhóm màu', hue: 'Theo sắc',
+  clear: 'Xóa đi', keep: 'Giữ lại', slide: 'Trượt', dissolve: 'Hòa tan', cut: 'Cắt thẳng',
+};
+export const PARAM_VALUE = { connector_mode: { frame: 'Chỉ khung' }, space: { frame: 'Theo khung hình', image: 'Theo ảnh' }, origin_space: { frame: 'Theo khung hình', source: 'Theo ảnh gốc' }, anchor_fit: { matte: 'Nền mờ tối' }, background: { image: 'Ảnh' } };
+/** Label of one enum value; `param` (the param name) picks a meaning where the same word is used in two ways. Unknown values show as they are. */
+export function valueLabel(v, param) { return PARAM_VALUE[param]?.[v] || VALUE[v] || String(v ?? ''); }
+
+// ---------------------------------------------------------------- the model list
+/** Why the Antigravity command did not answer (the model entry then carries `agy: {ok: false, reason}`), in words; null when it answered. */
+const AGY_WHY = { timeout: 'không trả lời kịp', config: 'chưa cài hoặc chưa cấu hình', auth: 'từ chối quyền truy cập' };
+export const agyProblem = (models) => { const m = (models || []).find((x) => x.agy && x.agy.ok === false); return m ? (AGY_WHY[m.agy.reason] || 'không trả lời') : null; };

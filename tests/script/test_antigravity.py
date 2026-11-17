@@ -250,3 +250,30 @@ def test_prompt_states_english_and_no_tools(fake):
     p = fake.calls()[0]
     assert "Follow the output layout" in p["prompt_tail"]
     assert "Do not use any tools" in antigravity.RULES and "ENGLISH" in antigravity.RULES and "override" in antigravity.RULES
+
+
+def test_models_list_is_cached_single_flight_and_failure_is_a_field(monkeypatch):
+    import threading
+    import time as _t
+    from bti.script.providers import ProviderError
+    calls = []
+
+    def slow_fail():
+        calls.append(1)
+        _t.sleep(0.2)
+        raise ProviderError("timeout", "`agy models` không trả lời.")
+    monkeypatch.setattr(antigravity, "list_models", slow_fail)
+    monkeypatch.setenv("BTI_AGY_BIN", "")
+    models_mod.reset_cache()
+    out = []
+    ts = [threading.Thread(target=lambda: out.append(models_mod.public_models())) for _ in range(3)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(calls) == 1                                           # three requests at once, one CLI call
+    agy = [m for m in out[0] if m["provider"] == "antigravity"][0]
+    assert agy["agy"] == {"ok": False, "reason": "timeout"} and any(m["provider"] == "mock" for m in out[0])
+    models_mod.public_models()
+    assert len(calls) == 1                                           # the failure is cached (1 minute)
+    assert models_mod.FAIL_SECONDS == 60 and models_mod.CACHE_SECONDS == 600 and antigravity.LIST_TIMEOUT_S == 8
+    models_mod.public_models(refresh=True)
+    assert len(calls) == 2                                           # refresh forces a new call

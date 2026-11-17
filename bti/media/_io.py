@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Any
 
 
-def write_json_atomic(path: Path, doc: Any, *, indent: int = 2) -> Path:
+def write_json_atomic(path: Path, doc: Any, *, indent: int = 2, parents: bool = True) -> Path:
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=parents, exist_ok=True)       # parents=False: FileNotFoundError when the folder above is gone
     tmp = path.with_name(path.name + ".tmp")
     try:
         with open(tmp, "w", encoding="utf-8") as fh:

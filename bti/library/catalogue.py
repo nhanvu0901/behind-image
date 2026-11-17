@@ -36,8 +36,17 @@ def write_json(path: Path, data) -> None:
     os.replace(tmp, path)
 
 
+class LibraryDataError(ValueError):
+    """A library file (catalogue, dossier, overrides) is there but is not UTF-8 JSON. The message names the file; the editor
+    answers 409 with `data_error: "library"`."""
+    what = "library"
+
+
 def read_json(path: Path):
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (UnicodeDecodeError, ValueError, RecursionError) as e:
+        raise LibraryDataError("%s is corrupt: %s" % (path.name, str(e)[:100]))
 
 
 # ------------------------------------------------------------------ normalising and matching
@@ -120,7 +129,7 @@ def load_overrides(book_id: str) -> dict:
         return {}
     try:
         d = read_json(f)
-    except (json.JSONDecodeError, UnicodeDecodeError):
+    except ValueError:
         return {}
     return d if isinstance(d, dict) else {}
 
@@ -160,8 +169,11 @@ def book_trust(book_id: str) -> dict:
     f = books_overrides_path()
     if f.is_file():
         try:
-            o = (read_json(f) or {}).get(book_id) or {}
-        except (json.JSONDecodeError, UnicodeDecodeError):
+            tbl = read_json(f)
+            o = (tbl.get(book_id) if isinstance(tbl, dict) else None) or {}
+        except ValueError:
+            o = {}
+        if not isinstance(o, dict):
             o = {}
         if o.get("trust") in ("normal", "low"):
             out["trust"] = o["trust"]
@@ -199,7 +211,10 @@ def load_work(book_id: str, n: int) -> dict | None:
 
 def load_artworks() -> dict:
     f = config.LIB_DIR / "artworks.json"
-    return read_json(f) if f.is_file() else {}
+    d = read_json(f) if f.is_file() else {}
+    if not isinstance(d, dict):
+        raise LibraryDataError("artworks.json is corrupt: the top level must be an object")
+    return d
 
 
 # ------------------------------------------------------------------ build
@@ -292,7 +307,7 @@ def load_artwork_overrides() -> dict:
     if f.is_file():
         try:
             d = read_json(f)
-        except (json.JSONDecodeError, UnicodeDecodeError):
+        except ValueError:
             d = {}
     if not isinstance(d, dict):
         d = {}

@@ -135,7 +135,9 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
                 out.append(issue("error", "chapter_missing", f"Chapter {oc.id} {oc.title} is missing from the narration.", chapter=oc.id))
         for c in n.chapters:
             if outline.chapter(c.id) is None:
-                out.append(issue("warning", "unknown_chapter", f"Chapter {c.id} {c.title} is not in the outline.", chapter=c.id))
+                # an error for approval (saving stays allowed): a narration approval belongs to one outline, and a chapter the
+                # outline does not have means the narration was written for another one
+                out.append(issue("error", "unknown_chapter", f"Chapter {c.id} {c.title} is not in the outline.", chapter=c.id))
     known = outline.fact_ids() if outline else None
     for c in n.chapters:
         for b in c.beats:

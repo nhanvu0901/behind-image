@@ -11,14 +11,14 @@ from dataclasses import dataclass, field
 
 from .stats import count_words
 from .. import textfold
-from .store import CERTAINTY, Beat, Fact, Hook, NChapter, Narration, OChapter, Outline, now_iso
+from .store import CERTAINTY, CHAPTER_ID_SRC, Beat, Fact, Hook, NChapter, Narration, OChapter, Outline, doc_problem, now_iso
 
 FINAL_RE = re.compile(r"^[\W_]*FINAL\s+SCRIPT[\W_]*$", re.I | re.M)
 OUTLINE_RE = re.compile(r"^[\W_]*OUTLINE[\W_]*$", re.I | re.M)
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 RULE_RE = re.compile(r"^\s*([-*_=])(\s*\1){2,}\s*$")
 HEAD_RE = re.compile(r"^\s*#{2,3}\s+(.*?)\s*#*\s*$")
-CH_ID_RE = re.compile(r"^\[?\s*(c\d+)\s*\]?\b[\s:.\-–—]*(.*)$", re.I)
+CH_ID_RE = re.compile(r"^\[?\s*(" + CHAPTER_ID_SRC + r")\s*\]?\b[\s:.\-–—]*(.*)$", re.I)   # same id shape as store.CHAPTER_ID_RE
 PARA_ID_RE = re.compile(r"\b[A-Z]{3}-\d{2,3}\b")
 FACT_ID_RE = re.compile(r"\bf\d+\b", re.I)
 
@@ -323,6 +323,9 @@ def parse_script(text: str, outline: Outline | None = None, *, project: str = ""
     for c in chapters:
         if not c.beats:
             res.add("warning", "chapter_empty", f"chapter {c.id} has no paragraphs", chapter=c.id)
+    bad = doc_problem("narration", n.to_dict())          # whatever the parser built must be a document the page could save
+    if bad:
+        return _fail(res, f"The script produced a document that cannot be stored ({bad}).", body, "The script could not be placed.")
     res.ok, res.narration, res.chapter_ids = True, n, order_ids
     return res
 
@@ -493,6 +496,9 @@ def parse_outline(text: str, known_paragraph_ids: set[str] | list[str] | None = 
     elif hook_choice:
         hook_choice = hook_choice.lower()
     o = Outline(thesis, hooks, hook_choice, chapters, facts, tw, {"kind": "paste", "model": "", "created_at": now_iso()})
+    bad = doc_problem("outline", o.to_dict())            # ids, roles and flags the page would refuse are refused here too
+    if bad:
+        return _fail(res, f"The outline produced a document that cannot be stored ({bad}).", body, "The outline could not be read.")
     o.counters = {"chapter": len(chapters), "fact": max([int(re.sub(r"\D", "", f.id) or 0) for f in facts], default=0)}
     res.ok, res.outline = True, o
     return res

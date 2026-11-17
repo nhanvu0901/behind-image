@@ -2,6 +2,7 @@
 import { api } from './api.js';
 import { ctx, bus, primaryAsset } from './ctx.js';
 import { $, svg, debounce, fmtTime } from './util.js';
+import { describeError, renderFailText } from './errmsg.js';
 import { DEBOUNCE_MS, MOCK } from './config.js';
 import { cameraLists, cameraAt, engineFitCamera, cameraToBox, boxToCamera, fixAspect, fitCamera, round, shotIndexAt, clone } from './logic.js';
 import { makeSpaces, dragPoint, boxToRect, paramSpace, splitSpace, resolvePoint, pickValue } from './coords.js';
@@ -61,12 +62,12 @@ function incompleteAt(t) {
 }
 /** The preview says WHY a frame could not be built, never just "500" (U2-012). */
 export function frameError(e, t) {
-  const detail = e?.body?.detail ?? e?.body;
-  const text = typeof detail === 'string' ? detail : detail?.message || detail?.reason || '';
   const inc = incompleteAt(t);
   if (inc) return `Chưa dựng được khung: ${inc}`;
-  if (text) return `Lỗi dựng khung: ${text}`;
-  return e?.status >= 500 ? `Máy chủ không dựng được khung (${e.status}). Xem tab Lỗi.` : 'Lỗi dựng khung: ' + (e?.status || e?.message);
+  if (e?.body?.code === 'render_failed') return renderFailText(e.body);   // names the shot; the page keeps working
+  const d = describeError(e);
+  if (e && 'status' in e && e.status >= 500) return 'Máy chủ không dựng được khung này. Xem tab Lỗi.';
+  return 'Lỗi dựng khung: ' + d.text;
 }
 const refreshDebounced = debounce(refresh, DEBOUNCE_MS);
 export const requestFrame = () => { refreshDebounced(); };

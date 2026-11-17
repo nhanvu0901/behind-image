@@ -5,7 +5,10 @@ import { api, ApiError } from '../api.js';
 import { MOCK, STYLE_ID } from '../config.js';
 import { ctx, bus, setRegistry } from '../ctx.js';
 import * as U from '../util.js';
-import { h, toast, modal, debounce, fmtTime, setStatus, ask } from '../util.js';
+import { h, toast, errorToast, modal, debounce, fmtTime, setStatus, ask, confirmDialog, detailFold } from '../util.js';
+import { stripDerived } from '../logic.js';
+import { mergeStoryboard, mergedNote } from '../sbmerge.js';
+import { jobFailText } from '../errmsg.js';
 import { initPreview, requestFrame } from '../preview.js';
 import { initTimeline, seek, ensureVisible, fitView, zoomToShowWords } from '../timeline.js';
 import { initInspector, setTab } from '../inspector.js';
@@ -113,7 +116,7 @@ export async function mount(host, mctx) {
   scope.on($('#preview-tools'), 'change', (e) => e.target.blur?.());
   initPreview(root, scope); initTimeline(root, scope); initInspector(root);
   try { setRegistry(await api.style(STYLE_ID)); }
-  catch (e) { toast('Không tải được registry kỹ thuật: ' + (e.status || e.message), 'err', 9000); return view; }
+  catch (e) { errorToast(e, 'Không tải được danh sách kỹ thuật: ', 9000); return view; }
   await loadProject(pid);
   applyUrlParams();
   window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api };
@@ -132,7 +135,7 @@ async function loadProject(pid) {
   try { p = await api.project(pid); } catch (e) {
     msg('');
     if (e.status === 409 && e.body && (e.body.corrupt || e.body.data_error)) { showDataError(pid, e.body); return; }
-    toast('Không mở được dự án: ' + (e.status || e.message), 'err', 8000); return;
+    errorToast(e, 'Không mở được dự án: ', 8000); return;
   }
   ctx.pid = pid; ctx.renderKey = p.render_key || null; pauseNow(); ctx.t = 0;
   st.load(p.storyboard, p.timing, p.rev);
@@ -150,13 +153,13 @@ function showDataError(pid, body) {
   const main = $('#main');
   const kind = body.data_error === 'timing' ? 'tệp thời gian (timing)' : body.corrupt ? 'storyboard.json' : 'dữ liệu của dự án';
   const box = h('div', { class: 'banner warn', style: { margin: '16px', flexDirection: 'column', alignItems: 'flex-start' } },
-    h('div', { text: `Không mở được ${kind}: ${body.detail || 'tệp hỏng hoặc thiếu'}.` }));
+    h('div', { text: `Không mở được ${kind}: tệp hỏng hoặc thiếu.` }), body.detail ? detailFold(body.detail) : null);
   if (body.corrupt) {
-    box.append(h('div', { class: 'hint', text: body.restore_from ? `Có bản sao gần nhất trong history/: ${body.restore_from}.` : 'Không có bản sao nào trong history/.' }));
+    box.append(h('div', { class: 'hint', title: body.restore_from || '', text: body.restore_from ? 'Có một bản sao gần nhất trong thư mục lịch sử của dự án.' : 'Dự án không có bản sao nào trong lịch sử.' }));
     if (body.restore_from) box.append(h('button', { class: 'primary', text: 'Khôi phục bản gần nhất', onclick: async (ev) => {
       ev.target.disabled = true;
       try { await api.post(`/api/projects/${encodeURIComponent(pid)}/storyboard/restore`, {}); toast('Đã khôi phục', 'ok'); box.remove(); await loadProject(pid); }
-      catch (e) { toast('Không khôi phục được: ' + (e.status || e.message), 'err', 6000); ev.target.disabled = false; }
+      catch (e) { errorToast(e, 'Không khôi phục được: ', 6000); ev.target.disabled = false; }
     } }));
   }
   main.prepend(box);
@@ -218,17 +221,31 @@ function incompleteItems() {
   return out;
 }
 /** Approval is refused while anything is incomplete: say which items, and take the owner to them. */
-async function showIncomplete(items = incompleteItems()) {
+async function showIncomplete(items = incompleteItems(), opt = {}) {
   if (!items.length) return;
   const go = (it) => { A.selectItem(it.shotId, it.overlayId); setTab(it.overlayId ? 'overlay' : 'shot'); ensureVisible(ctx.t); };
   let dlg;
-  const rows = items.map((it) => h('div', { class: 'list-item', onclick: () => { dlg.close(); go(it); } }, h('b', { text: it.label }), h('span', { class: 'grow', style: { flex: 1 } }), h('span', { class: 'chip partial', text: missingLabel(it.names) })));
-  const choice = ask({ title: `Chưa duyệt được: ${items.length} mục chưa đủ`, cancelValue: 'close',
-    message: 'Storyboard vẫn lưu được, nhưng chỉ duyệt được khi mọi mục bắt buộc đã điền. Bấm một dòng để tới mục đó.',
+  const rows = items.map((it) => h('div', { class: 'list-item', onclick: () => { dlg.close(); go(it); } }, h('b', { text: it.label }), h('span', { class: 'grow', style: { flex: 1 } }), h('span', { class: 'chip partial', text: it.chip || missingLabel(it.names) })));
+  const choice = ask({ title: opt.title || `Chưa duyệt được: ${items.length} mục chưa đủ`, cancelValue: 'close',
+    message: opt.message || 'Storyboard vẫn lưu được, nhưng chỉ duyệt được khi mọi mục bắt buộc đã điền. Bấm một dòng để tới mục đó.',
     body: h('div', { class: 'list', style: { maxHeight: '45vh', overflow: 'auto', marginTop: '8px' } }, ...rows),
-    buttons: [{ text: 'Đóng', value: 'close' }, { text: 'Tới mục đầu tiên', value: 'first', cls: 'primary' }] });
+    buttons: [{ text: 'Đóng', value: 'close' }, { text: opt.firstText || 'Tới mục đầu tiên', value: 'first', cls: 'primary' }] });
   dlg = { close: () => document.querySelector('#modal-root .modal.ask header button')?.click() };
   if ((await choice) === 'first') go(items[0]);
+}
+
+/** The `undrawable` issues of a refused approval, as list items that lead to the shot (or overlay). */
+function undrawableItems(issues) {
+  const out = [];
+  for (const i of issues || []) {
+    if (i.code !== 'undrawable') continue;
+    const p = E.parseIssuePath(i.path) || {};
+    const shot = (i.shot && st.shotById(i.shot)) || st.draft.shots[p.shot];
+    if (!shot) continue;
+    const ov = p.overlay != null ? (shot.overlays || [])[p.overlay] : (i.overlay ? (shot.overlays || []).find((o) => o.id === i.overlay) : null);
+    out.push({ shotId: shot.id, overlayId: ov?.id || null, label: ov ? `Lớp phủ ${ov.id} của ${shot.id} (${ov.technique})` : `Shot ${shot.id} (${shot.technique})`, chip: 'không vẽ được' });
+  }
+  return out;
 }
 
 function updateApprove() {
@@ -245,6 +262,8 @@ function updateApprove() {
   ic.hidden = !inc.length; ic.textContent = `${inc.length} mục chưa đủ`; ic.onclick = () => showIncomplete();
   // Duyệt stays clickable when only incomplete items stand in the way: the click explains which (a disabled button would not)
   btn.disabled = st.dirty || errs > 0 || (!!ap && ap.rev === st.rev) || approving;
+  btn.textContent = approving ? 'Đang duyệt...' : 'Duyệt';
+  btn.classList.toggle('busy', approving);
   btn.title = st.dirty ? 'Lưu trước khi duyệt' : errs ? 'Còn lỗi, chưa duyệt được' : inc.length ? `Còn ${inc.length} mục chưa đủ: bấm để xem` : cur ? 'Bản này đã được duyệt' : 'Duyệt storyboard đã lưu';
   // after an approval: "Tiếp tục" leads to the next step that can be opened
   const nx = shell.pipeline && nextOpenable(shell.pipeline.steps, 'edit'), bn = $('#btn-next');
@@ -253,10 +272,11 @@ function updateApprove() {
 }
 let approving = false;
 async function approve() {
+  if (approving) return;                                   // a second click while the check runs does nothing
   if (st.dirty) { toast('Lưu trước khi duyệt.', 'warn'); return; }
   const inc = incompleteItems();
   if (inc.length) { await showIncomplete(inc); return; }
-  approving = true; updateApprove();
+  approving = true; updateApprove(); msg('đang kiểm tra khi duyệt...');
   try {
     const r = await api.approve(ctx.pid, st.rev);
     st.setApprovals(r.approvals);                          // only the server-owned approvals: an edit made meanwhile stays unsaved
@@ -267,11 +287,12 @@ async function approve() {
     if (e.status === 409) toast('Bản trên server đã đổi, tải lại dự án rồi duyệt lại.', 'err', 6000);
     else if (e.status === 422) {
       if (issues) setIssues(issues);
-      const inc2 = incompleteItems();
-      if (inc2.length) await showIncomplete(inc2);
-      else { setTab('issues'); toast('Không duyệt được: còn lỗi trong storyboard', 'err', 6000); }
-    } else toast('Duyệt thất bại: ' + (e.status || e.message), 'err');
-  } finally { approving = false; updateApprove(); }
+      const bad = undrawableItems(issues), inc2 = incompleteItems();
+      if (bad.length) await showIncomplete(bad, { title: `Chưa duyệt được: ${bad.length} chỗ không vẽ được`, message: 'Khi thử vẽ lại, các shot dưới đây không dựng được hình với giá trị hiện tại. Sửa tham số của chúng (hoặc đổi kỹ thuật) rồi duyệt lại. Bấm một dòng để tới đó.', firstText: 'Tới chỗ đầu tiên' });
+      else if (inc2.length) await showIncomplete(inc2);
+      else { setTab('issues'); toast('Không duyệt được: storyboard còn lỗi. Xem tab Lỗi.', 'err', 6000); }
+    } else errorToast(e, 'Duyệt thất bại: ');
+  } finally { approving = false; msg(''); updateApprove(); }
 }
 
 function wireTopbar() {
@@ -321,7 +342,7 @@ function save() {
   })();
   return saving;
 }
-async function saveOnce() {
+async function saveOnce(tries = 0) {
   const btn = $('#btn-save'); btn.disabled = true; msg('đang lưu...');
   const sent = st.beginSave();                               // exactly what is sent; edits from now on are not part of this save
   try {
@@ -334,15 +355,58 @@ async function saveOnce() {
     shell.refreshPipeline();
     return true;
   } catch (e) {
-    if (e instanceof ApiError && e.status === 409) {
-      const dlg = modal({ title: 'Xung đột phiên bản (409)', body: h('div', { class: 'body', style: { maxWidth: '460px' } }, h('p', { text: 'Storyboard trên server đã thay đổi kể từ khi bạn mở (có thể agent hoặc cửa sổ khác vừa lưu).' }), h('p', { class: 'muted', text: 'Tải lại sẽ bỏ các thay đổi chưa lưu của bạn. Hoặc giữ bản nháp, xuất ra xem rồi tải lại sau.' })),
-        footer: h('footer', null, h('button', { text: 'Giữ bản nháp', onclick: () => dlg.close() }), h('button', { class: 'primary', text: 'Tải lại từ server', onclick: async () => { dlg.close(); await loadProject(ctx.pid); } })) });
-    } else if (e instanceof ApiError && e.status === 422) {
+    if (e instanceof ApiError && e.status === 409 && !(e.body && e.body.data_error)) return await resolveConflict(tries);
+    if (e instanceof ApiError && e.status === 422) {
       setIssues(e.body?.issues || e.body?.detail?.issues || []); setTab('issues');
-      toast('Không lưu được: storyboard còn lỗi', 'err', 6000);
-    } else toast('Lưu thất bại: ' + (e.status || '') + ' ' + e.message, 'err', 6000);
+      toast('Không lưu được: storyboard còn lỗi. Xem tab Lỗi.', 'err', 6000);
+    } else errorToast(e, 'Lưu thất bại: ', 6000);
     return false;
   } finally { btn.disabled = false; msg(''); }
+}
+
+/** Someone else saved a newer storyboard. Take what only they changed, keep what only I changed; ask only when both changed the same thing. */
+async function resolveConflict(tries) {
+  let theirs;
+  try { theirs = await api.project(ctx.pid); } catch (e) { errorToast(e, 'Không tải được bản trên máy chủ: ', 7000); return false; }
+  const base = JSON.parse(st.savedSnap || '{}'), mine = JSON.parse(st.snap());
+  const theirsDoc = JSON.parse(snapOfBoard(theirs.storyboard));
+  const m = mergeStoryboard(base, mine, theirsDoc);
+  if (m.status !== 'conflict' && tries < 2) {
+    let bad = false;
+    if (m.status === 'merged') {
+      try { const v = await api.validate(ctx.pid, m.value); bad = (v.issues || []).some((i) => i.level === 'error'); }
+      catch (e) { errorToast(e, 'Không kiểm tra được bản ghép: ', 7000); return false; }
+    }
+    if (!bad) {
+      st.rebase(m.value, theirs.storyboard, theirs.rev);
+      if (m.status === 'merged') toast(mergedNote(m.fromTheirs), 'ok', 6000);
+      setIssues(theirs.issues || []); validateSoon();
+      if (!st.dirty) return true;
+      return await saveOnce(tries + 1);
+    }
+  }
+  return await conflictDialog(theirs, tries);
+}
+const snapOfBoard = (b) => { const c = stripDerived(b); delete c.approvals; return JSON.stringify(c); };
+
+/** Both sides changed the same thing: the owner chooses. Every choice leaves the tab able to save again. */
+async function conflictDialog(theirs, tries) {
+  const choice = await ask({ title: 'Có người sửa storyboard này ở nơi khác', cancelValue: 'later',
+    message: 'Bản trên máy chủ đã đổi kể từ lúc bạn mở (tab khác hoặc đề xuất tự động vừa lưu), và có chỗ cả hai cùng sửa nên không tự ghép được.',
+    body: h('div', { class: 'hint', style: { marginTop: '8px' }, text: '"Ghi đè" giữ bản của bạn (bản kia vẫn nằm trong lịch sử của dự án). "Lấy bản trên máy chủ" bỏ các sửa đổi chưa lưu của bạn. "Để sau" giữ nguyên bản nháp, chưa lưu.' }),
+    buttons: [{ text: 'Để sau', value: 'later' }, { text: 'Lấy bản trên máy chủ', value: 'theirs' }, { text: 'Ghi đè bằng bản của tôi', value: 'mine', cls: 'primary' }] });
+  if (choice === 'theirs') {
+    if (await confirmDialog('Các sửa đổi chưa lưu của bạn sẽ bị bỏ, storyboard được tải lại từ máy chủ. Tiếp tục?', { title: 'Lấy bản trên máy chủ', ok: 'Bỏ bản của tôi', danger: true })) { await loadProject(ctx.pid); return true; }
+    return await conflictDialog(theirs, tries);
+  }
+  if (choice === 'mine') {
+    if (!(await confirmDialog('Bản của bạn sẽ thay bản trên máy chủ. Bản kia vẫn được giữ trong lịch sử của dự án. Tiếp tục?', { title: 'Ghi đè', ok: 'Ghi đè', danger: true }))) return await conflictDialog(theirs, tries);
+    let latest;
+    try { latest = await api.project(ctx.pid); } catch (e) { errorToast(e, 'Không tải được bản trên máy chủ: ', 7000); return false; }
+    st.rebase(JSON.parse(st.snap()), latest.storyboard, latest.rev, 'Ghi đè bản trên máy chủ');
+    return await saveOnce(2);
+  }
+  return false;                                              // "Để sau": the draft stays, the next save asks again
 }
 
 async function previewClip() {
@@ -359,10 +423,10 @@ async function previewClip() {
         if (MOCK) toast('Mock: clip minh họa là clip mẫu của kỹ thuật, không phải render thật', 'warn', 5000);
         break;
       }
-      if (j.state === 'error') { toast('Dựng clip lỗi: ' + (j.error || ''), 'err', 7000); break; }
+      if (j.state === 'error') { const d = jobFailText(j); toast('Không dựng được clip: ' + d.text, 'err', 7000, d.detail); break; }
       await new Promise((r) => scope.timeout(r, 500));
     }
-  } catch (e) { toast('Không dựng được clip: ' + (e.status || e.message), 'err'); }
+  } catch (e) { errorToast(e, 'Không dựng được clip: '); }
   finally { btn.disabled = false; msg(''); }
 }
 
@@ -370,7 +434,7 @@ async function previewClip() {
 let audio = null;
 let audioOk = false, vStart = 0, vT0 = 0, raf = 0;
 function setupAudio() {
-  const u = api.audioUrl(ctx.pid);
+  const u = st.draft?.audio ? api.audioUrl(ctx.pid) : '';      // no audio named in the storyboard: no request for it
   audioOk = !!u && !ctx.noAudio; audio.src = u ? api.url(u) : ''; audio.preload = 'auto';
   audio.onerror = () => { audioOk = false; };
 }

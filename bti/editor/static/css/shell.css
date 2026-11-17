@@ -38,11 +38,11 @@
 .home h1 { font-size: 20px; margin: 0 0 4px; }
 .home .head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
 .plist { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.prow { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(0, 1.4fr) auto; gap: 14px; align-items: center; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.prow { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(0, 1.4fr) 176px; gap: 14px; align-items: center; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
 .prow:hover { border-color: #3a4a68; }
 .prow .pt { font-weight: 600; } .prow .sub { color: var(--muted); font-size: 12px; }
 .prow .mono { color: var(--muted); font-size: 11px; }
-.prow .acts { display: flex; gap: 8px; align-items: center; }
+.prow .acts { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
 .minisb { display: flex; gap: 3px; margin-top: 6px; }
 .minisb i { width: 22px; height: 6px; border-radius: 3px; background: var(--elev); border: 1px solid var(--border); }
 .minisb i.st-done { background: var(--ok); border-color: var(--ok); } .minisb i.st-current, .minisb i.at { background: var(--accent); border-color: var(--accent); }
@@ -72,3 +72,4 @@
 .artv .acts { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
 .artv pre.text { white-space: pre-wrap; margin: 8px 0 0; max-height: 280px; overflow: auto; font: 13px/1.5 ui-serif, Georgia, serif; color: #d6dae3; background: var(--elev); padding: 8px 10px; border-radius: 6px; }
 .artv .conflict { color: var(--warn); }
+.prow.damaged { border-color: #6a5410; }

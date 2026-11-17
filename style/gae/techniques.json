@@ -2143,7 +2143,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "strip_step",
@@ -2156,7 +2157,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "strip_zoom",
@@ -2506,7 +2508,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "\\s*[1-8]\\s*[xX]\\s*[1-8]\\s*",
+     "pattern_hint": "Số cột x số hàng (mỗi số từ 1 đến 8), ví dụ 4x2"
     },
     {
      "name": "mirror",
@@ -2845,7 +2849,11 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(none|left|right|top|bottom)",
+     "pattern_hint": "Mỗi dòng một hướng: none, left, right, top hoặc bottom",
+     "min_items": 1,
+     "max_items": 12
     },
     {
      "name": "figure_scale",
@@ -3381,7 +3389,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "origin_space",
@@ -3577,7 +3586,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "labels",
@@ -3603,7 +3613,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "bend",
@@ -4103,7 +4114,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "region_opacity",
@@ -5537,7 +5549,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "to_label",
@@ -5560,7 +5573,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "control_point",
@@ -5573,7 +5587,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "route_color",
@@ -6279,7 +6294,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "axes_end",
@@ -6292,7 +6308,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "ray_origin",
@@ -6305,7 +6322,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "ray_count",
@@ -6543,7 +6561,10 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true,
+     "min_items": 4,
+     "max_items": 4
     },
     {
      "name": "to_quad",
@@ -6570,7 +6591,10 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true,
+     "min_items": 4,
+     "max_items": 4
     }
    ],
    "timing": {
@@ -6634,7 +6658,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "[^|]{0,60}\\|\\s*#[0-9a-fA-F]{6}\\s*\\|\\s*\\d{1,5}(\\.\\d{1,3})?\\s*",
+     "pattern_hint": "Mỗi dòng: TÊN | #màu | độ dày, ví dụ OAK PANEL | #785a3c | 200"
     },
     {
      "name": "section_box",
@@ -6973,7 +6999,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "[^|]{1,60}\\|\\s*\\d{1,3}(\\.\\d{1,3})?\\s*\\|\\s*-?\\d{1,5}(\\.\\d{1,3})?\\s*,\\s*-?\\d{1,5}(\\.\\d{1,3})?\\s*",
+     "pattern_hint": "Mỗi dòng: VÙNG | thu phóng | x,y, ví dụ MIRROR | 0.45 | 1450,80"
     },
     {
      "name": "piece_px",
@@ -7107,7 +7135,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(fill|outline|image|footage)(\\s*\\|\\s*(#[0-9a-fA-F]{6})?(\\s*\\|\\s*\\d{1,4}(\\.\\d{1,3})?(\\s*\\|\\s*\\d{1,3}(\\.\\d{1,3})?)?)?)?\\s*",
+     "pattern_hint": "Mỗi dòng: loại | #màu | giây bắt đầu | giây chuyển, loại là fill, outline, image hoặc footage; ví dụ fill | #ffbe3c"
     }
    ],
    "timing": {
@@ -7195,7 +7225,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "room_scale",
@@ -7268,7 +7299,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "room_label_start_s",
@@ -7356,7 +7388,8 @@
      "max": null,
      "unit": "canvas px",
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "uv_label_start_s",
@@ -7848,7 +7881,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "\\s*\\d{1,3}(\\.\\d{1,3})?(\\s*[,;]\\s*\\d{1,3}(\\.\\d{1,3})?){0,7}\\s*",
+     "pattern_hint": "Các số cách nhau bằng dấu phẩy, mỗi số một ô, ví dụ 14,5,0"
     },
     {
      "name": "stage_grey",
@@ -7858,7 +7893,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "\\s*[01](\\s*[,;]\\s*[01]){0,7}\\s*",
+     "pattern_hint": "Các số 0 hoặc 1 cách nhau bằng dấu phẩy, ví dụ 1,0,0"
     },
     {
      "name": "stage_gain",
@@ -7868,7 +7905,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "\\s*\\d{1,3}(\\.\\d{1,3})?(\\s*[,;]\\s*\\d{1,3}(\\.\\d{1,3})?){0,7}\\s*",
+     "pattern_hint": "Các số cách nhau bằng dấu phẩy, mỗi số một ô, ví dụ 0.9,1,1"
     }
    ],
    "timing": {
@@ -7965,7 +8004,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "\\s*(none|colour|grey|white|sepia|warm|contrast)(\\s*,\\s*(none|colour|grey|white|sepia|warm|contrast)){1,4}\\s*",
+     "pattern_hint": "Từ 2 đến 5 kiểu cách nhau bằng dấu phẩy: none, colour, grey, white, sepia, warm, contrast; ví dụ white,sepia,colour"
     },
     {
      "name": "panel_w_px",
@@ -8302,7 +8343,7 @@
      "name": "line_px",
      "type": "number",
      "default": 3,
-     "min": 0,
+     "min": 1,
      "max": 20,
      "unit": "px",
      "values": null,
@@ -8820,7 +8861,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(9:16|16:9|1:1|4:5|5:4|3:4|4:3|2:3|3:2)",
+     "pattern_hint": "Tỉ lệ khung: 9:16, 16:9, 1:1, 4:5, 5:4, 3:4, 4:3, 2:3 hoặc 3:2"
     }
    ],
    "timing": {
@@ -8933,7 +8976,10 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true,
+     "min_items": 4,
+     "max_items": 4
     },
     {
      "name": "fill_color",
@@ -8953,7 +8999,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(9:16|16:9|1:1|4:5|5:4|3:4|4:3|2:3|3:2)",
+     "pattern_hint": "Tỉ lệ khung: 9:16, 16:9, 1:1, 4:5, 5:4, 3:4, 4:3, 2:3 hoặc 3:2"
     }
    ],
    "timing": {
@@ -9123,7 +9171,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(9:16|16:9|1:1|4:5|5:4|3:4|4:3|2:3|3:2)",
+     "pattern_hint": "Tỉ lệ khung: 9:16, 16:9, 1:1, 4:5, 5:4, 3:4, 4:3, 2:3 hoặc 3:2"
     }
    ],
    "timing": {
@@ -9282,7 +9332,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(9:16|16:9|1:1|4:5|5:4|3:4|4:3|2:3|3:2)",
+     "pattern_hint": "Tỉ lệ khung: 9:16, 16:9, 1:1, 4:5, 5:4, 3:4, 4:3, 2:3 hoặc 3:2"
     }
    ],
    "timing": {
@@ -9442,7 +9494,9 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "pattern": "(9:16|16:9|1:1|4:5|5:4|3:4|4:3|2:3|3:2)",
+     "pattern_hint": "Tỉ lệ khung: 9:16, 16:9, 1:1, 4:5, 5:4, 3:4, 4:3, 2:3 hoặc 3:2"
     }
    ],
    "timing": {
@@ -11107,7 +11161,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "labels",
@@ -11505,7 +11560,8 @@
      "max": null,
      "unit": null,
      "values": null,
-     "measured": null
+     "measured": null,
+     "numeric_only": true
     },
     {
      "name": "anchor_fit",
@@ -11799,7 +11855,7 @@
      "name": "line_px",
      "type": "number",
      "default": 3,
-     "min": 0,
+     "min": 1,
      "max": 20,
      "unit": "px",
      "values": null,

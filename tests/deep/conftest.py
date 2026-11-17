@@ -142,3 +142,7 @@ def script_to_narration(client, pid):
     assert r.status_code == 200, r.text
     assert wait_job(client, r.json()["job_id"])["state"] == "done"
     return client.get(f"{P}/narration").json()
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "timing: wall-clock test, can fail on a loaded machine; skip with -m 'not timing'")

@@ -240,7 +240,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -295,12 +295,12 @@
       ]
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -351,12 +351,12 @@
       "quote": "\u201cA memorial, not a wedding record.\u201d"
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -408,12 +408,12 @@
       "role": "Curator, Example Museum (placeholder)"
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -466,7 +466,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -488,7 +488,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -505,7 +505,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -526,7 +526,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -565,12 +565,12 @@
       "y_pct": 56
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -595,7 +595,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -636,12 +636,12 @@
       "max_width_pct": 60
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   },
   {
@@ -658,7 +658,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": ""
   }
  ],

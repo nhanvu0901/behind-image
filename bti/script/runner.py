@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Callable
 
 from .env import redact
+from .store import make_parent
 
 HARD_TIMEOUT = 1800.0
 KEEP = 100
@@ -44,12 +45,12 @@ RESTART_MESSAGE = "the server was restarted while this job was running; its resu
 def write_record(path: Path, rec: dict) -> None:
     """Atomic write of one job record (best effort: a full disk must not break the job itself)."""
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        make_parent(path, 2)        # <project>/cache/jobs: never re-creates a project folder that was deleted
         fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(rec, f, ensure_ascii=False)
         os.replace(tmp, path)
-    except (OSError, ValueError, TypeError):
+    except (OSError, ValueError, TypeError):      # ProjectGone is an OSError too
         pass
 
 

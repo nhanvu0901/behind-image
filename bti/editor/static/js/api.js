@@ -10,6 +10,11 @@ let viewSignal = null;
 /** Called by the shell: requests that do not pass their own `signal` use this one. */
 export const setViewSignal = (s) => { viewSignal = s; };
 
+let netDown = false, netHook = null;
+/** The shell asks to be told when the server stops answering ('down', url) and when it answers again ('up', url). */
+export const setNetworkHook = (fn) => { netHook = fn; };
+const net = (state, u) => { if (state === 'up' ? !netDown : netDown && state === 'down') return; netDown = state === 'down'; try { netHook?.(state, u); } catch { /* the hook never breaks a request */ } };
+
 const hang = () => new Promise(() => {});
 const url = (path) => API_BASE + path;
 const JSON_HEADERS = { 'content-type': 'application/json' };
@@ -29,6 +34,7 @@ async function request(method, path, body, opts = {}) {
   else if (body !== undefined) { init.headers = JSON_HEADERS; init.body = JSON.stringify(body); }
   try {
     const res = await fetch(u, init);
+    net('up', u);
     if (!res.ok) {
       const err = await readBody(res);
       throw new ApiError(res.status, err, u);
@@ -37,6 +43,7 @@ async function request(method, path, body, opts = {}) {
     return await readBody(res);
   } catch (e) {
     if (e?.name === 'AbortError' || signal?.aborted) return hang();
+    if (e?.name === 'TypeError') net('down', u);
     throw e;
   }
 }

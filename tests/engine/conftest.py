@@ -80,3 +80,7 @@ def arnolfini():
     if not (d / "storyboard.json").exists():
         pytest.skip("projects/arnolfini not exported")
     return open_project(d)
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: takes minutes (the validate/draw sweep); skip with -m 'not slow'")

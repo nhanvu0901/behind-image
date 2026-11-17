@@ -6,20 +6,30 @@
 Mounted from app.py. Reads files only (never the engine), so it is cheap enough to call for every project."""
 from __future__ import annotations
 
+import os
 import shutil
+import uuid
 from pathlib import Path
 
 from fastapi import APIRouter, Query
 
-from .common import ApiError, compute_rev, read_json, valid_pid
+from bti.script.store import DocumentCorrupt, forget_lock, read_object, script_lock
 
-def project_meta(d: Path) -> dict:
-    """project.json of a folder as a dict ({} when missing or unreadable)."""
+from .common import ApiError, forget_save_lock, read_json, save_lock, storyboard_approval, valid_pid
+
+DELETE_WAIT_S = 2.0          # how long DELETE waits for a save in flight before it answers 409
+
+
+def project_meta(d: Path, strict: bool = False) -> dict:
+    """project.json of a folder as a dict ({} when there is none). When the file is there but unreadable or not an object:
+    `strict` raises DocumentCorrupt (409 `data_error: "project"` for the page); otherwise {} (used where the answer must not
+    fail: the protected check of a delete, so that a damaged project can still be removed)."""
     try:
-        pj = read_json(d / "project.json")
-    except Exception:       # noqa: BLE001
+        return read_object(d / "project.json", "project") or {}
+    except DocumentCorrupt:
+        if strict:
+            raise
         return {}
-    return pj if isinstance(pj, dict) else {}
 
 
 def is_protected(d: Path) -> bool:
@@ -70,13 +80,16 @@ def outputs_of(d: Path) -> list[dict]:
 
 def _script_state(d: Path) -> tuple[str, str]:
     """('done'|'available', detail) from the approved script files."""
-    from bti.script.store import DocumentCorrupt, load_narration, load_outline
+    from bti.script.store import load_narration, load_outline, narration_approval
     try:
         n, o = load_narration(d), load_outline(d)
     except (OSError, ValueError, DocumentCorrupt):
         return "available", "Tệp kịch bản không đọc được"
-    if n is not None and n.approved_fresh() and o is not None and o.approved_fresh():
+    na = narration_approval(n, o)         # the same function the stage and GET /narration use
+    if na["approved"]:
         return "done", "Lời dẫn đã duyệt"
+    if na["reason"] == "outline_changed":
+        return "available", "Dàn ý đã đổi sau khi duyệt lời dẫn: duyệt lại lời dẫn"
     if o is not None and o.approved_fresh():
         return "available", "Dàn ý đã duyệt, chờ viết và duyệt lời dẫn"
     if o is not None:
@@ -90,11 +103,10 @@ def _storyboard_state(d: Path) -> tuple[str, str]:
     if not f.is_file():
         return "locked", ""
     try:
-        sb = read_json(f)
-        ap = (sb.get("approvals") or {}).get("storyboard")
-        if ap and ap.get("rev") == compute_rev(sb):
+        sa = storyboard_approval(read_json(f))      # the same function `infer_stage` uses
+        if sa == "fresh":
             return "done", "Storyboard đã duyệt"
-        if ap:
+        if sa == "stale":
             return "available", "Duyệt cũ: storyboard đã sửa sau khi duyệt"
         return "available", "Storyboard chưa duyệt"
     except Exception:
@@ -130,7 +142,7 @@ def compute(root: Path, pid: str) -> dict:
     from .library_api import stage_of
     d = root / pid
     has_project = (d / "project.json").is_file()
-    pj = project_meta(d) if has_project else {}
+    pj = project_meta(d, strict=True) if has_project else {}
     # imported = came from an earlier edit, has no book data. A project.json may exist only to carry flags (`protected`).
     imported = bool(pj.get("imported")) or (not has_project and not (d / "source").is_dir())
     has_sb = (d / "storyboard.json").is_file()
@@ -196,9 +208,20 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, on_
 
     @r.delete("/projects/{pid}")
     def delete_project(pid: str, confirm: str = Query("")):
+        """Remove a project. It takes the project's script lock and its storyboard lock (in that order, see bti/script/store.py),
+        each for at most 2 seconds: when a save holds one the answer is 409 and nothing is removed. Under both locks the folder is
+        renamed away in one step (so no writer can find it, and the slug is free at once), then deleted."""
         if not valid_pid(pid):
             raise ApiError(404, "project not found")
         d = root / pid
+        if d.is_dir() and not d.is_symlink():
+            try:
+                project_meta(d, strict=True)
+            except DocumentCorrupt:
+                # the server cannot tell whether this project is protected: nothing is removed
+                raise ApiError(409, f"the project file of {pid!r} (project.json) is damaged, so the server cannot tell whether the "
+                                    "project is protected; repair or remove the folder by hand", data_error="project",
+                               code="project_file_damaged")
         if d.is_dir() and not d.is_symlink() and is_protected(d):
             raise ApiError(403, f"project {pid!r} is protected and cannot be deleted", protected=True)
         if d.is_symlink():
@@ -210,15 +233,60 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, on_
             raise ApiError(400, "invalid project path")
         if confirm != pid:
             raise ApiError(422, "type the project id in `confirm` to delete it")
-        busy = script_jobs.running(pid) if script_jobs is not None else None
-        if busy is not None:
-            raise ApiError(409, "a model job is running for this project; cancel it first (POST /api/jobs/{id}/cancel)",
-                           job_id=busy.id)
-        if preview_jobs is not None and preview_jobs.running(pid):
-            raise ApiError(409, "a preview is being rendered for this project; wait for it to finish")
-        shutil.rmtree(d)
+        sweep_trash(root)
+        busy_msg = ("a save of this project is in progress; try again in a moment", "project_busy")
+        sl, bl = script_lock(d), save_lock(d)
+        if not sl.acquire(timeout=DELETE_WAIT_S):
+            raise ApiError(409, busy_msg[0], code=busy_msg[1])
+        trash = None
+        try:
+            if not bl.acquire(timeout=DELETE_WAIT_S):
+                raise ApiError(409, busy_msg[0], code=busy_msg[1])
+            try:
+                if not d.is_dir():
+                    raise ApiError(404, "project not found")
+                busy = script_jobs.running(pid) if script_jobs is not None else None
+                if busy is not None:
+                    raise ApiError(409, "a model job is running for this project; cancel it first (POST /api/jobs/{id}/cancel)",
+                                   job_id=busy.id)
+                if preview_jobs is not None and preview_jobs.running(pid):
+                    raise ApiError(409, "a preview is being rendered for this project; wait for it to finish")
+                trash = root / f".deleting-{pid}-{uuid.uuid4().hex[:8]}"
+                try:
+                    os.rename(d, trash)           # one atomic step: the project is gone for every other request
+                except OSError as e:
+                    trash = None
+                    raise ApiError(409, f"the project folder could not be removed ({e.strerror or type(e).__name__})",
+                                   code="project_busy")
+            finally:
+                bl.release()
+        finally:
+            sl.release()
+        forget_lock(d)
+        forget_save_lock(d)
         if on_delete is not None:
             on_delete(pid)
+        remove_tree(trash)
         return {"deleted": pid}
 
     return r
+
+
+def remove_tree(path: Path | None) -> None:
+    """Delete a folder that nobody can reach by a project id any more; try again when a writer still finishing adds a file."""
+    if path is None:
+        return
+    for _ in range(5):
+        shutil.rmtree(path, ignore_errors=True)
+        if not path.exists():
+            return
+
+
+def sweep_trash(root: Path) -> None:
+    """Folders left by a delete that could not finish removing its files (a name that is never a project id)."""
+    try:
+        for f in root.glob(".deleting-*"):
+            if f.is_dir() and not f.is_symlink():
+                remove_tree(f)
+    except OSError:
+        pass

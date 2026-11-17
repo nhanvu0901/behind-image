@@ -298,7 +298,7 @@ Chỉ chạy khi bước Dựng hình đang mở (bước Kịch bản chỉ có
 | Space | Phát/dừng (phát âm thanh thật, hình bám theo) |
 | S | Cắt shot tại đầu phát |
 | L | Khóa/mở khóa mục đang chọn |
-| Delete | Xóa lớp phủ (hoặc shot nếu không chọn lớp phủ) |
+| Delete hoặc Backspace | Xóa lớp phủ (hoặc shot nếu không chọn lớp phủ). Bàn phím Mac không có Delete nên dùng Backspace; Ctrl+Z hoàn tác được |
 | `[` `]` | Shot trước/sau |
 | Mũi tên trái/phải | Từ trước/sau |
 | Ctrl+S | Lưu |

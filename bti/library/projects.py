@@ -47,10 +47,14 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
         if exclude is None:  # default: low-trust (machine-translated) sources are left out unless nothing else is left
             low = {w for w in art["works"] if catalogue.book_trust(w.split("/")[0])["trust"] == "low"}
             exclude = list(low) if len(low) < len(art["works"]) else []
+        if not (isinstance(exclude, list) and all(isinstance(x, str) for x in exclude)):
+            raise ProjectError("exclude must be a list of strings")
         excl = set(exclude)
         work_ids = [w for w in art["works"] if w not in excl]
     if not isinstance(work_ids, list) or not work_ids:
         raise ProjectError("work_ids must be a non-empty list")
+    if not all(isinstance(w, str) for w in work_ids):
+        raise ProjectError("work_ids must be a list of strings")
     if len(set(work_ids)) != len(work_ids):
         raise ProjectError("duplicate work ids")
     works = []
@@ -74,7 +78,11 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
         raise ProjectError(f"project {slug!r} already exists", 409)
     keys = [w.get("artwork_key") for w in works]
     key = artwork_key or keys[0]
-    d.mkdir(parents=True)
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        d.mkdir()                       # exclusive: of two simultaneous creates of one slug, one gets the folder, the other 409
+    except FileExistsError:
+        raise ProjectError(f"project {slug!r} already exists", 409)
     try:
         src = d / "source"
         tmp = d / ".dossier_tmp"
@@ -103,7 +111,8 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
 
 
 def infer_stage(d: Path) -> str:
-    """selected < script < voiced < storyboard < approved < rendered, from which files exist."""
+    """selected < script < voiced < storyboard < approved < rendered, from which files exist. `approved` only while the
+    storyboard approval names the current revision (a stale approval leaves the stage at `storyboard`)."""
     import json
     stage = "selected"
     if any((d / n).is_file() for n in ("script.md", "script.txt", "script.json")):
@@ -115,8 +124,8 @@ def infer_stage(d: Path) -> str:
     if sbf.is_file():
         stage = "storyboard"
         try:
-            appr = (json.loads(sbf.read_text(encoding="utf-8")).get("approvals") or {}).get("storyboard")
-            if appr:
+            from bti.editor.common import storyboard_approval      # the ONE rule: an approval counts only for the current revision
+            if storyboard_approval(json.loads(sbf.read_text(encoding="utf-8"))) == "fresh":
                 stage = "approved"
         except Exception:
             pass

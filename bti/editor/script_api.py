@@ -3,6 +3,7 @@ Mounted from app.py. Local tool, bound to 127.0.0.1. Keys never appear in any re
 from __future__ import annotations
 
 import re
+from contextlib import contextmanager
 from pathlib import Path
 
 from fastapi import APIRouter, Body, Query, Request
@@ -15,7 +16,7 @@ from bti.script.prompting import PromptError, build_prompt
 from bti.script.runner import BusyError, JobError, ScriptJobs
 from bti.script.stats import narration_stats
 
-from .common import ApiError, valid_pid
+from .common import ApiError, id_field, string_list, text_field, valid_pid
 from .pipeline_api import project_meta
 
 
@@ -29,12 +30,21 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         if not valid_pid(pid):
             raise ApiError(404, "project not found")
         d = root / pid
-        has_data = (d / "source").is_dir() or ((d / "project.json").is_file() and project_meta(d).get("imported") is not True)
+        has_data = (d / "source").is_dir() or ((d / "project.json").is_file() and project_meta(d, strict=True).get("imported") is not True)
         if not d.is_dir() or not has_data:
             raise ApiError(404, "project not found")
         if d.is_symlink() and not d.resolve().is_relative_to(root.resolve()):
             raise ApiError(404, "project not found")
         return d
+
+    @contextmanager
+    def hold(d: Path):
+        """The script lock of the project, and (under it) a check that the project still exists: a writer that waited for the
+        lock while the project was being deleted answers 404 and writes nothing (lock order: see bti/script/store.py)."""
+        with store.script_lock(d):
+            if not d.is_dir():
+                raise ApiError(404, "project not found")
+            yield
 
     def brief_for(d: Path) -> dict:
         return brief_mod.build_brief(d, library_root=library_root)
@@ -43,19 +53,30 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         return brief_mod.load_options(d)["wps"]
 
     def narr_payload(d: Path, n: store.Narration | None, brief: dict | None = None) -> dict:
+        """The narration document with what the page needs to explain its state:
+          approved         True only when the approval stands (`store.narration_approval`: same hash, outline approved and
+                           fresh, and it is the outline this narration was approved against).
+          approval_reason  why a recorded approval does NOT stand: "narration_edited" | "outline_not_approved" |
+                           "outline_changed"; null when it stands or nothing was approved.
+          stale            True when the outline changed after this narration was written (`source.outline_sha1` differs from
+                           the outline's revision). Information only: it never blocks saving.
+          outline_rev      the outline's revision now; `approved_outline_rev` the one the approval was given against.
+          chapter_diff     {not_in_outline: [ids], missing_in_narration: [ids]}: the differences that refuse an approval."""
         o = store.load_outline(d)
         if n is None:
             return {"narration": None, "rev": None, "issues": [], "stats": None, "approved": False, "stale": False,
+                    "approval_reason": None, "approved_outline_rev": None, "chapter_diff": store.chapter_diff(None, o),
                     "last_paste": store.read_paste(d, "narration"), "outline_rev": o.rev() if o else None}
         wps = wps_for(d)
         issues = validate.validate_narration(n, o, wps=wps, brief=brief)
         rev = n.rev()
-        ap = n.approval
-        # a narration approval stands only while the outline it was written from is still approved (design section 1)
-        fresh = bool(ap.get("approved")) and ap.get("sha1") == rev and o is not None and o.approved_fresh()
+        na = store.narration_approval(n, o)
+        written_for = n.source.get("outline_sha1") if isinstance(n.source, dict) else None
         return {"narration": n.to_dict(), "rev": rev, "issues": issues, "stats": narration_stats(n, o, wps),
-                "approved": fresh,
-                "stale": bool(ap.get("approved")) and not fresh,
+                "approved": na["approved"], "approval_reason": na["reason"],
+                "stale": bool(o is not None and written_for and written_for != o.rev()),
+                "approved_outline_rev": n.approval.get("outline_sha1") if n.approval.get("approved") else None,
+                "chapter_diff": store.chapter_diff(n, o),
                 "last_paste": store.read_paste(d, "narration"), "outline_rev": o.rev() if o else None}
 
     def outline_payload(d: Path, o: store.Outline | None, brief: dict | None = None) -> dict:
@@ -70,13 +91,14 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                 "last_paste": store.read_paste(d, "outline")}
 
     def str_field(body, key: str, required: bool = False) -> str:
-        v = body.get(key)
+        return text_field(body, key, required)
+
+    def rev_field(body) -> str:
+        v = body.get("rev")
         if v is None:
-            if required:
-                raise ApiError(422, f"{key} (string) is required")
             return ""
         if not isinstance(v, str):
-            raise ApiError(422, f"{key} must be a string")
+            raise ApiError(422, "rev must be a string")
         return v
 
     def stale_409(cur: str):
@@ -108,8 +130,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
 
     # ------------------------------------------------------------ models and jobs
     @r.get("/models")
-    def list_models():
-        return models_mod.public_models(models_path)
+    def list_models(refresh: int = Query(0)):
+        # `?refresh=1` forces a new `agy models` call; otherwise cached 10 minutes (1 minute after a failure).
+        # An antigravity entry carries `agy: {ok, reason}` (reason: timeout, config, auth... when not ok).
+        return models_mod.public_models(models_path, refresh=bool(refresh))
 
     @r.get("/jobs/{job_id}")
     def get_job(job_id: str, request: Request):
@@ -179,7 +203,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/outline/import")
     def outline_import(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             text = str_field(body, "text", True)
             brief = brief_for(d)
             res = parse_outline(text, set(brief["paragraph_ids"]), target_words=brief["options"]["target_words"])
@@ -200,7 +224,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.put("/projects/{pid}/outline")
     def put_outline(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             raw = body.get("outline")
             problem = store.doc_problem("outline", raw)
             if problem:
@@ -220,7 +244,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/outline/approve")
     def outline_approve(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             o = store.load_outline(d)
             if o is None:
                 raise ApiError(404, "no outline to approve")
@@ -228,7 +252,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             if errs:
                 raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs)
             try:
-                store.approve(d, "outline", str(body.get("rev") or ""))
+                store.approve(d, "outline", rev_field(body))
             except store.StaleRevision as e:
                 raise stale_409(str(e))
             return outline_payload(d, store.load_outline(d), brief_for(d))
@@ -242,9 +266,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         gate = validate.outline_gate(o)
         if gate:
             raise ApiError(409, gate["message"])
-        raw_ch = body.get("chapters")
-        if raw_ch is not None and not (isinstance(raw_ch, list) and all(isinstance(c, str) for c in raw_ch)):
-            raise ApiError(422, "chapters must be a list of chapter ids")
+        raw_ch = string_list(body.get("chapters"), "chapters", max_items=200, max_len=40)
         chapters = list(raw_ch or []) or None
         if chapters:
             bad = [c for c in chapters if o.chapter(c) is None]
@@ -263,7 +285,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/narration/import")
     def narration_import(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             text = str_field(body, "text", True)
             o = store.load_outline(d)
             if o is None:
@@ -302,7 +324,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.put("/projects/{pid}/narration")
     def put_narration(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             raw = body.get("narration")
             problem = store.doc_problem("narration", raw)
             if problem:
@@ -326,7 +348,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/narration/ops")
     def narration_ops(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             n = store.load_narration(d)
             if n is None:
                 raise ApiError(404, "no narration yet")
@@ -348,16 +370,19 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/narration/approve")
     def narration_approve(pid: str, body: dict = Body(...)):
         d = pdir(pid)
-        with store.script_lock(d):
+        with hold(d):
             n = store.load_narration(d)
             if n is None:
                 raise ApiError(404, "no narration to approve")
-            issues = validate.validate_narration(n, store.load_outline(d), wps=wps_for(d))
+            o = store.load_outline(d)
+            issues = validate.validate_narration(n, o, wps=wps_for(d))
             errs = validate.blocking(issues)
             if errs:
-                raise ApiError(422, "the narration has errors: " + "; ".join(e["message"] for e in errs[:5]), issues=issues)
+                diff = store.chapter_diff(n, o)
+                raise ApiError(422, "the narration has errors: " + "; ".join(e["message"] for e in errs[:5]), issues=issues,
+                               chapter_diff=diff)
             try:
-                store.approve(d, "narration", str(body.get("rev") or ""))
+                store.approve(d, "narration", rev_field(body))
             except store.StaleRevision as e:
                 raise stale_409(str(e))
             return narr_payload(d, store.load_narration(d), brief_for(d))

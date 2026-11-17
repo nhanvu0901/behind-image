@@ -1,5 +1,6 @@
 // Proposals panel: list, open one, accept/reject each change, apply.
-import { h, modal, toast, confirmDialog } from './util.js';
+import { h, modal, toast, errorToast, errorInto, confirmDialog } from './util.js';
+import { describeHttp } from './errmsg.js';
 import { ctx, bus } from './ctx.js';
 import { api } from './api.js';
 
@@ -16,9 +17,9 @@ export async function openProposals(onApplied, openId = null) {
     try {
       const res = await api.proposals(ctx.pid);
       if (Array.isArray(res)) items = res; else { items = res?.items || []; skipped = Array.isArray(res?.skipped) ? res.skipped : []; }   // files the server could not read: [{file, reason}]
-    } catch (e) { body.replaceChildren(h('div', { class: 'empty', text: 'Không tải được danh sách đề xuất: ' + (e.status || e.message) })); return; }
+    } catch (e) { const box = h('div', { class: 'empty' }); errorInto(box, e, 'Không tải được danh sách đề xuất: '); body.replaceChildren(box); return; }
     ctx.proposalsCount = items.length; bus.emit('proposals');
-    const skipNote = skipped.length ? h('div', { class: 'banner warn skipped-note', style: { flexDirection: 'column', alignItems: 'flex-start' } }, h('div', { text: `${skipped.length} tệp đề xuất không đọc được nên không có trong danh sách:` }), ...skipped.map((k) => h('div', { class: 'hint', text: `${k.file}: ${k.reason || 'không rõ lý do'}` }))) : null;
+    const skipNote = skipped.length ? h('div', { class: 'banner warn skipped-note', style: { flexDirection: 'column', alignItems: 'flex-start' } }, h('div', { text: `${skipped.length} tệp đề xuất không đọc được nên không có trong danh sách:` }), ...skipped.map((k) => h('div', { class: 'hint', title: k.reason || '', text: `${k.file}: ${describeHttp(422, { detail: k.reason || '' }).text}` }))) : null;
     body.replaceChildren(...[skipNote, items.length ? h('div', { class: 'list' }, ...items.map((p) => h('div', { class: 'list-item', onclick: () => open(p.id) },
       h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontWeight: 600 }, text: p.summary || p.id }), h('div', { class: 'hint', text: `${p.author} | ${p.created_at} | ${p.id}` })),
       h('span', { class: 'chip', text: `${p.n_changes} thay đổi` }), h('button', { class: 'small primary', text: 'Mở' })))) : h('div', { class: 'empty', text: 'Chưa có đề xuất nào.' })].filter(Boolean));
@@ -26,7 +27,7 @@ export async function openProposals(onApplied, openId = null) {
   async function open(id) {
     body.replaceChildren(h('div', { class: 'hint', text: 'Đang tải đề xuất...' }));
     let data;
-    try { data = await api.proposal(ctx.pid, id); } catch (e) { toast('Không mở được đề xuất: ' + (e.status || e.message), 'err'); return list(); }
+    try { data = await api.proposal(ctx.pid, id); } catch (e) { errorToast(e, 'Không mở được đề xuất: '); return list(); }
     const decision = {};
     for (const c of data.changes) c.op = normOp(c.op);
     for (const c of data.changes) decision[c.id] = c.blocked_by_lock ? null : 'accept';
@@ -40,7 +41,7 @@ export async function openProposals(onApplied, openId = null) {
       try {
         const res = await api.applyProposal(ctx.pid, id, accept);
         toast('Đã áp dụng đề xuất' + (res.skipped_locked?.length ? `; ${res.skipped_locked.length} mục khóa được giữ nguyên` : ''), 'ok'); dlg.close(); onApplied(res);
-      } catch (e) { toast('Áp dụng thất bại: ' + (e.status || '') + ' ' + (e.body?.detail?.message || e.message), 'err'); applyBtn.disabled = false; }
+      } catch (e) { errorToast(e, 'Áp dụng thất bại: '); applyBtn.disabled = false; }
     }
     const rows = data.changes.map((c) => {
       const blocked = !!c.blocked_by_lock;

@@ -1,5 +1,7 @@
 // Canvas timeline: chapters, shots (thumbs), overlay chips, words, waveform, playhead, minimap.
 import { api } from './api.js';
+import { MOCK } from './config.js';
+import { renderFailText } from './errmsg.js';
 import { ctx, bus, intentHsl } from './ctx.js';
 import { $, fmtTime } from './util.js';
 import { timeToX, xToTime, wordIndexAt, clamp, shotIndexAt, grabZone } from './logic.js';
@@ -54,6 +56,20 @@ function lanes() {
   return map;
 }
 
+/** A picture that did not load: ask again for the reason. A 422 `render_failed` names the shot; the timeline marks it and the page keeps working. */
+async function explainThumb(shotId, key) {
+  if (MOCK) return;
+  try {
+    const rk = key.slice(shotId.length + 1);
+    const r = await fetch(api.url(api.thumbUrl(ctx.pid, shotId, rk)));
+    if (r.status !== 422) return;
+    const b = await r.json().catch(() => null);
+    if (b?.code !== 'render_failed') return;
+    ctx.thumbFails.set(key, renderFailText({ ...b, shot: b.shot || shotId }));
+    requestDraw(); bus.emit('thumbfail');
+  } catch { /* the picture simply stays empty */ }
+}
+
 function thumb(shot) {
   const rk = ctx.renderKey || ctx.store.rev;
   const key = shot.id + '|' + rk;
@@ -61,7 +77,7 @@ function thumb(shot) {
   if (!t) {
     const img = new Image(); t = { img, ok: false };
     img.onload = () => { t.ok = true; requestDraw(); };
-    img.onerror = () => { t.err = true; };
+    img.onerror = () => { t.err = true; explainThumb(shot.id, key); };
     img.src = api.url(api.thumbUrl(ctx.pid, shot.id, rk));
     thumbs.set(key, t);
     if (thumbs.size > 400) thumbs.delete(thumbs.keys().next().value);
@@ -131,6 +147,7 @@ function draw() {
     if (s.transition_in && w > 30) { c.fillStyle = '#ffd666'; c.fillText('TR', x0 + 3, Y.shot + R.shot - 7); }
     c.restore();
     if (sel) { c.strokeStyle = '#4f9cff'; c.lineWidth = 2; c.strokeRect(x0 + 1, Y.shot + 1, Math.max(1, w - 3), R.shot - 2); }
+    if (ctx.thumbFailOf(s.id) && w > 4) { c.save(); c.strokeStyle = '#ff5d5d'; c.lineWidth = 2; c.setLineDash([2, 3]); c.strokeRect(x0 + 1, Y.shot + 1, Math.max(1, w - 3), R.shot - 2); if (w > 20) { c.fillStyle = '#ff5d5d'; c.font = 'bold 13px sans-serif'; c.fillText('!', x0 + w - 12, Y.shot + R.shot - 10); } c.restore(); }
     if (ctx.incompleteOf(s.id) && w > 4) {           // incomplete (an empty required slot): amber dashed frame and a "!" badge
       c.save(); c.strokeStyle = '#ffb020'; c.lineWidth = 2; c.setLineDash([4, 3]); c.strokeRect(x0 + 1, Y.shot + 1, Math.max(1, w - 3), R.shot - 2); c.restore();
       if (w > 24) pill('! ' + ctx.incompleteOf(s.id).join(','), x0 + 3, Y.shot + R.shot - 16, '#a86a00');
@@ -340,6 +357,7 @@ export function fitView() { view.pps = minPps(); view.t0 = 0; clampView(); reque
 export function zoomToShowWords() { view.pps = Math.max(view.pps, 140); clampView(); requestDraw(); }
 async function loadWave() {
   waves = null; ctx.noAudio = false;
+  if (!ctx.store.draft?.audio) { ctx.noAudio = true; bus.emit('audio-state', false); requestDraw(); return; }   // the project says it has no audio: do not ask for it
   try { waves = await api.waveform(ctx.pid, 4000); } catch (e) { waves = null; ctx.noAudio = e.status === 404; }
   bus.emit('audio-state', !ctx.noAudio);
   requestDraw();

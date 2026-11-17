@@ -216,7 +216,7 @@ class MapBackdrop:
         if mode == "auto":
             mode = "image" if self.map_key else "procedural"
         if mode == "image" and not self.map_key:
-            raise ValueError("background 'image' needs a `map` slot")
+            mode = "procedural"             # no map image in the slot yet: draw the procedural map instead of failing
         self.mode, self.seed = mode, int(seed)
 
     def frame(self, f, view):

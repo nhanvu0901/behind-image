@@ -72,11 +72,15 @@ def get_json(url: str, params: dict[str, Any] | None = None, **kw) -> Any:
         raise MediaHTTPError(f"response was not JSON for {_short(url)}") from exc
 
 
+import contextvars
+NO_NEW_PARENTS: contextvars.ContextVar = contextvars.ContextVar("bti_media_no_new_parents", default=False)
+
+
 def download_file(url: str, dest, *, max_bytes: int, timeout: float = 120, **kw):
     """Stream `url` to `dest` (via a .part file), refusing more than `max_bytes`."""
     from pathlib import Path
     dest = Path(dest)
-    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.parent.mkdir(parents=not NO_NEW_PARENTS.get(), exist_ok=True)   # set by the facade with require_root: never re-create a project
     tmp = dest.with_name(dest.name + ".part")
     total = 0
     try:

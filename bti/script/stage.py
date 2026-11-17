@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .store import DocumentCorrupt, load_narration, load_outline
+from .store import DocumentCorrupt, load_narration, load_outline, narration_approval
 
 ORDER = ["selected", "outlined", "script", "voiced", "storyboard", "approved", "rendered"]
 
@@ -11,8 +11,8 @@ ORDER = ["selected", "outlined", "script", "voiced", "storyboard", "approved", "
 def script_stage(pdir: Path) -> str | None:
     try:
         n, o = load_narration(pdir), load_outline(pdir)
-        if n is not None and n.approved_fresh() and o is not None and o.approved_fresh():
-            return "script"          # the narration approval counts only while the outline it was written from is approved
+        if n is not None and narration_approval(n, o)["approved"]:
+            return "script"          # the narration approval counts only against the outline it was approved with
         if o is not None and o.approved_fresh():
             return "outlined"
     except (OSError, ValueError, DocumentCorrupt):

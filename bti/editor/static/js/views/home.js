@@ -1,7 +1,7 @@
 // Home: the projects, each with its stage and a "Tiếp tục" button that opens it at the step its stage calls for.
 import { api } from '../api.js';
 import { SHOW_ALL } from '../config.js';
-import { h } from '../util.js';
+import { h, detailFold } from '../util.js';
 import { stageLabel } from '../labels.js';
 import { projectHash } from '../router.js';
 
@@ -17,12 +17,24 @@ export async function mount(host, { shell, scope }) {
     if (scope.dead) return;
     const list = all.filter((p) => SHOW_ALL || !/^(lab_|demo_)/.test(p.id))
       .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
-    const pipes = await Promise.all(list.map((p) => api.pipeline(p.id).catch(() => null)));
+    const pipes = await Promise.all(list.map((p) => (p.data_error ? null : api.pipeline(p.id).catch(() => null))));
     if (scope.dead) return;
     render(list, pipes);
   }
 
+  /** A project whose files cannot be read: shown as damaged, with no way into its steps. Delete still asks the server. */
+  function damagedRow(p) {
+    const del = h('button', { class: 'small danger', text: 'Xóa', title: 'Xóa dự án này (phải gõ mã dự án để xác nhận)', onclick: async () => { if (await shell.deleteProject(p)) load(); } });
+    return h('div', { class: 'prow damaged', 'data-pid': p.id },
+      h('div', null, h('div', { class: 'pt', text: p.id }), h('div', { class: 'mono', text: p.id })),
+      h('div', null, h('span', { class: 'tag lowtrust', text: 'Dự án hỏng' })),
+      h('div', null, h('div', { text: 'Không đọc được tệp của dự án này.' }),
+        h('div', { class: 'sub', text: 'Cần sửa tệp project.json hoặc xóa thư mục dự án bằng tay trong máy chủ.' }), p.data_error && p.data_error !== true ? detailFold(String(p.data_error)) : null),
+      h('div', { class: 'acts' }, del, h('button', { class: 'primary', text: 'Tiếp tục', disabled: true, title: 'Dự án hỏng không mở được' })));
+  }
+
   function row(p, pl) {
+    if (p.data_error) return damagedRow(p);
     const cur = pl?.steps.find((s) => s.id === pl.current);
     const del = pl?.protected
       ? h('span', { class: 'tag', title: 'Dự án gốc, không xóa được', text: 'được bảo vệ' })

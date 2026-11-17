@@ -2029,7 +2029,7 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2148,7 +2148,7 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2208,7 +2208,7 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2265,7 +2265,7 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2381,7 +2381,7 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2502,7 +2502,7 @@
       ]
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2659,7 +2659,7 @@
       "quote": "“A memorial, not a wedding record.”"
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -2703,7 +2703,7 @@
       "y_pct": 56
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -3446,7 +3446,7 @@
       "box_color": "#f5cd1e"
      },
      "locked": false,
-     "source": "manual",
+     "source": "human",
      "note": ""
     }
    ]
@@ -3844,7 +3844,7 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -3909,7 +3909,7 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]
@@ -4175,7 +4175,7 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ]

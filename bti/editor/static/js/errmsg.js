@@ -4,6 +4,8 @@
 // and survives a body it does not recognise. issueText(issue) does the same for the validation issues ({code, message, ...}).
 // jobErrorText(job) does it for a failed model job. Pure; tested in tests/editor_frontend/errmsg.test.mjs.
 
+import { storyboardIssueText } from './sbissues.js';
+
 const VI = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
 export const isVietnamese = (s) => VI.test(String(s || ''));
 const unquote = (s) => String(s).trim().replace(/^'(.*)'$/s, '$1').replace(/^"(.*)"$/s, '$1');
@@ -64,6 +66,7 @@ const CATALOG = [
   [/cannot merge an artwork with itself/i, 'Không gộp một tác phẩm với chính nó.'],
   [/artwork has only one source/i, 'Tác phẩm này chỉ có một nguồn nên không tách được.'],
   // storyboard, media, previews
+  [/^licence |licence is missing|object is not public domain/i, (m, b, raw) => licenceText(raw).text],
   [/^validation failed|cannot approve while there are errors|save refused/i, 'Storyboard còn lỗi nên chưa lưu hoặc duyệt được. Xem danh sách lỗi.'],
   [/^storyboard not found/i, 'Dự án chưa có storyboard.'],
   [/storyboard\.json is corrupt/i, 'Tệp storyboard.json bị hỏng.'],
@@ -124,10 +127,24 @@ export function rawDetail(status, body) {
 }
 
 /** Vietnamese message for an HTTP error. Never returns an empty text. */
-const DATA_ERROR = { timing: 'Tệp thời gian (timing) của dự án bị thiếu hoặc hỏng.', storyboard: 'Tệp storyboard của dự án bị hỏng hoặc thiếu.', script: 'Tệp dàn ý hoặc lời dẫn của dự án bị hỏng. Bản dán gần nhất (nếu có) vẫn được giữ.', style: 'Không đọc được kiểu (style) mà dự án dùng.' };
+const BY_CODE_HTTP = {
+  project_busy: () => 'Dự án đang được lưu hoặc xử lý ở chỗ khác nên chưa xóa được. Đợi vài giây rồi thử lại.',
+  too_deep: () => 'Dữ liệu gửi lên có cấu trúc lồng quá sâu nên máy chủ từ chối.',
+  project_file_damaged: () => 'Tệp project.json của dự án này bị hỏng nên ứng dụng không xóa được. Hãy sửa hoặc xóa thư mục dự án bằng tay trong máy chủ.',
+  undrawable: () => 'Storyboard có chỗ không vẽ được nên chưa duyệt được. Xem danh sách các shot bị lỗi.',
+  render_failed: (b) => renderFailText(b),
+};
+/** "Không dựng được shot s0012 (CAM-01): ..." from the 422 `render_failed` body ({shot, overlay, technique}). */
+export function renderFailText(b) {
+  const where = b?.shot ? `shot ${b.shot}${b.overlay ? `, lớp phủ ${b.overlay}` : ''}` : 'một shot';
+  return `Không dựng được hình của ${where}${b?.technique ? ` (kỹ thuật ${b.technique})` : ''} với các giá trị hiện tại. Sửa tham số của nó hoặc đổi sang kỹ thuật khác.`;
+}
+const DATA_ERROR = { project: 'Tệp project.json của dự án bị hỏng hoặc sai dạng.', source: 'Văn bản nguồn của dự án bị hỏng hoặc không đọc được (không phải UTF-8).', library: 'Một tệp của thư viện sách bị hỏng.', timing: 'Tệp thời gian (timing) của dự án bị thiếu hoặc hỏng.', storyboard: 'Tệp storyboard của dự án bị hỏng hoặc thiếu.', script: 'Tệp dàn ý hoặc lời dẫn của dự án bị hỏng. Bản dán gần nhất (nếu có) vẫn được giữ.', style: 'Không đọc được kiểu (style) mà dự án dùng.' };
 export function describeHttp(status, body) {
   const raw = rawDetail(status, body);
   const s = unquote(raw);
+  const byCode = body && typeof body === 'object' && typeof body.code === 'string' ? BY_CODE_HTTP[body.code] : null;
+  if (byCode) return { text: byCode(body), detail: raw };
   if (body && typeof body === 'object' && typeof body.data_error === 'string') return { text: DATA_ERROR[body.data_error] || 'Dữ liệu của dự án không dùng được.', detail: raw };
   if (s) {
     for (const [re, out] of CATALOG) {
@@ -227,6 +244,10 @@ const BUILD = {
 };
 const GATES = [[/There is no outline/i, 'outline_missing'], [/not approved/i, 'outline_not_approved'], [/Stale outline approval|changed after it was approved/i, 'outline_stale']];
 
+/** A storyboard issue: it points into the storyboard document (shots, assets, canvas...) or came from the storyboard checks. */
+const SB_PATH = /^(shots\b|assets\b|canvas\b|end\b|audio\b|schema\b|approvals\b|project\b|title\b|style\b|regions\b|overlays\b)|^$/;
+const isStoryboardIssue = (i) => !!i && (!!i.shot || (typeof i.path === 'string' && SB_PATH.test(i.path) && !i.chapter && !i.beat && !i.fact));
+
 /** Vietnamese sentence for a validation issue. `detail` holds the server's English text when no builder knows the code. */
 export function issueText(issue) {
   const raw = String(issue?.message || '');
@@ -234,6 +255,7 @@ export function issueText(issue) {
   if (!code || !BUILD[code]) { const g = GATES.find(([re]) => re.test(raw)); if (g) code = g[1]; }
   const fn = BUILD[code];
   if (fn) { try { return { text: fn(issue || {}, raw), detail: raw }; } catch { /* fall through */ } }
+  if (isStoryboardIssue(issue)) return storyboardIssueText(issue);       // sbissues.js: by code, else by the shape of the message
   if (isVietnamese(raw)) return { text: raw, detail: '' };
   return { text: 'Có một lưu ý về nội dung mà ứng dụng chưa dịch được. Xem "chi tiết".', detail: raw, generic: true };
 }
@@ -252,4 +274,29 @@ export function parseFailText(errorText) {
   if (/No chapters were found/i.test(first)) return 'Không đọc được dàn ý: không thấy chương nào (mỗi chương bắt đầu bằng một dòng như: ## c01 MỞ ĐẦU).';
   if (isVietnamese(first)) return first;
   return `Không đọc được ${what} từ văn bản đã dán.`;
+}
+
+// ---------------------------------------------------------------- licence of an image
+/** Vietnamese reason why the licence gate refused an image (the server's `licence_reason`). */
+export function licenceText(raw) {
+  const s = String(raw || ''), name = (/licen[cs]e '(.*?)'/i.exec(s) || [])[1];
+  const q = name ? ` "${name}"` : '';
+  let text;
+  if (/licence is missing/i.test(s)) text = 'Hình này không ghi giấy phép, nên không dùng được.';
+  else if (/non-commercial/i.test(s)) text = `Giấy phép${q} không cho dùng thương mại, nên không nhập được.`;
+  else if (/no-derivatives/i.test(s)) text = `Giấy phép${q} cấm sửa đổi, nên không nhập được.`;
+  else if (/not public domain/i.test(s)) text = 'Tác phẩm này không thuộc phạm vi công cộng, nên không nhập được.';
+  else if (/allow-list/i.test(s)) text = `Giấy phép${q} chưa nằm trong danh sách được phép (điều khoản hạn chế hoặc không rõ).`;
+  else text = isVietnamese(s) ? s : 'Giấy phép của hình này không được chấp nhận.';
+  return { text, detail: s !== text ? s : '' };
+}
+
+// ---------------------------------------------------------------- a failed preview clip (job of /preview)
+/** Vietnamese reason why a preview job failed. `job.error` is the server's text. */
+export function jobFailText(job) {
+  const raw = String(job?.error || '');
+  if (job?.error_code === 'render_failed') return { text: renderFailText(job), detail: raw };
+  const d = describeHttp(422, { detail: raw });
+  if (d.text === BY_STATUS[422] || !raw) return { text: 'Máy chủ không dựng được clip này.', detail: raw };
+  return d;
 }

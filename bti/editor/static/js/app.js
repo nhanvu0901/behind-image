@@ -1,6 +1,6 @@
 // The app shell: a persistent frame (name, project picker, project title, stepper, health, messages) and ONE view at a time.
 // The views live in ./views/*.js and export mount(host, ctx) -> { isDirty?, save?, pipelineChanged?, unmount? }.
-import { api, setViewSignal } from './api.js';
+import { api, setViewSignal, setNetworkHook } from './api.js';
 import { MOCK, SHOW_ALL } from './config.js';
 import { h, toast, errorToast, errorInto, setStatus, closeAllModals, ask, modal } from './util.js';
 import { describeError } from './errmsg.js';
@@ -164,7 +164,7 @@ function renderPicker() {
   const sel = $('#project-pick');
   const list = S.projects.filter((x) => SHOW_ALL || !/^(lab_|demo_)/.test(x.id) || x.id === S.pid);
   sel.replaceChildren(h('option', { value: '', text: list.length ? '- Chọn dự án -' : '(chưa có dự án)' }),
-    ...list.map((x) => h('option', { value: x.id, text: `${x.title || x.id} (${x.id})` })));
+    ...list.map((x) => h('option', { value: x.id, disabled: !!x.data_error, text: x.data_error ? `${x.id} (dự án hỏng)` : `${x.title || x.id} (${x.id})` })));
   sel.value = S.pid && list.some((x) => x.id === S.pid) ? S.pid : '';
 }
 
@@ -269,10 +269,11 @@ async function boot() {
   let lastSync = 0;                                      // another tab may have created or deleted a project: refresh the picker when this tab is looked at again
   window.addEventListener('focus', () => { if (Date.now() - lastSync > 5000 && !S.guarding) { lastSync = Date.now(); refreshProjects(); } });
   window.addEventListener('beforeunload', (e) => { if (S.view?.isDirty?.()) { e.preventDefault(); e.returnValue = ''; } });
+  setNetworkHook((state, url) => { if (state === 'up' || !/\/api\/health/.test(url)) loadHealth(); });   // the badges follow the server at once, not 30 s later
   setInterval(loadHealth, 30000);
   await Promise.all([loadHealth(), refreshProjects()]);
   await navigate(parseHash(location.hash));
 }
 
 window.__app = { S, shell };
-boot().catch((e) => { document.body.prepend(h('pre', { class: 'pre', text: 'Lỗi khởi động: ' + (e.message || e) })); });
+boot().catch((e) => { document.body.prepend(h('pre', { class: 'pre', text: 'Lỗi khởi động: ' + describeError(e).text })); });

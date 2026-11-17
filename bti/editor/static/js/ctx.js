@@ -21,6 +21,7 @@ export const ctx = {
   playing: false,
   proposalsCount: 0,
   pick: null,         // active "pick on preview" request: {space, cb}
+  thumbFails: new Map(), // 'shotId|rev' -> Vietnamese reason a shot's small picture could not be drawn (422 render_failed)
   incomplete: new Map(), // item key ('s0001' or 's0001/o1') -> names of its empty required slots/params
   health: null,
   canvasDims() { return this.store.draft?.canvas || { w: 1920, h: 1080 }; },
@@ -30,6 +31,7 @@ export const ctx = {
   tech(id) { return this.reg.byId[id] || null; },
   /** Recompute which shots/overlays are incomplete (registry rules now, the server's `incomplete` issues when they arrive). */
   refreshIncomplete() { this.incomplete = this.store.draft ? incompleteMap(this.store.draft, (id) => this.tech(id), this.issues) : new Map(); },
+  thumbFailOf(shotId) { return this.thumbFails.get(shotId + '|' + (this.renderKey || this.store.rev)) || null; },
   incompleteOf(shotId, overlayId = null) { return this.incomplete.get(overlayId ? `${shotId}/${overlayId}` : shotId) || null; },
   incompleteText(shotId, overlayId = null) { const n = this.incompleteOf(shotId, overlayId); return n ? missingLabel(n) : ''; },
   /** Move the playhead (clamped). The one way to seek; the timeline, the keys and the selection all use it. */
@@ -37,7 +39,7 @@ export const ctx = {
   /** Forget everything about the project that was open (the style registry is kept). */
   reset() {
     this.pid = null; this.store.reset(); this.assetInfo = {}; this.issues = []; this.t = 0; this.playing = false;
-    this.proposalsCount = 0; this.pick = null; this.slotPick = null; this.noAudio = false; this.incomplete = new Map(); this.renderKey = null;
+    this.proposalsCount = 0; this.pick = null; this.slotPick = null; this.noAudio = false; this.incomplete = new Map(); this.renderKey = null; this.thumbFails = new Map();
   },
 };
 

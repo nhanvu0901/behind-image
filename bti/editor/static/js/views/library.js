@@ -2,10 +2,11 @@
 // Step 1 of a NEW video. Mounted by the shell at #/library[/books|/book/<id>|/work/<book>/<n>|/artwork/<key>].
 import { api } from '../api.js';
 import { h, toast, errorToast, errorInto, detailFold, modal as uiModal, confirmDialog } from '../util.js';
+import { describeError } from '../errmsg.js';
 import { fold } from '../text.js';
 import { go } from '../nav.js';
 import { projectHash } from '../router.js';
-import { KIND, RIGHTS, STAGE, shortBook, LOW_TRUST as LOWTXT } from '../labels.js';
+import { KIND, RIGHTS, STAGE, shortBook, textSourceLabel, LOW_TRUST as LOWTXT } from '../labels.js';
 
 let root = null, scope = null;                  // the view root and its lifecycle scope (set by mount)
 const J = (url) => api.get(url);
@@ -194,7 +195,7 @@ function createDialog(w, also) {
 // ------------------------------------------------------------------ artworks (default view)
 const bookBadges = (books, low = []) => h('div', { class: 'badges' }, books.map((b) => h('span', { class: 'tag also' + (low.includes(b) ? ' lowtrust' : ''), title: low.includes(b) ? LOWTXT : '', text: shortBook(b) + (low.includes(b) ? ' (dịch máy)' : '') })));
 const lowTag = (title) => h('span', { class: 'tag lowtrust', title: title || LOWTXT, text: LOWTXT });
-const textTag = (t) => (t ? h('span', { class: 'tag ' + (t === 'clean' ? 'digital' : t === 'layer' ? 'scan' : ''), title: 'Nguồn văn bản: clean = đã làm sạch, layer = lớp chữ gốc của PDF', text: t }) : null);
+const textTag = (t) => (t ? h('span', { class: 'tag ' + (t === 'clean' ? 'digital' : t === 'layer' ? 'scan' : ''), title: 'Nguồn văn bản: đã làm sạch hoặc lớp chữ gốc của PDF', text: textSourceLabel(t) }) : null);
 const FILTER = { q: '', sort: 'sources', century: '', project: '', multi: false, themes: false };
 
 async function artworksView() {
@@ -375,7 +376,7 @@ export async function mount(host, ctx) {
     else if (r.sub === 'work') await workDetail(r.bid, r.n);
     else await artworksView();
   } catch (e) {
-    setMain(h('div', { class: 'empty', text: 'Lỗi: ' + (e.message || e) }));
+    setMain(h('div', { class: 'empty', text: 'Lỗi: ' + describeError(e).text }));
     if (e.detail) mainEl.firstChild.append(detailFold(e.detail));
   }
   return {};

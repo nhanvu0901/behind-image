@@ -25,26 +25,39 @@ def slugify(title: str, fallback: str = "img") -> str:
     return slug or fallback
 
 
-def media_dir(project_dir: Path) -> Path:
+def media_dir(project_dir: Path, require_root: bool = False) -> Path:
+    """`<project>/media`. `require_root`: the project folder must already exist (FileNotFoundError otherwise) and is never
+    created here; the default (stand-alone use) makes the whole path."""
     d = Path(project_dir) / "media"
-    d.mkdir(parents=True, exist_ok=True)
+    if require_root and not Path(project_dir).is_dir():
+        raise FileNotFoundError(f"project folder {Path(project_dir).name!r} does not exist")
+    d.mkdir(parents=not require_root, exist_ok=True)
     return d
 
 
 def load_index(project_dir: Path) -> dict:
     doc = read_json(Path(project_dir) / "media" / INDEX_NAME, {}) or {}
-    doc.setdefault("items", {})
+    if not isinstance(doc, dict):            # valid JSON of the wrong shape: set aside like a corrupt file, start a new index
+        try:
+            p = Path(project_dir) / "media" / INDEX_NAME
+            p.replace(p.with_name(p.name + ".corrupt"))
+        except OSError:
+            pass
+        doc = {}
+    if not isinstance(doc.get("items"), dict):
+        doc["items"] = {}
+    doc["items"] = {k: v for k, v in doc["items"].items() if isinstance(v, dict)}
     return doc
 
 
-def save_index(project_dir: Path, doc: dict) -> None:
-    write_json_atomic(media_dir(project_dir) / INDEX_NAME, doc)
+def save_index(project_dir: Path, doc: dict, require_root: bool = False) -> None:
+    write_json_atomic(media_dir(project_dir, require_root) / INDEX_NAME, doc, parents=not require_root)
 
 
 def taken_keys(project_dir: Path, index: dict) -> set[str]:
     keys = {v.get("key") for v in index["items"].values()}
     sb = read_json(Path(project_dir) / "storyboard.json", {}) or {}
-    if isinstance(sb.get("assets"), dict):
+    if isinstance(sb, dict) and isinstance(sb.get("assets"), dict):
         keys |= set(sb["assets"])
     return {k for k in keys if k}
 
@@ -74,7 +87,7 @@ def build_asset(file_rel: str, kind: str, title: str, artist: str, year: str,
             "width": int(width), "height": int(height), "credit": credit}
 
 
-def register(project_dir: Path, ident: str, key: str, asset: dict) -> None:
+def register(project_dir: Path, ident: str, key: str, asset: dict, require_root: bool = False) -> None:
     idx = load_index(project_dir)
     idx["items"][ident] = {"key": key, "asset": asset}
-    save_index(project_dir, idx)
+    save_index(project_dir, idx, require_root)

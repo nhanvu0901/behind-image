@@ -123,8 +123,20 @@ def build_all(keys: list[str] | None = None, log=print) -> dict:
 
 
 def load(key: str) -> dict | None:
+    """The dossier of an artwork; None when there is none (or the key cannot be a folder name). A file that is there but
+    damaged raises catalogue.LibraryDataError (a ValueError that names the file); a dossier that is not an object too."""
+    if not isinstance(key, str) or not key or "\x00" in key or "/" in key or len(key.encode("utf-8", "ignore")) > 200:
+        return None
     f = dossier_path(key)
-    return catalogue.read_json(f) if f.is_file() else None
+    try:
+        if not f.is_file():
+            return None
+    except OSError:
+        return None
+    d = catalogue.read_json(f)
+    if not isinstance(d, dict):
+        raise catalogue.LibraryDataError("dossier.json of %s is corrupt: the top level must be an object" % key[:60])
+    return d
 
 
 def summary(done: dict) -> dict:

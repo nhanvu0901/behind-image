@@ -63,7 +63,7 @@ export const isIncompleteIssue = (i) => i?.code === 'incomplete';
 export function issueMissing(issue) {
   if (Array.isArray(issue.missing) && issue.missing.length) return issue.missing.map(String);
   const m = String(issue.message || '').match(NAME_RE);
-  return [m ? m[1] : String(issue.message || 'chưa đủ')];
+  return [m ? m[1] : 'chưa đủ'];
 }
 /** Issue path ("shots[3].overlays[0].slots.mask") -> key 'sNNNN' or 'sNNNN/oN' of the item it belongs to. */
 export function itemKeyOfPath(draft, path) {

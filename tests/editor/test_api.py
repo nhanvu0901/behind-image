@@ -484,10 +484,10 @@ def test_real_media_exceptions_are_translated(root):
     class LicenceRejected(Exception):
         pass
 
-    def imp(d, s, i):
+    def imp(d, s, i, **kw):
         raise LicenceRejected("CC BY-NC not allowed")
 
-    def up(d, f, m):
+    def up(d, f, m, **kw):
         raise ValueError("upload metadata is missing: source_url")
 
     def se(q, source="commons", kind="image", limit=24):

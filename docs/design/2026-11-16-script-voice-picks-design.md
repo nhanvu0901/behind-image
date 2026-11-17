@@ -20,7 +20,7 @@ Inputs to this design:
 | `storyboard` | `storyboard.json` (drafted as a proposal, then edited) | The existing editing page |
 | `approved`, `rendered` | approvals, the final video | The owner approves; the server renders |
 
-**Each approval is tied to a hash.** An approval stores the sha1 of the approved file. Any later edit makes the approval stale, and later stages refuse to run on a stale approval. This is the comic pipeline's rule.
+**Each approval is tied to a hash.** An approval stores the sha1 of the approved file. Any later edit makes the approval stale, and later stages refuse to run on a stale approval. This is the comic pipeline's rule. A narration approval also belongs to ONE outline: its record holds the narration's sha1 and the sha1 of the approved outline at that moment (`outline_sha1`), and it stands only while both match and the outline approval is fresh; an old record without `outline_sha1` never stands. `GET /narration` shows why it does not (`approval_reason`: `narration_edited`, `outline_not_approved`, `outline_changed`), `stale` (the outline changed after the narration was written; information only) and `chapter_diff`. Approving is refused while the chapter ids of the narration and the outline differ (`unknown_chapter`, `chapter_missing` are errors); saving stays allowed. The stage is `script` only with a standing approval; the home list, `GET /pipeline` and `GET /narration` use the one function `store.narration_approval`.
 
 **Ids are never renumbered** (also a comic rule). A new beat gets a fresh id. A deleted id is not reused.
 
@@ -153,6 +153,7 @@ Errors block approval:
 - markup or metadata left inside `text`
 - total words under 70% of the target
 - a stale outline approval
+- a chapter id the outline does not have (`unknown_chapter`), or an outline chapter with no beats (`chapter_missing`)
 
 Warnings are shown and do not block:
 - total words outside ±15% of the target

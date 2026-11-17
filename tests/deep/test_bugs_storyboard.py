@@ -225,11 +225,8 @@ def _ref_preview_body(client, pid, tid):
     return {"t0": t0, "t1": t0 + 3.0, "width": 640, "fps": 15, "storyboard": sb}
 
 
-def test_B028_tr03_preview_is_not_an_outlier(client, lab):
-    ref = ["LAY-01", "CAM-03", "HI-01", "X-TR-01", "X-CARD-02"]
-    base = sorted(_preview_seconds(client, lab, _ref_preview_body(client, lab, t)) for t in ref)[len(ref) // 2]
-    tr = min(_preview_seconds(client, lab, _ref_preview_body(client, lab, "TR-03")) for _ in range(2))
-    assert tr < 2.2 * base, f"TR-03 {tr:.1f}s vs median {base:.1f}s of five other techniques"
+# test_B028 (TR-03 against a cold median of references) is replaced by test_TR03_preview_is_faster_than_it_plays_and_not_an_outlier
+# in test_round2_engine.py, which measures everything warm.
 
 
 def test_B029_x_lay_01_preview_frame_count(client, lab, tmp_path):

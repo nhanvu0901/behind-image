@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from bti.library import catalogue, config as libcfg, dossiers, extract
 from bti.library import projects as libprojects
 
-from .common import ApiError, read_json, valid_pid
+from .common import ApiError, read_json, segment_ok, storyboard_approval, string_list, valid_pid
 
 CENTURY_MAX = 21
 
@@ -54,14 +54,18 @@ def make_router(projects_root: Path) -> APIRouter:
             f = d / "project.json"
             if not (valid_pid(d.name) and f.is_file()):
                 continue
-            try:
+            try:                    # a damaged project is left out of the index; it never breaks the list for the others
                 p = read_json(f)
-            except Exception:
+                if not isinstance(p, dict):
+                    continue
+                srcs = [s for s in (p.get("sources") if isinstance(p.get("sources"), list) else []) if isinstance(s, dict)]
+                entry = {"id": d.name, "stage": libprojects.infer_stage(d), "has_storyboard": (d / "storyboard.json").is_file()}
+            except Exception:       # noqa: BLE001
                 continue
-            for s in p.get("sources") or []:
-                idx.setdefault(s.get("work_id"), []).append(
-                    {"id": d.name, "stage": libprojects.infer_stage(d),
-                     "has_storyboard": (d / "storyboard.json").is_file()})
+            for s in srcs:
+                wid = s.get("work_id")
+                if isinstance(wid, str):
+                    idx.setdefault(wid, []).append(dict(entry))
         return idx
 
     def others(w: dict, arts: dict) -> list[dict]:
@@ -159,7 +163,11 @@ def make_router(projects_root: Path) -> APIRouter:
             raise ApiError(415, "cannot extract this image")
 
     def art_row(key: str, a: dict, arts_pidx: dict) -> dict:
-        d = dossiers.load(key) or {}
+        bad = None
+        try:
+            d = dossiers.load(key) or {}
+        except ValueError as e:     # this artwork's dossier is damaged: its row falls back to the catalogue, the list still works
+            d, bad = {}, str(e)[:200]
         ids = a["works"]
         books_ = []
         yn = None
@@ -186,7 +194,7 @@ def make_router(projects_root: Path) -> APIRouter:
                 "low_trust_books": [b for b in books_ if catalogue.book_trust(b)["trust"] == "low"],
                 "text_source": d.get("text_source"), "n_conflicts": len(d.get("conflicts") or []),
                 "rights": rt, "projects": projs,
-                "thumb_url": _thumb_for(ids[0])}
+                "thumb_url": _thumb_for(ids[0]), **({"data_error": bad} if bad else {})}
 
     def _thumb_for(wid: str) -> str:
         bid, n = wid.split("/")
@@ -226,7 +234,7 @@ def make_router(projects_root: Path) -> APIRouter:
 
     @r.get("/artworks/{artwork_key}")
     def artwork(artwork_key: str):
-        a = catalogue.load_artworks().get(artwork_key)
+        a = catalogue.load_artworks().get(artwork_key) if segment_ok(artwork_key) else None
         if a is None:
             raise ApiError(404, "artwork not found")
         arts, pidx = catalogue.load_artworks(), project_index()
@@ -251,6 +259,8 @@ def make_router(projects_root: Path) -> APIRouter:
 
     @r.get("/artworks/{artwork_key}/source/{name}")
     def artwork_source(artwork_key: str, name: str):
+        if not (segment_ok(artwork_key) and segment_ok(name)):
+            raise ApiError(404, "dossier not found")
         d = dossiers.load(artwork_key)
         if d is None:
             raise ApiError(404, "dossier not found")
@@ -258,9 +268,14 @@ def make_router(projects_root: Path) -> APIRouter:
         if s is None:
             raise ApiError(404, "source not found")
         f = dossiers.dossier_path(artwork_key).parent / s["file"]
-        if not f.is_file():
+        try:
+            if not f.is_file():
+                raise ApiError(404, "source text missing")
+            return {"work_id": s["work_id"], "text": f.read_text(encoding="utf-8")}
+        except UnicodeDecodeError:
+            raise ApiError(409, f"{f.name} is not UTF-8 text", data_error="library")
+        except OSError:
             raise ApiError(404, "source text missing")
-        return {"work_id": s["work_id"], "text": f.read_text(encoding="utf-8")}
 
     @r.post("/artworks/merge")
     def merge(body: dict = Body(...)):
@@ -288,14 +303,14 @@ def make_router(projects_root: Path) -> APIRouter:
 
     @r.post("/projects")
     def create(body: dict = Body(...)):
-        wids = body.get("work_ids")
+        wids = string_list(body.get("work_ids"), "work_ids", max_items=50, max_len=100)
         slug = body.get("slug") or None
         key = body.get("artwork_key")
-        excl = body.get("exclude")
+        excl = string_list(body.get("exclude"), "exclude", max_items=50, max_len=100)
         if slug is not None and not isinstance(slug, str):
             raise ApiError(422, "slug must be a string")
-        if excl is not None and not isinstance(excl, list):
-            raise ApiError(422, "exclude must be a list")
+        if key is not None and not isinstance(key, str):
+            raise ApiError(422, "artwork_key must be a string")
         try:
             return libprojects.create_project(wids, slug, projects_root, artwork_key=key, exclude=excl)
         except libprojects.ProjectError as e:

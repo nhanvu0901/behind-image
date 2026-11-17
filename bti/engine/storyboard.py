@@ -14,6 +14,7 @@ import time
 from pathlib import Path
 
 from . import registry as R
+from . import limits as L
 from .errors import DataError
 from .timing import AnchorError, Timing
 from .vfx import EASE
@@ -21,6 +22,7 @@ from .vfx import EASE
 SCHEMA = "bti.storyboard/1"
 MIN_SHOT_S = 0.2
 EPS = 1e-6
+SOURCES = ("import", "agent", "human")
 INTENTS = ["establish", "explore", "point_at", "isolate", "reveal", "compare", "context", "quantify",
            "explain_mechanism", "quote", "structure", "transition"]
 
@@ -32,11 +34,36 @@ class ValidationError(Exception):
 
 
 # ----------------------------------------------------------------------------- canonical form and revision
+MAX_DEPTH = 64
+
+
+def check_depth(obj, limit: int = MAX_DEPTH) -> None:
+    """DataError when `obj` (dicts and lists) is nested deeper than `limit` levels. Iterative: it never recurses."""
+    stack = [(obj, 1)]
+    while stack:
+        o, d = stack.pop()
+        if isinstance(o, dict):
+            kids = o.values()
+        elif isinstance(o, list):
+            kids = o
+        else:
+            continue
+        if d > limit:
+            raise DataError("the document is nested more than %d levels deep" % limit, what="storyboard")
+        stack.extend((k, d + 1) for k in kids if isinstance(k, (dict, list)))
+
+
 def strip_derived(obj):
+    """Copy of `obj` without the keys that start with `_`. Over MAX_DEPTH levels of nesting it raises DataError (never RecursionError)."""
+    check_depth(obj)
+    return _strip(obj)
+
+
+def _strip(obj):
     if isinstance(obj, dict):
-        return {k: strip_derived(v) for k, v in obj.items() if not k.startswith("_")}
+        return {k: _strip(v) for k, v in obj.items() if not k.startswith("_")}
     if isinstance(obj, list):
-        return [strip_derived(v) for v in obj]
+        return [_strip(v) for v in obj]
     return obj
 
 
@@ -269,6 +296,110 @@ def missing_of(spec: dict, item: dict, kind: str, shot: dict | None = None) -> l
     return out
 
 
+# Every `code` a validation issue can carry, with a one-line English meaning (`args` keys are named in the text). A test checks
+# that validate never emits a code that is missing here.
+ISSUE_CODES = {
+    "undrawable": "A technique cannot draw this shot, overlay or transition with the values it has (found by drawing a frame). args: shot, technique, overlay.",
+    "incomplete": "A required slot or parameter is not set yet; saving is allowed, approval is not. args: what (slot|param), name, technique.",
+    "not_an_object": "The storyboard document is not a JSON object. args: none.",
+    "unreadable_structure": "The document has a structure the checks cannot read. args: error.",
+    "wrong_schema": "`schema` is not the supported schema id. args: schema.",
+    "canvas_not_object": "`canvas` is not an object. args: none.",
+    "canvas_size": "canvas.w or canvas.h is not a positive number. args: field.",
+    "canvas_fps": "canvas.fps is not a number in range. args: min, max.",
+    "canvas_not_1080p": "The canvas is not 1920x1080 (warning). args: none.",
+    "not_a_string": "A field that must be text is not. args: field.",
+    "approvals_not_object": "`approvals` is not an object. args: none.",
+    "project_name_differs": "`project` differs from the folder name (warning). args: project, folder.",
+    "audio_invalid": "`audio` is not a file path. args: none.",
+    "audio_outside_project": "`audio` points outside the project folder. args: file.",
+    "audio_missing": "The audio file does not exist (warning). args: file.",
+    "assets_not_object": "`assets` is not an object. args: none.",
+    "asset_not_object": "An asset is not an object. args: none.",
+    "asset_kind": "An asset's kind is not image, video or mask. args: none.",
+    "asset_file_required": "An asset has no file. args: none.",
+    "asset_file_outside_project": "An asset file path leaves the project. args: file.",
+    "asset_file_missing": "An asset file does not exist. args: file.",
+    "asset_file_unreadable": "An asset file is not a readable image. args: file.",
+    "credit_not_object": "An asset's credit is not an object. args: none.",
+    "asset_size": "An asset width/height is not a positive number. args: field.",
+    "regions_not_object": "An asset's regions are not an object. args: none.",
+    "region_xy": "A region has no numeric x and y. args: region.",
+    "region_radius": "A region rx/ry is not a number >= 0. args: region, field.",
+    "slots_not_object": "`slots` is not an object. args: none.",
+    "unknown_slot": "A slot name the technique does not have. args: slot, technique, allowed.",
+    "asset_undefined": "An asset key that is not in `assets`. args: asset.",
+    "slot_asset_kind": "The asset in a slot has the wrong kind. args: slot, asset, takes, got.",
+    "slot_not_object": "A slot value is not an object. args: slot.",
+    "locked_not_bool": "`locked` is not true/false. args: none.",
+    "unknown_source": "`source` is not import, agent or human (warning). args: source.",
+    "unknown_intent": "`intent` is not in the fixed list (warning). args: intent.",
+    "region_undefined": "A region name that the asset does not define. args: region, asset, param.",
+    "end_required": "The `end` anchor is missing. args: none.",
+    "anchor_invalid": "An anchor cannot be resolved (bad form, word index out of range, rel without a shot). args: none.",
+    "end_fade": "end.fade_s is not a number >= 0. args: none.",
+    "shots_not_list": "`shots` is not a list. args: none.",
+    "no_shots": "The storyboard has no shot. args: none.",
+    "start_required": "A start anchor is missing. args: none.",
+    "rel_anchor_not_allowed": "A `rel` anchor is used outside a camera key. args: none.",
+    "start_negative": "A shot starts before 0 s. args: start.",
+    "first_shot_late": "The first shot starts after 0 s (warning). args: start.",
+    "shot_not_object": "A shot is not an object. args: none.",
+    "id_required": "A shot or overlay id is missing or empty. args: none.",
+    "duplicate_shot_id": "Two shots share an id. args: id.",
+    "stale_anchor": "A word anchor's text no longer matches the word at its index. args: none.",
+    "shot_too_short": "A shot is shorter than the minimum. args: min, got.",
+    "shots_out_of_order": "Shots are not in time order. args: none.",
+    "unknown_technique": "The technique id is not in the registry. args: technique.",
+    "wrong_technique_kind": "The technique has the wrong kind for its place. args: technique, kind, needs.",
+    "technique_unavailable": "The technique exists but the engine cannot draw it yet. args: technique.",
+    "camera_keys_order": "Camera keys are not in strictly increasing time order. args: none.",
+    "camera_rel_range": "A camera key `rel` is outside 0..1. args: none.",
+    "unknown_ease": "A camera key has an unknown ease name. args: ease.",
+    "transition_dur": "A transition `dur` is not a number >= 0. args: none.",
+    "transition_too_long": "A transition is longer than its shot. args: dur, shot_dur.",
+    "first_shot_transition": "The first shot has a transition but nothing to come from (warning). args: none.",
+    "overlays_not_list": "`overlays` is not a list. args: none.",
+    "overlay_not_object": "An overlay is not an object. args: none.",
+    "duplicate_overlay_id": "Two overlays of a shot share an id. args: id.",
+    "label_without_position": "A label has neither `at` nor `screen` (warning). args: none.",
+    "overlay_dur": "An overlay `dur` is not a number > 0. args: none.",
+    "overlay_outside_shot": "An overlay starts or ends outside its shot. args: start|end, shot_start, shot_end.",
+    "overlay_ends_before_start": "An overlay ends before it starts. args: none.",
+    "end_before_last_start": "`end` is not after the last shot start. args: none.",
+    "end_after_audio": "`end` is after the audio/timing duration (warning). args: end, duration.",
+    "style_unusable": "The style id is unknown or unreadable. args: style.",
+    "timing_unusable": "The timing file is missing, outside the project or malformed. args: file.",
+    "params_not_object": "`params` is not an object. args: none.",
+    "unknown_param": "A parameter the technique does not have. args: param, technique, allowed.",
+    "param_null": "null where a value is required. args: param, technique.",
+    "param_not_number": "A number parameter holds something else. args: param, technique.",
+    "param_below_min": "A number is below the minimum. args: param, technique, min.",
+    "param_above_max": "A number is above the maximum. args: param, technique, max.",
+    "param_not_in_values": "The value is not one of the allowed values. args: param, technique, values.",
+    "param_not_bool": "A true/false parameter holds something else. args: param, technique.",
+    "param_not_string": "A text parameter holds something else. args: param, technique.",
+    "param_bad_form": "A text value does not have the required form. args: param, technique, pattern, hint (Vietnamese sentence), index (line number for lists).",
+    "param_bad_color": "Not a #rrggbb colour. args: param, technique.",
+    "param_not_points": "A points parameter is not a list. args: param, technique.",
+    "param_not_lines": "A lines parameter is not a list of strings. args: param, technique.",
+    "param_item_count": "A list has too few or too many items. args: param, technique, min, max, got.",
+    "param_bad_box": "A box is not [x0, y0, x1, y1]. args: param, technique.",
+    "param_box_range": "A box leaves the canvas or is too small. args: param, technique, w, h, min_px.",
+    "param_not_asset": "Not an asset key. args: param, technique.",
+    "point_bad_form": "A point is neither a region name nor [x, y]. args: param, technique, index (in lists).",
+    "point_empty_region": "An empty region name. args: param, technique, index.",
+    "point_out_of_range": "A coordinate is absurdly large. args: param, technique, limit, index.",
+    "point_numeric_only": "A region name where only [x, y] is accepted. args: param, technique, index.",
+    "camera_empty": "The camera has no keys. args: param, technique.",
+    "camera_key_not_object": "A camera key is not an object. args: param, technique, index.",
+    "camera_key_missing_field": "A camera key lacks at, cx, cy or zoom. args: param, technique, index, field.",
+    "camera_key_numbers": "A camera key cx/cy/zoom is not a number or zoom <= 0. args: param, technique, index.",
+    "camera_key_range": "A camera key cx/cy/zoom is out of range. args: param, technique, index, limit, zoom_max.",
+    "camera_key_anchor": "A camera key `at` is not an anchor. args: param, technique, index."
+}
+
+
 # ----------------------------------------------------------------------------- validate
 def validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | None = None) -> list[dict]:
     """Issues of a storyboard. Never raises: a structure the checks did not foresee is reported as an error issue.
@@ -276,129 +407,196 @@ def validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | No
     try:
         return _validate(sb, tm, bundle, project_dir)
     except Exception as e:      # noqa: BLE001
-        return [{"level": "error", "path": "", "message": "the storyboard has a structure the checks cannot read (%s: %s)"
-                 % (type(e).__name__, str(e)[:120])}]
+        return [{"level": "error", "path": "", "code": "unreadable_structure", "args": {"error": type(e).__name__},
+                 "message": "the storyboard has a structure the checks cannot read (%s: %s)" % (type(e).__name__, str(e)[:120])}]
 
 
 def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | None = None) -> list[dict]:
     issues: list[dict] = []
 
-    def err(path, msg):
-        issues.append({"level": "error", "path": path, "message": msg})
+    def err(path, msg, code, **args):
+        issues.append({"level": "error", "path": path, "message": msg, "code": code, "args": args})
 
-    def warn(path, msg):
-        issues.append({"level": "warn", "path": path, "message": msg})
+    def warn(path, msg, code, **args):
+        issues.append({"level": "warn", "path": path, "message": msg, "code": code, "args": args})
 
     def incomplete(path, what, name, tid):
-        issues.append({"level": "warn", "code": "incomplete", "path": path,
+        issues.append({"level": "warn", "code": "incomplete", "path": path, "args": {"what": what, "name": name, "technique": tid},
                        "message": "incomplete: required %s %r of %s is not set" % (what, name, tid)})
 
     if not isinstance(sb, dict):
-        return [{"level": "error", "path": "", "message": "storyboard must be an object"}]
+        return [{"level": "error", "path": "", "code": "not_an_object", "args": {}, "message": "storyboard must be an object"}]
     if sb.get("schema") != SCHEMA:
-        err("schema", "schema must be %r" % SCHEMA)
+        err("schema", "schema must be %r" % SCHEMA, "wrong_schema", schema=SCHEMA)
     canvas = sb.get("canvas")
     if canvas is None:
         canvas = {}
     if not isinstance(canvas, dict):
-        err("canvas", "canvas must be an object like {\"w\": 1920, \"h\": 1080}")
+        err("canvas", "canvas must be an object like {\"w\": 1920, \"h\": 1080}", "canvas_not_object")
         canvas = {}
+    for dim in ("w", "h"):
+        if dim in canvas and not (R._is_num(canvas[dim]) and canvas[dim] > 0):
+            err("canvas." + dim, "%s must be a positive number" % dim, "canvas_size", field=dim)
+    if "fps" in canvas and not (R._is_num(canvas["fps"]) and L.CANVAS_FPS_MIN <= canvas["fps"] <= L.CANVAS_FPS_MAX):
+        err("canvas.fps", "fps must be a number from %d to %d" % (L.CANVAS_FPS_MIN, L.CANVAS_FPS_MAX), "canvas_fps", min=L.CANVAS_FPS_MIN, max=L.CANVAS_FPS_MAX)
     if (canvas.get("w"), canvas.get("h")) != (1920, 1080):
-        warn("canvas", "renderers are tuned for 1920x1080; the engine always renders 1080p")
+        warn("canvas", "renderers are tuned for 1920x1080; the engine always renders 1080p", "canvas_not_1080p")
+    for k in ("project", "title"):
+        if k in sb and sb[k] is not None and not isinstance(sb[k], str):
+            err(k, "%s must be a string" % k, "not_a_string", field=k)
+    if "approvals" in sb and sb["approvals"] is not None and not isinstance(sb["approvals"], dict):
+        err("approvals", "approvals must be an object", "approvals_not_object")
     if project_dir is not None and sb.get("project") not in (None, Path(project_dir).name):
-        warn("project", "project %r differs from the folder name %r" % (sb.get("project"), Path(project_dir).name))
+        warn("project", "project %r differs from the folder name %r" % (sb.get("project"), Path(project_dir).name), "project_name_differs", project=sb.get("project"), folder=Path(project_dir).name)
     if sb.get("audio") is not None:
         a = sb["audio"]
         if not isinstance(a, str) or not a:
-            err("audio", "audio must be a file path inside the project")
+            err("audio", "audio must be a file path inside the project", "audio_invalid")
         elif project_dir is not None:
             f = safe_rel(project_dir, a)
             if f is None:
-                err("audio", "audio %r must be a file inside the project" % a)
+                err("audio", "audio %r must be a file inside the project" % a, "audio_outside_project", file=a)
             elif not f.is_file():
-                warn("audio", "audio file %r does not exist" % a)
+                warn("audio", "audio file %r does not exist" % a, "audio_missing", file=a)
     assets = sb.get("assets")
     if not isinstance(assets, dict):
-        err("assets", "assets must be an object")
+        err("assets", "assets must be an object", "assets_not_object")
         assets = {}
     for key, a in assets.items():
         p = "assets.%s" % key
         if not isinstance(a, dict):
-            err(p, "asset must be an object")
+            err(p, "asset must be an object", "asset_not_object")
             continue
         if a.get("kind") not in ("image", "video", "mask"):
-            err(p + ".kind", "kind must be image, video or mask")
+            err(p + ".kind", "kind must be image, video or mask", "asset_kind")
         if not a.get("file") or not isinstance(a.get("file"), str):
-            err(p + ".file", "file is required")
+            err(p + ".file", "file is required", "asset_file_required")
         elif project_dir is not None:
             f = safe_rel(project_dir, a["file"])
             if f is None:
-                err(p + ".file", "file %r must be a path inside the project" % a["file"])
+                err(p + ".file", "file %r must be a path inside the project" % a["file"], "asset_file_outside_project", file=a["file"])
             elif not f.is_file():
-                err(p + ".file", "file %r does not exist" % a["file"])
+                err(p + ".file", "file %r does not exist" % a["file"], "asset_file_missing", file=a["file"])
             elif a.get("kind") in ("image", "mask"):
                 m = image_problem(f)
                 if m:
-                    err(p + ".file", "file %r %s" % (a["file"], m))
+                    err(p + ".file", "file %r %s" % (a["file"], m), "asset_file_unreadable", file=a["file"])
+        for k in ("title", "artist", "year"):
+            v = a.get(k)
+            if v is not None and (isinstance(v, bool) or not isinstance(v, (str, int))):
+                err("%s.%s" % (p, k), "%s must be a string" % k, "not_a_string", field=k)
+        if a.get("credit") is not None:
+            cr = a["credit"]
+            if not isinstance(cr, dict):
+                err(p + ".credit", "credit must be an object", "credit_not_object")
+            else:
+                for k, v in cr.items():
+                    if v is not None and not isinstance(v, str):
+                        err("%s.credit.%s" % (p, k), "%s must be a string" % k, "not_a_string", field=k)
         for dim in ("width", "height"):
             if dim in a and a[dim] is not None and not (R._is_num(a[dim]) and a[dim] > 0):
-                err("%s.%s" % (p, dim), "%s must be a positive number" % dim)
+                err("%s.%s" % (p, dim), "%s must be a positive number" % dim, "asset_size", field=dim)
         regs = a.get("regions")
         if regs is not None and not isinstance(regs, dict):
-            err(p + ".regions", "regions must be an object")
+            err(p + ".regions", "regions must be an object", "regions_not_object")
             regs = {}
         for rn, r in (regs or {}).items():
             if not (isinstance(r, dict) and R._is_num(r.get("x")) and R._is_num(r.get("y"))):
-                err("%s.regions.%s" % (p, rn), "region needs numeric x and y")
+                err("%s.regions.%s" % (p, rn), "region needs numeric x and y", "region_xy", region=rn)
+                continue
+            for k in ("rx", "ry"):
+                if r.get(k) is not None and not (R._is_num(r[k]) and r[k] >= 0):
+                    err("%s.regions.%s.%s" % (p, rn, k), "%s must be a number >= 0" % k, "region_radius", region=rn, field=k)
+            if r.get("label") is not None and not isinstance(r["label"], str):
+                err("%s.regions.%s.label" % (p, rn), "label must be a string", "not_a_string", field="label")
 
     def check_slots(path, slots, spec, tid):
         """Slot names, asset keys and asset kinds of one shot or overlay."""
         if slots is None:
             return
         if not isinstance(slots, dict):
-            err(path, "slots must be an object")
+            err(path, "slots must be an object", "slots_not_object")
             return
         sdefs = {x["name"]: x for x in spec["slots"]}
         for sn, sv in slots.items():
             sp = "%s.%s" % (path, sn)
             if sn not in sdefs:
-                err(sp, "unknown slot %r for %s (allowed: %s)" % (sn, tid, ", ".join(sdefs) or "none"))
+                err(sp, "unknown slot %r for %s (allowed: %s)" % (sn, tid, ", ".join(sdefs) or "none"), "unknown_slot", slot=sn, technique=tid, allowed=list(sdefs))
             elif isinstance(sv, dict) and sv.get("asset") is not None:
                 ak = sv["asset"]
                 if not isinstance(ak, str) or ak not in assets:
-                    err(sp + ".asset", "asset %r is not defined" % (ak,))
+                    err(sp + ".asset", "asset %r is not defined" % (ak,), "asset_undefined", asset=ak)
                 elif isinstance(assets[ak], dict):
                     ok_kinds, got = slot_accepts(sdefs[sn]), assets[ak].get("kind")
                     if ok_kinds and got in ("image", "video", "mask") and got not in ok_kinds:
-                        err(sp + ".asset", "slot %r takes %s but asset %r is a %s" % (sn, " or ".join(ok_kinds), ak, got))
+                        err(sp + ".asset", "slot %r takes %s but asset %r is a %s" % (sn, " or ".join(ok_kinds), ak, got), "slot_asset_kind", slot=sn, asset=ak, takes=list(ok_kinds), got=got)
             elif sv is not None and not isinstance(sv, dict):
-                err(sp, "a slot must be an object like {\"asset\": \"<key>\"}")
+                err(sp, "a slot must be an object like {\"asset\": \"<key>\"}", "slot_not_object", slot=sn)
 
     def check_asset_params(path, params, spec):
         for pd in spec["params"]:
             if pd["type"] == "asset" and isinstance(params, dict):
                 v = params.get(pd["name"])
                 if isinstance(v, str) and v and v not in assets:
-                    err("%s.%s" % (path, pd["name"]), "asset %r is not defined" % v)
+                    err("%s.%s" % (path, pd["name"]), "asset %r is not defined" % v, "asset_undefined", asset=v)
+
+    def item_fields(path, item):
+        """locked / source / note / intent of one shot or overlay."""
+        if "locked" in item and not isinstance(item["locked"], bool):
+            err(path + ".locked", "locked must be true or false", "locked_not_bool")
+        if item.get("source") is not None:
+            if not isinstance(item["source"], str):
+                err(path + ".source", "source must be a string", "not_a_string", field="source")
+            elif item["source"] not in SOURCES:      # older lab projects carry other labels: a warning, not a refusal
+                warn(path + ".source", "unknown source %r (expected %s)" % (item["source"], ", ".join(SOURCES)), "unknown_source", source=item["source"])
+        if item.get("note") is not None and not isinstance(item["note"], str):
+            err(path + ".note", "note must be a string", "not_a_string", field="note")
+        if item.get("intent") is not None:
+            if not isinstance(item["intent"], str):
+                err(path + ".intent", "intent must be a string", "not_a_string", field="intent")
+            elif item["intent"] not in INTENTS:
+                warn(path + ".intent", "unknown intent %r" % item["intent"], "unknown_intent", intent=item["intent"])
+
+    def check_regions(path, params, spec, akey, regions):
+        """A `point` / `points` value that names a region must name one that exists on the asset in use."""
+        if not isinstance(params, dict):
+            return
+        for pd in spec["params"]:
+            v = params.get(pd["name"])
+            if pd.get("numeric_only"):
+                continue                  # a name there is already an error from the registry check
+            if pd["type"] == "point":
+                names = [(pd["name"], v)] if isinstance(v, str) else []
+            elif pd["type"] == "points" and isinstance(v, (list, tuple)):
+                names = [("%s[%d]" % (pd["name"], k), x) for k, x in enumerate(v) if isinstance(x, str)]
+            else:
+                continue
+            for label, nm in names:
+                if not nm:
+                    continue
+                if akey is None:
+                    continue              # no image yet: the item is incomplete (placeholder / skipped), nothing is drawn from the region
+                if nm not in regions:
+                    err("%s.%s" % (path, label), "region %r is not defined on asset %r" % (nm, akey), "region_undefined", region=nm, asset=akey, param=pd["name"])
 
     # -- end and shots ---------------------------------------------------------------------------------------
     end = sb.get("end")
     end_t = None
     if not isinstance(end, dict):
-        err("end", "end anchor is required")
+        err("end", "end anchor is required", "end_required")
     else:
         try:
             end_t = tm.resolve(end)
         except AnchorError as e:
-            err("end", str(e))
+            err("end", str(e), "anchor_invalid")
         if "fade_s" in end and not (R._is_num(end["fade_s"]) and end["fade_s"] >= 0):
-            err("end.fade_s", "fade_s must be a number >= 0")
+            err("end.fade_s", "fade_s must be a number >= 0", "end_fade")
     shots = shots_of(sb)
     if not isinstance(shots, list):
-        err("shots", "shots must be a list")
+        err("shots", "shots must be a list", "shots_not_list")
         return issues
     if not shots:
-        err("shots", "a storyboard needs at least one shot")
+        err("shots", "a storyboard needs at least one shot", "no_shots")
     seen = set()
     starts: list = []
     for i, s in enumerate(shots):
@@ -406,26 +604,28 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
             starts.append(None)
             continue
         if not isinstance(s.get("start"), dict):
-            err("shots[%d].start" % i, "start anchor is required (an object like {\"t\": 12.5})")
+            err("shots[%d].start" % i, "start anchor is required (an object like {\"t\": 12.5})", "start_required")
         try:
             starts.append(tm.resolve(s["start"]) if isinstance(s.get("start"), dict) else None)
         except (AnchorError, KeyError) as e:
             starts.append(None)
-            err("shots[%d].start" % i, str(e))
+            err("shots[%d].start" % i, str(e), "anchor_invalid")
         if isinstance(s.get("start"), dict) and "rel" in s["start"]:
-            err("shots[%d].start" % i, "'rel' anchors are only allowed for camera keys")
+            err("shots[%d].start" % i, "'rel' anchors are only allowed for camera keys", "rel_anchor_not_allowed")
+        elif starts[-1] is not None and starts[-1] < -EPS:
+            err("shots[%d].start" % i, "start must be >= 0 s (got %.3f s)" % starts[-1], "start_negative", start=starts[-1])
     if starts and starts[0] is not None and starts[0] > 0.05:
-        warn("shots[0].start", "the first shot starts at %.2f s: the beginning of the timeline is not covered" % starts[0])
+        warn("shots[0].start", "the first shot starts at %.2f s: the beginning of the timeline is not covered" % starts[0], "first_shot_late", start=starts[0])
     for i, s in enumerate(shots):
         p = "shots[%d]" % i
         if not isinstance(s, dict):
-            err(p, "shot must be an object")
+            err(p, "shot must be an object", "shot_not_object")
             continue
         sid = s.get("id")
         if not sid or not isinstance(sid, str):
-            err(p + ".id", "id is required (a string)")
+            err(p + ".id", "id is required (a string)", "id_required")
         elif sid in seen:
-            err(p + ".id", "duplicate shot id %r" % sid)
+            err(p + ".id", "duplicate shot id %r" % sid, "duplicate_shot_id", id=sid)
         else:
             seen.add(sid)
         t0 = starts[i]
@@ -434,24 +634,23 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
             for a in (s["start"],):
                 m = tm.stale(a)
                 if m:
-                    err(p + ".start", m)
+                    err(p + ".start", m, "stale_anchor")
         if t0 is not None and t1 is not None:
             if t1 - t0 < MIN_SHOT_S - EPS:
-                err(p, "shot is shorter than %.1f s (%.3f s)" % (MIN_SHOT_S, t1 - t0))
+                err(p, "shot is shorter than %.1f s (%.3f s)" % (MIN_SHOT_S, t1 - t0), "shot_too_short", min=MIN_SHOT_S, got=t1 - t0)
         if i > 0 and t0 is not None and starts[i - 1] is not None and t0 <= starts[i - 1]:
-            err(p + ".start", "shots must be in time order (starts before the previous shot)")
-        if isinstance(s.get("intent"), str) and s["intent"] not in INTENTS:
-            warn(p + ".intent", "unknown intent %r" % s["intent"])
+            err(p + ".start", "shots must be in time order (starts before the previous shot)", "shots_out_of_order")
+        item_fields(p, s)
 
         tid = s.get("technique")
         spec = bundle.spec(tid)
         if spec is None:
-            err(p + ".technique", "unknown technique %r" % (tid,))
+            err(p + ".technique", "unknown technique %r" % (tid,), "unknown_technique", technique=tid)
             continue
         if spec["kind"] not in ("base", "card"):
-            err(p + ".technique", "%s is a %s technique; a shot needs kind base or card" % (tid, spec["kind"]))
+            err(p + ".technique", "%s is a %s technique; a shot needs kind base or card" % (tid, spec["kind"]), "wrong_technique_kind", technique=tid, kind=spec["kind"], needs="base or card")
         if not bundle.available(tid):
-            err(p + ".technique", "%s is not available in the engine yet" % tid)
+            err(p + ".technique", "%s is not available in the engine yet" % tid, "technique_unavailable", technique=tid)
         issues.extend(R.validate_params(spec, s.get("params") or {}, p + ".params"))
         check_asset_params(p + ".params", s.get("params"), spec)
         check_slots(p + ".slots", s.get("slots"), spec, tid)
@@ -469,66 +668,69 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                         continue
                     m = tm.stale(k["at"])
                     if m:
-                        err(kp + ".at", m)
+                        err(kp + ".at", m, "stale_anchor")
                     try:
                         kt = tm.resolve(k["at"], t0, t1)
                     except AnchorError as e:
-                        err(kp + ".at", str(e))
+                        err(kp + ".at", str(e), "anchor_invalid")
                         continue
                     if prev is not None and kt <= prev + 1e-9:
-                        err(kp + ".at", "camera keys must be in strictly increasing time order")
+                        err(kp + ".at", "camera keys must be in strictly increasing time order", "camera_keys_order")
+                    if "rel" in k["at"] and not 0 <= k["at"]["rel"] <= 1:
+                        err(kp + ".at", "rel must be between 0 and 1", "camera_rel_range")
                     prev = kt
                     ease = k.get("ease", "linear")
                     if not isinstance(ease, str) or ease not in EASE:
-                        err(kp + ".ease", "unknown ease %r" % (ease,))
+                        err(kp + ".ease", "unknown ease %r" % (ease,), "unknown_ease", ease=ease if isinstance(ease, str) else str(ease))
         # transition
         tr = s.get("transition_in")
         if tr is not None:
             tp = p + ".transition_in"
             tspec = bundle.spec(tr.get("technique")) if isinstance(tr, dict) else None
             if tspec is None:
-                err(tp + ".technique", "unknown transition technique %r" % (tr.get("technique") if isinstance(tr, dict) else tr))
+                err(tp + ".technique", "unknown transition technique %r" % (tr.get("technique") if isinstance(tr, dict) else tr), "unknown_technique", technique=tr.get("technique") if isinstance(tr, dict) else None)
             else:
                 if tspec["kind"] != "transition":
-                    err(tp + ".technique", "%s is not a transition" % tr["technique"])
+                    err(tp + ".technique", "%s is not a transition" % tr["technique"], "wrong_technique_kind", technique=tr["technique"], kind=tspec["kind"], needs="transition")
                 if not bundle.available(tr["technique"]):
-                    err(tp + ".technique", "%s is not available in the engine yet" % tr["technique"])
+                    err(tp + ".technique", "%s is not available in the engine yet" % tr["technique"], "technique_unavailable", technique=tr["technique"])
                 issues.extend(R.validate_params(tspec, tr.get("params") or {}, tp + ".params"))
                 d = tr.get("dur")
                 if not R._is_num(d) or d < 0:
-                    err(tp + ".dur", "dur must be a number >= 0")
+                    err(tp + ".dur", "dur must be a number >= 0", "transition_dur")
                 elif t0 is not None and t1 is not None and d > (t1 - t0) + EPS:
-                    err(tp + ".dur", "transition is longer than the shot")
+                    err(tp + ".dur", "transition is longer than the shot", "transition_too_long", dur=d, shot_dur=t1 - t0)
                 if i == 0:
-                    warn(tp, "the first shot has nothing to transition from")
+                    warn(tp, "the first shot has nothing to transition from", "first_shot_transition")
         # overlays
         _, akey = primary_slot(s) if isinstance(s.get("slots"), dict) else (None, None)
         regions = ((assets.get(akey) or {}).get("regions") or {}) if isinstance(akey, str) else {}
         if not isinstance(regions, dict):
             regions = {}
+        check_regions(p + ".params", s.get("params"), spec, akey, regions)
         oseen = set()
         ovs = s.get("overlays")
         if ovs is not None and not isinstance(ovs, list):
-            err(p + ".overlays", "overlays must be a list")
+            err(p + ".overlays", "overlays must be a list", "overlays_not_list")
             ovs = []
         for j, o in enumerate(ovs or []):
             op = "%s.overlays[%d]" % (p, j)
             if not isinstance(o, dict):
-                err(op, "overlay must be an object")
+                err(op, "overlay must be an object", "overlay_not_object")
                 continue
             oid = o.get("id")
             if isinstance(oid, str) and oid in oseen:
-                err(op + ".id", "duplicate overlay id %r" % oid)
+                err(op + ".id", "duplicate overlay id %r" % oid, "duplicate_overlay_id", id=oid)
             if isinstance(oid, str):
                 oseen.add(oid)
             ospec = bundle.spec(o.get("technique"))
             if ospec is None:
-                err(op + ".technique", "unknown technique %r" % (o.get("technique"),))
+                err(op + ".technique", "unknown technique %r" % (o.get("technique"),), "unknown_technique", technique=o.get("technique") if isinstance(o.get("technique"), str) else None)
                 continue
             if ospec["kind"] != "overlay":
-                err(op + ".technique", "%s is a %s technique; an overlay needs kind overlay" % (o["technique"], ospec["kind"]))
+                err(op + ".technique", "%s is a %s technique; an overlay needs kind overlay" % (o["technique"], ospec["kind"]), "wrong_technique_kind", technique=o["technique"], kind=ospec["kind"], needs="overlay")
             if not bundle.available(o["technique"]):
-                err(op + ".technique", "%s is not available in the engine yet" % o["technique"])
+                err(op + ".technique", "%s is not available in the engine yet" % o["technique"], "technique_unavailable", technique=o["technique"])
             issues.extend(R.validate_params(ospec, o.get("params") or {}, op + ".params"))
             check_asset_params(op + ".params", o.get("params"), ospec)
             check_slots(op + ".slots", o.get("slots"), ospec, o["technique"])
@@ -536,51 +738,51 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                 if what == "slot":
                     incomplete(op + ".slots", "slot", name, o["technique"])
             oparams = o.get("params") if isinstance(o.get("params"), dict) else {}
-            for pd in ospec["params"]:
-                v = oparams.get(pd["name"])
-                if pd["type"] == "point" and isinstance(v, str) and akey is not None and v not in regions:
-                    err("%s.params.%s" % (op, pd["name"]), "region %r is not defined on asset %r" % (v, akey))
+            check_regions(op + ".params", oparams, ospec, akey, regions)
+            item_fields(op, o)
+            if oid is not None and not (isinstance(oid, str) and oid):
+                err(op + ".id", "id must be a non-empty string", "id_required")
             names = {pd["name"] for pd in ospec["params"]}
             if {"at", "screen", "text"} <= names and oparams.get("at") is None and oparams.get("screen") is None:
-                warn(op + ".params", "neither `at` nor `screen` is set: the label has no position and is not drawn")
+                warn(op + ".params", "neither `at` nor `screen` is set: the label has no position and is not drawn", "label_without_position")
             try:
                 ot0 = tm.resolve(o["start"]) if isinstance(o.get("start"), dict) else None
                 if ot0 is None:
-                    err(op + ".start", "start anchor is required")
+                    err(op + ".start", "start anchor is required", "start_required")
                 else:
                     m = tm.stale(o["start"])
                     if m:
-                        err(op + ".start", m)
+                        err(op + ".start", m, "stale_anchor")
                     if "rel" in o["start"]:
-                        err(op + ".start", "'rel' anchors are only allowed for camera keys")
+                        err(op + ".start", "'rel' anchors are only allowed for camera keys", "rel_anchor_not_allowed")
             except AnchorError as e:
                 ot0 = None
-                err(op + ".start", str(e))
+                err(op + ".start", str(e), "anchor_invalid")
             ot1 = None
             if isinstance(o.get("end"), dict):
                 try:
                     ot1 = tm.resolve(o["end"])
                     m = tm.stale(o["end"])
                     if m:
-                        err(op + ".end", m)
+                        err(op + ".end", m, "stale_anchor")
                 except AnchorError as e:
-                    err(op + ".end", str(e))
+                    err(op + ".end", str(e), "anchor_invalid")
             elif o.get("dur") is not None:
                 if not R._is_num(o["dur"]) or o["dur"] <= 0:
-                    err(op + ".dur", "dur must be a number > 0")
+                    err(op + ".dur", "dur must be a number > 0", "overlay_dur")
                 elif ot0 is not None:
                     ot1 = ot0 + o["dur"]
             elif t1 is not None:
                 ot1 = t1
             if ot0 is not None and t0 is not None and t1 is not None:
                 if ot0 < t0 - EPS or ot0 >= t1 - EPS:
-                    err(op + ".start", "overlay starts outside its shot (%.2f s; shot spans %.2f-%.2f s)" % (ot0, t0, t1))
+                    err(op + ".start", "overlay starts outside its shot (%.2f s; shot spans %.2f-%.2f s)" % (ot0, t0, t1), "overlay_outside_shot", start=ot0, shot_start=t0, shot_end=t1)
                 elif ot1 is not None and ot1 > t1 + EPS:
-                    err(op, "overlay ends outside its shot (%.2f s > %.2f s)" % (ot1, t1))
+                    err(op, "overlay ends outside its shot (%.2f s > %.2f s)" % (ot1, t1), "overlay_outside_shot", end=ot1, shot_start=t0, shot_end=t1)
                 if ot1 is not None and ot1 <= ot0:
-                    err(op, "overlay ends before it starts")
+                    err(op, "overlay ends before it starts", "overlay_ends_before_start")
     if end_t is not None and starts and starts[-1] is not None and end_t <= starts[-1]:
-        err("end", "end is not after the last shot start")
+        err("end", "end is not after the last shot start", "end_before_last_start")
     if end_t is not None and tm.duration and end_t > tm.duration + 1.0:
-        warn("end", "end %.2f s is after the audio/timing duration %.2f s" % (end_t, tm.duration))
+        warn("end", "end %.2f s is after the audio/timing duration %.2f s" % (end_t, tm.duration), "end_after_audio", end=end_t, duration=tm.duration)
     return issues

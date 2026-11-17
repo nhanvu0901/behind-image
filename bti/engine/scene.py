@@ -17,24 +17,77 @@ import numpy as np
 from . import registry as R
 from . import techniques  # noqa: F401  (registers every renderer)
 from .base import BaseRenderer, Ctx, OverlayRenderer, TransitionRenderer
+from . import guard
+from .errors import RenderError
 from .storyboard import missing_of
 from .vfx import ramp, to_u8
 
 DEFAULT_END_FADE_S = 1.6
+guard.install()          # every cv2.resize / warp now refuses a buffer over guard.MAX_PIXELS
+
+
+def render_error(exc: BaseException, shot: dict, technique: str | None, index: int, overlay: tuple | None = None,
+                 transition: bool = False) -> RenderError:
+    """`exc` as a RenderError that names the shot, the technique and (when there is one) the overlay."""
+    if isinstance(exc, RenderError):
+        return exc
+    path = "shots[%d]" % index
+    oid = None
+    if overlay is not None:
+        oid = overlay[1]
+        path += ".overlays[%d]" % overlay[0]
+    elif transition:
+        path += ".transition_in"
+    sid = shot.get("id") if isinstance(shot, dict) else None
+    where = "shot %s" % sid if sid else "shot %d" % index
+    if oid:
+        where += ", overlay %s" % oid
+    elif overlay is not None:
+        where += ", overlay %d" % overlay[0]
+    elif transition:
+        where += ", transition"
+    detail = str(exc).strip() or type(exc).__name__
+    if not isinstance(exc, (KeyError, ValueError)):
+        detail = "%s: %s" % (type(exc).__name__, detail)
+    err = RenderError("%s (%s) cannot be drawn: %s" % (where, technique, detail[:200]), shot=sid if isinstance(sid, str) else None,
+                      overlay=oid if isinstance(oid, str) else None, technique=technique, path=path)
+    err.__cause__ = exc
+    return err
 
 
 class CompiledShot:
-    def __init__(self, shot, base: BaseRenderer, overlays, transition):
+    def __init__(self, shot, base: BaseRenderer | None, overlays, transition, index: int = 0, error: RenderError | None = None):
+        # overlays: list of (index in the shot's overlay list, renderer)
         self.shot, self.base, self.overlays, self.transition = shot, base, overlays, transition
+        self.index, self.error = index, error
         self.t0, self.t1 = shot["_t0"], shot["_t1"]
 
     def render(self, t):
-        f = self.base.render(t)
+        if self.error is not None:
+            raise self.error
+        tid = self.shot.get("technique")
+        try:
+            f = self.base.render(t)
+        except Exception as e:      # noqa: BLE001
+            raise render_error(e, self.shot, tid, self.index) from e
         if self.overlays:
-            view = self.base.view(t)
-            for o in self.overlays:
-                f = o.apply(f, t, view)
+            try:
+                view = self.base.view(t)
+            except Exception as e:      # noqa: BLE001
+                raise render_error(e, self.shot, tid, self.index) from e
+            for j, o in self.overlays:
+                try:
+                    f = o.apply(f, t, view)
+                except Exception as e:      # noqa: BLE001
+                    ov = self.shot["overlays"][j]
+                    raise render_error(e, self.shot, ov.get("technique"), self.index, overlay=(j, ov.get("id"))) from e
         return f
+
+    def blend(self, f_out, f_in, p):
+        try:
+            return self.transition.blend(f_out, f_in, p)
+        except Exception as e:      # noqa: BLE001
+            raise render_error(e, self.shot, self.shot["transition_in"].get("technique"), self.index, transition=True) from e
 
 
 class Placeholder(BaseRenderer):
@@ -62,24 +115,32 @@ class Scene:
         self.end_t = sb["end"]["_t"]
         self.end_fade_s = float(sb["end"].get("fade_s", DEFAULT_END_FADE_S))
         self.shots: list[CompiledShot] = []
-        for s in sb["shots"]:
+        for i, s in enumerate(sb["shots"]):
             tid = s["technique"]
-            cls, kind = R.RENDERERS[tid]
-            miss = missing_of(bundle.spec(tid), s, "base")
-            base = Placeholder(tid, s, self.ctx, miss) if miss else cls(tid, s, self.ctx)
-            ovs = []
-            for o in s.get("overlays") or []:
-                ocls, _ = R.RENDERERS[o["technique"]]
-                if missing_of(bundle.spec(o["technique"]), o, "overlay", s):
-                    continue                    # incomplete overlay: skipped, never an error
-                ovs.append(ocls(o["technique"], o, base, self.ctx))
-            tr = None
-            if s.get("transition_in"):
-                ttid = s["transition_in"]["technique"]
-                tcls, _ = R.RENDERERS[ttid]
-                if not missing_of(bundle.spec(ttid), s["transition_in"], "transition"):
-                    tr = tcls(ttid, s["transition_in"], self.ctx)
-            self.shots.append(CompiledShot(s, base, ovs, tr))
+            stage = [tid, None]          # what is being built, for the error message
+            try:
+                cls, kind = R.RENDERERS[tid]
+                miss = missing_of(bundle.spec(tid), s, "base")
+                base = Placeholder(tid, s, self.ctx, miss) if miss else cls(tid, s, self.ctx)
+                ovs = []
+                for j, o in enumerate(s.get("overlays") or []):
+                    stage = [o["technique"], (j, o.get("id"))]
+                    ocls, _ = R.RENDERERS[o["technique"]]
+                    if missing_of(bundle.spec(o["technique"]), o, "overlay", s):
+                        continue                    # incomplete overlay: skipped, never an error
+                    ovs.append((j, ocls(o["technique"], o, base, self.ctx)))
+                tr = None
+                if s.get("transition_in"):
+                    stage = [s["transition_in"]["technique"], "transition"]
+                    ttid = s["transition_in"]["technique"]
+                    tcls, _ = R.RENDERERS[ttid]
+                    if not missing_of(bundle.spec(ttid), s["transition_in"], "transition"):
+                        tr = tcls(ttid, s["transition_in"], self.ctx)
+                self.shots.append(CompiledShot(s, base, ovs, tr, i))
+            except Exception as e:      # noqa: BLE001
+                # one shot that cannot be built must not hide the others: it raises when (and only when) it is drawn
+                ov = stage[1] if isinstance(stage[1], tuple) else None
+                self.shots.append(CompiledShot(s, None, [], None, i, error=render_error(e, s, stage[0], i, overlay=ov, transition=stage[1] == "transition")))
         self.starts = [c.t0 for c in self.shots]
         self.starts[0] = min(self.starts[0], 0.0)    # the first shot also covers t < its start (benchmark: shots[0].t0 = 0)
 
@@ -96,7 +157,7 @@ class Scene:
         tr = c.transition
         if tr is not None and i > 0 and tr.dur > 0 and t < c.t0 + tr.dur:
             p = (t - c.t0) / tr.dur
-            f = tr.blend(self.shots[i - 1].render(t), f, p)
+            f = c.blend(self.shots[i - 1].render(t), f, p)
         if self.end_fade_s > 0:
             fade = 1 - ramp(t, self.end_t - self.end_fade_s, self.end_fade_s, "inout_sine")
             if fade < 1:
@@ -104,7 +165,8 @@ class Scene:
         return f
 
     def frame_at(self, t: float, width: int = 1920) -> np.ndarray:
-        f = to_u8(self.frame_float(t))
+        with guard.limited():
+            f = to_u8(self.frame_float(t))
         return resize_frame(f, width)
 
     def render_range(self, t0: float, t1: float, out_path: Path, width: int = 640, fps: int = 15, on_progress=None, quality: str = "preview", threads: int | None = None) -> Path:
@@ -122,18 +184,30 @@ class Scene:
         i0 = int(round(t0 * fps))
         n = max(1, int(round((t1 - t0) * fps)))       # the length, not two rounded ends: 3.0 s at 15 fps is always 45 frames
         i1 = i0 + n
+        ok = False
+        broken_pipe = False
         try:
             for k, i in enumerate(range(i0, i1)):
                 fr = self.frame_at(i / fps, 1920)
                 if (w, h) != (1920, 1080):
                     fr = cv2.resize(fr, (w, h), interpolation=cv2.INTER_AREA)
-                p.stdin.write(fr.tobytes())
+                try:
+                    p.stdin.write(fr.tobytes())
+                except (BrokenPipeError, OSError):
+                    broken_pipe = True          # ffmpeg died: its own message is on stderr, the exit code is checked below
+                    break
                 if on_progress and (k % 5 == 0 or k == n - 1):
                     on_progress((k + 1) / n)
+            ok = not broken_pipe
         finally:
-            p.stdin.close()
+            try:
+                p.stdin.close()
+            except OSError:
+                pass
             rc = p.wait()
-        if rc != 0:
+            if not ok or rc != 0:
+                out_path.unlink(missing_ok=True)       # never leave a partial clip behind
+        if rc != 0 or broken_pipe:
             raise RuntimeError("ffmpeg failed with exit code %d" % rc)
         if on_progress:
             on_progress(1.0)

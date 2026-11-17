@@ -19,11 +19,11 @@ import numpy as np
 
 from . import registry as R
 from . import storyboard as SB
-from .errors import DataError
+from .errors import DataError, RenderError
 from .scene import Scene
 from .timing import Timing
 
-__all__ = ["open_project", "Project", "load_style", "ValidationError"]
+__all__ = ["open_project", "Project", "load_style", "ValidationError", "RenderError"]
 ValidationError = SB.ValidationError
 
 
@@ -118,7 +118,7 @@ class Project:
         try:
             bundle = self._bundle_for(sb)
         except DataError as e:
-            issues.append({"level": "error", "path": "style", "message": e.message})
+            issues.append({"level": "error", "path": "style", "code": "style_unusable", "args": {"style": sb.get("style")}, "message": e.message})
             try:
                 bundle = self.bundle
             except DataError:
@@ -126,7 +126,7 @@ class Project:
         try:
             tm = self._timing_for(sb)
         except DataError as e:
-            issues.append({"level": "error", "path": "timing", "message": e.message})
+            issues.append({"level": "error", "path": "timing", "code": "timing_unusable", "args": {"file": sb.get("timing")}, "message": e.message})
             tm = Timing({"duration": 0.0, "words": []})
         return issues + SB.validate(sb, tm, bundle, self.dir)
 
@@ -156,6 +156,65 @@ class Project:
     def render_range(self, t0: float, t1: float, out_path: Path, width: int = 640, fps: int = 15, on_progress=None, quality: str = "preview", threads: int | None = None) -> Path:
         """Silent H.264 of [t0, t1) written to out_path."""
         return self._scene().render_range(float(t0), float(t1), Path(out_path), int(width), int(fps), on_progress, quality, threads)
+
+    def draw_check(self, storyboard: dict | None = None, width: int = 320) -> list[dict]:
+        """Draw three small frames (just inside the start, the middle, just inside the end) of every shot, one inside every overlay's span and one in the middle of every
+        transition; return the failures as issues `{"level": "error", "code": "undrawable", "path", "shot", "message"}`.
+        Never raises for a technique failure and leaves the project's draft state as the caller had it."""
+        saved_draft = self._draft
+        issues: list[dict] = []
+        seen: set = set()
+
+        def fail(path, shot_id, message, technique=None, overlay=None):
+            if (path, message) not in seen:
+                seen.add((path, message))
+                issues.append({"level": "error", "code": "undrawable", "path": path, "shot": shot_id, "message": message,
+                               "args": {"shot": shot_id, "technique": technique, "overlay": overlay}})
+
+        try:
+            if storyboard is not None:
+                self.use_draft(storyboard)
+            try:
+                scene = self._scene()
+            except RenderError as e:
+                fail(e.path or "", e.shot, e.message, e.technique, e.overlay)
+                return issues
+            except DataError as e:
+                fail("", None, e.message)
+                return issues
+            except Exception as e:      # noqa: BLE001
+                fail("", None, "the storyboard cannot be compiled (%s: %s)" % (type(e).__name__, str(e)[:120]))
+                return issues
+            frame = 1 / 15.0
+            for i, c in enumerate(scene.shots):
+                sid = c.shot.get("id") if isinstance(c.shot.get("id"), str) else None
+                t0, t1 = c.t0, c.t1
+                if t0 is None or t1 is None:
+                    continue
+                eps = min(0.05, (t1 - t0) / 10)            # just inside the shot: a camera move needs its largest buffer at an end
+                times = [("shots[%d]" % i, t0 + eps), ("shots[%d]" % i, (t0 + t1) / 2), ("shots[%d]" % i, t1 - eps)]
+                tr = c.shot.get("transition_in")
+                if c.transition is not None and i > 0 and isinstance(tr, dict) and c.transition.dur > 0:
+                    times.append(("shots[%d].transition_in" % i, t0 + c.transition.dur / 2))
+                for j, o in enumerate(c.shot.get("overlays") or []):
+                    ot0, ot1 = o.get("_t0"), o.get("_t1")
+                    if ot0 is None or ot1 is None:
+                        continue
+                    times.append(("shots[%d].overlays[%d]" % (i, j), (ot0 + ot1) / 2))
+                drawn: list = []
+                for path, t in times:
+                    if any(abs(t - d) < frame for d in drawn):
+                        continue            # closer than one frame to a frame already drawn
+                    drawn.append(t)
+                    try:
+                        scene.frame_at(t, int(width))
+                    except RenderError as e:
+                        fail(e.path or path, e.shot or sid, e.message, e.technique, e.overlay)
+                    except Exception as e:      # noqa: BLE001
+                        fail(path, sid, "shot %s cannot be drawn: %s: %s" % (sid or i, type(e).__name__, str(e)[:120]))
+        finally:
+            self._draft = saved_draft
+        return issues
 
     # -- editing support -------------------------------------------------------------------------------------
     def _asset_info(self, key: str, sb: dict) -> dict | None:

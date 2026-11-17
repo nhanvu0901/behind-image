@@ -221,9 +221,8 @@ def test_map_annotations_draw_on_the_chosen_background(lab):
     p = lab([("AN-04", 0.0, 8.0, {"places": [[300, 400], [600, 1000]], "background": "base", "control": [500, 600]}, None)])
     h = frame(p, 5.0)
     assert ((h[:, :, 2] > 150) & (h[:, :, 1] < 80)).sum() > 100                                      # drawn over the picture
-    p = lab([("AN-04", 0.0, 8.0, dict(kw, background="image"), None)])          # image mode needs the `map` slot
-    with pytest.raises(ValueError):
-        p.frame_at(5.0, 480)
+    p = lab([("AN-04", 0.0, 8.0, dict(kw, background="image"), None)])          # image mode without the `map` slot draws the procedural map
+    assert np.array_equal(frame(p, 5.0), g)                                     # (it used to raise; validate must never accept what cannot be drawn)
 
 
 def test_map_route_follows_the_camera_in_base_mode(lab):

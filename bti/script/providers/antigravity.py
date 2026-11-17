@@ -23,6 +23,7 @@ from pathlib import Path
 
 from . import ProviderError
 
+LIST_TIMEOUT_S = 8             # `agy models` is a list: it answers quickly or the page must not wait for it
 LOCK = threading.Lock()          # one agy call at a time
 SETTINGS = {"toolPermission": "strict", "allowNonWorkspaceAccess": False, "enableTerminalSandbox": True,
             "disableSlashCommands": True}
@@ -155,7 +156,7 @@ def list_models() -> list[dict]:
     work = tempfile.mkdtemp(prefix="bti-agy-")
     try:
         r = subprocess.run([agy, "models"], cwd=work, env=clean_env(), stdin=subprocess.DEVNULL, capture_output=True,
-                           text=True, timeout=60, start_new_session=True)
+                           text=True, timeout=LIST_TIMEOUT_S, start_new_session=True)
     except (subprocess.TimeoutExpired, OSError):
         raise ProviderError("timeout", "`agy models` không trả lời.")
     finally:

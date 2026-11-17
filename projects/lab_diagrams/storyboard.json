@@ -238,7 +238,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -280,7 +280,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -295,7 +295,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -317,7 +317,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -344,7 +344,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -368,7 +368,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -408,7 +408,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -432,7 +432,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -461,7 +461,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -499,12 +499,12 @@
       "box_color": "#f5cd1e"
      },
      "locked": false,
-     "source": "manual",
+     "source": "human",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   },
   {
@@ -523,7 +523,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "manual",
+   "source": "human",
    "note": ""
   }
  ],

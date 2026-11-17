@@ -51,7 +51,7 @@ def _placeholder(path: Path, label: str, w: int = 1200, h: int = 1600) -> None:
     d = ImageDraw.Draw(img)
     d.rectangle([w // 10, h // 10, w - w // 10, h - h // 10], outline=(60, 50, 40), width=8)
     d.text((w // 8, h // 2), label, fill=(30, 25, 20))
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(exist_ok=True)           # media/ only: never the project folder
     img.save(path, "JPEG", quality=80)
 
 
@@ -60,7 +60,7 @@ def _translate(e: Exception) -> Exception:
     n = type(e).__name__
     if n == "LicenceRejected":
         return LicenceRejected(str(e))
-    if isinstance(e, ApiError):
+    if isinstance(e, (ApiError, FileNotFoundError)):       # FileNotFoundError: the project was deleted meanwhile (404 by the app)
         return e
     if isinstance(e, ValueError):
         return ApiError(422, str(e)[:300])
@@ -127,7 +127,7 @@ class MediaAdapter:
     def import_candidate(self, project_dir: Path, source: str, source_id: str) -> dict:
         if self.module is not None:
             try:
-                return self.module.import_candidate(project_dir, source, source_id)
+                return self.module.import_candidate(project_dir, source, source_id, require_root=True)
             except Exception as e:  # noqa: BLE001
                 raise _translate(e)
         cand = next((c for c in _CANDS if c[0] == source and c[1] == source_id), None)
@@ -149,7 +149,7 @@ class MediaAdapter:
     def add_upload(self, project_dir: Path, file_path: Path, meta: dict) -> dict:
         if self.module is not None:
             try:
-                return self.module.add_upload(project_dir, file_path, meta)
+                return self.module.add_upload(project_dir, file_path, meta, require_root=True)
             except Exception as e:  # noqa: BLE001
                 raise _translate(e)
         ok, name, reason = _licence_ok(meta.get("licence", ""))
@@ -169,7 +169,7 @@ class MediaAdapter:
         key = self._next_key(project_dir)
         rel = f"media/upload_{key}.{ext}"
         dest = safe_join(project_dir, "media") / f"upload_{key}.{ext}"
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.parent.mkdir(exist_ok=True)
         shutil.copyfile(file_path, dest)
         asset = {"file": rel, "kind": "image", "title": meta.get("title") or "", "artist": meta.get("artist") or "",
                  "year": meta.get("year") or "", "width": w, "height": h,

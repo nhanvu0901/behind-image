@@ -1,5 +1,6 @@
 // Generic DOM form built from registry param definitions (see formgen.js). No per-technique code.
 import { h } from './util.js';
+import { valueLabel } from './labels.js';
 import { buildFields, coerce, pointToText } from './formgen.js';
 import { splitSpace, normBox } from './coords.js';
 import { ctx, bus } from './ctx.js';
@@ -33,7 +34,7 @@ export function renderForm(defs, values, opts) {
   };
 }
 
-const placeholderOf = (space) => (space === 'frame' ? 'x, y (0 đến 1 của khung)' : space === 'canvas' ? 'x, y (px khung hình)' : space === 'none' ? 'x, y' : 'tên vùng hoặc x, y');
+const placeholderOf = (space, numeric) => (numeric ? 'x, y (hai số)' : space === 'frame' ? 'x, y (0 đến 1 của khung)' : space === 'canvas' ? 'x, y (px khung hình)' : space === 'none' ? 'x, y' : 'tên vùng hoặc x, y');
 const pickTitle = (space) => (space === 'none' ? 'Tham số này không chọn được trên ảnh: nhập số' : 'Bấm lên khung xem trước để lấy tọa độ' + (space === 'source' ? ' (Shift = luôn lấy x,y)' : ''));
 const spaceTag = (space) => h('span', { class: 'hint', title: 'Hệ tọa độ của tham số', text: { source: 'px ảnh nguồn', canvas: 'px khung hình', frame: 'tỉ lệ khung (0 đến 1)', none: '' }[space] || '' });
 
@@ -41,7 +42,17 @@ function row(f, ctl, extra) {
   const label = h('label', { title: f.name + (f.def.unit ? ` (${f.def.unit})` : ''), text: f.name });
   const r = h('div', { class: 'row' + (f.problem ? ' field-problem' : '') }, label, h('div', { class: 'ctl' }, ctl));
   if (extra) r.append(extra);
+  r.append(h('div', { class: 'hint field-note' }));
+  setNote(r, f);
   return r;
+}
+/** Under the field: what to type (the registry's `pattern_hint`), or what is wrong with the value now. */
+function setNote(r, f) {
+  const el = r.querySelector(':scope > .field-note');
+  if (!el) return;
+  el.textContent = f.problem || f.def.pattern_hint || '';
+  el.classList.toggle('warn', !!f.problem);
+  el.hidden = !el.textContent;
 }
 const measuredTag = (f) => f.measured ? h('span', { class: 'measured', title: `Đo từ kênh gốc: ${f.measured.value}\n${f.measured.source || ''}`, text: typeof f.measured.value === 'number' ? `ref ${f.measured.value}` : 'ref*' }) : null;
 
@@ -51,7 +62,7 @@ function makeWidget(f, opts) {
   let update = () => {};
   let ctlNodes = [];
   let r;
-  const mark = (nf) => r.classList.toggle('field-problem', !!nf.problem);
+  const mark = (nf) => { r.classList.toggle('field-problem', !!nf.problem); setNote(r, nf); };
   switch (f.widget) {
     case 'number': {
       const num = h('input', { type: 'number', step: f.step, min: f.min ?? undefined, max: f.max ?? undefined, value: f.value ?? '' });
@@ -78,8 +89,8 @@ function makeWidget(f, opts) {
       break;
     }
     case 'select': {
-      const sel = h('select', null, ...(f.values || []).map((v) => h('option', { value: v, text: v })));
-      if (f.value != null && !(f.values || []).includes(f.value)) sel.prepend(h('option', { value: f.value, text: String(f.value) }));
+      const sel = h('select', null, ...(f.values || []).map((v) => h('option', { value: v, text: valueLabel(v, f.name), title: v })));
+      if (f.value != null && !(f.values || []).includes(f.value)) sel.prepend(h('option', { value: f.value, text: valueLabel(f.value, f.name), title: String(f.value) }));
       sel.value = f.value ?? '';
       sel.addEventListener('change', () => emit(sel.value));
       ctlNodes = [sel, measuredTag(f)];
@@ -116,8 +127,8 @@ function makeWidget(f, opts) {
     case 'point': {
       const sp = () => splitSpace(opts.spaceOf ? opts.spaceOf(d) : 'source');
       const dl = 'dl-' + Math.random().toString(36).slice(2, 7);
-      const t = h('input', { type: 'text', list: dl, placeholder: placeholderOf(sp().space), value: pointToText(f.value, sp().space) });
-      const data = h('datalist', { id: dl }, ...(sp().space === 'source' ? Object.keys(opts.regions || {}) : []).map((n) => h('option', { value: n })));
+      const t = h('input', { type: 'text', list: dl, placeholder: placeholderOf(sp().space, d.numeric_only), value: pointToText(f.value, sp().space) });
+      const data = h('datalist', { id: dl }, ...(sp().space === 'source' && !d.numeric_only ? Object.keys(opts.regions || {}) : []).map((n) => h('option', { value: n })));
       t.addEventListener('change', () => emit(coerce(d, t.value)));
       const pick = h('button', { class: 'small', title: pickTitle(sp().space), text: 'Chọn trên ảnh', disabled: sp().space === 'none', onclick: () => {
         const { space } = sp();
@@ -131,23 +142,24 @@ function makeWidget(f, opts) {
     case 'points': {
       const sp = () => splitSpace(opts.spaceOf ? opts.spaceOf(d) : 'source');
       const dl = 'dl-' + Math.random().toString(36).slice(2, 7);
-      const data = h('datalist', { id: dl }, ...(sp().space === 'source' ? Object.keys(opts.regions || {}) : []).map((n) => h('option', { value: n })));
+      const data = h('datalist', { id: dl }, ...(sp().space === 'source' && !d.numeric_only ? Object.keys(opts.regions || {}) : []).map((n) => h('option', { value: n })));
       const wrap = h('div', { class: 'pts' }, data);
+      const lo = d.min_items ?? 0, hi = d.max_items ?? Infinity;
       let cur = Array.isArray(f.value) ? clone(f.value) : [];
       const push = (n) => { cur = n; emit(clone(n)); build(); };
       const build = () => {
         const { space } = sp();
         wrap.replaceChildren(data);
         cur.forEach((pt, i) => {
-          const t = h('input', { type: 'text', list: dl, value: pointToText(pt, space), placeholder: placeholderOf(space), style: { flex: 1, minWidth: 0 } });
+          const t = h('input', { type: 'text', list: dl, value: pointToText(pt, space), placeholder: placeholderOf(space, d.numeric_only), style: { flex: 1, minWidth: 0 } });
           t.addEventListener('change', () => { const n = clone(cur); n[i] = coerce({ type: 'point' }, t.value); cur = n; emit(clone(n)); });
           wrap.append(h('div', { class: 'pt-ctl' }, h('span', { class: 'hint', text: String(i + 1) }), t,
             h('button', { class: 'small', text: 'Chọn trên ảnh', disabled: space === 'none', title: pickTitle(space), onclick: () => {
               ctx.pick = { space, cb: (v) => { const n = clone(cur); n[i] = v; cur = n; emit(clone(n)); build(); } }; bus.emit('pick', true);
             } }),
-            h('button', { class: 'small danger', text: 'Xóa', onclick: () => push(cur.filter((_, k) => k !== i)) })));
+            h('button', { class: 'small danger', text: 'Xóa', disabled: cur.length <= lo, title: cur.length <= lo ? `Cần ít nhất ${lo} điểm` : '', onclick: () => push(cur.filter((_, k) => k !== i)) })));
         });
-        wrap.append(h('div', { class: 'pt-ctl' }, h('button', { class: 'small', text: '+ Thêm điểm', onclick: () => {
+        wrap.append(h('div', { class: 'pt-ctl' }, h('button', { class: 'small', text: '+ Thêm điểm', disabled: cur.length >= hi, title: cur.length >= hi ? `Tối đa ${hi} điểm` : '', onclick: () => {
           const last = cur[cur.length - 1], step = space === 'frame' ? 0.05 : 100;
           push([...cur, Array.isArray(last) ? [last[0] + step, last[1] + step] : (opts.centre ? opts.centre(space) : [1000, 1000])]);
         } }), spaceTag(space)));
@@ -192,11 +204,13 @@ function makeWidget(f, opts) {
         wrap.replaceChildren();
         keys.forEach((k, i) => {
           const kind = typeof k.at?.t === 'number' ? 't' : typeof k.at?.w === 'number' ? 'w' : 'rel';
-          const num = (key, step) => h('input', { type: 'number', step, value: round(k[key] ?? 0, 3), onchange: (e) => mutate(i, (kk) => { kk[key] = Number(e.target.value); }) });
+          // a number field never stores garbage: blank or not a number puts the old value back; zoom stays above 0
+          const typed = (e, old, min = -Infinity, max = Infinity) => { const v = e.target.value.trim() === '' ? NaN : Number(e.target.value); if (!Number.isFinite(v)) { e.target.value = round(old ?? 0, 3); return null; } const c = Math.min(max, Math.max(min, v)); if (c !== v) e.target.value = c; return c; };
+          const num = (key, step) => h('input', { type: 'number', step, value: round(k[key] ?? 0, 3), onchange: (e) => { const v = typed(e, k[key], key === 'zoom' ? 0.01 : -Infinity, key === 'zoom' ? 1000 : Infinity); if (v !== null) mutate(i, (kk) => { kk[key] = v; }); } });
           const kindSel = h('select', { onchange: (e) => mutate(i, (kk) => { kk.at = e.target.value === 'rel' ? { rel: i ? 1 : 0 } : e.target.value === 't' ? { t: round(ctx.t, 3) } : anchorFromTime(ctx.t, ctx.words(), false, Infinity); }, true) },
             ...[['rel', '% shot'], ['t', 'giây'], ['w', 'từ']].map(([v, l]) => h('option', { value: v, text: l, selected: v === kind })));
-          const atIn = kind === 'rel' ? h('input', { type: 'number', step: 0.05, min: 0, max: 1, value: k.at?.rel ?? 0, onchange: (e) => mutate(i, (kk) => { kk.at = { rel: Number(e.target.value) }; }) })
-            : kind === 't' ? h('input', { type: 'number', step: 0.1, value: k.at.t, onchange: (e) => mutate(i, (kk) => { kk.at = { t: Number(e.target.value) }; }) })
+          const atIn = kind === 'rel' ? h('input', { type: 'number', step: 0.05, min: 0, max: 1, value: k.at?.rel ?? 0, onchange: (e) => { const v = typed(e, k.at?.rel, 0, 1); if (v !== null) mutate(i, (kk) => { kk.at = { rel: v }; }); } })
+            : kind === 't' ? h('input', { type: 'number', step: 0.1, value: k.at.t, onchange: (e) => { const v = typed(e, k.at.t, 0); if (v !== null) mutate(i, (kk) => { kk.at = { t: v }; }); } })
               : h('span', { class: 'hint', text: describeAnchor(k.at, ctx.words()) });
           wrap.append(h('div', { class: 'kf' },
             h('div', { class: 'row' }, h('b', { text: 'Khóa ' + (i + 1), style: { flex: 1 } }),
@@ -204,8 +218,8 @@ function makeWidget(f, opts) {
             h('div', { class: 'row' }, h('label', { text: 'Thời điểm' }), h('div', { class: 'ctl' }, kindSel, atIn,
               h('button', { class: 'small', style: { whiteSpace: 'nowrap' }, title: 'Gắn vào từ tại đầu phát', text: '= đầu phát', onclick: () => mutate(i, (kk) => { kk.at = anchorFromTime(ctx.t, ctx.words(), false, Infinity); }, true) }))),
             h('div', { class: 'kf-grid' }, h('div', null, h('label', { text: 'cx' }), num('cx', 1)), h('div', null, h('label', { text: 'cy' }), num('cy', 1)), h('div', null, h('label', { text: 'zoom' }), num('zoom', 0.01))),
-            h('div', { class: 'row', style: { marginTop: '4px' } }, h('label', { text: 'ease' }), h('div', { class: 'ctl' },
-              h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }, ...EASE_NAMES.map((n) => h('option', { value: n, text: n, selected: n === (k.ease || 'linear') })))))));
+            h('div', { class: 'row', style: { marginTop: '4px' } }, h('label', { text: 'Chuyển động' }), h('div', { class: 'ctl' },
+              h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }, ...EASE_NAMES.map((n) => h('option', { value: n, text: valueLabel(n), title: n, selected: n === (k.ease || 'linear') })))))));
         });
         wrap.append(h('button', { class: 'small', text: '+ Thêm khóa camera', onclick: () => {
           const n = cur.length ? [...clone(cur), { ...clone(cur[cur.length - 1]), at: { rel: 1 } }] : [opts.newKey ? opts.newKey() : { at: { rel: 0 }, cx: 1000, cy: 1000, zoom: 0.5, ease: 'linear' }]; cur = n; emit(n); build(n);

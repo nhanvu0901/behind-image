@@ -1,5 +1,6 @@
 // "Hình" tab: assets, region manager, licence-aware search, import and upload.
-import { h, svg, toast, ask } from './util.js';
+import { h, svg, toast, ask, errorToast, errorInto } from './util.js';
+import { licenceText } from './errmsg.js';
 import { ctx, bus, assetThumbUrl } from './ctx.js';
 import { api } from './api.js';
 import { clone } from './logic.js';
@@ -179,7 +180,7 @@ function regionManager(key, a) {
 const scopeTimeout = (fn, ms) => setTimeout(fn, ms);
 
 function licChip(c) {
-  return h('span', { class: 'chip ' + (c.licence_ok ? 'ok' : 'missing'), title: c.licence_reason || '', text: `${c.licence || 'không rõ'}${c.licence_ok ? '' : ' (bị chặn)'}` });
+  return h('span', { class: 'chip ' + (c.licence_ok ? 'ok' : 'missing'), title: c.licence_reason ? licenceText(c.licence_reason).text : '', text: `${c.licence || 'không rõ'}${c.licence_ok ? '' : ' (bị chặn)'}` });
 }
 
 function searchSection() {
@@ -190,7 +191,7 @@ function searchSection() {
   const go = async () => {
     state.q = q.value; state.source = src.value; state.kind = kind.value;
     out.replaceChildren(h('div', { class: 'hint', text: 'Đang tìm...' }));
-    try { state.results = await api.search(state.q, state.source, state.kind, 24); } catch (e) { state.results = []; toast('Tìm thất bại: ' + (e.status || e.message), 'err'); }
+    try { state.results = await api.search(state.q, state.source, state.kind, 24); } catch (e) { state.results = []; errorToast(e, 'Tìm thất bại: '); }
     paint();
   };
   const paint = () => {
@@ -198,18 +199,18 @@ function searchSection() {
     if (state.results === null) return;
     if (!state.results.length) out.append(h('div', { class: 'empty', text: 'Không có kết quả.' }));
     for (const c of state.results) {
-      const imp = h('button', { class: 'small primary', text: 'Nhập', disabled: !c.licence_ok, title: c.licence_ok ? 'Tải về dự án' : (c.licence_reason || 'Giấy phép không được phép'), onclick: async () => {
+      const imp = h('button', { class: 'small primary', text: 'Nhập', disabled: !c.licence_ok, title: c.licence_ok ? 'Tải về dự án' : licenceText(c.licence_reason).text, onclick: async () => {
         imp.disabled = true; imp.textContent = '...';
         try {
           const r = await api.importAsset(ctx.pid, c.source, c.source_id);
           addAsset(r.asset_key, r.asset, c.thumb_url); toast(`Đã nhập ${r.asset_key}`, 'ok');
           if (ctx.slotPick) await assign(r.asset_key); else { selKey = r.asset_key; bus.emit('assets'); }
-        } catch (e) { const reason = e.body?.detail?.reason || e.body?.reason || (typeof e.body?.detail === 'string' ? e.body.detail : '') || e.message; toast(e.status === 422 ? 'Giấy phép bị từ chối: ' + reason : 'Nhập thất bại: ' + reason, 'err', 6000); imp.disabled = false; imp.textContent = 'Nhập'; }
+        } catch (e) { errorToast(e, e.status === 422 ? 'Giấy phép bị từ chối: ' : 'Nhập thất bại: ', 6000); imp.disabled = false; imp.textContent = 'Nhập'; }
       } });
       out.append(h('div', { class: 'cand' }, h('img', { src: api.url(c.thumb_url), alt: '' }), h('div', { class: 'info' },
         h('div', { class: 't', title: c.title, text: c.title }), h('div', { class: 'hint', text: `${c.author || '?'} | ${c.width || '?'}x${c.height || '?'} | ${c.mime || ''}` }),
         h('div', { style: { display: 'flex', gap: '6px', alignItems: 'center', marginTop: '3px' } }, licChip(c), c.page_url ? h('a', { href: c.page_url, target: '_blank', rel: 'noopener', style: { color: 'var(--accent)', fontSize: '11px' }, text: 'trang gốc' }) : null),
-        !c.licence_ok && c.licence_reason ? h('div', { class: 'hint err', text: c.licence_reason }) : null), imp));
+        !c.licence_ok && c.licence_reason ? h('div', { class: 'hint err', text: licenceText(c.licence_reason).text }) : null), imp));
     }
   };
   q.addEventListener('keydown', (e) => { if (e.key === 'Enter') go(); });
@@ -227,15 +228,15 @@ function uploadSection() {
   const msg = h('div', { class: 'hint' });
   const form = h('div', { class: 'form-grid' },
     h('div', { class: 'full' }, h('label', { text: 'Tệp' }), f.file), inp('title', 'Tiêu đề'), inp('artist', 'Họa sĩ'), inp('year', 'Năm'), h('div', null, h('label', { text: 'Giấy phép' }), f.licence),
-    h('div', { class: 'full' }, inp('source_url', 'URL nguồn (bắt buộc)', { placeholder: 'https://...' })), h('div', { class: 'full' }, inp('author', 'Tác giả (hoặc "unknown, PD")')),
+    h('div', { class: 'full' }, inp('source_url', 'Địa chỉ trang nguồn (bắt buộc)', { placeholder: 'https://...' })), h('div', { class: 'full' }, inp('author', 'Tác giả (hoặc "unknown, PD")')),
     h('div', { class: 'full' }, h('button', { class: 'primary', text: 'Tải lên', onclick: async () => {
       if (!f.file.files[0]) return (msg.textContent = 'Chọn tệp trước.');
-      if (!f.source_url.value || !f.author.value) return (msg.textContent = 'Cần source_url và author (design 8.2).');
+      if (!f.source_url.value || !f.author.value) return (msg.textContent = 'Cần điền địa chỉ nguồn và tác giả của hình.');
       const fd = new FormData(); fd.append('file', f.file.files[0]);
       for (const k of ['title', 'artist', 'year', 'licence', 'source_url', 'author']) fd.append(k, f[k].value);
       msg.textContent = 'Đang tải...';
       try { const r = await api.upload(ctx.pid, fd); addAsset(r.asset_key, r.asset); msg.textContent = ''; toast('Đã tải lên ' + r.asset_key, 'ok'); selKey = r.asset_key; bus.emit('assets'); }
-      catch (e) { msg.textContent = 'Lỗi: ' + (e.body?.detail?.reason || e.body?.detail || e.body?.reason || e.message); }
+      catch (e) { errorInto(msg, e, 'Không tải lên được: '); }
     } }), msg));
   return h('div', { class: 'sect' }, h('h4', null, 'Tải lên hình của bạn'), form);
 }
