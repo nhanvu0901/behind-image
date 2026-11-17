@@ -23,13 +23,16 @@ def commons_net(monkeypatch):
 def test_search_candidate_shape_and_licence_flags(commons_net):
     res = api.search("Arnolfini Portrait", "commons", "image", 10)
     keys = {"source", "source_id", "title", "thumb_url", "page_url", "width", "height", "mime",
-            "author", "licence", "licence_ok", "licence_reason"}
+            "author", "licence", "licence_ok", "licence_reason", "flag"}
     assert all(set(r) == keys for r in res)
     by = {r["source_id"]: r for r in res}
     assert by["File:Arnolfini nc.jpg"]["licence_ok"] is False
     assert "NC" in by["File:Arnolfini nc.jpg"]["licence_reason"]
     assert by["File:Arnolfini nolicence.jpg"]["licence_ok"] is False
     assert by["File:Arnolfini small.png"]["licence"] == "CC BY-SA 4.0"
+    # the advisory flag: licence problems first, then a small picture
+    assert by["File:Arnolfini nc.jpg"]["flag"] == "rejected" and by["File:Arnolfini nolicence.jpg"]["flag"] == "unknown"
+    assert by["File:Arnolfini small.png"]["flag"] == "small"
 
 
 def test_check_licence_facade():
@@ -68,21 +71,26 @@ def test_key_avoids_clash_with_storyboard_assets(commons_net, tmp_path):
     assert list(sb["assets"]) == ["arnolfini_portrait"]            # untouched
 
 
-def test_import_rejects_licence_before_download(commons_net, tmp_path):
+def test_import_nc_licence_is_kept_and_flagged_not_refused(commons_net, tmp_path):
+    # CHANGED (advisory gate, owner decision 2026-11-16): this used to assert LicenceRejected before any download.
     page = [p for p in load("commons_search.json")["query"]["pages"] if p["pageid"] == 3][0]
     commons_net.routes.insert(0, ("titles=", {"query": {"pages": [page]}}))
-    with pytest.raises(api.LicenceRejected) as ei:
-        api.import_candidate(tmp_path / "p", "commons", "File:Arnolfini nc.jpg")
-    assert "NC" in str(ei.value)
-    assert not any("x/nc" in u for u in commons_net.urls)
-    assert not list((tmp_path / "p").rglob("*.jpg"))
+    commons_net.routes.insert(0, ("x/nc", png_bytes(1300, 1250)))
+    res = api.import_candidate(tmp_path / "p", "commons", "File:Arnolfini nc.jpg")
+    assert res["asset"]["credit"]["flag"] == "rejected" and "NC" in api.check_licence({"licence": "CC BY-NC-SA 3.0"})[2]
+    assert any("x/nc" in u for u in commons_net.urls) and (tmp_path / "p" / res["asset"]["file"]).is_file()
 
 
-def test_import_too_small(commons_net, tmp_path):
+def test_import_too_small_is_flagged_not_refused(commons_net, tmp_path):
+    # CHANGED (advisory size floor): this used to assert ImageTooSmall.
     page = [p for p in load("commons_search.json")["query"]["pages"] if p["pageid"] == 1][0]
     commons_net.routes.insert(0, ("titles=", {"query": {"pages": [page]}}))
-    with pytest.raises(ImageTooSmall):
-        api.import_candidate(tmp_path / "p", "commons", "File:Arnolfini small.png")
+    commons_net.routes.insert(0, ("s/s0", png_bytes(800, 600)))
+    res = api.import_candidate(tmp_path / "p", "commons", "File:Arnolfini small.png")
+    assert res["asset"]["credit"]["flag"] == "small" and (res["asset"]["width"], res["asset"]["height"]) == (800, 600)
+    # the threshold is still configurable: under a 500 px floor the same picture is fine
+    res2 = api.import_candidate(tmp_path / "q", "commons", "File:Arnolfini small.png", min_short_side=500)
+    assert res2["asset"]["credit"]["flag"] is None
 
 
 def test_met_search_and_import(monkeypatch, tmp_path):
@@ -98,12 +106,13 @@ def test_met_search_and_import(monkeypatch, tmp_path):
     assert (a["width"], a["height"]) == (1500, 1300) and a["credit"]["source"] == "met"
 
 
-def test_met_non_pd_rejected(monkeypatch, tmp_path):
+def test_met_non_pd_is_flagged_not_refused(monkeypatch, tmp_path):
+    # CHANGED (advisory gate): this used to assert LicenceRejected.
     obj = dict(load("met_object.json"), isPublicDomain=False)
-    net = FakeNet([("/objects/1", obj)])
+    net = FakeNet([("/objects/1", obj), ("images.metmuseum.org", png_bytes(1500, 1300))])
     monkeypatch.setitem(api._SOURCES, "met", MetSource(opener=net, sleep=lambda s: None))
-    with pytest.raises(api.LicenceRejected):
-        api.import_candidate(tmp_path / "m", "met", "1")
+    res = api.import_candidate(tmp_path / "m", "met", "1")
+    assert res["asset"]["credit"]["flag"] == "rejected"
 
 
 def test_add_upload(tmp_path):
@@ -116,13 +125,19 @@ def test_add_upload(tmp_path):
     assert res["asset"]["credit"]["source"] == "upload" and (proj / "media/my_scan.png").is_file()
 
 
-def test_add_upload_requires_fields_and_licence(tmp_path):
+def test_add_upload_needs_no_metadata_and_flags_the_licence(tmp_path):
+    # CHANGED (advisory gate): this used to assert ValueError for missing fields and LicenceRejected for an NC licence.
     f = tmp_path / "scan.png"
-    f.write_bytes(png_bytes(4, 4))
-    with pytest.raises(ValueError):
-        api.add_upload(tmp_path / "p", f, {"licence": "CC0", "source_url": ""})
-    with pytest.raises(api.LicenceRejected):
-        api.add_upload(tmp_path / "p", f, {"licence": "CC BY-NC 4.0", "source_url": "u", "author": "a"})
+    f.write_bytes(png_bytes(1300, 1250))
+    bare = api.add_upload(tmp_path / "p", f, {})["asset"]["credit"]
+    assert bare["flag"] == "unknown" and bare["author"] == "unknown" and bare["source"] == "upload"
+    nc = api.add_upload(tmp_path / "p2", f, {"licence": "CC BY-NC 4.0", "source_url": "u", "author": "a"})["asset"]["credit"]
+    assert nc["flag"] == "rejected" and nc["licence"] == "CC BY-NC 4.0"
+    ok = api.add_upload(tmp_path / "p3", f, {"licence": "CC0", "source_url": "u", "author": "a"})["asset"]["credit"]
+    assert ok["flag"] is None
+    small = tmp_path / "small.png"
+    small.write_bytes(png_bytes(40, 30))
+    assert api.add_upload(tmp_path / "p4", small, {"licence": "CC0"})["asset"]["credit"]["flag"] == "small"
 
 
 def test_unknown_source_and_kind():

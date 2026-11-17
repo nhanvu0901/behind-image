@@ -56,10 +56,15 @@ def _retry_text(msg: str, limit: int = 1500) -> str:
     return msg if len(msg) <= limit else msg[:limit] + " ..."
 
 
-def run_outline(job: Job, pdir: Path, spec: dict, notes: str = "", *, wps: float = WPS_DEFAULT) -> None:
+_UNSET = object()
+
+
+def run_outline(job: Job, pdir: Path, spec: dict, notes: str = "", *, wps: float = WPS_DEFAULT, base_rev=_UNSET) -> None:
+    """`base_rev`: the revision of outline.json (None = no file) the owner's request started from. The route fixes it BEFORE it
+    returns the job id; this thread never decides what the base was (R3B-014). Left out, it is read here (direct callers)."""
     brief = build_brief(pdir)
     opts = load_options(pdir)
-    start_rev = disk_rev(script_dir(pdir) / "outline.json", "outline")      # what the file was when the job began
+    start_rev = disk_rev(script_dir(pdir) / "outline.json", "outline") if base_rev is _UNSET else base_rev
     job.chapters = [{"id": "outline", "title": "Dàn ý", "state": "running", "attempts": 0, "words": 0, "message": ""}]
     retry = None
     for attempt in (1, 2):
@@ -111,7 +116,9 @@ def chapter_problems(ch: NChapter | None, cid: str) -> str | None:
 
 
 def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None = None, notes: str = "", *,
-                  wps: float = WPS_DEFAULT) -> None:
+                  wps: float = WPS_DEFAULT, base_locked=_UNSET) -> None:
+    """`base_locked`: the ids of the beats that were locked when the owner's request started (fixed by the route before the
+    job id was returned); a beat locked after that, while the model ran, makes its chapter be skipped (R3B-014)."""
     outline = load_outline(pdir)
     gate = outline_gate(outline)
     if gate:
@@ -122,7 +129,8 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
     job.chapters = [{"id": c.id, "title": c.title, "state": "pending", "attempts": 0, "words": 0, "message": ""}
                     for c in outline.chapters if c.id in want]
     first_save = True
-    start_locked = {b.id for c in narr.chapters for b in c.beats if b.locked}     # locks that already stood (force replaced them)
+    start_locked = ({b.id for c in narr.chapters for b in c.beats if b.locked}     # locks that already stood (force replaced them)
+                    if base_locked is _UNSET else set(base_locked))
     written: list[str] = []
     skipped: list[dict] = []
     job.result = {"written": written, "skipped": skipped}

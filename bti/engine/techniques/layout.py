@@ -11,7 +11,7 @@ import numpy as np
 
 from ..base import BaseRenderer, View
 from ..registry import technique
-from ..vfx import Cam, backdrop, compose_matte, ease, ramp, text_layer
+from ..vfx import Cam, backdrop, compose_matte, ease, put, ramp, text_layer
 from .camera import _key, camera_keys, fit_zoom
 
 
@@ -43,15 +43,13 @@ class TwoPanel(BaseRenderer):
         pw, ph, py, xl, xr = self.pw, self.ph, self.py, self.xl, self.xr
         f = backdrop(W, H).copy()
         cx, cy, z = self.camL.at(t)
-        f[py:py + ph, xl:xl + pw] = compose_matte(self.ctx.image(self.kl), cx, cy, z, pw, ph)
+        put(f, xl, py, compose_matte(self.ctx.image(self.kl), cx, cy, z, pw, ph))
         t_slide = self.t0 + float(p["slide_delay_s"])
         sl = ease("out_cubic", (t - t_slide - .05) / float(p["slide_s"]))
         x = int(round(W + 10 - (W + 10 - xr) * sl))
         cx, cy, z = self.camR.at(t)
         right = self.ctx.image(self.kr).view(cx, cy, z, pw, ph)[0].astype(np.float32)
-        x0, x1 = max(x, 0), min(x + pw, W)
-        if x1 > x0:
-            f[py:py + ph, x0:x1] = right[:, x0 - x:x1 - x]
+        put(f, x, py, right)
         self.capL.apply(f, ramp(t, t_slide, .2))
         self.capR.apply(f, ramp(t, t_slide + .75, .25))
         return f

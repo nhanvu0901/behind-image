@@ -159,7 +159,10 @@ def compute(root: Path, pid: str) -> dict:
         if sid in ("artwork", "script", "voice", "picks") and imported:
             steps.append(_step(i, sid, label, "no_data", R_IMPORTED))
         elif sid == "artwork":
-            n = len(pj.get("sources") or [])
+            srcs = pj.get("sources")
+            if srcs is not None and not isinstance(srcs, list):
+                raise DocumentCorrupt("project.json is corrupt: sources must be a list", "project")
+            n = len(srcs or [])
             steps.append(_step(i, sid, label, "done", detail=f"{n} nguồn sách" if n else "Đã chọn tác phẩm"))
         elif sid == "script":
             st, det = _script_state(d)

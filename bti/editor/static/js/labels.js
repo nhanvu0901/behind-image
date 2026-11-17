@@ -15,7 +15,7 @@ export const LOW_TRUST = 'bản dịch máy, không dùng làm nguồn sự ki�
 
 /** Messages for the validation codes of the script step. */
 export const CODE = {
-  chapter_missing: 'Thiếu chương', empty_beat: 'Dòng trống', markup_in_text: 'Có ký hiệu trong lời đọc', words_under: 'Quá ngắn (dưới 70% mục tiêu)',
+  chapter_missing: 'Thiếu chương', empty_chapter: 'Chương chưa có chữ', chapter_order: 'Chương xếp sai thứ tự', empty_beat: 'Dòng trống', markup_in_text: 'Có ký hiệu trong lời đọc', words_under: 'Quá ngắn (dưới 70% mục tiêu)',
   outline_stale: 'Dàn ý đã đổi sau khi duyệt', outline_not_approved: 'Dàn ý chưa duyệt', outline_missing: 'Chưa có dàn ý',
   words_off_target: 'Lệch mục tiêu quá 15%', chapter_off_budget: 'Chương lệch ngân sách quá 30%', beat_too_long: 'Dòng quá dài (trên 90 từ)',
   unknown_fact: 'Mã dữ kiện không có trong dàn ý', no_show: 'Dòng chưa có gợi ý hình', unknown_chapter: 'Chương không có trong dàn ý',
@@ -99,3 +99,22 @@ export function valueLabel(v, param) { return PARAM_VALUE[param]?.[v] || VALUE[v
 /** Why the Antigravity command did not answer (the model entry then carries `agy: {ok: false, reason}`), in words; null when it answered. */
 const AGY_WHY = { timeout: 'không trả lời kịp', config: 'chưa cài hoặc chưa cấu hình', auth: 'từ chối quyền truy cập' };
 export const agyProblem = (models) => { const m = (models || []).find((x) => x.agy && x.agy.ok === false); return m ? (AGY_WHY[m.agy.reason] || 'không trả lời') : null; };
+
+// ---------------------------------------------------------------- dropdowns built from a list (R3U-001)
+export const NOT_IN_LIST = '(không có trong danh sách)';
+export const UNSET = '— chưa chọn —';
+/** The options of a dropdown built from a list, so that it ALWAYS shows the stored value.
+ * A value the list does not know gets its own entry, first, marked NOT_IN_LIST; an empty value (when '' is not one of the
+ * choices) gets a disabled UNSET entry. Returns { options: [{value, text, title, state, disabled}], selected }.
+ * Pure: nothing is written anywhere; the stored value changes only when the owner picks something else. */
+export function dropdownOptions(values, current, labelOf = String) {
+  const list = (values || []).map((v) => ({ value: String(v), text: labelOf(v), title: String(v), state: 'ok' }));
+  const empty = current === null || current === undefined || current === '';
+  if (empty) {
+    if (!list.some((o) => o.value === '')) list.unshift({ value: '', text: UNSET, title: '', state: 'unset', disabled: true });
+    return { options: list, selected: '' };
+  }
+  const cur = String(current);
+  if (!list.some((o) => o.value === cur)) list.unshift({ value: cur, text: `${labelOf(current)} ${NOT_IN_LIST}`, title: cur, state: 'foreign' });
+  return { options: list, selected: cur };
+}

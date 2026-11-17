@@ -151,13 +151,15 @@ const T = [
 ];
 /** Templates by the engine's stable `code`, using `args` (bti.engine.storyboard.ISSUE_CODES lists every code; a unit test fails when one is missing). */
 const num = (x) => (typeof x === 'number' ? String(Math.round(x * 1000) / 1000) : String(x ?? ''));
+/** "Mốc camera thứ 3: " when the issue is about one key of a camera (args.index), else nothing. */
+const key = (a) => (a.index != null ? `Mốc camera thứ ${Number(a.index) + 1}: ` : '');
 const item = (a) => (a.index != null ? ` (mục thứ ${Number(a.index) + 1})` : '');
 const P = (a) => (a.param ? `Tham số ${q(a.param)}` : 'Một tham số');
 const list = (v) => (Array.isArray(v) ? v : String(v ?? '').split(/\s*,\s*/)).filter(Boolean);
 const FIELD_NAME = { w: 'chiều rộng', h: 'chiều cao', width: 'chiều rộng', height: 'chiều cao', at: 'thời điểm', cx: 'tâm ngang', cy: 'tâm dọc', zoom: 'độ phóng', rx: 'bán kính ngang', ry: 'bán kính dọc' };
 const fld = (f) => FIELD_NAME[f] || FIELD[f] || String(f ?? '');
 const BY_ARGS = {
-  undrawable: () => 'Không vẽ được hình của mục này với các giá trị hiện tại. Sửa tham số của nó hoặc đổi sang kỹ thuật khác.',
+  undrawable: (i, a) => (a.asset ? `Không vẽ được hình của mục này vì hình ${q(a.asset)} có vấn đề (tệp hỏng, không đọc được hoặc không còn). Thay bằng hình khác ở tab Hình.` : 'Không vẽ được hình của mục này với các giá trị hiện tại. Sửa tham số của nó hoặc đổi sang kỹ thuật khác.'),
   incomplete: (i, a) => `Chưa điền ${a.what === 'slot' ? 'hình cho chỗ' : 'tham số'} ${q(a.name ?? '')}${a.technique ? ' của ' + a.technique : ''}.`,
   not_an_object: () => 'Storyboard phải là một đối tượng.',
   unreadable_structure: () => 'Storyboard có cấu trúc mà bộ kiểm tra không đọc được.',
@@ -178,6 +180,8 @@ const BY_ARGS = {
   asset_file_required: (i) => `Hình ${q(assetKey(i))} chưa có tệp.`,
   asset_file_outside_project: (i, a) => `Tệp ${q(a.file ?? '')} của hình ${q(assetKey(i))} nằm ngoài thư mục dự án.`,
   asset_file_missing: (i, a) => `Tệp ${q(a.file ?? '')} của hình ${q(assetKey(i))} không có trong dự án.`,
+  asset_file_truncated: (i, a) => `Tệp ${q(a.file ?? '')} của hình ${q(assetKey(i))} bị cắt dở hoặc hỏng một phần, nên không hiện đủ ảnh. Tải lại ảnh hoặc thay bằng ảnh khác.`,
+  asset_video_unreadable: (i, a) => `Tệp ${q(a.file ?? '')} của video ${q(assetKey(i))} không mở được. Tải lại video hoặc thay bằng tệp khác.`,
   asset_file_unreadable: (i, a) => `Tệp ${q(a.file ?? '')} của hình ${q(assetKey(i))} không đọc được như một ảnh.`,
   credit_not_object: (i) => `Phần ghi nguồn của hình ${q(assetKey(i))} bị hỏng.`,
   asset_size: (i, a) => `${cap(fld(a.field))} của hình ${q(assetKey(i))} phải là số dương.`,
@@ -194,7 +198,7 @@ const BY_ARGS = {
   unknown_intent: (i, a) => `Ý đồ ${q(a.intent ?? '')} không có trong danh sách.`,
   region_undefined: (i, a) => `Vùng ${q(a.region ?? '')} không có trên hình ${q(a.asset ?? '')}${a.param ? ` (tham số ${q(a.param)})` : ''}.`,
   end_required: () => 'Storyboard chưa có điểm kết thúc.',
-  anchor_invalid: () => 'Mốc thời gian này không xác định được (sai dạng, số thứ tự từ không có, hoặc tính theo tỉ lệ khi chưa có shot).',
+  anchor_invalid: (i, a) => key(a) + 'Mốc thời gian này không xác định được (sai dạng, số thứ tự từ không có, hoặc tính theo tỉ lệ khi chưa có shot).',
   end_fade: () => 'Thời gian mờ dần ở cuối phải là số không âm.',
   shots_not_list: () => 'Danh sách shot bị hỏng.',
   no_shots: () => 'Storyboard cần có ít nhất một shot.',
@@ -205,15 +209,15 @@ const BY_ARGS = {
   shot_not_object: () => 'Bị hỏng, không đọc được.',
   id_required: () => 'Chưa có mã.',
   duplicate_shot_id: (i, a) => `Mã ${q(a.id ?? '')} bị dùng hai lần.`,
-  stale_anchor: () => 'Mốc gắn vào một từ của lời đọc, nhưng từ ở vị trí đó đã khác (lời đọc đã đổi). Hãy gắn lại mốc.',
+  stale_anchor: (i, a) => key(a) + 'Mốc gắn vào một từ của lời đọc, nhưng từ ở vị trí đó đã khác (lời đọc đã đổi). Hãy gắn lại mốc.',
   shot_too_short: (i, a) => `Ngắn hơn ${num(a.min)} giây (hiện ${num(a.got)} giây).`,
   shots_out_of_order: () => 'Các shot phải xếp theo thời gian; shot này bắt đầu trước shot đứng trước nó.',
   unknown_technique: (i, a) => `Kỹ thuật ${a.technique ?? ''} không có trong danh sách.`,
   wrong_technique_kind: (i, a) => `${a.technique ?? ''} không dùng được ở đây: ${a.needs === 'overlay' ? 'lớp phủ cần một kỹ thuật lớp phủ' : a.needs === 'transition' ? 'chuyển cảnh cần một kỹ thuật chuyển cảnh' : 'shot cần một kỹ thuật cảnh nền hoặc thẻ chữ'}.`,
   technique_unavailable: (i, a) => `Kỹ thuật ${a.technique ?? ''} chưa dùng được trong bộ dựng hình.`,
-  camera_keys_order: () => 'Các mốc camera phải theo thứ tự thời gian tăng dần.',
-  camera_rel_range: () => 'Vị trí tương đối của mốc camera phải từ 0 đến 1.',
-  unknown_ease: (i, a) => `Kiểu chuyển động ${q(valueLabel(a.ease ?? ''))} không có trong danh sách.`,
+  camera_keys_order: (i, a) => (a.index != null ? `${key(a)}đến sớm hơn hoặc cùng lúc với mốc trước nó; các mốc camera phải theo thứ tự thời gian tăng dần.` : 'Các mốc camera phải theo thứ tự thời gian tăng dần.'),
+  camera_rel_range: (i, a) => key(a) + 'Vị trí tương đối của mốc camera phải từ 0 đến 1.',
+  unknown_ease: (i, a) => `${key(a)}Kiểu chuyển động ${q(valueLabel(a.ease ?? ''))} không có trong danh sách.`,
   transition_dur: () => 'Thời lượng chuyển cảnh phải là số không âm.',
   transition_too_long: (i, a) => `Chuyển cảnh dài ${num(a.dur)} giây, hơn cả shot (${num(a.shot_dur)} giây).`,
   first_shot_transition: () => 'Đây là shot đầu nên không có cảnh nào để chuyển từ.',
@@ -292,4 +296,32 @@ export function storyboardIssueText(issue) {
   if (isVi(raw)) return { text: raw, detail: '' };
   const f = fieldOf(issue);
   return { text: cap(`${w.loc ? cap(w.loc) + ': ' : ''}có một điểm chưa đúng${f ? ` ở mục "${f}"` : ''}. Xem "chi tiết".`), detail: raw, generic: true };
+}
+
+// ---------------------------------------------------------------- where a click on an issue leads (R3U-003)
+const slotsHold = (slots, key) => Object.values(slots || {}).some((v) => v?.asset === key);
+/** Ids of the shots that use asset `key` (a slot of the shot or of one of its overlays holds it), in timeline order. */
+export function shotsUsingAsset(draft, key) {
+  return (draft?.shots || []).filter((s) => slotsHold(s.slots, key) || (s.overlays || []).some((o) => slotsHold(o.slots, key))).map((s) => s.id);
+}
+/** What a click on an issue does. Pure.
+ *  { kind: 'shot', shot: index, overlay: index|null }   the issue names a shot (path or id): go to it
+ *  { kind: 'asset', asset, shots: [ids] }               about a picture: the first shot that uses it (`shots` has them all), or the pictures tab when none does
+ *  { kind: 'none' }                                     no place: the owner stays where he is and only sees the detail */
+export function issueTarget(issue, draft) {
+  const shots = draft?.shots || [];
+  const m = SHOT_PATH.exec(String(issue?.path || ''));
+  if (m && shots[Number(m[1])]) return { kind: 'shot', shot: Number(m[1]), overlay: m[2] != null ? Number(m[2]) : null };
+  const sid = issue?.shot || issue?.args?.shot;
+  if (sid) {
+    const i = shots.findIndex((s) => s.id === sid);
+    if (i >= 0) {
+      const oid = issue?.overlay || issue?.args?.overlay;
+      const oi = oid ? (shots[i].overlays || []).findIndex((o) => o.id === oid) : -1;
+      return { kind: 'shot', shot: i, overlay: oi >= 0 ? oi : null };
+    }
+  }
+  const key = issue?.args?.asset || assetKey(issue);
+  if (key && draft?.assets?.[key]) return { kind: 'asset', asset: key, shots: shotsUsingAsset(draft, key) };
+  return { kind: 'none' };
 }

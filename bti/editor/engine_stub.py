@@ -181,6 +181,10 @@ class StubProject:
         """The stub draws placeholders, so nothing is ever undrawable (the real engine's `Project.draw_check` does the work)."""
         return []
 
+    def draw_check_iter(self, storyboard: dict | None = None, width: int = 320):
+        return []
+        yield       # a generator that returns [] at once
+
     def validate(self, storyboard: dict | None = None) -> list[dict]:
         issues: list[dict] = []
 

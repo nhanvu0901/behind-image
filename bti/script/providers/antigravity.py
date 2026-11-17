@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -148,25 +149,33 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 900, on_pro
         LOCK.release()
 
 
+_SLUG_OK = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:+-]{0,99}")
+
+
 def list_models() -> list[dict]:
-    """`agy models` -> [{"slug", "label"}], CLI default first. Raises ProviderError when unavailable or not logged in."""
+    """`agy models` -> [{"slug", "label"}], CLI default first. Raises ProviderError when unavailable or not logged in.
+    The output is decoded leniently (bad bytes become U+FFFD); a slug with control characters, `..` or a path separator is
+    dropped and a duplicate slug is listed once."""
     agy = find_agy()
     if not agy:
         raise ProviderError("config", "Chưa cài `agy` (Antigravity CLI).")
     work = tempfile.mkdtemp(prefix="bti-agy-")
     try:
         r = subprocess.run([agy, "models"], cwd=work, env=clean_env(), stdin=subprocess.DEVNULL, capture_output=True,
-                           text=True, timeout=LIST_TIMEOUT_S, start_new_session=True)
+                           timeout=LIST_TIMEOUT_S, start_new_session=True)
     except (subprocess.TimeoutExpired, OSError):
         raise ProviderError("timeout", "`agy models` không trả lời.")
     finally:
         shutil.rmtree(work, ignore_errors=True)
-    rows = []
-    for line in r.stdout.splitlines():
+    stdout, stderr = r.stdout.decode("utf-8", "replace"), r.stderr.decode("utf-8", "replace")
+    rows, seen = [], set()
+    for line in stdout.splitlines():
         if "\t" in line:
             slug, label = line.split("\t", 1)
-            if slug.strip():
-                rows.append({"slug": slug.strip(), "label": label.strip()})
+            slug = slug.strip()
+            if slug and slug not in seen and _SLUG_OK.fullmatch(slug) and ".." not in slug:
+                seen.add(slug)
+                rows.append({"slug": slug, "label": label.strip()})
     if r.returncode != 0 or not rows:
-        raise classify(r.stderr + " " + r.stdout)
+        raise classify(stderr + " " + stdout)
     return rows

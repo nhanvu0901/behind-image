@@ -99,26 +99,72 @@ def make_parent(path: Path, levels: int = 1) -> None:
             raise ProjectGone(f"cannot write {Path(path).name}: the project folder is gone")
 
 
+def _why(e: BaseException) -> str:
+    """A short reason for the owner: no exception text, no path (the raw exception goes to the log only)."""
+    import errno
+    import logging
+    logging.getLogger("bti.editor").info("project file not readable: %r", e)
+    if isinstance(e, UnicodeDecodeError):
+        return "it is not UTF-8 text"
+    if isinstance(e, PermissionError):
+        return "the server may not read it (permission denied)"
+    if isinstance(e, IsADirectoryError):
+        return "it is a folder, not a file"
+    if isinstance(e, json.JSONDecodeError):
+        return "it is not valid JSON (line %d, column %d)" % (e.lineno, e.colno)
+    if isinstance(e, (RecursionError, ValueError)):
+        return "it is not valid JSON"
+    if isinstance(e, OSError) and e.errno == errno.ELOOP:
+        return "it is a link that loops"
+    return "it cannot be read"
+
+
+def read_file_text(path: Path, what: str = "script", *, missing_ok: bool = True, errors: str = "strict") -> str | None:
+    """THE reader of a project text file. The UTF-8 text of `path`; None when there is no such file (`missing_ok`) .
+    DocumentCorrupt (naming the file by its name, with a short reason and no server path) when it is a folder, cannot be
+    read, or is not UTF-8. Nothing is replaced silently, and a repaired file reads again at once (nothing is cached)."""
+    import stat as _stat
+    try:
+        st = os.stat(path)
+    except FileNotFoundError:
+        st = None
+    except NotADirectoryError:
+        st = None
+    except OSError as e:
+        if getattr(e, "errno", None) == 40:                  # a link that loops: the file is not there
+            st = None
+        else:
+            raise DocumentCorrupt("%s is corrupt: %s" % (Path(path).name, _why(e)), what)
+    if st is None:
+        if missing_ok:
+            return None
+        raise DocumentCorrupt("%s is missing" % Path(path).name, what)
+    if not _stat.S_ISREG(st.st_mode):
+        raise DocumentCorrupt("%s is corrupt: it is a folder, not a file" % Path(path).name, what)
+    try:
+        return Path(path).read_text(encoding="utf-8", errors=errors)
+    except (OSError, UnicodeDecodeError) as e:
+        raise DocumentCorrupt("%s is corrupt: %s" % (Path(path).name, _why(e)), what)
+
+
 def read_object(path: Path, what: str = "script") -> dict | None:
     """The JSON object in `path`; None when there is no such file; DocumentCorrupt (naming the file) when it is there but is not
-    UTF-8, not JSON, or not an object. Nothing is replaced silently."""
+    readable, not UTF-8, not JSON, or not an object. Nothing is replaced silently."""
+    text = read_file_text(path, what)
+    if text is None:
+        return None
     try:
-        if not path.is_file():
-            return None
-        d = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, ValueError, RecursionError) as e:
-        raise DocumentCorrupt("%s is corrupt: %s" % (path.name, str(e)[:120]), what)
+        d = json.loads(text)
+    except (ValueError, RecursionError) as e:
+        raise DocumentCorrupt("%s is corrupt: %s" % (Path(path).name, _why(e)), what)
     if not isinstance(d, dict):
-        raise DocumentCorrupt("%s is corrupt: the top level must be an object" % path.name, what)
+        raise DocumentCorrupt("%s is corrupt: the top level must be an object" % Path(path).name, what)
     return d
 
 
 def read_text_strict(path: Path, what: str = "source") -> str:
-    """UTF-8 text of `path`; DocumentCorrupt naming the file when it is not UTF-8 (no silent replacement of characters)."""
-    try:
-        return path.read_text(encoding="utf-8")
-    except UnicodeDecodeError as e:
-        raise DocumentCorrupt("%s is not UTF-8 text: %s" % (path.name, str(e)[:100]), what)
+    """UTF-8 text of `path`; DocumentCorrupt naming the file when it is missing, unreadable or not UTF-8."""
+    return read_file_text(path, what, missing_ok=False)
 
 
 def now_iso() -> str:
@@ -417,14 +463,25 @@ def narration_approval(n: "Narration | None", o: "Outline | None") -> dict:
     return {"approved": True, "reason": None}
 
 
+def chapter_order_differs(n: "Narration", o: "Outline") -> bool:
+    mine = [c.id for c in n.chapters if o.chapter(c.id) is not None]
+    theirs = [c.id for c in o.chapters if c.id in set(mine)]
+    return mine != theirs
+
+
 def chapter_diff(n: "Narration | None", o: "Outline | None") -> dict:
-    """The chapter ids of the narration against the outline: `not_in_outline` (the narration has them, the outline does not)
-    and `missing_in_narration` (an outline chapter with no beats in the narration)."""
+    """The chapter ids of the narration against the outline:
+    `not_in_outline`        the narration has the chapter, the outline does not (drop it with `drop_chapter`);
+    `missing_in_narration`  an outline chapter the narration does not have at all (`add_chapter`, or write it);
+    `empty_in_narration`    an outline chapter the narration has, but with no beat that has text (write it);
+    `order`                 True when the chapters both documents share are in a different order (`order_like_outline`)."""
     if n is None or o is None:
-        return {"not_in_outline": [], "missing_in_narration": []}
-    have = {c.id for c in n.chapters if c.beats}
-    return {"not_in_outline": [c.id for c in n.chapters if o.chapter(c.id) is None],
-            "missing_in_narration": [c.id for c in o.chapters if c.id not in have]}
+        return {"not_in_outline": [], "missing_in_narration": [], "empty_in_narration": [], "order": False}
+    have = {c.id: c for c in n.chapters}
+    return {"order": chapter_order_differs(n, o),
+            "not_in_outline": [c.id for c in n.chapters if o.chapter(c.id) is None],
+            "missing_in_narration": [c.id for c in o.chapters if c.id not in have],
+            "empty_in_narration": [c.id for c in o.chapters if c.id in have and not any(b.text.strip() for b in have[c.id].beats)]}
 
 
 # ---------------------------------------------------------------- shape check of a document sent by a client
@@ -560,6 +617,8 @@ def load_narration(pdir: Path) -> Narration | None:
 def _save(path: Path, obj, base_rev: str | None, *, backup: bool = True) -> str:
     """Write `obj`; the approval is dropped unless it still matches the new revision.
     `base_rev`, when given, must equal the revision currently on disk."""
+    if path.is_dir():           # a folder in place of the document: 409 before anything is written (a damaged FILE is replaceable)
+        raise DocumentCorrupt("%s is corrupt: it is a folder, not a file" % path.name, "script")
     if base_rev is not None and path.is_file():
         cur = type(obj).from_dict(_load(path)).rev()
         if cur != base_rev:
@@ -625,8 +684,7 @@ def keep_paste(pdir: Path, kind: str, text: str) -> None:
 
 
 def read_paste(pdir: Path, kind: str) -> str:
-    p = paste_path(pdir, kind)
-    return p.read_text(encoding="utf-8", errors="replace") if p.is_file() else ""
+    return read_file_text(paste_path(pdir, kind), "script", errors="replace") or ""
 
 
 def clear_paste(pdir: Path, kind: str) -> None:

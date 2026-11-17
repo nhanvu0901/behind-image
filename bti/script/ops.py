@@ -1,7 +1,7 @@
 """Beat operations. They never renumber ids: a split makes a fresh id, a drop leaves a gap that is never reused."""
 from __future__ import annotations
 
-from .store import Beat, NChapter, Narration, now_iso
+from .store import Beat, NChapter, Narration, Outline, now_iso
 
 
 class OpError(Exception):
@@ -55,6 +55,37 @@ def drop_beat(n: Narration, bid: str) -> None:
     if ch.beats[i].locked:
         raise OpError(f"beat {bid} is locked")
     del ch.beats[i]
+
+
+def drop_chapter(n: Narration, chapter_id: str) -> None:
+    """Remove a chapter and its beats from the narration. Refused while any of its beats is locked (the rule `drop` uses)."""
+    ch = n.chapter(chapter_id)
+    if ch is None:
+        raise OpError(f"chapter {chapter_id} not found")
+    locked = [b.id for b in ch.beats if b.locked]
+    if locked:
+        raise OpError(f"beat {', '.join(locked)} is locked: chapter {chapter_id} cannot be dropped")
+    n.chapters = [c for c in n.chapters if c.id != chapter_id]
+
+
+def add_chapter(n: Narration, outline: Outline | None, chapter_id: str) -> None:
+    """Add an outline chapter that the narration lacks, at the outline's position, with the outline's title and no beats."""
+    oc = outline.chapter(chapter_id) if outline is not None else None
+    if oc is None:
+        raise OpError(f"chapter {chapter_id} is not in the outline")
+    if n.chapter(chapter_id) is not None:
+        raise OpError(f"chapter {chapter_id} is already in the narration")
+    n.chapters.append(NChapter(oc.id, oc.role, oc.title, oc.card, []))
+    order = {c.id: i for i, c in enumerate(outline.chapters)}
+    n.chapters.sort(key=lambda c: order.get(c.id, 10_000))
+
+
+def order_like_outline(n: Narration, outline: Outline | None) -> None:
+    """Put the chapters in the outline's order; chapters the outline does not have keep their relative order at the end."""
+    if outline is None:
+        raise OpError("there is no outline to follow")
+    order = {c.id: i for i, c in enumerate(outline.chapters)}
+    n.chapters.sort(key=lambda c: order.get(c.id, 10_000))
 
 
 def insert_beat(n: Narration, chapter_id: str, after: str | None = None, text: str = "",
@@ -113,8 +144,8 @@ def _str_list(op: dict, key: str):
     return v
 
 
-def apply_op(n: Narration, op: dict) -> dict:
-    """Dispatch for the API: {"op": "split|merge|drop|insert|move", ...}. Returns {"id": ...} where relevant.
+def apply_op(n: Narration, op: dict, outline: Outline | None = None) -> dict:
+    """Dispatch for the API: {"op": "split|merge|drop|insert|move|drop_chapter|add_chapter|order_like_outline" (`add_chapter` needs the outline), ...}. Returns {"id": ...} where relevant.
     Every field is type-checked; nothing is coerced (a list is not turned into text, a string is not turned into a list)."""
     if not isinstance(op, dict):
         raise OpError("bad operation: each operation must be an object")
@@ -125,6 +156,15 @@ def apply_op(n: Narration, op: dict) -> dict:
         return {"id": merge_with_previous(n, _need(op, "beat", str, "a beat id"))}
     if kind == "drop":
         drop_beat(n, _need(op, "beat", str, "a beat id"))
+        return {}
+    if kind == "drop_chapter":
+        drop_chapter(n, _need(op, "chapter", str, "a chapter id"))
+        return {}
+    if kind == "add_chapter":
+        add_chapter(n, outline, _need(op, "chapter", str, "a chapter id"))
+        return {}
+    if kind == "order_like_outline":
+        order_like_outline(n, outline)
         return {}
     if kind == "insert":
         return {"id": insert_beat(n, _need(op, "chapter", str, "a chapter id"), _need(op, "after", str, "a beat id", True),

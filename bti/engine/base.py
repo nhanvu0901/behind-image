@@ -90,6 +90,22 @@ class View:
         return self.img.to_screen(px, py, self.cx, self.cy, self.z, CANVAS_W, CANVAS_H)
 
 
+def tag_asset(exc: BaseException, key, ctx=None) -> BaseException:
+    """Remember on `exc` which asset key it is about (read back by `scene.render_error`); the first key set stays.
+    With `ctx` it also records the asset's kind, its file (path relative to the project) and whether that file is missing, so the
+    message for the owner can name the file without showing the exception text or a server path."""
+    if isinstance(key, str) and getattr(exc, "bti_asset", None) is None:
+        try:
+            exc.bti_asset = key
+            a = ctx.assets.get(key) if ctx is not None and isinstance(ctx.assets, dict) else None
+            if isinstance(a, dict) and isinstance(a.get("file"), str):
+                exc.bti_kind, exc.bti_file = a.get("kind"), a["file"]
+                exc.bti_missing = not os.path.exists(os.path.join(str(ctx.project_dir), a["file"]))
+        except Exception:       # noqa: BLE001
+            pass
+    return exc
+
+
 class Ctx:
     def __init__(self, project_dir: Path, sb: dict, timing, bundle: R.StyleBundle):
         self.project_dir = Path(project_dir)
@@ -111,7 +127,7 @@ class Ctx:
         try:
             return self.assets[key]
         except KeyError:
-            raise KeyError("asset %r is not defined" % key)
+            raise tag_asset(KeyError("asset %r is not defined" % key), key, self)
 
     def asset_path(self, key: str) -> str:
         return str(self.project_dir / self.asset(key)["file"])
@@ -119,8 +135,11 @@ class Ctx:
     def image(self, key: str) -> "vfx.Img":
         """Lazy, LRU-cached source image with its pyramid."""
         path = self.asset_path(key)
-        mt = os.stat(path).st_mtime_ns
-        return IMAGES.get(("img", path, mt), lambda: vfx.Img(path, key), _img_bytes)
+        try:
+            mt = os.stat(path).st_mtime_ns
+            return IMAGES.get(("img", path, mt), lambda: vfx.Img(path, key), _img_bytes)
+        except Exception as e:      # noqa: BLE001 - a missing or unreadable file: say which asset it is
+            raise tag_asset(e, key, self)
 
     def raw_image_reduced(self, key: str, reduce: int = 4):
         """Decode-time downscaled BGR image (cv2.IMREAD_REDUCED_COLOR_n), for blurred backgrounds."""

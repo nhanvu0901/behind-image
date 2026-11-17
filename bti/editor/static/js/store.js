@@ -63,14 +63,19 @@ export class Store {
     this.emit('saved');
     return { edited };
   }
-  /** The server has a newer version (`theirsBoard`, `rev`). The draft becomes `merged` (an edit the owner can undo) and the saved
+  /** The server has a newer version (`theirsBoard`, `rev`). The draft becomes `merged` (an edit the owner can undo, unless `fresh`: then the history restarts here) and the saved
    * baseline becomes the server's version, so the next save is "my draft on top of what the server has". */
-  rebase(merged, theirsBoard, rev, label = 'Ghép với bản khác') {
+  rebase(merged, theirsBoard, rev, label = 'Ghép với bản khác', { fresh = false } = {}) {
     const before = this.snap();
     this.draft = clone(merged);
     this.draft.approvals = clone(theirsBoard.approvals);
     derive(this.draft, this.timing);
-    if (this.snap() !== before) { this.undoStack.push({ label, snap: before }); if (this.undoStack.length > this.limit) this.undoStack.shift(); this.redoStack = []; }
+    if (this.snap() !== before) {
+      // `fresh` (a merge with another tab): the history starts at the merged document. An undo past the merge would bring back a draft
+      // without the other tab's edit, and the next save would remove that edit without asking (R3U-005).
+      if (fresh) { this.undoStack = []; this.redoStack = []; }
+      else { this.undoStack.push({ label, snap: before }); if (this.undoStack.length > this.limit) this.undoStack.shift(); this.redoStack = []; }
+    }
     this.rev = rev; this.savedSnap = snapOf(theirsBoard); this.lastKey = null;
     this.editVersion++;
     this.emit('draft');

@@ -56,10 +56,22 @@ def save_index(project_dir: Path, doc: dict, require_root: bool = False) -> None
 
 def taken_keys(project_dir: Path, index: dict) -> set[str]:
     keys = {v.get("key") for v in index["items"].values()}
-    sb = read_json(Path(project_dir) / "storyboard.json", {}) or {}
-    if isinstance(sb, dict) and isinstance(sb.get("assets"), dict):
-        keys |= set(sb["assets"])
+    for name in ("storyboard.json", "picks.json"):          # an asset key is shared by the picks and the storyboard
+        doc = _peek(Path(project_dir) / name)
+        if isinstance(doc.get("assets"), dict):
+            keys |= set(doc["assets"])
     return {k for k in keys if k}
+
+
+def _peek(path: Path) -> dict:
+    """The JSON object of a project document, or {} when it is missing or unreadable. Read only: a damaged file is left
+    where it is (it belongs to another stage, which reports it)."""
+    import json
+    try:
+        d = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return d if isinstance(d, dict) else {}
 
 
 def make_key(title: str, ident: str, taken: set[str]) -> str:

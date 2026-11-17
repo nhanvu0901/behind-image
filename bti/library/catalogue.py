@@ -45,8 +45,14 @@ class LibraryDataError(ValueError):
 def read_json(path: Path):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
-    except (UnicodeDecodeError, ValueError, RecursionError) as e:
-        raise LibraryDataError("%s is corrupt: %s" % (path.name, str(e)[:100]))
+    except UnicodeDecodeError:
+        raise LibraryDataError("%s is corrupt: it is not UTF-8 text" % path.name)
+    except (ValueError, RecursionError):
+        raise LibraryDataError("%s is corrupt: it is not valid JSON" % path.name)
+    except IsADirectoryError:
+        raise LibraryDataError("%s is corrupt: it is a folder, not a file" % path.name)
+    except PermissionError:
+        raise LibraryDataError("%s is corrupt: the server may not read it (permission denied)" % path.name)
 
 
 # ------------------------------------------------------------------ normalising and matching

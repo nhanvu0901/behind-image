@@ -491,12 +491,13 @@ def test_approve_runs_draw_check_and_lists_the_undrawable_items(tmp_path, monkey
     with TestClient(app, raise_server_exceptions=False) as c:
         proj = app.state.engine.project("lab")
         calls = []
-        real = proj.draw_check
+        real = proj.draw_check_iter
 
         def fake(sb=None, width=320):
             calls.append(1)
             return [{"level": "error", "code": "undrawable", "path": "shots[1]", "shot": "s0002", "message": "no good"}]
-        monkeypatch.setattr(proj, "draw_check", fake)
+            yield
+        monkeypatch.setattr(proj, "draw_check_iter", fake)
         st = c.get("/api/projects/lab").json()
         if any(i["level"] == "error" or i.get("code") == "incomplete" for i in st["issues"]):
             pytest.skip("the lab project is not approvable on its own")
@@ -506,7 +507,7 @@ def test_approve_runs_draw_check_and_lists_the_undrawable_items(tmp_path, monkey
         assert j["undrawable"] is True and j["code"] == "undrawable" and any(i.get("code") == "undrawable" for i in j["issues"])
         assert "shots[1]" in j["detail"]
         assert c.get("/api/projects/lab").json()["storyboard"].get("approvals", {}).get("storyboard") in (None, {})
-        monkeypatch.setattr(proj, "draw_check", real)
+        monkeypatch.setattr(proj, "draw_check_iter", real)
         assert c.post("/api/projects/lab/approve", json={"rev": st["rev"]}).status_code == 200
 
 
@@ -607,3 +608,168 @@ def test_http_limits_are_the_engine_limits(client):
                  {"t0": 0, "t1": 1, "fps": limits.FPS_MAX + 1}, {"t0": 0, "t1": 1, "fps": limits.FPS_MIN - 1},
                  {"t0": 0, "t1": limits.PREVIEW_MAX_SECONDS + 1}):
         assert client.post(A + "/preview", json=body).status_code == 422, body
+
+
+# ------------------------------------------------------------------ R3U-002: chapter differences can be resolved through the API
+def _outline_without_last_chapter(client):
+    o = client.get(f"{B}/outline").json()
+    od = copy.deepcopy(o["outline"])
+    gone = od["chapters"].pop()["id"]
+    assert client.put(f"{B}/outline", json={"outline": od, "base_rev": o["rev"]}).status_code == 200
+    o = client.get(f"{B}/outline").json()
+    assert client.post(f"{B}/outline/approve", json={"rev": o["rev"]}).status_code == 200
+    return gone, od
+
+
+def _ops(client, ops):
+    n = client.get(f"{B}/narration").json()
+    return client.post(f"{B}/narration/ops", json={"base_rev": n["rev"], "ops": ops})
+
+
+def test_drop_chapter_resolves_a_chapter_the_outline_lost_and_the_narration_can_be_approved(client):
+    make_narration(client)
+    gone, _ = _outline_without_last_chapter(client)
+    n = client.get(f"{B}/narration").json()
+    assert n["chapter_diff"]["not_in_outline"] == [gone] and n["approved"] is False
+    assert _ops(client, [{"op": "drop_chapter", "chapter": "c77"}]).status_code == 422
+    r = _ops(client, [{"op": "drop_chapter", "chapter": gone}])
+    assert r.status_code == 200 and gone not in [c["id"] for c in r.json()["narration"]["chapters"]]
+    assert r.json()["chapter_diff"] == {"not_in_outline": [], "missing_in_narration": [], "empty_in_narration": [], "order": False}
+    n = client.get(f"{B}/narration").json()
+    assert client.post(f"{B}/narration/approve", json={"rev": n["rev"]}).status_code == 200
+    assert client.get(f"{B}/pipeline").json()["stage"] == "script" == stage_in_list(client)
+
+
+def test_an_emptied_chapter_that_the_outline_lacks_is_removable(client):
+    make_narration(client, approve=False)
+    gone, _ = _outline_without_last_chapter(client)
+    n = client.get(f"{B}/narration").json()
+    ch = next(c for c in n["narration"]["chapters"] if c["id"] == gone)
+    r = _ops(client, [{"op": "drop", "beat": b["id"]} for b in ch["beats"]])
+    assert r.status_code == 200
+    assert gone in r.json()["chapter_diff"]["not_in_outline"]                 # the empty chapter is still there
+    assert _ops(client, [{"op": "drop_chapter", "chapter": gone}]).status_code == 200
+    n = client.get(f"{B}/narration").json()
+    assert client.post(f"{B}/narration/approve", json={"rev": n["rev"]}).status_code == 200
+
+
+def test_locked_beat_blocks_drop_chapter_like_drop(client):
+    make_narration(client, approve=False)
+    n = client.get(f"{B}/narration").json()
+    ch = n["narration"]["chapters"][-1]
+    bid = ch["beats"][0]["id"]
+    nd = copy.deepcopy(n["narration"])
+    nd["chapters"][-1]["beats"][0]["locked"] = True
+    assert client.put(f"{B}/narration", json={"narration": nd, "base_rev": n["rev"]}).status_code == 200
+    assert _ops(client, [{"op": "drop", "beat": bid}]).status_code == 422
+    assert _ops(client, [{"op": "drop_chapter", "chapter": ch["id"]}]).status_code == 422
+    assert client.post(f"{B}/narration/ops", json={"base_rev": "stale", "ops": [{"op": "drop_chapter", "chapter": ch["id"]}]}).status_code == 409
+
+
+def test_add_chapter_empty_chapter_and_a_job_for_one_chapter(client):
+    make_narration(client)
+    o = client.get(f"{B}/outline").json()
+    cid = o["outline"]["chapters"][1]["id"]
+    assert _ops(client, [{"op": "add_chapter", "chapter": cid}]).status_code == 422          # already there
+    assert _ops(client, [{"op": "add_chapter", "chapter": "c88"}]).status_code == 422        # not in the outline
+    assert _ops(client, [{"op": "drop_chapter", "chapter": cid}]).status_code == 200
+    n = client.get(f"{B}/narration").json()
+    assert n["chapter_diff"]["missing_in_narration"] == [cid] and n["approved"] is False
+    assert any(i["code"] == "chapter_missing" for i in n["issues"])
+    r = _ops(client, [{"op": "add_chapter", "chapter": cid}])
+    assert r.status_code == 200
+    ids = [c["id"] for c in r.json()["narration"]["chapters"]]
+    assert ids == [c["id"] for c in o["outline"]["chapters"]]                                  # at the outline's position
+    d = r.json()
+    assert d["chapter_diff"]["empty_in_narration"] == [cid]
+    emp = [i for i in d["issues"] if i["code"] == "empty_chapter"]
+    assert len(emp) == 1 and emp[0]["level"] == "error" and emp[0]["args"]["chapter"] == cid
+    assert client.post(f"{B}/narration/approve", json={"rev": d["rev"]}).status_code == 422
+    assert client.put(f"{B}/narration", json={"narration": d["narration"], "base_rev": d["rev"]}).status_code == 200   # saving is allowed
+    # a model job for that one chapter, empty
+    r = client.post(f"{B}/narration/generate", json={"model": "mock", "chapters": [cid]})
+    assert wait_job(client, r.json()["job_id"])["state"] == "done"
+    n = client.get(f"{B}/narration").json()
+    assert n["chapter_diff"] == {"not_in_outline": [], "missing_in_narration": [], "empty_in_narration": [], "order": False}
+    assert client.post(f"{B}/narration/approve", json={"rev": n["rev"]}).status_code == 200
+    # ... and the same job when the chapter is missing altogether
+    assert _ops(client, [{"op": "drop_chapter", "chapter": cid}]).status_code == 200
+    r = client.post(f"{B}/narration/generate", json={"model": "mock", "chapters": [cid]})
+    assert wait_job(client, r.json()["job_id"])["state"] == "done"
+    n = client.get(f"{B}/narration").json()
+    assert n["chapter_diff"]["missing_in_narration"] == [] and n["chapter_diff"]["empty_in_narration"] == []
+
+
+# ------------------------------------------------------------------ R3B-007: chapter order is part of the comparison
+def test_chapter_order_is_an_error_and_order_like_outline_fixes_it(client):
+    make_narration(client)
+    o = client.get(f"{B}/outline").json()
+    od = copy.deepcopy(o["outline"])
+    od["chapters"][1], od["chapters"][2] = od["chapters"][2], od["chapters"][1]
+    assert client.put(f"{B}/outline", json={"outline": od, "base_rev": o["rev"]}).status_code == 200
+    o = client.get(f"{B}/outline").json()
+    assert client.post(f"{B}/outline/approve", json={"rev": o["rev"]}).status_code == 200
+    n = client.get(f"{B}/narration").json()
+    assert n["chapter_diff"]["order"] is True and n["approved"] is False
+    assert any(i["code"] == "chapter_order" and i["level"] == "error" for i in n["issues"])
+    r = client.post(f"{B}/narration/approve", json={"rev": n["rev"]})
+    assert r.status_code == 422 and r.json()["chapter_diff"]["order"] is True
+    assert client.put(f"{B}/narration", json={"narration": n["narration"], "base_rev": n["rev"]}).status_code == 200   # saving allowed
+    r = _ops(client, [{"op": "order_like_outline"}])
+    assert r.status_code == 200 and r.json()["chapter_diff"]["order"] is False
+    assert [c["id"] for c in r.json()["narration"]["chapters"]] == [c["id"] for c in o["outline"]["chapters"]]
+    n = client.get(f"{B}/narration").json()
+    assert client.post(f"{B}/narration/approve", json={"rev": n["rev"]}).status_code == 200
+    assert client.get(f"{B}/pipeline").json()["stage"] == "script" == stage_in_list(client)
+
+
+def test_a_chapter_the_outline_lacks_keeps_its_place_at_the_end_when_ordering(client):
+    make_narration(client, approve=False)
+    gone, _ = _outline_without_last_chapter(client)
+    o = client.get(f"{B}/outline").json()
+    od = copy.deepcopy(o["outline"])
+    od["chapters"].reverse()
+    assert client.put(f"{B}/outline", json={"outline": od, "base_rev": o["rev"]}).status_code == 200
+    r = _ops(client, [{"op": "order_like_outline"}])
+    ids = [c["id"] for c in r.json()["narration"]["chapters"]]
+    assert ids[:-1] == [c["id"] for c in od["chapters"]] and ids[-1] == gone
+    assert r.json()["chapter_diff"]["order"] is False
+
+
+# ------------------------------------------------------------------ R3B-003/005/006/010/011: files of a project
+def test_project_files_of_the_wrong_shape_or_kind_are_409_and_recover(client):
+    import os
+    d = client.root / "books"
+    f = d / "script" / "narration.json"
+    make_narration(client, approve=False)
+    good = f.read_text()
+    n = client.get(f"{B}/narration").json()
+    f.unlink(); f.mkdir()
+    r = client.get(f"{B}/narration")
+    assert r.status_code == 409 and r.json()["data_error"] == "script" and str(d) not in r.json()["detail"]
+    r = client.put(f"{B}/narration", json={"narration": n["narration"], "base_rev": n["rev"]})
+    assert r.status_code == 409 and str(d) not in r.json()["detail"]
+    f.rmdir(); f.write_text(good)
+    assert client.get(f"{B}/narration").status_code == 200                       # repaired: works at once
+    pj = d / "project.json"
+    doc = json.loads(pj.read_text()); keep = doc.get("sources"); doc["sources"] = 5; pj.write_text(json.dumps(doc))
+    r = client.get(f"{B}/pipeline")
+    assert r.status_code == 409 and r.json()["data_error"] == "project"
+    doc["sources"] = keep; pj.write_text(json.dumps(doc))
+    assert client.get(f"{B}/pipeline").status_code == 200
+    if os.geteuid() != 0:
+        paste = d / "script" / "last_paste.txt"
+        paste.write_text("x"); os.chmod(paste, 0)
+        try:
+            r = client.get(f"{B}/narration")
+            assert r.status_code == 409 and "last_paste.txt" in r.json()["detail"] and str(d) not in r.json()["detail"]
+        finally:
+            os.chmod(paste, 0o644)
+        assert client.get(f"{B}/narration").status_code == 200
+
+
+def test_api_error_details_carry_no_server_path():
+    from bti.editor.common import ApiError, scrub_paths
+    assert scrub_paths("cannot read /Users/me/projects/x/media/a.jpg now") == "cannot read a.jpg now"
+    assert scrub_paths("a/b and 1/2 and https://e.org/x/y") == "a/b and 1/2 and https://e.org/x/y"
+    assert "/Users" not in ApiError(500, "failed: /private/tmp/x/y/z.json").detail

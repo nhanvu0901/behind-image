@@ -187,7 +187,7 @@ def build_brief(pdir: Path, *, library_root: Path | None = None, include_low: li
     except (AttributeError, TypeError, KeyError, IndexError, ValueError) as e:      # a field of the wrong type deep inside a data file
         if isinstance(e, DocumentCorrupt):
             raise
-        raise DocumentCorrupt(f"the data files of project {Path(pdir).name!r} are malformed ({type(e).__name__}: {str(e)[:80]})", "project")
+        raise DocumentCorrupt(f"the data files of project {Path(pdir).name!r} are malformed ({type(e).__name__})", "project")
 
 
 def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None) -> dict:

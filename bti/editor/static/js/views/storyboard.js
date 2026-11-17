@@ -378,8 +378,8 @@ async function resolveConflict(tries) {
       catch (e) { errorToast(e, 'Không kiểm tra được bản ghép: ', 7000); return false; }
     }
     if (!bad) {
-      st.rebase(m.value, theirs.storyboard, theirs.rev);
-      if (m.status === 'merged') toast(mergedNote(m.fromTheirs), 'ok', 6000);
+      st.rebase(m.value, theirs.storyboard, theirs.rev, undefined, { fresh: true });
+      if (m.status === 'merged') toast(mergedNote(m.fromTheirs) + ' Hoàn tác không quay lại trước lúc ghép.', 'ok', 7000);
       setIssues(theirs.issues || []); validateSoon();
       if (!st.dirty) return true;
       return await saveOnce(tries + 1);

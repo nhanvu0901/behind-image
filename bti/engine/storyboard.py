@@ -75,6 +75,62 @@ def revision_of(sb: dict) -> str:
     return hashlib.sha256(canonical(sb).encode("utf-8")).hexdigest()
 
 
+def _bad(where: str, want: str):
+    raise DataError("storyboard.json is corrupt: %s must be %s" % (where, want), what="storyboard")
+
+
+def _dict_or_none(v, where: str):
+    if v is not None and not isinstance(v, dict):
+        _bad(where, "an object")
+
+
+def check_shape(doc) -> None:
+    """DataError when the document has a wrong TYPE somewhere the engine walks (top level, `shots`, a shot, `params`, `slots`,
+    `overlays`, an overlay, an anchor, `transition_in`, `assets`, an asset, `regions`). Missing keys and bad VALUES are not
+    this function's business (validate reports them); only a shape that would make a walker fail with AttributeError / TypeError.
+    Iterative over the shots, so it is linear in the size of the document."""
+    if not isinstance(doc, dict):
+        _bad("the top level", "an object")
+    for k in ("canvas", "end", "approvals", "assets"):
+        _dict_or_none(doc.get(k), k)
+    for key, a in (doc.get("assets") or {}).items():
+        _dict_or_none(a, "assets.%s" % key)
+        if isinstance(a, dict):
+            _dict_or_none(a.get("regions"), "assets.%s.regions" % key)
+            for rn, r in (a.get("regions") or {}).items():
+                _dict_or_none(r, "assets.%s.regions.%s" % (key, rn))
+    shots = doc.get("shots")
+    if shots is None:
+        return
+    if not isinstance(shots, list):
+        _bad("shots", "a list")
+    for i, s in enumerate(shots):
+        _check_item(s, "shots[%d]" % i, True)
+        for j, o in enumerate(s.get("overlays") or []):
+            _check_item(o, "shots[%d].overlays[%d]" % (i, j), False)
+        tr = s.get("transition_in")
+        _dict_or_none(tr, "shots[%d].transition_in" % i)
+        if isinstance(tr, dict):
+            _dict_or_none(tr.get("params"), "shots[%d].transition_in.params" % i)
+
+
+def _check_item(s, where: str, is_shot: bool) -> None:
+    if not isinstance(s, dict):
+        _bad(where, "an object")
+    for k in ("start", "end", "params", "slots"):
+        _dict_or_none(s.get(k), "%s.%s" % (where, k))
+    for k, v in (s.get("slots") or {}).items():
+        _dict_or_none(v, "%s.slots.%s" % (where, k))
+    if is_shot:
+        if s.get("overlays") is not None and not isinstance(s["overlays"], list):
+            _bad(where + ".overlays", "a list")
+        for k, v in (s.get("params") or {}).items():
+            if isinstance(v, list):
+                for n, key in enumerate(v):
+                    if isinstance(key, dict):
+                        _dict_or_none(key.get("at"), "%s.params.%s[%d].at" % (where, k, n))
+
+
 # ----------------------------------------------------------------------------- load / save
 def load(project_dir: Path) -> dict:
     f = Path(project_dir) / "storyboard.json"
@@ -86,6 +142,7 @@ def load(project_dir: Path) -> dict:
         raise DataError("storyboard.json is corrupt: %s" % str(e)[:120], what="storyboard")
     if not isinstance(doc, dict):
         raise DataError("storyboard.json is corrupt: the top level must be an object", what="storyboard")
+    check_shape(doc)
     return doc
 
 
@@ -183,6 +240,7 @@ def _resolve_anchor(a, tm: Timing, t0=None, t1=None):
 # ----------------------------------------------------------------------------- resolve
 def resolve(sb: dict, tm: Timing, bundle: R.StyleBundle) -> dict:
     """Copy of `sb` with `_t` on anchors and `_t0`/`_t1` on shots, overlays and transitions."""
+    check_shape(sb)
     sb = copy.deepcopy(strip_derived(sb))
     shots = shots_of(sb)
     end = sb.get("end") or {}
@@ -196,7 +254,8 @@ def resolve(sb: dict, tm: Timing, bundle: R.StyleBundle) -> dict:
         spec = bundle.spec(s.get("technique"))
         if spec and t0 is not None and t1 is not None:
             for name in camera_params(spec):
-                for k in (s.get("params") or {}).get(name) or []:
+                keys = (s.get("params") or {}).get(name)
+                for k in keys if isinstance(keys, list) else []:
                     if isinstance(k, dict) and isinstance(k.get("at"), dict):
                         _resolve_anchor(k["at"], tm, t0, t1)
         tr = s.get("transition_in")
@@ -217,7 +276,7 @@ def resolve(sb: dict, tm: Timing, bundle: R.StyleBundle) -> dict:
 
 
 # ----------------------------------------------------------------------------- paths and references
-_IMAGE_OK: dict = {}          # (path, mtime_ns, size) -> None | problem text; images are checked once per file version
+_MEDIA_OK: dict = {}          # (path, mtime_ns, size, kind) -> None | (code, reason); media files are checked once per file version
 
 
 def safe_rel(project_dir, rel) -> Path | None:
@@ -236,26 +295,61 @@ def safe_rel(project_dir, rel) -> Path | None:
     return target
 
 
-def image_problem(path: Path) -> str | None:
-    """None when `path` decodes as an image header and its data is intact, else a short reason (cached per file version)."""
+def media_problem(path: Path, kind: str) -> tuple[str, str] | None:
+    """None when the media file is intact, else `(issue code, short reason)`.
+
+    image / mask: the header must read (`asset_file_unreadable`: zero bytes, not an image) AND all the pixel data must decode
+    (`asset_file_truncated`: a picture cut off part way, which OpenCV would draw half grey without a word). A JPEG is decoded at 1/8
+    scale, which still reads every compressed byte but costs a fraction of the time.
+    video: the file must open and give a first frame (`asset_video_unreadable`).
+    The answer is cached by (path, size, modification time, kind): a file is decoded once per version, so validating a project
+    whose files did not change costs a dictionary lookup per asset."""
     try:
         st = path.stat()
     except OSError as e:
-        return "cannot be read (%s)" % e.strerror
-    key = (str(path), st.st_mtime_ns, st.st_size)
-    if key in _IMAGE_OK:
-        return _IMAGE_OK[key]
+        return "asset_file_unreadable", "cannot be read (%s)" % e.strerror
+    key = (str(path), st.st_mtime_ns, st.st_size, kind)
+    if key in _MEDIA_OK:
+        return _MEDIA_OK[key]
+    res = _check_media(path, kind)
+    if len(_MEDIA_OK) > 4000:
+        _MEDIA_OK.clear()
+    _MEDIA_OK[key] = res
+    return res
+
+
+def _check_media(path: Path, kind: str) -> tuple[str, str] | None:
+    if kind == "video":
+        try:
+            import cv2
+            cap = cv2.VideoCapture(str(path))
+            try:
+                ok = cap.isOpened() and cap.read()[0]
+            finally:
+                cap.release()
+        except Exception:       # noqa: BLE001
+            ok = False
+        return None if ok else ("asset_video_unreadable", "cannot be opened as a video or has no frame")
+    from PIL import Image
     try:
-        from PIL import Image
         with Image.open(path) as im:
             im.verify()
-        res = None
     except Exception:       # noqa: BLE001
-        res = "is not a readable image"
-    if len(_IMAGE_OK) > 2000:
-        _IMAGE_OK.clear()
-    _IMAGE_OK[key] = res
-    return res
+        return "asset_file_unreadable", "is not a readable image"
+    try:
+        with Image.open(path) as im:                    # verify() leaves the file unusable: open it again to decode
+            if im.format == "JPEG":
+                im.draft("RGB", (max(im.width // 8, 1), max(im.height // 8, 1)))
+            im.load()
+    except Exception:       # noqa: BLE001
+        return "asset_file_truncated", "is cut off: its picture does not decode completely"
+    return None
+
+
+def image_problem(path: Path) -> str | None:
+    """Short reason when `path` is not an intact image, else None (kept for older callers; see `media_problem`)."""
+    m = media_problem(path, "image")
+    return m[1] if m else None
 
 
 def slot_kind(sd: dict) -> str | None:
@@ -299,7 +393,7 @@ def missing_of(spec: dict, item: dict, kind: str, shot: dict | None = None) -> l
 # Every `code` a validation issue can carry, with a one-line English meaning (`args` keys are named in the text). A test checks
 # that validate never emits a code that is missing here.
 ISSUE_CODES = {
-    "undrawable": "A technique cannot draw this shot, overlay or transition with the values it has (found by drawing a frame). args: shot, technique, overlay.",
+    "undrawable": "A technique cannot draw this shot, overlay or transition with the values it has (found by drawing a frame). args: shot, technique, overlay, asset (the asset key, when the failure is about an asset file or key; else null).",
     "incomplete": "A required slot or parameter is not set yet; saving is allowed, approval is not. args: what (slot|param), name, technique.",
     "not_an_object": "The storyboard document is not a JSON object. args: none.",
     "unreadable_structure": "The document has a structure the checks cannot read. args: error.",
@@ -308,24 +402,26 @@ ISSUE_CODES = {
     "canvas_size": "canvas.w or canvas.h is not a positive number. args: field.",
     "canvas_fps": "canvas.fps is not a number in range. args: min, max.",
     "canvas_not_1080p": "The canvas is not 1920x1080 (warning). args: none.",
-    "not_a_string": "A field that must be text is not. args: field.",
+    "not_a_string": "A field that must be text is not. args: field (asset, when the field belongs to an asset).",
     "approvals_not_object": "`approvals` is not an object. args: none.",
     "project_name_differs": "`project` differs from the folder name (warning). args: project, folder.",
     "audio_invalid": "`audio` is not a file path. args: none.",
     "audio_outside_project": "`audio` points outside the project folder. args: file.",
     "audio_missing": "The audio file does not exist (warning). args: file.",
     "assets_not_object": "`assets` is not an object. args: none.",
-    "asset_not_object": "An asset is not an object. args: none.",
-    "asset_kind": "An asset's kind is not image, video or mask. args: none.",
-    "asset_file_required": "An asset has no file. args: none.",
-    "asset_file_outside_project": "An asset file path leaves the project. args: file.",
-    "asset_file_missing": "An asset file does not exist. args: file.",
-    "asset_file_unreadable": "An asset file is not a readable image. args: file.",
-    "credit_not_object": "An asset's credit is not an object. args: none.",
-    "asset_size": "An asset width/height is not a positive number. args: field.",
-    "regions_not_object": "An asset's regions are not an object. args: none.",
-    "region_xy": "A region has no numeric x and y. args: region.",
-    "region_radius": "A region rx/ry is not a number >= 0. args: region, field.",
+    "asset_not_object": "An asset is not an object. args: asset.",
+    "asset_kind": "An asset's kind is not image, video or mask. args: asset.",
+    "asset_file_required": "An asset has no file. args: asset.",
+    "asset_file_outside_project": "An asset file path leaves the project. args: file, asset.",
+    "asset_file_missing": "An asset file does not exist. args: file, asset.",
+    "asset_file_unreadable": "An image or mask file is not a readable image (zero bytes, not an image, cannot be read). args: file, asset.",
+    "asset_file_truncated": "An image or mask file is cut off: its header reads but its picture does not decode completely. args: file, asset.",
+    "asset_video_unreadable": "A video file cannot be opened or has no frame. args: file, asset.",
+    "credit_not_object": "An asset's credit is not an object. args: asset.",
+    "asset_size": "An asset width/height is not a positive number. args: field, asset.",
+    "regions_not_object": "An asset's regions are not an object. args: asset.",
+    "region_xy": "A region has no numeric x and y. args: region, asset.",
+    "region_radius": "A region rx/ry is not a number >= 0. args: region, field, asset.",
     "slots_not_object": "`slots` is not an object. args: none.",
     "unknown_slot": "A slot name the technique does not have. args: slot, technique, allowed.",
     "asset_undefined": "An asset key that is not in `assets`. args: asset.",
@@ -336,7 +432,7 @@ ISSUE_CODES = {
     "unknown_intent": "`intent` is not in the fixed list (warning). args: intent.",
     "region_undefined": "A region name that the asset does not define. args: region, asset, param.",
     "end_required": "The `end` anchor is missing. args: none.",
-    "anchor_invalid": "An anchor cannot be resolved (bad form, word index out of range, rel without a shot). args: none.",
+    "anchor_invalid": "An anchor cannot be resolved (bad form, word index out of range, rel without a shot). args: param, index (camera key, 0-based) when it is a camera key.",
     "end_fade": "end.fade_s is not a number >= 0. args: none.",
     "shots_not_list": "`shots` is not a list. args: none.",
     "no_shots": "The storyboard has no shot. args: none.",
@@ -347,15 +443,15 @@ ISSUE_CODES = {
     "shot_not_object": "A shot is not an object. args: none.",
     "id_required": "A shot or overlay id is missing or empty. args: none.",
     "duplicate_shot_id": "Two shots share an id. args: id.",
-    "stale_anchor": "A word anchor's text no longer matches the word at its index. args: none.",
+    "stale_anchor": "A word anchor's text no longer matches the word at its index. args: param, index (camera key, 0-based) when it is a camera key.",
     "shot_too_short": "A shot is shorter than the minimum. args: min, got.",
     "shots_out_of_order": "Shots are not in time order. args: none.",
     "unknown_technique": "The technique id is not in the registry. args: technique.",
     "wrong_technique_kind": "The technique has the wrong kind for its place. args: technique, kind, needs.",
     "technique_unavailable": "The technique exists but the engine cannot draw it yet. args: technique.",
-    "camera_keys_order": "Camera keys are not in strictly increasing time order. args: none.",
-    "camera_rel_range": "A camera key `rel` is outside 0..1. args: none.",
-    "unknown_ease": "A camera key has an unknown ease name. args: ease.",
+    "camera_keys_order": "Camera keys are not in strictly increasing time order. args: param, index (the key, 0-based).",
+    "camera_rel_range": "A camera key `rel` is outside 0..1. args: param, index.",
+    "unknown_ease": "A camera key has an unknown ease name. args: ease, param, index.",
     "transition_dur": "A transition `dur` is not a number >= 0. args: none.",
     "transition_too_long": "A transition is longer than its shot. args: dur, shot_dur.",
     "first_shot_transition": "The first shot has a transition but nothing to come from (warning). args: none.",
@@ -465,50 +561,55 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
     for key, a in assets.items():
         p = "assets.%s" % key
         if not isinstance(a, dict):
-            err(p, "asset must be an object", "asset_not_object")
+            err(p, "asset must be an object", "asset_not_object", asset=key)
             continue
         if a.get("kind") not in ("image", "video", "mask"):
-            err(p + ".kind", "kind must be image, video or mask", "asset_kind")
+            err(p + ".kind", "kind must be image, video or mask", "asset_kind", asset=key)
         if not a.get("file") or not isinstance(a.get("file"), str):
-            err(p + ".file", "file is required", "asset_file_required")
+            err(p + ".file", "file is required", "asset_file_required", asset=key)
         elif project_dir is not None:
             f = safe_rel(project_dir, a["file"])
             if f is None:
-                err(p + ".file", "file %r must be a path inside the project" % a["file"], "asset_file_outside_project", file=a["file"])
+                err(p + ".file", "file %r must be a path inside the project" % a["file"], "asset_file_outside_project", file=a["file"], asset=key)
             elif not f.is_file():
-                err(p + ".file", "file %r does not exist" % a["file"], "asset_file_missing", file=a["file"])
-            elif a.get("kind") in ("image", "mask"):
-                m = image_problem(f)
-                if m:
-                    err(p + ".file", "file %r %s" % (a["file"], m), "asset_file_unreadable", file=a["file"])
+                err(p + ".file", "file %r does not exist" % a["file"], "asset_file_missing", file=a["file"], asset=key)
+            elif a.get("kind") in ("image", "mask", "video"):
+                m = media_problem(f, a["kind"])
+                msg = "file %r %s" % (a["file"], m[1]) if m else ""
+                if m and m[0] == "asset_file_truncated":
+                    err(p + ".file", msg, "asset_file_truncated", file=a["file"], asset=key)
+                elif m and m[0] == "asset_video_unreadable":
+                    err(p + ".file", msg, "asset_video_unreadable", file=a["file"], asset=key)
+                elif m:
+                    err(p + ".file", msg, "asset_file_unreadable", file=a["file"], asset=key)
         for k in ("title", "artist", "year"):
             v = a.get(k)
             if v is not None and (isinstance(v, bool) or not isinstance(v, (str, int))):
-                err("%s.%s" % (p, k), "%s must be a string" % k, "not_a_string", field=k)
+                err("%s.%s" % (p, k), "%s must be a string" % k, "not_a_string", field=k, asset=key)
         if a.get("credit") is not None:
             cr = a["credit"]
             if not isinstance(cr, dict):
-                err(p + ".credit", "credit must be an object", "credit_not_object")
+                err(p + ".credit", "credit must be an object", "credit_not_object", asset=key)
             else:
                 for k, v in cr.items():
                     if v is not None and not isinstance(v, str):
-                        err("%s.credit.%s" % (p, k), "%s must be a string" % k, "not_a_string", field=k)
+                        err("%s.credit.%s" % (p, k), "%s must be a string" % k, "not_a_string", field=k, asset=key)
         for dim in ("width", "height"):
             if dim in a and a[dim] is not None and not (R._is_num(a[dim]) and a[dim] > 0):
-                err("%s.%s" % (p, dim), "%s must be a positive number" % dim, "asset_size", field=dim)
+                err("%s.%s" % (p, dim), "%s must be a positive number" % dim, "asset_size", field=dim, asset=key)
         regs = a.get("regions")
         if regs is not None and not isinstance(regs, dict):
-            err(p + ".regions", "regions must be an object", "regions_not_object")
+            err(p + ".regions", "regions must be an object", "regions_not_object", asset=key)
             regs = {}
         for rn, r in (regs or {}).items():
             if not (isinstance(r, dict) and R._is_num(r.get("x")) and R._is_num(r.get("y"))):
-                err("%s.regions.%s" % (p, rn), "region needs numeric x and y", "region_xy", region=rn)
+                err("%s.regions.%s" % (p, rn), "region needs numeric x and y", "region_xy", region=rn, asset=key)
                 continue
             for k in ("rx", "ry"):
                 if r.get(k) is not None and not (R._is_num(r[k]) and r[k] >= 0):
-                    err("%s.regions.%s.%s" % (p, rn, k), "%s must be a number >= 0" % k, "region_radius", region=rn, field=k)
+                    err("%s.regions.%s.%s" % (p, rn, k), "%s must be a number >= 0" % k, "region_radius", region=rn, field=k, asset=key)
             if r.get("label") is not None and not isinstance(r["label"], str):
-                err("%s.regions.%s.label" % (p, rn), "label must be a string", "not_a_string", field="label")
+                err("%s.regions.%s.label" % (p, rn), "label must be a string", "not_a_string", field="label", asset=key)
 
     def check_slots(path, slots, spec, tid):
         """Slot names, asset keys and asset kinds of one shot or overlay."""
@@ -668,20 +769,20 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                         continue
                     m = tm.stale(k["at"])
                     if m:
-                        err(kp + ".at", m, "stale_anchor")
+                        err(kp + ".at", m, "stale_anchor", param=name, index=ki)
                     try:
                         kt = tm.resolve(k["at"], t0, t1)
                     except AnchorError as e:
-                        err(kp + ".at", str(e), "anchor_invalid")
+                        err(kp + ".at", str(e), "anchor_invalid", param=name, index=ki)
                         continue
                     if prev is not None and kt <= prev + 1e-9:
-                        err(kp + ".at", "camera keys must be in strictly increasing time order", "camera_keys_order")
+                        err(kp + ".at", "camera keys must be in strictly increasing time order", "camera_keys_order", param=name, index=ki)
                     if "rel" in k["at"] and not 0 <= k["at"]["rel"] <= 1:
-                        err(kp + ".at", "rel must be between 0 and 1", "camera_rel_range")
+                        err(kp + ".at", "rel must be between 0 and 1", "camera_rel_range", param=name, index=ki)
                     prev = kt
                     ease = k.get("ease", "linear")
                     if not isinstance(ease, str) or ease not in EASE:
-                        err(kp + ".ease", "unknown ease %r" % (ease,), "unknown_ease", ease=ease if isinstance(ease, str) else str(ease))
+                        err(kp + ".ease", "unknown ease %r" % (ease,), "unknown_ease", ease=ease if isinstance(ease, str) else str(ease), param=name, index=ki)
         # transition
         tr = s.get("transition_in")
         if tr is not None:

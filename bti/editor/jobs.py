@@ -6,6 +6,7 @@ stages/mascot/render.py, reimplemented with a thread pool.
 """
 from __future__ import annotations
 
+import logging
 import subprocess
 import threading
 import time
@@ -18,7 +19,7 @@ from bti.engine.errors import RenderError
 from bti.script.runner import RESTART_MESSAGE, find_record, job_file, write_record
 from bti.script.store import ProjectGone, make_parent
 
-from .common import ApiError, safe_join
+from .common import ApiError, safe_join, scrub_paths
 
 KEEP_PREVIEWS = 20
 MAX_JOBS = 300
@@ -43,7 +44,7 @@ class JobManager:
     def _public(j: dict) -> dict:
         out = {"state": j["state"], "progress": j["progress"], "result_url": j["result_url"], "error": j["error"]}
         if j.get("error_code"):       # a technique could not draw: the page names the shot (code render_failed)
-            out.update({k: j.get(k) for k in ("error_code", "shot", "overlay", "technique")})
+            out.update({k: j.get(k) for k in ("error_code", "shot", "overlay", "technique", "asset")})
         return out
 
     def submit(self, pid: str, fn: Callable[[Callable[[float], None]], str]) -> str:
@@ -70,13 +71,14 @@ class JobManager:
                 job["progress"] = 1.0
                 job["state"] = "done"
             except RenderError as e:
-                job.update(error=e.message, error_code="render_failed", shot=e.shot, overlay=e.overlay, technique=e.technique,
+                job.update(error=scrub_paths(e.message), error_code="render_failed", shot=e.shot, overlay=e.overlay, technique=e.technique, asset=getattr(e, "asset", None),
                            state="error")
             except ApiError as e:
                 job["error"] = e.detail
                 job["state"] = "error"
             except BaseException as e:  # noqa: BLE001
-                job["error"] = f"{type(e).__name__}: {e}"[:400]
+                logging.getLogger("bti.editor").warning("job failed", exc_info=e)
+                job["error"] = scrub_paths(f"{type(e).__name__}: {e}")[:400]
                 job["state"] = "error"
             self._persist(job)
 
@@ -90,7 +92,7 @@ class JobManager:
             rec = find_record(self.projects_root, jid) if self.projects_root else None
             if rec is None or "kind" in rec:      # records of script jobs are served by the script router
                 return None
-            return {k: rec.get(k) for k in ("state", "progress", "result_url", "error", "error_code", "shot", "overlay", "technique")
+            return {k: rec.get(k) for k in ("state", "progress", "result_url", "error", "error_code", "shot", "overlay", "technique", "asset")
                     if k in ("state", "progress", "result_url", "error") or rec.get(k)}
         return self._public(j)
 

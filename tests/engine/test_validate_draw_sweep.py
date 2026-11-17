@@ -193,3 +193,65 @@ def test_validate_accepts_only_what_can_be_drawn(lab, tid):
                 lab.use_draft(None)
     assert not holes, "%s: validate accepts %d values that cannot be drawn, e.g. %s" % (tid, len(holes), holes[:6])
     assert n_drawn > 0 or not spec["params"], "no mutation was accepted by validate: the sweep drew nothing for %s" % tid
+
+
+# ----------------------------------------------------------------------------- R3B-008: the bounds themselves
+def _bound_values(p: dict) -> list:
+    """min, max and the default of a number param (the ones that exist), without duplicates."""
+    out: list = []
+    for k in ("min", "max", "default"):
+        v = p.get(k)
+        if isinstance(v, (int, float)) and not isinstance(v, bool) and v not in out:
+            out.append(v)
+    return out
+
+
+def _item_and_time(lab, sb, tid):
+    i, j = _locate(sb, tid)
+    rs = lab.resolve(sb)
+    shot = rs["shots"][i]
+    if j is None:
+        return i, j, (shot["_t0"] + shot["_t1"]) / 2
+    if j == "tr":
+        return i, j, shot["_t0"] + (shot["transition_in"].get("dur") or 0) / 2
+    ov = shot["overlays"][j]
+    return i, j, (ov["_t0"] + ov["_t1"]) / 2
+
+
+@pytest.mark.parametrize("tid", [t["id"] for t in _bundle().techniques if any(p["type"] == "number" for p in t["params"])])
+def test_every_numeric_bound_and_default_draws(lab, tid):
+    """R3B-008: for EVERY numeric param, its `min`, its `max` and its default (the other params at the editor's defaults) validate
+    without an error AND draw. A bound that validate accepts but the canvas cannot hold is a hole in the registry."""
+    sb = lab.storyboard()
+    i, j, t = _item_and_time(lab, sb, tid)
+    spec = _bundle().spec(tid)
+    shot = sb["shots"][i]
+    ctx = {"shot_id": shot["id"]}
+    base = lab.default_params(tid, ctx)
+    # the lab's own values for params the defaults leave empty (a camera, a required text): the reference configuration
+    ref_item = shot if j is None else (shot["transition_in"] if j == "tr" else shot["overlays"][j])
+    for k, v in (ref_item.get("params") or {}).items():
+        if base.get(k) is None:
+            base[k] = v
+    holes: list = []
+    for p in spec["params"]:
+        if p["type"] != "number":
+            continue
+        for v in _bound_values(p):
+            draft = copy.deepcopy(sb)
+            tgt = draft["shots"][i] if j is None else (draft["shots"][i]["transition_in"] if j == "tr" else draft["shots"][i]["overlays"][j])
+            tgt["params"] = {**copy.deepcopy(base), p["name"]: v}
+            errs = [x for x in lab.validate(draft) if x["level"] == "error"]
+            if errs:
+                holes.append((p["name"], v, "validate refuses its own bound: %s" % errs[0]["message"][:100]))
+                continue
+            lab.use_draft(draft)
+            global CURRENT
+            CURRENT = (tid, p["name"], v)
+            try:
+                lab.frame_at(t, 160)
+            except Exception as e:      # noqa: BLE001
+                holes.append((p["name"], v, "%s: %s" % (type(e).__name__, str(e)[:100])))
+            finally:
+                lab.use_draft(None)
+    assert not holes, "%s: %d bound values do not draw: %s" % (tid, len(holes), holes[:8])

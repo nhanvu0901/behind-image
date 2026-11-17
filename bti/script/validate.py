@@ -8,7 +8,7 @@ from __future__ import annotations
 import re
 
 from .stats import WPS_DEFAULT, count_words, minutes, narration_stats
-from .store import Narration, Outline
+from .store import Narration, Outline, chapter_order_differs
 from .. import textfold
 
 MARKUP = [
@@ -18,7 +18,7 @@ MARKUP = [
     (re.compile(r"`"), "a code mark"),
     (re.compile(r"<[^>\n]{1,40}>"), "an HTML or angle-bracket tag"),
     (re.compile(r"\[[^\]\n]{1,80}\]"), "square brackets (a tag or stage direction)"),
-    (re.compile(r"\((?:pause|beat|music|sfx|cut|b-?roll|show|visual|on screen|silence)\b[^)]*\)", re.I), "a stage direction"),
+    (re.compile(r"\((?:pause|beat|music|sfx|cut|b-?roll|show|visual|on screen|silence)\b[^)]{0,200}\)", re.I), "a stage direction"),
     (re.compile(r"\b(?:facts|show)\s*:\s*\S", re.I), "a facts/show metadata fragment"),
     (re.compile(r"\b[A-Z]{3}-\d{2,3}\b"), "a source paragraph id"),
     (re.compile(r"\bf\d{2,}\b"), "a fact id"),
@@ -131,8 +131,15 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
     if outline:
         for oc in outline.chapters:
             c = n.chapter(oc.id)
-            if c is None or not c.beats:
-                out.append(issue("error", "chapter_missing", f"Chapter {oc.id} {oc.title} is missing from the narration.", chapter=oc.id))
+            if c is None:
+                out.append(issue("error", "chapter_missing", f"Chapter {oc.id} {oc.title} is missing from the narration.", chapter=oc.id,
+                                 args={"chapter": oc.id}))
+            elif not any(b.text.strip() for b in c.beats):
+                out.append(issue("error", "empty_chapter", f"Chapter {oc.id} {oc.title} has no text in the narration.", chapter=oc.id,
+                                 args={"chapter": oc.id}))
+        if chapter_order_differs(n, outline):
+            out.append(issue("error", "chapter_order", "The chapters of the narration are not in the order of the outline.",
+                             args={}))
         for c in n.chapters:
             if outline.chapter(c.id) is None:
                 # an error for approval (saving stays allowed): a narration approval belongs to one outline, and a chapter the

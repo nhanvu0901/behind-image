@@ -1,5 +1,5 @@
 // Generic DOM form built from registry param definitions (see formgen.js). No per-technique code.
-import { h } from './util.js';
+import { h, fillSelect } from './util.js';
 import { valueLabel } from './labels.js';
 import { buildFields, coerce, pointToText } from './formgen.js';
 import { splitSpace, normBox } from './coords.js';
@@ -89,12 +89,12 @@ function makeWidget(f, opts) {
       break;
     }
     case 'select': {
-      const sel = h('select', null, ...(f.values || []).map((v) => h('option', { value: v, text: valueLabel(v, f.name), title: v })));
-      if (f.value != null && !(f.values || []).includes(f.value)) sel.prepend(h('option', { value: f.value, text: valueLabel(f.value, f.name), title: String(f.value) }));
-      sel.value = f.value ?? '';
+      const sel = h('select');
+      const fill = (v) => fillSelect(sel, f.values || [], v, (x) => valueLabel(x, f.name));
+      fill(f.value);
       sel.addEventListener('change', () => emit(sel.value));
       ctlNodes = [sel, measuredTag(f)];
-      update = (v) => { sel.value = v ?? ''; };
+      update = (v) => { if (sel.value !== String(v ?? '')) fill(v); };
       break;
     }
     case 'checkbox': {
@@ -191,10 +191,12 @@ function makeWidget(f, opts) {
       break;
     }
     case 'asset': {
-      const sel = h('select', null, h('option', { value: '', text: '(không)' }), ...Object.entries(opts.assets || {}).map(([k, a]) => h('option', { value: k, text: `${k}: ${a.title || a.file}` })));
-      sel.value = (f.value && f.value.asset) || f.value || '';
+      const sel = h('select');
+      const cur = (v) => (v && v.asset) || v || '';
+      const fill = (v) => fillSelect(sel, ['', ...Object.keys(opts.assets || {})], cur(v), (k) => (k === '' ? '(không)' : `${k}: ${opts.assets[k].title || opts.assets[k].file}`));
+      fill(f.value);
       sel.addEventListener('change', () => emit(sel.value ? { asset: sel.value } : null));
-      ctlNodes = [sel]; update = (v) => { sel.value = (v && v.asset) || v || ''; };
+      ctlNodes = [sel]; update = (v) => { if (sel.value !== String(cur(v))) fill(v); };
       break;
     }
     case 'camera': {
@@ -219,7 +221,7 @@ function makeWidget(f, opts) {
               h('button', { class: 'small', style: { whiteSpace: 'nowrap' }, title: 'Gắn vào từ tại đầu phát', text: '= đầu phát', onclick: () => mutate(i, (kk) => { kk.at = anchorFromTime(ctx.t, ctx.words(), false, Infinity); }, true) }))),
             h('div', { class: 'kf-grid' }, h('div', null, h('label', { text: 'cx' }), num('cx', 1)), h('div', null, h('label', { text: 'cy' }), num('cy', 1)), h('div', null, h('label', { text: 'zoom' }), num('zoom', 0.01))),
             h('div', { class: 'row', style: { marginTop: '4px' } }, h('label', { text: 'Chuyển động' }), h('div', { class: 'ctl' },
-              h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }, ...EASE_NAMES.map((n) => h('option', { value: n, text: valueLabel(n), title: n, selected: n === (k.ease || 'linear') })))))));
+              fillSelect(h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }), EASE_NAMES, k.ease || 'linear', (n) => valueLabel(n))))));
         });
         wrap.append(h('button', { class: 'small', text: '+ Thêm khóa camera', onclick: () => {
           const n = cur.length ? [...clone(cur), { ...clone(cur[cur.length - 1]), at: { rel: 1 } }] : [opts.newKey ? opts.newKey() : { at: { rel: 0 }, cx: 1000, cy: 1000, zoom: 0.5, ease: 'linear' }]; cur = n; emit(n); build(n);

@@ -43,19 +43,41 @@ def image_size(path: Path) -> tuple[int, int]:
         return 0, 0
 
 
-def readable_problem(path: Path) -> str | None:
-    """None when `path` is a non-empty image that decodes completely, else a short reason. A file that only has a valid
-    header (truncated, or junk after it) is refused: a stored asset must never break the stills that use it."""
+class ImageDamaged(ValueError):
+    """An image file that does not decode completely. `code`: `image_empty`, `image_truncated` or `image_unreadable`."""
+
+    def __init__(self, message: str, code: str):
+        super().__init__(message)
+        self.code = code
+
+
+def image_problem(path: Path) -> tuple[str, str] | None:
+    """None when `path` is a non-empty image that decodes completely, else `(code, short reason)`. A file that only has a valid
+    header (cut off part way, or junk after it) is refused: a stored asset must never break the stills that use it. This is the
+    same completeness rule as the engine's `media_problem` (header reads AND all pixel data decodes); it is kept here because
+    `bti.media` must not import the engine."""
+    from PIL import Image
     try:
         if Path(path).stat().st_size == 0:
-            return "the file is empty"
-        from PIL import Image
+            return "image_empty", "the file is empty"
+    except OSError:
+        return "image_unreadable", "the file cannot be read"
+    try:
         with Image.open(path) as im:
             im.verify()
+    except Exception:       # noqa: BLE001
+        return "image_unreadable", "the file is not a readable image (damaged or not an image)"
+    try:
         with Image.open(path) as im:
             im.load()
             if im.width < 1 or im.height < 1:
-                return "the image has no pixels"
-    except Exception:       # noqa: BLE001 - any failure to decode means "not a usable image"
-        return "the file is not a readable image (damaged, truncated or not an image)"
+                return "image_unreadable", "the image has no pixels"
+    except Exception:       # noqa: BLE001
+        return "image_truncated", "the image is cut off: its picture does not decode completely"
     return None
+
+
+def readable_problem(path: Path) -> str | None:
+    """Short reason (see `image_problem`) or None."""
+    p = image_problem(path)
+    return p[1] if p else None

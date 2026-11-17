@@ -271,6 +271,8 @@ def label_layer(title, sub=None, y0=.70, h=140, x_text=.07, w=W, hh=H, opacity=0
     """Channel-style detail label: dark translucent strip, white caps title, smaller 2nd line (artist, year).
     (opacity/fade_frac/size/sub_size/pad/gap are new keyword arguments; their defaults reproduce the benchmark.)"""
     Y0 = int(y0 * hh)
+    if h < 1 or w < 1:
+        return Layer(np.zeros((1, 1, 4), np.uint8), 0, 0)      # a strip whose bottom edge is above its top edge: nothing to draw
     a = np.full((h, w), opacity * 255, np.float32)
     fade = int(w * fade_frac)
     if fade > 0:
@@ -350,6 +352,24 @@ def ring(frame, sx, sy, r, prog, alpha=0.75, thick=13, color=(205, 205, 205)):
 
 def blend(a, b, p):
     return a * (1 - p) + b * p
+
+
+def put(frame, x, y, img, alpha=None):
+    """Draw `img` (h, w, 3) on `frame` with its top-left corner at (x, y), clipped to the canvas: the part that lies outside is
+    dropped, a box that lies completely outside draws nothing. `alpha` (0..1) blends instead of replacing. Slice assignment with a
+    box that leaves the canvas fails (or wraps around when x or y is negative), so every layout draws through this."""
+    x, y = int(x), int(y)
+    h, w = img.shape[:2]
+    fx0, fy0 = max(x, 0), max(y, 0)
+    fx1, fy1 = min(x + w, frame.shape[1]), min(y + h, frame.shape[0])
+    if fx1 <= fx0 or fy1 <= fy0:
+        return frame
+    part = img[fy0 - y:fy1 - y, fx0 - x:fx1 - x]
+    if alpha is None:
+        frame[fy0:fy1, fx0:fx1] = part
+    else:
+        frame[fy0:fy1, fx0:fx1] = frame[fy0:fy1, fx0:fx1] * (1 - alpha) + part * alpha
+    return frame
 
 
 def to_u8(f):

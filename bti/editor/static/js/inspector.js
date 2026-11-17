@@ -1,6 +1,7 @@
 // Inspector tabs: Shot, Lớp phủ, Hình (media.js), Lỗi.
-import { h, $, $$, detailFold } from './util.js';
-import { issueText } from './errmsg.js';
+import { h, $, $$, detailFold, fillSelect, toast } from './util.js';
+import { issueText, groupIssues } from './errmsg.js';
+import { issueTarget } from './sbissues.js';
 import { ctx, bus, assetThumbUrl, intentHsl, primaryAsset } from './ctx.js';
 import { api } from './api.js';
 import { renderForm } from './formui.js';
@@ -10,9 +11,8 @@ import { paramSpace } from './coords.js';
 import { slotKind, effectiveSlot, KIND_VI, isIncompleteIssue } from './slots.js';
 import * as E from './edit.js';
 import { intentLabel, sourceLabel } from './labels.js';
-const { parseIssuePath } = E;
 import * as A from './actions.js';
-import { renderMedia } from './media.js';
+import { renderMedia, selectAsset } from './media.js';
 
 let tab = 'shot';
 let lastSig = '';
@@ -129,8 +129,7 @@ function renderShot() {
     incompleteBanner(s.id), renderBanner(s.id),
     sect('Kỹ thuật', techCard(tech, () => openGallery({ title: 'Chọn kỹ thuật cho shot', kinds: ['base', 'card'], current: s.technique, onPick: (id) => A.setShotTechnique(s.id, id) })),
       !tech ? h('div', { class: 'hint err', text: `Kỹ thuật ${s.technique} không có trong registry` }) : null,
-      rowOf('Ý đồ', h('select', { onchange: (e) => A.commitShot('Đổi ý đồ', s.id, (x) => { x.intent = e.target.value; }) },
-        ...intents.map((i) => h('option', { value: i, text: intentLabel(i) + (tech && tech.intents.includes(i) ? ' *' : ''), title: i, selected: i === s.intent }))), h('span', { class: 'hint', text: '* hợp với kỹ thuật' }))),
+      rowOf('Ý đồ', fillSelect(h('select', { onchange: (e) => A.commitShot('Đổi ý đồ', s.id, (x) => { x.intent = e.target.value; }) }), intents, s.intent, (i) => intentLabel(i) + (tech && tech.intents.includes(i) ? ' *' : '')), h('span', { class: 'hint', text: '* hợp với kỹ thuật' }))),
     pictureSlots(tech).length ? sect('Slot hình', ...pictureSlots(tech).map((sl) => slotRow({ shotId: s.id }, s, sl, s, false))) : null,
     startRow(s, 'shot', s.id),
     tech ? sect('Tham số (sinh từ registry)', formFor(s, 'shot', tech)) : null,
@@ -147,7 +146,7 @@ function slotRow(target, item, sl, shot, isOverlay) {
   const missing = sl.required && !eff?.asset;
   const pick = () => { ctx.slotPick = { ...target, slot: sl.name, kind }; setTab('media'); };
   return h('div', { class: 'slot' + (missing ? ' missing' : ''), title: `${sl.required ? 'Bắt buộc' : 'Tùy chọn'}, cần ${KIND_VI[kind] || kind}` },
-    a ? h('img', { src: assetThumbUrl(key, api), alt: key }) : h('div', { style: { width: '56px', height: '42px', background: '#000' } }),
+    a ? h('img', { src: assetThumbUrl(key, api), alt: '', onerror: (e) => { e.target.replaceWith(h('div', { class: 'thumb-none', title: 'Không đọc được hình này', style: { width: '56px', height: '42px', background: '#000' } })); } }) : h('div', { style: { width: '56px', height: '42px', background: '#000' } }),
     h('div', { class: 'nm', text: sl.name + (sl.required ? ' *' : '') }),
     h('div', { class: 'as', text: a ? `${eff.own === false ? '(theo shot) ' : ''}${key}: ${a.title || a.file}` : `(trống) cần ${KIND_VI[kind] || kind}` }),
     missing ? h('span', { class: 'chip partial', text: 'thiếu' }) : null,
@@ -158,8 +157,9 @@ function slotRow(target, item, sl, shot, isOverlay) {
 function transitionSection(s) {
   const trs = ctx.reg.list.filter((t) => t.kind === 'transition');
   const cur = s.transition_in;
-  const sel = h('select', { onchange: (e) => A.setTransition(s.id, e.target.value) }, h('option', { value: '', text: 'Cắt thẳng (mặc định của kênh)' }),
-    ...trs.map((t) => h('option', { value: t.id, disabled: t.engine?.available !== true, selected: cur?.technique === t.id, text: `${t.id} ${t.label_vi}${t.engine?.available === true ? '' : ' (chưa có)'}` })));
+  const sel = fillSelect(h('select', { onchange: (e) => A.setTransition(s.id, e.target.value) }), ['', ...trs.map((t) => t.id)], cur?.technique || '',
+    (id) => { const t = trs.find((x) => x.id === id); return !id ? 'Cắt thẳng (mặc định của kênh)' : t ? `${t.id} ${t.label_vi}` : id; },
+    (id) => { const t = trs.find((x) => x.id === id); return id && t && t.engine?.available !== true ? { disabled: true, text: `${t.id} ${t.label_vi} (chưa có)` } : null; });
   const kids = [rowOf('Chuyển vào', sel)];
   if (cur) {
     kids.push(rowOf('Thời lượng (s)', h('input', { type: 'number', step: 0.1, min: 0.1, value: cur.dur, onchange: (e) => A.commitShot('Đổi thời lượng chuyển cảnh', s.id, (x) => { x.transition_in.dur = Number(e.target.value) || 1; }) })));
@@ -186,7 +186,7 @@ function renderOverlay() {
   body.append(...kids(
     incompleteBanner(s.id, o.id),
     sect('Kỹ thuật', techCard(tech, () => openGallery({ title: 'Đổi kỹ thuật lớp phủ', kinds: ['overlay'], current: o.technique, onPick: (id) => A.setOverlayTechnique(o.id, id, s.id) })),
-      rowOf('Ý đồ', h('select', { onchange: (e) => A.commitOverlay('Đổi ý đồ', o.id, (x) => { x.intent = e.target.value; }) }, ...ctx.reg.intents.map((i) => h('option', { value: i, text: intentLabel(i), title: i, selected: i === o.intent }))))),
+      rowOf('Ý đồ', fillSelect(h('select', { onchange: (e) => A.commitOverlay('Đổi ý đồ', o.id, (x) => { x.intent = e.target.value; }) }), ctx.reg.intents, o.intent, intentLabel))),
     pictureSlots(tech).length ? sect('Slot hình của lớp phủ', ...pictureSlots(tech).map((sl) => slotRow(target, o, sl, s, true))) : null,
     startRow(o, 'overlay', o.id),
     sect('Thời lượng', rowOf('dur (s)', h('input', { type: 'number', step: 0.1, min: 0.1, value: round(o._t1 - o._t0, 2),
@@ -198,27 +198,36 @@ function renderOverlay() {
 }
 
 /** One issue in words; the server's English text is kept under "chi tiết" only when the sentence is a general one. */
-function issueLine(i) {
+function issueLine(i, n = 1) {
   const t = issueText(i);
-  return h('div', null, h('div', { text: t.text }), t.generic && t.detail ? detailFold(t.detail) : null);
+  return h('div', null, h('div', { text: n > 1 ? `${t.text} (${n} chỗ)` : t.text }), t.generic && t.detail ? detailFold(t.detail) : null);
 }
-
 function renderIssues() {
   const list = ctx.issues;
   if (!list.length) { body.append(h('div', { class: 'empty', text: 'Không có lỗi hay cảnh báo. Bấm "Kiểm tra" để chạy lại.' })); return; }
   const errs = list.filter((i) => i.level === 'error').length;
   body.append(h('div', { class: 'hint', style: { marginBottom: '8px' }, text: `${errs} lỗi, ${list.length - errs} cảnh báo` }));
-  body.append(h('div', { class: 'list' }, ...list.map((i) => h('div', { class: 'list-item issue ' + i.level, onclick: () => selectIssue(i) },
-    h('div', { class: 'msg' }, issueLine(i)),
+  body.append(h('div', { class: 'list' }, ...groupIssues(list).map(({ issue: i, n }) => h('div', { class: 'list-item issue ' + i.level, onclick: () => selectIssue(i) },
+    h('div', { class: 'msg' }, issueLine(i, n)),
     h('span', { class: 'chip ' + (i.level === 'error' ? 'missing' : 'partial'), text: i.level === 'error' ? 'lỗi' : isIncompleteIssue(i) ? 'chưa đủ' : 'cảnh báo' })))));
 }
 
 export function selectIssue(i) {
-  const p = parseIssuePath(i.path), d = ctx.store.draft;
-  if (!p || !d.shots[p.shot]) return;
-  const s = d.shots[p.shot], o = p.overlay != null ? (s.overlays || [])[p.overlay] : null;
-  A.selectItem(s.id, o?.id || null);       // the playhead goes into the item
-  setTab(o ? 'overlay' : 'shot');
+  const d = ctx.store.draft;
+  const tg = issueTarget(i, d);
+  if (tg.kind === 'shot') {
+    const s = d.shots[tg.shot], o = tg.overlay != null ? (s.overlays || [])[tg.overlay] : null;
+    A.selectItem(s.id, o?.id || null);       // the playhead goes into the item
+    setTab(o ? 'overlay' : 'shot');
+  } else if (tg.kind === 'asset') {
+    if (tg.shots.length) {
+      A.selectItem(tg.shots[0], null); setTab('shot');
+      toast(tg.shots.length === 1 ? `Hình ${tg.asset} chỉ dùng ở shot ${tg.shots[0]}.` : `Hình ${tg.asset} được dùng ở ${tg.shots.length} shot. Đang mở shot đầu tiên (${tg.shots[0]}).`, '', 5000);
+    } else { selectAsset(tg.asset); ctx.slotPick = null; setTab('media'); toast(`Hình ${tg.asset} chưa shot nào dùng. Đã mở tab Hình.`, '', 4000); }
+  } else {
+    const t = issueText(i);
+    toast(t.text, '', 6000, t.detail || null);       // no place to go: stay where the owner is, show only the detail
+  }
 }
 
 export function initInspector(viewRoot) {

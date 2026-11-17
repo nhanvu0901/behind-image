@@ -13,11 +13,33 @@ from .stats import count_words
 from .. import textfold
 from .store import CERTAINTY, CHAPTER_ID_SRC, Beat, Fact, Hook, NChapter, Narration, OChapter, Outline, doc_problem, now_iso
 
-FINAL_RE = re.compile(r"^[\W_]*FINAL\s+SCRIPT[\W_]*$", re.I | re.M)
-OUTLINE_RE = re.compile(r"^[\W_]*OUTLINE[\W_]*$", re.I | re.M)
+FINAL_RE = re.compile(r"^(?:_|[^\w\n])*FINAL\s+SCRIPT(?:_|[^\w\n])*$", re.I | re.M)       # never across lines: [\W_] used to eat the newlines
+OUTLINE_RE = re.compile(r"^(?:_|[^\w\n])*OUTLINE(?:_|[^\w\n])*$", re.I | re.M)
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 RULE_RE = re.compile(r"^\s*([-*_=])(\s*\1){2,}\s*$")
-HEAD_RE = re.compile(r"^\s*#{2,3}\s+(.*?)\s*#*\s*$")
+_HEAD_START = re.compile(r"\s*#{2,3}\s+")
+
+
+class _HeadRe:
+    """`^\\s*#{2,3}\\s+(.*?)\\s*#*\\s*$` without the lazy group: that pattern was cubic on a long run of spaces (R3B-002)."""
+
+    @staticmethod
+    def match(line: str):
+        m = _HEAD_START.match(line)
+        if m is None:
+            return None
+        return _HeadMatch(line[m.end():].strip().rstrip("#").strip())
+
+
+class _HeadMatch:
+    def __init__(self, text: str):
+        self._t = text
+
+    def group(self, i: int = 0) -> str:
+        return self._t
+
+
+HEAD_RE = _HeadRe()
 CH_ID_RE = re.compile(r"^\[?\s*(" + CHAPTER_ID_SRC + r")\s*\]?\b[\s:.\-–—]*(.*)$", re.I)   # same id shape as store.CHAPTER_ID_RE
 PARA_ID_RE = re.compile(r"\b[A-Z]{3}-\d{2,3}\b")
 FACT_ID_RE = re.compile(r"\bf\d+\b", re.I)
@@ -29,7 +51,7 @@ _LABELS = (r"hook options?|hooks?|chosen hook|hook choice|spoken word count|word
 LABEL_RE = re.compile(rf"^\W*({_LABELS})\s*(:|$)", re.I)
 TAIL_LABELS = re.compile(r"^\W*(spoken word count|word count|total words?|fact trace|audit|sources?|notes?|unsupported facts|"
                          r"opening chain|flow check|issue mention check|length check|budget check|self[- ]check|checks?)\s*(:|$)", re.I)
-WORDCOUNT_LINE = re.compile(r"^\W*(?:chapter |total |spoken )?(?:word count|words?)\s*[:=]?\s*~?\d+.*$|^\W*[\(\[]\s*~?\d+\s+words?\s*[\)\]]\W*$", re.I)
+WORDCOUNT_LINE = re.compile(r"^\W*(?:chapter |total |spoken )?(?:word count|words?)\s*(?:[:=]\s*)?~?\d+.*$|^\W*[\(\[]\s*~?\d+\s+words?\s*[\)\]]\W*$", re.I)
 LIST_ITEM = re.compile(r"^\s*(?:\d+[.)]|[-*•]|h\d+\s*:)\s+")
 
 
@@ -403,17 +425,17 @@ def parse_outline(text: str, known_paragraph_ids: set[str] | list[str] | None = 
         if m:
             thesis, section, last_key = line.split(":", 1)[1].strip(), "thesis", "thesis"
             continue
-        if re.match(r"^(hooks?|hook options?)\s*:?\s*$", low):
+        if re.match(r"^(hooks?|hook options?)\s*(?::\s*)?$", low):
             section, cur = "hooks", None
             continue
         m = re.match(r"^(hook choice|chosen hook|hook chosen)\s*:\s*(.*)$", low)
         if m:
             hook_choice = line.split(":", 1)[1].strip()
             continue
-        if re.match(r"^facts\s*:?\s*$", low) and cur is None:
+        if re.match(r"^facts\s*(?::\s*)?$", low) and cur is None:
             section = "facts"
             continue
-        if re.match(r"^chapters\s*:?\s*$", low):
+        if re.match(r"^chapters\s*(?::\s*)?$", low):
             section, cur = "chapters", None
             continue
         m = re.match(r"^(target words|target|total words)\s*[:=]\s*~?([\d,]+)", low)

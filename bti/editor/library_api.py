@@ -274,6 +274,8 @@ def make_router(projects_root: Path) -> APIRouter:
             return {"work_id": s["work_id"], "text": f.read_text(encoding="utf-8")}
         except UnicodeDecodeError:
             raise ApiError(409, f"{f.name} is not UTF-8 text", data_error="library")
+        except PermissionError:
+            raise ApiError(409, f"{f.name} cannot be read (permission denied)", data_error="library")
         except OSError:
             raise ApiError(404, "source text missing")
 

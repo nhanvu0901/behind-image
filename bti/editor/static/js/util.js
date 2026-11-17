@@ -1,4 +1,5 @@
 import { describeError } from './errmsg.js';
+import { dropdownOptions } from './labels.js';
 export function h(tag, attrs, ...kids) {
   const el = document.createElement(tag);
   if (attrs) for (const [k, v] of Object.entries(attrs)) {
@@ -12,6 +13,13 @@ export function h(tag, attrs, ...kids) {
   }
   for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
   return el;
+}
+/** Fill a <select> from a list so that it shows the stored value (see `dropdownOptions`). `extra(v)` may add {disabled, text} per entry. Safe to call again on sync. */
+export function fillSelect(sel, values, current, labelOf = String, extra = null) {
+  const { options, selected } = dropdownOptions(values, current, labelOf);
+  sel.replaceChildren(...options.map((o) => { const x = extra && o.state === 'ok' ? extra(o.value) || {} : {}; const el = h('option', { value: o.value, text: x.text || o.text, title: o.title, disabled: o.disabled || x.disabled }); el.dataset.state = o.state; return el; }));
+  sel.value = selected;
+  return sel;
 }
 export const svg = (tag, attrs) => {
   const el = document.createElementNS('http://www.w3.org/2000/svg', tag);

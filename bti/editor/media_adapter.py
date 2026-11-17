@@ -63,7 +63,8 @@ def _translate(e: Exception) -> Exception:
     if isinstance(e, (ApiError, FileNotFoundError)):       # FileNotFoundError: the project was deleted meanwhile (404 by the app)
         return e
     if isinstance(e, ValueError):
-        return ApiError(422, str(e)[:300])
+        code = getattr(e, "code", None)
+        return ApiError(422, str(e)[:300], **({"code": code, "reason": str(e)[:300]} if code else {}))
     if n == "ImageTooSmall":
         return ApiError(422, str(e)[:300], reason=str(e)[:300])
     if n == "MediaHTTPError":
@@ -162,7 +163,7 @@ class MediaAdapter:
                 w, h = im.size
                 fmt = (im.format or "JPEG").lower()
         except Exception:
-            raise ApiError(422, "file is not a readable image")
+            raise ApiError(422, "file is not a readable image", code="image_unreadable", reason="file is not a readable image")
         ext = {"jpeg": "jpg", "png": "png", "webp": "webp"}.get(fmt)
         if ext is None:
             raise ApiError(422, f"unsupported image format {fmt}")

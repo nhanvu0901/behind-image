@@ -60,3 +60,22 @@ def test_ytdlp_metadata():
     assert not check_licence({"license": "Standard YouTube License"})[0]
     assert not check_licence({"license": None})[0]
     assert not check_licence({})[0]
+
+
+from bti.media.licence import flag_for_meta, flag_for_text, with_size_flag  # noqa: E402
+
+
+@pytest.mark.parametrize("text,flag", [
+    ("CC0", None), ("CC BY-SA 4.0", None), ("Public domain", None),
+    ("CC BY-NC 2.0", "rejected"), ("CC BY-ND 4.0", "rejected"), ("Fair use", "rejected"), ("All rights reserved", "rejected"),
+    ("", "unknown"), (None, "unknown"), ("unknown", "unknown"), ("GFDL", "unknown"),
+])
+def test_flag_for_text(text, flag):
+    assert flag_for_text(text) == flag
+
+
+def test_flag_for_meta_and_size():
+    assert flag_for_meta({"isPublicDomain": False}) == "rejected" and flag_for_meta({"isPublicDomain": True}) is None
+    assert flag_for_meta({"licence": "CC BY 4.0"}) is None and flag_for_meta({}) == "unknown"
+    assert with_size_flag(None, 800, 600, 1200) == "small" and with_size_flag(None, 0, 0, 1200) is None
+    assert with_size_flag("unknown", 800, 600, 1200) == "unknown" and with_size_flag(None, 1300, 1250, 1200) is None

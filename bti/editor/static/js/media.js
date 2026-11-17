@@ -31,6 +31,9 @@ async function assign(key) {
 }
 const put = (el, ...kids) => { for (const k of kids.flat()) if (k !== null && k !== undefined && k !== false) el.append(k.nodeType ? k : document.createTextNode(String(k))); return el; };
 
+/** Open the pictures tab on one asset (an issue about that picture leads here). */
+export function selectAsset(key) { selKey = key; }
+
 export function renderMedia(body) {
   const d = ctx.store.draft;
   if (selKey && !d.assets[selKey]) selKey = null;

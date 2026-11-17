@@ -103,3 +103,40 @@ def test_style_and_timing_problems_have_codes(tiny_project):
         d[key] = val
         iss = tiny_project.validate(d)
         assert iss and all(i["code"] in SB.ISSUE_CODES for i in iss), iss
+
+
+# R3U-003: an issue about an asset or its file names the asset key; an issue about one camera key names its index
+ASSET_CODES = ("asset_not_object", "asset_kind", "asset_file_required", "asset_file_outside_project", "asset_file_missing",
+               "asset_file_unreadable", "credit_not_object", "asset_size", "regions_not_object", "region_xy", "region_radius",
+               "asset_undefined", "slot_asset_kind", "region_undefined")
+
+
+def test_asset_issues_carry_the_asset_key(tiny_project):
+    base = tiny_project.storyboard()
+    key = next(iter(base["assets"]))
+    docs = _broken(base)
+    d = copy.deepcopy(base)
+    a = d["assets"][key]
+    a.update(kind="x", credit=3, width=-1, regions=5)
+    docs["many"] = d
+    d2 = copy.deepcopy(base)
+    d2["assets"][key]["regions"] = {"R": {"x": 1, "y": 2, "rx": -1}, "S": {"x": "a"}}
+    docs["regions"] = d2
+    d3 = copy.deepcopy(base)
+    d3["assets"][key]["file"] = None
+    docs["nofile"] = d3
+    seen = set()
+    for name, doc in docs.items():
+        for i in tiny_project.validate(doc):
+            if i["code"] in ASSET_CODES:
+                seen.add(i["code"])
+                assert isinstance(i["args"].get("asset"), str) and i["args"]["asset"], (name, i)
+    assert {"asset_kind", "asset_file_missing", "asset_file_outside_project", "region_xy", "asset_undefined", "asset_size",
+            "regions_not_object", "credit_not_object", "region_radius", "asset_file_required"} <= seen, seen
+
+
+def test_camera_issues_carry_the_key_index(tiny_project):
+    docs = _broken(tiny_project.storyboard())
+    for name in ("cam_ease", "cam_rel"):
+        found = [i for i in tiny_project.validate(docs[name]) if i["code"] in ("unknown_ease", "camera_rel_range", "camera_keys_order")]
+        assert found and all(isinstance(i["args"].get("index"), int) and i["args"].get("param") for i in found), (name, found)

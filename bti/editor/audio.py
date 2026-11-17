@@ -24,7 +24,7 @@ def decode_mono(path: Path) -> np.ndarray:
     try:
         r = subprocess.run(cmd, capture_output=True, timeout=300)
     except (OSError, subprocess.TimeoutExpired) as e:
-        raise ApiError(500, f"audio decode failed: {e}")
+        raise ApiError(500, "audio decode failed (ffmpeg did not run or took too long)")
     if r.returncode != 0:
         raise ApiError(500, "audio decode failed: " + r.stderr.decode("utf-8", "replace")[-200:])
     return np.frombuffer(r.stdout, dtype="<i2")

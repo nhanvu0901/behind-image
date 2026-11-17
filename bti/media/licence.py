@@ -106,3 +106,43 @@ def check_licence(meta: dict) -> tuple[bool, str, str]:
             return True, "CC0", ""
         return False, "", "object is not public domain (Met isPublicDomain is false)"
     return check_texts(_collect_texts(meta))
+
+
+# ---------------------------------------------------------------------------- advisory flag
+# The licence gate is advisory (owner decision, 2026-11-16): an import is never refused for its licence. The result of
+# the gate is recorded as `credit.flag`, and the page shows it.
+FLAGS = ("rejected", "unknown", "small")
+_RESTRICTED = ("fair use", "all rights reserved", "non-commercial", "noncommercial", "no-deriv", "no deriv", "non-free", "nonfree", "copyrighted")
+
+
+def flag_of(allowed: bool, name: str, reason: str) -> str | None:
+    """The licence part of the flag, from a `(allowed, name, reason)` answer of the gate:
+    None when the licence is on the allow-list; "unknown" when it is missing or unclear; "rejected" when it is
+    recognisably restricted (NC, ND, fair use, not public domain)."""
+    if allowed:
+        return None
+    if not name:
+        # an empty name is "missing", except for a Met record that says it is not public domain
+        return "rejected" if "not public domain" in (reason or "") else "unknown"
+    low = (name + " " + (reason or "")).lower()
+    if any(p in low for p in _RESTRICTED) or _NC.search(low) or _ND.search(low):
+        return "rejected"
+    return "unknown"
+
+
+def flag_for_text(text: Any) -> str | None:
+    return flag_of(*check_text(text))
+
+
+def flag_for_meta(meta: dict) -> str | None:
+    return flag_of(*check_licence(meta))
+
+
+def with_size_flag(flag: str | None, width: int, height: int, floor: int) -> str | None:
+    """`flag`, or "small" when the licence is fine but the picture is under `floor` px on its short side.
+    A size of 0 means "not known", which is not small."""
+    if flag:
+        return flag
+    if width and height and floor and min(width, height) < floor:
+        return "small"
+    return None

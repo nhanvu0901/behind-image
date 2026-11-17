@@ -10,7 +10,8 @@
 //    and is merged with the job's result when the job ends.
 import { api } from '../api.js';
 import { agyProblem } from '../labels.js';
-import { h, toast, errorToast, errorInto, detailFold, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
+import { chapterDiffItems, headerRole } from '../chapdiff.js';
+import { h, toast, errorToast, errorInto, detailFold, fillSelect, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
 import { LEVEL } from '../labels.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
@@ -22,7 +23,7 @@ import { issueText, jobErrorText, parseFailText } from '../errmsg.js';
 let root = null, scope = null, shell = null;     // the view root, its lifecycle scope and the shell (set by mount)
 const $ = (s) => root?.querySelector(s);
 const modal = (o) => uiModal({ ...o, cls: (o.cls || '') + ' v-scr' });   // dialogs opened here carry the scope class of this view
-const S = { pid: null, brief: null, models: [], model: null, tab: null, search: '', hl: [], focus: 'narr' };
+const S = { pid: null, brief: null, models: [], modelsState: 'loading', model: null, tab: null, search: '', hl: [], focus: 'narr' };
 const D = { outline: null, narr: null };                       // drafts (what is on screen)
 const R = { outline: null, narr: null };                       // revisions of the saved files
 const B = { outline: null, narr: null };                       // the last saved documents the page knew (base of the merges)
@@ -227,21 +228,34 @@ const WHY = {
   outline_not_approved: { badge: 'chờ duyệt dàn ý', text: 'Dàn ý chưa được duyệt (hoặc đã sửa sau khi duyệt), nên lời dẫn chưa duyệt được. Hãy duyệt dàn ý trước.' },
 };
 const approvalWhy = (st) => (!st.approved && st.approval_reason ? WHY[st.approval_reason] || null : null);
-const diffList = (ids) => (ids || []).join(', ');
-/** Chapters the narration and the outline do not share (`chapter_diff`); empty when they match. */
-function diffLines(d) {
-  const out = [];
-  if (d?.not_in_outline?.length) out.push(`Có trong lời dẫn nhưng không có trong dàn ý: ${diffList(d.not_in_outline)}. Xóa chương đó khỏi lời dẫn hoặc thêm nó vào dàn ý.`);
-  if (d?.missing_in_narration?.length) out.push(`Có trong dàn ý nhưng chưa có lời dẫn: ${diffList(d.missing_in_narration)}. Viết các chương còn thiếu hoặc bỏ chúng khỏi dàn ý.`);
-  return out;
+/** One difference with its own action buttons. `after` runs when a button was used (the refusal dialog closes itself). */
+function diffRow(it, after = () => {}) {
+  const run = {
+    drop: () => dropChapter(it.chapter),
+    write: () => runDialog('narration', [it.chapter]),
+    add_empty: () => doOp({ op: 'add_chapter', chapter: it.chapter }),
+    add_beat: () => doOp({ op: 'insert', chapter: it.chapter, after: D.narr?.chapters.find((c) => c.id === it.chapter)?.beats.at(-1)?.id || null }),
+    order: () => doOp({ op: 'order_like_outline' }),
+  };
+  return h('div', { class: 'diff-row', 'data-diff': it.kind, 'data-chapter': it.chapter || '', style: { display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+    h('span', { text: it.text }),
+    ...it.actions.map((a) => h('button', { class: 'small' + (a.id === 'drop' ? ' danger' : ''), 'data-act': a.id, text: a.label, onclick: () => { after(); run[a.id](); } })));
+}
+const diffItems = (d) => chapterDiffItems(d, D.outline, D.narr);
+/** Remove a chapter that the outline does not have from the narration. Asks once; Hoàn tác brings it back. */
+async function dropChapter(id) {
+  const ch = D.narr?.chapters.find((c) => c.id === id);
+  const n = ch ? ch.beats.length : 0;
+  if (!(await confirmDialog(`Xóa chương ${id}${n ? ` và ${n} dòng của nó` : ''} khỏi lời dẫn? Bạn có thể bấm Hoàn tác để lấy lại.`, { title: 'Xóa chương khỏi lời dẫn', ok: 'Xóa', danger: true }))) return;
+  return doOp({ op: 'drop_chapter', chapter: id });
 }
 /** The note above the narration: why it is not approved (when it was before), what changed in the outline, which chapters differ. */
 function approvalNote() {
-  const st = ST.narr, w = approvalWhy(st), diff = diffLines(st.chapter_diff);
+  const st = ST.narr, w = approvalWhy(st), diff = diffItems(st.chapter_diff);
   const lines = [];
   if (w) lines.push(h('div', { text: w.text }));
-  if (st.stale && !w) lines.push(h('div', { class: 'hint', text: 'Dàn ý đã đổi kể từ lúc lời dẫn này được viết. Chỉ để bạn biết, vẫn lưu và duyệt được.' }));
-  for (const l of diff) lines.push(h('div', { text: l }));
+  if (st.stale && !w && !st.approved) lines.push(h('div', { class: 'hint', text: 'Dàn ý đã đổi kể từ lúc lời dẫn này được viết. Chỉ để bạn biết, vẫn lưu và duyệt được.' }));
+  for (const it of diff) lines.push(diffRow(it));
   return lines.length ? h('div', { class: 'banner warn approval-note', style: { flexDirection: 'column', alignItems: 'flex-start' } }, ...lines) : null;
 }
 
@@ -265,7 +279,8 @@ function refreshChrome() {
   b.disabled = !D[next] || !!currentJob; b.dataset.kind = next;
   $('#approve-state').textContent = approvedFlag('narr') ? 'Lời dẫn đã duyệt' : approvedFlag('outline') ? 'Dàn ý đã duyệt' : 'Chưa duyệt gì';
   $('#approve-state').className = 'badge' + (approvedFlag('narr') ? ' ok' : '');
-  $('#btn-write').disabled = !!currentJob; $('#btn-outline').disabled = !!currentJob;
+  const noModel = !S.models.length;      // only while there is no model to choose (loading, or the list failed)
+  $('#btn-write').disabled = !!currentJob || noModel; $('#btn-outline').disabled = !!currentJob || noModel;
   renderStatus();
   const nx = shell?.pipeline && nextOpenable(shell.pipeline.steps, 'script'), bn = $('#btn-next');
   bn.hidden = !(approvedFlag('narr') && nx);
@@ -402,7 +417,7 @@ function outBody() {
         h('button', { class: 'small', text: '↓', disabled: i === o.chapters.length - 1, onclick: () => { mutate('outline', () => { [o.chapters[i + 1], o.chapters[i]] = [o.chapters[i], o.chapters[i + 1]]; }); outBody(); } }),
         h('button', { class: 'small danger', text: 'Xóa', onclick: async () => { if (await confirmDialog(`Xóa chương ${c.id} khỏi dàn ý?`, { title: 'Xóa chương', ok: 'Xóa', danger: true })) { mutate('outline', () => { o.chapters = o.chapters.filter((x) => x !== c); }); outBody(); } } })),
       h('div', { class: 'r' }, h('label', { text: 'Vai trò' }),
-        h('select', { onchange: (e) => mutate('outline', () => { c.role = e.target.value; }) }, ['cold_open', 'chapter', 'closing'].map((r) => h('option', { value: r, selected: c.role === r, text: { cold_open: 'mở đầu', chapter: 'chương', closing: 'kết' }[r] }))),
+        fillSelect(h('select', { onchange: (e) => mutate('outline', () => { c.role = e.target.value; }) }), ['cold_open', 'chapter', 'closing'], c.role, (r) => ({ cold_open: 'mở đầu', chapter: 'chương', closing: 'kết' }[r] || r)),
         h('label', { class: 'chk', style: { display: 'inline-flex', gap: '4px', width: 'auto', whiteSpace: 'nowrap' }, title: 'Hiện thẻ tiêu đề chương trong video' }, h('input', { type: 'checkbox', checked: c.card, onchange: (e) => mutate('outline', () => { c.card = e.target.checked; }) }), 'thẻ chương')),
       h('div', { class: 'r' }, h('label', { text: 'Số từ' }), intField({ value: c.word_budget, min: 0, max: 20000, label: `Số từ của chương ${c.id}`, style: { width: '110px', flex: 'none' }, onValid: (v) => { mutate('outline', () => { c.word_budget = v; }); outBody(); } }), h('span', { class: 'muted', 'data-wb': c.word_budget, text: `khoảng ${(c.word_budget / (S.brief.options.wps || 2.41) / 60).toFixed(1)} phút` })),
       h('div', { class: 'r' }, h('label', { text: 'Mục đích' }), h('textarea', { value: c.purpose, rows: 2, oninput: (e) => mutate('outline', () => { c.purpose = e.target.value; }, 'cp' + c.id) })),
@@ -417,7 +432,7 @@ function outBody() {
     const is = issueFor('outline', (x) => x.fact === f.id);
     kids.push(h('div', { class: 'card' + (f.certainty === 'disputed' ? ' warnc' : ''), 'data-fact': f.id },
       h('div', { class: 'r' }, h('span', { class: 'small-id mono', text: f.id }),
-        h('select', { style: { width: '150px', flex: 'none' }, onchange: (e) => { mutate('outline', () => { f.certainty = e.target.value; }); outBody(); } }, ['established', 'likely', 'disputed'].map((c) => h('option', { value: c, selected: f.certainty === c, text: { established: 'chắc chắn', likely: 'nhiều khả năng', disputed: 'tranh cãi' }[c] }))),
+        fillSelect(h('select', { style: { width: '150px', flex: 'none' }, onchange: (e) => { mutate('outline', () => { f.certainty = e.target.value; }); outBody(); } }), ['established', 'likely', 'disputed'], f.certainty, (c) => ({ established: 'chắc chắn', likely: 'nhiều khả năng', disputed: 'tranh cãi' }[c] || c)),
         h('input', { type: 'text', value: f.sources.join(', '), placeholder: 'mã đoạn nguồn, ví dụ PAY-07, HOD-02', onchange: (e) => { mutate('outline', () => { f.sources = ids(e.target.value).map((x) => x.toUpperCase()); }); outBody(); } }),
         h('button', { class: 'small danger', text: 'Xóa', onclick: () => { mutate('outline', () => { o.facts = o.facts.filter((x) => x !== f); }); outBody(); } })),
       srcChips(f.sources),
@@ -449,12 +464,12 @@ function narBody() {
       h('div', { class: 'chap-h' }, h('span', { class: 'cid mono', text: ch.id }), h('span', { class: 'ttl', text: ch.title }),
         ch.card ? h('span', { class: 'tag', text: 'thẻ chương' }) : null,
         h('span', { class: 'wc mono', 'data-wc': ch.id, text: chapWcText(ch) }),
-        h('button', { class: 'small', text: 'Viết lại chương', title: 'Mô hình viết lại chương này, kèm ghi chú của bạn', onclick: () => runDialog('narration', ch.id) }),
+        h('button', { class: 'small', text: chapWords(ch) ? 'Viết lại chương' : 'Viết chương này', title: 'Mô hình viết lại chương này, kèm ghi chú của bạn', onclick: () => runDialog('narration', ch.id) }),
+        headerRole(ch.id, D.outline).inOutline ? null : h('button', { class: 'small danger', 'data-act': 'drop', text: 'Xóa chương này khỏi lời dẫn', title: 'Dàn ý không có chương này', onclick: () => dropChapter(ch.id) }),
         h('button', { class: 'small', text: '+ Dòng', onclick: () => doOp({ op: 'insert', chapter: ch.id, after: ch.beats.at(-1)?.id || null }) })),
       ...ch.beats.map((b, i) => beatEl(ch, b, i))));
   }
-  const missing = (D.outline?.chapters || []).filter((c) => !n.chapters.some((x) => x.id === c.id));
-  if (missing.length) kids.push(h('div', { class: 'card warnc' }, `Chưa có chương: ${missing.map((c) => c.id + ' ' + c.title).join(', ')}. `, h('button', { class: 'small', text: 'Viết các chương còn thiếu', onclick: () => runDialog('narration', missing.map((c) => c.id)) })));
+  for (const it of diffItems(ST.narr.chapter_diff).filter((x) => x.kind === 'missing')) kids.push(h('div', { class: 'card warnc' }, diffRow(it)));
   if (n.source?.kind) kids.push(h('div', { class: 'hint', text: `Nguồn lời dẫn: ${{ model: 'mô hình ' + (n.source.model || ''), paste: 'dán vào', manual: 'viết tay' }[n.source.kind] || n.source.kind}, ${(n.source.created_at || '').slice(0, 16).replace('T', ' ')}` }));
   body.replaceChildren(...kids);
   fitAll(body);
@@ -519,9 +534,11 @@ function doOp(op) {
     const o = typeof op === 'function' ? op() : op;
     if (!o) return;
     S.focus = 'narr';
+    const before = D.narr ? JSON.stringify(D.narr) : null;
     try {
       const r = await send('POST', `${P()}/narration/ops`, { base_rev: R.narr, ops: [o] });
       redraw(await reconcile('narr', r)); pipeChanged();
+      if (before && JSON.stringify(D.narr) !== before) { hist.narr.past.push(before); hist.narr.future = []; hist.narr.key = ''; }   // Hoàn tác puts the document back as it was before the operation
       const id = r.results?.[0]?.id;
       if (id && o.op !== 'merge' && root) scope.timeout(() => { const t = document.querySelector(`#beat-${id} textarea`); t?.scrollIntoView({ block: 'center' }); t?.focus(); }, 30);
     } catch (e) {
@@ -805,8 +822,8 @@ function approve() {
       if (e.status === 409 && !e.body?.issues && /changed|rev/i.test(String(e.body?.detail || ''))) return void (await recoverStale(kk, false));
       if (e.body?.chapter_diff) {                          // refused because the chapters differ: list them
         ST.narr.chapter_diff = e.body.chapter_diff; renderAll();
-        const lines = diffLines(e.body.chapter_diff);
-        if (lines.length) modal({ title: 'Chưa duyệt được lời dẫn: chương không khớp dàn ý', body: h('div', { class: 'body', style: { maxWidth: '520px' } }, h('p', { text: 'Lời dẫn và dàn ý phải có cùng các chương. Sửa chỗ khác nhau dưới đây rồi duyệt lại:' }), ...lines.map((l) => h('p', { text: l }))) });
+        const items = diffItems(e.body.chapter_diff);
+        if (items.length) { const m = modal({ title: 'Chưa duyệt được lời dẫn: chương không khớp dàn ý', body: h('div', { class: 'body', style: { maxWidth: '560px' } }, h('p', { text: 'Lời dẫn và dàn ý phải có cùng các chương, cùng thứ tự. Mỗi chỗ khác nhau có nút sửa ngay:' }), ...items.map((it) => diffRow(it, () => m.close()))) }); }
       }
       if (e.body?.issues) { ST[kk].issues = e.body.issues; renderAll(); if (!e.body?.chapter_diff) checkDialog(); }
       errorToast(e, '', 9000);
@@ -860,7 +877,13 @@ const store = {
 function paintModels() {
   const mp = $('#model-pick'), note = $('#model-note');
   if (!mp) return;
-  mp.replaceChildren(...(S.models.length ? S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })) : [h('option', { value: '', text: '(chưa có mô hình)' })]));
+  mp.replaceChildren(...(S.models.length ? S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })) : [h('option', { value: '', text: S.modelsState === 'loading' ? 'Đang tải danh sách mô hình...' : '(chưa có mô hình)' })]));
+  mp.disabled = !S.models.length;
+  if (S.modelsState === 'failed' && !S.models.length) {
+    note.hidden = false;
+    note.replaceChildren('Không tải được danh sách mô hình. ', h('button', { class: 'small', id: 'btn-models-retry', text: 'Thử lại', onclick: () => loadModels(true) }));
+    if (S.brief) refreshChrome(); return;
+  }
   const why = agyProblem(S.models);
   note.hidden = !why;
   note.replaceChildren(...(why ? [`Lệnh Antigravity ${why}, nên danh sách mô hình có thể chưa đủ. `, h('button', { class: 'small', id: 'btn-models-retry', text: 'Thử lại', onclick: async (e) => {
@@ -868,6 +891,23 @@ function paintModels() {
     try { S.models = await J('/api/models?refresh=1'); if (!S.models.some((m) => m.id === S.model)) S.model = (S.models.find((m) => m.enabled) || S.models[0])?.id || null; paintModels(); if (!agyProblem(S.models)) toast('Lệnh Antigravity đã trả lời.', 'ok', 2500); }
     catch (err) { errorToast(err, 'Không tải lại được danh sách mô hình: '); e.target.disabled = false; e.target.textContent = 'Thử lại'; }
   } })] : []));
+  if (S.brief) refreshChrome();
+}
+/** Fetch the model list without holding the page: the outline and the narration are shown first. */
+async function loadModels(refresh = false) {
+  S.modelsState = 'loading'; S.models = []; paintModels();
+  const pid = S.pid;
+  try {
+    const list = await J(refresh ? '/api/models?refresh=1' : '/api/models');
+    if (!root || S.pid !== pid) return;
+    S.models = list; S.modelsState = 'ok';
+    const saved = store.get('bti.script.model');
+    S.model = (S.models.find((m) => m.id === saved && m.enabled) || S.models.find((m) => m.default && m.enabled) || S.models.find((m) => m.enabled) || S.models[0])?.id || null;
+  } catch (e) {
+    if (!root || S.pid !== pid) return;
+    S.modelsState = 'failed'; errorToast(e, 'Không tải được danh sách mô hình: ');
+  }
+  paintModels();
 }
 
 export async function mount(host, ctx) {
@@ -877,11 +917,9 @@ export async function mount(host, ctx) {
   root = h('div', { class: 'scr-root v-scr' });
   root.innerHTML = BAR;
   host.append(root);
-  S.models = await J('/api/models');
-  const saved = store.get('bti.script.model');
-  S.model = (S.models.find((m) => m.id === saved && m.enabled) || S.models.find((m) => m.default && m.enabled) || S.models.find((m) => m.enabled) || S.models[0])?.id || null;
   const mp = $('#model-pick');
   paintModels();
+  loadModels();       // not awaited: the page does not wait for the model list
   mp.onchange = () => { S.model = mp.value || null; if (S.model) store.set('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (m && !m.enabled) toast(m.message || 'Mô hình này chưa dùng được. Xem docs/APP_GUIDE.md.', 'warn', 9000); if (m?.paid) toast('Mô hình này tính tiền theo token.', 'warn', 5000); };
   $('#btn-outline').onclick = () => runDialog('outline');
   $('#btn-write').onclick = () => { if (!approvedFlag('outline')) return toast('Cần duyệt dàn ý trước khi viết lời dẫn.', 'warn'); runDialog('narration'); };

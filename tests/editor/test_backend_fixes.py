@@ -640,3 +640,62 @@ def test_proposal_list_names_the_files_it_skipped(client, root):
     assert "malformed" in got["bad4.json"]
     j = client.get(f"{P}/proposals").json()              # the corrupt file was moved aside: not listed again
     assert {s["file"] for s in j["skipped"]} == {"bad4.json", "bad6.json"}
+
+
+# ------------------------------------------------------------------ R3B-014: the base of a job is fixed by the request, not by the thread
+@pytest.fixture()
+def held_job(monkeypatch):
+    """The job thread is held at its very first step until the test releases it: no timing involved."""
+    import threading
+    from bti.script import generate
+    release = threading.Event()
+    real = generate.build_brief
+    release.armed = False
+
+    def held(*a, **k):
+        if release.armed:
+            assert release.wait(30)
+        return real(*a, **k)
+    monkeypatch.setattr(generate, "build_brief", held)
+    yield release              # a test sets `release.armed = True` once its own set-up jobs are done
+    release.set()
+
+
+@pytest.mark.parametrize("n", range(30))
+def test_an_outline_saved_between_the_post_and_the_job_thread_is_a_conflict(client, held_job, n):
+    make_outline(client)
+    o = client.get(f"{B}/outline").json()
+    held_job.armed = True
+    jid = client.post(f"{B}/outline/generate", json={"model": "mock"}).json()["job_id"]      # the thread has not read anything yet
+    ol = o["outline"]
+    ol["thesis"] = "Owner thesis saved before the job thread started."
+    assert client.put(f"{B}/outline", json={"outline": ol, "base_rev": o["rev"]}).status_code == 200
+    held_job.set()
+    j = _poll(client, jid, lambda j: j["state"] in ("done", "error", "cancelled"))
+    assert j["state"] == "error" and j["error_kind"] == "conflict"
+    now = client.get(f"{B}/outline").json()
+    assert now["outline"]["thesis"] == "Owner thesis saved before the job thread started." and now["last_paste"]
+
+
+def test_a_beat_locked_between_the_post_and_the_job_thread_is_not_overwritten(client, held_job):
+    nar = make_narration(client)
+    ids = [c["id"] for c in nar["narration"]["chapters"]]
+    before = {b["id"]: b["text"] for b in nar["narration"]["chapters"][1]["beats"]}
+    held_job.armed = True
+    jid = client.post(f"{B}/narration/generate", json={"model": "mock", "force": True, "chapters": ids[:2]}).json()["job_id"]
+    locked = nar["narration"]["chapters"][1]["beats"][0]["id"]
+
+    def lock(doc):
+        doc["chapters"][1]["beats"][0]["locked"] = True
+    _save_retrying(client, lock)
+    held_job.set()
+    j = _poll(client, jid, lambda j: j["state"] in ("done", "error", "cancelled"))
+    assert j["state"] == "done" and j["result"]["written"] == [ids[0]]
+    assert j["result"]["skipped"] == [{"chapter": ids[1], "beats": [locked], "reason": "locked while the job ran"}]
+    ch = client.get(f"{B}/narration").json()["narration"]["chapters"][1]
+    assert {b["id"]: b["text"] for b in ch["beats"]} == before
+
+
+@pytest.mark.parametrize("n", range(30))
+def test_the_old_outline_conflict_test_is_stable(client, slow_mock, n):
+    test_an_outline_saved_during_the_outline_job_is_not_overwritten(client, slow_mock)

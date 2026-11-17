@@ -32,8 +32,10 @@ def test_error_chapter_missing():
     iss = validate.validate_narration(n, o)
     assert "chapter_missing" in codes(iss, "error")
     n2, _ = good()
-    n2.chapters[0].beats.clear()                                   # present but empty also counts as missing
-    assert "chapter_missing" in codes(validate.validate_narration(n2, o), "error")
+    n2.chapters[0].beats.clear()                                   # present but empty is its own error (R3U-002)
+    iss2 = validate.validate_narration(n2, o)
+    assert "empty_chapter" in codes(iss2, "error") and "chapter_missing" not in codes(iss2, "error")
+    assert [i["args"]["chapter"] for i in iss2 if i["code"] == "empty_chapter"] == [o.chapters[0].id]
 
 
 def test_error_empty_beat():

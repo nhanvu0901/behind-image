@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import importlib
 import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -17,6 +18,23 @@ from bti.engine.errors import DataError
 from .engine_stub import StubProject, load_style_stub
 
 ENGINE_LOCK = threading.RLock()
+
+
+def draw_check_stepwise(project, storyboard: dict | None = None, width: int = 320) -> list[dict]:
+    """`project.draw_check` with `ENGINE_LOCK` held for ONE step (one compile or one sample) at a time, so that requests for other
+    projects are served between samples. The project's own locks (taken by the caller) keep protecting it for the whole check."""
+    it = project.draw_check_iter(storyboard, width)
+    try:
+        while True:
+            with ENGINE_LOCK:
+                try:
+                    next(it)
+                except StopIteration as done:
+                    return done.value or []
+            time.sleep(0.001)       # an RLock is not fair: without this pause this thread takes the lock again before a waiter wakes
+    finally:
+        with ENGINE_LOCK:
+            it.close()
 
 
 def import_facade(name: str) -> Any | None:

@@ -128,6 +128,7 @@ export function rawDetail(status, body) {
 
 /** Vietnamese message for an HTTP error. Never returns an empty text. */
 const BY_CODE_HTTP = {
+  too_large: () => 'Dữ liệu gửi lên quá lớn (trên 8 MB) nên máy chủ không nhận. Thu nhỏ tệp hoặc bớt nội dung rồi thử lại.',
   project_busy: () => 'Dự án đang được lưu hoặc xử lý ở chỗ khác nên chưa xóa được. Đợi vài giây rồi thử lại.',
   too_deep: () => 'Dữ liệu gửi lên có cấu trúc lồng quá sâu nên máy chủ từ chối.',
   project_file_damaged: () => 'Tệp project.json của dự án này bị hỏng nên ứng dụng không xóa được. Hãy sửa hoặc xóa thư mục dự án bằng tay trong máy chủ.',
@@ -137,6 +138,8 @@ const BY_CODE_HTTP = {
 /** "Không dựng được shot s0012 (CAM-01): ..." from the 422 `render_failed` body ({shot, overlay, technique}). */
 export function renderFailText(b) {
   const where = b?.shot ? `shot ${b.shot}${b.overlay ? `, lớp phủ ${b.overlay}` : ''}` : 'một shot';
+  const asset = b?.asset ? `, hình ${b.asset}` : '';
+  if (b?.asset) return `Không dựng được hình của ${where}${asset}: tệp ảnh bị hỏng hoặc không đọc được. Thay bằng ảnh khác ở tab Hình.`;
   return `Không dựng được hình của ${where}${b?.technique ? ` (kỹ thuật ${b.technique})` : ''} với các giá trị hiện tại. Sửa tham số của nó hoặc đổi sang kỹ thuật khác.`;
 }
 const DATA_ERROR = { project: 'Tệp project.json của dự án bị hỏng hoặc sai dạng.', source: 'Văn bản nguồn của dự án bị hỏng hoặc không đọc được (không phải UTF-8).', library: 'Một tệp của thư viện sách bị hỏng.', timing: 'Tệp thời gian (timing) của dự án bị thiếu hoặc hỏng.', storyboard: 'Tệp storyboard của dự án bị hỏng hoặc thiếu.', script: 'Tệp dàn ý hoặc lời dẫn của dự án bị hỏng. Bản dán gần nhất (nếu có) vẫn được giữ.', style: 'Không đọc được kiểu (style) mà dự án dùng.' };
@@ -144,7 +147,7 @@ export function describeHttp(status, body) {
   const raw = rawDetail(status, body);
   const s = unquote(raw);
   const byCode = body && typeof body === 'object' && typeof body.code === 'string' ? BY_CODE_HTTP[body.code] : null;
-  if (byCode) return { text: byCode(body), detail: raw };
+  if (byCode) return { text: byCode(body), detail: body.code === 'render_failed' ? '' : raw };   // the sentence comes from the code, the shot and the asset; the server's own text is never shown
   if (body && typeof body === 'object' && typeof body.data_error === 'string') return { text: DATA_ERROR[body.data_error] || 'Dữ liệu của dự án không dùng được.', detail: raw };
   if (s) {
     for (const [re, out] of CATALOG) {
@@ -219,6 +222,8 @@ const BUILD = {
   outline_not_approved: () => 'Dàn ý chưa duyệt. Hãy duyệt dàn ý trước khi duyệt lời dẫn.',
   outline_stale: () => 'Dàn ý đã đổi sau khi được duyệt. Hãy duyệt lại dàn ý.',
   chapter_missing: (i) => `Lời dẫn còn thiếu chương ${w(i.chapter)}.`,
+  chapter_order: () => 'Các chương của lời dẫn xếp khác thứ tự trong dàn ý. Bấm "Sắp xếp theo dàn ý".',
+  empty_chapter: (i) => `Chương ${w(i.chapter)} chưa có chữ nào trong lời dẫn.`,
   unknown_chapter: (i) => `Chương ${w(i.chapter)} có trong lời dẫn nhưng không có trong dàn ý.`,
   empty_beat: (i) => `Dòng ${w(i.beat)}${i.chapter ? ' (chương ' + i.chapter + ')' : ''} đang trống.`,
   markup_in_text: (i, r) => { const m = /has (.+?) in its text/i.exec(r); return `Dòng ${w(i.beat)} có ký hiệu${m ? ' ' + m[1] : ''} trong lời đọc; lời đọc chỉ gồm chữ để đọc.`; },
@@ -295,8 +300,18 @@ export function licenceText(raw) {
 /** Vietnamese reason why a preview job failed. `job.error` is the server's text. */
 export function jobFailText(job) {
   const raw = String(job?.error || '');
-  if (job?.error_code === 'render_failed') return { text: renderFailText(job), detail: raw };
+  if (job?.error_code === 'render_failed') return { text: renderFailText(job), detail: '' };
   const d = describeHttp(422, { detail: raw });
   if (d.text === BY_STATUS[422] || !raw) return { text: 'Máy chủ không dựng được clip này.', detail: raw };
   return d;
+}
+
+/** The same sentence for the same place is shown once with a count (keys of one camera that cannot be told apart). */
+export function groupIssues(list) {
+  const seen = new Map(), out = [];
+  for (const i of list) {
+    const k = i.level + '|' + issueText(i).text;
+    if (seen.has(k)) seen.get(k).n++; else { const g = { issue: i, n: 1 }; seen.set(k, g); out.push(g); }
+  }
+  return out;
 }

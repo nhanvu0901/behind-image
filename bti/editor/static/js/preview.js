@@ -16,6 +16,7 @@ let seq = 0, shown = 0, lastBitmap = null, W = 640, H = 360;
 let frozen = null; // mapping frozen during a drag
 let srcImg = null, srcImgKey = '';
 let lastReq = 0;
+let frameFail = null;   // {shot, text}: the frame at the playhead could not be drawn; nothing stale is shown meanwhile (R3U-004)
 
 function fit() {
   const aw = stage.clientWidth - 16, ah = stage.clientHeight - 16;
@@ -39,6 +40,7 @@ async function refresh() {
     const bmp = await createImageBitmap(blob);
     if (mySeq !== seq) return;
     lastBitmap = bmp; shown = mySeq;
+    clearFrameFail();
     const inc = incompleteAt(t);
     stateEl.textContent = `khung ${fmtTime(t)}` + (inc ? ` | khung tạm, ${inc}` : '');
     stateEl.classList.toggle('warn', !!inc);
@@ -46,8 +48,35 @@ async function refresh() {
   } catch (e) {
     if (mySeq !== seq) return;
     stateEl.classList.add('warn');
-    stateEl.textContent = frameError(e, t);
+    const text = frameError(e, t);
+    stateEl.textContent = text;
+    setFrameFail(t, text);
   }
+}
+const shotKeyOf = (shotId) => shotId + '|' + (ctx.renderKey || ctx.store.rev);
+/** The frame at time t cannot be drawn: forget the old picture (it belongs to another moment), say why on the canvas, and give the Shot tab the same sentence. */
+function setFrameFail(t, text) {
+  const sh = ctx.store.draft?.shots[shotIndexAt(ctx.store.draft.shots, t)];
+  clearFrameFail(true);
+  lastBitmap = null;
+  frameFail = { shot: sh?.id || null, text, key: sh ? shotKeyOf(sh.id) : null, inTab: false };
+  if (sh && !incompleteAt(t) && !ctx.thumbFails.has(frameFail.key)) { ctx.thumbFails.set(frameFail.key, text); frameFail.inTab = true; bus.emit('thumbfail'); }
+  drawBase(); drawHandles();
+}
+function clearFrameFail(quiet = false) {
+  if (!frameFail) return;
+  const f = frameFail; frameFail = null;
+  if (f.inTab) { ctx.thumbFails.delete(f.key); if (!quiet) bus.emit('thumbfail'); }
+}
+/** The failure that applies to what is under the playhead now (a failure of another shot does not). */
+const failHere = () => (frameFail && !sourceChk.checked && frameFail.shot && frameFail.shot === playheadShot()?.id ? frameFail : null);
+function wrapText(c, text, x, y, maxW, lh) {
+  let line = '';
+  for (const w of String(text).split(/\s+/)) {
+    const t = line ? line + ' ' + w : w;
+    if (line && c.measureText(t).width > maxW) { c.fillText(line, x, y); y += lh; line = w; } else line = t;
+  }
+  if (line) c.fillText(line, x, y);
 }
 /** What is incomplete at time t (the shot and its overlays): "thiếu: right (s0031)". */
 function incompleteAt(t) {
@@ -122,6 +151,8 @@ function drawBase() {
     } else paintAsset(c, cm.pa.key, cm.pa.asset, cam, canvas, W, H);
     return;
   }
+  const ff = failHere();
+  if (ff) { c.fillStyle = '#1b1f2a'; c.fillRect(0, 0, W, H); c.fillStyle = '#ffb4b4'; c.font = '14px sans-serif'; wrapText(c, ff.text, 20, 34, W - 40, 20); return; }
   if (lastBitmap) c.drawImage(lastBitmap, 0, 0, W, H);
   else { c.fillStyle = '#8a93a6'; c.font = '14px sans-serif'; c.fillText('Đang chờ khung hình từ engine...', 20, 30); }
 }
@@ -134,6 +165,7 @@ function drawHandles() {
   svgEl.classList.toggle('picking', !!ctx.pick);
   const note = $('#map-note');
   if (!d) return;
+  if (failHere()) { note.textContent = ''; return; }   // handles belong to a picture; there is none
   const cm = currentMapping();
   const M = frozen || cm;
   const sel = ctx.store.sel;
@@ -312,7 +344,7 @@ export function initPreview(viewRoot, viewScope) {
   root = viewRoot; scope = viewScope; alive = true;
   canvasEl = $('#frame', root); svgEl = $('#handles', root); box = $('#stage-box', root); stage = $('#stage', root);
   sourceChk = $('#view-source', root); regionsChk = $('#view-regions', root);
-  seq = 0; shown = 0; lastBitmap = null; frozen = null; srcImg = null; srcImgKey = ''; lastReq = 0;
+  seq = 0; shown = 0; lastBitmap = null; frameFail = null; frozen = null; srcImg = null; srcImgKey = ''; lastReq = 0;
   scope.add(() => { alive = false; refreshDebounced.cancel(); });
   installPick();
   const ro = new ResizeObserver(fit); ro.observe(stage); scope.add(() => ro.disconnect());
@@ -325,7 +357,7 @@ export function initPreview(viewRoot, viewScope) {
     drawHandles();
     if (kind !== 'select') requestFrame();
   });
-  bus.on('time', () => { if (!ctx.playing) requestFrame(); drawHandles(); if (sourceChk.checked) drawBase(); });
+  bus.on('time', () => { if (!ctx.playing) requestFrame(); drawHandles(); if (sourceChk.checked || frameFail) drawBase(); });
   bus.on('tick', () => { requestFrameThrottled(250); });
   fit();
   refresh();

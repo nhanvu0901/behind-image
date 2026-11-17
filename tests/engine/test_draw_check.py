@@ -69,3 +69,20 @@ def test_deep_documents_raise_data_error_not_recursion_error():
         SB.strip_derived(doc)
     with pytest.raises(DataError):
         SB.canonical(doc)
+
+
+def test_unreadable_media_names_the_asset_in_the_render_error_and_the_undrawable_issue(tiny_project, tmp_path):
+    sb = tiny_project.storyboard()
+    key = next(k for k, a in sb["assets"].items() if a.get("kind") == "image")
+    f = tiny_project.dir / sb["assets"][key]["file"]
+    keep = f.read_bytes()
+    try:
+        f.write_bytes(b"not a picture")
+        from bti.engine import base as engine_base
+        engine_base.IMAGES.clear() if hasattr(engine_base.IMAGES, "clear") else None
+        issues = tiny_project.draw_check(sb)
+        bad = [i for i in issues if i["code"] == "undrawable"]
+        assert bad and all("asset" in i["args"] for i in bad)
+        assert any(i["args"]["asset"] == key for i in bad), bad
+    finally:
+        f.write_bytes(keep)

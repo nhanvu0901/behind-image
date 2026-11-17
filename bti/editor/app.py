@@ -26,7 +26,7 @@ from bti.engine import limits
 from bti.engine.errors import DataError, RenderError
 from bti.library.catalogue import LibraryDataError
 from bti.script.runner import ScriptJobs
-from bti.script.store import DocumentCorrupt, ProjectGone, forget_lock, make_parent, script_lock
+from bti.script.store import DocumentCorrupt, ProjectGone, forget_lock, make_parent, read_file_text, script_lock
 
 from . import audio as audio_mod
 from . import frames as frames_mod
@@ -34,7 +34,8 @@ from . import jobs as jobs_mod
 from . import proposals as prop_mod
 from .common import (ApiError, DepthLimitMiddleware, ITEM_RE, REPO_ROOT, STYLE_RE, compute_rev, finite_number,
                      forget_save_lock, id_field, now_iso, quarantine, read_json, safe_join, save_lock as storyboard_lock,
-                     segment_ok, storyboard_approval, strip_derived, text_field, valid_pid, write_json_atomic)
+                     scrub_paths, segment_ok, storyboard_approval, storyboard_shape_problem, strip_derived, text_field, valid_pid, write_json_atomic)
+from . import engine_adapter as engine_adapter_mod
 from .engine_adapter import ENGINE_LOCK, EngineAdapter
 from .media_adapter import LicenceRejected, MediaAdapter
 
@@ -85,7 +86,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     @app.exception_handler(DataError)
     async def _data_error(_: Request, e: DataError):
         # the project's own data is unusable (missing or corrupt timing, unknown style...): the page can show the message
-        return JSONResponse({"detail": e.message, "data_error": e.what}, status_code=409)
+        return JSONResponse({"detail": scrub_paths(e.message), "data_error": e.what}, status_code=409)
 
     @app.exception_handler(RenderError)
     async def _render_error(_: Request, e: RenderError):
@@ -95,11 +96,11 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     @app.exception_handler(DocumentCorrupt)
     async def _doc_corrupt(_: Request, e: DocumentCorrupt):
         # a file of the project (script document, project.json, a source text, a library file) cannot be read: 409 naming it
-        return JSONResponse({"detail": str(e), "data_error": getattr(e, "what", "script")}, status_code=409)
+        return JSONResponse({"detail": scrub_paths(str(e)), "data_error": getattr(e, "what", "script")}, status_code=409)
 
     @app.exception_handler(LibraryDataError)
     async def _library_error(_: Request, e: LibraryDataError):
-        return JSONResponse({"detail": str(e), "data_error": "library"}, status_code=409)
+        return JSONResponse({"detail": scrub_paths(str(e)), "data_error": "library"}, status_code=409)
 
     @app.exception_handler(ProjectGone)
     async def _project_gone(_: Request, e: ProjectGone):
@@ -134,7 +135,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         return storyboard_lock(pdir(pid))
 
     def render_failed_body(e: RenderError) -> dict:
-        return {"detail": e.message, "code": "render_failed", "shot": e.shot, "overlay": e.overlay, "technique": e.technique}
+        return {"detail": scrub_paths(e.message), "code": "render_failed", "shot": e.shot, "overlay": e.overlay, "technique": e.technique,
+            "asset": getattr(e, "asset", None)}
 
     def history_files(d: Path) -> list[Path]:
         h = d / "history"
@@ -164,10 +166,14 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         if readable.get(pid) == sig:
             return
         try:
-            doc = read_json(f)
-            problem = None if isinstance(doc, dict) else "the top level must be an object"
-        except (OSError, ValueError) as e:
-            problem = str(e)[:120]
+            text = read_file_text(f, "storyboard", missing_ok=False)
+            doc = json.loads(text)
+            problem = storyboard_shape_problem(doc)
+        except DocumentCorrupt as e:
+            problem = str(e).split("is corrupt: ", 1)[-1][:120]
+        except (ValueError, RecursionError) as e:
+            problem = ("it is not valid JSON (line %d, column %d)" % (e.lineno, e.colno)) if isinstance(e, json.JSONDecodeError) \
+                else "it is not valid JSON"
         if problem:
             readable.pop(pid, None)
             engine.forget(pid)
@@ -486,8 +492,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                                + "; ".join(f"{i['path']}: {i['message']}" for i in todo[:8])
                                + (f" (and {len(todo) - 8} more)" if len(todo) > 8 else ""), issues=issues, incomplete=True)
             # whatever validate accepts the engine must be able to draw: draw one small frame in every shot and overlay
-            with ENGINE_LOCK:
-                drawn = p.draw_check(saved)
+            # the process-wide lock is taken one sample at a time (R3B-001); this project stays protected by its own storyboard lock
+            drawn = engine_adapter_mod.draw_check_stepwise(p, saved)
             bad = [i for i in drawn if i.get("code") == "undrawable"]
             if bad:
                 raise ApiError(422, "cannot approve while items cannot be drawn: "
@@ -717,10 +723,11 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                     if size > MAX_UPLOAD:
                         raise ApiError(413, "file too large")
                     out.write(chunk)
-            from bti.media.imageinfo import readable_problem
-            problem = readable_problem(Path(tmp))
-            if problem:
-                raise ApiError(422, problem)
+            from bti.media import imageinfo
+            bad = imageinfo.readable_problem(Path(tmp)) and imageinfo.image_problem(Path(tmp))
+            if bad:
+                confirm_alive(d)        # the folder may have been deleted while the file was checked: that is a 404, not a bad image
+                raise ApiError(422, bad[1], code=bad[0], reason=bad[1])
             title = title.strip() or title_from_filename(file.filename)       # never the name of our own temp file
             meta = {"title": title, "artist": artist, "year": year, "licence": licence, "source_url": source_url,
                     "author": author, "original_name": title_from_filename(file.filename)}
@@ -740,9 +747,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         f = pdir(pid) / "proposals" / f"{prop_id}.json"
         if not f.is_file():
             raise ApiError(404, "proposal not found")
+        text = read_file_text(f, "proposal")             # DocumentCorrupt (409 naming the file) when it cannot be read at all
         try:
-            doc = read_json(f)
-        except (json.JSONDecodeError, UnicodeDecodeError):
+            doc = json.loads(text)
+        except ValueError:
             quarantine(f)
             raise ApiError(404, "proposal file was corrupt and has been quarantined")
         if not isinstance(doc, dict) or not isinstance(doc.get("storyboard"), dict):
@@ -770,6 +778,9 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                     n = len(prop_mod.diff(saved, doc["storyboard"]))
                 except ApiError as e:
                     skipped.append({"file": f.name, "reason": str(e.detail)[:200]})
+                    continue
+                except DocumentCorrupt as e:
+                    skipped.append({"file": f.name, "reason": str(e)[:200]})
                     continue
                 except Exception as e:      # noqa: BLE001 - a shape the checks did not foresee: skip it, say so
                     skipped.append({"file": f.name, "reason": f"unreadable ({type(e).__name__})"})

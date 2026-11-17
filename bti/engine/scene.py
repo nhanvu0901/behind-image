@@ -7,6 +7,7 @@ Frame pipeline (matches the benchmark's `frame_fn`):
 from __future__ import annotations
 
 import bisect
+import logging
 import subprocess
 import time
 from pathlib import Path
@@ -19,6 +20,7 @@ from . import techniques  # noqa: F401  (registers every renderer)
 from .base import BaseRenderer, Ctx, OverlayRenderer, TransitionRenderer
 from . import guard
 from .errors import RenderError
+from .guard import BufferTooLarge
 from .storyboard import missing_of
 from .vfx import ramp, to_u8
 
@@ -26,9 +28,34 @@ DEFAULT_END_FADE_S = 1.6
 guard.install()          # every cv2.resize / warp now refuses a buffer over guard.MAX_PIXELS
 
 
+log = logging.getLogger("bti.engine")
+
+
+def _cause_sentence(exc: BaseException) -> str:
+    """One short sentence for the owner about WHY `exc` happened: no exception text, no class name, no absolute path.
+    The exception itself is kept as `__cause__` of the RenderError and logged."""
+    kind = {"image": "image", "mask": "mask", "video": "video"}.get(getattr(exc, "bti_kind", None), "file")
+    f = getattr(exc, "bti_file", None)
+    key = getattr(exc, "bti_asset", None)
+    if isinstance(exc, KeyError) and key is not None and f is None:
+        return "the asset %r is not defined" % key
+    if f is not None:
+        if getattr(exc, "bti_missing", False):
+            return "the %s %s is missing" % (kind, f)
+        return "the %s %s cannot be read (it is empty or damaged)" % (kind, f)
+    if key is not None:
+        return "the file of asset %r cannot be read" % key
+    if isinstance(exc, BufferTooLarge):
+        return str(exc)                     # "a resized picture of W x H px is larger than the engine allows (N px)": no path in it
+    if isinstance(exc, KeyError) and exc.args and isinstance(exc.args[0], str) and exc.args[0].startswith("region "):
+        return exc.args[0]
+    return "the values of this item cannot be drawn together"
+
+
 def render_error(exc: BaseException, shot: dict, technique: str | None, index: int, overlay: tuple | None = None,
                  transition: bool = False) -> RenderError:
-    """`exc` as a RenderError that names the shot, the technique and (when there is one) the overlay."""
+    """`exc` as a RenderError that names the shot, the technique and (when there is one) the overlay. The message is one short
+    sentence for a person; the original exception is `__cause__` and goes to the log."""
     if isinstance(exc, RenderError):
         return exc
     path = "shots[%d]" % index
@@ -46,12 +73,11 @@ def render_error(exc: BaseException, shot: dict, technique: str | None, index: i
         where += ", overlay %d" % overlay[0]
     elif transition:
         where += ", transition"
-    detail = str(exc).strip() or type(exc).__name__
-    if not isinstance(exc, (KeyError, ValueError)):
-        detail = "%s: %s" % (type(exc).__name__, detail)
-    err = RenderError("%s (%s) cannot be drawn: %s" % (where, technique, detail[:200]), shot=sid if isinstance(sid, str) else None,
-                      overlay=oid if isinstance(oid, str) else None, technique=technique, path=path)
+    err = RenderError("%s (%s) cannot be drawn: %s" % (where, technique, _cause_sentence(exc)), shot=sid if isinstance(sid, str) else None,
+                      overlay=oid if isinstance(oid, str) else None, technique=technique, path=path,
+                      asset=getattr(exc, "bti_asset", None))
     err.__cause__ = exc
+    log.warning("render failed at %s (%s): %s: %s", path, technique, type(exc).__name__, exc, exc_info=(type(exc), exc, exc.__traceback__))
     return err
 
 

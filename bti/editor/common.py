@@ -6,6 +6,7 @@ here; nothing is imported from that repo.
 """
 from __future__ import annotations
 
+import asyncio
 import copy
 import hashlib
 import json
@@ -15,6 +16,7 @@ import re
 import tempfile
 import threading
 import time
+from itertools import accumulate
 from pathlib import Path
 from typing import Any
 
@@ -28,10 +30,20 @@ SCHEMA = "bti.storyboard/1"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+_ABS_PATH = re.compile(r"(?<![\w:/.~])/(?:[^\s'\",;:()\[\]<>]+/)+([^\s'\",;:()\[\]<>]+)")
+
+
+def scrub_paths(text: Any) -> Any:
+    """A message for the owner never shows a server path: every absolute path (two or more segments) becomes its last
+    component. Anything that is not a string is returned unchanged."""
+    return _ABS_PATH.sub(r"\1", text) if isinstance(text, str) else text
+
+
 class ApiError(Exception):
-    """Error carried to the client as JSON `{detail, ...extra}`."""
+    """Error carried to the client as JSON `{detail, ...extra}`. The detail is scrubbed of server paths (R3B-010)."""
 
     def __init__(self, status: int, detail: str, **extra: Any):
+        detail = scrub_paths(detail)
         super().__init__(detail)
         self.status = status
         self.detail = detail
@@ -134,25 +146,66 @@ def id_field(v: Any, name: str, rx: re.Pattern, hint: str) -> str:
     return v
 
 
+_DEPTH_SKELETON = re.compile(rb'(?:[^"]++|"(?:[^"\\]++|\\.)*+")*+', re.S)      # whole strings and the text between them, possessive: no backtracking
+_DEPTH_STRING = re.compile(rb'"(?:[^"\\]++|\\.)*+"', re.S)
+_DEPTH_NOT_BRACKET = bytes(b for b in range(256) if b not in b"[]{}")
+_DEPTH_DELTA = [0] * 256
+_DEPTH_DELTA[ord("[")] = _DEPTH_DELTA[ord("{")] = 1
+_DEPTH_DELTA[ord("]")] = _DEPTH_DELTA[ord("}")] = -1
+MAX_JSON_BODY_BYTES = 8 * 1024 * 1024            # a JSON request body over this is refused with 413 before it is parsed
+_DEPTH_CHUNK = 256 * 1024
+
+
 class DepthLimitMiddleware:
     """Pure ASGI middleware: a JSON request body nested deeper than MAX_BODY_DEPTH is answered 422 before any route, parser or
-    walker of the product sees it. The scan is iterative over the raw bytes (never recursive), strings are skipped."""
-    _TOKEN = re.compile(rb'"(?:[^"\\]|\\.)*"|[\[\]{}]', re.S)
+    walker of the product sees it, and a body over MAX_JSON_BODY_BYTES is answered 413.
 
-    def __init__(self, app, limit: int = MAX_BODY_DEPTH, max_bytes: int = 200 * 1024 * 1024):
+    The scan is ONE linear pass in C-speed steps (R3B-002): whole strings are matched with possessive quantifiers (no
+    backtracking, so an unterminated string cannot make the cost grow with its number of quotes), removed, and the remaining
+    brackets are counted. The text after an unterminated string is not scanned (the document is not JSON anyway; the parser
+    refuses it). The async path scans one chunk of about 256 KB at a time and yields to the event loop between chunks."""
+
+    def __init__(self, app, limit: int = MAX_BODY_DEPTH, max_bytes: int = MAX_JSON_BODY_BYTES):
         self.app, self.limit, self.max_bytes = app, limit, max_bytes
 
-    def too_deep(self, body: bytes) -> bool:
-        depth = 0
-        for m in self._TOKEN.finditer(body):
-            c = m.group(0)[0]
-            if c in b"[{":
-                depth += 1
-                if depth > self.limit:
+    def _steps(self, body: bytes):
+        """Generator: yields after every chunk, returns True when the nesting depth exceeds the limit."""
+        n, pos, depth = len(body), 0, 0
+        window = _DEPTH_CHUNK
+        while pos < n:
+            end = _DEPTH_SKELETON.match(body, pos, min(n, pos + window)).end()
+            if end == pos:
+                if pos + window >= n:
+                    break                   # an unterminated string up to the end of the body
+                window *= 2                 # a string longer than the window: widen it (geometric, so still linear)
+                continue
+            window = _DEPTH_CHUNK
+            chunk = _DEPTH_STRING.sub(b"", body[pos:end]).translate(None, _DEPTH_NOT_BRACKET)
+            if chunk:
+                levels = list(accumulate(map(_DEPTH_DELTA.__getitem__, chunk), initial=depth))
+                if max(levels) > self.limit:
                     return True
-            elif c in b"]}":
-                depth -= 1
+                depth = levels[-1]
+            pos = end
+            yield
         return False
+
+    def too_deep(self, body: bytes) -> bool:
+        it = self._steps(body)
+        while True:
+            try:
+                next(it)
+            except StopIteration as done:
+                return bool(done.value)
+
+    async def too_deep_async(self, body: bytes) -> bool:
+        it = self._steps(body)
+        while True:
+            try:
+                next(it)
+            except StopIteration as done:
+                return bool(done.value)
+            await asyncio.sleep(0)
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http" or scope["method"] not in ("POST", "PUT", "PATCH"):
@@ -169,9 +222,14 @@ class DepthLimitMiddleware:
             total += len(chunks[-1])
             more = msg.get("more_body", False)
             if total > self.max_bytes:
-                break
+                payload = json.dumps({"detail": f"the request body is larger than {self.max_bytes // (1024 * 1024)} MB",
+                                      "code": "too_large"}).encode()
+                await send({"type": "http.response.start", "status": 413,
+                            "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(payload)).encode())]})
+                await send({"type": "http.response.body", "body": payload})
+                return
         body = b"".join(chunks)
-        if self.too_deep(body):
+        if await self.too_deep_async(body):
             payload = json.dumps({"detail": f"the request body is nested deeper than {self.limit} levels",
                                   "code": "too_deep"}).encode()
             await send({"type": "http.response.start", "status": 422,
@@ -205,6 +263,29 @@ def save_lock(pdir: Path) -> threading.RLock:
 def forget_save_lock(pdir: Path) -> None:
     with _SAVE_GUARD:
         _SAVE_LOCKS.pop(str(Path(pdir).resolve()), None)
+
+
+def storyboard_shape_problem(doc: Any) -> str | None:
+    """None when `doc` has the shape every route can read (an object; `shots` a list of objects; each `overlays` a list of
+    objects), else a short sentence. The engine validates values; this keeps a wrong TYPE from reaching code that expects one."""
+    if not isinstance(doc, dict):
+        return "the top level must be an object"
+    shots = doc.get("shots")
+    if shots is None:
+        return None
+    if not isinstance(shots, list):
+        return "shots must be a list"
+    for i, sh in enumerate(shots):
+        if not isinstance(sh, dict):
+            return "shots[%d] must be an object" % i
+        ov = sh.get("overlays")
+        if ov is not None:
+            if not isinstance(ov, list):
+                return "shots[%d].overlays must be a list" % i
+            for j, o in enumerate(ov):
+                if not isinstance(o, dict):
+                    return "shots[%d].overlays[%d] must be an object" % (i, j)
+    return None
 
 
 def read_json(path: Path) -> Any:

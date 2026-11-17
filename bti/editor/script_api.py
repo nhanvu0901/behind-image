@@ -61,7 +61,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
           stale            True when the outline changed after this narration was written (`source.outline_sha1` differs from
                            the outline's revision). Information only: it never blocks saving.
           outline_rev      the outline's revision now; `approved_outline_rev` the one the approval was given against.
-          chapter_diff     {not_in_outline: [ids], missing_in_narration: [ids]}: the differences that refuse an approval."""
+          chapter_diff     {not_in_outline: [ids], missing_in_narration: [ids], empty_in_narration: [ids], order: bool}: the differences that refuse an approval."""
         o = store.load_outline(d)
         if n is None:
             return {"narration": None, "rev": None, "issues": [], "stats": None, "approved": False, "stale": False,
@@ -109,8 +109,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         uses the owner's subscription quota)."""
         if not isinstance(model_id, str) or not model_id.strip():
             raise ApiError(400, "model is required: name the model to run (see GET /api/models)")
-        ms = models_mod.load_models(models_path)
-        spec = next((m for m in ms if m["id"] == model_id), None)
+        spec = models_mod.resolve(model_id, models_path)         # never runs `agy models` for a model that is not Antigravity
         if spec is None:
             raise ApiError(404, "unknown model")
         pub = models_mod.public(spec)
@@ -198,7 +197,8 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         spec = model_for(body.get("model"))
         notes = str_field(body, "notes")
         wps = wps_for(d)
-        return start_job("outline", pid, spec, lambda job: generate.run_outline(job, d, spec, notes, wps=wps))
+        base_rev = store.disk_rev(store.script_dir(d) / "outline.json", "outline")       # fixed here, before the job id is returned
+        return start_job("outline", pid, spec, lambda job: generate.run_outline(job, d, spec, notes, wps=wps, base_rev=base_rev))
 
     @r.post("/projects/{pid}/outline/import")
     def outline_import(pid: str, body: dict = Body(...)):
@@ -280,7 +280,9 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                 raise ApiError(409, "locked beats would be replaced (" + ", ".join(locked[:6]) + "); unlock them or send force", locked=locked)
         notes = str_field(body, "notes")
         wps = wps_for(d)
-        return start_job("narration", pid, spec, lambda job: generate.run_narration(job, d, spec, chapters, notes, wps=wps))
+        base_locked = sorted(b.id for c in n.chapters for b in c.beats if b.locked) if n else []     # fixed here, not in the thread
+        return start_job("narration", pid, spec, lambda job: generate.run_narration(job, d, spec, chapters, notes, wps=wps,
+                                                                                     base_locked=base_locked))
 
     @r.post("/projects/{pid}/narration/import")
     def narration_import(pid: str, body: dict = Body(...)):
@@ -359,9 +361,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             if not isinstance(ops, list) or not ops:
                 raise ApiError(422, "ops must be a non-empty list of operations")
             results = []
+            outline = store.load_outline(d)
             try:
                 for op in ops:
-                    results.append(ops_mod.apply_op(n, op))
+                    results.append(ops_mod.apply_op(n, op, outline))
             except ops_mod.OpError as e:
                 raise ApiError(422, str(e))
             store.save_narration(d, n, cur)

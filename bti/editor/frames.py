@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -64,7 +65,8 @@ def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> byt
         except Exception as e:  # noqa: BLE001
             if isinstance(e, DataError):
                 raise
-            raise ApiError(500, f"render failed: {type(e).__name__}: {e}"[:300], render_failed=True)
+            logging.getLogger("bti.editor").warning("render failed", exc_info=e)
+            raise ApiError(500, f"render failed ({type(e).__name__})", render_failed=True)
         finally:
             if draft is not None:
                 try:
