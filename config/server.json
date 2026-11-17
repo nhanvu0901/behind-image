@@ -1,0 +1,34 @@
+{
+  "_note": "One block per platform. 'windows' is the owner's server; 'default' is every other machine (no lock folder, no voice worker, no aligner: stages then use their fakes or say the program is not available). Paths of other machines live only here.",
+  "windows": {
+    "lock_dir": "D:/bench/_heavy.lock",
+    "memory_floor_kb": 12000000,
+    "production_patterns": ["_chatterbox_worker", "stages\\.stage_4", "stages\\.stage_5"],
+    "voice": {
+      "python": "D:/code/comic-book-pipeline/.venv-chatterbox/Scripts/python.exe",
+      "worker": "D:/code/comic-book-pipeline/stages/stage_4/_chatterbox_worker.py",
+      "reference_voice": "D:/code/comic-book-pipeline/assets/voices/machiavelli_ref.wav",
+      "exaggeration": 0.35,
+      "cfg_weight": 0.5,
+      "temperature": 0.7,
+      "seed": 42
+    },
+    "aligner": {
+      "python": "D:/code/behind-the-image/.venv-align/Scripts/python.exe",
+      "model": "small.en",
+      "compute_type": "int8",
+      "beam_size": 5
+    },
+    "render_threads": 4,
+    "part_seconds": 240
+  },
+  "default": {
+    "lock_dir": null,
+    "memory_floor_kb": 0,
+    "production_patterns": [],
+    "voice": null,
+    "aligner": null,
+    "render_threads": 4,
+    "part_seconds": 240
+  }
+}

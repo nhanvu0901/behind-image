@@ -1,0 +1,29 @@
+/* Export view ("Xuất video"). Scoped under .v-exp. */
+.v-exp { padding: 16px 22px 60px; max-width: 980px; margin: 0 auto; overflow: auto; height: 100%; }
+.v-exp h1 { font-size: 20px; margin: 0 0 4px; }
+.v-exp .ex-sub { margin-bottom: 14px; line-height: 1.5; }
+.v-exp .box { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 12px; line-height: 1.5; }
+.v-exp .box.warn { border-color: #6a5410; background: #2a2410; }
+.v-exp .box.err { border-color: var(--danger); }
+.v-exp .box h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.v-exp .ex-kv { border-collapse: collapse; margin-bottom: 8px; }
+.v-exp .ex-kv th { text-align: left; font-weight: 400; color: var(--muted); padding: 2px 18px 2px 0; vertical-align: top; white-space: nowrap; }
+.v-exp .ex-kv td { padding: 2px 0; }
+.v-exp .ex-acts { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 10px; }
+.v-exp .bar { height: 8px; background: var(--elev); border-radius: 4px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 4px; }
+.v-exp .bar > i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+.v-exp .ex-parts { margin: 10px 0 0; padding-left: 22px; }
+.v-exp .ex-parts li { padding: 2px 0; }
+.v-exp .ex-parts li .pst { margin-left: 10px; font-size: 11px; padding: 1px 8px; border-radius: 10px; background: var(--elev); border: 1px solid var(--border); }
+.v-exp .ex-parts li.st-running .pst { color: var(--accent); border-color: var(--accent); }
+.v-exp .ex-parts li.st-done .pst { color: var(--ok); }
+.v-exp .ex-parts li.st-waiting .pst { color: var(--warn); }
+.v-exp .ex-parts li.st-error .pst, .v-exp .ex-parts li.st-interrupted .pst { color: var(--danger); }
+.v-exp .ex-video { width: 100%; max-height: 520px; background: #000; border-radius: var(--radius); margin-bottom: 8px; }
+.v-exp .ex-card { border-collapse: collapse; width: 100%; }
+.v-exp .ex-card th { text-align: left; font-weight: 400; padding: 4px 12px 4px 0; white-space: nowrap; }
+.v-exp .ex-card td { padding: 4px 12px 4px 0; }
+.v-exp .ex-card tr + tr { border-top: 1px solid var(--border); }
+.v-exp .ex-desc { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 200px; user-select: text; }
+.v-exp .files .file { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid var(--border); }
+.v-exp .files .file code { color: var(--muted); font-size: 11px; word-break: break-all; }

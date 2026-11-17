@@ -1,0 +1,72 @@
+/* "Chọn hình" view. Scoped under .v-pk (the view root and the dialogs it opens). Not yet linked from index.html: CORE adds the <link>. */
+.pk-root { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-width: 980px; }
+.v-pk .pk-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.v-pk .pk-main { display: flex; gap: 12px; align-items: center; flex: 1 1 320px; min-width: 0; }
+.v-pk .pk-maintitle { font-size: 15px; font-weight: 600; }
+.v-pk .pk-topbtns { display: flex; gap: 8px; align-items: center; }
+.v-pk .pk-banner { flex-basis: 100%; padding: 6px 10px; border-radius: var(--radius); font-size: 12px; background: var(--elev); border: 1px solid var(--border); margin: 4px 0; }
+.v-pk .pk-banner.warn { background: #3a2c10; border-color: #6a5410; }
+.v-pk .pk-body { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(340px, 1.2fr) minmax(380px, 1.4fr); min-height: 0; }
+.v-pk .pk-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.v-pk .pk-col:last-child { border-right: 0; }
+.v-pk .col-h { padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.v-pk .col-h h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.v-pk .col-b { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px 40px; }
+.v-pk .pad { padding: 10px 0; }
+.v-pk h3.sh { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.v-pk .pk-chap { margin-bottom: 10px; }
+.v-pk .pk-chaph { display: flex; justify-content: space-between; align-items: center; padding: 4px 2px; }
+.v-pk .pk-beat { display: flex; gap: 8px; align-items: center; width: 100%; text-align: left; margin: 2px 0; padding: 4px 8px; background: transparent; border-color: transparent; }
+.v-pk .pk-beat.sel { background: #1a2a42; border-color: var(--accent); }
+.v-pk .pk-beat.skip { opacity: .6; }
+.v-pk .pk-beat .bid, .v-pk .pk-beattext .bid { color: var(--accent); font-size: 11px; flex: none; }
+.v-pk .pk-beat .bt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-pk .count.none { background: transparent; border: 1px dashed var(--border); color: var(--muted); }
+.v-pk .pk-beattext { line-height: 1.55; font-size: 14px; padding-bottom: 8px; }
+.v-pk .pk-show { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin: 6px 0; }
+.v-pk .det { padding: 2px 8px; border-radius: 10px; font-size: 11px; background: var(--elev); border: 1px solid var(--border); }
+.v-pk .det.d { border-color: var(--accent); }
+.v-pk .pk-facts { margin: 6px 0; font-size: 12px; color: var(--muted); }
+.v-pk .pk-tray { display: flex; flex-direction: column; gap: 6px; }
+.v-pk .pk-item { display: flex; gap: 10px; align-items: flex-start; padding: 8px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+.v-pk .pk-item.bad { border-color: var(--danger); }
+.v-pk .pk-itembody { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.v-pk .pk-itemrow { display: flex; gap: 6px; }
+.v-pk .pk-itemrow select { flex: 1; min-width: 0; }
+.v-pk .pk-itembtns { display: flex; flex-direction: column; gap: 3px; }
+.v-pk .pk-thumb { flex: none; border-radius: 4px; border: 1px solid var(--border); background-color: #000; background-repeat: no-repeat; }
+.v-pk .pk-thumb.fit { background-size: contain; background-position: center; }
+.v-pk .pk-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.v-pk .pk-beatfoot { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+.v-pk .cb { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.v-pk .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+.v-pk .tabs button { padding: 3px 9px; font-size: 12px; }
+.v-pk .tabs button.active { border-color: var(--accent); background: #1a2a42; }
+.v-pk .pk-row { display: flex; gap: 8px; align-items: center; margin: 4px 0; flex-wrap: wrap; }
+.v-pk .pk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; margin-top: 8px; }
+.v-pk .pk-card { display: flex; flex-direction: column; gap: 4px; padding: 6px; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); }
+.v-pk .pk-card img { width: 100%; height: 120px; object-fit: contain; background: #000; border-radius: 4px; }
+.v-pk .pk-cardtitle { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-pk .pk-cardbody { display: flex; flex-direction: column; gap: 2px; font-size: 11px; flex: 1; }
+.v-pk .pk-cardbtns { display: flex; gap: 4px; flex-wrap: wrap; }
+.v-pk .pk-flag { display: inline-block; padding: 1px 7px; border-radius: 10px; font-size: 11px; width: fit-content; border: 1px solid; }
+.v-pk .pk-flag.rejected { color: var(--danger); border-color: #6a2a2a; }
+.v-pk .pk-flag.unknown, .v-pk .pk-flag.small { color: var(--warn); border-color: #6a5410; }
+.v-pk .pk-upload { display: flex; flex-direction: column; gap: 6px; max-width: 420px; }
+.v-pk .pk-upload label.lb { display: flex; flex-direction: column; gap: 2px; color: var(--muted); font-size: 12px; }
+.v-pk .pk-sug { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.v-pk .pk-job { padding: 8px; background: var(--elev); border-radius: var(--radius); margin: 8px 0; display: flex; flex-direction: column; gap: 4px; }
+.v-pk .pk-issues { margin: 4px 0 12px 18px; padding: 0; line-height: 1.6; }
+.v-pk .pk-issues li { cursor: pointer; } .v-pk .pk-issues li.error { color: var(--danger); } .v-pk .pk-issues li.warning { color: var(--warn); }
+/* regions editor */
+.v-pk .pk-reg { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 14px; }
+.v-pk .pk-reg-stage { position: relative; line-height: 0; justify-self: center; max-width: 100%; }
+.v-pk .pk-reg-img { display: block; max-width: 100%; max-height: 72vh; border-radius: 4px; user-select: none; -webkit-user-drag: none; }
+.v-pk .pk-reg-svg { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; touch-action: none; }
+.v-pk .pk-reg-svg ellipse { fill: rgba(79, 156, 255, .15); stroke: var(--accent); stroke-width: 2; }
+.v-pk .pk-reg-svg ellipse.draw { stroke: var(--warn); fill: rgba(244, 180, 0, .15); stroke-dasharray: 5 3; }
+.v-pk .pk-reg-svg text { fill: #fff; font-size: 12px; paint-order: stroke; stroke: #000; stroke-width: 3px; }
+.v-pk .pk-reg-side { display: flex; flex-direction: column; gap: 8px; line-height: 1.4; }
+.v-pk .pk-regrow { display: flex; gap: 8px; align-items: center; }
+.v-pk .pk-regrow span { flex: 1; }
+.modal.pk-regmodal { width: min(1100px, 96vw); }

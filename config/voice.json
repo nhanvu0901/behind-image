@@ -1,0 +1,14 @@
+{
+  "silence": {"sentence": 0.20, "beat": 0.45, "chapter": 1.0, "card": 3.0, "lead": 0.35, "tail": 2.5},
+  "tempo": 1.0,
+  "tempo_range": [1.0, 1.2],
+  "pad": {"enabled": true, "level_db": -24, "duck": 0.37, "chord_seconds": 10},
+  "chunk": {"min_chars": 40, "max_chars": 280},
+  "part_chars": 4000,
+  "estimate": {"chars_per_audio_second": 15.0, "compute_per_audio_second": 4.1, "load_seconds": 60},
+  "fade_ms": 8,
+  "loudness": {"i": -15, "tp": -1.5, "lra": 11},
+  "aac_bitrate": "192k",
+  "provider": "chatterbox",
+  "aligner": {"provider": "auto", "model_en": "small.en", "model": "small", "margin": 0.15, "match_floor": 0.6}
+}

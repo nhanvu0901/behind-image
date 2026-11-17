@@ -1,0 +1,16 @@
+{{title}}
+
+{{artwork}}
+
+Chapters:
+{{chapters}}
+
+Sources:
+{{books}}
+
+Images and credits:
+{{credits}}
+
+{{notes}}
+
+Subtitles available - turn on CC.
