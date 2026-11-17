@@ -24,7 +24,13 @@ MAX_BEATS = 40
 SUGGESTIONS = "cache/picks/suggestions.json"
 SCHEMA = "bti.picks.suggestions/1"
 PART_ERRORS = {"suggest_off": "Gợi ý hình đang tắt trong cấu hình.", "suggest_no_key": "Chưa có khóa You.com trên máy chủ.",
-               "suggest_failed": "You.com không trả lời được. Thử lại sau."}
+               "suggest_failed": "You.com không trả lời được. Thử lại sau.",
+               "suggest_key_refused": "You.com từ chối khóa của máy chủ. Cần kiểm tra khóa.",
+               "suggest_quota": "Tài khoản You.com hết hạn mức hoặc cần thanh toán.",
+               "suggest_timeout": "You.com trả lời quá chậm (hết thời gian chờ). Thử lại sau.",
+               "suggest_bad_answer": "You.com từ chối yêu cầu hoặc trả lời sai dạng."}
+_KIND_CODE = {"key_refused": "suggest_key_refused", "quota": "suggest_quota", "timeout": "suggest_timeout",
+              "bad_answer": "suggest_bad_answer", "failed": "suggest_failed"}
 _longjob = None          # tests put a fake module here; None means `bti.longjob`
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -81,12 +87,17 @@ class YouComProvider:
         if not live_allowed():
             raise PicksError(409, "suggestions are switched off in config/picks.json", "suggest_off")
         from bti.media import research
+        from bti.media.youcom import YouComClient
+        from bti.script import env as script_env
+        client = YouComClient(api_key=script_env.get_key("YDC_API_KEY") or "")      # LR-001: the key may live only in the project's .env
         try:
-            found = research.visual_research(beat["text"], ctx, client=None, live=True)
+            found = research.visual_research(beat["text"], ctx, client=client, live=True)
         except research.LiveCallDisabled as e:
             raise PicksError(409, str(e)[:200], "suggest_no_key")
         except research.ResearchError as e:
-            raise PicksError(502, str(e)[:200], "suggest_failed")
+            key = client.api_key
+            raw = f"{e} | status={e.status} | {e.detail}".replace(key, "***") if key else f"{e} | status={e.status} | {e.detail}"
+            raise PicksError(502, raw[:500], _KIND_CODE.get(e.kind, "suggest_failed"))
         out = []
         for s in found[: self.limit_suggestions]:
             cands = research.resolve_suggestion(s)[: self.limit_candidates]
@@ -177,6 +188,7 @@ def start(pdir: Path, pid: str, beat_ids, *, confirm_paid, refresh: bool = False
             try:
                 items = provider.suggest({"id": b["id"], "text": b["text"], "show": b["show"]}, ctx)
             except PicksError as e:
+                c.log(f"{e.code}: {str(e)[:400]}")          # LR-002: the reason was thrown away; the owner/engineer saw only a generic sentence
                 raise lj.PartError(e.code or "suggest_failed", PART_ERRORS.get(e.code, "Không lấy được gợi ý hình từ You.com."))
             _store(pdir, b["id"], getattr(provider, "name", "custom"), items)
             c.progress(1.0, f"{len(items)} gợi ý")

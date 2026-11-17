@@ -7,6 +7,7 @@ import { errorText, jobErrorText, STAGE_CODES } from '../errmsg.js';
 import { VOICE_LABELS } from '../labels.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
+import { watchIdle, jobWatcher } from '../idlewatch.js';
 
 let root = null, scope = null, shell = null;
 const S = { pid: null, d: null, job: null, table: null, tableDirty: false, playing: null };
@@ -36,7 +37,9 @@ async function load() {
   }
 }
 
+let seen = jobWatcher();
 function watch(id) {
+  seen.know(id);
   clearInterval(poll);
   const tick = async () => {
     let j;
@@ -47,6 +50,7 @@ function watch(id) {
       if (j.state === 'done') toast('Giọng đọc đã xong.', 'ok');
       else if (j.state === 'error' || j.state === 'interrupted') toast(CODE_TEXT[j.error_code] || jobErrorText(j).text, 'error', 9000);
       await load(); shell?.refreshPipeline();
+      scope.timeout(() => shell?.refreshPipeline(), 1000);           // once more a moment later: the stepper must not keep saying "Đang chạy"
     }
   };
   poll = scope.interval(tick, 2000);
@@ -95,18 +99,22 @@ function paint() {
   const d = S.d; if (!root || !d) return;
   const run = d.state === 'running' || (S.job && ['queued', 'waiting', 'running'].includes(S.job.state));
   const none = !d.approved && d.state === 'none';
+  const hold = !d.approved && d.state !== 'none';           // the narration is being edited: what exists stays, nothing new is read until it is approved again
   const top = $('#vc-top'); top.replaceChildren();
   top.append(h('span', { class: `vc-chip vc-${d.state}`, text: STATE_TEXT[d.state] || d.state }),
     h('span', { class: 'muted', text: d.detail }));
   const acts = $('#vc-acts'); acts.replaceChildren();
   const first = d.state === 'none' || !d.counts || d.counts.cached === 0;
   acts.append(...kids(
-    h('button', { class: 'primary', text: first ? 'Tạo giọng đọc' : d.state === 'stale' ? 'Đọc lại phần đã đổi' : 'Tạo lại nếu thiếu', disabled: run || none || !d.configured, title: !d.configured ? CODE_TEXT.voice_not_configured : none ? 'Cần duyệt lời dẫn trước.' : '', onclick: () => generate({ scope: 'changed' }) }),
+    h('button', { class: 'primary', text: first ? 'Tạo giọng đọc' : d.state === 'stale' ? 'Đọc lại phần đã đổi' : 'Tạo lại nếu thiếu', disabled: run || none || hold || !d.configured, title: !d.configured ? CODE_TEXT.voice_not_configured : none || hold ? 'Cần duyệt lời dẫn trước.' : '', onclick: () => generate({ scope: 'changed' }) }),
     run ? h('button', { text: 'Hủy', onclick: cancel }) : null,
-    !run && !first ? h('button', { text: 'Đọc lại toàn bộ', title: 'Bỏ các câu đã đọc và đọc lại tất cả (rất lâu).', disabled: !d.configured, onclick: async () => { if (await confirmDialog(`Đọc lại toàn bộ ${d.counts.total} câu? Việc này mất rất lâu (khoảng ${fmtMin((d.counts.total ? d.estimate.seconds : 0) || 3000)} trở lên).`, { ok: 'Đọc lại tất cả', danger: true })) generate({ scope: 'all' }); } }) : null));
+    !run && !first ? h('button', { text: 'Đọc lại toàn bộ', title: 'Bỏ các câu đã đọc và đọc lại tất cả (rất lâu).', disabled: hold || !d.configured, onclick: async () => { if (await confirmDialog(`Đọc lại toàn bộ ${d.counts.total} câu? Việc này mất rất lâu (khoảng ${fmtMin((d.counts.total ? d.estimate.seconds : 0) || 3000)} trở lên).`, { ok: 'Đọc lại tất cả', danger: true })) generate({ scope: 'all' }); } }) : null));
   const info = $('#vc-info'); info.replaceChildren();
   if (!d.approved && d.state === 'none') info.append(h('div', { class: 'box warn', text: d.detail || 'Cần duyệt lời dẫn ở bước Kịch bản trước.' }));
-  for (const r of d.reasons || []) if (REASON_TEXT[r] && d.state !== 'none') info.append(h('div', { class: 'box warn', text: REASON_TEXT[r] }));
+  const why = (d.reasons || []).filter((r) => REASON_TEXT[r] && d.state !== 'none');
+  const byReason = d.counts?.by_reason || {};
+  const mixed = why.filter((r) => byReason[r]).length > 1;                       // several reasons at once: say how many sentences each one covers
+  for (const r of why) info.append(h('div', { class: 'box warn', text: REASON_TEXT[r] + (mixed && byReason[r] ? ` (${byReason[r]} câu)` : '') }));
   if (d.counts && d.counts.missing > 0 && d.estimate) info.append(h('div', { class: 'muted', text: `Còn ${d.counts.missing}/${d.counts.total} câu chưa đọc: chia ${d.estimate.parts} phần, ước tính ${fmtMin(d.estimate.seconds)} máy chạy (máy chỉ chạy một việc nặng một lúc).` }));
   if (!d.configured) info.append(h('div', { class: 'box warn', text: CODE_TEXT.voice_not_configured }));
   if (d.timing?.quality === 'even') info.append(h('div', { class: 'box warn', text: 'Thời điểm từng từ được chia đều trong mỗi câu (chưa có máy đo từ). Chỉ chính xác ở đầu và cuối câu.' }));
@@ -158,10 +166,10 @@ function paintScript() {
   let cur = null, lastBeat = null;
   for (const c of d.chunks) {
     if (c.chapter !== cur) { cur = c.chapter; lastBeat = null; box.append(h('div', { class: 'vc-ch', text: `${titles[cur] || cur}` })); }
-    const btn = h('button', { class: 'vc-play', text: '▶', title: 'Nghe câu này', disabled: !c.cached, onclick: (ev) => playChunk(c, ev.currentTarget) });
+    const btn = h('button', { class: 'vc-play', text: S.playing === c.id ? '■' : '▶', title: 'Nghe câu này', disabled: !c.cached, onclick: (ev) => playChunk(c, ev.currentTarget) });
     const tags = [!c.cached ? h('span', { class: 'vc-tag warn', text: 'chưa đọc' }) : c.new && d.state !== 'none' ? h('span', { class: 'vc-tag', text: 'đã đổi' }) : null,
       c.sec ? h('span', { class: 'muted vc-sec', text: c.sec.toFixed(1) + ' giây' }) : null];
-    const again = h('button', { class: 'vc-again', text: 'Đọc lại câu này', title: 'Đọc câu này bằng một lần đọc khác', disabled: S.d.state === 'running' || !d.configured, onclick: () => generate({ scope: [c.id], reseed: [c.id] }) });
+    const again = h('button', { class: 'vc-again', text: 'Đọc lại câu này', title: 'Đọc câu này bằng một lần đọc khác', disabled: S.d.state === 'running' || !d.configured || !d.approved, onclick: () => generate({ scope: [c.id], reseed: [c.id] }) });
     box.append(h('div', { class: 'vc-row' + (c.beat !== lastBeat ? ' vc-newbeat' : ''), title: c.spoken !== c.text ? `Đọc là: ${c.spoken}` : '' }, btn, h('div', { class: 'vc-text' }, h('span', { text: c.text }), c.spoken !== c.text ? h('div', { class: 'vc-spoken muted', text: 'đọc là: ' + c.spoken }) : null), h('div', { class: 'vc-side' }, tags, again)));
     lastBeat = c.beat;
   }
@@ -197,7 +205,7 @@ export async function mount(host, ctx) {
   scope = ctx.scope; shell = ctx.shell;
   Object.assign(S, { pid: ctx.pipeline.project, d: null, job: null, table: null, tableDirty: false, playing: null });
   Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') });
-  poll = null; audio = null;
+  poll = null; audio = null; seen = jobWatcher();
   root = h('div', { class: 'vc-root v-vc' },
     h('div', { class: 'vc-head' }, h('h1', { text: '3. Giọng đọc' }), h('div', { id: 'vc-top', class: 'vc-top' }), h('div', { id: 'vc-acts', class: 'vc-acts' })),
     h('div', { class: 'vc-body' },
@@ -206,6 +214,11 @@ export async function mount(host, ctx) {
   host.append(root);
   scope.add(() => stopAudio());
   try { await load(); } catch (e) { fail(e, 'Không mở được giọng đọc.'); }
+  // a job started in another tab or window shows up here within a few seconds
+  watchIdle(scope, { root: () => root, idle: () => !poll && !['queued', 'waiting', 'running'].includes(S.job?.state),
+    check: async () => {                                  // one cheap GET: the list of voice jobs
+      if (seen(await api.get(`/api/projects/${S.pid}/longjobs?kind=voice`))) { await load(); shell?.refreshPipeline(); }     // a job runs, or ran and ended, elsewhere
+    } });
   window.__voice = { S };
   return {
     isDirty: () => S.tableDirty,

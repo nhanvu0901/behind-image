@@ -4,6 +4,9 @@ from fastapi.testclient import TestClient
 
 from bti.editor.common import ApiError
 from bti.editor.voice_api import make_router
+from bti.longjob.config import ServerConfig
+from bti.longjob.fakes import FakeProbes
+from bti.longjob.heavy import HeavySlot
 from bti.longjob.manager import LongJobManager
 from bti.voice import files
 from conftest import needs_ffmpeg, write_project
@@ -13,7 +16,7 @@ from conftest import needs_ffmpeg, write_project
 def client(tmp_path, cfg):
     d = write_project(tmp_path, "vtest")
     write_project(tmp_path, "unap", approve=False)
-    mgr = LongJobManager()
+    mgr = LongJobManager(heavy=HeavySlot(ServerConfig(), probes=FakeProbes()))        # in-process only: never the server's lock folder
     mgr.configure(projects_root=tmp_path)
     app = FastAPI()
 

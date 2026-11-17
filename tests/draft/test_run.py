@@ -69,6 +69,21 @@ def test_auto_job_writes_a_proposal_with_hashes(proj, mgr):
     assert R.state(proj)["state"] == "stale"
 
 
+def test_one_number_of_shots_everywhere(proj, mgr):
+    """SU-007: the panel, the proposal summary and the storyboard that "Áp dụng" makes all say the shots of the compiled storyboard."""
+    rec = R.start(proj.name, proj, provider="auto", manager=mgr)
+    j = finish(mgr, rec)
+    assert j["state"] == "done", (j["error"], j["error_code"])
+    pid = j["result"]["proposal_id"]
+    doc = json.loads((proj / "proposals" / (pid + ".json")).read_text(encoding="utf-8"))
+    n_all = len(doc["storyboard"]["shots"])
+    last = R.last_run(proj)
+    assert last["n_shots"] == n_all == j["result"]["n_shots"]
+    assert last["n_content"] + last["n_cards"] == n_all
+    assert doc["summary"] == "Bản nháp tự động: %d cảnh: %d cảnh nội dung, %d thẻ" % (n_all, last["n_content"], last["n_cards"])
+    assert R.shots_text(54, 48, 6) == "54 cảnh: 48 cảnh nội dung, 6 thẻ"
+
+
 def test_a_second_job_while_one_runs_is_busy(proj, mgr, fake):
     fake.mode("slow")
     rec = R.start(proj.name, proj, provider="agy", manager=mgr, guard_factory=gf, python="python")

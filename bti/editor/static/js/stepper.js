@@ -10,7 +10,8 @@ export function stepView(step, { active = false, current = null } = {}) {
   const cls = ['step', 'st-' + step.state, active ? 'active' : '', at ? 'at' : '', openable ? '' : 'disabled'].filter(Boolean).join(' ');
   const state = step.state === 'available' && at ? 'current' : step.state;
   let tag = at && step.state === 'not_built' ? `${STEP_STATE.not_built}, ở đây` : STEP_STATE[state] || state;
-  if (STEP_WORK[step.work] && step.state !== 'locked' && !(step.work === 'stale' && step.state === 'done')) tag = STEP_WORK[step.work];   // a stage package that is running or out of date says so
+  if (step.state === 'waiting') { if (step.work === 'running') tag = STEP_WORK.running; }                       // it waits on an earlier step: "stale" is the reason, not news
+  else if (STEP_WORK[step.work] && step.state !== 'locked' && !(step.work === 'stale' && step.state === 'done')) tag = STEP_WORK[step.work];   // a stage package that is running or out of date says so
   const title = [step.label, step.reason || step.detail].filter(Boolean).join(': ');
   return { cls, openable, tag, title };
 }

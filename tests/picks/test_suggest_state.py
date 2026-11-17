@@ -67,6 +67,13 @@ def test_provider_failure_fails_the_job_with_a_sentence(env):
     assert env.get(env.u("/suggestions")).json()["beats"] == {}
 
 
+def test_provider_failure_reason_is_in_the_job_log(env):     # LR-002
+    env.app.state.picks_provider = suggest.FakeProvider(fail=PicksError(502, "You.com call failed: HTTP 401", "suggest_failed"))
+    r = env.post(env.u("/suggest"), json={"beats": ["b0001"], "confirm_paid": True})
+    job = manager.wait(r.json()["job_id"], 20)
+    assert any("HTTP 401" in str(x) for x in job["log_tail"])
+
+
 def test_real_provider_is_off_unless_the_config_allows(env):
     env.app.state.picks_provider = None
     r = env.post(env.u("/suggest"), json={"beats": ["b0001"], "confirm_paid": True})
@@ -154,3 +161,23 @@ def test_state_running_reads_the_runner(root, monkeypatch):
     d = make_project(root, "st3")
     monkeypatch.setattr(manager, "active", lambda pid, kind=None: {"id": "j1"} if (pid == "st3" and kind == "picks") else None)
     assert state(d)["state"] == "running"
+
+
+@pytest.mark.parametrize("status,error,code", [(401, "HTTP 401", "suggest_key_refused"), (403, "HTTP 403", "suggest_key_refused"),
+                                               (402, "HTTP 402", "suggest_quota"), (429, "HTTP 429", "suggest_quota"),
+                                               (None, "request failed: TimeoutError", "suggest_timeout"),
+                                               (422, "HTTP 422", "suggest_bad_answer"), (None, "response was not valid JSON", "suggest_bad_answer"),
+                                               (500, "HTTP 500", "suggest_failed"), (None, "request failed: URLError", "suggest_failed")])
+def test_you_com_failures_get_a_code_by_kind_and_the_key_stays_out(monkeypatch, status, error, code):     # LR-002
+    from bti.media import research
+    from bti.media.youcom import RawCall
+    monkeypatch.setattr(suggest, "live_allowed", lambda: True)
+    from bti.script import env as script_env
+    monkeypatch.setattr(script_env, "get_key", lambda n: "sekrit-key")
+    monkeypatch.setattr("bti.media.youcom.YouComClient.research",
+                        lambda self, *a, **k: RawCall(api="research", payload={}, error=error, status_code=status,
+                                                      response_text='{"message":"bad sekrit-key here"}'))
+    with pytest.raises(PicksError) as e:
+        suggest.YouComProvider().suggest({"id": "b1", "text": "t", "show": []}, {"title": "T"})
+    assert e.value.code == code and "sekrit-key" not in e.value.detail
+    assert code in suggest.PART_ERRORS and "***" in e.value.detail or status is None

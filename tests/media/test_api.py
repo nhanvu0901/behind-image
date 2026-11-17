@@ -106,6 +106,16 @@ def test_met_search_and_import(monkeypatch, tmp_path):
     assert (a["width"], a["height"]) == (1500, 1300) and a["credit"]["source"] == "met"
 
 
+def test_met_search_uses_the_documented_v1_1_url(monkeypatch):
+    # LR-003: /v1/search answers 410 since 2026-10-01; the documented one is /v1.1/search with limit and offset.
+    net = FakeNet([("/search", {"total": 1, "objectIDs": [436535]}), ("/objects/436535", load("met_object.json"))])
+    MetSource(opener=net, sleep=lambda s: None).search("wheat field", limit=5)
+    u = [x for x in net.urls if "/search" in x][0]
+    assert u.startswith("https://collectionapi.metmuseum.org/public/collection/v1.1/search?")
+    assert "limit=5" in u and "offset=0" in u and "q=wheat+field" in u
+    assert any("/public/collection/v1/objects/436535" in x for x in net.urls)
+
+
 def test_met_non_pd_is_flagged_not_refused(monkeypatch, tmp_path):
     # CHANGED (advisory gate): this used to assert LicenceRejected.
     obj = dict(load("met_object.json"), isPublicDomain=False)

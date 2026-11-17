@@ -107,7 +107,7 @@ function mountFirstDraft(host, mctx) {
     slot);
   host.append(box);
   const reopen = () => { sh.refreshPipeline(); sh.go(projectHash(pid, 'edit')); };
-  mountDraftPanel(slot, { pid, scope: sc, onProposal: (id) => { ctx.reset(); ctx.pid = pid; openProposals(reopen, id); } });
+  mountDraftPanel(slot, { pid, scope: sc, onJobEnd: () => sh.refreshPipeline(), onProposal: (id) => { ctx.reset(); ctx.pid = pid; openProposals(reopen, id); } });
   return {};
 }
 
@@ -325,7 +325,7 @@ function wireTopbar() {
     const slot = h('div', { class: 'body', style: { width: 'min(640px, 92vw)', minHeight: '240px' } });
     let off = null;
     const dlg = modal({ title: 'Bản nháp storyboard', body: slot, onClose: () => off?.() });
-    off = mountDraftPanel(slot, { pid: ctx.pid, scope, onProposal: (id) => { dlg.close(); openProposals(applied, id); } });
+    off = mountDraftPanel(slot, { pid: ctx.pid, scope, inDialog: true, onJobEnd: () => shell.refreshPipeline(), onProposal: (id) => { dlg.close(); openProposals(applied, id); } });
   };
   $('#btn-clip').onclick = previewClip;
   $('#t-prev').onclick = () => stepShot(-1); $('#t-next').onclick = () => stepShot(1);

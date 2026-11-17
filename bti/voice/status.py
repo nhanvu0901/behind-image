@@ -10,6 +10,7 @@ from . import files, planner
 from .config import load_server_config, load_voice_config, voice_worker
 from .errors import VoiceError
 from .plan import make_plan
+from .chunks import written_hash
 from .providers.chatterbox import wav_seconds
 
 
@@ -20,6 +21,39 @@ def _active(pid: str, manager=None):
         return manager.active(pid, "voice")
     except Exception:         # the runner missing or broken never breaks the page
         return None
+
+
+# Why a sentence has to be read again (when the voice settings are the same): its written text changed, only the pronunciation
+# table changed its spoken text, or the owner asked for another reading of the same text (a new seed).
+CHANGE_REASONS = ("narration_changed", "pronounce_changed", "reread")
+
+
+def classify_changed(changed: list, prior: list) -> dict[str, int]:
+    """{reason: number of sentences}. `prior` is the chunk list of the manifest (id, th and, since the pronunciation split, wh).
+    A manifest written before `wh` existed cannot tell the narration from the table: it says narration_changed."""
+    prior_th = {p.get("th") for p in prior if isinstance(p, dict)}
+    prior_wh = {p.get("wh") for p in prior if isinstance(p, dict) and p.get("wh")}
+    out: dict[str, int] = {}
+    for c in changed:
+        if c.th in prior_th:
+            r = "reread"
+        elif written_hash(c) in prior_wh:
+            r = "pronounce_changed"
+        else:
+            r = "narration_changed"
+        out[r] = out.get(r, 0) + 1
+    return out
+
+
+def change_detail(by_reason: dict[str, int], n: int) -> str:
+    """The sentence of the status for the sentences that must be read again: one reason, or the split when they are mixed."""
+    kinds = [r for r in CHANGE_REASONS if by_reason.get(r)]
+    if len(kinds) == 1:
+        return {"narration_changed": "Lời dẫn đã đổi: %d câu cần đọc lại." % n,
+                "pronounce_changed": "Bảng phát âm đã đổi: %d câu cần đọc lại." % n,
+                "reread": "Bạn đã yêu cầu đọc lại: %d câu cần đọc lại." % n}[kinds[0]]
+    part = {"narration_changed": "%d do lời dẫn đổi", "pronounce_changed": "%d do bảng phát âm đổi", "reread": "%d do bạn yêu cầu đọc lại"}
+    return "Cần đọc lại %d câu: %s." % (n, ", ".join(part[r] % by_reason[r] for r in kinds))
 
 
 def describe(pdir: Path, pid: str | None = None, *, cfg: dict | None = None, server: dict | None = None,
@@ -57,12 +91,14 @@ def describe(pdir: Path, pid: str | None = None, *, cfg: dict | None = None, ser
     timing_ok = files.timing_path(pdir).is_file()
     sig_ok = (m.get("plan") or {}).get("assemble_sig") == plan.assemble_sig
     reasons = []
+    by_reason: dict[str, int] = {}
     if not manifest or not (m.get("plan")):
         reasons.append("never_built")
     else:
-        if changed and (m.get("plan") or {}).get("settings_sig") == plan.settings_sig:
-            reasons.append("narration_changed")
-        elif (m.get("plan") or {}).get("settings_sig") != plan.settings_sig:
+        if (m.get("plan") or {}).get("settings_sig") == plan.settings_sig:
+            by_reason = classify_changed(changed, m.get("chunks") or [])
+            reasons += [r for r in CHANGE_REASONS if by_reason.get(r)]
+        else:
             reasons.append("voice_changed")
         if not sig_ok and not changed:
             reasons.append("mix_settings_changed")
@@ -76,7 +112,9 @@ def describe(pdir: Path, pid: str | None = None, *, cfg: dict | None = None, ser
         out["state"], out["detail"] = "none", "Chưa tạo giọng đọc." + (" Đã đọc sẵn %d/%d câu." % (len(plan.chunks) - len(todo), len(plan.chunks)) if len(todo) < len(plan.chunks) else "")
     elif reasons:
         out["state"] = "stale"
-        out["detail"] = {"narration_changed": "Lời dẫn đã đổi: %d câu cần đọc lại." % len(changed),
+        out["detail"] = {"narration_changed": change_detail(by_reason, len(changed)),
+                         "pronounce_changed": change_detail(by_reason, len(changed)),
+                         "reread": change_detail(by_reason, len(changed)),
                          "voice_changed": "Cài đặt giọng đã đổi: cần đọc lại.",
                          "mix_settings_changed": "Tốc độ hoặc nhạc nền đã đổi: cần ghép lại.",
                          "files_missing": "Thiếu tệp âm thanh hoặc thời gian: cần tạo lại."}[reasons[0]]
@@ -84,7 +122,8 @@ def describe(pdir: Path, pid: str | None = None, *, cfg: dict | None = None, ser
         out["state"], out["detail"] = "done", "Giọng đọc đã xong."
     out["reasons"] = reasons
     out["settings"] = plan.settings
-    out["counts"] = {"total": len(plan.chunks), "cached": len(plan.chunks) - len(todo), "missing": len(todo), "changed": len(changed)}
+    out["counts"] = {"total": len(plan.chunks), "cached": len(plan.chunks) - len(todo), "missing": len(todo), "changed": len(changed),
+                     "by_reason": by_reason}
     chars = sum(len(c.spoken) for c in todo)
     out["estimate"] = {"chars": chars, "seconds": planner.estimate_seconds(chars, cfg) if todo else 0,
                        "parts": len(planner.group_parts(todo, int(cfg["part_chars"])))}

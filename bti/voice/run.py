@@ -13,6 +13,7 @@ from . import align as align_mod
 from . import files, planner
 from .assemble import assemble
 from .config import aligner_config, load_server_config, load_voice_config
+from .chunks import written_hash
 from .errors import VoiceError
 from .plan import Plan, make_plan
 from .providers import resolve
@@ -166,7 +167,7 @@ def make_parts(pdir: Path, pid: str, plan: Plan, *, provider, aligner, force_ids
             doc["plan"] = {"assemble_sig": cur.assemble_sig, "text_hash": cur.text_hash, "chunk_ids": [c.id for c in cur.chunks],
                            "provider": cur.provider, "settings": cur.settings, "settings_sig": cur.settings_sig}
             doc["narration_rev"] = cur.narration.rev()
-            doc["chunks"] = [{"id": c.id, "th": c.th, "beat": c.beat, "chapter": c.chapter, "spoken": c.spoken,
+            doc["chunks"] = [{"id": c.id, "th": c.th, "wh": written_hash(c), "beat": c.beat, "chapter": c.chapter, "spoken": c.spoken,
                               "start": s["start"], "end": s["end"]} for c, s in zip(cur.chunks, spans)]
             doc["duration"] = a["duration"]
             doc["loudness"] = a["loudness"]

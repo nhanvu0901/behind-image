@@ -145,7 +145,8 @@ def test_export_step_shows_rendered_files(c):
     (d / "render" / "final.mp4").write_bytes(b"x" * 2048)
     b = c.get("/api/projects/imp/pipeline").json()
     assert b["outputs"] == [{"path": "render/final.mp4", "size": 2048, "url": "/api/projects/imp/files/render/final.mp4"}]
-    assert steps(b)["export"]["state"] == "locked" and "1 tệp" in steps(b)["export"]["detail"]
+    # an old video file is output: the export step opens (waiting on the storyboard), it is not the locked page
+    assert steps(b)["export"]["state"] == "waiting" and steps(b)["export"]["blocked_by"] == "edit" and "1 tệp" in steps(b)["export"]["detail"]
     assert c.get(b["outputs"][0]["url"]).status_code == 200
     assert b["stage"] == "rendered"
 

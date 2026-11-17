@@ -111,6 +111,11 @@ def text_hash(spoken: str) -> str:
     return hashlib.sha1(spoken.encode("utf-8")).hexdigest()[:10]
 
 
+def written_hash(c: "Chunk") -> str:
+    """Hash of the WRITTEN words of a chunk: unchanged when only the pronunciation table changed."""
+    return text_hash(" ".join(c.written))
+
+
 def default_seed(th: str) -> int:
     return int(th, 16) % (2 ** 31)
 

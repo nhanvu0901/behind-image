@@ -5,8 +5,28 @@ export const STAGE = { selected: 'Đã chọn tác phẩm', outlined: 'Đã duy�
 export const stageLabel = (s) => STAGE[s] || s || '';
 
 /** Short state of a step of the stepper. */
-export const STEP_STATE = { done: 'Xong', current: 'Hiện tại', available: 'Mở được', locked: 'Khóa', not_built: 'Chưa xây dựng', no_data: 'Không có dữ liệu' };
+export const STEP_STATE = { done: 'Xong', current: 'Hiện tại', available: 'Mở được', locked: 'Khóa', not_built: 'Chưa xây dựng', no_data: 'Không có dữ liệu', waiting: 'Chờ bước trước' };
 /** What a stage package says about its step (`step.work`), shown beside the state when it needs attention. */
+/** A step that already has output but waits on an earlier step (`state: 'waiting'`, `blocked_by`): what is going on, in plain words,
+ * by [step][blocked_by]. The last key is the fallback for any other blocker. */
+const WAIT_TEXT = {
+  voice: { script: 'Lời dẫn đang được sửa và chưa được duyệt lại. Giọng đọc hiện có được làm từ bản đã duyệt trước. Duyệt lại lời dẫn để biết những câu nào cần đọc lại.' },
+  picks: { script: 'Lời dẫn đang được sửa và chưa được duyệt lại. Các hình đã chọn gắn với bản lời dẫn đã duyệt trước. Duyệt lại lời dẫn để biết dòng nào cần chọn lại hình.' },
+  edit: {
+    script: 'Lời dẫn đang được sửa và chưa được duyệt lại. Storyboard hiện có được dựng từ bản đã duyệt trước. Duyệt lại lời dẫn, rồi làm lại giọng đọc và hình nếu cần, để biết phần nào của storyboard phải dựng lại.',
+    voice: 'Giọng đọc chưa khớp với lời dẫn hiện tại. Storyboard hiện có được dựng từ giọng đọc cũ. Làm lại giọng đọc trước, rồi kiểm tra lại storyboard.',
+    picks: 'Phần chọn hình chưa được duyệt lại. Storyboard hiện có được dựng từ các hình đã duyệt trước. Duyệt lại phần chọn hình, rồi kiểm tra lại storyboard.',
+  },
+  export: {
+    script: 'Lời dẫn đang được sửa và chưa được duyệt lại. Video đã xuất được làm từ bản đã duyệt trước. Duyệt lại lời dẫn để biết có phải xuất lại không.',
+    voice: 'Giọng đọc chưa khớp với lời dẫn hiện tại. Video đã xuất dùng giọng đọc cũ. Làm lại giọng đọc rồi xuất lại.',
+    picks: 'Phần chọn hình chưa được duyệt lại. Video đã xuất dùng các hình đã duyệt trước. Duyệt lại rồi xuất lại.',
+    edit: 'Storyboard đã đổi và chưa được duyệt lại. Video đã xuất được làm từ bản đã duyệt trước. Duyệt lại storyboard rồi xuất lại.',
+  },
+};
+export const waitText = (stepId, blockedBy) => WAIT_TEXT[stepId]?.[blockedBy] || 'Một bước trước đang được sửa và chưa được duyệt lại. Kết quả hiện có được làm từ bản đã duyệt trước.';
+export const OPEN_STEP = (label) => `Mở bước ${label}`;
+
 export const STEP_WORK = { running: 'Đang chạy', stale: 'Cần làm lại' };
 
 export const RIGHTS = { pd_likely: 'Có thể hết bản quyền', copyright_likely: 'Có thể còn bản quyền', unknown: 'Chưa rõ bản quyền' };
@@ -96,6 +116,8 @@ export const VOICE_LABELS = {
   reason: {
   never_built: 'Chưa tạo giọng đọc cho lời dẫn này.',
   narration_changed: 'Lời dẫn đã đổi sau lần đọc trước. Chỉ các câu đã đổi sẽ được đọc lại.',
+  pronounce_changed: 'Bảng phát âm đã đổi sau lần đọc trước. Chỉ các câu có chữ đó sẽ được đọc lại.',
+  reread: 'Bạn đã yêu cầu đọc lại một số câu bằng một lần đọc khác.',
   voice_changed: 'Cài đặt giọng đã đổi, nên phải đọc lại.',
   mix_settings_changed: 'Tốc độ hoặc nhạc nền đã đổi. Chỉ cần ghép lại, không đọc lại.',
   files_missing: 'Thiếu tệp âm thanh hoặc tệp thời gian. Bấm tạo lại.',
@@ -142,6 +164,7 @@ export const DRAFT_LABELS = {
   last: 'Lần dựng gần nhất',
   tampered: 'Lần dựng bị bỏ vì agent đã đổi tệp ngoài thư mục làm việc.',
   doneNote: 'Xong. Có %n cảnh.',
+  doneSplit: 'Xong. Có %n cảnh: %c cảnh nội dung, %k thẻ.',
   issues: '%n mục còn dở, xem trong đề xuất.',
   loadingModels: 'Đang tải danh sách mô hình...',
   noModels: 'Chưa lấy được danh sách mô hình (agy chưa đăng nhập?). Dùng mô hình mặc định.',

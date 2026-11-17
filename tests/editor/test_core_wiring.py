@@ -147,7 +147,8 @@ def test_step_matrix_for_a_book_project(book_client, monkeypatch):
 def test_narration_not_approved_locks_steps_3_and_4(book_client, monkeypatch):
     fake_states(monkeypatch, voice="done", picks="done")
     st = steps(book_client.get("/api/projects/book/pipeline").json())
-    assert st["voice"]["state"] == "done"            # a done step stays done
+    # a step that has output is never hidden behind the locked page: it waits on the script step and still opens
+    assert st["voice"]["state"] == "waiting" and st["voice"]["blocked_by"] == "script" and st["voice"]["has_output"] is True
     fake_states(monkeypatch)
     st = steps(book_client.get("/api/projects/book/pipeline").json())
     assert st["voice"]["state"] == "locked" and st["picks"]["state"] == "locked" and "lời dẫn" in st["voice"]["reason"]

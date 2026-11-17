@@ -7,12 +7,14 @@ import { api } from './api.js';
 import { h, toast, errorInto, confirmDialog } from './util.js';
 import { stageJobErrorText, stageErrorText } from './errmsg.js';
 import { DRAFT_LABELS } from './labels.js';
+import { watchIdle, jobWatcher } from './idlewatch.js';
 
 const TEXT = DRAFT_LABELS;
 const ACTIVE = new Set(['queued', 'waiting', 'running']);
 
-export function mountDraftPanel(container, { pid, scope = null, onProposal = null } = {}) {
+export function mountDraftPanel(container, { pid, scope = null, onProposal = null, onJobEnd = null, inDialog = false } = {}) {
   let dead = false, timer = null, jobId = null, info = null, models = null, modelsErr = null, job = null;
+  const seen = jobWatcher();
   const root = h('div', { class: 'draft-panel' });
   container.replaceChildren(root);
 
@@ -23,6 +25,7 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
     try { info = await api.get(`/api/projects/${encodeURIComponent(pid)}/draft`); } catch (e) { if (!dead) errorInto(root, e, 'Không đọc được trạng thái bản nháp: '); return; }
     if (dead) return;
     jobId = info.job_id || jobId;
+    seen.know(jobId);
     render();
     if (jobId && !job) tick();
   }
@@ -37,7 +40,9 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
     if (dead) return;
     if (!ACTIVE.has(job.state)) {
       const finished = job; jobId = null;
+      scope?.timeout?.(() => onJobEnd?.(), 1000);          // once more a moment later: the stepper must not keep saying "Đang chạy"
       await load();
+      onJobEnd?.();
       job = finished;
       render();
       return;
@@ -52,7 +57,7 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
     if (provider === 'agy' && sel && sel.value) body.model = sel.value;
     try {
       const r = await api.post(`/api/projects/${encodeURIComponent(pid)}/draft/start`, body);
-      jobId = r.job_id; job = null; render(); tick();
+      jobId = r.job_id; seen.know(jobId); job = null; render(); tick();
     } catch (e) { toast('Không bắt đầu được: ' + stageErrorText('draft', e).text, 'err', 9000); }
   }
   async function cancel() {
@@ -85,7 +90,7 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
       if (job && job.state === 'error') kids.push(h('div', { class: 'banner warn', text: stageJobErrorText('draft', job).text }));
       if (lr && lr.status === 'tampered') kids.push(h('div', { class: 'banner warn', text: TEXT.tampered }));
       if (st.proposal) {
-        const note = lr && lr.status === 'done' ? [TEXT.doneNote.replace('%n', lr.n_shots), (lr.errors_left || lr.incomplete) ? ' ' + TEXT.issues.replace('%n', (lr.errors_left || 0) + (lr.incomplete || 0)) : ''].join('') : st.detail;
+        const note = lr && lr.status === 'done' ? [(lr.n_content != null && lr.n_cards != null ? TEXT.doneSplit.replace('%n', lr.n_shots).replace('%c', lr.n_content).replace('%k', lr.n_cards) : TEXT.doneNote.replace('%n', lr.n_shots)), (lr.errors_left || lr.incomplete) ? ' ' + TEXT.issues.replace('%n', (lr.errors_left || 0) + (lr.incomplete || 0)) : ''].join('') : st.detail;
         kids.push(h('div', { class: 'row' }, h('span', { class: 'hint', text: note }), onProposal ? h('button', { class: 'primary small', text: TEXT.open, onclick: () => onProposal(st.proposal) }) : null));
       }
     }
@@ -94,5 +99,14 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
   function unmount() { dead = true; clearTimeout(timer); root.remove(); }
 
   load().then(loadModels);
+  // a draft started in another tab shows up here within a few seconds (one cheap GET: the list of draft jobs)
+  if (scope) watchIdle(scope, { root: () => root, idle: () => !dead && !jobId, ownDialog: inDialog,
+    check: async () => {
+      const r = await api.get(`/api/projects/${encodeURIComponent(pid)}/longjobs?kind=draft`);
+      const what = seen(r);
+      const act = what === 'active' ? (r?.items || []).find((j) => ACTIVE.has(j.state)) : null;
+      if (act && !jobId) { jobId = act.id; job = null; render(); tick(); }
+      else if (what === 'changed') { await load(); onJobEnd?.(); }                             // a draft ended elsewhere
+    } });
   return unmount;
 }

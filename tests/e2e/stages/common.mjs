@@ -20,7 +20,12 @@ export async function openBrowser({ width = 1700, height = 1000 } = {}) {
 
 export function makeApi(base) {
   const call = async (method, p, body, raw) => {
-    const r = await fetch(base + p, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined });
+    // the ssh tunnel to the server drops a connection now and then ("fetch failed"): GETs are asked again, up to 4 times
+    let r;
+    for (let i = 0; ; i++) {
+      try { r = await fetch(base + p, { method, headers: body ? { 'content-type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined }); break; }
+      catch (e) { if (method !== 'GET' || i >= 3) throw e; await sleep(1500); }
+    }
     const t = await r.text(); let j = null; try { j = JSON.parse(t); } catch {}
     return { status: r.status, json: j, text: t };
   };

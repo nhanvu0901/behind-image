@@ -169,6 +169,11 @@ def _author(r: _Run) -> str:
     return "agent:agy:%s" % (r.model or DEFAULT_MODEL)
 
 
+def shots_text(n_all: int, n_content: int, n_cards: int) -> str:
+    """'54 cảnh: 48 cảnh nội dung, 6 thẻ': the number of shots of the storyboard, then how it splits."""
+    return "%d cảnh: %d cảnh nội dung, %d thẻ" % (n_all, n_content, n_cards)
+
+
 def _write_last(r: _Run, **kw) -> None:
     from bti.engine.storyboard import write_atomic
     d = {"id": r.run_id, "provider": r.provider, "model": r.model, "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "chapters": r.chapters}
@@ -283,8 +288,12 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
             base_rev = compute_rev(inp.current)
         left = [i for i in res.issues if i["level"] == "error" or i.get("code") == "incomplete"]
         notes_line = next((ln.strip(" #\t") for ln in (r.notes or "").splitlines() if ln.strip(" #\t")), "")
+        # ONE number everywhere: the shots of the compiled storyboard (what the editor will show), the split said once
+        n_all = len(res.storyboard["shots"])
+        n_content = len([o for o in res.origin if o["kind"] == "agent"])
+        n_cards = max(n_all - n_content, 0)
         summary = notes_line[:200] if (provider == "agy" and notes_line) else \
-            "Bản nháp %s: %d cảnh" % ("tự động" if provider == "auto" else "của agent", len([o for o in res.origin if o["kind"] == "agent"]))
+            "Bản nháp %s: %s" % ("tự động" if provider == "auto" else "của agent", shots_text(n_all, n_content, n_cards))
         if r.partial:
             summary += " (agent hết giờ; các chương thiếu do chế độ tự động dựng)"
         pid_ = "draft_" + r.run_id
@@ -296,7 +305,7 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                "stats": res.stats, "notes": (r.notes or "")[:4000]}
         write_atomic(r.project_dir / "proposals" / (pid_ + ".json"), json.dumps(doc, ensure_ascii=False, indent=1))
         info = {"steps": getattr(r.agy, "steps", None), "turns": getattr(r.agy, "turns", None), "elapsed": round(getattr(r.agy, "elapsed", 0) or 0)}
-        _write_last(r, status="done", proposal=pid_, n_shots=len(res.storyboard["shots"]), errors_left=len([i for i in left if i["level"] == "error"]),
+        _write_last(r, status="done", proposal=pid_, n_shots=n_all, n_content=n_content, n_cards=n_cards, errors_left=len([i for i in left if i["level"] == "error"]),
                     incomplete=len([i for i in left if i["level"] != "error"]), degraded=len(res.degraded), partial=r.partial, **info)
         if r.ws is not None:
             shutil.rmtree(r.ws.root, ignore_errors=True)

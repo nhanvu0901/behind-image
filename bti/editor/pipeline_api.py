@@ -48,7 +48,12 @@ STEPS = [
     ("edit", "Dựng hình"),
     ("export", "Xuất video"),
 ]
-STATES = ("done", "current", "available", "locked", "not_built", "no_data")     # `not_built` is kept for old clients; no step is in it now
+STATES = ("done", "current", "available", "locked", "not_built", "no_data", "waiting")     # `not_built` is kept for old clients; no step is in it now
+# `waiting`: the step HAS output, but an earlier document is being edited (or redone) and is not approved again yet. The step still
+# opens (read-only where acting would be wrong) and says what it waits for in `blocked_by`.
+
+# the steps a step stands on, in pipeline order: its `blocked_by` is the first of them that is not done
+DEPENDS_ON = {"voice": ("script",), "picks": ("script",), "edit": ("script", "voice", "picks"), "export": ("script", "voice", "picks", "edit")}
 
 R_IMPORTED = "Dự án này được nhập từ bản dựng trước, chưa có dữ liệu cho bước này."
 R_NEEDS_NARRATION = "Cần duyệt lời dẫn ở bước Kịch bản trước."
@@ -158,6 +163,43 @@ def template() -> dict:
             "current": "artwork", "steps": steps, "outputs": []}
 
 
+def _has_output(sid: str, sts: dict, has_sb: bool, outputs: list) -> bool:
+    """Whether a step has made something the owner could lose sight of (a voice, picks, a storyboard, an export or a video file)."""
+    if sid in ("voice", "picks"):
+        st = sts[sid]
+        return st.get("state") in ("done", "stale") or bool((st.get("counts") or {}).get("cached")) or bool(st.get("picked")) or bool(st.get("main_asset"))
+    if sid == "edit":
+        return has_sb
+    if sid == "export":
+        return sts["export"].get("state") in ("done", "stale") or bool(outputs)
+    return False
+
+
+def _mark_blocking(steps: list[dict], sts: dict, has_sb: bool, outputs: list) -> None:
+    """Add `blocked_by` (the id of the first earlier step this one stands on that is not done, or None) and `has_output` to steps 3 to 6
+    (fields are added, none renamed). A step with output that is blocked is `waiting` and never `done` or `locked`: its page stays
+    open. A step without output that is blocked is `locked`."""
+    by = {s["id"]: s for s in steps}
+    for s in steps:
+        sid = s["id"]
+        if sid not in DEPENDS_ON or s["state"] == "no_data":
+            continue
+        blocker = next((d for d in DEPENDS_ON[sid] if by[d]["state"] not in ("done", "no_data")), None)
+        out = _has_output(sid, sts, has_sb, outputs)
+        s["blocked_by"], s["has_output"] = blocker, out
+        if not blocker:
+            continue
+        label = by[blocker]["label"]
+        if out and s["state"] in ("done", "locked", "available", "current"):
+            s["state"] = "waiting"
+            s["reason"] = "Chờ duyệt lại lời dẫn ở bước Kịch bản." if blocker == "script" else f"Chờ xong bước {label}."
+        elif not out and s["state"] in ("available", "current"):
+            s["state"] = "locked"
+            s["reason"] = s["reason"] or f"Cần xong bước {label} trước."
+        elif s["state"] == "locked" and not s["reason"]:
+            s["reason"] = f"Cần xong bước {label} trước."
+
+
 def compute(root: Path, pid: str) -> dict:
     from .library_api import stage_of
     d = root / pid
@@ -209,6 +251,8 @@ def compute(root: Path, pid: str) -> dict:
             if st.get("state") == "none" and outputs:
                 st["detail"] = f"Đã có {len(outputs)} tệp video dựng sẵn"
             steps.append(_stage_step(i, sid, label, st, sb_state == "done", R_NEEDS_APPROVED))
+
+    _mark_blocking(steps, sts, has_sb, outputs)
 
     # the step the stage calls for: the first one that is neither done nor without data nor locked
     current = next((s["id"] for s in steps if s["state"] in ("available", "current", "not_built")), steps[-1]["id"])

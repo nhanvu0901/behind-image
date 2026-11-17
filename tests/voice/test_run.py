@@ -4,6 +4,9 @@ import json
 import pytest
 
 from bti.longjob import manager as _unused  # noqa: F401  (the module must exist)
+from bti.longjob.config import ServerConfig
+from bti.longjob.fakes import FakeProbes
+from bti.longjob.heavy import HeavySlot
 from bti.longjob.manager import LongJobManager
 from bti.voice import describe, files, run as voice_run, state
 from bti.voice.errors import VoiceError
@@ -15,7 +18,8 @@ pytestmark = needs_ffmpeg
 
 @pytest.fixture()
 def mgr(tmp_path):
-    m = LongJobManager()
+    # the in-process heavy slot only: these tests never touch the server's lock folder (a real run may hold it for an hour)
+    m = LongJobManager(heavy=HeavySlot(ServerConfig(), probes=FakeProbes()))
     m.configure(projects_root=tmp_path)
     return m
 
@@ -73,6 +77,62 @@ def test_second_run_does_nothing_and_a_change_redoes_only_that_sentence(project,
     ids_after = set(p.stem for p in files.chunks_dir(project).glob("*.wav"))
     assert len(ids_after - ids_before) == 1 and ids_before <= ids_after
     assert describe(project, cfg=cfg, server={}, provider_name="fake")["state"] == "done"
+
+
+def _by(project, cfg):
+    return describe(project, cfg=cfg, server={}, provider_name="fake")
+
+
+def test_a_pronunciation_change_is_named_for_what_it_is(project, mgr, cfg):
+    """SU-004: the narration did not change, the pronunciation table did."""
+    go(project, mgr, cfg)
+    files.write_pronounce(project, {"London": "Lon-don"})
+    d = _by(project, cfg)
+    assert d["state"] == "stale" and d["counts"]["changed"] == 1
+    assert d["reasons"] == ["pronounce_changed"] and d["counts"]["by_reason"] == {"pronounce_changed": 1}
+    assert d["detail"] == "Bảng phát âm đã đổi: 1 câu cần đọc lại." and "Lời dẫn" not in d["detail"]
+    assert go(project, mgr, cfg)["state"] == "done" and _by(project, cfg)["state"] == "done"
+
+
+def test_asking_for_another_reading_is_named_for_what_it_is(project, mgr, cfg):
+    """SU-004: the seed of one sentence moved on at the owner's request; its text did not change."""
+    go(project, mgr, cfg)
+    d0 = _by(project, cfg)
+    cid = d0["chunks"][1]["id"]
+    from bti.voice.plan import make_plan
+    voice_run.reseed(project, make_plan(project, cfg=cfg, provider="fake"), [cid])
+    d = _by(project, cfg)
+    assert d["reasons"] == ["reread"] and d["counts"]["by_reason"] == {"reread": 1}
+    assert d["detail"] == "Bạn đã yêu cầu đọc lại: 1 câu cần đọc lại."
+
+
+def test_mixed_reasons_are_counted_per_reason(project, mgr, cfg):
+    go(project, mgr, cfg)
+    from bti.script import store
+    n = store.load_narration(project)
+    n.chapters[1].beats[1].text = "Look at the chandelier above the couple, it has a single candle."
+    store.save_narration(project, n)
+    store.approve(project, "narration", n.rev())
+    files.write_pronounce(project, {"London": "Lon-don"})
+    d = _by(project, cfg)
+    assert d["counts"]["by_reason"] == {"narration_changed": 1, "pronounce_changed": 1} and d["counts"]["changed"] == 2
+    assert d["reasons"][:2] == ["narration_changed", "pronounce_changed"]
+    assert d["detail"] == "Cần đọc lại 2 câu: 1 do lời dẫn đổi, 1 do bảng phát âm đổi."
+
+
+def test_voice_settings_change_is_its_own_reason(project, mgr, cfg):
+    go(project, mgr, cfg)
+    files.update_manifest(project, lambda doc: doc["plan"].update(settings_sig="an older voice"))
+    d = _by(project, cfg)
+    assert d["reasons"][0] == "voice_changed" and d["counts"]["by_reason"] == {}
+
+
+def test_a_manifest_from_before_the_split_still_says_narration(project, mgr, cfg):
+    """No `wh` in the manifest: the table cannot be told from the narration, so the old word is kept (never a wrong new one)."""
+    go(project, mgr, cfg)
+    files.update_manifest(project, lambda doc: [c.pop("wh", None) for c in doc["chunks"]])
+    files.write_pronounce(project, {"London": "Lon-don"})
+    assert _by(project, cfg)["reasons"] == ["narration_changed"]
 
 
 def test_tempo_change_regenerates_only_the_mix(project, mgr, cfg):

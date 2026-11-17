@@ -36,7 +36,25 @@ class LiveCallDisabled(RuntimeError):
 
 
 class ResearchError(RuntimeError):
-    """The upstream call failed (never includes the key or the prompt)."""
+    """The upstream call failed (never includes the key or the prompt). `kind` is one of key_refused, quota, timeout,
+    bad_answer, failed; `status` the HTTP status when there was one; `detail` a bounded piece of the service's own words."""
+
+    def __init__(self, message: str, *, kind: str = "failed", status: int | None = None, detail: str = ""):
+        super().__init__(message)
+        self.kind, self.status, self.detail = kind, status, detail
+
+
+def _error_kind(status, error: str) -> str:
+    err = (error or "").lower()
+    if status in (401, 403):
+        return "key_refused"
+    if status in (402, 429):
+        return "quota"
+    if "timeout" in err or "timed out" in err:
+        return "timeout"
+    if status is not None and 400 <= status < 500 or "not valid json" in err:
+        return "bad_answer"
+    return "failed"
 
 
 # --------------------------------------------------------------------------- guard
@@ -50,7 +68,7 @@ def _require_live(client, live: bool):
             raise LiveCallDisabled(
                 "live You.com calls are OFF by default: pass live=True to enable them "
                 "(this is a paid API)")
-        if not os.environ.get("YDC_API_KEY", "").strip():
+        if not (getattr(client, "api_key", "") or os.environ.get("YDC_API_KEY", "")).strip():
             raise LiveCallDisabled("live=True but the YDC_API_KEY environment variable is not set")
     return client
 
@@ -159,7 +177,9 @@ def _gate_urls(urls, returned: set[str], domains: list[str]) -> list[str]:
 
 def _unpack(call) -> tuple[dict, set[str]]:
     if not getattr(call, "ok", False):
-        raise ResearchError(f"You.com call failed: {getattr(call, 'error', 'unknown error')}")
+        status, err = getattr(call, "status_code", None), str(getattr(call, "error", None) or "unknown error")
+        raise ResearchError(f"You.com call failed: {err}", kind=_error_kind(status, err), status=status,
+                            detail=str(getattr(call, "response_text", "") or "")[:300])
     out = (call.payload or {}).get("output") or {}
     content = out.get("content")
     if isinstance(content, str):

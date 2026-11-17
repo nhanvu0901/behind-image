@@ -133,3 +133,13 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 .hint.warn { color: var(--warn); }
 .regions-stage .rknob { fill: #fff; stroke: #000; stroke-width: 1; cursor: nwse-resize; }
 .ref-list { margin: 8px 0 0; padding-left: 18px; max-height: 40vh; overflow: auto; }
+
+/* The storyboard draft panel (draftpanel.js): normal text size, room between the rows */
+.draft-panel { display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; font-size: 14px; line-height: 1.55; }
+.draft-panel h4 { margin: 0; font-size: 16px; }
+.draft-panel .hint { font-size: 14px; line-height: 1.55; }
+.draft-panel .hint:first-of-type { margin-bottom: 4px; }
+.draft-panel .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.draft-panel .banner { padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--panel); }
+.draft-panel .banner.warn { border-color: #6a5410; background: #2a2410; }
+.draft-panel select.draft-model { min-width: 220px; }

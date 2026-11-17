@@ -26,6 +26,11 @@
 .step.st-current .num, .step.at .num { background: var(--accent); border-color: var(--accent); color: #07101d; }
 .step.st-current .tg, .step.at .tg { color: var(--accent); }
 .step.st-available .tg { color: var(--muted); }
+.step.st-waiting .tg { color: #d8a93a; }
+.step.st-waiting .num { border-color: #6a5410; }
+#step-banner { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #2a2410; border-top: 1px solid #6a5410; color: var(--text); font-size: 13px; line-height: 1.45; }
+#step-banner[hidden] { display: none; }
+#step-banner .msg { flex: 1; }
 .step.st-locked { opacity: .5; cursor: not-allowed; }
 .step.st-locked .nm { font-weight: 400; }
 .step.st-not_built .num { border-style: dashed; }

@@ -14,6 +14,7 @@ import { createQueue } from '../queue.js';
 import { describeError, jobErrorText, STAGE_CODES } from '../errmsg.js';
 import { PICKS_LABELS } from '../labels.js';
 import { projectHash } from '../router.js';
+import { watchIdle, jobWatcher } from '../idlewatch.js';
 import * as L from './picks_logic.js';
 
 // ------------------------------------------------------------------ words
@@ -363,7 +364,9 @@ async function suggestFor(ids) {
   try { const r = await api.post(`${P()}/suggest`, { beats: ids, confirm_paid: true }); watch(r.job_id); }
   catch (e) { fail(e, 'Không chạy được: '); }
 }
+let seen = jobWatcher();
 function watch(id) {
+  seen.know(id);
   clearInterval(pollId);
   const tick = async () => {
     try {
@@ -373,6 +376,7 @@ function watch(id) {
       if (j.state === 'error') toast(ERR[j.error_code] || jobErrorText(j).text, 'err', 9000);
       else if (j.state === 'cancelled') toast('Đã hủy.', 'warn');
       await loadSuggestions(); pipeChanged();
+      scope.timeout(pipeChanged, 1000);                   // once more a moment later: the stepper must not keep saying "Đang chạy"
     } catch (e) { clearInterval(pollId); S.job = null; fail(e); }
   };
   pollId = scope.interval(tick, 2000); tick();
@@ -438,7 +442,7 @@ export async function mount(host, ctx) {
   scope = ctx.scope; shell = ctx.shell;
   Object.assign(S, { pid: ctx.pipeline.project, data: null, beat: null, tab: 'main', books: null, sugg: { beats: {} }, job: null });
   S.q = { text: '', sources: { commons: true, met: true }, res: null, busy: false };
-  D = null; R = null; dirty = false; editVersion = 0; pollId = null;
+  D = null; R = null; dirty = false; editVersion = 0; pollId = null; seen = jobWatcher();
   Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') });
   root = h('div', { class: 'pk-root v-pk' }); root.innerHTML = BAR; host.append(root);
   try { applyData(await api.get(P())); } catch (e) { root.replaceChildren(h('div', { class: 'view-msg', text: failText(e) })); return {}; }
@@ -446,6 +450,15 @@ export async function mount(host, ctx) {
   renderAll();
   try { const r = await api.get(`/api/projects/${S.pid}/longjobs?kind=picks`); const run = (r.items || r || []).find?.((j) => ['queued', 'waiting', 'running'].includes(j.state)); if (run) watch(run.id); } catch { /* the runner may not answer */ }
   loadSuggestions();
+  // a suggestion job started in another tab shows up here within a few seconds
+  watchIdle(scope, { root: () => root, idle: () => !S.job && !dirty,
+    check: async () => {
+      const r = await api.get(`/api/projects/${S.pid}/longjobs?kind=picks`);
+      const what = seen(r);
+      const run = what === 'active' ? (r.items || r || []).find?.((j) => ['queued', 'waiting', 'running'].includes(j.state)) : null;
+      if (run) { watch(run.id); pipeChanged(); }
+      else if (what === 'changed') { await loadSuggestions(); pipeChanged(); }               // a suggestion job ended elsewhere
+    } });
   return {
     isDirty: () => dirty,
     save: () => Q.run(saveNow),

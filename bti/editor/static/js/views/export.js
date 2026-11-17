@@ -5,7 +5,8 @@
 import { api } from '../api.js';
 import { describeError, isVietnamese, STAGE_CODES } from '../errmsg.js';
 import { EXPORT_LABELS } from '../labels.js';
-import { h, toast, errorToast, errorInto, detailFold, confirmDialog } from '../util.js';
+import { h, kids, toast, errorToast, errorInto, detailFold, confirmDialog } from '../util.js';
+import { watchIdle, jobWatcher } from '../idlewatch.js';
 import { projectHash } from '../router.js';
 
 const POLL_MS = 2000;
@@ -47,7 +48,7 @@ export function jobMessage(job) {
 }
 
 // ------------------------------------------------------------------ view
-let root = null, scope = null, shell = null, S = null;
+let root = null, scope = null, shell = null, S = null, seen = jobWatcher();
 
 function ensureCss() {
   if (document.querySelector('link[data-export-css]')) return;
@@ -75,6 +76,7 @@ async function load() {
 }
 
 function startPolling() {
+  seen.know(S.job?.id);
   if (S.timer) return;
   S.timer = scope.interval(poll, POLL_MS);
   poll();
@@ -89,6 +91,7 @@ async function poll() {
     S.last = j.state === 'done' ? null : j;
     await load();
     shell?.refreshPipeline?.();
+    scope.timeout(() => shell?.refreshPipeline?.(), 1000);       // once more a moment later: the stepper must not keep saying "Đang chạy"
     if (j.state === 'done') toast('Xuất video xong.', 'ok');
     else toast(jobMessage(j), j.state === 'error' ? 'err' : 'warn', 9000);
   } catch (e) {
@@ -133,10 +136,10 @@ async function copyText(text, btn) {
 function paint() {
   if (!root) return;
   const d = S.data;
-  root.replaceChildren(
+  root.replaceChildren(...kids(
     h('h1', { text: '6. Xuất video' }),
     h('div', { class: 'ex-sub muted', text: 'Dựng bản cuối từ storyboard đã duyệt và giọng đọc: video MP4 có phụ đề bên trong, tệp phụ đề riêng, mô tả và mục lục.' }),
-    staleBox(d), blockedBox(d), lastErrorBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d));
+    staleBox(d), blockedBox(d), lastErrorBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d)));
   paintJob();
 }
 
@@ -225,10 +228,21 @@ function resultBox(d) {
 export async function mount(host, ctx) {
   ensureCss();
   scope = ctx.scope; shell = ctx.shell;
+  seen = jobWatcher();
   S = { pid: ctx.pipeline.project, pipeline: ctx.pipeline, data: null, job: null, last: null, timer: null, busyPoll: false };
   root = h('div', { class: 'infov v-exp', 'data-step': 'export' });
   host.append(root);
   try { await load(); } catch (e) { errorInto(root, e); }
+  // an export started in another tab shows up here within a few seconds (one cheap GET: the list of export jobs)
+  watchIdle(scope, { root: () => root, idle: () => !!S && !isActive(S.job),
+    check: async () => {
+      const list = await api.get(`${P()}/longjobs?kind=export`);
+      const what = seen(list);
+      if (!what || !S || isActive(S.job)) return;
+      const act = (Array.isArray(list) ? list : list?.items || list?.jobs || []).find(isActive);
+      if (act) { S.job = act; S.last = null; }
+      await load(); shell?.refreshPipeline?.();                                                 // a job runs, or ran and ended, elsewhere
+    } });
   return {
     pipelineChanged: () => { if (!isActive(S?.job)) load().catch(() => {}); },
     unmount() { root = null; S = null; },

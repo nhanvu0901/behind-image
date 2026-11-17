@@ -175,7 +175,9 @@ export const STAGE_CODES = {
     image_empty: 'Tệp ảnh trống.', image_unreadable: 'Tệp này không phải ảnh đọc được.', image_truncated: 'Tệp ảnh bị cắt dở, không đọc hết được. Tải lại tệp đầy đủ.',
     region_name: 'Tên vùng không hợp lệ (chữ, số, dấu cách, - hoặc _; tối đa 40 ký tự).', region_shape: 'Vùng không hợp lệ.', region_outside: 'Tâm vùng nằm ngoài bức ảnh.',
     confirm_required: 'Cần bạn xác nhận chi phí trước khi chạy.', suggest_off: 'Gợi ý thêm đang tắt trong cấu hình.', suggest_no_key: 'Chưa có khóa You.com trên máy chủ.',
-    suggest_failed: 'You.com không trả lời được. Thử lại sau.', busy: 'Đang có một lượt gợi ý chạy cho dự án này.', too_many: 'Chọn tối đa 40 dòng một lần.',
+    suggest_failed: 'You.com không trả lời được. Thử lại sau.', suggest_key_refused: 'You.com từ chối khóa của máy chủ. Cần kiểm tra khóa.',
+    suggest_quota: 'Tài khoản You.com hết hạn mức hoặc cần thanh toán.', suggest_timeout: 'You.com trả lời quá chậm (hết thời gian chờ). Thử lại sau.',
+    suggest_bad_answer: 'You.com từ chối yêu cầu hoặc trả lời sai dạng.', busy: 'Đang có một lượt gợi ý chạy cho dự án này.', too_many: 'Chọn tối đa 40 dòng một lần.',
   },
   export: {
     no_storyboard: 'Chưa có storyboard. Hãy dựng hình ở bước "Dựng hình" trước.',

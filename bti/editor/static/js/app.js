@@ -8,7 +8,7 @@ import { createScope } from './lifecycle.js';
 import { parseHash, projectHash, legacyTarget } from './router.js';
 import { renderStepper, landing } from './stepper.js';
 import { setNavigator } from './nav.js';
-import { stageLabel } from './labels.js';
+import { stageLabel, waitText, OPEN_STEP } from './labels.js';
 
 const $ = (s) => document.querySelector(s);
 const S = { hash: null, route: null, pid: null, pipeline: null, projects: [], view: null, scope: null, seq: 0, skipGuard: false, guarding: false };
@@ -188,6 +188,18 @@ function renderFrame() {
     st.hidden = false;
     renderStepper(st, p, r.name === 'library' ? 'artwork' : r.step, onStep);
   } else st.hidden = true;
+  paintWaitBanner();
+}
+
+/** One banner under the stepper when the open step has output but waits on an earlier step (see pipeline `waiting` / `blocked_by`). */
+function paintWaitBanner() {
+  const ban = $('#step-banner'), p = S.pipeline, r = S.route;
+  const cur = r?.name === 'project' && p ? p.steps.find((s) => s.id === r.step) : null;
+  if (cur?.state !== 'waiting') { ban.hidden = true; ban.replaceChildren(); return; }
+  const blk = p.steps.find((s) => s.id === cur.blocked_by);
+  ban.hidden = false;
+  ban.replaceChildren(...kids(h('span', { class: 'msg', text: waitText(cur.id, cur.blocked_by) }),
+    blk ? h('button', { class: 'primary small', text: OPEN_STEP(blk.label), onclick: () => go(projectHash(S.pid, blk.id)) }) : null));
 }
 
 function onStep(step, v) {

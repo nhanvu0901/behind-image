@@ -5,6 +5,7 @@ import { up, down, readState } from './remote.mjs';
 import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
 import { clickExact, makePng, setFile, leftovers, go, settle, openBrowser, makeApi, check, finish, bodyText, has, rawLooking, snap, both, sleep, pipeline, stepsOf, stepperDom } from './common.mjs';
 
+const onlyExtras = process.argv.includes('--only-extras');
 const keep = process.argv.includes('--keep-server');
 const started = !readState();
 const st = await up({ doDeploy: started });
@@ -77,18 +78,18 @@ const stepperTexts = () => p.eval(`Array.from(document.querySelectorAll('.step')
 /** What the stepper shows must agree with GET /pipeline: a done step shows "XONG", a locked one "KHÓA", a running one "ĐANG CHẠY". */
 async function stepperAgrees(name) {
   const pl = await pipeline(api, PID); const dom = await stepperTexts();
-  const want = { done: 'XONG', locked: 'KHÓA', current: 'HIỆN TẠI', available: 'MỞ ĐƯỢC' };
+  const want = { done: 'XONG', locked: 'KHÓA', current: 'HIỆN TẠI', available: 'MỞ ĐƯỢC', waiting: 'CHỜ BƯỚC TRƯỚC' };
   const bad = [];
   pl.steps.forEach((s, i) => {
     let w = want[s.state] || '';
-    if (s.work === 'running') w = 'ĐANG CHẠY'; else if (s.work === 'stale' && s.state !== 'locked') w = 'CẦN LÀM LẠI';
+    if (s.work === 'running') w = 'ĐANG CHẠY'; else if (s.work === 'stale' && s.state !== 'locked' && s.state !== 'waiting') w = 'CẦN LÀM LẠI';
     if (s.state === 'locked') w = 'KHÓA';
     if (w && !String(dom[i]).toUpperCase().includes(w)) bad.push(`${s.id}: api ${s.state}/${s.work} but page "${dom[i]}"`);
   });
   check(`SU-005 ${name}: stepper agrees with /pipeline`, bad.length === 0, bad.join(' ; '));
 }
 
-await step('A4 voice', async () => {
+if (!onlyExtras) await step('A4 voice', async () => {
   await go(p, base, `#/project/${PID}/voice`);
   await noLeft('voice page');
   await both(p, 'voice-before');
@@ -146,7 +147,7 @@ await step('A4 voice', async () => {
   check('voice is done again after the remix', (await api.get(`/api/projects/${PID}/voice`)).json.state === 'done', JSON.stringify((await api.get(`/api/projects/${PID}/voice`)).json.detail));
 });
 
-await step('A5 picks', async () => {
+if (!onlyExtras) await step('A5 picks', async () => {
   await go(p, base, `#/project/${PID}/picks`);
   await noLeft('picks page');
   await both(p, 'picks-before');
@@ -198,10 +199,16 @@ await step('A5 picks', async () => {
   await both(p, 'picks-done');
 });
 
-await step('A6 draft', async () => {
+if (!onlyExtras) await step('A6 draft', async () => {
   await go(p, base, `#/project/${PID}/edit`);
   await both(p, 'draft-panel');
   await noLeft('draft panel');
+  for (const [w, h] of [[1700, 1000], [1280, 720]]) {
+    await p.resize(w, h); await sleep(400);
+    const dp = await p.eval(`(() => { const hint = document.querySelector('.draft-panel .hint'); const next = hint?.nextElementSibling; if (!next) return null; const a = hint.getBoundingClientRect(), b = next.getBoundingClientRect(); return { fs: parseFloat(getComputedStyle(hint).fontSize), gap: Math.round(b.top - a.bottom), right: Math.round(a.right), vw: innerWidth }; })()`);
+    check(`SU-011 the draft panel introduction has normal text size and room before the next row (${w}x${h})`, dp && dp.fs >= 13.5 && dp.gap >= 6 && dp.right <= dp.vw, JSON.stringify(dp));
+  }
+  await p.resize(1700, 1000);
   await clickExact(p, 'Dựng tự động (không dùng agent)');
   const ok = await p.waitFor(`!!Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Mở đề xuất')`, 120000);
   check('draft with the no-model provider finishes', ok);
@@ -225,7 +232,7 @@ await step('A6 draft', async () => {
   await stepperAgrees('storyboard approved');
 });
 
-await step('A7 export', async () => {
+if (!onlyExtras) await step('A7 export', async () => {
   await go(p, base, `#/project/${PID}/export`);
   await noLeft('export page');
   await both(p, 'export-before');
@@ -243,6 +250,79 @@ await step('A7 export', async () => {
   check('export shows description, copy button and file links', has(t, 'Chép mô tả', 'Tải về'), '');
   const files = (await api.get(`/api/projects/${PID}/export`)).json.files || [];
   for (const f of files.slice(0, 4)) { const r = await fetch(base + `/api/projects/${PID}/export/files/${f.name}`); check(`export file ${f.name} downloads`, r.status === 200, r.status); }
+});
+
+
+await step('B/C/E extras', async () => {
+  // B: the narration is edited after the voice, the storyboard and an export exist
+  const n = (await api.get(`/api/projects/${PID}/narration`)).json;
+  n.narration.chapters[0].beats[0].text += ' An extra sentence by the owner.';
+  await api.put(`/api/projects/${PID}/narration`, { narration: n.narration, base_rev: n.rev });
+  await go(p, base, `#/project/${PID}/voice`);
+  const vt = await text();
+  check('SU-003 after the narration is edited, the voice page says the existing voice is out of date (not only "locked")', /đã đổi|cũ|đọc lại/i.test(vt.split('Giọng đọc').slice(-1)[0] || ''), vt.slice(vt.indexOf('3. Giọng đọc'), vt.indexOf('3. Giọng đọc') + 200));
+  // SU-003 / SU-008: every step that has output still opens, says it waits, and takes the owner to the step to act on
+  const s3 = stepsOf(await pipeline(api, PID));
+  const wantWaiting = ['voice', 'picks', 'edit', 'export'];
+  check('SU-003 steps with output wait on the script (not "done", not "locked") and have_output / blocked_by are in the pipeline', wantWaiting.every((id) => s3[id].state === 'waiting' && s3[id].blocked_by === 'script' && s3[id].has_output === true), JSON.stringify(wantWaiting.map((id) => [id, s3[id].state, s3[id].blocked_by, s3[id].has_output])));
+  const dom3 = await stepperTexts();
+  check('SU-003 the stepper shows steps 3 to 6 as waiting on an earlier step (not "Xong", not "Khóa")', [2, 3, 4, 5].every((i) => /CHỜ BƯỚC TRƯỚC/i.test(dom3[i]) && !/XONG|KHÓA/i.test(dom3[i])), JSON.stringify(dom3));
+  for (const id of wantWaiting) {
+    await go(p, base, `#/project/${PID}/${id}`);
+    const bn = await p.eval(`(() => { const b = document.querySelector('#step-banner'); return b && !b.hidden ? { text: b.innerText.replace(/\\s+/g, ' '), btn: Array.from(b.querySelectorAll('button')).map((x) => x.textContent.trim()) } : null; })()`);
+    check(`SU-003 the ${id} page keeps its content and shows ONE banner that says what is going on and offers "Mở bước Kịch bản"`, bn && /Lời dẫn đang được sửa và chưa được duyệt lại/.test(bn.text) && bn.btn.includes('Mở bước Kịch bản') && !/null|undefined/.test(bn.text), JSON.stringify(bn));
+    const body = await text();
+    check(`SU-003 the ${id} page is not the "locked" page`, !/Bước này đang khóa/.test(body), body.slice(0, 160).replace(/\n/g, ' '));
+    if (id === 'voice') await both(p, 'waiting-voice');
+    if (id === 'export') await both(p, 'waiting-export');
+  }
+  await clickExact(p, 'Mở bước Kịch bản'); await settle(p);
+  check('SU-008 the banner button goes to the script step', (await p.eval('location.hash')).endsWith('/script'), await p.eval('location.hash'));
+  const rv = (await api.get(`/api/projects/${PID}/narration`)).json.rev;
+  await api.post(`/api/projects/${PID}/narration/approve`, { rev: rv });
+  // C: a page opened before a job starts elsewhere must notice it
+  await go(p, base, `#/project/${PID}/voice`);
+  await api.post(`/api/projects/${PID}/voice/generate`, { scope: 'all' });
+  const noticed = await p.waitFor(`document.body.innerText.includes('Đang chạy')`, 12000);
+  check('SU-009 a voice page open in one tab notices a job started in another tab', noticed);
+  const followed = await p.waitFor(`/ĐANG CHẠY/i.test(document.querySelectorAll('.step')[2]?.innerText || '')`, 6000);
+  check('SU-009 and the stepper follows (step 3 says "Đang chạy" within a few seconds)', followed, JSON.stringify(await stepperTexts()));
+  for (let i = 0; i < 160; i++) { if ((await api.get(`/api/projects/${PID}/voice`)).json.state !== 'running') break; await sleep(1500); }
+  await sleep(3500);
+  check('after the job ended the stepper no longer says "Đang chạy" (asked once more a moment later)', !/ĐANG CHẠY/i.test((await stepperTexts())[2] || ''), JSON.stringify(await stepperTexts()));
+  await stepperAgrees('voice after the job started elsewhere');
+  // the same for an export started elsewhere
+  await go(p, base, `#/project/${PID}/export`);
+  const ex = await api.post(`/api/projects/${PID}/export/start`, {});
+  if (ex.status === 200 || ex.status === 202) {
+    // the fake export is quick: the page either shows the running job ("Hủy") or, when it ended between two looks, no longer says the old video is out of date
+    const seen = await p.waitFor(`!!Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Hủy') || !document.body.innerText.includes('Cần xuất lại.')`, 20000);
+    check('SU-009 an export page notices an export started in another tab', seen, ex.text.slice(0, 120));
+    await p.waitFor(`document.body.innerText.includes('Phiếu kiểm tra')`, 180000);
+  } else console.log('  (export could not start here, skipping its SU-009 check):', ex.status, ex.text.slice(0, 160));
+  // and for a draft started elsewhere, with the dialog of the editor open
+  await go(p, base, `#/project/${PID}/edit`);
+  await clickExact(p, 'Bản nháp'); await sleep(1200);
+  const dr = await api.post(`/api/projects/${PID}/draft/start`, { provider: 'auto' });
+  if (dr.status === 200 || dr.status === 202) {
+    const seen = await p.waitFor(`/Đang dựng bản nháp|Dừng/.test(document.querySelector('.modal')?.innerText || '')`, 15000);
+    check('SU-009 the draft panel notices a draft started in another tab', seen, dr.text.slice(0, 120));
+    await both(p, 'draft-running');
+    for (let i = 0; i < 60; i++) { if (!['running'].includes(((await api.get(`/api/projects/${PID}/draft`)).json.state || {}).state)) break; await sleep(1500); }
+    await sleep(3500);
+  } else console.log('  (draft could not start here, skipping its SU-009 check):', dr.status, dr.text.slice(0, 160));
+  await p.eval(`document.querySelector('.modal header button, .modal .close')?.click()`);
+  // E: the old project
+  await go(p, base, `#/project/arnolfini/export`);
+  const hasLink = await p.eval(`!!Array.from(document.querySelectorAll('#view a, #view button')).find(e => /Dựng hình/.test(e.textContent) || /\\/edit/.test(e.getAttribute('href') || ''))`);
+  check('SU-008 the locked export page of an old project offers a way to the storyboard step', hasLink);
+  await go(p, base, `#/project/arnolfini/edit`);
+  const hd = await p.eval(`document.querySelector('header, .topbar, #top')?.innerText || document.body.innerText.slice(0, 300)`);
+  check('SU-010 the header of an imported project does not print "null"', !/\bnull\b/.test(hd), hd.replace(/\n/g, ' ').slice(0, 160));
+  const lock = (await text());
+  await go(p, base, `#/project/arnolfini-from-books/voice`);
+  const lt = await text();
+  check('SU-008 a locked step page offers a way to the step that unlocks it', await p.eval(`!!Array.from(document.querySelectorAll('#view a, #view button')).find(e => /Kịch bản/.test(e.textContent) || /\\/script/.test(e.getAttribute('href') || ''))`), '');
 });
 
 console.log(p.logs, p.bad());

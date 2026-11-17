@@ -11,7 +11,7 @@
 import { api } from '../api.js';
 import { agyProblem } from '../labels.js';
 import { chapterDiffItems, headerRole } from '../chapdiff.js';
-import { h, toast, errorToast, errorInto, detailFold, fillSelect, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
+import { h, kids, toast, errorToast, errorInto, detailFold, fillSelect, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
 import { LEVEL } from '../labels.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
@@ -740,7 +740,7 @@ function pasteDialog(kind = 'outline') {
     } catch (e) {
       if (e.status === 422) {
         PASTE[cur] = text; if (cur === 'outline') ST.outline.last_paste = text; else ST.narr.last_paste = text;
-        err.replaceChildren(h('div', { class: 'hint err', text: parseFailText(e.body?.error || e.body?.detail || '') + ' Văn bản vừa dán đã được giữ lại, sẽ hiện lại khi tải trang. Không có gì bị ghi đè.' }), paragraphList(e.body?.paragraphs));
+        err.replaceChildren(...kids(h('div', { class: 'hint err', text: parseFailText(e.body?.error || e.body?.detail || '') + ' Văn bản vừa dán đã được giữ lại, sẽ hiện lại khi tải trang. Không có gì bị ghi đè.' }), paragraphList(e.body?.paragraphs)));
       } else { const box = h('div', { class: 'hint err' }); errorInto(box, e); err.replaceChildren(box); }
     } finally { go.disabled = false; }
   } });
