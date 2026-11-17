@@ -14,6 +14,7 @@ from bti.script.store import ProjectGone, make_parent
 from bti.engine import limits
 
 from .common import ApiError, finite_number
+from bti.fsio import atomic_replace
 
 # The engine's limits file has no time range; this one is the editor's own (a day), named here so it is not a loose number.
 T_MAX_SECONDS = 86400
@@ -91,7 +92,7 @@ def cached_jpeg(project, cache_dir: Path, rev: str, t: float, width: int, tag: s
     tmp = p.with_suffix(f".{id(data)}.tmp")
     try:
         tmp.write_bytes(data)
-        tmp.replace(p)
+        atomic_replace(tmp, p)
     except OSError:
         tmp.unlink(missing_ok=True)
     prune(cache_dir)

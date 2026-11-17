@@ -44,6 +44,7 @@ from .export_api import router as export_router
 from .media_adapter import LicenceRejected, MediaAdapter
 from .picks_api import router as picks_router
 from .voice_api import router as voice_router
+from bti.fsio import atomic_replace
 
 PLACEHOLDER = """<!doctype html><meta charset="utf-8"><title>BTI editor</title>
 <body style="font-family:sans-serif;margin:3em"><h1>BTI editor backend is running</h1>
@@ -1025,14 +1026,14 @@ def _thumb_response(pdir_: Path, f: Path, w: int) -> Response:
                     im.thumbnail((w, w * 4))
                     tmp = out.with_suffix(".tmp.jpg")
                     im.save(tmp, "JPEG", quality=82)
-                    tmp.replace(out)
+                    atomic_replace(tmp, out)
             else:
                 tmp = out.with_suffix(".tmp.jpg")
                 r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(f), "-frames:v", "1",
                                     "-vf", f"scale={w}:-2", str(tmp)], capture_output=True, timeout=60)
                 if r.returncode != 0 or not tmp.is_file():
                     raise ApiError(415, "cannot make a thumbnail of this file")
-                tmp.replace(out)
+                atomic_replace(tmp, out)
         except ApiError:
             raise
         except Exception:

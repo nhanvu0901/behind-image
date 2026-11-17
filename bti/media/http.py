@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Callable
+from bti.fsio import atomic_replace
 
 USER_AGENT = "behind-the-image-media/0.1 (art documentary research tool)"
 MAX_TRIES = 4
@@ -96,7 +97,7 @@ def download_file(url: str, dest, *, max_bytes: int, timeout: float = 120, **kw)
                 if total > max_bytes:
                     raise MediaHTTPError(f"download exceeded the {max_bytes} byte cap")
                 fh.write(chunk)
-        tmp.replace(dest)
+        atomic_replace(tmp, dest)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise

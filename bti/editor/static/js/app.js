@@ -2,7 +2,7 @@
 // The views live in ./views/*.js and export mount(host, ctx) -> { isDirty?, save?, pipelineChanged?, unmount? }.
 import { api, setViewSignal, setNetworkHook } from './api.js';
 import { MOCK, SHOW_ALL } from './config.js';
-import { h, toast, errorToast, errorInto, setStatus, closeAllModals, ask, modal } from './util.js';
+import { h, kids, toast, errorToast, errorInto, setStatus, closeAllModals, ask, modal } from './util.js';
 import { describeError } from './errmsg.js';
 import { createScope } from './lifecycle.js';
 import { parseHash, projectHash, legacyTarget } from './router.js';
@@ -177,9 +177,9 @@ function renderFrame() {
   const info = $('#frame-project');
   if (S.pid && p) {
     const pt = p.painting;
-    info.replaceChildren(h('span', { class: 'pt', text: p.title }),
+    info.replaceChildren(...kids(h('span', { class: 'pt', text: p.title }),
       pt?.title ? h('span', { class: 'pp', text: [pt.title, [pt.artist, pt.year].filter(Boolean).join(', ')].filter(Boolean).join(' · ') }) : null,
-      h('span', { class: 'tag', text: stageLabel(p.stage), title: 'Giai đoạn của dự án' }));
+      h('span', { class: 'tag', text: stageLabel(p.stage), title: 'Giai đoạn của dự án' })));
   } else if (r?.name === 'library') info.replaceChildren(h('span', { class: 'pp', text: 'Video mới: chọn một tác phẩm' }));
   else info.replaceChildren();
   // stepper

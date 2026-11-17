@@ -113,6 +113,55 @@ def test_failed_sentence_is_retried_then_reported(project, mgr, cfg, monkeypatch
     assert not files.mix_path(project).exists()
 
 
+def _flaky_finish(monkeypatch, fails_for_chunk, times):
+    """The fake voice's rename fails `times` times for the file of one chunk (a lock held by another process)."""
+    real = fakemod.atomic_replace
+    seen = {"n": 0}
+
+    def flaky(src, dst):
+        if str(dst).endswith(fails_for_chunk + ".wav") and seen["n"] < times:
+            seen["n"] += 1
+            raise PermissionError(13, "Access is denied", None, 5)
+        real(src, dst)
+    monkeypatch.setattr(fakemod, "atomic_replace", flaky)
+    return seen
+
+
+def test_a_chunk_whose_file_cannot_be_finished_is_retried_and_the_job_survives(project, mgr, cfg, monkeypatch):
+    first = None
+    prov = fakemod.FakeProvider()
+    monkeypatch.setattr("bti.voice.run.resolve", lambda name, server: prov)
+    orig = prov.synth
+
+    def spy(chunks, dest_dir, ctx, workdir=None):
+        nonlocal first
+        if first is None:
+            first = chunks[0].id
+            _flaky_finish(monkeypatch, first, 1)
+        return orig(chunks, dest_dir, ctx, workdir)
+    prov.synth = spy
+    rec = go(project, mgr, cfg)
+    assert rec["state"] == "done", rec.get("error")
+    assert files.chunk_path(project, first).is_file()
+    assert sum(call.count(first) for call in prov.calls) == 2      # offered again in a later part
+
+
+def test_a_chunk_that_never_finishes_is_reported_not_a_crash(project, mgr, cfg, monkeypatch):
+    prov = fakemod.FakeProvider()
+    monkeypatch.setattr("bti.voice.run.resolve", lambda name, server: prov)
+    orig = prov.synth
+    done = {}
+
+    def spy(chunks, dest_dir, ctx, workdir=None):
+        if not done:
+            done["id"] = chunks[0].id
+            _flaky_finish(monkeypatch, chunks[0].id, 99)
+        return orig(chunks, dest_dir, ctx, workdir)
+    prov.synth = spy
+    rec = go(project, mgr, cfg)
+    assert rec["state"] == "error" and rec["error_code"] == "voice_chunks_failed"      # a reported error, not PermissionError
+
+
 def test_not_approved_and_not_configured(tmp_path, mgr, cfg):
     d = write_project(tmp_path, "unap", approve=False)
     with pytest.raises(VoiceError) as e:

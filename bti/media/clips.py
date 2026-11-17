@@ -26,6 +26,7 @@ from . import assets as _assets
 from ..proc import group_kwargs, kill_tree
 from .errors import LicenceRejected, MediaError
 from .licence import check_licence
+from bti.fsio import atomic_replace
 
 _YT_ID = re.compile(r"(?:v=|youtu\.be/|shorts/|embed/|live/)([A-Za-z0-9_-]{11})")
 SECTION_TIMEOUT = float(os.getenv("CLIP_SECTION_TIMEOUT", "180"))
@@ -163,7 +164,7 @@ def normalize(src: Path, out: Path, *, max_short_side: int = 1080) -> Path:
     if res.returncode != 0:
         tmp.unlink(missing_ok=True)
         raise MediaError(f"transcode failed: {(res.stderr or '')[-600:]}")
-    tmp.replace(out)
+    atomic_replace(tmp, out)
     return out
 
 

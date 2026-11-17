@@ -18,7 +18,8 @@ def main(argv: list[str]) -> int:
     lang = argv[6] if len(argv) > 6 and argv[6] else "en"
     import numpy as np
     from faster_whisper import WhisperModel
-    spans = json.load(open(spans_file, encoding="utf-8"))
+    with open(spans_file, encoding="utf-8") as fh:
+        spans = json.load(fh)
     raw = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-i", wav, "-ac", "1", "-ar", "16000", "-f", "f32le", "-"],
                          capture_output=True).stdout
     audio = np.frombuffer(raw, np.float32)
@@ -37,7 +38,8 @@ def main(argv: list[str]) -> int:
                     words.append({"w": w.word.strip(), "s": round(a + w.start, 4), "e": round(a + w.end, 4)})
         out[str(sp["index"])] = words
         print(json.dumps({"i": n, "of": len(spans)}), flush=True)
-    json.dump(out, open(out_file, "w", encoding="utf-8"))
+    with open(out_file, "w", encoding="utf-8") as fh:
+        json.dump(out, fh)
     return 0
 
 

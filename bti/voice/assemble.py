@@ -14,9 +14,18 @@ import numpy as np
 
 from . import files
 from .errors import VoiceError
+from bti.fsio import atomic_replace
 
 SR = 48000
 SRC_SR = 24000
+
+
+def _finish(tmp: Path, dst: Path) -> None:
+    """Finish a written file; a rename that still fails after the retries becomes a voice error (never a raw OSError)."""
+    try:
+        atomic_replace(tmp, dst)
+    except OSError as e:
+        raise VoiceError("voice_assemble_failed", "the file %s could not be finished: %s" % (dst.name, type(e).__name__), 500)
 
 
 def layout(durations: list[float], gaps: list[float], tail: float, sr: int = SR) -> dict:
@@ -117,7 +126,7 @@ def write_wav(path: Path, data: np.ndarray) -> None:
         wf.setsampwidth(2)
         wf.setframerate(SR)
         wf.writeframes((np.clip(frames, -1, 1) * 32767).astype("<i2").tobytes())
-    os.replace(tmp, path)
+    _finish(tmp, path)
 
 
 def parse_loudnorm(stderr: str) -> dict | None:
@@ -154,7 +163,7 @@ def normalise(src_wav: Path, out_m4a: Path, loud: dict, bitrate: str) -> dict:
     r2 = _run(cmd)
     if r2.returncode != 0:
         raise VoiceError("voice_assemble_failed", "ffmpeg could not write the mix: " + r2.stderr.decode("utf-8", "replace")[-200:], 500)
-    os.replace(tmp, out_m4a)
+    _finish(tmp, out_m4a)
     return measure(out_m4a)
 
 

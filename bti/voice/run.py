@@ -75,11 +75,12 @@ def make_parts(pdir: Path, pid: str, plan: Plan, *, provider, aligner, force_ids
             mine = [by[i] for i in ids]
             retry = [by[i] for i in list(state["failed"]) if i in by and i not in ids and state["tries"].get(i, 0) < 2]
             batch = [c for c in mine + retry if not planner.is_cached(pdir, c, since if (force_ids and c.id in force_ids) else None)]
-            if not batch:
+            if not batch and not (last and state["failed"]):
                 return None
             for c in batch:
                 state["tries"][c.id] = state["tries"].get(c.id, 0) + 1
-            res = provider.synth(batch, files.chunks_dir(pdir), ctx, ctx.workdir)
+            # the last part reports what is still unspoken even when every chunk has used its two tries already
+            res = provider.synth(batch, files.chunks_dir(pdir), ctx, ctx.workdir) if batch else {}
             for c in batch:
                 r = res.get(c.id)
                 if r and r.get("ok"):

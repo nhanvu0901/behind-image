@@ -17,6 +17,7 @@ import pymupdf
 
 from . import config, extract, parse
 from .. import textfold
+from bti.fsio import atomic_replace
 
 PARTICLES = {"van", "von", "de", "da", "di", "del", "della", "le", "la", "the", "elder", "younger", "of", "der",
              "den", "af", "el", "jr", "sir", "mr"}
@@ -33,7 +34,7 @@ def write_json(path: Path, data) -> None:
     fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
     with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, path)
+    atomic_replace(tmp, path)
 
 
 class LibraryDataError(ValueError):

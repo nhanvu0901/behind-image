@@ -8,7 +8,7 @@
 //  - The paid "Gợi ý thêm" runs only when the owner confirms it, once per click.
 //  - Words and error texts that are not yet in labels.js / errmsg.js live in the tables LBL and ERR below (CORE merges them).
 import { api } from '../api.js';
-import { h, toast, errorToast, setStatus, modal, ask, confirmDialog, debounce } from '../util.js';
+import { h, kids, toast, errorToast, setStatus, modal, ask, confirmDialog, debounce } from '../util.js';
 import { makeSpaces } from '../coords.js';
 import { createQueue } from '../queue.js';
 import { describeError, jobErrorText, STAGE_CODES } from '../errmsg.js';
@@ -118,7 +118,7 @@ function paintTop() {
   const top = $('#pk-top'); if (!top) return;
   const a = mainAsset(), d = S.data, errs = (d.issues || []).filter((i) => i.level === 'error');
   const nv = d.narration;
-  top.replaceChildren(
+  top.replaceChildren(...kids(
     h('div', { class: 'pk-main' }, thumb(a, null, 72),
       h('div', { class: 'pk-maininfo' },
         h('div', { class: 'pk-maintitle', text: a ? (a.title || D.main_asset) : 'Chưa chọn tranh chính' }),
@@ -132,7 +132,7 @@ function paintTop() {
     !nv.present ? h('div', { class: 'pk-banner warn', text: 'Dự án chưa có lời dẫn. Hãy viết và duyệt lời dẫn ở bước Kịch bản.' })
       : !nv.approved ? h('div', { class: 'pk-banner warn' }, `Lời dẫn chưa được duyệt${nv.reason === 'narration_edited' ? ' (đã đổi sau khi duyệt)' : ''}: bạn vẫn chọn hình được, nhưng chưa duyệt chọn hình được. `,
         h('a', { class: 'lnk', href: projectHash(S.pid, 'script'), text: 'Mở bước Kịch bản' }))
-      : d.approval_reason ? h('div', { class: 'pk-banner warn', text: 'Đã duyệt trước đó nhưng cần duyệt lại. ' + (LBL.reason[d.approval_reason] || '') }) : null);
+      : d.approval_reason ? h('div', { class: 'pk-banner warn', text: 'Đã duyệt trước đó nhưng cần duyệt lại. ' + (LBL.reason[d.approval_reason] || '') }) : null));
   paintStatus();
 }
 function paintStatus() {
@@ -187,7 +187,7 @@ function paintMid() {
   const words = L.showWords(b.show, S.data.details);
   const main = mainAsset();
   const mainRegions = main ? Object.entries(main.regions || {}) : [];
-  col.replaceChildren(
+  col.replaceChildren(...kids(
     h('div', { class: 'pk-beattext' }, h('span', { class: 'bid', text: b.id }), ' ', b.text),
     words.length ? h('div', { class: 'pk-show' }, h('span', { class: 'muted', text: 'Gợi ý hình: ' }), words.map((w) => h('button', { class: 'det' + (w.detail ? ' d' : ''), title: 'Tìm hình theo từ này', text: w.text, onclick: () => searchFor(w.query) }))) : null,
     b.facts.length ? h('details', { class: 'pk-facts' }, h('summary', { text: `Dữ kiện (${b.facts.length})` }), h('ul', null, b.facts.map((f) => h('li', { text: `${f}: ${facts[f] || ''}` })))) : null,
@@ -200,7 +200,7 @@ function paintMid() {
       main ? h('button', { text: 'Vẽ vùng mới...', onclick: () => regionEditor(D.main_asset) }) : null),
     h('div', { class: 'pk-beatfoot' },
       h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: rec.status === 'skip', onchange: () => { L.toggleSkip(D, b.id); touch(); paintLeft(); paintMid(); } }), ' Bỏ qua dòng này (không tính là thiếu hình)'),
-      h('input', { type: 'text', class: 'grow', placeholder: 'Ghi chú cho dòng này (không bắt buộc)', value: rec.note || '', oninput: (e) => { L.ensureBeat(D, b.id).note = e.target.value; touch(); } })));
+      h('input', { type: 'text', class: 'grow', placeholder: 'Ghi chú cho dòng này (không bắt buộc)', value: rec.note || '', oninput: (e) => { L.ensureBeat(D, b.id).note = e.target.value; touch(); } }))));
 }
 function trayItem(beatId, it, i, n) {
   const a = assets()[it.asset];

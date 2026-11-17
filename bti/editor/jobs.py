@@ -20,6 +20,7 @@ from bti.script.runner import RESTART_MESSAGE, find_record, job_file, write_reco
 from bti.script.store import ProjectGone, make_parent
 
 from .common import ApiError, safe_join, scrub_paths
+from bti.fsio import atomic_replace
 
 KEEP_PREVIEWS = 20
 MAX_JOBS = 300
@@ -145,7 +146,7 @@ def render_preview(project, project_dir: Path, audio: Path | None, t0: float, t1
                 raise RuntimeError("audio mux failed: " + r.stderr.decode("utf-8", "replace")[-200:])
             silent.unlink(missing_ok=True)
         else:
-            silent.replace(final)
+            atomic_replace(silent, final)
     except BaseException:
         silent.unlink(missing_ok=True)
         final.unlink(missing_ok=True)

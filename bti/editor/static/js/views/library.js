@@ -1,7 +1,7 @@
 // Library view: artworks, book shelf, works of a book, work detail, artwork dossier, create-project dialog.
 // Step 1 of a NEW video. Mounted by the shell at #/library[/books|/book/<id>|/work/<book>/<n>|/artwork/<key>].
 import { api } from '../api.js';
-import { h, toast, errorToast, errorInto, detailFold, modal as uiModal, confirmDialog } from '../util.js';
+import { h, kids, toast, errorToast, errorInto, detailFold, modal as uiModal, confirmDialog } from '../util.js';
 import { describeError } from '../errmsg.js';
 import { fold } from '../text.js';
 import { go } from '../nav.js';
@@ -141,10 +141,10 @@ async function workDetail(bid, n) {
     preview.replaceChildren(h('div', { class: 'muted', text: 'Đang tải...' }));
     let d;
     try { d = await J(`/api/library/works/${o.book_id}/${o.n}`); } catch (e) { preview.replaceChildren(h('div', { class: 'hint err' })); errorInto(preview.firstChild, e, 'Không xem nhanh được: '); return; }
-    preview.replaceChildren(h('div', { class: 'ttl', text: `${BOOKNAME[o.book_id]}: ${d.title}` }),
+    preview.replaceChildren(...kids(h('div', { class: 'ttl', text: `${BOOKNAME[o.book_id]}: ${d.title}` }),
       h('div', { class: 'pages', style: { margin: '8px 0' } }, d.pages.slice(0, 2).map((p) => h('div', null, h('img', { src: p.url, onclick: () => lightbox(p.url.replace('w=900', 'w=1500')) })))),
       d.ocr ? h('div', { class: 'note', text: 'Văn bản OCR, có thể sai chữ.' }) : null,
-      h('pre', { class: 'text', text: d.text.slice(0, 2500) + (d.text.length > 2500 ? '\n...' : '') }));
+      h('pre', { class: 'text', text: d.text.slice(0, 2500) + (d.text.length > 2500 ? '\n...' : '') })));
   }
   const mine = w.projects || [];
   setMain(crumb(h('a', { href: '#/library/books', text: 'Kệ sách' }), h('a', { href: `#/library/book/${bid}`, text: BOOKNAME[bid] || bid }), `${w.n}. ${w.title}`),

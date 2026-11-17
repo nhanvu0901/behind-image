@@ -14,6 +14,9 @@ export function h(tag, attrs, ...kids) {
   for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) el.append(c.nodeType ? c : document.createTextNode(String(c)));
   return el;
 }
+/** The children worth appending: drops null, undefined and false (Element.append would write them as the words "null" and "false").
+ * Use it for every conditional child that is not built through h(): `el.append(...kids(a, cond ? b : null))`. */
+export const kids = (...c) => c.flat(Infinity).filter((x) => x !== null && x !== undefined && x !== false);
 /** Fill a <select> from a list so that it shows the stored value (see `dropdownOptions`). `extra(v)` may add {disabled, text} per entry. Safe to call again on sync. */
 export function fillSelect(sel, values, current, labelOf = String, extra = null) {
   const { options, selected } = dropdownOptions(values, current, labelOf);

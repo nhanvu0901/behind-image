@@ -18,6 +18,7 @@ from bti.script.store import DocumentCorrupt, forget_lock, read_object, script_l
 from bti.library import projects as projects_mod
 
 from .common import ApiError, forget_save_lock, read_json, save_lock, storyboard_approval, valid_pid
+from bti.fsio import atomic_replace
 
 DELETE_WAIT_S = 2.0          # how long DELETE waits for a save in flight before it answers 409
 
@@ -293,7 +294,7 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, lon
                     raise ApiError(409, "a preview is being rendered for this project; wait for it to finish")
                 trash = root / f".deleting-{pid}-{uuid.uuid4().hex[:8]}"
                 try:
-                    os.rename(d, trash)           # one atomic step: the project is gone for every other request
+                    atomic_replace(d, trash)           # one atomic step: the project is gone for every other request
                 except OSError as e:
                     trash = None
                     raise ApiError(409, f"the project folder could not be removed ({e.strerror or type(e).__name__})",

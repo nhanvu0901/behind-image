@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Callable
 
 from ..errors import NotFound
+from bti.fsio import atomic_replace
 
 ID_RE = re.compile(r"([a-z0-9_]{1,40})/(img|page)/(\d{1,9})")
 IMG_WIDTH = 2400          # an embedded image is rendered at its own size, never larger than this
@@ -79,7 +80,7 @@ class BookPageSource:
         tmp = dest.with_name(dest.name + ".part")
         try:
             self._render(meta["book_id"], meta["ref_kind"], int(meta["ref"]), tmp)
-            tmp.replace(dest)
+            atomic_replace(tmp, dest)
         finally:
             tmp.unlink(missing_ok=True)
         return dest

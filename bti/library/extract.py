@@ -9,6 +9,7 @@ from pathlib import Path
 import pymupdf
 
 from . import config
+from bti.fsio import atomic_replace
 
 _LOCK = threading.RLock()
 _DOCS: dict[str, "pymupdf.Document"] = {}
@@ -126,7 +127,7 @@ def render_page(book_id: str, pdf_page: int, width: int = 800) -> Path:
         data = pix.tobytes("jpeg", jpg_quality=80)
     tmp = out.with_suffix(".tmp")
     tmp.write_bytes(data)
-    tmp.replace(out)
+    atomic_replace(tmp, out)
     return out
 
 
@@ -150,5 +151,5 @@ def render_image(book_id: str, xref: int, width: int = 600) -> Path:
             im = im.resize((width, max(1, round(im.height * width / im.width))))
         tmp = out.with_suffix(".tmp")
         im.save(tmp, format="JPEG", quality=82)
-        tmp.replace(out)
+        atomic_replace(tmp, out)
     return out

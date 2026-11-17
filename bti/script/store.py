@@ -18,6 +18,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from bti.fsio import atomic_replace
 
 SCHEMA_OUTLINE = "bti.outline/1"
 SCHEMA_NARRATION = "bti.narration/1"
@@ -188,7 +189,7 @@ def write_json_atomic(path: Path, data: Any, levels: int = 1) -> None:
             json.dump(data, f, ensure_ascii=False, indent=1)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        atomic_replace(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)
@@ -203,7 +204,7 @@ def write_text_atomic(path: Path, text: str, levels: int = 1) -> None:
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             f.write(text)
-        os.replace(tmp, path)
+        atomic_replace(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)

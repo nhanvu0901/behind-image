@@ -17,6 +17,7 @@ from typing import Callable
 
 from .env import redact
 from .store import make_parent
+from bti.fsio import atomic_replace
 
 HARD_TIMEOUT = 1800.0
 KEEP = 100
@@ -49,7 +50,7 @@ def write_record(path: Path, rec: dict) -> None:
         fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(rec, f, ensure_ascii=False)
-        os.replace(tmp, path)
+        atomic_replace(tmp, path)
     except (OSError, ValueError, TypeError):      # ProjectGone is an OSError too
         pass
 

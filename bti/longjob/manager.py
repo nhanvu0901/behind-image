@@ -23,6 +23,7 @@ from bti.proc import group_kwargs, kill_tree
 
 from .config import REPO_ROOT, load as load_config
 from .heavy import Cancelled, HeavyError, HeavySlot
+from bti.fsio import atomic_replace
 
 PART_LIMIT_SECONDS = 35 * 60.0
 CANCEL_GRACE_SECONDS = 10.0
@@ -83,7 +84,7 @@ def _write_json(path: Path, rec: dict, project_dir: Path) -> None:
         fd, tmp = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(path.parent))
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump(rec, f, ensure_ascii=False)
-        os.replace(tmp, path)
+        atomic_replace(tmp, path)
     except (OSError, ValueError, TypeError):
         pass
 

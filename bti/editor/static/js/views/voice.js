@@ -1,7 +1,7 @@
 // "Giọng đọc" step (step 3): approved narration -> audio/mix.m4a + timing.json. Mounted by the shell at #/project/<id>/voice.
 // Everything the owner reads is Vietnamese. Words come from labels.js (VOICE_LABELS) and the sentences of error codes from errmsg.js (STAGE_CODES).
 import { api } from '../api.js';
-import { h, toast, errorToast, confirmDialog, setStatus } from '../util.js';
+import { h, kids, toast, errorToast, confirmDialog, setStatus } from '../util.js';
 import { createQueue } from '../queue.js';
 import { errorText, jobErrorText, STAGE_CODES } from '../errmsg.js';
 import { VOICE_LABELS } from '../labels.js';
@@ -100,10 +100,10 @@ function paint() {
     h('span', { class: 'muted', text: d.detail }));
   const acts = $('#vc-acts'); acts.replaceChildren();
   const first = d.state === 'none' || !d.counts || d.counts.cached === 0;
-  acts.append(
+  acts.append(...kids(
     h('button', { class: 'primary', text: first ? 'Tạo giọng đọc' : d.state === 'stale' ? 'Đọc lại phần đã đổi' : 'Tạo lại nếu thiếu', disabled: run || none || !d.configured, title: !d.configured ? CODE_TEXT.voice_not_configured : none ? 'Cần duyệt lời dẫn trước.' : '', onclick: () => generate({ scope: 'changed' }) }),
     run ? h('button', { text: 'Hủy', onclick: cancel }) : null,
-    !run && !first ? h('button', { text: 'Đọc lại toàn bộ', title: 'Bỏ các câu đã đọc và đọc lại tất cả (rất lâu).', disabled: !d.configured, onclick: async () => { if (await confirmDialog(`Đọc lại toàn bộ ${d.counts.total} câu? Việc này mất rất lâu (khoảng ${fmtMin((d.counts.total ? d.estimate.seconds : 0) || 3000)} trở lên).`, { ok: 'Đọc lại tất cả', danger: true })) generate({ scope: 'all' }); } }) : null);
+    !run && !first ? h('button', { text: 'Đọc lại toàn bộ', title: 'Bỏ các câu đã đọc và đọc lại tất cả (rất lâu).', disabled: !d.configured, onclick: async () => { if (await confirmDialog(`Đọc lại toàn bộ ${d.counts.total} câu? Việc này mất rất lâu (khoảng ${fmtMin((d.counts.total ? d.estimate.seconds : 0) || 3000)} trở lên).`, { ok: 'Đọc lại tất cả', danger: true })) generate({ scope: 'all' }); } }) : null));
   const info = $('#vc-info'); info.replaceChildren();
   if (!d.approved && d.state === 'none') info.append(h('div', { class: 'box warn', text: d.detail || 'Cần duyệt lời dẫn ở bước Kịch bản trước.' }));
   for (const r of d.reasons || []) if (REASON_TEXT[r] && d.state !== 'none') info.append(h('div', { class: 'box warn', text: REASON_TEXT[r] }));

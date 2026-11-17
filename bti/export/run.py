@@ -17,6 +17,7 @@ from bti.script import store
 from . import check, describe, mux, plan, render, subtitles
 from .errors import ExportError, part_error
 from .settings import Settings, load_settings
+from bti.fsio import atomic_replace
 
 KIND = "export"
 SCHEMA = "bti.export/1"
@@ -335,7 +336,7 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
                 raise ExportError("project_gone", "the project was removed", 404)
             store.make_parent(edir / "x", 1)
             manifest_path(project_dir).unlink(missing_ok=True)        # while the files change the export is "not made", never half
-            os.replace(final, edir / names["video"])
+            atomic_replace(final, edir / names["video"])
             store.write_text_atomic(edir / names["subtitles"], st["srt"], 1)
             store.write_text_atomic(edir / names["description"], d["description"], 1)
             store.write_text_atomic(edir / names["chapters"], d["chapters"], 1)

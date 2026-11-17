@@ -13,6 +13,7 @@ from pathlib import Path
 
 from ._io import read_json, write_json_atomic
 from .. import textfold
+from bti.fsio import atomic_replace
 
 INDEX_NAME = "sources.json"
 _STOP = {"with", "from", "by", "for", "the", "of", "a", "an", "and", "de", "la", "le", "in", "on", "at", "file"}
@@ -40,7 +41,7 @@ def load_index(project_dir: Path) -> dict:
     if not isinstance(doc, dict):            # valid JSON of the wrong shape: set aside like a corrupt file, start a new index
         try:
             p = Path(project_dir) / "media" / INDEX_NAME
-            p.replace(p.with_name(p.name + ".corrupt"))
+            atomic_replace(p, p.with_name(p.name + ".corrupt"))
         except OSError:
             pass
         doc = {}

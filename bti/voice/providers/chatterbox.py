@@ -14,6 +14,7 @@ import wave
 from pathlib import Path
 
 from ..errors import VoiceError
+from bti.fsio import atomic_replace
 
 
 def wav_seconds(path: Path) -> float | None:
@@ -96,7 +97,11 @@ class ChatterboxProvider:
                 why = errors.get(i) or ("the voice worker stopped (exit code %s)" % rc if rc else "the voice worker wrote no audio")
                 res[c.id] = {"ok": False, "error": why}
                 continue
-            os.replace(src, dest_dir / f"{c.id}.wav")
+            try:
+                atomic_replace(src, dest_dir / f"{c.id}.wav")
+            except OSError as e:              # a file that cannot be finished fails this chunk only; the next part retries it
+                res[c.id] = {"ok": False, "error": "the audio file could not be finished: %s" % type(e).__name__}
+                continue
             res[c.id] = {"ok": True, "sec": sec}
         if not any(r["ok"] for r in res.values()) and rc and not ctx.cancelled():
             raise VoiceError("voice_worker_failed", "the voice worker failed (exit code %s)" % rc)

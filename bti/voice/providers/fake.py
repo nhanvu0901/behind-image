@@ -7,6 +7,7 @@ import os
 import struct
 import wave
 from pathlib import Path
+from bti.fsio import atomic_replace
 
 SR = 24000
 SEC_PER_CHAR = 0.05
@@ -30,7 +31,7 @@ def write_wav(path: Path, samples: list[int], sr: int = SR) -> None:
         wf.setsampwidth(2)
         wf.setframerate(sr)
         wf.writeframes(struct.pack("<%dh" % len(samples), *samples))
-    os.replace(tmp, path)
+    atomic_replace(tmp, path)
 
 
 class FakeProvider:
@@ -52,7 +53,11 @@ class FakeProvider:
                 res[c.id] = {"ok": False, "error": "fake failure"}
             else:
                 s = tone_samples(c.spoken, c.seed)
-                write_wav(dest_dir / f"{c.id}.wav", s)
-                res[c.id] = {"ok": True, "sec": len(s) / SR}
+                try:
+                    write_wav(dest_dir / f"{c.id}.wav", s)
+                except OSError as e:          # a file that cannot be finished fails this chunk only; the next part retries it
+                    res[c.id] = {"ok": False, "error": "the audio file could not be finished: %s" % type(e).__name__}
+                else:
+                    res[c.id] = {"ok": True, "sec": len(s) / SR}
             ctx.progress((k + 1) / len(chunks), f"{k + 1}/{len(chunks)}")
         return res

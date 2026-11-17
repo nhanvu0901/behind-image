@@ -20,6 +20,7 @@ from .errors import ExportError
 from .mux import concat_list, join_command
 from .plan import PartSpec, part_filename
 from .settings import REPO_ROOT, Settings
+from bti.fsio import atomic_replace
 
 
 def engine_command(project_dir: Path, spec: PartSpec, out: Path, settings: Settings) -> list[str]:
@@ -87,7 +88,7 @@ def render_part(ctx, tools: Tools, settings: Settings, project_dir: Path, spec: 
     if frames != spec.frames:
         tmp.unlink(missing_ok=True)
         raise ExportError("frames_mismatch", "part %d has %s frames, expected %d" % (spec.index + 1, frames, spec.frames), status=500, part=spec.index + 1)
-    os.replace(tmp, final)
+    atomic_replace(tmp, final)
     ctx.progress(1.0)
     return {"file": name, "skipped": False, "frames": frames}
 
@@ -115,5 +116,5 @@ def join_parts(ctx, tools: Tools, files: list[Path], out: Path, expected_frames:
     if frames != expected_frames:
         tmp.unlink(missing_ok=True)
         raise ExportError("frames_mismatch", "the joined video has %s frames, expected %d" % (frames, expected_frames), status=500, frames=frames, expected=expected_frames)
-    os.replace(tmp, out)
+    atomic_replace(tmp, out)
     return {"frames": frames}

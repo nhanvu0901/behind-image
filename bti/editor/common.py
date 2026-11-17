@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from bti.script.store import ProjectGone, make_parent
+from bti.fsio import atomic_replace
 
 PID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
 STYLE_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
@@ -302,7 +303,7 @@ def write_json_atomic(path: Path, data: Any, levels: int = 1) -> None:
             json.dump(data, f, ensure_ascii=False, indent=1)
             f.flush()
             os.fsync(f.fileno())
-        os.replace(tmp, path)
+        atomic_replace(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)
@@ -315,7 +316,7 @@ def quarantine(path: Path) -> Path | None:
     """Move a corrupt file aside so it is not re-read; returns the new path."""
     try:
         dest = path.with_name(f"{path.name}.corrupt-{int(time.time())}")
-        os.replace(path, dest)
+        atomic_replace(path, dest)
         return dest
     except OSError:
         return None

@@ -2,7 +2,8 @@
 // One PASS or FAIL line per check, named after a bug id (SU-nnn); each asserts the CORRECT behaviour. Exit code = number failing.
 // Usage: node run.mjs [--keep-server]     (starts the server through remote.mjs when none is up, and stops it again)
 import { up, down, readState } from './remote.mjs';
-import { leftovers, go, settle, openBrowser, makeApi, check, finish, bodyText, has, rawLooking, snap, both, sleep, pipeline, stepsOf, stepperDom } from './common.mjs';
+import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
+import { clickExact, makePng, setFile, leftovers, go, settle, openBrowser, makeApi, check, finish, bodyText, has, rawLooking, snap, both, sleep, pipeline, stepsOf, stepperDom } from './common.mjs';
 
 const keep = process.argv.includes('--keep-server');
 const started = !readState();
@@ -10,6 +11,11 @@ const st = await up({ doDeploy: started });
 const base = st.base; const api = makeApi(base);
 const br = await openBrowser();
 const p = await br.newPage();
+// one Chrome at a time, and it never outlives this process (closed by its own process id, never by a name pattern)
+const closeAll = () => { try { br.close(); } catch {} };
+process.on('exit', closeAll);
+for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { closeAll(); process.exit(130); });
+process.on('uncaughtException', (e) => { console.error(e); closeAll(); process.exit(99); });
 const argPid = process.argv.includes('--pid') ? process.argv[process.argv.indexOf('--pid') + 1] : null;
 const PID = argPid || 'lm-' + Date.now().toString(36).slice(-5);
 const step = async (name, fn) => { try { await fn(); } catch (e) { check(`journey: ${name} did not run to the end`, false, e.message); console.log(e.stack?.split('\n').slice(0, 3).join('\n')); } };
@@ -66,29 +72,177 @@ const jobOf = async (kind) => ((await api.get(`/api/projects/${PID}/longjobs?kin
 const btn = (t) => `Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim().includes(${JSON.stringify(t)}) && b.offsetParent)`;
 const noLeft = async (name) => { const l = await leftovers(p); check(`SU-001 ${name}: no stray "null" or "undefined" text`, l.length === 0, JSON.stringify(l)); };
 
+
+const stepperTexts = () => p.eval(`Array.from(document.querySelectorAll('.step')).map(e => e.innerText.replace(/\\n/g, ' ').trim())`);
+/** What the stepper shows must agree with GET /pipeline: a done step shows "XONG", a locked one "KHÓA", a running one "ĐANG CHẠY". */
+async function stepperAgrees(name) {
+  const pl = await pipeline(api, PID); const dom = await stepperTexts();
+  const want = { done: 'XONG', locked: 'KHÓA', current: 'HIỆN TẠI', available: 'MỞ ĐƯỢC' };
+  const bad = [];
+  pl.steps.forEach((s, i) => {
+    let w = want[s.state] || '';
+    if (s.work === 'running') w = 'ĐANG CHẠY'; else if (s.work === 'stale' && s.state !== 'locked') w = 'CẦN LÀM LẠI';
+    if (s.state === 'locked') w = 'KHÓA';
+    if (w && !String(dom[i]).toUpperCase().includes(w)) bad.push(`${s.id}: api ${s.state}/${s.work} but page "${dom[i]}"`);
+  });
+  check(`SU-005 ${name}: stepper agrees with /pipeline`, bad.length === 0, bad.join(' ; '));
+}
+
 await step('A4 voice', async () => {
   await go(p, base, `#/project/${PID}/voice`);
   await noLeft('voice page');
   await both(p, 'voice-before');
-  let pl = await pipeline(api, PID);
-  check('voice step before: not locked and says none', stepsOf(pl).voice.state !== 'locked');
-  await p.click('button', 'Tạo giọng đọc');
+  await stepperAgrees('voice before');
+  const vs0 = (await api.get(`/api/projects/${PID}/voice`)).json;
+  if (vs0.state === 'done') console.log('  (voice already done: skipping the first click)'); else await p.click('button.primary', vs0.state === 'stale' ? 'Đọc lại phần đã đổi' : vs0.counts.cached ? 'Tạo lại nếu thiếu' : 'Tạo giọng đọc');
   const sawRun = await p.waitFor(`document.body.innerText.includes('Đang chạy')`, 20000);
   await snap(p, 'a4-voice-running');
-  check('voice page shows "Đang chạy" after the click', sawRun);
-  const during = await pipeline(api, PID);
-  check('stepper marks voice as running while the job runs', ['running'].includes(stepsOf(during).voice.work) || (await jobOf('voice'))?.state === 'done', JSON.stringify(stepsOf(during).voice));
-  const fin = await p.waitFor(`!document.body.innerText.includes('Đang chạy') && !!${btn('Nghe')} || !!document.querySelector('audio')`, 240000);
-  await settle(p);
-  await snap(p, 'a4-voice-done');
+  if (vs0.state !== 'done') check('voice page shows "Đang chạy" after the click', sawRun);
+  const fin = await p.waitFor(`!document.body.innerText.includes('Đang chạy') && /Xong|Lỗi|Đã hủy/.test(document.querySelector('.vc-head')?.innerText || '')`, 240000);
+  await settle(p); await sleep(1500);
   const job = await jobOf('voice');
-  check('voice job ends done', job?.state === 'done', JSON.stringify({ s: job?.state, e: job?.error_code, m: job?.error }));
-  pl = await pipeline(api, PID);
-  check('voice step is done after the job', stepsOf(pl).voice.state === 'done', JSON.stringify(stepsOf(pl).voice));
-  const t = await text();
-  console.log(t.slice(0, 900).replace(/\n/g, ' | '));
+  check('SU-002 voice job ends done (no PermissionError)', job?.state === 'done', JSON.stringify({ s: job?.state, e: job?.error_code, m: (job?.error || '').slice(0, 160) }));
+  await stepperAgrees('voice done');
   await noLeft('voice page done');
   await both(p, 'voice-done');
+  // listen controls: one sentence plays, the whole mix is served with ranges
+  await p.click('.vc-play'); await sleep(1500);
+  const playing = await p.eval(`document.querySelector('.vc-play').textContent`);
+  check('one sentence starts playing (button turns into stop)', playing === '■', playing);
+  await p.click('.vc-play');
+  const rg = await fetch(base + `/api/projects/${PID}/voice/mix`, { headers: { Range: 'bytes=0-99' } });
+  check('the mix answers a range request with 206', rg.status === 206, rg.status);
+  // one sentence re-read
+  const before = (await api.get(`/api/projects/${PID}/voice`)).json.chunks[3].id;
+  await p.eval(`document.querySelectorAll('.vc-again')[3].scrollIntoView({block:'center'})`);
+  const rr = await p.eval(`(() => { const r = document.querySelectorAll('.vc-again')[3].getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2} })()`);
+  await p.clickXY(rr.x, rr.y);
+  await sleep(1500);
+  for (let i = 0; i < 90; i++) { if (!['running'].includes((await api.get(`/api/projects/${PID}/voice`)).json.state)) break; await sleep(1500); }
+  await sleep(2500); await settle(p);
+  const vd = (await api.get(`/api/projects/${PID}/voice`)).json;
+  check('SU-004 after re-reading one sentence the voice is done, not "narration changed"', vd.state === 'done', `${vd.state} ${vd.detail} ${JSON.stringify(vd.reasons)}`);
+  // pronunciation table: one row, saved
+  await clickExact(p, 'Thêm dòng');
+  const inputs = await p.eval(`Array.from(document.querySelectorAll('.vc-rows input')).length`);
+  await p.focus('.vc-rows input'); await p.insert('Velázquez');
+  await p.eval(`document.querySelectorAll('.vc-rows input')[1].focus()`); await p.insert('Ve-las-kes');
+  await clickExact(p, 'Lưu bảng phát âm'); await sleep(1500);
+  const v2 = (await api.get(`/api/projects/${PID}/voice`)).json;
+  check('pronunciation table saved', JSON.stringify(v2.pronounce).includes('Ve-las-kes'), JSON.stringify(v2.pronounce));
+  check('only sentences with that word become stale', v2.counts.changed > 0 && v2.counts.changed < v2.counts.total, JSON.stringify(v2.counts));
+  check('SU-004 a pronunciation change is not reported as "Lời dẫn đã đổi" (the narration did not change)', !/Lời dẫn đã đổi/.test(v2.detail || ''), v2.detail);
+  console.log('  pronunciation: state', v2.state, v2.detail, JSON.stringify(v2.counts));
+  await snap(p, 'a4-pronounce');
+  if (v2.counts.changed) { await clickExact(p, v2.state === 'stale' ? 'Đọc lại phần đã đổi' : 'Tạo lại nếu thiếu'); await sleep(1500); for (let i = 0; i < 90; i++) { if ((await api.get(`/api/projects/${PID}/voice`)).json.state !== 'running') break; await sleep(1500); } await sleep(2500); }
+  // tempo
+  await p.eval(`(() => { const i = document.querySelector('#vc-set input[type=number]'); i.focus(); i.select(); })()`);
+  await p.insert('1.1');
+  await clickExact(p, 'Lưu cài đặt'); await sleep(1500);
+  const v3 = (await api.get(`/api/projects/${PID}/voice`)).json;
+  check('tempo saved', v3.settings.tempo === 1.1, JSON.stringify(v3.settings));
+  console.log('  tempo: state', v3.state, v3.detail);
+  if (v3.state !== 'done') { await clickExact(p, 'Đọc lại phần đã đổi').catch(() => clickExact(p, 'Tạo lại nếu thiếu')); await sleep(1500); for (let i = 0; i < 120; i++) { if ((await api.get(`/api/projects/${PID}/voice`)).json.state !== 'running') break; await sleep(1500); } await sleep(2500); }
+  check('voice is done again after the remix', (await api.get(`/api/projects/${PID}/voice`)).json.state === 'done', JSON.stringify((await api.get(`/api/projects/${PID}/voice`)).json.detail));
+});
+
+await step('A5 picks', async () => {
+  await go(p, base, `#/project/${PID}/picks`);
+  await noLeft('picks page');
+  await both(p, 'picks-before');
+  if (!(await api.get(`/api/projects/${PID}/picks`)).json.picks.main_asset) {
+  await clickExact(p, 'Tìm'); await p.waitFor(`document.body.innerText.includes('Làm tranh chính')`, 20000); await settle(p);
+  const rr = await p.eval(`(() => { const b = Array.from(document.querySelectorAll('button')).filter(b => b.textContent.trim() === 'Làm tranh chính')[1]; b.scrollIntoView({block:'center'}); const r = b.getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2} })()`);
+  await p.clickXY(rr.x, rr.y);
+  await p.waitFor(`!document.body.innerText.includes('Chưa chọn tranh chính')`, 30000); await settle(p); await sleep(1500);
+  }
+  let d = (await api.get(`/api/projects/${PID}/picks`)).json.picks;
+  check('main painting chosen from fixture search', !!d.main_asset, JSON.stringify(d.main_asset));
+  // region
+  await clickExact(p, 'Vùng trên tranh'); await sleep(2000);
+  const box = await p.eval(`(() => { const r = document.querySelector('.pk-reg-svg').getBoundingClientRect(); return {x: r.x, y: r.y, w: r.width, h: r.height} })()`);
+  const cx = box.x + box.w * 0.5, cy = box.y + box.h * 0.4;
+  await p.mouse('mouseMoved', cx, cy, { buttons: 0 }); await p.mouse('mousePressed', cx, cy);
+  for (let i = 1; i <= 6; i++) await p.mouse('mouseMoved', cx + i * 10, cy + i * 6, { buttons: 1 });
+  await p.mouse('mouseReleased', cx + 60, cy + 36);
+  await p.focus('.pk-reg-side input[type=text]'); await p.insert('D1');
+  await clickExact(p, 'Thêm vùng này'); await sleep(300);
+  await clickExact(p, 'Lưu các vùng'); await sleep(2000);
+  d = (await api.get(`/api/projects/${PID}/picks`)).json.picks;
+  check('region D1 saved', !!Object.values(d.assets)[0]?.regions?.D1, JSON.stringify(Object.values(d.assets)[0]?.regions));
+  // beats: whole painting on b0002, region on b0003, upload on b0004
+  for (const [b, label] of [['b0002', '+ Cả tranh chính'], ['b0003', '+ The Infanta']]) {
+    await p.click('button.pk-beat', b); await sleep(500);
+    await clickExact(p, label); await sleep(800);
+  }
+  await p.click('button.pk-beat', 'b0004'); await sleep(500);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'stg-'));
+  await clickExact(p, 'Tải lên'); await sleep(500);
+  fs.writeFileSync(path.join(tmp, 'notes.txt'), 'this is not an image');
+  await setFile(p, 'form input[type=file]', [path.join(tmp, 'notes.txt')]);
+  await p.eval(`document.querySelector('form').requestSubmit()`); await sleep(2500);
+  const t1 = await p.eval(`Array.from(document.querySelectorAll('.toast, [class*=toast]')).map(e => e.innerText).join(' || ')`);
+  check('SU-006 a non-image upload is refused in Vietnamese', /chưa hỗ trợ|không phải ảnh/i.test(t1) && !rawLooking(t1).length, t1);
+  await setFile(p, 'form input[type=file]', [makePng(path.join(tmp, 'mine.png'))]);
+  await p.eval(`document.querySelector('form').requestSubmit()`); await sleep(3000);
+  d = (await api.get(`/api/projects/${PID}/picks`)).json.picks;
+  check('upload of a real image lands in the beat', (d.beats.b0004?.items || []).some((i) => i.asset === 'mine'), JSON.stringify(d.beats.b0004));
+  for (const tab of ['Sách', 'Gợi ý', 'Tìm kiếm', 'Tranh chính']) { await clickExact(p, tab); await sleep(1200); await noLeft('picks tab ' + tab); }
+  await clickExact(p, 'Gợi ý'); await sleep(500); await snap(p, 'a5-tab-suggest');
+  await clickExact(p, 'Duyệt chọn hình'); await sleep(900);
+  await p.eval(`(()=>{const b=Array.from(document.querySelectorAll('footer button')).find(b=>/^Duyệt$/.test(b.textContent.trim())); b && b.click()})()`);
+  await sleep(2500);
+  const pl = await pipeline(api, PID);
+  check('picks step done after approving', stepsOf(pl).picks.state === 'done', JSON.stringify(stepsOf(pl).picks));
+  await stepperAgrees('picks done');
+  await both(p, 'picks-done');
+});
+
+await step('A6 draft', async () => {
+  await go(p, base, `#/project/${PID}/edit`);
+  await both(p, 'draft-panel');
+  await noLeft('draft panel');
+  await clickExact(p, 'Dựng tự động (không dùng agent)');
+  const ok = await p.waitFor(`!!Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Mở đề xuất')`, 120000);
+  check('draft with the no-model provider finishes', ok);
+  await sleep(1500);
+  await stepperAgrees('draft done');
+  const dr = (await api.get(`/api/projects/${PID}/draft`)).json;
+  const props = (await api.get(`/api/projects/${PID}/proposals`)).json.items;
+  const shown = /Có (\d+) cảnh/.exec(await text());
+  check('SU-007 the draft panel and the proposal agree on the number of shots', !shown || props[0]?.summary.includes(`${shown[1]} cảnh`), `panel ${shown?.[0]} / proposal "${props[0]?.summary}" / last_run ${dr.last_run?.n_shots}`);
+  await clickExact(p, 'Mở đề xuất'); await sleep(2500); await both(p, 'proposal-box');
+  const rr = await p.eval(`(() => { const b = Array.from(document.querySelectorAll('button')).find(b => /^Áp dụng/.test(b.textContent.trim())); b.scrollIntoView(); const r = b.getBoundingClientRect(); return {x: r.x + r.width/2, y: r.y + r.height/2} })()`);
+  await p.clickXY(rr.x, rr.y);
+  await p.waitFor(`!!Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Lưu')`, 60000); await settle(p); await sleep(3000);
+  const sb = await api.get(`/api/projects/${PID}/storyboard`);
+  check('accept all gives the first storyboard', (await pipeline(api, PID)).has_storyboard === true, '');
+  await both(p, 'editor-new');
+  await clickExact(p, 'Lưu'); await sleep(2500);
+  await clickExact(p, 'Duyệt');
+  const ap = await (async () => { for (let i = 0; i < 90; i++) { await sleep(2000); if (stepsOf(await pipeline(api, PID)).edit.state === 'done') return true; } return false; })();
+  check('storyboard approved from the editor', ap);
+  await stepperAgrees('storyboard approved');
+});
+
+await step('A7 export', async () => {
+  await go(p, base, `#/project/${PID}/export`);
+  await noLeft('export page');
+  await both(p, 'export-before');
+  await clickExact(p, 'Xuất video');
+  const sawRun = await p.waitFor(`document.body.innerText.includes('Đang chạy') || document.body.innerText.includes('Hủy')`, 20000);
+  await snap(p, 'a7-export-running');
+  check('export page shows progress while it runs', sawRun);
+  const done = await p.waitFor(`document.body.innerText.includes('PHIẾU KIỂM TRA') || document.body.innerText.includes('Phiếu kiểm tra')`, 180000);
+  await settle(p); await sleep(1500);
+  check('export ends with the report card', done);
+  await noLeft('export done');
+  await stepperAgrees('export done');
+  await both(p, 'export-done');
+  const t = await text();
+  check('export shows description, copy button and file links', has(t, 'Chép mô tả', 'Tải về'), '');
+  const files = (await api.get(`/api/projects/${PID}/export`)).json.files || [];
+  for (const f of files.slice(0, 4)) { const r = await fetch(base + `/api/projects/${PID}/export/files/${f.name}`); check(`export file ${f.name} downloads`, r.status === 200, r.status); }
 });
 
 console.log(p.logs, p.bad());
