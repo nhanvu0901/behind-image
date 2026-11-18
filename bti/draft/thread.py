@@ -124,6 +124,7 @@ def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
         "escalated": bool(raw.get("escalated", False)),
         "seconds": float(raw.get("seconds") or 0.0),
         "summary": str(raw.get("summary") or ""),
+        "summary_source": raw.get("summary_source"),
         "changes": changes,
         "status": status,
         "job_id": raw.get("job_id"),

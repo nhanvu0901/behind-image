@@ -561,3 +561,47 @@ Same class elsewhere, checked: `bti/longjob/manager.py` `run_process` and the te
 is interrupted by the supervisor's kill (the write then fails and is ignored); no data is lost and nothing waits for a close that never comes, so they have not the defect and are unchanged.
 Tests (`tests/script/test_antigravity.py`): a fake that sleeps 1.5 s before it reads, fed 300 KB, returns its answer (the whole line arrived, nothing after it); cancel after 0.5 s interrupts a fake that never reads
 (under 3 s) and leaves no prompt file behind; the prompt file is gone after a normal call and after a failure. They pass on Windows with the old code too (writer thread); they guard the POSIX behaviour, which is verified by the real run.
+
+### 13.3 Fast path v2: a delta answer, words the owner can read, no leaked defaults, a real briefing
+
+Found by two real probes (Claude Sonnet 4.6 through agy: a 2-shot edit in 34 s, a 6-shot edit in 127 s, almost all of it output).
+
+**1. The model returns only what it changes.** New answer shape: `shots` = only the shots it changes (the whole shot, `id` kept) or adds (no `id`); `remove` = ids to delete (`[]`
+when none); `changes[].shot` = an id. Every shot of the scope that is neither returned nor removed stays exactly as it is (the compiler already copies a shot that equals its decompiled form
+verbatim). Mechanics (`fastedit.try_compile`): the server builds the full list itself: the scope's decompiled shots, minus `remove`, a returned shot replacing the one with its id, plus the new ones. A new shot gets its
+place from its own start anchor (`start_word`, `off`), the way every spec shot does: the list is sorted by that anchor and the compiler tiles the time, so no "insert after X" field exists to get wrong.
+Chosen because the spec format already is an anchor-based, id-keyed list: nothing new for the model to learn, and an old-style full list still works (the unchanged shots in it are not changes). Refused with a message the repair call can act on:
+an `id` that does not exist ("for a NEW shot leave out 'id'"), a locked or out-of-scope id (in `shots` or in `remove`), the same id twice, an id both returned and removed, an `edit` with neither `shots` nor `remove`.
+The prompt also gets the narration words over the scope (`{{WORDS}}`, `index:word@second`) because moving a start needs word indexes. Measured with `tests/draft/measure_answer_size.py` (arnolfini copy, 12-shot scope, 4 shots change, compact JSON):
+**6,526 characters before, 2,898 after (44%)**; the delta applies through `fast_edit` with 4 shots differing, as expected.
+
+**2. What the owner reads** (`bti/draft/describe.py`, new). By code, always true: every change gets `facts` (list of plain Vietnamese sentences from the difference between the shot before and after, with the registry's `label_vi`
+names and the region labels of the picture; never an id or a setting name). Examples from the tests: `["Máy quay đi chậm hơn"]` (camera keys closer together), `["Thêm: vẽ vòng khoanh quanh chiếc gương"]` (an AN-01 overlay on the region MIRROR labelled
+"chiếc gương"), `["Cảnh bắt đầu sớm hơn 1,2 giây"]`, `["Bỏ dòng chữ"]`, `["Đổi cách dựng: Đẩy vào thành kéo ra"]`, `["Thêm cảnh: Đẩy vào"]`, `["Xóa cảnh"]`, `["Máy quay chuyển động mượt hơn"]`, `["Đổi ghi chú của cảnh"]`.
+The model's sentence (`what`, `summary`, `reason`) is used only when `describe.sentence_ok` accepts it: it has Vietnamese letters with diacritics and no shot id, technique id, parameter name (names with `_` and a list of format words
+such as camera, ease, shadow, cx) or bare parameter number (a number is fine only as seconds, or a whole number of one or two digits). Otherwise `what` is the facts joined, `summary` is built by code
+("Đã sửa 4 cảnh, thêm 1 cảnh: Máy quay đi chậm hơn; ..."), and a `cannot`/`escalate` reason becomes a fixed Vietnamese sentence. No second model call. The same for the deep path's `notes.json`. The `what` of a changed shot is found by shot id only
+(the old positional lookup used the wrong index and is gone); a new shot's sentence is always code-made.
+
+**3. Defaults do not leak** (`bti/draft/normalize.py`, new). A parameter whose value is the registry default and which the saved shot did not carry is not written (shot and overlays); a compiled shot that is equal to the saved one after that (the `source` flag aside) is replaced by the saved one verbatim, so it is not a change and keeps its `source`.
+Applied after the compile on both paths.
+
+**4. `skills/storyboard_edit/FAST.template.md` is now a briefing** for a model that knows nothing: who types, that the answer is applied at once with before/after pictures and undo ("do exactly what was asked, between two readings take the smaller change and say so"), what it is given, how the usual requests translate
+(slower camera = camera keys and ease, never the shot length; zoom/circle X needs a named region, else `escalate`; longer/shorter = move the next shot's start word; remove text = remove the overlay), the no-subtitles rule with its reason, `cannot` vs `escalate` with two examples each, the wording rules with two good and two bad examples, the exact format and one complete example.
+The edit part of `skills/storyboard_draft/TASK.template.md` got the same camera rule and the same wording rules for `notes.json`. The technique catalogue is unchanged.
+
+**New fields for the page** (nothing removed): `changes[].facts` (list of strings), `changes[].what_source` (`model` | `code`), turn `summary_source` (`model` | `code`). `what`, `summary`, `reason` stay strings and are now always Vietnamese without codes.
+
+**Tests** (mock; nothing real): `tests/draft/test_describe.py` (the describer, the sentence check with the real probe sentences as bad examples, the summary, the normalisation), `test_fastedit.py` (delta contract, remove, new shot, refusals), `test_edit_routes_e2e.py` `test_i` to `test_o`
+(only changed shots in the answer; English and id-bearing sentences replaced; default `shadow` not written and an unchanged returned shot not a change, red without `normalize.py`; add and remove through the routes; `cannot`/`escalate` reasons; the deep path's list; refused ids).
+
+**Real probes to repeat when quota returns** (Claude Sonnet 4.6 or Gemini; on a copy of `projects/arnolfini`, through the page or `POST /draft/edit`, `mode: "fast"`):
+1. Scope: two adjacent content shots with a camera move. Instruction: `làm chậm cú zoom ở hai cảnh này`. Look at: time (was 34 s; the output should be about the two shots only), `turn.summary` and each `changes[].what` are Vietnamese with no id, no `AN-`/`CAM-`, no decimal; `what_source` says whether the model's sentence passed; `facts` read "Máy quay đi chậm hơn"; `params` of the changed shots do not gain `shadow` (compare `storyboard.json` before and after); the shot starts and the other shots are byte-identical; undo restores exactly.
+2. Scope: six consecutive shots. Instruction: `bỏ vòng khoanh ở các cảnh này và làm máy quay mượt hơn` (pick a range that has an overlay). Look at: time (was 127 s), only changed shots in `turn.changes` (the ones the model returned and did not change must not be listed), `what_source` per change, English answers must have been replaced by code sentences (`summary_source: "code"`).
+3. Scope: one shot whose narration names a region that exists (for example the mirror). Instruction: `khoanh tròn cái gương`. Look at: an AN-01 overlay with `params.at` = the region name, `facts` = "Thêm: vẽ vòng khoanh quanh <region label>".
+4. Scope: one shot. Instruction: `zoom sát vào cái nhẫn` (a detail with no region). Expect `escalate` in `mode: "fast"` (turn `failed`, Vietnamese reason, no change), and in `mode: "auto"` the deep path starts.
+5. Scope: one shot. Instruction: `đọc lại câu này chậm hơn`. Expect `cannot`: turn `no_change` with a Vietnamese sentence saying the voice is another step.
+6. Scope: one shot and the one after it. Instruction: `cho cảnh đầu dài hơn một giây`. Expect the second shot's `start` moved by about a second (a new `start_word`/offset), `facts` "Cảnh bắt đầu muộn hơn 1 giây" on the second shot; with only the first shot selected expect `cannot` naming the neighbour.
+Also check `turn.summary_source`/`what_source` over several runs: how often the model's own sentence passes the check (if rarely, the template's examples need work).
+
+Counts for 13.3 (Windows server, snapshot `acore2`): `tests/draft` 214 passed; `tests/editor` 415 passed.

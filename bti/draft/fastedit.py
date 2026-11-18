@@ -79,19 +79,29 @@ def check_shape(data: dict) -> list[str]:
     if not isinstance(summary, str) or not summary.strip():
         issues.append("Result 'edit' requires a non-empty 'summary' in Vietnamese")
     shots = data.get("shots")
-    if not isinstance(shots, list) or not shots:
-        issues.append("Result 'edit' requires a non-empty list of 'shots'")
-    else:
-        for i, s in enumerate(shots):
-            if not isinstance(s, dict):
-                issues.append(f"shots[{i}] must be an object")
-                continue
-            if not s.get("technique"):
-                issues.append(f"shots[{i}] is missing 'technique'")
-            if not isinstance(s.get("start_word"), int) or isinstance(s.get("start_word"), bool):
-                issues.append(f"shots[{i}] is missing integer 'start_word'")
-            if not s.get("beat"):
-                issues.append(f"shots[{i}] is missing 'beat'")
+    remove = data.get("remove")
+    if shots is None:
+        shots = []
+    if remove is None:
+        remove = []
+    if not isinstance(shots, list):
+        issues.append("'shots' must be a list of the shots you change or add (the other shots of the scope stay as they are)")
+        shots = []
+    if not isinstance(remove, list) or not all(isinstance(x, str) and x for x in remove):
+        issues.append("'remove' must be a list of shot ids to delete (use [] when none)")
+        remove = []
+    if not shots and not remove:
+        issues.append("Result 'edit' needs at least one shot in 'shots' (changed or new) or one id in 'remove'")
+    for i, s in enumerate(shots):
+        if not isinstance(s, dict):
+            issues.append(f"shots[{i}] must be an object")
+            continue
+        if not s.get("technique"):
+            issues.append(f"shots[{i}] is missing 'technique'")
+        if not isinstance(s.get("start_word"), int) or isinstance(s.get("start_word"), bool):
+            issues.append(f"shots[{i}] is missing integer 'start_word'")
+        if not s.get("beat"):
+            issues.append(f"shots[{i}] is missing 'beat'")
     changes = data.get("changes")
     if not isinstance(changes, list):
         issues.append("Result 'edit' requires a 'changes' list")
@@ -190,8 +200,18 @@ def prepare_prompt(
     # Techniques catalogue
     tech_md = techniques_md.generate(bundle)
 
+    # The narration words over the scope (index:word@second), so that a shot can be moved to another word
+    words = inp.timing["words"]
+    scope_starts = [s.get("start_word", 0) for s in scope_shots] or [0]
+    w_lo, w_last = min(scope_starts), max(scope_starts)
+    after = [D._word_of(tm, rc["shot"].get("start") or {}, rc["t0"])[0] for rc in cur_resolved if rc["shot"].get("id") not in (inp.edit_shots or set())]
+    w_hi = min([w for w in after if w > w_last] or [len(words)])          # up to the first shot after the scope
+    w_hi = min(w_hi, w_lo + 1500)
+    words_text = " ".join("%d:%s@%.1f" % (i, str(words[i].get("w", "")), float(words[i].get("s", 0.0))) for i in range(w_lo, w_hi))
+
     # Fill template
     rendered = template
+    rendered = rendered.replace("{{WORDS}}", words_text or "(none)")
     rendered = rendered.replace("{{INSTRUCTION}}", instruction.strip())
     rendered = rendered.replace("{{THREAD_HISTORY}}", hist_text)
     rendered = rendered.replace("{{SCOPE_SHOTS}}", scope_shots_json)
@@ -209,37 +229,62 @@ def try_compile(
     regions: list[dict] | None,
     bundle = None,
     project_dir: Path | None = None,
+    remove: list[str] | None = None,
 ) -> tuple[CompileResult | None, list[str]]:
-    """Compile and check the model's replacement shots."""
+    """Compile and check the model's answer. `shots` are the shots it changes (with their `id`) or adds (without), `remove` the ids it
+    deletes; every other shot of the scope stays exactly as it is."""
     issues: list[str] = []
+    remove = list(remove or [])
     allowed_shots = set(inp.edit_shots or set())
     locked_shots = {s["id"] for s in (inp.current or {}).get("shots", []) if s.get("locked") and s.get("id")}
     current_shots_map = {s["id"]: s for s in (inp.current or {}).get("shots", []) if s.get("id")}
 
-    # Validate that shots do not claim ids outside scope or locked shots
+    seen_ids: set[str] = set()
     for s in shots:
         sid = s.get("id")
-        if sid and sid not in allowed_shots:
-            if sid in current_shots_map:
-                issues.append(f"Shot {sid} is outside the allowed edit scope (allowed: {', '.join(sorted(allowed_shots))})")
-            if sid in locked_shots:
-                issues.append(f"Shot {sid} is locked and cannot be changed")
+        if not sid:
+            continue
+        if sid in seen_ids:
+            issues.append(f"Shot {sid} appears twice in 'shots'")
+        seen_ids.add(sid)
+        if sid in locked_shots:
+            issues.append(f"Shot {sid} is locked and cannot be changed")
+        elif sid in current_shots_map and sid not in allowed_shots:
+            issues.append(f"Shot {sid} is outside the allowed edit scope (allowed: {', '.join(sorted(allowed_shots))})")
+        elif sid not in current_shots_map:
+            issues.append(f"Shot id {sid!r} does not exist; for a NEW shot leave out 'id'")
+    for sid in remove:
+        if sid in locked_shots:
+            issues.append(f"Shot {sid} is locked and cannot be removed")
+        elif sid not in allowed_shots:
+            issues.append(f"Cannot remove {sid}: it is outside the allowed edit scope (allowed: {', '.join(sorted(allowed_shots))})")
+        if sid in seen_ids:
+            issues.append(f"Shot {sid} is both in 'shots' and in 'remove'")
 
     dec = D.decompile(inp, inp.edit_shots)
+    returned = {s["id"]: s for s in shots if s.get("id")}
+    new_shots = [s for s in shots if not s.get("id")]
     specs = {}
     from bti.draft import spec as S
     for cid in inp.in_scope():
         chap_shots = []
         for s in dec.get(cid, {}).get("spec", {}).get("shots", []):
+            sid = s.get("id")
             if not s.get("in_scope"):
                 chap_shots.append(copy.deepcopy(s))
-        for s in shots:
+            elif sid in remove:
+                continue
+            elif sid in returned:
+                chap_shots.append(copy.deepcopy(returned[sid]))
+            else:
+                chap_shots.append(copy.deepcopy(s))              # not mentioned: exactly as it is
+        for s in new_shots:
             sw = s.get("start_word", 0)
             scid = chapter_of(inp, sw)
             if scid == cid:
                 chap_shots.append(copy.deepcopy(s))
             elif scid not in inp.in_scope():
-                issues.append(f"Shot {s.get('id', 'new')} with start_word {sw} falls into chapter {scid!r} which is outside the scope")
+                issues.append(f"Shot with start_word {sw} falls into chapter {scid!r} which is outside the scope")
         chap_shots.sort(key=lambda x: (x.get("start_word", 0), float(x.get("off") or 0.0)))
         clean_spec, shape_probs = S.shape_problems({"schema": SPEC_SCHEMA, "chapter": cid, "shots": chap_shots}, cid)
         for p in shape_probs:
@@ -264,6 +309,9 @@ def try_compile(
     except Exception as e:
         return None, [f"Compilation error: {e}"]
 
+    if res.storyboard is not None:
+        from bti.draft.normalize import keep_saved
+        keep_saved(inp.current, res.storyboard, bundle or R.load_bundle(inp.style))
     if res.violations:
         for v in res.violations:
             issues.append(f"Scope violation: {v.get('message', str(v))}")
@@ -397,7 +445,7 @@ def fast_edit(
         if data.get("result") in ("cannot", "escalate"):
             return FastEditResult(status=data["result"], summary=data.get("summary") or "", reason=data.get("reason") or "",
                                   raw_answer=raw_text, repair_used=used_repair)
-        comp_res, comp_issues = try_compile(inp, data["shots"], data.get("regions"), bundle, project_dir)
+        comp_res, comp_issues = try_compile(inp, data.get("shots") or [], data.get("regions"), bundle, project_dir, remove=data.get("remove"))
         if comp_issues:
             issues.extend(comp_issues)
             continue

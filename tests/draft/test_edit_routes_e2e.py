@@ -154,6 +154,20 @@ class Env:
                            "changes": [{"shot": sid, "what": "Đổi cảnh %d theo yêu cầu." % (i + 1)} for i, sid in enumerate(overrides)]},
                           ensure_ascii=False)
 
+    def delta_answer(self, overrides: dict[str, dict], *, remove=(), new_shots=(), summary: str = "Đã đổi vài cảnh theo yêu cầu.",
+                     whats: dict[str, str] | None = None, **extra) -> str:
+        """The v2 contract: ONLY the shots the model changes (whole shot, id kept) and adds (no id), plus `remove`."""
+        shots = self.spec_shots(list(overrides))
+        for sh in shots:
+            sh.update(overrides[sh["id"]])
+            for k in ("in_scope", "locked", "start_s", "end_s", "beat_text", "duration_s"):
+                sh.pop(k, None)
+        whats = whats if whats is not None else {sid: "Đổi cảnh theo yêu cầu." for sid in overrides}
+        body = {"result": "edit", "summary": summary, "shots": shots + list(new_shots), "remove": list(remove),
+                "changes": [{"shot": sid, "what": w} for sid, w in whats.items()]}
+        body.update(extra)
+        return json.dumps(body, ensure_ascii=False)
+
     def deep_cfg(self, fake_dir, overrides: dict[str, dict], notes_json: dict | None = None) -> None:
         """What the fake agy writes into out/: every chapter's decompiled spec with `overrides` (by shot id) applied."""
         specs = {}
@@ -699,3 +713,111 @@ def test_a_quota_without_a_time_says_so_without_inventing_one(env, monkeypatch):
     job, turn = env.run_edit("sửa", ids, mode="fast")
     assert turn["error"] == "agy_rate_limit" and turn["retry_after_seconds"] is None and turn["retry_at"] is None
     assert "Hạn mức" in turn["summary"]
+
+
+# ----------------------------------------------------------------------------------------------------------- fast path v2: only changed shots, owner words, no leaked defaults
+def test_i_only_the_changed_shots_are_in_the_answer_and_the_others_stay_exactly(env):
+    ids = env.content_ids()
+    assert len(ids) == 6
+    before = env.saved()
+    mock.set_canned([env.delta_answer({ids[0]: {"note": "first"}, ids[3]: {"note": "fourth"}})])
+    _, turn = env.run_edit("đổi hai cảnh", ids, mode="fast")
+    assert turn["status"] == "applied", turn
+    b, a = {s["id"]: s for s in before["shots"]}, {s["id"]: s for s in env.saved()["shots"]}
+    assert {sid for sid in a if a[sid] != b[sid]} == {ids[0], ids[3]}
+    assert [c["shot_id"] for c in turn["changes"]] == [ids[0], ids[3]]
+    assert all(c["facts"] == ["Đổi ghi chú của cảnh"] and c["what_source"] == "model" for c in turn["changes"]), turn["changes"]
+    assert turn["summary_source"] == "model"
+
+
+def test_j_sentences_with_ids_or_english_are_replaced_by_descriptions_built_by_code(env):
+    ids = env.content_ids("c01")[:2]
+    mock.set_canned([env.delta_answer({ids[0]: {"note": "a"}, ids[1]: {"note": "b"}},
+                                      summary="Camera easing changed from linear to inout_cubic and zoom end reduced from 0.4075 to 0.3850.",
+                                      whats={ids[0]: "Làm chậm zoom ở %s và thêm AN-01." % ids[0], ids[1]: "Slower camera."})])
+    _, turn = env.run_edit("đổi", ids, mode="fast")
+    assert turn["status"] == "applied", turn
+    assert turn["summary"] == "Đã sửa 2 cảnh: Đổi ghi chú của cảnh." and turn["summary_source"] == "code"
+    assert [(c["what"], c["what_source"]) for c in turn["changes"]] == [("Đổi ghi chú của cảnh.", "code")] * 2
+    for c in turn["changes"]:
+        assert c["shot_id"] not in c["what"] and "AN-01" not in c["what"]
+
+
+def test_k_a_registry_default_the_saved_shot_did_not_carry_is_not_written(env):
+    ids = env.content_ids("c01")[:2]
+    raw = env.raw()
+    n_dropped = 0
+    for s in raw["shots"]:
+        if isinstance(s.get("params"), dict) and "shadow" in s["params"]:
+            del s["params"]["shadow"]                              # the saved storyboard never carried this default
+            n_dropped += 1
+    assert n_dropped, "the synthetic storyboard has no shot with a default `shadow` to test with"
+    (env.pdir / "storyboard.json").write_text(json.dumps(raw, indent=1), encoding="utf-8")
+    before = {s["id"]: s for s in env.saved()["shots"]}
+    # the model returns shot 1 changed and shot 2 UNCHANGED (as it was shown): the second is not a change
+    mock.set_canned([env.delta_answer({ids[0]: {"note": "changed"}, ids[1]: {}})])
+    _, turn = env.run_edit("đổi cảnh đầu", ids, mode="fast")
+    assert turn["status"] == "applied", turn
+    after = {s["id"]: s for s in env.saved()["shots"]}
+    assert [c["shot_id"] for c in turn["changes"]] == [ids[0]]
+    assert after[ids[1]] == before[ids[1]]                                                     # byte for byte
+    assert "shadow" not in (after[ids[0]].get("params") or {})
+    assert {k: v for k, v in after[ids[0]].items() if k not in ("note", "source")} == {k: v for k, v in before[ids[0]].items() if k not in ("note", "source")}
+
+
+def test_l_remove_and_add_through_the_route(env):
+    ids = env.content_ids("c01")
+    assert len(ids) == 3
+    before = env.saved()
+    dec = {s["id"]: s for s in env.spec_shots(ids)}
+    mid = dec[ids[2]]                                              # a shot with no overlay (splitting one with an overlay would cut it)
+    new = {"beat": mid["beat"], "start_word": mid["start_word"] + 5, "technique": "CAM-03", "slots": {"image": {"asset": "A"}}, "params": {},
+           "overlays": [], "note": "split"}
+    mock.set_canned([env.delta_answer({}, new_shots=[new])])
+    _, t1 = env.run_edit("thêm một cảnh", ids, mode="fast")
+    assert t1["status"] == "applied", t1
+    assert [c["op"] for c in t1["changes"]] == ["added"], t1["changes"]
+    added = [c for c in t1["changes"] if c["op"] == "added"]
+    assert added[0]["facts"] == ["Thêm cảnh: Kéo ra"] and added[0]["what"] == "Thêm cảnh: Kéo ra."
+    assert len(env.saved()["shots"]) == len(before["shots"]) + 1
+    # and remove the middle one of the original three
+    mock.set_canned([env.delta_answer({}, remove=[ids[1]])])
+    _, t2 = env.run_edit("bỏ cảnh giữa", env.content_ids("c01"), mode="fast")
+    assert t2["status"] == "applied", t2
+    assert ids[1] not in {s["id"] for s in env.saved()["shots"]}
+    assert [c["op"] for c in t2["changes"] if c["shot_id"] == ids[1]] == ["removed"]
+    assert [c for c in t2["changes"] if c["shot_id"] == ids[1]][0]["facts"] == ["Xóa cảnh"]
+
+
+def test_m_cannot_and_escalate_reasons_are_plain_vietnamese_or_replaced(env):
+    ids = env.content_ids("c01")[:1]
+    mock.set_canned([json.dumps({"result": "cannot", "reason": "The request needs a new picture."})])
+    _, turn = env.run_edit("thêm tranh khác", ids, mode="fast")
+    assert turn["status"] == "no_change" and turn["summary_source"] == "code"
+    assert "dự án chưa có" in turn["summary"]
+    mock.set_canned([json.dumps({"result": "escalate", "reason": "Needs to look at region RING (s0001)."})])
+    _, turn = env.run_edit("zoom vào nhẫn", ids, mode="fast")
+    assert turn["status"] == "failed" and "chế độ sâu" in turn["summary"]
+
+
+def test_n_the_deep_paths_change_list_gets_the_same_treatment(env, fake):
+    ids = env.content_ids("c01")
+    env.deep_cfg(fake.dir, {ids[0]: {"note": "slower push-in"}},
+                 notes_json={"summary": "Slowed the push-in of s0001.", "changes": [{"shot": ids[0], "what": "Camera easing changed."}]})
+    _, turn = env.run_edit("làm chậm", chapter="c01", mode="deep")
+    assert turn["status"] == "applied", turn
+    assert turn["summary"] == "Đã sửa 1 cảnh: Đổi ghi chú của cảnh." and turn["summary_source"] == "code"
+    assert turn["changes"][0]["what"] == "Đổi ghi chú của cảnh." and turn["changes"][0]["what_source"] == "code"
+
+
+def test_o_a_shot_id_that_does_not_exist_and_a_removal_outside_the_scope_are_refused(env):
+    ids = env.content_ids("c01")[:1]
+    other = env.content_ids("c02")[0]
+    rev0 = env.rev()
+    ghost = env.spec_shots(ids)[0]
+    ghost["id"] = "s9999"
+    mock.set_canned([json.dumps({"result": "edit", "summary": "Đã đổi.", "shots": [ghost], "remove": [], "changes": []}),
+                     json.dumps({"result": "edit", "summary": "Đã đổi.", "shots": [], "remove": [other], "changes": []})])
+    _, turn = env.run_edit("sửa", ids, mode="fast")
+    assert turn["status"] == "failed" and env.rev() == rev0
+    assert "does not exist" in mock.CALLS[-1]["user"]                      # the repair call names the problem to the model

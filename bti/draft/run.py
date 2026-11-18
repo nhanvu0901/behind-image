@@ -61,6 +61,7 @@ VI = {
     "real_models_off": "Máy này đang tắt việc gọi mô hình thật (chế độ thử), nên chưa sửa được.",
     "bad_model": "Mô hình đã chọn không dùng được. Chọn mô hình khác trong phần cài đặt.",
     "edit_failed": "Lần sửa gặp lỗi bất ngờ nên chưa có gì thay đổi. Hãy thử lại.",
+    "cannot": "Yêu cầu này cần thứ mà dự án chưa có (ví dụ một bức tranh mới, hoặc đổi lời dẫn hay giọng đọc), nên chưa làm được.",
 }
 
 # what a single-turn provider's error kind is called for the owner (codes the page already has a sentence for)
@@ -641,16 +642,20 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
 
             if outcome.status == "cannot":
                 elapsed = round(time.time() - st.start_time, 2)
-                words = (outcome.reason or outcome.summary or "").strip()
+                from bti.draft.describe import sentence_ok
+                said = (outcome.reason or outcome.summary or "").strip()
+                words, src = (said, "model") if sentence_ok(said) else (vi("cannot"), "code")      # the owner reads Vietnamese, without codes
                 if turn_id:
-                    update_turn(project_dir, turn_id, status="no_change", summary=words,
-                                notes=words, seconds=elapsed, path="fast")
+                    update_turn(project_dir, turn_id, status="no_change", summary=words, summary_source=src,
+                                notes=said, seconds=elapsed, path="fast")
                 _write_last_edit(project_dir, turn_id, status="done", no_change=True, summary=words)
                 ctx.progress(1.0, words)
                 return {"status": "no_change", "no_change": True, "summary": words}
 
             if outcome.status == "escalate":
-                words = (outcome.reason or outcome.summary or "").strip()
+                from bti.draft.describe import sentence_ok
+                said = (outcome.reason or outcome.summary or "").strip()
+                words = said if sentence_ok(said) else vi("escalate")
                 if mode == "auto":
                     ctx.progress(0.2, "Chuyển sang phân tích sâu…")
                     st.chosen_path = "deep"
@@ -775,7 +780,10 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                 if out_data.notes and out_data.notes.strip():
                     elapsed = round(time.time() - st.start_time, 2)
                     if turn_id:
-                        update_turn(project_dir, turn_id, status="no_change", summary=out_data.notes[:200], notes=out_data.notes, seconds=elapsed, path="deep")
+                        from bti.draft.describe import sentence_ok
+                        said = out_data.notes.strip().splitlines()[0][:200] if out_data.notes.strip() else ""
+                        update_turn(project_dir, turn_id, status="no_change", summary=said if sentence_ok(said) else vi("edit_no_change"),
+                                    summary_source="model" if sentence_ok(said) else "code", notes=out_data.notes, seconds=elapsed, path="deep")
                     _write_last_edit(project_dir, turn_id, status="done", no_change=True)
                     ctx.progress(1.0, "Agent không thay đổi gì.")
                     return {"status": "no_change", "no_change": True, "notes": out_data.notes}
@@ -817,7 +825,9 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                 _write_last_edit(project_dir, turn_id, status="error", error="compile_error")
                 raise PartError("compile_error", vi("compile_error", errs[0].get("message") or "compile errors in edit"))
 
-            st.compiled_sb = c_res.storyboard
+            from .normalize import keep_saved
+            from bti.engine import registry as _R
+            st.compiled_sb = keep_saved(deep_inputs.current, c_res.storyboard, _R.load_bundle(deep_inputs.style))
             notes_file = ws.root / "out" / "notes.json"
             if notes_file.is_file():
                 try:
@@ -847,7 +857,11 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
         )
         elapsed = round(time.time() - st.start_time, 2)
         status = res["status"]
-        summary = st.summary if status != "no_change" else vi("edit_no_change")
+        from bti.draft.describe import summary_for
+        if status == "no_change":
+            summary, summary_source = vi("edit_no_change"), "code"
+        else:       # the model's sentence when it is plain Vietnamese without codes, else one built from the changes
+            summary, summary_source = summary_for(st.summary, res.get("changes", []))
         if turn_id:
             update_turn(
                 project_dir,
@@ -859,6 +873,7 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                 escalated=st.escalated,
                 seconds=elapsed,
                 summary=summary,
+                summary_source=summary_source,
                 changes=res.get("changes", []),
                 conflicts=res.get("conflicts"),
                 notes=st.notes,

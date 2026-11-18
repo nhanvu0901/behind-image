@@ -53,55 +53,53 @@ def compute_changes(
     model_changes: list[dict] | None = None,
     timing: dict | None = None,
 ) -> list[dict]:
-    """Compute changes list with [{shot_id, number, start, op: 'changed'|'added'|'removed', what}]."""
+    """Changes list `[{shot_id, number, start, op: 'changed'|'added'|'removed', what, what_source, facts}]`.
+
+    `facts` are built by code from the difference of the shot before and after, in plain Vietnamese (bti/draft/describe.py). `what` is
+    the model's own sentence for that shot (found by shot id) when it passes the check of `describe.sentence_ok`, else the facts joined
+    (`what_source` is `model` or `code`)."""
+    from bti.draft import describe as DS
     b_shots = shots_map(before_sb)
     a_shots_list = shots_of(after_sb)
     a_shots = shots_map(after_sb)
 
     tm = Timing({"duration": timing.get("duration", 0), "words": timing.get("words", [])}) if timing else None
+    bundle = DS._bundle(after_sb or before_sb)
+    assets = (after_sb or {}).get("assets") or (before_sb or {}).get("assets") or {}
 
-    # Map model change explanations by shot id if provided
     what_map: dict[str, str] = {}
-    if model_changes:
-        for idx, ch in enumerate(model_changes):
-            if isinstance(ch, dict):
-                target = str(ch.get("shot", ""))
-                what = str(ch.get("what", ""))
-                what_map[target] = what
-                what_map[str(idx)] = what
+    for ch in model_changes or []:
+        if isinstance(ch, dict) and isinstance(ch.get("shot"), str) and isinstance(ch.get("what"), str):
+            what_map[ch["shot"]] = ch["what"]
+
+    def start_of(shot):
+        st = shot.get("start")
+        if tm and isinstance(st, dict):
+            try:
+                return tm.resolve(st)
+            except Exception:       # noqa: BLE001
+                pass
+        return st
 
     out: list[dict] = []
     for num, s in enumerate(a_shots_list, 1):
         sid = s.get("id")
         if not sid:
             continue
-        st = s.get("start")
-        start_val = st
-        if tm and isinstance(st, dict):
-            try:
-                start_val = tm.resolve(st)
-            except Exception:
-                pass
-
         if sid not in b_shots:
-            what = what_map.get(sid) or what_map.get(str(num - 1)) or "Thêm cảnh mới"
-            out.append({"shot_id": sid, "number": num, "start": start_val, "op": "added", "what": what})
+            facts = DS.added_facts(a_shots[sid], bundle=bundle)
+            what, src = DS.what_for(None, facts)
+            out.append({"shot_id": sid, "number": num, "start": start_of(s), "op": "added", "what": what, "what_source": src, "facts": facts})
         elif canon(a_shots[sid]) != canon(b_shots[sid]):
-            what = what_map.get(sid) or what_map.get(str(num - 1)) or "Thay đổi cảnh"
-            out.append({"shot_id": sid, "number": num, "start": start_val, "op": "changed", "what": what})
+            facts = DS.shot_facts(b_shots[sid], a_shots[sid], assets=assets, bundle=bundle, tm=tm)
+            what, src = DS.what_for(what_map.get(sid), facts)
+            out.append({"shot_id": sid, "number": num, "start": start_of(s), "op": "changed", "what": what, "what_source": src, "facts": facts})
 
-    # Removed shots
     for sid, b_shot in b_shots.items():
         if sid not in a_shots:
-            st = b_shot.get("start")
-            start_val = st
-            if tm and isinstance(st, dict):
-                try:
-                    start_val = tm.resolve(st)
-                except Exception:
-                    pass
-            what = what_map.get(sid) or "Xóa cảnh"
-            out.append({"shot_id": sid, "number": None, "start": start_val, "op": "removed", "what": what})
+            facts = DS.removed_facts(b_shot, bundle=bundle)
+            what, src = DS.what_for(what_map.get(sid), facts)
+            out.append({"shot_id": sid, "number": None, "start": start_of(b_shot), "op": "removed", "what": what, "what_source": src, "facts": facts})
 
     return out
 

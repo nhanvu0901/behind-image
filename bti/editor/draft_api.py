@@ -166,7 +166,8 @@ def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...
     try:
         with _storyboard_lock(request, pid, d):
             res = resolve_overwrite(d, turn_id, timing=timing, scope_shot_ids=scope_ids,
-                                    model_changes=[{"shot": c.get("shot_id"), "what": c.get("what")} for c in turn.get("changes") or []])
+                                    model_changes=[{"shot": c.get("shot_id"), "what": c.get("what")} for c in turn.get("changes") or []
+                                                   if c.get("what_source") == "model"])
     except LookupError:
         raise ApiError(410, "turn storyboard data lost", code="turn_data_lost")
     except Exception as e:      # noqa: BLE001 - the engine's ValidationError carries the issues; nothing was written

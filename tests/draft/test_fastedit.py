@@ -178,7 +178,7 @@ def test_fastedit_fails_after_repair(synth_edit_setup):
     res = fast_edit(inp_edit, "zoom chậm hơn", model="mock", max_repairs=1)
     assert res.status == "failed"
     assert res.repair_used is True
-    assert any("requires a non-empty list of 'shots'" in iss for iss in res.issues)
+    assert any("at least one shot" in iss for iss in res.issues)
 
 
 def test_the_draw_check_of_changed_shots_really_runs(synth_edit_setup):
@@ -239,3 +239,61 @@ def test_a_removed_and_added_shot_marks_the_neighbours_whose_times_moved(synth_e
     del sb["shots"][1]                               # shot 1's range is now covered by the shot before it
     full, _ = affected_shots(inp_edit, sb)
     assert ids[0] in full and ids[1] not in full and set(ids[3:]).isdisjoint(full), full
+
+
+# ---------------------------------------------------------------------------------------------------- fast path v2: the answer is a delta
+def test_check_shape_of_the_delta():
+    from bti.draft.fastedit import check_shape
+    one = {"technique": "CAM-01", "start_word": 3, "beat": "b0001"}
+    assert check_shape({"result": "edit", "summary": "Đã đổi.", "shots": [one], "changes": []}) == []
+    assert check_shape({"result": "edit", "summary": "Đã xóa.", "shots": [], "remove": ["s0001"], "changes": []}) == []
+    assert any("at least one" in i for i in check_shape({"result": "edit", "summary": "Đã đổi.", "shots": [], "remove": [], "changes": []}))
+    assert any("'remove'" in i for i in check_shape({"result": "edit", "summary": "x", "shots": [one], "remove": "s0001", "changes": []}))
+
+
+def test_a_shot_that_is_not_mentioned_stays_and_one_not_returned_is_not_deleted(synth_edit_setup):
+    """The old contract was a full replacement list (a missing shot was a deleted shot); now a missing shot is an untouched one."""
+    inp_edit, first_id = synth_edit_setup
+    from bti.draft.inputs import clone_inputs, resolve_edit_scope
+    es, sc, _ = resolve_edit_scope(inp_edit, {"all": True})
+    inp = clone_inputs(inp_edit, scope=sc, edit_shots=es)
+    from bti.draft.fastedit import try_compile
+    shots_before = [s["id"] for s in inp.current["shots"]]
+    import copy
+    spec = {s["id"]: s for c in D_decompile(inp).values() for s in c["spec"]["shots"]}
+    one = copy.deepcopy(spec[first_id])
+    one["note"] = "only this one"
+    res, issues = try_compile(inp, [one], None)
+    assert not issues, issues
+    assert [s["id"] for s in res.storyboard["shots"]] == shots_before
+    changed = [s["id"] for s in res.storyboard["shots"] if s != next(x for x in inp.current["shots"] if x["id"] == s["id"])]
+    assert changed == [first_id]
+
+
+def D_decompile(inp):
+    from bti.draft import decompile as D
+    return D.decompile(inp)
+
+
+def test_remove_and_new_shot_and_the_refusals(synth_edit_setup):
+    inp_edit, first_id = synth_edit_setup
+    from bti.draft.inputs import clone_inputs, resolve_edit_scope
+    import copy
+    es, sc, _ = resolve_edit_scope(inp_edit, {"all": True})
+    inp = clone_inputs(inp_edit, scope=sc, edit_shots=es)
+    from bti.draft.fastedit import try_compile
+    spec = {s["id"]: s for c in D_decompile(inp).values() for s in c["spec"]["shots"]}
+    ids = list(spec)
+    res, issues = try_compile(inp, [], None, remove=[ids[1]])
+    assert not issues, issues
+    assert ids[1] not in [s["id"] for s in res.storyboard["shots"]]
+    new = {"beat": spec[ids[2]]["beat"], "start_word": spec[ids[2]]["start_word"] + 5, "technique": "CAM-03", "slots": {"image": {"asset": "A"}},
+           "params": {}, "overlays": [], "note": "new"}
+    res, issues = try_compile(inp, [new], None)
+    assert not issues, issues
+    assert len(res.storyboard["shots"]) == len(inp.current["shots"]) + 1
+    ghost = copy.deepcopy(spec[ids[0]])
+    ghost["id"] = "s9999"
+    assert any("does not exist" in i for i in try_compile(inp, [ghost], None)[1])
+    assert any("both in 'shots' and in 'remove'" in i for i in try_compile(inp, [copy.deepcopy(spec[ids[0]])], None, remove=[ids[0]])[1])
+    assert any("appears twice" in i for i in try_compile(inp, [copy.deepcopy(spec[ids[0]]), copy.deepcopy(spec[ids[0]])], None)[1])
