@@ -60,6 +60,7 @@ say("TMP=%s" % tmp)
 say("PID=%d" % os.getpid())
 
 # the environment: no keys, no .env, no agy on PATH
+os.environ["BTI_NO_REAL_MODELS"] = "1"
 os.environ["BTI_PROJECTS_ROOT"] = str(projects)
 os.environ["BTI_ENV_FILE"] = str(tmp / "no.env")
 os.environ["BTI_MODELS_FILE"] = str(tmp / "models.json")

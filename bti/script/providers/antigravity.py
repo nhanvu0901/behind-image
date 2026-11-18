@@ -159,6 +159,8 @@ def _kill(proc: subprocess.Popen) -> None:
 
 
 def complete(spec: dict, system: str, user: str, *, timeout: float = 900, on_progress=None, cancel=None) -> str:
+    if os.environ.get("BTI_NO_REAL_MODELS") == "1":
+        raise ProviderError("real_models_off", "real models are disabled (BTI_NO_REAL_MODELS=1)")
     agy = find_agy()
     if not agy:
         raise ProviderError("config", "Chưa cài `agy` (Antigravity CLI). " + LOGIN_HINT)

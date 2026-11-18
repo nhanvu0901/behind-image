@@ -9,7 +9,7 @@ Original docstring:
 All camera motion is sub-pixel: cv2.warpAffine with a float matrix + INTER_CUBIC from an area-averaged image pyramid
 (level chosen so the warp scale stays within 0.7-1.4, i.e. never aliases, never zoompan).  Frames are BGR uint8.
 """
-import math, os, sys
+import math, os, sys, threading
 import cv2, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 from .guard import check_pixels, unlimited
@@ -29,6 +29,7 @@ _FONT_CANDIDATES = {
 }
 _FONTS = {k: list(v) for k, v in _FONT_CANDIDATES.items()}
 _FONT_CACHE = {}
+_FONT_LOCK = threading.RLock()
 
 
 def configure_fonts(style=None):
@@ -45,25 +46,31 @@ def configure_fonts(style=None):
         for kind, paths in m.items():
             if isinstance(paths, list):
                 fonts[kind] = list(paths)
-    _FONTS = fonts
-    _FONT_CACHE.clear()
+    with _FONT_LOCK:
+        _FONTS = fonts
+        _FONT_CACHE.clear()
 
 
 def font_signature():
     """Stable text identifying the font choice; part of every text-layer cache key."""
     out = []
-    for kind in sorted(_FONTS):
-        first = next((p for p in _FONTS[kind] if os.path.exists(p)), "default")
+    with _FONT_LOCK:
+        kinds = sorted(_FONTS)
+        candidates = {k: list(_FONTS[k]) for k in kinds}
+    for kind in kinds:
+        first = next((p for p in candidates[kind] if os.path.exists(p)), "default")
         out.append(kind + "=" + os.path.basename(first))
     return ";".join(out)
 
 
 def font(kind, size):
     key = (kind, int(size))
-    if key in _FONT_CACHE:
-        return _FONT_CACHE[key]
+    with _FONT_LOCK:
+        if key in _FONT_CACHE:
+            return _FONT_CACHE[key]
+        candidates = list(_FONTS.get(kind, []))
     res = None
-    for p in _FONTS[kind]:
+    for p in candidates:
         if os.path.exists(p):
             try:
                 if p.endswith(".ttc") and "Futura" in p:
@@ -75,7 +82,8 @@ def font(kind, size):
                 continue
     if res is None:
         res = ImageFont.load_default()
-    _FONT_CACHE[key] = res
+    with _FONT_LOCK:
+        _FONT_CACHE[key] = res
     return res
 
 
@@ -161,20 +169,25 @@ class Img:
 
 # ----------------------------------------------------------------------------- backdrop (designed near-black gallery matte)
 _BD = {}
+_BD_LOCK = threading.RLock()
 
 
 def backdrop(ow=W, oh=H):
     key = (ow, oh)
-    if key not in _BD:
-        yy, xx = np.mgrid[0:oh, 0:ow].astype(np.float32)
-        r = np.sqrt(((xx - ow / 2) / (ow * .62)) ** 2 + ((yy - oh * .46) / (oh * .72)) ** 2)
-        v = 30 - 24 * np.clip(r, 0, 1.15) ** 1.4          # centre ~#1e, edges ~#06
-        v = np.clip(v, 5, 30)
-        bgr = np.stack([v * 1.02, v * 0.99, v * 0.97], -1)  # faint warm-neutral
-        rng = np.random.RandomState(7)
-        bgr += rng.normal(0, 0.6, bgr.shape[:2])[:, :, None]  # grain kills 8-bit banding
-        _BD[key] = np.clip(bgr, 0, 255).astype(np.float32)
-    return _BD[key]
+    with _BD_LOCK:
+        if key in _BD:
+            return _BD[key]
+    yy, xx = np.mgrid[0:oh, 0:ow].astype(np.float32)
+    r = np.sqrt(((xx - ow / 2) / (ow * .62)) ** 2 + ((yy - oh * .46) / (oh * .72)) ** 2)
+    v = 30 - 24 * np.clip(r, 0, 1.15) ** 1.4          # centre ~#1e, edges ~#06
+    v = np.clip(v, 5, 30)
+    bgr = np.stack([v * 1.02, v * 0.99, v * 0.97], -1)  # faint warm-neutral
+    rng = np.random.RandomState(7)
+    bgr += rng.normal(0, 0.6, bgr.shape[:2])[:, :, None]  # grain kills 8-bit banding
+    res = np.clip(bgr, 0, 255).astype(np.float32)
+    with _BD_LOCK:
+        _BD[key] = res
+    return res
 
 
 def compose_matte(img, cx, cy, zoom, ow=W, oh=H, shadow=True):

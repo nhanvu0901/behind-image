@@ -10,6 +10,7 @@ import hashlib
 import json
 import os
 import tempfile
+import threading
 import time
 from pathlib import Path
 
@@ -278,6 +279,7 @@ def resolve(sb: dict, tm: Timing, bundle: R.StyleBundle) -> dict:
 
 # ----------------------------------------------------------------------------- paths and references
 _MEDIA_OK: dict = {}          # (path, mtime_ns, size, kind) -> None | (code, reason); media files are checked once per file version
+_MEDIA_LOCK = threading.RLock()
 
 
 def safe_rel(project_dir, rel) -> Path | None:
@@ -310,12 +312,14 @@ def media_problem(path: Path, kind: str) -> tuple[str, str] | None:
     except OSError as e:
         return "asset_file_unreadable", "cannot be read (%s)" % e.strerror
     key = (str(path), st.st_mtime_ns, st.st_size, kind)
-    if key in _MEDIA_OK:
-        return _MEDIA_OK[key]
+    with _MEDIA_LOCK:
+        if key in _MEDIA_OK:
+            return _MEDIA_OK[key]
     res = _check_media(path, kind)
-    if len(_MEDIA_OK) > 4000:
-        _MEDIA_OK.clear()
-    _MEDIA_OK[key] = res
+    with _MEDIA_LOCK:
+        if len(_MEDIA_OK) > 4000:
+            _MEDIA_OK.clear()
+        _MEDIA_OK[key] = res
     return res
 
 

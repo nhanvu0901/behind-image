@@ -22,6 +22,7 @@ Thread turns record:
 from __future__ import annotations
 
 import json
+import shutil
 import threading
 import time
 from pathlib import Path
@@ -29,6 +30,7 @@ from pathlib import Path
 from bti.engine.storyboard import write_atomic
 
 MAX_TURNS = 50
+MAX_TURN_DIRS = 20
 
 _THREAD_GUARD = threading.Lock()
 _THREAD_LOCKS: dict[str, threading.RLock] = {}
@@ -36,6 +38,10 @@ _THREAD_LOCKS: dict[str, threading.RLock] = {}
 
 def thread_path(project_dir: Path) -> Path:
     return Path(project_dir) / "cache" / "draft" / "thread.json"
+
+
+def turns_dir(project_dir: Path) -> Path:
+    return Path(project_dir) / "cache" / "draft" / "turns"
 
 
 def thread_lock(project_dir: Path) -> threading.RLock:
@@ -50,11 +56,58 @@ def forget_thread_lock(project_dir: Path) -> None:
         _THREAD_LOCKS.pop(str(Path(project_dir).resolve()), None)
 
 
-def _normalize_turn(raw: dict) -> dict:
+def save_turn_storyboards(project_dir: Path, turn_id: str, before_sb: dict, after_sb: dict) -> None:
+    """Save full before and after storyboards for turn under cache/draft/turns/<turn_id>/."""
+    tdir = turns_dir(project_dir) / turn_id
+    tdir.mkdir(parents=True, exist_ok=True)
+    write_atomic(tdir / "before.json", json.dumps(before_sb, ensure_ascii=False, indent=1))
+    write_atomic(tdir / "after.json", json.dumps(after_sb, ensure_ascii=False, indent=1))
+    prune_turn_dirs(project_dir)
+
+
+def prune_turn_dirs(project_dir: Path, keep: int = MAX_TURN_DIRS) -> None:
+    """Keep only the last `keep` turn directories under cache/draft/turns/."""
+    base = turns_dir(project_dir)
+    if not base.is_dir():
+        return
+    try:
+        subdirs = sorted([d for d in base.iterdir() if d.is_dir()], key=lambda p: p.name)
+        if len(subdirs) > keep:
+            for old in subdirs[:-keep]:
+                shutil.rmtree(old, ignore_errors=True)
+    except OSError:
+        pass
+
+
+def get_turn_storyboard(project_dir: Path, turn_id: str, which: str) -> dict | None:
+    """Read stored 'before' or 'after' storyboard for a turn."""
+    if which not in ("before", "after"):
+        return None
+    f = turns_dir(project_dir) / turn_id / f"{which}.json"
+    if not f.is_file():
+        return None
+    try:
+        data = json.loads(f.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
     scope = raw.get("scope") or {}
     kind = scope.get("kind") if isinstance(scope, dict) else "all"
+    tid = str(raw.get("id") or "")
+    status = str(raw.get("status") or "running")
+    has_undo = bool(raw.get("has_undo", False))
+    if project_dir and tid:
+        has_before = (turns_dir(project_dir) / tid / "before.json").is_file()
+        has_undo = has_before and (status in ("applied", "undone"))
+
+    changes_raw = raw.get("changes")
+    changes = list(changes_raw) if isinstance(changes_raw, list) else []
+
     return {
-        "id": str(raw.get("id") or ""),
+        "id": tid,
         "at": str(raw.get("at") or ""),
         "instruction": str(raw.get("instruction") or ""),
         "scope": {
@@ -65,12 +118,21 @@ def _normalize_turn(raw: dict) -> dict:
         "scope_words": str(raw.get("scope_words") or ""),
         "model": str(raw.get("model") or ""),
         "base_rev": raw.get("base_rev"),
-        "status": str(raw.get("status") or "running"),
+        "before_rev": raw.get("before_rev", raw.get("base_rev")),
+        "after_rev": raw.get("after_rev"),
+        "path": str(raw.get("path") or "deep"),
+        "escalated": bool(raw.get("escalated", False)),
+        "seconds": float(raw.get("seconds") or 0.0),
+        "summary": str(raw.get("summary") or ""),
+        "changes": changes,
+        "status": status,
         "job_id": raw.get("job_id"),
         "proposal_id": raw.get("proposal_id"),
         "conversation_id": raw.get("conversation_id"),
         "notes": str(raw.get("notes") or ""),
         "error": raw.get("error"),
+        "conflicts": raw.get("conflicts"),
+        "has_undo": has_undo,
         "accepted": raw.get("accepted"),
         "accepted_at": raw.get("accepted_at"),
         "accepted_shots": list(raw.get("accepted_shots")) if isinstance(raw.get("accepted_shots"), list) else None,
@@ -95,7 +157,7 @@ def load_thread(project_dir: Path) -> list[dict]:
                 raw_list = data["entries"]
         elif isinstance(data, list):
             raw_list = data
-        return [_normalize_turn(t) for t in raw_list if isinstance(t, dict)]
+        return [_normalize_turn(t, project_dir=project_dir) for t in raw_list if isinstance(t, dict)]
 
 
 def save_thread(project_dir: Path, turns: list[dict]) -> None:
@@ -104,7 +166,7 @@ def save_thread(project_dir: Path, turns: list[dict]) -> None:
     with thread_lock(project_dir):
         f.parent.mkdir(parents=True, exist_ok=True)
         capped = turns[-MAX_TURNS:]
-        normalized = [_normalize_turn(t) for t in capped]
+        normalized = [_normalize_turn(t, project_dir=project_dir) for t in capped]
         write_atomic(f, json.dumps({"turns": normalized}, ensure_ascii=False, indent=1))
 
 
@@ -169,30 +231,34 @@ def reconcile_thread(project_dir: Path, manager=None) -> list[dict]:
                     changed = True
                 elif j.get("state") == "done":
                     res = j.get("result") or {}
-                    if res.get("proposal_id"):
+                    if res.get("status"):
+                        t["status"] = res["status"]
+                    elif res.get("proposal_id"):
                         t["status"] = "done"
                         t["proposal_id"] = res["proposal_id"]
                     elif res.get("no_change"):
                         t["status"] = "no_change"
                     else:
-                        t["status"] = "done"
+                        t["status"] = "applied"
+                    if res.get("summary") and not t.get("summary"):
+                        t["summary"] = res["summary"]
                     if res.get("notes") and not t.get("notes"):
                         t["notes"] = res["notes"]
                     changed = True
                 elif j.get("state") == "error":
-                    t["status"] = "refused" if j.get("error_code") == "edit_outside_scope" else "error"
+                    t["status"] = "failed"
                     t["error"] = j.get("error_code") or "error"
                     changed = True
                 elif j.get("state") == "cancelled":
-                    t["status"] = "error"
+                    t["status"] = "cancelled"
                     t["error"] = "cancelled"
                     changed = True
                 elif j.get("state") == "interrupted":
-                    t["status"] = "error"
+                    t["status"] = "failed"
                     t["error"] = "interrupted"
                     changed = True
                 elif j.get("state") not in ("queued", "waiting", "running"):
-                    t["status"] = "error"
+                    t["status"] = "failed"
                     t["error"] = j.get("error_code") or "interrupted"
                     changed = True
         if changed:

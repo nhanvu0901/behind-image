@@ -179,6 +179,7 @@ def test_rate_limit_offers_the_next_model(approved):
 def test_a_real_provider_through_the_job_with_a_recorded_shape_fake(approved, monkeypatch):
     jobs, d = approved
     monkeypatch.setenv("GEMINI_API_KEY", "AIzaFAKE0000000000")
+    monkeypatch.delenv("BTI_NO_REAL_MODELS", raising=False)
     outline = store.load_outline(d)
 
     def handler(req: httpx.Request):

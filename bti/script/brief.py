@@ -102,7 +102,9 @@ def load_options(pdir: Path) -> dict:
 def _options_from(o: dict) -> dict:
     tw = o.get("target_words")
     low = o.get("include_low")
+    exc = o.get("exclude")
     return {"include_low": [str(x) for x in low if isinstance(x, (str, int))] if isinstance(low, list) else [],
+            "exclude": [str(x) for x in exc if isinstance(x, (str, int))] if isinstance(exc, list) else [],
             "target_words": int(tw) if isinstance(tw, (int, float)) and not isinstance(tw, bool) and math.isfinite(tw) and tw > 0 else DEFAULT_TARGET,
             "notes": str(o.get("notes") or ""),
             "wps": float(o["wps"]) if isinstance(o.get("wps"), (int, float)) and 0.5 <= o["wps"] <= 6 else DEFAULT_WPS}
@@ -110,6 +112,10 @@ def _options_from(o: dict) -> dict:
 
 class OptionsError(ValueError):
     """A brief option is out of range or of the wrong type; the message names the option and the allowed values."""
+
+    def __init__(self, message: str, code: str = "options_error"):
+        super().__init__(message)
+        self.code = code
 
 
 def check_options(opts: dict) -> dict:
@@ -121,6 +127,11 @@ def check_options(opts: dict) -> dict:
         if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
             raise OptionsError("include_low must be a list of strings (book ids, work ids or source codes)")
         out["include_low"] = sorted(set(v))
+    if "exclude" in opts:
+        v = opts["exclude"]
+        if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
+            raise OptionsError("exclude must be a list of strings (book ids, work ids or source codes)")
+        out["exclude"] = sorted(set(v))
     if "target_words" in opts:
         v = opts["target_words"]
         if not (num(v) and 300 <= v <= 20000):
@@ -141,13 +152,38 @@ def check_options(opts: dict) -> dict:
     return out
 
 
-def save_options(pdir: Path, opts: dict) -> dict:
+def save_options(pdir: Path, opts: dict, *, library_root: Path | None = None) -> dict:
     new = check_options(opts)           # raises OptionsError before anything is written
     try:
         cur = load_options(pdir)
     except DocumentCorrupt:             # a damaged file is replaced by a whole, valid one: this is how the owner repairs it
         cur = _options_from({})
     cur.update(new)
+
+    pdir = Path(pdir)
+    lib = Path(library_root) if library_root else REPO_ROOT / "library"
+    proj = _read_json(pdir / "project.json", "project")
+    dossier, _ = _resolve_dossier(pdir, proj)
+    entries = _source_entries(pdir, proj, dossier)
+    if entries:
+        ticked = set(cur.get("include_low", []))
+        excluded = set(cur.get("exclude", []))
+        trust_tbl = _trust_table(lib)
+        taken: set[str] = set()
+        included_count = 0
+        for e in entries:
+            code = src_code(e["book_id"], taken)
+            taken.add(code)
+            trust = e["trust"] or (trust_tbl.get(e["book_id"]) or {}).get("trust") or "normal"
+            low = trust == "low"
+            is_excluded = e["book_id"] in excluded or e["work_id"] in excluded or code in excluded
+            is_low_included = e["book_id"] in ticked or e["work_id"] in ticked or code in ticked
+            inc = (not is_excluded) and ((not low) or is_low_included)
+            if inc:
+                included_count += 1
+        if included_count == 0:
+            raise OptionsError("at least one source must stay", code="at_least_one_source")
+
     write_json_atomic(script_dir(pdir) / "brief_options.json", cur)
     return cur
 
@@ -181,16 +217,18 @@ def _source_entries(pdir: Path, proj: dict, dossier: dict | None) -> list[dict]:
     return [e for e in out if e["file"] and (src_dir / e["file"]).is_file()]
 
 
-def build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None) -> dict:
+def build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None,
+                exclude: list[str] | None = None) -> dict:
     try:
-        return _build_brief(pdir, library_root=library_root, include_low=include_low)
+        return _build_brief(pdir, library_root=library_root, include_low=include_low, exclude=exclude)
     except (AttributeError, TypeError, KeyError, IndexError, ValueError) as e:      # a field of the wrong type deep inside a data file
         if isinstance(e, DocumentCorrupt):
             raise
         raise DocumentCorrupt(f"the data files of project {Path(pdir).name!r} are malformed ({type(e).__name__})", "project")
 
 
-def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None) -> dict:
+def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: list[str] | None = None,
+                 exclude: list[str] | None = None) -> dict:
     pdir = Path(pdir)
     lib = Path(library_root) if library_root else REPO_ROOT / "library"
     proj = _read_json(pdir / "project.json", "project")
@@ -198,6 +236,7 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
     dossier, _ = _resolve_dossier(pdir, proj)
     opts = load_options(pdir)
     ticked = set(include_low if include_low is not None else opts["include_low"])
+    excluded = set(exclude if exclude is not None else opts.get("exclude", []))
     trust_tbl = _trust_table(lib)
 
     ident = (dossier or {}).get("identity") or {}
@@ -214,7 +253,9 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
         trust = e["trust"] or (trust_tbl.get(e["book_id"]) or {}).get("trust") or "normal"
         note = e["trust_note"] or (trust_tbl.get(e["book_id"]) or {}).get("trust_note") or ""
         low = trust == "low"
-        included = (not low) or e["book_id"] in ticked or e["work_id"] in ticked or code in ticked
+        is_excluded = e["book_id"] in excluded or e["work_id"] in excluded or code in excluded
+        is_low_included = e["book_id"] in ticked or e["work_id"] in ticked or code in ticked
+        included = (not is_excluded) and ((not low) or is_low_included)
         width = 3 if len(parsed["paragraphs"]) > 99 else 2
         paras = [{"id": f"{code}-{p['n']:0{width}d}", **p} for p in parsed["paragraphs"]]
         if e["meta"]:
@@ -222,8 +263,8 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
         bi = _book_info(e["book_id"], lib)
         sources.append({"code": code, "work_id": e["work_id"], "book_id": e["book_id"], "book_title": bi["title"],
                         "author": bi["author"], "trust": trust, "trust_note": note or (LOW_NOTE if low else ""),
-                        "low_trust": low, "included": included, "file": e["file"], "title": parsed["title"],
-                        "sections": parsed["sections"], "detail_headings": e["details"],
+                        "low_trust": low, "included": included, "excluded": is_excluded, "file": e["file"],
+                        "title": parsed["title"], "sections": parsed["sections"], "detail_headings": e["details"],
                         "words": sum(len(p["text"].split()) for p in paras), "paragraphs": paras})
 
     # named details: Hodge detail headings and the section headings of the other sources
@@ -250,7 +291,7 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
     return {"project": proj.get("id") or pdir.name, "built_at": now_iso(),
             "shape": "dossier" if dossier else ("project" if proj.get("sources") else "files"),
             "painting": painting, "sources": sources, "code_map": code_map, "details": det_list,
-            "conflicts": conflicts, "options": {**opts, "include_low": sorted(ticked)},
+            "conflicts": conflicts, "options": {**opts, "include_low": sorted(ticked), "exclude": sorted(excluded)},
             "paragraph_ids": sorted(p["id"] for s in sources for p in s["paragraphs"]),
             "totals": {"sources": len(sources), "included": sum(1 for s in sources if s["included"]),
                        "paragraphs": sum(len(s["paragraphs"]) for s in sources),

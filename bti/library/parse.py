@@ -27,6 +27,7 @@ def clean(s: str) -> str:
     s = unicodedata.normalize("NFKC", s)
     s = s.replace("\x00", "").replace("\xad", "").replace("\xa0", " ")
     s = re.sub(r"¬\s*", "", s)
+    s = re.sub(r"[\ud800-\udfff]", "", s)
     return re.sub(r"\s+", " ", s).strip()
 
 

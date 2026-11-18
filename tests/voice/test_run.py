@@ -1,5 +1,6 @@
 """The whole run with the fake voice and the even aligner, through a real long-job manager instance."""
 import json
+from pathlib import Path
 
 import pytest
 
@@ -273,3 +274,47 @@ def test_busy_when_a_job_runs(project, mgr, cfg, monkeypatch):
 
 def state_running(project, mgr, cfg):
     return describe(project, cfg=cfg, server={}, provider_name="fake", manager=mgr)["state"] == "running"
+
+
+def test_clean_stop_past_28_minutes_finishes_sentence_and_creates_new_part(project, mgr, cfg, monkeypatch):
+    """D17: A part that still runs past 28 minutes finishes the sentence it is on, stops cleanly,
+    and the rest goes to a new part (never killed mid-sentence, never a failed job)."""
+    # Custom provider with injected clock that triggers clean stop after first chunk
+    simulated_time = [0.0]
+
+    def mock_clock():
+        return simulated_time[0]
+
+    class OverrunningProvider(fakemod.FakeProvider):
+        def synth(self, chunks, dest_dir, ctx, workdir=None):
+            dest_dir = Path(dest_dir)
+            dest_dir.mkdir(parents=True, exist_ok=True)
+            self.calls.append([c.id for c in chunks])
+            res = {}
+            for k, c in enumerate(chunks):
+                if ctx.cancelled():
+                    break
+                s = fakemod.tone_samples(c.spoken, c.seed)
+                fakemod.write_wav(dest_dir / f"{c.id}.wav", s)
+                res[c.id] = {"ok": True, "sec": len(s) / fakemod.SR}
+                # Simulate that first chunk pushed time past 28 minutes (28 * 60 = 1680s)
+                if simulated_time[0] < 1680.0:
+                    simulated_time[0] = 1685.0
+                    # The sentence is finished, stop cleanly!
+                    break
+            return res
+
+    prov = OverrunningProvider()
+    monkeypatch.setattr("bti.voice.run.resolve", lambda name, server: prov)
+    # Configure clock and run
+    cfg_stop = dict(cfg, clock=mock_clock, part_stop_seconds=1680)
+    rec = go(project, mgr, cfg_stop)
+    assert rec["state"] == "done", rec.get("error")
+    # Verify that a new synth part was created for the remaining sentences
+    synth_parts = [p for p in rec["parts"] if p["key"].startswith("synth-")]
+    # Should have synth-1 and at least one continuation part
+    assert len(synth_parts) >= 2
+    # All chunks exist on disk and all sentences were spoken
+    assert files.mix_path(project).is_file() and files.timing_path(project).is_file()
+    assert describe(project, cfg=cfg, server={}, provider_name="fake")["state"] == "done"
+

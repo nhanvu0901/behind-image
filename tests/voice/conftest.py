@@ -2,9 +2,12 @@
 Windows server, under the heavy slot, and speak two real sentences."""
 from __future__ import annotations
 
+import os
 import shutil
 import sys
 from pathlib import Path
+
+os.environ["BTI_NO_REAL_MODELS"] = "1"
 
 import pytest
 

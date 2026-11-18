@@ -210,8 +210,9 @@ def import_clip_picks(pid: str, request: Request, body: dict = Body(...)):
         raise ApiError(422, "beat_id must be a string")
     role = _str(body, "role", max_len=40) or "video"
     clip_imp = getattr(request.app.state, "clip_importer", None)
-    out = service.import_video_clip(
+    out = service.start_clip_job(
         d,
+        pid,
         url,
         body.get("start"),
         body.get("end"),
@@ -221,7 +222,15 @@ def import_clip_picks(pid: str, request: Request, body: dict = Body(...)):
         note=_str(body, "note", max_len=400),
         clip_importer=clip_imp,
     )
-    return _full(request, pid, d, asset_key=out["asset_key"], asset=out["asset"])
+    if _flag(body.get("wait")):
+        import bti.longjob as lj
+        rec = lj.manager.wait(out["job_id"], timeout=180)
+        res = rec.get("result") or {}
+        ak = res.get("asset_key")
+        ass = res.get("asset")
+        return _full(request, pid, d, asset_key=ak, asset=ass, job_id=out["job_id"])
+    return out
+
 
 
 # ------------------------------------------------------------------ regions

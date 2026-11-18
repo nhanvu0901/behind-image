@@ -60,6 +60,8 @@ class ChatterboxProvider:
         errors: dict[int, str] = {}
         done = {"n": 0}
         t0 = time.monotonic()
+        part_stop_seconds = float(self.w.get("part_stop_seconds", 28 * 60))
+        self.stopped_cleanly = False
         self.timing = {"load_s": None, "total_s": None, "chunks": 0}
 
         def on_line(line: str) -> None:
@@ -81,6 +83,11 @@ class ChatterboxProvider:
                 done["n"] += 1
             elif isinstance(d.get("i"), int) and "sec" in d:
                 done["n"] += 1
+                now = time.monotonic()
+                if now - t0 >= part_stop_seconds and not self.stopped_cleanly:
+                    self.stopped_cleanly = True
+                    if hasattr(ctx, "_run") and ctx._run is not None:
+                        ctx._run.kill_children()
             else:
                 return
             ctx.progress(min(done["n"] / max(len(chunks), 1), 1.0), f"{done['n']}/{len(chunks)}")
@@ -103,6 +110,6 @@ class ChatterboxProvider:
                 res[c.id] = {"ok": False, "error": "the audio file could not be finished: %s" % type(e).__name__}
                 continue
             res[c.id] = {"ok": True, "sec": sec}
-        if not any(r["ok"] for r in res.values()) and rc and not ctx.cancelled():
+        if not any(r["ok"] for r in res.values()) and rc and not ctx.cancelled() and not self.stopped_cleanly:
             raise VoiceError("voice_worker_failed", "the voice worker failed (exit code %s)" % rc)
         return res

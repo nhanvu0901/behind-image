@@ -145,8 +145,14 @@ def _num(v) -> float | None:
     return x if np.isfinite(x) else None
 
 
+def _limiter_filter(tp_db: float, margin_db: float = 0.2) -> str:
+    lim_linear = min(1.0, max(0.0625, 10 ** ((tp_db - margin_db) / 20)))
+    return "alimiter=limit=%.6f:attack=5:release=50:asc=0:level=false" % lim_linear
+
+
 def normalise(src_wav: Path, out_m4a: Path, loud: dict, bitrate: str) -> dict:
-    """Two-pass loudnorm of `src_wav` into an AAC file; returns the measured loudness of the result {i, tp, lra}."""
+    """Two-pass loudnorm of `src_wav` into an AAC file with a true-peak limiter; returns {i, tp, lra}."""
+    tp_target = float(loud.get("tp", -1.5))
     ln = "loudnorm=I=%s:TP=%s:LRA=%s" % (loud["i"], loud["tp"], loud["lra"])
     r1 = _run(["ffmpeg", "-y", "-hide_banner", "-nostdin", "-i", str(src_wav), "-af", ln + ":print_format=json", "-f", "null", "-"])
     j = parse_loudnorm(r1.stderr.decode("utf-8", "replace"))
@@ -157,14 +163,33 @@ def normalise(src_wav: Path, out_m4a: Path, loud: dict, bitrate: str) -> dict:
             j["input_i"], j["input_tp"], j["input_lra"], j["input_thresh"], j["target_offset"])
     tmp = out_m4a.with_name(out_m4a.stem + ".part.m4a")
     cmd = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(src_wav)]
+    filters = []
     if af:
-        cmd += ["-af", af]
+        filters.append(af)
+    filters.append(_limiter_filter(tp_target, 0.2))
+    cmd += ["-af", ",".join(filters)]
     cmd += ["-ar", str(SR), "-ac", "2", "-c:a", "aac", "-b:a", bitrate, "-movflags", "+faststart", str(tmp)]
     r2 = _run(cmd)
     if r2.returncode != 0:
         raise VoiceError("voice_assemble_failed", "ffmpeg could not write the mix: " + r2.stderr.decode("utf-8", "replace")[-200:], 500)
     _finish(tmp, out_m4a)
-    return measure(out_m4a)
+    meas = measure(out_m4a)
+    if meas.get("tp") is not None and meas["tp"] > tp_target + 1e-4:
+        # Retry with additional limiter margin to compensate for AAC encoder overshoot
+        margin = max(0.4, (meas["tp"] - tp_target) + 0.3)
+        filters_retry = []
+        if af:
+            filters_retry.append(af)
+        filters_retry.append(_limiter_filter(tp_target, margin))
+        cmd_retry = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(src_wav), "-af", ",".join(filters_retry),
+                     "-ar", str(SR), "-ac", "2", "-c:a", "aac", "-b:a", bitrate, "-movflags", "+faststart", str(tmp)]
+        r3 = _run(cmd_retry)
+        if r3.returncode == 0:
+            _finish(tmp, out_m4a)
+            meas = measure(out_m4a)
+    if meas.get("tp") is not None and meas["tp"] > tp_target + 1e-4:
+        raise VoiceError("voice_assemble_failed", "true peak %.2f dBTP exceeds limit %.2f dBTP" % (meas["tp"], tp_target), 500)
+    return meas
 
 
 def measure(path: Path) -> dict:
@@ -217,6 +242,9 @@ def assemble(pdir: Path, chunks, settings: dict, cfg: dict, workdir: Path, ctx=N
     if ctx is not None:
         ctx.progress(0.85, "chuẩn hóa âm lượng")
     loud = normalise(pre, files.mix_path(pdir), cfg["loudness"], cfg["aac_bitrate"])
+    tp_target = float(cfg.get("loudness", {}).get("tp", -1.5))
+    if loud.get("tp") is not None and loud["tp"] > tp_target + 1e-4:
+        raise VoiceError("voice_assemble_failed", "true peak %.2f dBTP exceeds limit %.2f dBTP" % (loud["tp"], tp_target), 500)
     try:
         pre.unlink()
     except OSError:

@@ -56,10 +56,14 @@ def payload(pdir: Path, pid: str, suggest_info: dict | None = None) -> dict:
     iss = doc.issues(cur, pdir, nv["beat_ids"] if nv["present"] else None)
     ident = context.identity(pdir)
     det = context.details(pdir)
+    from bti.media import clips
+    vtools = clips.tool_status()
     return {"project": pid, "exists": d is not None, "picks": cur, "rev": rev, "approved": ap["approved"], "approval_reason": ap["reason"],
             "issues": iss, "narration": nv, "identity": ident, "details": det,
             "default_main_query": " ".join(x for x in (ident["title"], ident["artist"]) if x),
-            "suggest": suggest_info or {"available": False}}
+            "suggest": suggest_info or {"available": False},
+            "video_tools": vtools}
+
 
 
 # ---------------------------------------------------------------- saving the owner's edits
@@ -217,7 +221,9 @@ def video_search(pdir: Path, query: str = "", beat: str | None = None, url: str 
     if not url and query and clips.video_id(query):
         url, query = query, ""
     if url:
-        if not clips.video_id(url):
+        try:
+            url = clips.safe_youtube_url(url)
+        except ValueError:
             raise PicksError(422, "not a supported YouTube URL", "video_bad_url")
         try:
             row = media().inspect_video_url(url, desc=query, metadata=metadata_fn)
@@ -254,7 +260,9 @@ def import_video_clip(pdir: Path, url: str, start: float, end: float, *, title: 
     from bti.media import clips
 
     url = (url or "").strip()
-    if not clips.video_id(url):
+    try:
+        url = clips.safe_youtube_url(url)
+    except ValueError:
         raise PicksError(422, "not a supported YouTube URL", "video_bad_url")
     try:
         s_val = float(start)
@@ -291,6 +299,86 @@ def import_video_clip(pdir: Path, url: str, start: float, end: float, *, title: 
             doc.save(pdir, d)
             saved = d["assets"].get(key, saved)
     return {"asset_key": key, "asset": saved}
+
+
+def start_clip_job(pdir: Path, pid: str, url: str, start: float, end: float, *, title: str = "",
+                   beat_id: str | None = None, role: str = "video", note: str = "",
+                   clip_importer=None) -> dict:
+    """Start cutting a YouTube clip as a long job (kind='picks'). Returns {'job_id': ...}."""
+    from bti.media import clips
+    import math
+
+    url = (url or "").strip()
+    try:
+        canon_url = clips.safe_youtube_url(url)
+    except ValueError:
+        raise PicksError(422, "not a supported YouTube URL", "video_bad_url")
+    try:
+        s_val = float(start)
+        e_val = float(end)
+    except (TypeError, ValueError):
+        raise PicksError(422, "start and end must be numbers", "video_bad_range")
+    span = e_val - s_val
+    if not (math.isfinite(s_val) and math.isfinite(e_val)) or s_val < 0 or not (MIN_CLIP_S <= span <= MAX_CLIP_S):
+        raise PicksError(422, f"clip range must be between {MIN_CLIP_S:g} and {MAX_CLIP_S:g} seconds", "video_bad_range")
+    if beat_id is not None and not doc.BEAT_ID_RE.fullmatch(beat_id):
+        raise PicksError(422, f"invalid beat id {beat_id!r}", "invalid")
+
+    try:
+        import bti.longjob as lj
+    except ImportError:
+        raise PicksError(503, "the long-job runner is not available yet", "longjob_missing")
+
+    def run_clip(c):
+        if c.cancelled():
+            return None
+        c.progress(0.1, "Đang tải đoạn video...")
+        try:
+            res = import_video_clip(
+                pdir, canon_url, s_val, e_val, title=title, beat_id=beat_id, role=role, note=note,
+                clip_importer=clip_importer,
+            )
+        except Exception as e:
+            if c.cancelled():
+                return None
+            pe = _translate(e)
+            raise lj.PartError(pe.code or "video_failed", pe.detail)
+        if c.cancelled():
+            return None
+        c.progress(1.0, "Đã cắt xong đoạn video.")
+        return res
+
+    vid = clips.video_id(canon_url) or "clip"
+    part = lj.Part(
+        key=f"clip-{vid}-{s_val:.1f}-{e_val:.1f}",
+        title=f"Cắt clip {s_val:.1f}–{e_val:.1f}s",
+        run=run_clip,
+        heavy=False,
+        est_seconds=60,
+    )
+    try:
+        job = lj.manager.start(
+            kind="picks",
+            pid=pid,
+            project_dir=pdir,
+            parts=[part],
+            meta={
+                "action": "clip",
+                "url": canon_url,
+                "start": s_val,
+                "end": e_val,
+                "title": title,
+                "beat_id": beat_id,
+                "role": role,
+                "note": note,
+            },
+        )
+    except getattr(lj, "Busy", ()) as e:
+        raise PicksError(409, "a picks job is already running for this project", "busy",
+                         job_id=(getattr(e, "job", None) or {}).get("id"))
+    jid = job["id"] if isinstance(job, dict) else getattr(job, "id", str(job))
+    return {"job_id": jid}
+
 
 
 # ---------------------------------------------------------------- regions

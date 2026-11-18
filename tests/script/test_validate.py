@@ -157,3 +157,25 @@ def test_outline_validation():
     o2.chapters[0].facts = ["f01", "f42"]
     w = codes(validate.validate_outline(o2, {"paragraph_ids": ["PAY-01"]}), "warning")
     assert {"fact_no_source", "disputed_no_conflict", "unknown_fact"} <= set(w)
+
+
+def test_outline_source_excluded(tproj):
+    from bti.script.brief import build_brief, save_options
+    save_options(tproj, {"exclude": ["hodge_aid"]})
+    b = build_brief(tproj)
+    o = make_outline()
+
+    # Fact cites one excluded source and one active source -> warning "source_excluded"
+    o.facts[0].sources = ["PAY-01", "HOD-01"]
+    iss = validate.validate_outline(o, b)
+    assert "source_excluded" in codes(iss, "warning")
+    assert not any(i["code"] == "source_excluded" and i["level"] == "error" for i in iss)
+    assert not validate.blocking(iss)
+
+    # Fact cites ONLY excluded source(s) -> error "source_excluded" (blocking approval)
+    o.facts[0].sources = ["HOD-01", "HOD-02"]
+    iss_err = validate.validate_outline(o, b)
+    assert any(i["code"] == "source_excluded" and i["level"] == "error" for i in iss_err)
+    blockers = validate.blocking(iss_err)
+    assert any(i["code"] == "source_excluded" for i in blockers)
+

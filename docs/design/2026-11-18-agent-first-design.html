@@ -1,0 +1,415 @@
+<title>Thiết kế hướng agent</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column; diagrams and screen sketches sit inside it; three role colours (người / agent / code) carry meaning everywhere. */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --ink:#1b2230; --muted:#5a6475; --line:#d8dde6; --soft:#eceff4;
+  --accent:#1d5bb8; --human:#a85f00; --human-bg:#fbefd9; --agent:#6a45c2; --agent-bg:#ece6fa; --code:#0f7a6c; --code-bg:#dcf2ee;
+  --warn:#b03a2e; --warn-bg:#fbe5e1;
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12151b; --surface:#1a1f28; --ink:#e6e9ef; --muted:#9ba5b6; --line:#2c3441; --soft:#222834;
+  --accent:#7fabff; --human:#f0b560; --human-bg:#3a2c12; --agent:#b9a0ff; --agent-bg:#2b2346; --code:#62d1c1; --code-bg:#12332f;
+  --warn:#ff9b8e; --warn-bg:#3d1c18; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#12151b; --surface:#1a1f28; --ink:#e6e9ef; --muted:#9ba5b6; --line:#2c3441; --soft:#222834;
+  --accent:#7fabff; --human:#f0b560; --human-bg:#3a2c12; --agent:#b9a0ff; --agent-bg:#2b2346; --code:#62d1c1; --code-bg:#12332f;
+  --warn:#ff9b8e; --warn-bg:#3d1c18; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.6;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 64px}
+.page{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:44px}
+h1{font-size:34px;line-height:1.15;margin:0;font-weight:700;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:23px;line-height:1.25;margin:0;font-weight:700;text-wrap:balance}
+h3{font-size:17px;margin:0;font-weight:600}
+p{margin:0;max-width:68ch}
+section{display:flex;flex-direction:column;gap:16px}
+.lede{font-size:18px;color:var(--muted);max-width:62ch}
+.eyebrow{font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{font-size:13px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--muted)}
+.chip.human{color:var(--human);background:var(--human-bg);border-color:transparent}
+.chip.agent{color:var(--agent);background:var(--agent-bg);border-color:transparent}
+.chip.code{color:var(--code);background:var(--code-bg);border-color:transparent}
+.chip.warn{color:var(--warn);background:var(--warn-bg);border-color:transparent}
+ul,ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:6px;max-width:68ch}
+code{font-family:var(--mono);font-size:.88em;background:var(--soft);padding:1px 5px;border-radius:4px}
+pre{font-family:var(--mono);font-size:13px;line-height:1.55;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin:0;overflow-x:auto;white-space:pre}
+pre code{background:none;padding:0;font-size:inherit}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--soft)}
+tr:last-child td{border-bottom:none}
+td.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+.note{border-left:3px solid var(--accent);padding:10px 14px;background:var(--surface);border-radius:0 8px 8px 0;font-size:15px;max-width:68ch}
+.note.warn{border-left-color:var(--warn)}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.two>*{min-width:0}
+/* core diagram */
+.diagram{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}
+.box{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:10px 12px;font-size:14px;min-width:0}
+.box b{display:block;font-size:14.5px}
+.box.human{border-color:var(--human);background:var(--human-bg)}
+.box.agent{border-color:var(--agent);background:var(--agent-bg)}
+.box.code{border-color:var(--code);background:var(--code-bg)}
+.down{text-align:center;color:var(--muted);font-size:15px;line-height:1}
+/* steps */
+.steps{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;counter-reset:s}
+.step{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:12px;font-size:14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.step::before{counter-increment:s;content:counter(s);font-family:var(--mono);font-size:12px;color:var(--muted)}
+.step b{font-size:15px}
+/* screen sketches */
+.mock{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden;font-size:13.5px}
+.mock .bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-bottom:1px solid var(--line);background:var(--soft)}
+.mock .bar .ttl{font-weight:600;margin-right:auto}
+.btn{display:inline-block;padding:5px 11px;border-radius:6px;border:1px solid var(--line);background:var(--surface);font-size:13px;white-space:nowrap}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:600}
+.mock .body{display:grid;gap:0}
+.beat{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:12px;padding:11px 12px;border-bottom:1px solid var(--line)}
+.beat:last-child{border-bottom:none}
+.beat .t{color:var(--muted);font-family:var(--mono);font-size:12px}
+.thumbs{display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start}
+.th{width:92px;min-height:54px;border-radius:5px;border:1px solid var(--line);background:var(--soft);font-size:11.5px;padding:5px 6px;line-height:1.3;display:flex;align-items:flex-end}
+.th.detail{background:var(--code-bg);border-color:var(--code)}
+.th.ctx{background:var(--agent-bg);border-color:var(--agent)}
+.th.clip{background:var(--human-bg);border-color:var(--human)}
+.th.add{align-items:center;justify-content:center;color:var(--muted);border-style:dashed;width:54px}
+.why{font-size:12.5px;color:var(--muted);margin-top:4px}
+.prompt{display:flex;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);background:var(--soft);flex-wrap:wrap}
+.prompt .field{flex:1 1 240px;min-width:0;border:1px solid var(--line);border-radius:6px;background:var(--surface);padding:7px 10px;color:var(--muted)}
+.split{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.split>div{min-width:0}
+.player{aspect-ratio:16/9;max-width:100%;background:var(--soft);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted)}
+.scene{display:grid;grid-template-columns:64px minmax(0,1fr);gap:9px;padding:9px 11px;border-bottom:1px solid var(--line);border-left:1px solid var(--line)}
+.scene.sel{background:var(--agent-bg)}
+.scene .sth{height:38px;border-radius:4px;background:var(--code-bg);border:1px solid var(--code)}
+.turn{margin:10px 12px;border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--surface);display:flex;flex-direction:column;gap:5px}
+@media (max-width:640px){ .beat{grid-template-columns:1fr} .split{grid-template-columns:1fr} .scene{border-left:none} h1{font-size:27px} }
+</style>
+
+<div class="page">
+
+<header style="display:flex;flex-direction:column;gap:12px">
+  <div class="eyebrow">Behind the image · bản thiết kế, chưa viết code</div>
+  <h1>Thiết kế hướng agent cho pipeline</h1>
+  <p class="lede">Mỗi bước vừa dễ cho người chưa biết gì, vừa làm được bằng agent. Trang web, ô gõ lệnh và agent bên ngoài cùng dùng một bộ thao tác.</p>
+  <div class="chips"><span class="chip">18/11/2026</span><span class="chip human">Người</span><span class="chip agent">Agent (mô hình)</span><span class="chip code">Code cố định</span></div>
+</header>
+
+<section id="tom-tat">
+  <h2>Tóm tắt một phút</h2>
+  <ul>
+    <li>Không thiết kế lại. Lõi hiện tại (API, storyboard khai báo, engine cố định, cổng duyệt) giữ nguyên.</li>
+    <li>Thêm năm thứ để agent vận hành được: thao tác nhỏ, trạng thái và việc tiếp theo, lỗi có cách sửa, tài liệu cho agent, lệnh dòng lệnh.</li>
+    <li>Bước 4 có agent tự chọn hình và clip. Bước 4 và 5 có ô gõ lệnh; agent sửa thẳng dữ liệu, mọi thay đổi hoàn tác được.</li>
+    <li>Hai trang Chọn hình và Dựng hình được làm lại cho đơn giản: agent làm trước, bạn xem và gõ yêu cầu. Công cụ chỉnh tay nằm sau một nút.</li>
+    <li>Người vẫn duyệt trước hai bước đắt: giọng đọc (khoảng một giờ máy) và xuất video (khoảng 25 phút máy).</li>
+  </ul>
+  <div class="diagram" aria-label="Ba loại người dùng, một lõi">
+    <div class="row">
+      <div class="box human"><b>Bạn, qua trang web</b>Bấm nút, kéo thả, duyệt.</div>
+      <div class="box agent"><b>Agent trong trang</b>Ô gõ lệnh ở bước 4 và 5; nút "Để agent chọn hình".</div>
+      <div class="box agent"><b>Agent bên ngoài</b>agy, Codex, Claude trong terminal, qua lệnh <code>bti</code>.</div>
+    </div>
+    <div class="down">▼ cùng gọi ▼</div>
+    <div class="row">
+      <div class="box code"><b>Thao tác nhỏ</b>Mỗi thao tác đổi một thứ, được kiểm tra trước khi ghi.</div>
+      <div class="box code"><b>Trạng thái và việc tiếp theo</b>Dự án đang ở đâu, gọi gì tiếp.</div>
+      <div class="box code"><b>Tác vụ dài</b>Giọng đọc, cắt clip, dựng nháp, xuất video.</div>
+      <div class="box human"><b>Cổng duyệt</b>Dàn ý, lời dẫn, chọn hình, storyboard.</div>
+    </div>
+    <div class="down">▼</div>
+    <div class="row">
+      <div class="box"><b>Dữ liệu dự án</b>File JSON, kèm lịch sử và nhật ký ai đổi gì.</div>
+      <div class="box code"><b>Engine dựng hình</b>71 kỹ thuật định sẵn, vẽ đúng như storyboard ghi.</div>
+    </div>
+  </div>
+</section>
+
+<section id="hien-tai">
+  <h2>Đã có gì, còn thiếu gì</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Khuyến nghị từ nghiên cứu</th><th>Hiện tại</th><th>Sẽ thêm</th></tr>
+    <tr><td>Lõi chạy qua API, trang web chỉ là một lớp</td><td>Có. Lần chạy thật Arnolfini do một agent điều khiển hoàn toàn qua API.</td><td>Không cần.</td></tr>
+    <tr><td>Bản mô tả khai báo, kiểm tra trước khi dựng</td><td>Có: storyboard, bộ kiểm tra, vẽ thử khi duyệt.</td><td>Không cần.</td></tr>
+    <tr><td>Tác vụ dài có mã theo dõi, hủy, chạy tiếp</td><td>Có.</td><td>Không cần.</td></tr>
+    <tr><td>Thao tác nhỏ có kiểu</td><td>Chỉ có ở lời dẫn (tách, gộp, chuyển đoạn).</td><td>Cho chọn hình và storyboard.</td></tr>
+    <tr><td>Trạng thái và việc tiếp theo</td><td>Có trạng thái từng bước, chưa có "gọi gì tiếp".</td><td>Danh sách việc làm được ngay, kèm cách gọi.</td></tr>
+    <tr><td>Lỗi nói cách sửa</td><td>Có mã lỗi và câu tiếng Việt cho người.</td><td>Thêm phần hướng dẫn sửa cho agent.</td></tr>
+    <tr><td>Tài liệu cho agent</td><td>Chỉ có hướng dẫn cho agent dựng nháp.</td><td><code>AGENTS.md</code> và skill cho từng bước.</td></tr>
+    <tr><td>Lệnh dòng lệnh trả JSON</td><td>Chưa có.</td><td>Lệnh <code>bti</code>.</td></tr>
+  </table></div>
+  <p class="note">Nguồn: báo cáo <code>docs/design/research/R8_agent_first_design.md</code> (40 trang đã mở). Phần lớn khuyến nghị là lập luận của nguồn gốc, không phải số đo. Không nguồn nào đo được lợi ích của việc thiết kế lại toàn bộ, nên thiết kế này chỉ bổ sung.</p>
+</section>
+
+<section id="thao-tac-nho">
+  <div class="eyebrow">Phần bổ sung 1</div>
+  <h2>Thao tác nhỏ có kiểu</h2>
+  <p>Hôm nay agent sửa video bằng cách viết lại cả file trong một thư mục làm việc. Đo thật: 9,5 phút để đổi hai cảnh. Thay vào đó, mỗi thay đổi là một thao tác nhỏ có tên, có khuôn dữ liệu, được máy chủ kiểm tra rồi mới ghi.</p>
+  <div class="two">
+    <div class="tablewrap"><table>
+      <tr><th>Chọn hình (bước 4)</th><th>Việc nó làm</th></tr>
+      <tr><td><code>set_main</code></td><td>Chọn tranh chính</td></tr>
+      <tr><td><code>set_region</code>, <code>remove_region</code></td><td>Đặt, sửa, bỏ một vùng trên ảnh</td></tr>
+      <tr><td><code>set_picks</code></td><td>Thay toàn bộ hình của một đoạn</td></tr>
+      <tr><td><code>add_pick</code>, <code>remove_pick</code></td><td>Thêm, bỏ một hình ở một đoạn</td></tr>
+      <tr><td><code>skip_beat</code></td><td>Đoạn này dùng lại tranh chính</td></tr>
+      <tr><td><code>import</code></td><td>Nhập một ảnh hoặc clip tìm được vào dự án</td></tr>
+    </table></div>
+    <div class="tablewrap"><table>
+      <tr><th>Storyboard (bước 5)</th><th>Việc nó làm</th></tr>
+      <tr><td><code>set_technique</code></td><td>Đổi kỹ thuật của một cảnh</td></tr>
+      <tr><td><code>set_params</code></td><td>Đổi vài tham số: độ zoom, tốc độ</td></tr>
+      <tr><td><code>set_slot</code></td><td>Đổi hình hoặc vùng mà cảnh dùng</td></tr>
+      <tr><td><code>add_overlay</code>, <code>set_overlay</code>, <code>remove_overlay</code></td><td>Lớp phủ: vòng sáng, nhãn</td></tr>
+      <tr><td><code>split_shot</code>, <code>merge_shots</code>, <code>move_boundary</code></td><td>Tách, gộp cảnh, dời điểm cắt</td></tr>
+      <tr><td><code>replace_range</code></td><td>Thay cả một đoạn cảnh liên tiếp</td></tr>
+      <tr><td><code>lock</code>, <code>unlock</code></td><td>Khóa cảnh, không ai được đổi</td></tr>
+    </table></div>
+  </div>
+  <h3>Ví dụ: bạn gõ "zoom chậm hơn vào khuôn mặt và thêm vòng sáng"</h3>
+  <p>Mô hình không viết lại storyboard. Nó trả về hai thao tác. Tên tham số dưới đây chỉ để minh họa.</p>
+<pre><code>POST /api/projects/scream/storyboard/ops
+{ "base_rev": "41ab…", "actor": "agent:gemini-3.8-flash-high",
+  "ops": [
+    { "op": "set_params",  "shot": "s0012", "params": { "zoom_seconds": 9.0 } },
+    { "op": "add_overlay", "shot": "s0012", "technique": "HI-01", "params": { "region": "HEAD" } }
+  ] }
+
+200 { "rev": "9f3c…", "applied": 2, "undo": "batch_0412",
+      "changes": [ { "shot": 12, "time": "1:42", "what": "Zoom chậm hơn; thêm vòng sáng quanh khuôn mặt" } ] }</code></pre>
+  <ul>
+    <li><b>Cả lô hoặc không gì cả.</b> Một thao tác sai thì không thao tác nào được ghi.</li>
+    <li><b>Chạy thử.</b> Thêm <code>"dry_run": true</code> để xem sẽ đổi gì và có lỗi gì, không ghi.</li>
+    <li><b>Hoàn tác theo lô.</b> Mỗi lô có mã để hoàn tác, dù do bạn bấm nút hay agent làm.</li>
+    <li><b>Một bộ thao tác cho mọi bên.</b> Nút trên trang, ô gõ lệnh và agent bên ngoài gọi cùng những thao tác này.</li>
+    <li><b>Cảnh đã khóa và cảnh ngoài phạm vi</b> bị máy chủ từ chối, không phụ thuộc vào việc mô hình có nghe lời hay không.</li>
+  </ul>
+  <p class="note">Phần đang làm dở (đường nhanh cho sửa video bằng câu lệnh) trả về "thay cả đoạn cảnh". Đó chính là <code>replace_range</code>, nên không phải làm lại.</p>
+</section>
+
+<section id="trang-thai">
+  <div class="eyebrow">Phần bổ sung 2</div>
+  <h2>Trạng thái và việc tiếp theo</h2>
+  <p>Một câu hỏi duy nhất trả lời: dự án đang ở đâu, cái gì đang chặn, làm được gì ngay. Trang web vẽ nó thành thanh các bước và nút chính của trang. Agent đọc nguyên JSON.</p>
+<pre><code>GET /api/projects/scream/state
+{ "project": "scream", "stage": "voiced",
+  "steps": [
+    { "step": "script",     "state": "done" },
+    { "step": "voice",      "state": "done" },
+    { "step": "picks",      "state": "current", "detail": "Chưa chọn tranh chính" },
+    { "step": "storyboard", "state": "locked",  "blocked_by": "picks" },
+    { "step": "export",     "state": "locked",  "blocked_by": "storyboard" } ],
+  "next_actions": [
+    { "id": "picks.auto",     "label": "Để agent chọn hình", "call": "POST /api/projects/scream/picks/auto",
+      "long_job": true, "uses_model": true },
+    { "id": "picks.set_main", "label": "Chọn tranh chính",   "call": "POST /api/projects/scream/picks/ops" },
+    { "id": "picks.approve",  "label": "Duyệt chọn hình",    "gate": true, "who": "human", "needs": ["main_asset"] } ],
+  "jobs": [] }</code></pre>
+  <p>Ví dụ trên dùng đúng tình trạng dự án The Scream của bạn lúc viết: đã có lời dẫn và giọng đọc, chưa chọn hình.</p>
+</section>
+
+<section id="loi">
+  <div class="eyebrow">Phần bổ sung 3</div>
+  <h2>Lỗi nói rõ cách sửa</h2>
+  <p>Bạn vẫn thấy câu tiếng Việt như hiện nay. Agent nhận thêm ba thứ trong cùng câu trả lời: phải làm gì, trường nào sai, có nên thử lại không.</p>
+  <div class="two">
+<pre><code>Hôm nay
+409 { "code": "stale_revision",
+      "detail": "stale" }</code></pre>
+<pre><code>Sau khi làm
+409 { "code": "stale_revision",
+      "detail": "Storyboard changed since rev 41ab.",
+      "fix": "GET the storyboard again, re-apply
+              your ops on the new rev, send again.",
+      "retry": "after_fix",
+      "current_rev": "9f3c…" }</code></pre>
+  </div>
+<pre><code>422 { "code": "unknown_region",
+      "fields": [ { "path": "ops[1].params.region", "problem": "no region HEAD on asset the_scream",
+                    "allowed": ["FACE", "BRIDGE", "SKY", "TWO_FIGURES"] } ],
+      "fix": "Use one of the allowed names, or add the region first with set_region.",
+      "retry": "after_fix" }</code></pre>
+</section>
+
+<section id="tai-lieu">
+  <div class="eyebrow">Phần bổ sung 4</div>
+  <h2>Tài liệu viết cho agent</h2>
+  <div class="two">
+    <div class="box"><b><code>AGENTS.md</code> ở gốc dự án, một trang</b>
+      <ul>
+        <li>Pipeline này làm gì, sáu bước.</li>
+        <li>Bắt đầu bằng <code>bti status</code>.</li>
+        <li>Luật: chỉ đổi dữ liệu qua thao tác, không sửa file dự án; cổng nào cần người; việc nào tốn tiền hoặc tốn giờ máy.</li>
+        <li>Skill của từng bước nằm ở đâu.</li>
+      </ul></div>
+    <div class="box"><b><code>skills/&lt;bước&gt;/SKILL.md</code>, mỗi bước một file</b>
+      <ul>
+        <li>Mục tiêu của bước, đầu vào, đầu ra.</li>
+        <li>Các thao tác được dùng, kèm một phiên làm mẫu.</li>
+        <li>Thế nào là làm tốt: nhịp cảnh khoảng 7 giây, đoạn bối cảnh cần hình ngoài bức tranh.</li>
+        <li>Lỗi hay gặp và cách sửa.</li>
+      </ul></div>
+  </div>
+  <p>Danh sách thao tác và danh mục 71 kỹ thuật trong tài liệu được sinh từ code. Một bài test sẽ trượt nếu tài liệu nhắc tới thao tác không tồn tại.</p>
+</section>
+
+<section id="bti">
+  <div class="eyebrow">Phần bổ sung 5</div>
+  <h2>Lệnh dòng lệnh <code>bti</code></h2>
+  <p>Một lớp mỏng gọi đúng API của trang đang chạy. Mọi agent trong terminal dùng được, không cần cài thêm máy chủ nào. Thêm <code>--json</code> thì mọi lệnh trả JSON.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Lệnh</th><th>Việc nó làm</th></tr>
+    <tr><td><code>bti status &lt;dự án&gt;</code></td><td>Trạng thái và việc tiếp theo</td></tr>
+    <tr><td><code>bti do &lt;dự án&gt; &lt;việc&gt; [--wait]</code></td><td>Chạy một việc trong danh sách, chờ tác vụ dài nếu muốn</td></tr>
+    <tr><td><code>bti ops &lt;dự án&gt; picks|storyboard --file ops.json [--dry-run]</code></td><td>Gửi một lô thao tác</td></tr>
+    <tr><td><code>bti job &lt;mã&gt; [--wait]</code></td><td>Xem hoặc chờ một tác vụ dài</td></tr>
+    <tr><td><code>bti approve &lt;dự án&gt; &lt;cổng&gt;</code></td><td>Duyệt một cổng; bị từ chối nếu cổng đó cần người</td></tr>
+    <tr><td><code>bti undo &lt;dự án&gt; &lt;lô&gt;</code></td><td>Hoàn tác một lô thao tác</td></tr>
+    <tr><td><code>bti schema ops picks</code>, <code>bti doc picks</code></td><td>In khuôn dữ liệu và hướng dẫn của một bước</td></tr>
+  </table></div>
+<pre><code>$ bti status scream
+Bước hiện tại: Chọn hình (chưa chọn tranh chính)
+Làm được ngay: picks.auto  Để agent chọn hình
+
+$ bti do scream picks.auto --wait
+Đang chạy: Lập danh sách hình cần tìm (1/4) … Tìm (2/4) … Chọn (3/4) … Ghi (4/4)
+Xong: 28 đoạn, 9 hình mới, 2 clip, 3 đoạn chưa có hình phù hợp
+
+$ bti approve scream picks
+Cổng này cần người duyệt.                      (mã thoát 3)</code></pre>
+  <p class="note">Số liệu trong phiên mẫu là ví dụ, chưa phải kết quả thật. Mã thoát: 0 xong, 2 gõ sai lệnh, 3 cần người, 4 dữ liệu không hợp lệ, 5 đang bận.</p>
+</section>
+
+<section id="buoc-4">
+  <h2>Bước 4 mới: Chọn hình</h2>
+  <p>Trang mở ra với kết quả của agent, không phải một bảng trống. Mỗi dòng là một đoạn lời dẫn và những hình sẽ hiện khi đọc đoạn đó. Lời dẫn dưới đây là ví dụ minh họa.</p>
+  <div class="mock" aria-label="Phác thảo trang Chọn hình">
+    <div class="bar"><span class="ttl">Chọn hình · The Scream</span><span class="chip agent">Agent đã chọn 25/28 đoạn</span><span class="btn">Chọn lại phần còn thiếu</span><span class="btn primary">Duyệt chọn hình</span></div>
+    <div class="body">
+      <div class="beat"><div><div class="t">0:00 · đoạn 1</div>Một hình người đứng trên cầu, hai tay áp lên đầu.</div>
+        <div><div class="thumbs"><div class="th">Cả bức tranh</div><div class="th detail">Cận cảnh: khuôn mặt</div><div class="th add">+</div></div><div class="why">Agent: mở bằng cả bức tranh rồi vào khuôn mặt.</div></div></div>
+      <div class="beat"><div><div class="t">1:12 · đoạn 6</div>Munch viết trong nhật ký về một buổi chiều đi dạo ở Kristiania.</div>
+        <div><div class="thumbs"><div class="th ctx">Ảnh: trang nhật ký</div><div class="th clip">▶ Clip 6 giây: vịnh Oslo</div><div class="th add">+</div></div><div class="why">Agent: đoạn bối cảnh, dùng hình ngoài bức tranh.</div></div></div>
+      <div class="beat"><div><div class="t">3:40 · đoạn 15</div>Có ba cách giải thích bầu trời đỏ.</div>
+        <div><div class="thumbs"><div class="th detail">Cận cảnh: bầu trời</div><div class="th add">+</div></div><div class="why chip warn" style="display:inline-block">Chưa tìm được hình cho "tro núi lửa Krakatoa"</div></div></div>
+    </div>
+    <div class="prompt"><span class="field">Nhờ agent: "đoạn 15 thêm một tranh vẽ núi lửa Krakatoa năm 1883"</span><span class="btn primary">Gửi</span><span class="btn">Tự chọn tay</span></div>
+  </div>
+  <div class="chips"><span class="chip code">Vùng của tranh chính</span><span class="chip agent">Hình bối cảnh</span><span class="chip human">Clip video</span></div>
+  <h3>Agent chọn hình làm việc thế nào</h3>
+  <p>Một luồng cố định do code điều khiển. Mô hình chỉ được gọi ở bước cần phán đoán, mỗi lần một câu trả lời có khuôn.</p>
+  <div class="steps">
+    <div class="step"><span class="chip agent">Mô hình</span><b>Lập danh sách</b>Đọc lời dẫn, hồ sơ và nhìn tranh chính. Với mỗi đoạn: cần chi tiết nào của tranh, hay cần hình bối cảnh, hay clip. Đề xuất khung cho các chi tiết.</div>
+    <div class="step"><span class="chip code">Code</span><b>Tìm</b>Tìm ứng viên ở Wikimedia Commons, bảo tàng Met, ảnh trong sách, You.com, YouTube. Không gọi mô hình.</div>
+    <div class="step"><span class="chip agent">Mô hình</span><b>Chọn</b>Nhìn các ứng viên, chọn cái hợp nhất cho từng đoạn hoặc trả lời "không có cái nào hợp".</div>
+    <div class="step"><span class="chip code">Code</span><b>Ghi</b>Nhập hình đã chọn, ghi bằng thao tác <code>set_picks</code>, kèm lý do. Đoạn nào chưa có hình thì đánh dấu.</div>
+    <div class="step"><span class="chip human">Bạn</span><b>Xem và duyệt</b>Đổi bằng cách bấm vào hình, hoặc gõ yêu cầu. Rồi bấm duyệt.</div>
+  </div>
+</section>
+
+<section id="buoc-5">
+  <h2>Bước 5 mới: Dựng hình</h2>
+  <p>Mặc định bạn thấy video và danh sách cảnh bằng lời thường. Timeline, bảng tham số và 71 kỹ thuật vẫn còn, sau nút "Chỉnh tay".</p>
+  <div class="mock" aria-label="Phác thảo trang Dựng hình">
+    <div class="bar"><span class="ttl">Dựng hình · The Scream</span><span class="chip">93 cảnh · 14:24</span><span class="btn">Chỉnh tay</span><span class="btn primary">Duyệt</span></div>
+    <div class="split">
+      <div>
+        <div class="player">▶ Xem thử · 1:42 / 14:24</div>
+        <div class="prompt"><span class="field">Nhờ agent sửa 2 cảnh đang chọn…</span><span class="btn primary">Gửi</span></div>
+        <div class="turn"><b>Bạn: zoom chậm hơn vào khuôn mặt và thêm vòng sáng</b><span>Agent: đã zoom chậm hơn ở cảnh 12 và thêm vòng sáng quanh khuôn mặt.</span><span class="chips"><span class="chip">Cảnh 12 · 1:42 · trước | sau</span><span class="btn">Xem thử</span><span class="btn">Hoàn tác</span></span></div>
+      </div>
+      <div>
+        <div class="scene"><div class="sth"></div><div><div class="t" style="font-family:var(--mono);font-size:12px;color:var(--muted)">Cảnh 11 · 1:33</div>Cả bức tranh, lia chậm từ trái sang.</div></div>
+        <div class="scene sel"><div class="sth"></div><div><div class="t" style="font-family:var(--mono);font-size:12px;color:var(--muted)">Cảnh 12 · 1:42 · đang chọn</div>Zoom vào khuôn mặt · vòng sáng.</div></div>
+        <div class="scene sel"><div class="sth"></div><div><div class="t" style="font-family:var(--mono);font-size:12px;color:var(--muted)">Cảnh 13 · 1:51 · đang chọn</div>Hai người phía sau, làm tối phần còn lại.</div></div>
+        <div class="scene"><div class="sth"></div><div><div class="t" style="font-family:var(--mono);font-size:12px;color:var(--muted)">Cảnh 14 · 2:03</div>Clip vịnh Oslo, 6 giây.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="o-go-lenh">
+  <h2>Ô gõ lệnh hoạt động thế nào</h2>
+  <p>Cùng một cách ở bước 4 và bước 5. Phạm vi là những gì bạn đang chọn: vài đoạn, vài cảnh, một chương, hoặc cả video.</p>
+  <div class="steps">
+    <div class="step"><span class="chip human">Bạn</span><b>Gõ yêu cầu</b>Bằng lời thường. Trang gửi kèm phạm vi đang chọn.</div>
+    <div class="step"><span class="chip agent">Mô hình</span><b>Trả danh sách thao tác</b>Một lần gọi. Nó nhận phần dữ liệu trong phạm vi và khuôn của các thao tác được phép.</div>
+    <div class="step"><span class="chip code">Code</span><b>Chạy thử</b>Kiểm tra phạm vi, cảnh khóa, tính hợp lệ, vẽ thử cảnh đã đổi. Có lỗi thì cho mô hình sửa đúng một lần.</div>
+    <div class="step"><span class="chip code">Code</span><b>Ghi</b>Áp dụng cả lô, lưu bản trước và sau.</div>
+    <div class="step"><span class="chip human">Bạn</span><b>Xem kết quả</b>Một dòng mô tả, ảnh trước và sau, nút "Xem thử" và "Hoàn tác".</div>
+  </div>
+  <div class="tablewrap"><table>
+    <tr><th>Đường</th><th>Dùng khi</th><th>Thời gian</th></tr>
+    <tr><td><b>Nhanh</b>: một lần gọi mô hình</td><td>Yêu cầu hẹp trên tối đa khoảng 12 cảnh hoặc vài đoạn</td><td class="num">Mục tiêu vài chục giây. Chưa đo.</td></tr>
+    <tr><td><b>Kỹ</b>: agent làm việc nhiều bước</td><td>Cần nhìn tranh để tìm chi tiết mới, tìm hình mới, hoặc dựng lại cả chương</td><td class="num">Vài phút đến hơn 20 phút. Đo thật: 10 phút một chương, 23 phút cả video.</td></tr>
+  </table></div>
+  <p>Trang tự chọn đường. Khi chuyển sang đường kỹ, nó báo trước là sẽ lâu. Khi yêu cầu không làm được với những gì dự án đang có, agent không đổi gì và nói bạn cần làm gì.</p>
+</section>
+
+<section id="cong-duyet">
+  <h2>Cổng duyệt và chạy tự động</h2>
+  <p>Mặc định mọi cổng do bạn duyệt. Khi bật "Chạy tự động", agent đi tiếp qua những cổng bạn cho phép và dừng ở cổng đầu tiên cần người.</p>
+  <div class="tablewrap"><table>
+    <tr><th>Cổng</th><th>Sau cổng này là</th><th>Agent tự duyệt được? (đề xuất)</th></tr>
+    <tr><td>Dàn ý</td><td>Viết lời dẫn, vài phút</td><td>Được</td></tr>
+    <tr><td>Lời dẫn</td><td>Giọng đọc, khoảng một giờ máy</td><td>Không, cần bạn</td></tr>
+    <tr><td>Chọn hình</td><td>Dựng nháp, khoảng 20 phút</td><td>Được</td></tr>
+    <tr><td>Storyboard</td><td>Xuất video, khoảng 25 phút máy</td><td>Không, cần bạn</td></tr>
+  </table></div>
+</section>
+
+<section id="an-toan">
+  <h2>An toàn và kiểm chứng</h2>
+  <ul>
+    <li><b>Agent không sửa file dự án.</b> Mọi thay đổi đi qua thao tác nhỏ. Agent dựng nháp vẫn làm trong thư mục tạm, kết quả của nó được đổi thành <code>replace_range</code>.</li>
+    <li><b>Nhật ký.</b> Mỗi lô thao tác ghi lại: lúc nào, ai (bạn hay agent nào, mô hình nào), tóm tắt, bản trước và sau. Trang có mục "Lịch sử thay đổi" với nút hoàn tác từng lô.</li>
+    <li><b>Việc tốn tiền hoặc tốn giờ máy</b> được đánh dấu trong danh sách việc tiếp theo. Agent bên ngoài không tự chạy được nếu bạn chưa cho phép.</li>
+    <li><b>Bộ bài kiểm cho agent.</b> Khoảng mười yêu cầu mẫu cho mỗi bước trên dự án mẫu, mỗi yêu cầu chạy vài lần, có tiêu chí đạt rõ ràng. Chạy lại mỗi khi đổi lời nhắc hoặc đổi mô hình. Lý do: các nghiên cứu cho thấy agent làm cùng một việc nhiều lần cho kết quả không ổn định.</li>
+  </ul>
+</section>
+
+<section id="thu-tu">
+  <h2>Thứ tự xây</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Đợt</th><th>Nội dung</th><th>Bạn thấy gì khi xong</th></tr>
+    <tr><td class="num">C1</td><td>Thao tác nhỏ cho chọn hình và storyboard, nhật ký, hoàn tác theo lô, trạng thái và việc tiếp theo, lỗi có cách sửa</td><td>Chưa đổi gì trên màn hình; nền cho các đợt sau</td></tr>
+    <tr><td class="num">C2</td><td>Ô gõ lệnh chạy trên thao tác nhỏ, ở bước 5 rồi bước 4</td><td>Gõ yêu cầu, thấy thay đổi và nút hoàn tác</td></tr>
+    <tr><td class="num">C3</td><td>Agent chọn hình</td><td>Nút "Để agent chọn hình"</td></tr>
+    <tr><td class="num">C4</td><td>Hai trang đơn giản như phác thảo ở trên</td><td>Trang Chọn hình và Dựng hình mới</td></tr>
+    <tr><td class="num">C5</td><td>Lệnh <code>bti</code>, <code>AGENTS.md</code>, skill từng bước</td><td>Agent trong terminal chạy được từng bước</td></tr>
+    <tr><td class="num">C6</td><td>Chạy tự động qua các cổng, bộ bài kiểm</td><td>Nút "Chạy tự động"</td></tr>
+  </table></div>
+  <h3>Không làm lúc này</h3>
+  <ul>
+    <li><b>Máy chủ MCP.</b> Lợi thế chính của nó là quản lý quyền cho nhiều người dùng; pipeline này có một chủ. Có thể thêm sau như một lớp mỏng trên cùng các thao tác.</li>
+    <li><b>Nhiều agent phối hợp.</b> Tốn token gấp nhiều lần và dễ lệch nhau khi các phần phụ thuộc nhau.</li>
+    <li><b>Cho agent bấm giao diện như người.</b> Chậm, đắt, dễ bấm trượt; chỉ là phương án dự phòng.</li>
+  </ul>
+</section>
+
+<section id="chua-chac">
+  <h2>Điểm chưa chắc, cần thử trước khi xây</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Câu hỏi</th><th>Vì sao quan trọng</th><th>Nếu câu trả lời là không</th></tr>
+    <tr><td>Một lần gọi <code>agy</code> có gửi kèm ảnh được không?</td><td>Agent chọn hình cần nhìn tranh để đề xuất vùng và chọn ứng viên.</td><td>Hai bước "nhìn" chạy như một phiên agent ngắn có giới hạn, chậm hơn (ước vài phút).</td></tr>
+    <tr><td>Một lần gọi Gemini 3.8 Flash cho yêu cầu nhỏ mất bao lâu?</td><td>Quyết định ô gõ lệnh có cảm giác nhanh hay không.</td><td>Thử mức suy luận thấp hơn cho đường nhanh, hoặc mô hình khác trong hộp cài đặt.</td></tr>
+    <tr><td>Hạn mức Antigravity có đủ không?</td><td>Tài khoản đang ở gói khởi đầu và đã hết hạn mức một lần hôm 17/11.</td><td>Nâng gói, hoặc đặt mô hình khác cho từng việc.</td></tr>
+    <tr><td>Khóa You.com mới có chạy không?</td><td>Nguồn gợi ý hình cho đoạn bối cảnh.</td><td>Agent dùng các nguồn miễn phí.</td></tr>
+  </table></div>
+</section>
+
+<section id="can-quyet">
+  <h2>Ba điều cần bạn quyết</h2>
+  <ol>
+    <li><b>Cổng nào agent được tự duyệt khi chạy tự động?</b> Đề xuất: dàn ý và chọn hình. Lời dẫn và storyboard luôn cần bạn.</li>
+    <li><b>Clip video: bao nhiêu và dài bao lâu?</b> Đề xuất: mỗi chương tối đa một clip, 4 đến 10 giây, chỉ cho đoạn bối cảnh.</li>
+    <li><b>Trang Dựng hình mặc định là danh sách cảnh, timeline nằm sau nút "Chỉnh tay".</b> Có đúng ý bạn không?</li>
+  </ol>
+</section>
+
+</div>

@@ -105,6 +105,159 @@ def slug(s: str, words: int = 6) -> str:
     return "-".join(norm(s).split()[:words]) or "x"
 
 
+def title_case_words(s: str) -> str:
+    if not s:
+        return s
+    minor = {"a", "an", "the", "and", "but", "or", "for", "nor", "on", "at", "to", "from", "by", "of", "in", "with",
+             "du", "des", "de", "la", "le"}
+    words = s.split()
+    out = []
+    for i, w in enumerate(words):
+        parts = re.split(r"([-\/’\'])", w)
+        cased_parts = []
+        for p in parts:
+            if re.match(r"^([-\/’\']|\d+)$", p):
+                cased_parts.append(p)
+            else:
+                low = p.lower()
+                if i > 0 and low in minor:
+                    cased_parts.append(low)
+                else:
+                    cased_parts.append(p.capitalize())
+        out.append("".join(cased_parts))
+    return " ".join(out)
+
+
+def extract_clean_meta(bid: str, w: dict) -> dict[str, str | None]:
+    """Take title, artist, year (and headline) from cleaned text of the work's first page if present."""
+    a, b = w["pdf_pages"]
+    clean_lines: list[str] | None = None
+    for p in ((a, a + 1) if a < b else (a,)):
+        cf = config.LIB_DIR / "clean_text" / bid / f"page_{p:04d}.txt"
+        if not cf.is_file():
+            continue
+        try:
+            lines = [ln.strip() for ln in cf.read_text(encoding="utf-8").splitlines() if ln.strip()]
+        except Exception:
+            continue
+        has_h1 = any(re.match(r"^#\s+", ln) for ln in lines)
+        has_meta = any(re.match(r"^\[meta\]", ln, re.I) for ln in lines)
+        if has_h1 or has_meta:
+            clean_lines = lines
+            break
+    if not clean_lines:
+        return {}
+
+    h1 = None
+    metas: list[str] = []
+    for ln in clean_lines:
+        if re.match(r"^#\s+", ln) and not h1:
+            h1 = re.sub(r"^#\s+", "", ln).strip()
+        elif re.match(r"^\[meta\]", ln, re.I):
+            metas.append(re.sub(r"^\[meta\]\s*", "", ln, flags=re.I).strip())
+
+    orig_title = w.get("title")
+    orig_artist = w.get("artist")
+    res: dict[str, str | None] = {}
+
+    if bid == "payne_gae":
+        if h1:
+            if orig_title and norm(h1) == norm(orig_title):
+                res["title"] = orig_title
+            else:
+                res["title"] = title_case_words(h1)
+        for m in metas:
+            if re.match(r"^CHAPTER\s+\d+$", m, re.I):
+                continue
+            elif parse.year_num(m) is not None:
+                res["year"] = re.sub(r"\s*[-–—]\s*", "-", m)
+            else:
+                if orig_artist and norm(m) == norm(orig_artist):
+                    res["artist"] = orig_artist
+                else:
+                    res["artist"] = title_case_words(m)
+
+    elif bid == "hodge_aid":
+        if h1:
+            if orig_title and h1.lower() == orig_title.lower():
+                res["title"] = orig_title
+            else:
+                res["title"] = title_case_words(h1)
+        if len(metas) >= 1:
+            m_artist = metas[0]
+            if orig_artist and m_artist.lower() == orig_artist.lower():
+                res["artist"] = orig_artist
+            else:
+                res["artist"] = title_case_words(m_artist)
+        if len(metas) >= 2:
+            res["year"] = re.sub(r"\s*[-–—]\s*", "-", metas[1])
+
+    elif bid == "hagen_wgps":
+        if metas and ":" in metas[0]:
+            art_part, _, rest = metas[0].partition(": ")
+            t_part, y_part = parse.split_year_tail(rest)
+            art_part = parse.fix_ocr(art_part.strip())
+            t_part = parse.fix_ocr(t_part.strip())
+            if art_part.lower().startswith("artist unknown"):
+                res["artist"] = None
+            else:
+                res["artist"] = art_part
+            res["title"] = t_part
+            if y_part:
+                res["year"] = re.sub(r"\s*[-–—]\s*", "-", y_part)
+        if h1:
+            res["headline"] = h1
+
+    elif bid == "grovier_nws":
+        if h1:
+            m = re.match(r"^\d\d\s+(.*)$", h1)
+            body = m.group(1).strip() if m else h1.strip()
+            if ", " in body and not body.startswith("The "):
+                a_str, _, t_str = body.partition(", ")
+                res["artist"] = a_str.strip()
+                res["title"] = t_str.strip()
+            else:
+                res["title"] = body
+        if metas:
+            ym = re.search(r"^\((.*)\)$", metas[0])
+            y_str = ym.group(1).strip() if ym else metas[0].strip()
+            res["year"] = re.sub(r"\s*[-–—]\s*", "-", y_str)
+
+    elif bid == "brookehitching_mad":
+        if h1:
+            m = re.match(r"^(.*?)\s*\(([^()]*\d[^()]*|[^()]*centur[^()]*)\)(.*)$", h1)
+            if m:
+                t_str, y_str, tail = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
+                a_str = None
+                if tail.startswith(","):
+                    a_sub = tail[1:].strip()
+                    a_str = re.split(r"\s+and\s+", a_sub, flags=re.I)[0].strip() or None
+                pm = re.match(r"^([A-Z][\w.]*(?:\s+(?:[a-z]+\s+)?[A-Z][\w.]*)+)’s\s+(.+)$", t_str, re.I)
+                if pm and not a_str and not pm.group(1).lower().startswith(("mr ", "mrs ", "dr ", "st ")):
+                    a_str, t_str = pm.group(1), pm.group(2)
+                if orig_title and norm(t_str) == norm(orig_title):
+                    res["title"] = orig_title
+                else:
+                    res["title"] = title_case_words(t_str)
+                if a_str:
+                    if orig_artist and norm(a_str) == norm(orig_artist):
+                        res["artist"] = orig_artist
+                    else:
+                        res["artist"] = title_case_words(a_str)
+                if y_str:
+                    res["year"] = re.sub(r"\s*[-–—]\s*", "-", y_str)
+        if w.get("n") in parse.MADMAN_EXC:
+            for k, v in parse.MADMAN_EXC[w["n"]].items():
+                if k in ("title", "artist"):
+                    res[k] = v
+
+    elif bid == "dasal_artcurious":
+        if h1:
+            res["title"] = h1
+
+    return res
+
+
 # ------------------------------------------------------------------ rights estimate
 def estimate_rights(w: dict, today_year: int | None = None) -> dict:
     """Only a hint for the human. pd_likely: artist died >= 71 years ago, or work before 1900.
@@ -269,6 +422,12 @@ def build(only: list[str] | None = None, log=print) -> dict:
             for k in ("artist_death", "artist_alive", "artist_dates", "pages_inferred"):
                 if r.get(k) is not None:
                     w[k] = r[k]
+            clean_meta = extract_clean_meta(bid, w)
+            for k in ("title", "artist", "year"):
+                if clean_meta.get(k) is not None:
+                    w[k] = clean_meta[k]
+            if clean_meta.get("headline"):
+                w["headline"] = clean_meta["headline"]
             w["year_num"] = parse.year_num(w["year"])
             works.append(w)
         works = apply_overrides(works, load_overrides(bid))
@@ -369,10 +528,34 @@ def regroup(log=print) -> dict:
     for bid, w in flat:
         groups.setdefault(find(w["id"]), []).append((bid, w))
 
+    project_pinned_groups: dict[str, str] = {}
+    pdir = getattr(config, "PROJECTS_DIR", None) or Path("projects")
+    pdir = Path(pdir)
+    if pdir.is_dir():
+        for pj in pdir.glob("*/project.json"):
+            try:
+                pdata = json.loads(pj.read_text(encoding="utf-8"))
+                pk = pdata.get("artwork_key")
+                if pk:
+                    pwids = {s.get("work_id") for s in pdata.get("sources", []) if s.get("work_id")}
+                    if pwids:
+                        best_leader = None
+                        best_overlap = 0
+                        for leader, members in groups.items():
+                            ws_ids = {w["id"] for _, w in members}
+                            overlap = len(ws_ids & pwids)
+                            if overlap > best_overlap:
+                                best_overlap = overlap
+                                best_leader = leader
+                        if best_leader is not None:
+                            project_pinned_groups[best_leader] = pk
+            except Exception:
+                pass
+
     known = [w for w in all_works.get("hodge_aid", []) if w.get("artist_death") or w.get("artist_alive")]
     keys_used: dict[str, int] = {}
     artworks: dict[str, dict] = {}
-    for members in groups.values():
+    for leader, members in groups.items():
         ws = [w for _, w in members]
         rep = next((w for w in ws if w.get("artist")), ws[0])
         year = next((w["year"] for w in ws if w.get("year")), None)
@@ -385,10 +568,15 @@ def regroup(log=print) -> dict:
             base = f"{tk[-1] if tk else 'unknown'}-{slug(rep['title'], 5)}"
         keys_used[base] = keys_used.get(base, 0) + 1
         key = base if keys_used[base] == 1 else f"{base}-{keys_used[base]}"
-        artworks[key] = {"title": rep["title"], "artist": rep.get("artist"), "year": year,
-                         "works": [w["id"] for w in ws]}
+        pinned_key = project_pinned_groups.get(leader)
+        final_key = pinned_key or key
+        art_entry = {"title": rep["title"], "artist": rep.get("artist"), "year": year,
+                     "works": [w["id"] for w in ws]}
+        if pinned_key and pinned_key != key:
+            art_entry["alias"] = key
+        artworks[final_key] = art_entry
         for w in ws:
-            w["artwork_key"] = key
+            w["artwork_key"] = final_key
             if w.get("year_num") is None and ynum is not None:
                 w["year_num"] = ynum
                 w["year_from_group"] = True

@@ -59,14 +59,36 @@ def validate_outline(o: Outline, brief: dict | None = None) -> list[dict]:
     if len(set(fids)) != len(fids):
         out.append(issue("error", "duplicate_fact", "Two facts share an id."))
     known_f = set(fids)
-    known_p = set(brief["paragraph_ids"]) if brief else None
+    active_paras: set[str] = set()
+    excluded_paras: set[str] = set()
+    if brief and "sources" in brief:
+        for s in brief["sources"]:
+            pids = {p["id"] for p in s.get("paragraphs", [])}
+            if s.get("included"):
+                active_paras |= pids
+            else:
+                excluded_paras |= pids
+        all_known = active_paras | excluded_paras
+    elif brief and "paragraph_ids" in brief:
+        active_paras = set(brief["paragraph_ids"])
+        excluded_paras = set(brief.get("excluded_paragraph_ids", []))
+        all_known = active_paras | excluded_paras
+    else:
+        all_known = None
+
     for f in o.facts:
         if not f.sources:
             out.append(issue("warning", "fact_no_source", f"Fact {f.id} cites no source paragraph.", fact=f.id))
-        elif known_p is not None:
-            bad = [s for s in f.sources if s not in known_p]
+        elif all_known is not None:
+            bad = [s for s in f.sources if s not in all_known]
             if bad:
                 out.append(issue("warning", "unknown_source_id", f"Fact {f.id} cites {', '.join(bad)}, not in the brief.", fact=f.id))
+            exc = [s for s in f.sources if s in excluded_paras]
+            if exc:
+                if len(exc) == len(f.sources):
+                    out.append(issue("error", "source_excluded", f"Fact {f.id} has all its sources excluded ({', '.join(exc)}).", fact=f.id))
+                else:
+                    out.append(issue("warning", "source_excluded", f"Fact {f.id} cites excluded source: {', '.join(exc)}.", fact=f.id))
         if f.certainty == "disputed" and not f.conflict:
             out.append(issue("warning", "disputed_no_conflict", f"Fact {f.id} is disputed but no conflict is described.", fact=f.id))
     for c in o.chapters:

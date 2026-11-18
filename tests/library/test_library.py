@@ -203,3 +203,59 @@ def test_create_project_validation(tmp_path):
 def test_soft_hyphen_repair():
     assert extract.repair("Hast¬\nings and re¬ \nproduc¬\ntion") == "Hastings and reproduction"
     assert "¬" not in extract.work_text({"id": "hagen_wgps/001", "pdf_pages": [12, 13]})["text"]
+
+
+# ---------------------------------------------------------------- D19 clean text catalogue & project key alias
+def test_d19_clean_text_metadata_precedence(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LIB_DIR", tmp_path)
+    clean_dir = tmp_path / "clean_text" / "payne_gae"
+    clean_dir.mkdir(parents=True)
+    # page 1 has clean text with corrected title, artist and year
+    (clean_dir / "page_0001.txt").write_text(
+        "[page-type] body\n\n# RAIN, STEAM AND SPEED – THE GREAT WESTERN RAILWAY\n"
+        "[meta] CHAPTER 1\n[meta] J. M. W. TURNER\n[meta] 1844\n\nSome body text.\n",
+        encoding="utf-8"
+    )
+    raw_work = {"id": "payne_gae/001", "n": 1, "title": "Rail, Steam and Speed", "artist": "J. M. W. Turner",
+                "year": "1840", "pdf_pages": [1, 2]}
+    meta = catalogue.extract_clean_meta("payne_gae", raw_work)
+    assert meta["title"] == "Rain, Steam and Speed – the Great Western Railway"
+    assert meta["artist"] == "J. M. W. Turner"
+    assert meta["year"] == "1844"
+
+
+def test_d19_artwork_key_preserved_with_alias(tmp_path, monkeypatch):
+    monkeypatch.setattr(config, "LIB_DIR", tmp_path)
+    monkeypatch.setattr(config, "PROJECTS_DIR", tmp_path / "projects")
+    (tmp_path / "overrides").mkdir()
+    (tmp_path / "overrides" / "artworks.json").write_text('{"merge": [], "split": []}\n', encoding="utf-8")
+    
+    # Fake books and works
+    bd = config.book_dir("payne_gae")
+    bd.mkdir(parents=True)
+    works = [{"id": "payne_gae/001", "n": 1, "title": "Rain, Steam and Speed – The Great Western Railway",
+              "artist": "J. M. W. Turner", "year": "1844", "pdf_pages": [1, 2]}]
+    (bd / "works.json").write_text(json.dumps(works), encoding="utf-8")
+    for b in config.BOOKS:
+        if b["id"] != "payne_gae":
+            (config.book_dir(b["id"])).mkdir(parents=True, exist_ok=True)
+            (config.book_dir(b["id"]) / "works.json").write_text("[]\n", encoding="utf-8")
+
+    # An existing project points to the old key
+    proj_dir = tmp_path / "projects" / "test-turner"
+    proj_dir.mkdir(parents=True)
+    (proj_dir / "project.json").write_text(json.dumps({
+        "id": "test-turner",
+        "title": "Rail, Steam and Speed",
+        "artwork_key": "turner-rail-steam-and-speed",
+        "sources": [{"work_id": "payne_gae/001"}]
+    }), encoding="utf-8")
+
+    catalogue.regroup()
+    artworks = catalogue.load_artworks()
+    
+    # Old key must be kept for the artwork that has a project
+    assert "turner-rail-steam-and-speed" in artworks
+    art = artworks["turner-rail-steam-and-speed"]
+    assert art["alias"].startswith("turner-rain-steam-and-speed")
+

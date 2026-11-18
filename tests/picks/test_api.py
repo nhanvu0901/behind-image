@@ -55,6 +55,7 @@ def test_get_new_project(client):
     assert [i["code"] for i in r["issues"] if i["level"] == "error"] == ["no_main"]
     assert r["narration"]["approved"] is True and len(r["narration"]["beat_ids"]) == 6
     assert [d["id"] for d in r["details"]] == ["D1", "D2"] and r["default_main_query"] == "The Test Painting A. Painter"
+    assert "video_tools" in r and "available" in r["video_tools"]
     assert not (client.pdir / "picks.json").exists()                      # reading writes nothing
 
 
@@ -283,7 +284,18 @@ def test_video_search_paid_gate_and_url_inspect(client):
 
     free = client.post(client.u("/video-search"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "query": "oil"})
     assert free.status_code == 200 and free.json()["paid"] is False and free.json()["items"][0]["id"] == "dQw4w9WgXcQ"
+    assert free.json()["url"] == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
     assert client.post(client.u("/video-search"), json={"url": "https://example.org/not-yt"}).json()["code"] == "video_bad_url"
+    assert client.post(client.u("/video-search"), json={"url": "--batch-file=C:/x youtube.com/watch?v=aaaaaaaaaaa"}).json()["code"] == "video_bad_url"
+    assert client.post(client.u("/video-search"), json={"url": "https://www.youtube.com/watch?v=aaaaaaaaaaa; rm -rf /"}).json()["code"] == "video_bad_url"
+
+    def fail_missing(*a, **k):
+        from bti.media.clips import ToolMissing
+        raise ToolMissing("missing yt-dlp")
+    client.app.state.video_metadata_fn = fail_missing
+    miss = client.post(client.u("/video-search"), json={"url": "https://youtu.be/dQw4w9WgXcQ"})
+    assert miss.status_code == 503 and miss.json()["code"] == "tool_missing"
+
 
 
 def test_import_clip_and_upload_video(client):
@@ -291,6 +303,7 @@ def test_import_clip_and_upload_video(client):
     mp4 = _mp4_bytes()
 
     def fake_imp(pdir, url, s, e, *, strict_licence=False, require_root=True):
+        assert url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
         m = pdir / "media"
         m.mkdir(exist_ok=True)
         (m / "ve_clip.mp4").write_bytes(mp4)
@@ -302,10 +315,42 @@ def test_import_clip_and_upload_video(client):
 
     client.app.state.clip_importer = fake_imp
     assert client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 5, "end": 5.1}).json()["code"] == "video_bad_range"
-    r = client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 10, "end": 18, "beat_id": "b0001", "note": "when talking about glaze"})
+    assert client.post(client.u("/import-clip"), json={"url": "--batch-file=C:/x youtube.com/watch?v=aaaaaaaaaaa", "start": 1, "end": 5}).json()["code"] == "video_bad_url"
+    assert client.post(client.u("/import-clip"), json={"url": "https://evil.com/x", "start": 1, "end": 5}).json()["code"] == "video_bad_url"
+    import bti.longjob as lj
+
+    # Async job test
+    r_async = client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 10, "end": 18, "beat_id": "b0001", "note": "when talking about glaze"})
+    assert r_async.status_code == 200 and "job_id" in r_async.json()
+    jid = r_async.json()["job_id"]
+    rec = lj.manager.wait(jid, timeout=10)
+    assert rec["state"] == "done"
+    part_res = rec.get("result") or {}
+    assert part_res.get("asset", {}).get("duration") == 8.0
+
+    # Wait=True test
+    r = client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 10, "end": 18, "beat_id": "b0001", "note": "when talking about glaze", "wait": True})
     assert r.status_code == 200 and r.json()["asset"]["kind"] == "video" and r.json()["asset"]["duration"] == 8.0
     items = r.json()["picks"]["beats"]["b0001"]["items"]
     assert items[0]["asset"] == "ve_clip" and items[0]["role"] == "video" and items[0]["note"] == "when talking about glaze"
+
+    # Cancel test
+    import threading
+    started_evt = threading.Event()
+    def slow_imp(pdir, url, s, e, **kw):
+        started_evt.set()
+        import time
+        for _ in range(50):
+            time.sleep(0.05)
+        return fake_imp(pdir, url, s, e, **kw)
+    client.app.state.clip_importer = slow_imp
+    r_c = client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 10, "end": 18})
+    jid_c = r_c.json()["job_id"]
+    started_evt.wait(timeout=2.0)
+    cancel_res = client.post(f"/api/longjobs/{jid_c}/cancel")
+    assert cancel_res.status_code == 200
+    rec_c = lj.manager.wait(jid_c, timeout=10)
+    assert rec_c["state"] == "cancelled"
 
     bad_main = client.post(client.u("/upload"), files={"file": ("clip.mp4", mp4, "video/mp4")}, data={"as_main": "1"})
     assert bad_main.status_code == 422 and bad_main.json()["code"] == "video_not_main"

@@ -22,7 +22,11 @@ const FORBIDDEN = [
   [/\b(?:i|x|issue|is|it)\.message\b/, 'a raw validation message is shown: use issueText'],
   [/\bj\.error\b|job\.error\b/, 'a raw job error is shown: use jobErrorText / jobFailText'],
   [/e\.body\??\.detail\??\.(?:message|reason)|e\.body\??\.(?:reason|detail)\b.*text/, 'a raw server body text is shown'],
+  [/['"`]\s*\+\s*v\.error\b|\$\{\s*v\.error\s*\}|text:\s*v\.error\b/, 'a raw video error is shown or built into text: use errmsg / ERR'],
+  [/text:\s*(?:m|moment)\.why\b/, 'a raw moment reason is shown directly: use labels.js / momentWhy'],
 ];
+
+
 const ALLOW = [/new RegExp|\.test\(|\.exec\(|\.match\(|console\.|throw new|\/\*\*|^\s*\*/];
 
 test('no view or helper shows an exception message, a status number or a raw validation text', () => {

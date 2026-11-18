@@ -5,11 +5,14 @@ No personal details in any header or URL.
 """
 from __future__ import annotations
 
+import email.utils
 import json
+import socket
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime, timezone
 from typing import Any, Callable
 from bti.fsio import atomic_replace
 
@@ -26,20 +29,50 @@ class MediaHTTPError(RuntimeError):
         self.status = status
 
 
+class FileTooLarge(ValueError, MediaHTTPError):
+    def __init__(self, message: str = "file too large", status: int = 413, code: str = "too_large"):
+        ValueError.__init__(self, message)
+        MediaHTTPError.__init__(self, message, status)
+        self.code = code
+        self.status = status
+
+
 def _retry_after(exc: urllib.error.HTTPError) -> float | None:
     try:
         v = exc.headers.get("Retry-After") if exc.headers else None
-        return float(v) if v is not None else None
-    except (TypeError, ValueError):
+        if v is None:
+            return None
+        try:
+            return max(0.0, float(v))
+        except ValueError:
+            dt = email.utils.parsedate_to_datetime(v)
+            if dt is not None:
+                now = datetime.now(timezone.utc)
+                diff = (dt - now).total_seconds()
+                return max(0.0, diff)
+            return None
+    except Exception:
         return None
+
+
+def _is_timeout(exc: BaseException) -> bool:
+    if isinstance(exc, (TimeoutError, socket.timeout)):
+        return True
+    if isinstance(exc, urllib.error.URLError):
+        reason = getattr(exc, "reason", None)
+        if isinstance(reason, (TimeoutError, socket.timeout)):
+            return True
+        if "timed out" in str(reason).lower():
+            return True
+    return False
 
 
 def open_url(url: str, *, timeout: float = 30, tries: int = MAX_TRIES,
              sleep: Callable[[float], None] = time.sleep,
              opener: Callable[..., Any] | None = None,
              headers: dict[str, str] | None = None):
-    """Open `url`, retrying 429/5xx with a growing wait (2, 4, 8 s; Retry-After honoured,
-    capped), at most `tries` attempts. Returns the response object (a context manager)."""
+    """Open `url`, retrying 429/5xx and timeouts with a growing wait (2, 4, 8 s; Retry-After
+    honoured, capped), at most `tries` attempts. Returns the response object (a context manager)."""
     opener = opener or urllib.request.urlopen
     hdrs = {"User-Agent": USER_AGENT, "Accept": "*/*", **(headers or {})}
     delay = BASE_DELAY
@@ -53,8 +86,16 @@ def open_url(url: str, *, timeout: float = 30, tries: int = MAX_TRIES,
                 delay *= 2
                 continue
             raise MediaHTTPError(f"HTTP {exc.code} for {_short(url)}", exc.code) from exc
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
-            raise MediaHTTPError(f"request failed ({exc.__class__.__name__}) for {_short(url)}") from exc
+        except Exception as exc:
+            if _is_timeout(exc) and attempt < tries:
+                sleep(min(delay, MAX_WAIT))
+                delay *= 2
+                continue
+            if _is_timeout(exc):
+                raise MediaHTTPError(f"timed out after {tries} tries for {_short(url)}") from exc
+            if isinstance(exc, (urllib.error.URLError, TimeoutError, OSError)):
+                raise MediaHTTPError(f"request failed ({exc.__class__.__name__}) for {_short(url)}") from exc
+            raise
     raise MediaHTTPError(f"gave up after {tries} tries for {_short(url)}")  # pragma: no cover
 
 
@@ -88,14 +129,14 @@ def download_file(url: str, dest, *, max_bytes: int, timeout: float = 120, **kw)
         with open_url(url, timeout=timeout, **kw) as r, open(tmp, "wb") as fh:
             declared = r.headers.get("Content-Length") if getattr(r, "headers", None) else None
             if declared and declared.isdigit() and int(declared) > max_bytes:
-                raise MediaHTTPError(f"file is {int(declared)} bytes, over the {max_bytes} byte cap")
+                raise FileTooLarge(f"file is {int(declared)} bytes, over the {max_bytes} byte cap")
             while True:
                 chunk = r.read(1 << 16)
                 if not chunk:
                     break
                 total += len(chunk)
                 if total > max_bytes:
-                    raise MediaHTTPError(f"download exceeded the {max_bytes} byte cap")
+                    raise FileTooLarge(f"download exceeded the {max_bytes} byte cap")
                 fh.write(chunk)
         atomic_replace(tmp, dest)
     except BaseException:

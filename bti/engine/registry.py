@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 from pathlib import Path
 
 from .errors import DataError, StyleError
@@ -114,6 +115,7 @@ class StyleBundle:
 
 
 _BUNDLES: dict = {}
+_BUNDLE_LOCK = threading.RLock()
 
 
 def load_bundle(style_id: str = "gae", root: Path | None = None) -> StyleBundle:
@@ -121,14 +123,15 @@ def load_bundle(style_id: str = "gae", root: Path | None = None) -> StyleBundle:
     if not (isinstance(style_id, str) and STYLE_ID.fullmatch(style_id)):
         raise StyleError("unknown style %r" % (style_id,))
     key = (style_id, str(root))
-    b = _BUNDLES.get(key)
     path = (root or STYLE_ROOT) / style_id / "techniques.json"
     mtime = path.stat().st_mtime if path.exists() else 0
-    if b is None or getattr(b, "_mtime", None) != mtime:
-        b = StyleBundle(style_id, root)
-        b._mtime = mtime
-        _BUNDLES[key] = b
-    return b
+    with _BUNDLE_LOCK:
+        b = _BUNDLES.get(key)
+        if b is None or getattr(b, "_mtime", None) != mtime:
+            b = StyleBundle(style_id, root)
+            b._mtime = mtime
+            _BUNDLES[key] = b
+        return b
 
 
 # ----------------------------------------------------------------------------- parameter validation
@@ -174,13 +177,15 @@ def _check_camera(v):
 
 
 _PATTERNS: dict = {}
+_PATTERN_LOCK = threading.RLock()
 
 
 def _pattern(src: str):
-    c = _PATTERNS.get(src)
-    if c is None:
-        c = _PATTERNS[src] = re.compile(src)
-    return c
+    with _PATTERN_LOCK:
+        c = _PATTERNS.get(src)
+        if c is None:
+            c = _PATTERNS[src] = re.compile(src)
+        return c
 
 
 def _check_count(p: dict, n: int):

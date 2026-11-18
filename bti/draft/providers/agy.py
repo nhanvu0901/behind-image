@@ -31,7 +31,6 @@ from bti.proc import IS_WINDOWS, group_kwargs, kill_tree
 
 from ..inputs import DraftError
 
-DEFAULT_MODEL = "gemini-pro-orchestrator-g1-pro"
 PROMPT = "Read TASK.md in this folder and do the task."
 LOCK = threading.Lock()                     # one agent run at a time
 HELP_TIMEOUT = 30
@@ -91,7 +90,10 @@ def clean_env(python: str | None = None) -> dict:
 
 
 def build_command(agy: str, model: str | None) -> list[str]:
-    return [agy, "--dangerously-skip-permissions", "--model", model or DEFAULT_MODEL, "--input-format", "stream-json",
+    from bti.settings import model_for
+    m = model or model_for("draft")
+    slug = m[len("agy:"):] if m.startswith("agy:") else m
+    return [agy, "--dangerously-skip-permissions", "--model", slug, "--input-format", "stream-json",
             "--output-format", "stream-json"]
 
 
@@ -218,6 +220,8 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
     Own work, because the runner offers no way to do it: the 30 minute limit of the whole run kills the tree through bti.proc
     (`kill_tree` on the handle's process) and keeps the partial result."""
     import types
+    if os.environ.get("BTI_NO_REAL_MODELS") == "1":
+        raise DraftError("real_models_off", "real models are disabled (BTI_NO_REAL_MODELS=1)")
     agy = agy or find_agy()
     if not agy:
         raise DraftError("agy_missing", "agy (the Antigravity CLI) is not installed on this machine")

@@ -1,0 +1,8 @@
+{
+  "script.outline": "agy:gemini-3.8-flash-high",
+  "script.narration": "agy:gemini-3.8-flash-high",
+  "draft": "agy:gemini-3.8-flash-high",
+  "edit.fast": "agy:gemini-3.8-flash-high",
+  "edit.deep": "agy:gemini-3.8-flash-high",
+  "picks": "agy:gemini-3.8-flash-high"
+}

@@ -1,5 +1,8 @@
+import os
 import sys
 from pathlib import Path
+
+os.environ["BTI_NO_REAL_MODELS"] = "1"
 
 import pytest
 

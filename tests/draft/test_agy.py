@@ -32,6 +32,7 @@ def fake(tmp_path, monkeypatch, proj):
         exe.write_text("#!%s\n%s" % (sys.executable, script.read_text(encoding="utf-8")), encoding="utf-8")
         exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("BTI_AGY_BIN", str(exe))
+    monkeypatch.delenv("BTI_NO_REAL_MODELS", raising=False)
     agy._HELP_OK.clear()
     victim = proj / "timing.json"
     (d / "cfg.json").write_text(json.dumps({"specs": GOOD, "victim": str(victim)}), encoding="utf-8")
@@ -79,14 +80,17 @@ def test_normal_run_command_line_prompt_and_events(fake, ws, proj):
     assert "TASK.md" in fake.prompts()[0] and (ws.root / "out" / "c01.json").is_file()
     assert seen and seen[-1]["steps"] == 3 and seen[-1]["out_files"] == 2
     assert (ws.root.parent / "events.jsonl").read_text().count('"event": "step_update"') == 3
-    assert agy.DEFAULT_MODEL == "gemini-pro-orchestrator-g1-pro"
 
 
 def test_default_model_and_environment_whitelist(fake, ws, monkeypatch):
+    from bti.settings import model_for
     monkeypatch.setenv("SECRET_THING", "x")
     agy.run(ws.root, timeout=60, python="/the/python")
     c = fake.calls()[0]
-    assert c["argv"][c["argv"].index("--model") + 1] == agy.DEFAULT_MODEL
+    expected = model_for("draft")
+    if expected.startswith("agy:"):
+        expected = expected[len("agy:"):]
+    assert c["argv"][c["argv"].index("--model") + 1] == expected
     assert "SECRET_THING" not in c["env"] and "BTI_PYTHON" in c["env"] and "BTI_AGY_BIN" not in c["env"]
 
 

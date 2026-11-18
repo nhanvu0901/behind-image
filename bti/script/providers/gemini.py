@@ -1,6 +1,7 @@
 """Google Generative Language REST API (generateContent). The key goes in a header, never in the URL."""
 from __future__ import annotations
 
+import os
 import httpx
 
 from ..env import get_key
@@ -10,6 +11,8 @@ BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
 
 
 def complete(spec: dict, system: str, user: str, *, timeout: float = 300, on_progress=None, cancel=None) -> str:
+    if os.environ.get("BTI_NO_REAL_MODELS") == "1":
+        raise ProviderError("real_models_off", "real models are disabled (BTI_NO_REAL_MODELS=1)")
     key_env = spec.get("key_env")
     key = get_key(key_env)
     if not key:

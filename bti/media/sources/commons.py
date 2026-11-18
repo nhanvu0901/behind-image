@@ -16,10 +16,22 @@ from ..licence import check_licence
 API_URL = "https://commons.wikimedia.org/w/api.php"
 IIPROP = "url|size|mime|extmetadata"
 MIN_SHORT_SIDE = 1200
-MAX_IMAGE_BYTES = 150 * 1024 * 1024
+MAX_IMAGE_BYTES = 60 * 1024 * 1024
 MAX_VIDEO_BYTES = 400 * 1024 * 1024
+MAX_ORIGINAL_PIXELS = 25_000_000
+MAX_ORIGINAL_BYTES = 40 * 1024 * 1024
+SCALED_LONGEST_SIDE = 6000
 _TAG = re.compile(r"<[^>]+>")
 _VIDEO_MIMES = ("video/", "application/ogg")
+
+
+def _scaled_width(w: int, h: int, longest: int = SCALED_LONGEST_SIDE) -> int:
+    """Calculate target width for Commons thumbnail so the longest side is `longest` px."""
+    if w and h:
+        if w >= h:
+            return min(w, longest) if w > longest else longest
+        return max(1, int(round(w * longest / h)))
+    return longest
 
 
 def _text(v: Any) -> str:
@@ -129,20 +141,44 @@ class CommonsSource:
 
     def download(self, meta: dict, dest: Path, *, min_short_side: int | None = None,
                  max_bytes: int | None = None) -> Path:
-        """Download the original file. Images shorter than `min_short_side` (default 1200 px)
-        are refused with ImageTooSmall before any bytes are fetched."""
+        """Download the file. Images shorter than `min_short_side` (default 1200 px)
+        are refused with ImageTooSmall before any bytes are fetched.
+        Large images (> 25 megapixels or > 40 MB) request a scaled rendering (longest side 6000 px).
+        Files over 60 MB (or max_bytes) after all that are refused with FileTooLarge."""
         dest = Path(dest)
         kind = meta.get("kind") or kind_of(meta.get("mime", ""))
         floor = self.min_short_side if min_short_side is None else min_short_side
         w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
+        size = int(meta.get("size") or 0)
         if kind == "image" and w and h and min(w, h) < floor:
             raise ImageTooSmall(f"{meta.get('source_id')}: {w}x{h} px, short side below {floor}")
         if not meta.get("url"):
             raise NotFound(f"{meta.get('source_id')}: no download url")
         cap = max_bytes or (MAX_VIDEO_BYTES if kind == "video" else MAX_IMAGE_BYTES)
-        if meta.get("size") and int(meta["size"]) > cap:
-            raise http.MediaHTTPError(f"{meta.get('source_id')}: {meta['size']} bytes exceeds cap {cap}")
-        http.download_file(meta["url"], dest, max_bytes=cap, opener=self._opener, sleep=self._sleep)
+        download_url = meta["url"]
+        scaled = False
+
+        if kind == "image" and ((max(w, h) > SCALED_LONGEST_SIDE and w * h > MAX_ORIGINAL_PIXELS) or (size > MAX_ORIGINAL_BYTES)):
+            target_w = _scaled_width(w, h, SCALED_LONGEST_SIDE)
+            title = unquote(str(meta.get("source_id") or "").strip())
+            if not title.lower().startswith("file:"):
+                title = "File:" + title
+            data = self._api({
+                "titles": title.replace("_", " "),
+                "prop": "imageinfo",
+                "iiprop": "url|size|mime",
+                "iiurlwidth": str(target_w),
+            })
+            for page in (data.get("query") or {}).get("pages") or []:
+                infos = page.get("imageinfo") or []
+                if infos and infos[0].get("thumburl"):
+                    download_url = infos[0]["thumburl"]
+                    scaled = True
+                    break
+
+        if not scaled and meta.get("size") and int(meta["size"]) > cap:
+            raise http.FileTooLarge(f"{meta.get('source_id')}: {meta['size']} bytes exceeds cap {cap}")
+        http.download_file(download_url, dest, max_bytes=cap, opener=self._opener, sleep=self._sleep)
         if kind == "image" and not (w and h):
             aw, ah = image_size(dest)
             if aw and ah and min(aw, ah) < floor:

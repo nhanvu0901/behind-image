@@ -1,7 +1,9 @@
 // Pure helpers of the "Chọn hình" view (no DOM, no network): editing the picks document and the arithmetic of regions.
 // Tested in tests/picks/picks_logic.test.mjs. A "doc" is the `picks` object of GET /api/projects/{pid}/picks.
 export const ROLES = ['main', 'detail', 'context', 'compare', 'document', 'map', 'video'];
+export const VIDEO_ROLES = ['video', 'context', 'compare'];
 export const MIN_SHORT = 1200;
+
 
 export const clone = (o) => JSON.parse(JSON.stringify(o));
 

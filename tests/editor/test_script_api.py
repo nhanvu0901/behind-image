@@ -92,6 +92,26 @@ def test_brief(c):
     assert o["target_words"] == 1500 and o["wps"] == 2.5 and o["include_low"] == ["grovier_nws"]
 
 
+def test_brief_options_exclude_and_approval_gate(c):
+    # Exclude one source
+    o = c.put(P + "/brief/options", json={"exclude": ["payne_gae"]}).json()
+    assert o["exclude"] == ["payne_gae"]
+    b = c.get(P + "/brief").json()
+    pay = next(s for s in b["sources"] if s["code"] == "PAY")
+    assert not pay["included"]
+    assert pay.get("excluded") is True
+
+    # Excluding all sources returns 422 with code="at_least_one_source"
+    all_books = [s["book_id"] for s in b["sources"]]
+    r_all = c.put(P + "/brief/options", json={"exclude": all_books})
+    assert r_all.status_code == 422
+    assert r_all.json().get("code") == "at_least_one_source"
+
+    # Reset exclude
+    c.put(P + "/brief/options", json={"exclude": []})
+
+
+
 def test_prompt_endpoint(c):
     r = c.get(P + "/prompt", params={"phase": "outline"})
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/plain") and r.text.startswith("PHASE: outline")

@@ -75,6 +75,7 @@ def fake(tmp_path, monkeypatch):
         exe.write_text(f"#!{sys.executable}\n" + FAKE.format(), encoding="utf-8")
         exe.chmod(exe.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("BTI_AGY_BIN", str(exe))
+    monkeypatch.delenv("BTI_NO_REAL_MODELS", raising=False)
     antigravity._HELP_OK.clear()
     models_mod.reset_cache()
 

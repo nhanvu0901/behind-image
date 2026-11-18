@@ -59,6 +59,41 @@ def test_conflicts_and_low_trust(tproj):
     assert build_brief(tproj, include_low=[])["sources"][2]["included"] is False
 
 
+def test_exclude_option_and_source_omission(tproj):
+    import pytest
+    from bti.script.brief import check_options, OptionsError
+
+    # Invalid type
+    with pytest.raises(OptionsError, match="exclude must be a list"):
+        check_options({"exclude": "invalid"})
+
+    # Exclude trusted source by book_id
+    save_options(tproj, {"exclude": ["payne_gae"]})
+    b = build_brief(tproj)
+    pay = next(s for s in b["sources"] if s["code"] == "PAY")
+    hod = next(s for s in b["sources"] if s["code"] == "HOD")
+    assert not pay["included"]
+    assert pay.get("excluded") is True
+    assert hod["included"] and not hod.get("excluded")
+    # Paragraph ids of remaining sources do not change
+    assert [p["id"] for p in hod["paragraphs"]] == ["HOD-01", "HOD-02", "HOD-03"]
+    txt = render_brief(b)
+    assert "[PAY-01]" not in txt
+    assert "[HOD-01]" in txt
+
+    # Exclude by code
+    save_options(tproj, {"exclude": ["HOD"]})
+    b_code = build_brief(tproj)
+    assert not next(s for s in b_code["sources"] if s["code"] == "HOD")["included"]
+    assert next(s for s in b_code["sources"] if s["code"] == "PAY")["included"]
+
+    # At least one source must stay
+    with pytest.raises(OptionsError, match="at least one source must stay") as exc_info:
+        save_options(tproj, {"exclude": ["payne_gae", "hodge_aid", "grovier_nws"]})
+    assert exc_info.value.code == "at_least_one_source"
+
+
+
 def test_source_text_parser_ignores_tagged_lines():
     p = parse_source_text("# T\n\n[caption] a picture\n\n## S\n\nBody one.\n[meta] x\n> quote\n")
     assert [x["text"] for x in p["paragraphs"]] == ["Body one.", "quote"] and p["paragraphs"][1]["kind"] == "quote"

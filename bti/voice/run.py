@@ -66,34 +66,93 @@ def make_parts(pdir: Path, pid: str, plan: Plan, *, provider, aligner, force_ids
                cfg: dict, worker: dict | None = None) -> list:
     from bti.longjob import Part
     todo = planner.missing(pdir, plan.chunks, force_ids, since)
-    groups = planner.group_parts(todo, int(cfg["part_chars"]))
-    state = {"failed": {}, "tries": {}}       # chunk id -> error ; chunk id -> attempts
+    groups = planner.group_parts(todo, cfg)
+    state = {"failed": {}, "tries": {}, "deferred": []}       # chunk id -> error ; chunk id -> attempts ; deferred ids
     by = plan.by_id()
     parts = []
 
+    clock_fn = getattr(provider, "clock", None) or cfg.get("clock") or time.monotonic
+    part_stop_seconds = float(cfg.get("part_stop_seconds", 28 * 60))
+
     def synth_run(ids: list[str], last: bool):
         def run(ctx):
+            t0 = clock_fn()
             mine = [by[i] for i in ids]
             retry = [by[i] for i in list(state["failed"]) if i in by and i not in ids and state["tries"].get(i, 0) < 2]
-            batch = [c for c in mine + retry if not planner.is_cached(pdir, c, since if (force_ids and c.id in force_ids) else None)]
+            deferred = [by[i] for i in state.pop("deferred", []) if i in by and i not in ids]
+            batch = [c for c in mine + retry + deferred if not planner.is_cached(pdir, c, since if (force_ids and c.id in force_ids) else None)]
             if not batch and not (last and state["failed"]):
                 return None
             for c in batch:
                 state["tries"][c.id] = state["tries"].get(c.id, 0) + 1
             # the last part reports what is still unspoken even when every chunk has used its two tries already
             res = provider.synth(batch, files.chunks_dir(pdir), ctx, ctx.workdir) if batch else {}
+            clean_stopped = getattr(provider, "stopped_cleanly", False) or (clock_fn() - t0 >= part_stop_seconds)
+            spoken = []
+            unspoken = []
             for c in batch:
                 r = res.get(c.id)
                 if r and r.get("ok"):
                     state["failed"].pop(c.id, None)
+                    spoken.append(c)
+                elif clean_stopped and c.id not in res:
+                    unspoken.append(c)
                 elif not ctx.cancelled():
                     state["failed"][c.id] = (r or {}).get("error", "not spoken")
+
+            if unspoken:
+                unspoken_ids = [c.id for c in unspoken]
+                if hasattr(ctx, "_job") and ctx._job is not None:
+                    job = ctx._job
+                    extra_chars = sum(len(c.spoken) for c in unspoken)
+                    extra_part = Part(
+                        key=f"synth-{len(job.parts) + 1}",
+                        title=f"Đọc tiếp phần dở ({len(unspoken)} câu)",
+                        run=synth_run(unspoken_ids, False),
+                        heavy=True,
+                        est_seconds=planner.estimate_seconds(extra_chars, cfg),
+                        is_done=synth_done(unspoken_ids),
+                    )
+                    with job.lock:
+                        pos = ctx._i + 1
+                        job.parts.insert(pos, extra_part)
+                        job.rows.insert(pos, {
+                            "key": extra_part.key,
+                            "title": extra_part.title,
+                            "state": "queued",
+                            "progress": 0.0,
+                            "note": "",
+                            "started": None,
+                            "ended": None,
+                            "error": None,
+                            "heavy": bool(extra_part.heavy),
+                            "est_seconds": extra_part.est_seconds,
+                        })
+                        job._weights.insert(pos, float(extra_part.est_seconds or 60.0))
+                        job._persist(job, True)
+                else:
+                    state.setdefault("deferred", []).extend(unspoken_ids)
+
+            # Record stats if real part or stats requested
+            timing = getattr(provider, "timing", {}) or {}
+            total_s = timing.get("total_s") or (clock_fn() - t0)
+            load_s = timing.get("load_s")
+            if provider.name == "chatterbox" or (timing and "load_s" in timing) or cfg.get("stats_path"):
+                if load_s is None:
+                    load_s = 0.0
+                chars_spoken = sum(len(c.spoken) for c in spoken)
+                if chars_spoken > 0:
+                    synth_s = max(0.0, total_s - load_s)
+                    spc = synth_s / chars_spoken
+                    from .stats import record_part_stats
+                    record_part_stats(load_s, spc, path=Path(cfg["stats_path"]) if cfg.get("stats_path") else None)
+
             if last and state["failed"] and not ctx.cancelled():
                 bad = [by[i].spoken[:120] for i in state["failed"] if i in by]
                 from bti.longjob import PartError
                 ctx.log("failed sentences: " + "; ".join(bad))
                 raise PartError("voice_chunks_failed", "Có %d câu máy chưa đọc được: %s" % (len(bad), " | ".join(bad[:3])))
-            return {"spoken": len(batch) - len(state["failed"])}
+            return {"spoken": len(spoken)}
         return _guard(run)
 
     def synth_done(ids: list[str]):

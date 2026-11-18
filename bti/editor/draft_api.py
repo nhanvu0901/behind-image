@@ -10,11 +10,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import APIRouter, Body, Request
+from fastapi import APIRouter, Body, Request, Response
 
 from bti.draft import run as draft_run
 from bti.draft.inputs import DraftError
-from bti.draft.providers.agy import DEFAULT_MODEL
+from bti.settings import model_for
 
 from .common import ApiError, valid_pid
 
@@ -34,7 +34,7 @@ def _pdir(request: Request, pid: str) -> Path:
 @router.get("")
 def get_draft(pid: str, request: Request):
     d = _pdir(request, pid)
-    return draft_run.overview(pid, d, DEFAULT_MODEL)
+    return draft_run.overview(pid, d, model_for("draft"))
 
 
 @router.get("/models")
@@ -45,7 +45,7 @@ def get_models(pid: str, request: Request, refresh: int = 0):
         rows, err = models_mod.agy_models(refresh=bool(refresh))
     except Exception:       # noqa: BLE001 - the list can never break the page
         rows, err = None, "`agy models` không đọc được."
-    return {"default": DEFAULT_MODEL, "models": rows or [], "error": err}
+    return {"default": model_for("draft"), "models": rows or [], "error": err}
 
 
 @router.post("/start")

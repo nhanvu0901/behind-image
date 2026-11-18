@@ -79,6 +79,12 @@
 .v-pk .pk-vmoments { display: flex; flex-direction: column; gap: 4px; }
 .v-pk .pk-vmoment { display: flex; gap: 6px; align-items: center; font-size: 12px; }
 .v-pk .pk-vmoment button { white-space: nowrap; }
-.v-pk .pk-vtrim { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding-top: 4px; border-top: 1px solid var(--border); }
-.v-pk .pk-vtrim label { display: inline-flex; gap: 4px; align-items: center; font-size: 12px; color: var(--muted); }
+.v-pk .pk-vtrim { display: flex; flex-direction: column; gap: 8px; padding-top: 6px; border-top: 1px solid var(--border); }
+.v-pk .pk-vtrim-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.v-pk .pk-vtrim-row label { display: inline-flex; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
 .v-pk .pk-vtrim input[type="number"] { width: 68px; }
+.v-pk .pk-vslider { width: 120px; accent-color: var(--accent); cursor: pointer; }
+.v-pk .pk-vtrim-action { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; width: 100%; }
+.v-pk .pk-vtrim-btnwrap { display: inline-flex; gap: 6px; align-items: center; }
+.v-pk .pk-btn-reason { font-size: 11px; color: var(--muted); }
+.v-pk .pk-tray-video { flex-shrink: 0; }

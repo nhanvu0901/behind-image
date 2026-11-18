@@ -48,3 +48,6 @@ projects/*/history/
 demo_runs/antigravity/
 demo_runs/codex/
 !.env.example
+
+# Machine-local settings and run state (owner model choices, voice timing stats, snapshots)
+run/

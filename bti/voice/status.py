@@ -126,7 +126,7 @@ def describe(pdir: Path, pid: str | None = None, *, cfg: dict | None = None, ser
                      "by_reason": by_reason}
     chars = sum(len(c.spoken) for c in todo)
     out["estimate"] = {"chars": chars, "seconds": planner.estimate_seconds(chars, cfg) if todo else 0,
-                       "parts": len(planner.group_parts(todo, int(cfg["part_chars"])))}
+                       "parts": len(planner.group_parts(todo, cfg))}
     if m.get("assembled") or mix_ok:
         out["mix"] = {"exists": mix_ok, "duration": m.get("duration") or (m.get("assembled") or {}).get("duration"),
                       "loudness": m.get("loudness"), "bytes": files.mix_path(pdir).stat().st_size if mix_ok else 0}

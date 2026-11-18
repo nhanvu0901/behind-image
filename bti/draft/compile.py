@@ -186,8 +186,17 @@ class _Compiler:
                  "card": None, "title": None, "kept_cards": []}
             lead = c.get("lead")
             if self.edit:       # edit mode: the cards of the saved storyboard stay exactly as they are
+                first_spoken = (
+                    float(lead["end"])
+                    if isinstance(lead, dict) and isinstance(lead.get("end"), (int, float)) and not isinstance(lead.get("end"), bool)
+                    else (
+                        self.words[c["w0"]]["s"]
+                        if (c.get("w0") is not None and 0 <= c["w0"] < len(self.words))
+                        else c["start"]
+                    )
+                )
                 for cc in self.cur:
-                    if D.is_card(self.bundle, cc["shot"]) and prev_end - EPS <= cc["t0"] <= c["start"] + EPS:
+                    if D.is_card(self.bundle, cc["shot"]) and prev_end - EPS <= cc["t0"] < first_spoken - EPS:
                         z["kept_cards"].append(cc)
             elif lead and lead["kind"] in ("title", "card", "plain"):
                 # the voice says what the silence before the first word is for: place the cards from it

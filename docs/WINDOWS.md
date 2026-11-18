@@ -22,6 +22,9 @@ Written by the WIN agent, phase 1 (2026-11-16). The server is `DESKTOP-4V6D49N` 
 | Heavy pytest run under the heavy slot (lock folder, memory and production checks, 28 min limit, detached) | `scp tools/deploy/launch_heavy.ps1 winbox-lan:D:/code/behind-the-image/run/` then `ssh winbox-lan "powershell -NoProfile -ExecutionPolicy Bypass -File D:\code\behind-the-image\run\launch_heavy.ps1 -What \"what runs\" -Minutes 28 -PytestArgs \"tests/engine -m slow -q\""`; progress in `logs\heavy_run.log` (`LOCK TAKEN`, `LOCK RELEASED`, `EXIT=`) |
 | Deploy, then run pytest on the server | `tools/deploy/remote_test.sh tests/script -q -x` |
 | Run pytest without deploying | `tools/deploy/remote_test.sh --no-sync tests/editor -k name` |
+| Run pytest in a private snapshot (no deploy lock, safe for concurrent workers) | `tools/deploy/snapshot_test.sh NAME -- tests/longjob -q` |
+| Run one-off python in snapshot | `tools/deploy/snapshot_py.sh NAME -c "import bti"` |
+| Remove private snapshot and archive | `tools/deploy/snapshot_rm.sh NAME` |
 | Any one-off python check | `tools/deploy/remote_py.sh -c "import sys; print(sys.version)"` |
 | The same in the Python 3.12 align venv | `tools/deploy/remote_py.sh --venv align -c "import faster_whisper"` |
 
@@ -29,6 +32,34 @@ Written by the WIN agent, phase 1 (2026-11-16). The server is `DESKTOP-4V6D49N` 
 - The app is NOT restarted by a deploy unless `--restart` is given (agents deploy often).
 - `remote_test.sh` / `remote_py.sh` ship the arguments as a JSON file and `run\remote_run.py` starts the interpreter without any shell, so spaces, quotes and non-ASCII in arguments survive (tested with `-c "print('é ü \"q\" a b')"`). The run is not retried after a dropped connection (it would start the tests twice); scp and the preparatory ssh are tried three times. Output is UTF-8, streamed; the exit code is pytest's. `PYTHONUTF8=1`, `PYTHONDONTWRITEBYTECODE=1` and `HF_HOME=cache\hf` are set for the child.
 - Long runs: the ssh session stays open the whole time (`ServerAliveInterval=30`). If you run a suite of more than a few minutes, run `remote_test.sh` in the background on the Mac and redirect its output to a file.
+
+## Snapshot tests
+
+Runs Python tests in an isolated, private copy of the repository on the Windows server, without touching the server's main working folder or disturbing the running app. Multiple workers can sync, run tests, and clean up snapshots simultaneously without stepping on each other or taking the deploy lock.
+
+### Commands
+| What | Command |
+|---|---|
+| Run tests in a snapshot (syncs tree + refdata if needed) | `tools/deploy/snapshot_test.sh NAME [--no-sync] [--refdata] -- <pytest arguments>` |
+| Run a one-off python command in the snapshot environment | `tools/deploy/snapshot_py.sh NAME <python arguments>` |
+| Remove snapshot and its archives | `tools/deploy/snapshot_rm.sh NAME` |
+
+### Where things live
+- `NAME` matches `[a-z0-9-]{1,24}`.
+- Private snapshot checkout: `D:\code\behind-the-image\run\snap-NAME\` on the server (`run\` is never touched by a deploy).
+- Archive files: `.scratch/snap/NAME.tgz` (Mac) and `D:\code\behind-the-image\run\snap-NAME.tgz` (server).
+- Shared reference projects: `D:\code\behind-the-image\run\refdata\projects` (synced automatically if missing or with `--refdata`, shared read-only by all snapshots).
+- Data junctions inside each snapshot:
+  - `library` -> directory junction to `D:\code\behind-the-image\library`
+  - `books` -> directory junction to `D:\code\behind-the-image\books`
+  - `projects` -> directory junction to `D:\code\behind-the-image\run\refdata\projects`
+
+### Rules
+- Never write into the server's main code folders (`bti`, `tests`, `tools`, `config`, `prompts`, `style`, `skills`, `docs`) or main data folders (`projects`, `library`, `books`).
+- Never stop, restart, or redeploy the app on port 8560; do not take `deploy.lock`.
+- Removing a snapshot must never follow directory junctions into main data: always remove junctions with non-recursive `rmdir` first before deleting the snapshot folder (`snapshot_rm.sh` handles this).
+- Tests run with `PYTHONUTF8=1`, `PYTHONUNBUFFERED=1`, `PYTHONDONTWRITEBYTECODE=1`, and `BTI_NO_REAL_MODELS=1`.
+- Heavy tests (`-m slow`, `-m server`) are refused unless `BTI_ALLOW_HEAVY=1`.
 
 ## Start, stop, tunnel
 - Start (detached through `Win32_Process Create`, logs to `logs\app.log`, refuses if 8560 is busy or memory is low):

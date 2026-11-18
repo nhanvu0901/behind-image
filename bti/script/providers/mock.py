@@ -16,7 +16,18 @@ import time
 from . import ProviderError
 
 CALLS: list[dict] = []           # what the mock was asked, for tests (prompts only, never keys)
+_CANNED: list[str] = []
 DELAY = 0.05
+
+
+def set_canned(answers: list[str]) -> None:
+    global _CANNED
+    _CANNED = list(answers)
+
+
+def clear_canned() -> None:
+    global _CANNED
+    _CANNED = []
 
 
 def _sleep(seconds: float, cancel) -> None:
@@ -135,13 +146,18 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 60, on_prog
     if "[mock:ratelimit]" in user:
         raise ProviderError("rate_limit", "rate limit or quota reached (mock)")
     _sleep(10 if "[mock:slow]" in user else DELAY, cancel)
+    if _CANNED:
+        ans = _CANNED.pop(0)
+        if on_progress:
+            on_progress(1.0)
+        return ans
     retry = RETRY_MARK in user
     if "PHASE: outline" in user[:40]:
         text = _mock_outline(user, retry)
     elif "PHASE: script" in user[:40]:
         text = _mock_script(user, retry)
     else:
-        raise ProviderError("empty", "the mock does not know this prompt")
+        text = "mock response"
     if on_progress:
         on_progress(1.0)
     return text

@@ -19,6 +19,11 @@ def serve(handler):
     set_transport(httpx.MockTransport(handler))
 
 
+@pytest.fixture(autouse=True)
+def _allow_fake_transport(monkeypatch):
+    monkeypatch.delenv("BTI_NO_REAL_MODELS", raising=False)
+
+
 def test_env_parser_and_precedence(tmp_path, monkeypatch):
     f = tmp_path / "x.env"
     f.write_text("# comment\nK1=abc\nexport OPENROUTER_API_KEY = \"quoted value\"\nYDC_API_KEY='single'\nGEMINI_API_KEY=val # trailing\nEMPTY=\n", encoding="utf-8")

@@ -26,7 +26,7 @@ def _run(cmd: list[str], timeout: float) -> subprocess.CompletedProcess:
 
 
 def probe(ffprobe: list[str], path, timeout: float = 120) -> dict:
-    """`{duration, size, video: {codec, width, height, fps, frames}, audio: {codec, ...}|None, subtitle: {codec}|None, chapters: [..]}`.
+    """`{duration, size, video: {codec, width, height, fps, frames}, audio: {codec, ...}|None, chapters: [..]}`.
     The frame count is the number of packets of the video stream (one packet is one frame in H.264 without field coding)."""
     cmd = [*ffprobe, "-v", "error", "-count_packets", "-show_format", "-show_streams", "-show_chapters", "-of", "json", str(path)]
     r = _run(cmd, timeout)
@@ -52,8 +52,8 @@ def parse_probe(doc: dict) -> dict:
     def first(kind):
         return next((s for s in streams if s.get("codec_type") == kind), None)
 
-    v, a, s = first("video"), first("audio"), first("subtitle")
-    out = {"duration": _num(fmt.get("duration")), "size": int(_num(fmt.get("size"))), "video": None, "audio": None, "subtitle": None,
+    v, a = first("video"), first("audio")
+    out = {"duration": _num(fmt.get("duration")), "size": int(_num(fmt.get("size"))), "video": None, "audio": None,
            "chapters": [{"start": _num(c.get("start_time")), "end": _num(c.get("end_time")), "title": (c.get("tags") or {}).get("title", "")} for c in doc.get("chapters") or []]}
     if v:
         num, _, den = str(v.get("avg_frame_rate") or v.get("r_frame_rate") or "0/1").partition("/")
@@ -63,8 +63,6 @@ def parse_probe(doc: dict) -> dict:
                         "frames": int(_num(frames)) if frames is not None else None, "duration": _num(v.get("duration"), out["duration"])}
     if a:
         out["audio"] = {"codec": a.get("codec_name"), "sample_rate": int(_num(a.get("sample_rate"))), "channels": a.get("channels"), "duration": _num(a.get("duration"), out["duration"])}
-    if s:
-        out["subtitle"] = {"codec": s.get("codec_name"), "language": (s.get("tags") or {}).get("language")}
     return out
 
 

@@ -17,8 +17,7 @@ LOUD = """[Parsed_ebur128_0 @ 0x1] t: 10 M: -20 I: -20.0 LUFS LRA: 0.0 LU
 
 PROBE = {"format": {"duration": "820.83", "size": "900000000"},
          "streams": [{"codec_type": "video", "codec_name": "h264", "width": 1920, "height": 1080, "avg_frame_rate": "30/1", "nb_read_packets": "24625"},
-                     {"codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2},
-                     {"codec_type": "subtitle", "codec_name": "mov_text", "tags": {"language": "eng"}}],
+                     {"codec_type": "audio", "codec_name": "aac", "sample_rate": "48000", "channels": 2}],
          "chapters": [{"start_time": "0.0", "end_time": "80.0", "tags": {"title": "A"}}, {"start_time": "80.0", "end_time": "820.83", "tags": {"title": "B"}}]}
 
 
@@ -29,8 +28,9 @@ def test_parse_loudness_reads_the_summary_not_the_running_lines():
 
 def test_parse_probe():
     i = check.parse_probe(PROBE)
-    assert i["video"]["frames"] == 24625 and i["video"]["fps"] == 30.0 and i["subtitle"]["codec"] == "mov_text"
+    assert i["video"]["frames"] == 24625 and i["video"]["fps"] == 30.0
     assert i["audio"]["codec"] == "aac" and len(i["chapters"]) == 2 and i["size"] == 900000000
+    assert "subtitle" not in i
     assert check.parse_probe({})["video"] is None
 
 

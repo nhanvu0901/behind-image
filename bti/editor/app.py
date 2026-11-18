@@ -44,6 +44,7 @@ from .export_api import router as export_router
 from .media_adapter import LicenceRejected, MediaAdapter
 from .picks_api import router as picks_router
 from .voice_api import router as voice_router
+from .settings_api import router as settings_router
 from bti.fsio import atomic_replace
 
 PLACEHOLDER = """<!doctype html><meta charset="utf-8"><title>BTI editor</title>
@@ -504,8 +505,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                 raise ApiError(422, "cannot approve while items are incomplete: "
                                + "; ".join(f"{i['path']}: {i['message']}" for i in todo[:8])
                                + (f" (and {len(todo) - 8} more)" if len(todo) > 8 else ""), issues=issues, incomplete=True)
-            # whatever validate accepts the engine must be able to draw: draw one small frame in every shot and overlay
-            # the process-wide lock is taken one sample at a time (R3B-001); this project stays protected by its own storyboard lock
+            # whatever validate accepts the engine must be able to draw: draw small frames across shots and overlays
+            # compiled under ENGINE_LOCK, drawn by a thread pool without holding ENGINE_LOCK (D16)
             drawn = engine_adapter_mod.draw_check_stepwise(p, saved)
             bad = [i for i in drawn if i.get("code") == "undrawable"]
             if bad:
@@ -922,6 +923,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(picks_router)
     app.include_router(draft_router)
     app.include_router(export_router)
+    app.include_router(settings_router)
     from .pipeline_api import make_router as _pipeline_router
     app.include_router(_pipeline_router(root, script_jobs=script_jobs, preview_jobs=jobs, longjobs=longjob_manager, on_delete=forget_project))  # steps of a project (stepper, home) and delete-project
 

@@ -11,8 +11,12 @@ thread-safe: callers serialise access (the backend holds a lock).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import copy
+import json
 import logging
+import os
+import threading
 from collections import OrderedDict
 from pathlib import Path
 
@@ -24,9 +28,29 @@ from .errors import DataError, RenderError
 from .scene import Scene
 from .timing import Timing
 
-__all__ = ["open_project", "Project", "load_style", "ValidationError", "RenderError"]
+__all__ = ["open_project", "Project", "load_style", "ValidationError", "RenderError", "_default_check_threads"]
 ValidationError = SB.ValidationError
 log = logging.getLogger("bti.engine")
+
+
+def _default_check_threads() -> int:
+    plat = "windows" if os.name == "nt" else "default"
+    fallback = 8 if plat == "windows" else 4
+    cfg_file = Path(__file__).resolve().parents[2] / "config" / "server.json"
+    try:
+        if cfg_file.exists():
+            doc = json.loads(cfg_file.read_text(encoding="utf-8"))
+            if isinstance(doc, dict):
+                block = doc.get(plat)
+                if not isinstance(block, dict):
+                    block = doc.get("default")
+                if isinstance(block, dict):
+                    ct = block.get("check_threads")
+                    if isinstance(ct, int) and not isinstance(ct, bool) and ct > 0:
+                        return ct
+    except Exception:
+        pass
+    return fallback
 
 
 def load_style(style_id: str) -> dict:
@@ -49,6 +73,7 @@ class Project:
         self._draft = None
         self._scenes: OrderedDict = OrderedDict()
         self._timings: dict = {}            # relative path -> (mtime_ns, Timing)
+        self._lock = threading.RLock()
 
     # -- documents -------------------------------------------------------------------------------------------
     @property
@@ -79,12 +104,13 @@ class Project:
             mt = path.stat().st_mtime_ns
         except OSError:
             raise DataError("%s is missing" % rel, what="timing")
-        hit = self._timings.get(rel)
-        if hit is None or hit[0] != mt:
-            tm = Timing.load(path)
-            self._timings[rel] = hit = (mt, tm)
-            self._scenes.clear()
-        return hit[1]
+        with self._lock:
+            hit = self._timings.get(rel)
+            if hit is None or hit[0] != mt:
+                tm = Timing.load(path)
+                self._timings[rel] = hit = (mt, tm)
+                self._scenes.clear()
+            return hit[1]
 
     def _tm(self) -> Timing:
         self._reload_if_changed()
@@ -137,19 +163,20 @@ class Project:
 
     # -- rendering -------------------------------------------------------------------------------------------
     def _scene(self) -> Scene:
-        self._reload_if_changed()
-        sb = self._draft if self._draft is not None else self._saved
-        tm, bundle = self._timing_for(sb), self._bundle_for(sb)
-        key = (SB.revision_of(sb), self._draft is not None)
-        sc = self._scenes.get(key)
-        if sc is None:
-            sc = Scene(self.dir, SB.resolve(sb, tm, bundle), tm, bundle)
-            self._scenes[key] = sc
-            while len(self._scenes) > 4:
-                self._scenes.popitem(last=False)
-        else:
-            self._scenes.move_to_end(key)
-        return sc
+        with self._lock:
+            self._reload_if_changed()
+            sb = self._draft if self._draft is not None else self._saved
+            tm, bundle = self._timing_for(sb), self._bundle_for(sb)
+            key = (SB.revision_of(sb), self._draft is not None)
+            sc = self._scenes.get(key)
+            if sc is None:
+                sc = Scene(self.dir, SB.resolve(sb, tm, bundle), tm, bundle)
+                self._scenes[key] = sc
+                while len(self._scenes) > 4:
+                    self._scenes.popitem(last=False)
+            else:
+                self._scenes.move_to_end(key)
+            return sc
 
     def frame_at(self, t: float, width: int = 960) -> np.ndarray:
         """BGR uint8 frame, 16:9, `width` px wide."""
@@ -159,16 +186,16 @@ class Project:
         """Silent H.264 of [t0, t1) written to out_path."""
         return self._scene().render_range(float(t0), float(t1), Path(out_path), int(width), int(fps), on_progress, quality, threads)
 
-    def draw_check(self, storyboard: dict | None = None, width: int = 320) -> list[dict]:
+    def draw_check(self, storyboard: dict | None = None, width: int = 320, threads: int | None = None) -> list[dict]:
         """The whole check in one call (see `draw_check_iter` for the step by step form)."""
-        it = self.draw_check_iter(storyboard, width)
+        it = self.draw_check_iter(storyboard, width, threads=threads)
         while True:
             try:
                 next(it)
             except StopIteration as done:
-                return done.value
+                return done.value or []
 
-    def draw_check_iter(self, storyboard: dict | None = None, width: int = 320):
+    def draw_check_iter(self, storyboard: dict | None = None, width: int = 320, threads: int | None = None):
         """Generator form of `draw_check`: yields after the storyboard is compiled and after every drawn sample, and RETURNS the
         issues (`StopIteration.value`). A caller that holds a lock may release it between two `next()` calls: the draft is swapped
         in only while the storyboard is compiled (inside the first step, restored before that step yields); the samples are drawn
@@ -205,7 +232,10 @@ class Project:
         finally:
             self._draft = saved_draft
         yield
+
         frame = 1 / 15.0
+        jobs = []
+        job_idx = 0
         for i, c in enumerate(scene.shots):
             sid = c.shot.get("id") if isinstance(c.shot.get("id"), str) else None
             t0, t1 = c.t0, c.t1
@@ -226,15 +256,44 @@ class Project:
                 if any(abs(t - d) < frame for d in drawn):
                     continue            # closer than one frame to a frame already drawn
                 drawn.append(t)
-                try:
-                    scene.frame_at(t, int(width))
-                except RenderError as e:
-                    fail(e.path or path, e.shot or sid, e.message, e.technique, e.overlay, getattr(e, "asset", None))
-                except Exception as e:      # noqa: BLE001
-                    log.warning("draw_check: %s cannot be drawn", path, exc_info=e)
-                    fail(path, sid, "shot %s cannot be drawn" % (sid or i))
+                jobs.append((job_idx, path, sid, i, t))
+                job_idx += 1
+
+        def _draw_job(job):
+            j_idx, path, sid, i, t = job
+            try:
+                scene.frame_at(t, int(width))
+                return None
+            except RenderError as e:
+                return (j_idx, e.path or path, e.shot or sid, e.message, e.technique, e.overlay, getattr(e, "asset", None))
+            except Exception as e:      # noqa: BLE001
+                log.warning("draw_check: %s cannot be drawn", path, exc_info=e)
+                return (j_idx, path, sid, "shot %s cannot be drawn" % (sid or i), None, None, None)
+
+        n_threads = max(1, int(threads if threads is not None else _default_check_threads()))
+        if n_threads == 1 or len(jobs) <= 1:
+            for job in jobs:
+                res = _draw_job(job)
+                if res is not None:
+                    fail(*res[1:])
                 yield
-        return issues
+            return issues
+
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=n_threads)
+        results = [None] * len(jobs)
+        try:
+            futures = [executor.submit(_draw_job, job) for job in jobs]
+            for fut in concurrent.futures.as_completed(futures):
+                res = fut.result()
+                if res is not None:
+                    results[res[0]] = res[1:]
+                yield
+            for r in results:
+                if r is not None:
+                    fail(*r)
+            return issues
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
 
     # -- editing support -------------------------------------------------------------------------------------
     def _asset_info(self, key: str, sb: dict) -> dict | None:

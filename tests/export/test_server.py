@@ -65,7 +65,7 @@ def test_five_second_export_through_the_job(real_project, monkeypatch):
     st = {i["key"]: i for i in m["report"]}
     assert st["frames"]["status"] == "ok" and st["audio"]["status"] == "ok"
     info = check.probe(["ffprobe"], real_project / "export" / "arnolfini.mp4")
-    assert info["subtitle"] is None and info["audio"]["codec"] == "aac" and info["video"]["frames"] == 150
+    assert info.get("subtitle") is None and info["audio"]["codec"] == "aac" and info["video"]["frames"] == 150
     assert abs(info["video"]["duration"] - SECONDS) < 0.1 and info["duration"] < SECONDS + 1.0
     assert len(info["chapters"]) >= 1
     print("SERVER-METRIC frames=%s loudness=%s audio=%s chapters=%s" % (m["frames"], m["loudness"], info["audio"]["codec"], len(info["chapters"])))

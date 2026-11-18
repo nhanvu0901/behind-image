@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import copy
 import json
+import os
 import shutil
 import subprocess
 import sys
 import time
 from pathlib import Path
+
+os.environ["BTI_NO_REAL_MODELS"] = "1"
 
 import pytest
 from fastapi.testclient import TestClient

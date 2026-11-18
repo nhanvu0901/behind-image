@@ -74,6 +74,32 @@ def test_assemble_end_to_end(project, cfg, tmp_path, tempo, pad):
     raw = 1.0 * len(c0.spoken) * 0.05
     assert abs((spans[0]["end"] - spans[0]["start"]) - max(raw, 0.1) / tempo) < 0.03
     assert res["loudness"]["i"] is not None and abs(res["loudness"]["i"] - cfg["loudness"]["i"]) < 3.0
+    assert res["loudness"]["tp"] is not None and res["loudness"]["tp"] <= -1.5 + 1e-4
+
+
+@needs_ffmpeg
+def test_true_peak_held_at_or_under_minus_one_point_five(project, cfg, tmp_path):
+    plan = make_plan(project, cfg=cfg, provider="fake")
+    ctx = FakeCtx(tmp_path / "w")
+    FakeProvider().synth(plan.chunks, files.chunks_dir(project), ctx)
+    res = assemble.assemble(project, plan.chunks, plan.settings, cfg, tmp_path / "w", ctx)
+    tp = res["loudness"]["tp"]
+    assert tp is not None
+    # Contract: true-peak limiter holds the mix at or under -1.5 dBTP
+    assert tp <= -1.5 + 1e-4, f"True peak {tp} dBTP exceeds -1.5 dBTP"
+
+
+def test_mix_over_target_true_peak_raises_assemble_error(project, cfg, tmp_path, monkeypatch):
+    from bti.voice.errors import VoiceError
+    plan = make_plan(project, cfg=cfg, provider="fake")
+    ctx = FakeCtx(tmp_path / "w")
+    FakeProvider().synth(plan.chunks, files.chunks_dir(project), ctx)
+    # Monkeypatch normalise to return tp over -1.5 (e.g. -1.06 like the real run)
+    monkeypatch.setattr(assemble, "normalise", lambda src, dst, loud, bitrate: {"i": -15.0, "tp": -1.06, "lra": 3.0})
+    with pytest.raises(VoiceError) as exc_info:
+        assemble.assemble(project, plan.chunks, plan.settings, cfg, tmp_path / "w", ctx)
+    assert exc_info.value.code == "voice_assemble_failed"
+    assert "true peak" in str(exc_info.value).lower()
 
 
 def test_missing_chunk_is_reported_by_sentence(project, cfg, tmp_path):

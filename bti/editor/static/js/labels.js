@@ -184,3 +184,18 @@ export const EXPORT_LABELS = {
   stale: { storyboard: 'Storyboard đã đổi sau lần xuất trước, nên video này không còn khớp.', audio: 'Giọng đọc đã đổi sau lần xuất trước, nên video này không còn khớp.', files: 'Một số tệp của lần xuất trước không còn nữa.' },
   files: { video: 'Video (MP4)', description: 'Mô tả video', chapters: 'Mục lục (chapters.txt)' },
 };
+
+// --- picks and clips
+export const MOMENT_WHY = {
+  chapter: (arg) => `Chương: "${arg || ''}"`,
+  subtitle: (arg) => `Phụ đề: "${arg || ''}"`,
+  replayed: (arg) => `Xem lại nhiều (${arg || ''})`,
+};
+export const momentWhy = (why) => {
+  if (!why) return '';
+  if (typeof why === 'string') return why;
+  const fn = MOMENT_WHY[why.code];
+  if (fn) return fn(why.title ?? why.text ?? why.value ?? why.arg ?? '');
+  return why.code || '';
+};
+

@@ -10,3 +10,5 @@ Pillow>=10.1
 pytest>=8
 jsonschema>=4
 pymupdf
+yt-dlp==2026.08.19
+

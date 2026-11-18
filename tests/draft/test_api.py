@@ -27,7 +27,8 @@ def test_get_draft(client, proj):
     r = client.get("/api/projects/%s/draft" % proj.name)
     assert r.status_code == 200
     d = r.json()
-    assert d["ready"]["ok"] is True and d["state"]["state"] == "none" and d["default_model"] == "gemini-pro-orchestrator-g1-pro"
+    from bti.settings import model_for
+    assert d["ready"]["ok"] is True and d["state"]["state"] == "none" and d["default_model"] == model_for("draft")
     assert d["providers"] == ["agy", "auto"]
     assert client.get("/api/projects/nope/draft").status_code == 404
 
