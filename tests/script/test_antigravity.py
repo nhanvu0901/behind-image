@@ -24,6 +24,10 @@ if args[:1] == ["models"]:
         sys.stderr.write("authentication required\\n"); sys.exit(1)
     print("Fetching available models...")
     print("gemini-x-high\\tGemini X (High)"); print("claude-y\\tClaude Y (Thinking)"); sys.exit(0)
+if mode == "late":                       # a program that is slow to start reading its input
+    time.sleep(1.5)
+elif mode == "never_reads":
+    time.sleep(60)
 line = sys.stdin.readline()
 msg = json.loads(line)
 assert msg["event"] == "user", msg
@@ -41,7 +45,7 @@ def env(**kw):
     d = {{"conversation_id": "c", "status": "SUCCESS", "response": "FINAL SCRIPT\\n\\n## c01 COLD OPEN\\nHello there.\\n", "duration_seconds": 1.0,
           "num_turns": 1, "usage": {{"input_tokens": 5, "output_tokens": 5, "total_tokens": 10}}}}
     d.update(kw); return d
-if mode == "ok": out(env())
+if mode in ("ok", "late"): out(env())
 elif mode == "status_error": out(env(status="ERROR", response="", error="something broke")); sys.exit(1)
 elif mode == "canceled": out(env(status="CANCELED", response=""))
 elif mode == "tools": out(env(num_turns=4))
@@ -50,6 +54,9 @@ elif mode == "denied": sys.stderr.write("notice: tool run_command was denied (ne
 elif mode == "writes": open("leak.txt", "w").write("x"); out(env())
 elif mode == "auth": sys.stderr.write("Error: authentication required. Run agy to log in.\\n"); sys.exit(1)
 elif mode == "quota": out(env(status="ERROR", response="", error="429 RESOURCE_EXHAUSTED: quota exceeded")); sys.exit(1)
+elif mode == "quota_reset":
+    sys.stderr.write("Individual quota reached. Please wait. Resets in 22m20s.\\n"); print(json.dumps({{"error_code": 429}}))
+    out(env(status="ERROR", response="", error="429 RESOURCE_EXHAUSTED")); sys.exit(1)
 elif mode == "badmodel": out(env(status="ERROR", response="", error="unknown model 'zzz'")); sys.exit(1)
 elif mode == "empty": out(env(response="  "))
 elif mode == "garbage": print("not json at all")
@@ -313,3 +320,71 @@ def test_models_list_is_cached_single_flight_and_failure_is_a_field(monkeypatch)
     assert models_mod.FAIL_SECONDS == 60 and models_mod.CACHE_SECONDS == 600 and antigravity.LIST_TIMEOUT_S == 8
     models_mod.public_models(refresh=True)
     assert len(calls) == 2                                           # refresh forces a new call
+
+
+def test_the_quota_reset_time_is_carried_on_the_error(fake):
+    fake.mode("quota_reset")
+    with pytest.raises(ProviderError) as e:
+        call()
+    assert e.value.kind == "rate_limit"
+    assert e.value.retry_after_seconds == 22 * 60 + 20
+    assert "22 phút 20 giây" in e.value.message                                      # the owner is told how long
+    assert len(fake.calls()) == 1                                                    # never retried inside the call
+
+
+def test_a_quota_without_a_time_has_none():
+    err = antigravity.classify("429 RESOURCE_EXHAUSTED: quota exceeded")
+    assert err.kind == "rate_limit" and err.retry_after_seconds is None
+
+
+@pytest.mark.parametrize("text,seconds", [("Resets in 2m56s.", 176), ("resets in 22m20s", 1340), ("Resets in 167h12m29s", 601949), ("Resets in 45s", 45),
+                                          ("Resets in 1d2h", 93600), ("no time here", None)])
+def test_parse_reset_seconds(text, seconds):
+    assert antigravity.parse_reset_seconds(text) == seconds
+
+
+def test_wait_words_and_the_clock_time():
+    import datetime
+    assert antigravity.wait_words(176) == "2 phút 56 giây"
+    assert antigravity.wait_words(601949) == "6 ngày 23 giờ"
+    now = datetime.datetime(2026, 11, 18, 10, 0, 0).timestamp()
+    assert antigravity.retry_at(176, now) == "10:02"
+    assert antigravity.retry_at(601949, now) == "25/11 09:12"
+
+
+def test_a_large_prompt_reaches_a_program_that_starts_reading_late(fake):
+    """On macOS and Linux a piped prompt bigger than the pipe (16 KB, 64 KB) was written only in part while the program was not
+    reading yet, and the polling loop never wrote the rest: the call hung. The prompt now goes through a file. (On Windows
+    communicate() uses a writer thread, so this test passes there with the old code too; it guards the POSIX behaviour.)"""
+    fake.mode("late")
+    big = "A" * 300_000
+    t0 = time.time()
+    text = get_provider("antigravity")(SPEC, "SYS", big, timeout=60)
+    assert text.startswith("FINAL SCRIPT")
+    assert time.time() - t0 < 20
+    c = fake.calls()[0]
+    assert c["rest_of_stdin"] == "" and c["line_len"] > 300_000                       # the whole line arrived, nothing after it
+
+
+def test_cancel_still_interrupts_within_a_second_while_the_program_has_not_read_its_input(fake):
+    import tempfile
+    fake.mode("never_reads")
+    ev = threading.Event()
+    threading.Timer(0.5, ev.set).start()
+    before = set(os.listdir(tempfile.gettempdir()))
+    t0 = time.time()
+    with pytest.raises(ProviderError) as e:
+        get_provider("antigravity")(SPEC, "SYS", "B" * 300_000, timeout=60, cancel=ev)
+    assert e.value.kind == "cancelled" and time.time() - t0 < 3
+    leftovers = [n for n in set(os.listdir(tempfile.gettempdir())) - before if n.startswith("bti-agy-in-")]
+    assert leftovers == []                                                            # the prompt file (the owner's text) is gone
+
+
+def test_the_prompt_file_is_removed_after_a_normal_call_and_after_a_failure(fake):
+    import tempfile
+    before = set(os.listdir(tempfile.gettempdir()))
+    call()
+    fake.mode("status_error")
+    with pytest.raises(ProviderError):
+        call()
+    assert [n for n in set(os.listdir(tempfile.gettempdir())) - before if n.startswith("bti-agy-in-")] == []

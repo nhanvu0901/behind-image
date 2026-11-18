@@ -15,6 +15,7 @@ __pycache__/
 books/
 library/books/
 library/clean_text/
+library/restored/
 library/text_audit/
 library/cache/
 library/artworks.json

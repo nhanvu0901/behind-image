@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import email.utils
 import json
+import re
 import socket
 import time
 import urllib.error
@@ -15,6 +16,7 @@ import urllib.request
 from datetime import datetime, timezone
 from typing import Any, Callable
 from bti.fsio import atomic_replace
+from .safety import refuse_if_real_models_off
 
 USER_AGENT = "behind-the-image-media/0.1 (art documentary research tool)"
 MAX_TRIES = 4
@@ -73,7 +75,9 @@ def open_url(url: str, *, timeout: float = 30, tries: int = MAX_TRIES,
              headers: dict[str, str] | None = None):
     """Open `url`, retrying 429/5xx and timeouts with a growing wait (2, 4, 8 s; Retry-After
     honoured, capped), at most `tries` attempts. Returns the response object (a context manager)."""
-    opener = opener or urllib.request.urlopen
+    if opener is None:                                   # no injected transport: this would be a real request (A7 safety switch)
+        refuse_if_real_models_off(f"network request to {_host(url)}")
+        opener = urllib.request.urlopen
     hdrs = {"User-Agent": USER_AGENT, "Accept": "*/*", **(headers or {})}
     delay = BASE_DELAY
     for attempt in range(1, tries + 1):
@@ -99,8 +103,17 @@ def open_url(url: str, *, timeout: float = 30, tries: int = MAX_TRIES,
     raise MediaHTTPError(f"gave up after {tries} tries for {_short(url)}")  # pragma: no cover
 
 
+_SECRET_PARAM = re.compile(r"([?&](?:key|api_key|apikey|token)=)[^&#\s]*", re.I)
+
+
 def _short(url: str) -> str:
+    url = _SECRET_PARAM.sub(r"\1***", url)               # Pixabay takes its key in the query: it must never reach a message
     return url if len(url) < 120 else url[:117] + "..."
+
+
+def _host(url: str) -> str:
+    """Only the host, for a refusal message: a query string may carry a key."""
+    return urllib.parse.urlparse(url).hostname or "?"
 
 
 def get_json(url: str, params: dict[str, Any] | None = None, **kw) -> Any:
@@ -122,6 +135,8 @@ def download_file(url: str, dest, *, max_bytes: int, timeout: float = 120, **kw)
     """Stream `url` to `dest` (via a .part file), refusing more than `max_bytes`."""
     from pathlib import Path
     dest = Path(dest)
+    if kw.get("opener") is None:                         # refuse before anything is created (open_url below checks again)
+        refuse_if_real_models_off(f"download from {_host(url)}")
     dest.parent.mkdir(parents=not NO_NEW_PARENTS.get(), exist_ok=True)   # set by the facade with require_root: never re-create a project
     tmp = dest.with_name(dest.name + ".part")
     total = 0

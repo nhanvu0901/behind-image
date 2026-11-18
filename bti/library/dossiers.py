@@ -129,6 +129,10 @@ def load(key: str) -> dict | None:
         return None
     f = dossier_path(key)
     try:
+        if not f.is_file():              # an old key (alias): the dossier lives under the current key
+            cur = catalogue.resolve_key(key)
+            if cur and cur != key:
+                f = dossier_path(cur)
         if not f.is_file():
             return None
     except OSError:

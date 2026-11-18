@@ -179,3 +179,28 @@ def test_outline_source_excluded(tproj):
     blockers = validate.blocking(iss_err)
     assert any(i["code"] == "source_excluded" for i in blockers)
 
+
+def test_warning_long_sentence_and_median_summary():
+    n, o = good()
+    # Beat with a sentence <= 28 words has no warning
+    n.chapters[0].beats[0].text = " ".join(["Word"] * 28) + "."
+    iss = validate.validate_narration(n, o)
+    assert "long_sentence" not in codes(iss, "warning")
+
+    # Beat with a sentence > 28 words triggers warning "long_sentence"
+    n.chapters[0].beats[0].text = " ".join(["Word"] * 29) + "."
+    iss2 = validate.validate_narration(n, o)
+    assert "long_sentence" in codes(iss2, "warning")
+    long_iss = [i for i in iss2 if i["code"] == "long_sentence"]
+    assert len(long_iss) == 1
+    assert long_iss[0]["beat"] == n.chapters[0].beats[0].id
+    assert long_iss[0]["chapter"] == n.chapters[0].id
+    assert not validate.blocking(long_iss)  # warning, not error
+
+    # Summary line with median sentence length
+    med_iss = [i for i in iss2 if i["code"] == "sentence_median"]
+    assert len(med_iss) == 1
+    assert med_iss[0]["level"] == "info"
+    assert "Median sentence length" in med_iss[0]["message"]
+
+

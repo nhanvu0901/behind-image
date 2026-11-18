@@ -13,7 +13,7 @@ const TEXT = DRAFT_LABELS;
 const ACTIVE = new Set(['queued', 'waiting', 'running']);
 
 export function mountDraftPanel(container, { pid, scope = null, onProposal = null, onJobEnd = null, inDialog = false } = {}) {
-  let dead = false, timer = null, jobId = null, info = null, models = null, modelsErr = null, job = null;
+  let dead = false, timer = null, jobId = null, info = null, models = null, modelsErr = null, job = null, settingModel = null, chosenModel = null;
   const seen = jobWatcher();
   const root = h('div', { class: 'draft-panel' });
   container.replaceChildren(root);
@@ -32,6 +32,8 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
   async function loadModels() {
     try { const r = await api.get(`/api/projects/${encodeURIComponent(pid)}/draft/models`); models = r.models || []; modelsErr = r.error || null; if (r.default && info) info.default_model = r.default; }
     catch { models = []; modelsErr = TEXT.noModels; }
+    // the model of the role `draft` in the settings is what the select starts on (the owner changes it under "Cài đặt")
+    try { settingModel = ((await api.get('/api/settings/models')).roles || []).find((r) => r.role === 'draft')?.model || null; } catch { settingModel = null; }
     if (!dead) render();
   }
   async function tick() {
@@ -79,8 +81,10 @@ export function mountDraftPanel(container, { pid, scope = null, onProposal = nul
       const parts = (job?.parts || []).map((p) => h('div', { class: 'hint' }, `${p.title}: ${TEXT.partState[p.state] || p.state}`, p.note ? ' - ' + p.note : ''));
       kids.push(h('div', { class: 'row' }, h('b', { text: TEXT.running }), h('progress', { max: 1, value: job?.progress ?? 0 }), h('button', { class: 'small', text: TEXT.cancel, onclick: cancel })), ...parts);
     } else {
-      const sel = h('select', { class: 'draft-model' }, h('option', { value: '', text: `${TEXT.modelDefault} (${info.default_model})` }),
+      const slug = String(settingModel || info.default_model || '').replace(/^agy:/, '');
+      const sel = h('select', { class: 'draft-model', onchange: (e) => { chosenModel = e.target.value; } }, h('option', { value: '', text: `${TEXT.modelDefault} (${slug})` }),
         ...(models || []).map((m) => h('option', { value: m.slug, text: m.label ? `${m.label} (${m.slug})` : m.slug })));
+      sel.value = chosenModel ?? ((models || []).some((m) => m.slug === slug) ? slug : '');
       kids.push(h('div', { class: 'row' }, h('label', { text: TEXT.model + ': ' }), sel),
         models === null ? h('div', { class: 'hint', text: TEXT.loadingModels }) : (modelsErr && !(models || []).length ? h('div', { class: 'hint', text: TEXT.noModels }) : null),
         h('div', { class: 'row' }, h('button', { class: 'primary', text: TEXT.start, disabled: !info.ready.ok, onclick: () => start('agy') }),

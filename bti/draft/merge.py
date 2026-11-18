@@ -113,8 +113,11 @@ def merge_storyboard(
     *,
     scope_shot_ids: set[str] | None = None,
     timing: dict | None = None,
+    overwrite: bool = False,
 ) -> MergeResult:
-    """Perform three-way merge: base -> result vs current."""
+    """Perform three-way merge: base -> result vs current. With `overwrite` (the owner chose it after a conflict) a shot both
+    sides changed takes the agent's version and a changed shot list is not a conflict; everything the owner changed elsewhere
+    stays."""
     b_shots = shots_map(base)
     r_shots = shots_map(result)
     c_shots = shots_map(current)
@@ -152,34 +155,38 @@ def merge_storyboard(
         r_s = r_shots.get(sid)
 
         current_changed = (canon(b_s) != canon(c_s))
-        if current_changed and canon(r_s) != canon(c_s):
+        if current_changed and canon(r_s) != canon(c_s) and not overwrite:
             conflicts.append({"kind": "shot", "id": sid, "reason": "both sides modified shot"})
 
     # Check if shot list in scope changed in current
-    if timing and (scope_shot_ids or touched_ids):
+    if timing and not overwrite and (scope_shot_ids or touched_ids):
         target_ids = set(scope_shot_ids or touched_ids)
         tm = Timing({"duration": timing.get("duration", 0), "words": timing.get("words", [])})
         base_shots_list = shots_of(base)
-        t_ranges = []
-        for s in base_shots_list:
-            if s.get("id") in target_ids:
-                try:
-                    t0 = tm.resolve(s["start"]) if isinstance(s.get("start"), dict) else None
-                    if t0 is not None:
-                        t_ranges.append(t0)
-                except Exception:
-                    pass
-        if t_ranges:
-            scope_t0 = min(t_ranges)
+
+        def start_of(sh):
+            try:
+                return tm.resolve(sh["start"]) if isinstance(sh.get("start"), dict) else None
+            except Exception:       # noqa: BLE001
+                return None
+
+        base_starts = [start_of(sh) for sh in base_shots_list]
+        t_starts, t_ends = [], []
+        for i, sh in enumerate(base_shots_list):
+            if sh.get("id") in target_ids and base_starts[i] is not None:
+                t_starts.append(base_starts[i])
+                t_ends.append(next((x for x in base_starts[i + 1:] if x is not None), float(timing.get("duration", 0) or 0)))
+        if t_starts:
+            # the scope's time range: from the first scope shot's start to the end of the last one. A shot the owner added or
+            # removed elsewhere (before or after) is not a conflict.
+            scope_t0, scope_t1 = min(t_starts), max(t_ends)
+
             def list_in_scope(sb):
                 ids = []
-                for s in shots_of(sb):
-                    try:
-                        st = tm.resolve(s["start"]) if isinstance(s.get("start"), dict) else None
-                        if st is not None and st >= scope_t0 - 0.05:
-                            ids.append(s.get("id"))
-                    except Exception:
-                        pass
+                for sh in shots_of(sb):
+                    st = start_of(sh)
+                    if st is not None and scope_t0 - 0.05 <= st < scope_t1 - 0.05:
+                        ids.append(sh.get("id"))
                 return ids
             b_list = [sid for sid in list_in_scope(base) if sid not in target_ids]
             c_list = [sid for sid in list_in_scope(current) if sid not in target_ids]
@@ -297,6 +304,31 @@ def undo_turn(
     return res_doc, []
 
 
+def locked_update(project_dir: Any, make) -> tuple[str | None, Any, dict | None]:
+    """Read the saved storyboard, let `make(current) -> (new_doc | None, payload)` decide, and save `new_doc` the way a storyboard
+    save does (validation, `history/` copy, atomic write), all under the project's storyboard lock, the one every editor save
+    holds. Approvals stay as they are. Returns `(revision, payload)`; the revision is the one the editor reads
+    (`bti.editor.common.compute_rev`), None when nothing was written. The third value is the document that was written (read
+    under the lock, never re-read later), None when nothing was written."""
+    from pathlib import Path
+    from bti.editor.common import compute_rev, save_lock, strip_derived
+    from bti.engine import storyboard as SB
+    from bti.engine.api import open_project
+    project_dir = Path(project_dir)
+    with save_lock(project_dir):
+        if not (project_dir / "storyboard.json").is_file():
+            raise FileNotFoundError(f"storyboard.json not found in {project_dir}")
+        proj = open_project(project_dir)
+        current = proj.storyboard()
+        new_doc, payload = make(current)
+        if new_doc is None:
+            return None, payload, None
+        new_doc = strip_derived(new_doc)
+        new_doc["approvals"] = copy.deepcopy(current.get("approvals")) if current.get("approvals") is not None else {"storyboard": None}
+        SB.save(project_dir, new_doc, proj.validate(new_doc))
+        return compute_rev(new_doc), payload, new_doc
+
+
 def apply_direct_edit(
     project_dir: Any,
     turn_id: str,
@@ -306,81 +338,93 @@ def apply_direct_edit(
     model_changes: list[dict] | None = None,
     timing: dict | None = None,
     scope_shot_ids: set[str] | None = None,
-    engine: Any = None,
-    pid: str | None = None,
 ) -> dict:
-    """Apply compiled edit result directly with three-way merge (contract A3)."""
+    """Apply compiled edit result directly with three-way merge (contract A3). Returns
+    `{status: applied|no_change|needs_choice, after_rev, changes, conflicts, storyboard}`."""
     from pathlib import Path
     project_dir = Path(project_dir)
     from bti.draft.thread import save_turn_storyboards
 
-    # 1. Read current storyboard
-    current_sb = None
-    if engine and pid:
-        try:
-            p = engine.project(pid)
-            from bti.editor.engine_adapter import ENGINE_LOCK
-            with ENGINE_LOCK:
-                current_sb = p.storyboard()
-        except Exception:
-            current_sb = None
-    if current_sb is None:
-        sb_file = project_dir / "storyboard.json"
-        if not sb_file.is_file():
-            raise FileNotFoundError(f"storyboard.json not found in {project_dir}")
-        current_sb = json.loads(sb_file.read_text(encoding="utf-8"))
+    def make(current_sb):
+        res = merge_storyboard(base_sb, result_sb, current_sb, scope_shot_ids=scope_shot_ids, timing=timing)
+        if res.status == "needs_choice":
+            return None, res
+        return (res.storyboard or copy.deepcopy(result_sb)), res
 
-    # 2. Perform three-way merge
-    res = merge_storyboard(base_sb, result_sb, current_sb, scope_shot_ids=scope_shot_ids, timing=timing)
+    # The merge and the write happen under one lock: a save of the editor cannot slip in between.
+    after_rev, res, written = locked_update(project_dir, make)
 
-    # 3. Handle conflict
     if res.status == "needs_choice":
         save_turn_storyboards(project_dir, turn_id, base_sb, result_sb)
         changes = compute_changes(base_sb, result_sb, model_changes=model_changes, timing=timing)
-        return {
-            "status": "needs_choice",
-            "storyboard": None,
-            "conflicts": res.conflicts,
-            "changes": changes,
-            "after_rev": None,
-        }
+        return {"status": "needs_choice", "storyboard": None, "conflicts": res.conflicts, "changes": changes, "after_rev": None}
 
-    # 4. Handle clean merge (same or merged)
-    final_sb = res.storyboard or copy.deepcopy(result_sb)
-    # Approvals remain as in current
-    if "approvals" in current_sb:
-        final_sb["approvals"] = copy.deepcopy(current_sb["approvals"])
-    else:
-        final_sb["approvals"] = {"storyboard": None}
-
-    # Commit storyboard
-    after_rev = None
-    if engine and pid:
-        p = engine.project(pid)
-        from bti.editor.engine_adapter import ENGINE_LOCK
-        with ENGINE_LOCK:
-            after_rev = p.save(final_sb)
-    else:
-        from bti.engine import storyboard as SB
-        from bti.engine.api import open_project
-        try:
-            p_obj = open_project(project_dir)
-            issues = p_obj.validate(final_sb)
-        except Exception:
-            issues = []
-        after_rev = SB.save(project_dir, final_sb, issues)
-
-    # Save turn before & after
-    save_turn_storyboards(project_dir, turn_id, base_sb, final_sb)
-
-    # Compute changes between base and final
-    changes = compute_changes(base_sb, final_sb, model_changes=model_changes, timing=timing)
+    # The turn owns only what the agent's result changed against its base (`touched_ids`). A shot the owner changed, added or
+    # removed meanwhile is in the written document too, but it is not the turn's change and undo must not touch it.
+    changes = turn_changes(base_sb, written, res.touched_ids, model_changes=model_changes, timing=timing)
+    save_turn_storyboards(project_dir, turn_id, base_sb, written)
     status = "no_change" if not changes else "applied"
+    return {"status": status, "no_change": (status == "no_change"), "storyboard": written, "after_rev": after_rev,
+            "changes": changes, "conflicts": [], "touched_ids": sorted(res.touched_ids)}
 
-    return {
-        "status": status,
-        "storyboard": final_sb,
-        "after_rev": after_rev,
-        "changes": changes,
-        "conflicts": [],
-    }
+
+def turn_changes(base_sb: dict, final_sb: dict, touched_ids: set[str], *, model_changes: list[dict] | None = None,
+                 timing: dict | None = None) -> list[dict]:
+    """`compute_changes(base, final)` restricted to the shots the agent's result touched."""
+    return [c for c in compute_changes(base_sb, final_sb, model_changes=model_changes, timing=timing) if c.get("shot_id") in touched_ids]
+
+
+def resolve_overwrite(project_dir: Any, turn_id: str, *, timing: dict | None = None, model_changes: list[dict] | None = None,
+                      scope_shot_ids: set[str] | None = None) -> dict:
+    """The owner chose to overwrite after a conflict: apply the turn's stored result (its `after.json`) onto the storyboard as it
+    is now; a shot both sides changed takes the agent's version, every other change of the owner stays. The turn's stored
+    `after.json` becomes what was written, so that undo compares against it. Returns like `apply_direct_edit`."""
+    from pathlib import Path
+    from bti.draft.thread import get_turn_storyboard, save_turn_storyboards
+    project_dir = Path(project_dir)
+    base_sb = get_turn_storyboard(project_dir, turn_id, "before")
+    result_sb = get_turn_storyboard(project_dir, turn_id, "after")
+    if not base_sb or not result_sb:
+        raise LookupError("turn storyboard data lost")
+
+    def make(current_sb):
+        res = merge_storyboard(base_sb, result_sb, current_sb, scope_shot_ids=scope_shot_ids, timing=timing, overwrite=True)
+        return res.storyboard, res
+
+    after_rev, res, written = locked_update(project_dir, make)
+    changes = turn_changes(base_sb, written, res.touched_ids, model_changes=model_changes, timing=timing)
+    save_turn_storyboards(project_dir, turn_id, base_sb, written)
+    return {"status": "applied" if changes else "no_change", "after_rev": after_rev, "changes": changes, "conflicts": [],
+            "touched_ids": sorted(res.touched_ids)}
+
+
+class UndoConflict(Exception):
+    def __init__(self, conflicts: list[str]):
+        super().__init__("shots changed since the turn: " + ", ".join(conflicts))
+        self.conflicts = conflicts
+
+
+def undo_apply(project_dir: Any, turn_id: str, touched_ids: set[str] | None = None, *, force: bool = False) -> str:
+    """Put the shots a turn touched back as they were before it (one more revision), under the storyboard lock. Raises
+    UndoConflict (nothing written) when some of them changed since and `force` is not set, LookupError when the stored
+    storyboards are gone. Returns the new revision."""
+    from pathlib import Path
+    from bti.draft.thread import get_turn_storyboard
+    project_dir = Path(project_dir)
+    before_sb = get_turn_storyboard(project_dir, turn_id, "before")
+    after_sb = get_turn_storyboard(project_dir, turn_id, "after")
+    if not before_sb or not after_sb:
+        raise LookupError("undo data lost")
+    ids = set(touched_ids or ())
+    if not ids:
+        b_s, a_s = shots_map(before_sb), shots_map(after_sb)
+        ids = {sid for sid in (set(b_s) | set(a_s)) if canon(b_s.get(sid)) != canon(a_s.get(sid))}
+
+    def make(current_sb):
+        restored, conflicts = undo_turn(current_sb, before_sb, after_sb, ids, force=force)
+        if conflicts and not force:
+            raise UndoConflict(sorted(conflicts))
+        return restored, None
+
+    rev, _, _ = locked_update(project_dir, make)
+    return rev

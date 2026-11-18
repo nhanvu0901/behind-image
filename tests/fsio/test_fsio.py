@@ -102,3 +102,19 @@ def test_no_bare_rename_is_left_in_bti():
             if re.search(r"\bos\.(replace|rename)\(|\b(tmp|silent)\.replace\(|shutil\.move\(", code):
                 bad.append("%s:%d" % (p.relative_to(root), n))
     assert bad == []
+
+
+@pytest.mark.parametrize("windows", [False, True])
+def test_a_patched_os_replace_is_reached(monkeypatch, tmp_path, windows):
+    """`os.replace` is looked up at call time: a caller (a test) that patches it still reaches the final rename."""
+    import os
+    monkeypatch.setattr(fsio, "IS_WINDOWS", windows)
+    (tmp_path / "a.part").write_text("new")
+    (tmp_path / "a").write_text("old")
+
+    def boom(src, dst):
+        raise OSError("disk full")
+    monkeypatch.setattr(os, "replace", boom)
+    with pytest.raises(OSError, match="disk full"):
+        fsio.atomic_replace(tmp_path / "a.part", tmp_path / "a")
+    assert (tmp_path / "a").read_text() == "old"

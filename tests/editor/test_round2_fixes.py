@@ -547,6 +547,22 @@ def test_upload_and_import_racing_a_delete_answer_404_and_leave_nothing(app, cli
         pj.write_text(json.dumps(d))
     A = f"/api/projects/{pid}"
     media = app.state.media
+
+    class FakeCommons:                          # the picture source behind the import: a local fake, never a request (A7 safety switch)
+        name = "commons"
+
+        def fetch_meta(self, source_id):
+            return {"source": "commons", "source_id": source_id, "kind": "image", "title": "X", "author": "me", "width": 8, "height": 8,
+                    "mime": "image/png", "licence": "CC0", "page_url": "http://x"}
+
+        def download(self, meta, dest, **kw):
+            Path(dest).write_bytes(_png())
+            return Path(dest)
+
+        def credit(self, meta):
+            return {"source": "commons", "source_url": meta["page_url"], "author": meta["author"], "licence": "CC0"}
+    if media.module is not None:
+        monkeypatch.setitem(media.module._SOURCES, "commons", FakeCommons())
     for mode in ("upload", "import"):
         entered, go = threading.Event(), threading.Event()
         orig = media.module.add_upload if mode == "upload" else media.module.import_candidate

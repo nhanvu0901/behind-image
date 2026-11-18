@@ -31,6 +31,12 @@ def _pdir(request: Request, pid: str) -> Path:
     return d
 
 
+def _storyboard_lock(request: Request, pid: str, d: Path):
+    """The project's storyboard lock (re-entrant, the one every editor save holds)."""
+    from .common import save_lock
+    return save_lock(d)
+
+
 @router.get("")
 def get_draft(pid: str, request: Request):
     d = _pdir(request, pid)
@@ -106,12 +112,15 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
     model = body.get("model")
     if model is not None and not isinstance(model, str):
         raise ApiError(422, "model must be text", code="bad_model")
+    mode = body.get("mode", "auto")
+    if mode not in ("auto", "fast", "deep"):
+        raise ApiError(422, "mode must be auto, fast, or deep", code="edit_bad_scope")
     followup = bool(body.get("followup", False))
     base_rev = body.get("base_rev")
 
     try:
         res = draft_run.start(pid, d, instruction=instruction, edit_scope=scope, model=model or None,
-                              followup=followup, base_rev=base_rev)
+                              followup=followup, base_rev=base_rev, mode=mode)
     except DraftError as e:
         status = 409 if e.code in ("draft_not_ready", "agy_missing", "scope_needs_storyboard", "edit_no_storyboard", "edit_needs_agy", "picks_missing", "timing_missing", "picks_no_main", "stale_revision") else 422
         raise ApiError(status, e.message, code=e.code)
@@ -120,6 +129,133 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
             raise ApiError(409, "a draft is already running for this project", code="busy", job_id=getattr(e, "job_id", None))
         raise
     return {"job_id": res["id"], "turn_id": res["turn_id"]}
+
+
+@router.post("/edit/{turn_id}/resolve")
+def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...)):
+    d = _pdir(request, pid)
+    if not isinstance(body, dict):
+        raise ApiError(422, "body must be an object")
+    action = body.get("action")
+    if action not in ("overwrite", "discard"):
+        raise ApiError(422, "action must be 'overwrite' or 'discard'", code="bad_action")
+
+    from bti.draft.thread import load_thread, update_turn
+    turns = load_thread(d)
+    turn = next((t for t in turns if t.get("id") == turn_id), None)
+    if turn is None:
+        raise ApiError(404, "turn not found")
+    if turn.get("status") != "needs_choice":
+        raise ApiError(409, "turn does not need choice", code="not_needs_choice")
+
+    if action == "discard":
+        update_turn(d, turn_id, status="cancelled")
+        return {"ok": True, "action": "discard", "status": "cancelled"}
+
+    # action == "overwrite": the agent's result goes onto the storyboard as it is NOW (the owner's other changes stay)
+    from bti.draft.merge import resolve_overwrite
+    from bti.draft.inputs import DraftError, load_inputs
+    from bti.draft.thread import get_turn_storyboard
+    if not get_turn_storyboard(d, turn_id, "after") or not get_turn_storyboard(d, turn_id, "before"):
+        raise ApiError(410, "turn storyboard data lost", code="turn_data_lost")
+    try:
+        timing = load_inputs(d, for_edit=True).timing
+    except DraftError:
+        timing = None
+    scope_ids = set((turn.get("scope") or {}).get("shots") or []) or None
+    try:
+        with _storyboard_lock(request, pid, d):
+            res = resolve_overwrite(d, turn_id, timing=timing, scope_shot_ids=scope_ids,
+                                    model_changes=[{"shot": c.get("shot_id"), "what": c.get("what")} for c in turn.get("changes") or []])
+    except LookupError:
+        raise ApiError(410, "turn storyboard data lost", code="turn_data_lost")
+    except Exception as e:      # noqa: BLE001 - the engine's ValidationError carries the issues; nothing was written
+        if hasattr(e, "issues"):
+            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [])
+        raise
+    update_turn(d, turn_id, status=res["status"], after_rev=res["after_rev"], changes=res["changes"], conflicts=[])
+    return {"ok": True, "action": "overwrite", "status": res["status"], "rev": res["after_rev"], "after_rev": res["after_rev"]}
+
+
+@router.post("/edit/{turn_id}/undo")
+def undo_edit(pid: str, turn_id: str, request: Request, body: dict = Body(None)):
+    d = _pdir(request, pid)
+    force = False
+    if isinstance(body, dict):
+        force = bool(body.get("force", False))
+
+    from bti.draft.thread import load_thread, update_turn, get_turn_storyboard
+    from bti.draft.merge import undo_apply, UndoConflict
+    turns = load_thread(d)
+    turn = next((t for t in turns if t.get("id") == turn_id), None)
+    if turn is None:
+        raise ApiError(404, "turn not found")
+    if turn.get("status") == "undone":
+        raise ApiError(409, "turn already undone", code="already_undone")
+    if turn.get("status") != "applied":
+        raise ApiError(409, "turn was not applied", code="turn_not_applied")
+    if not get_turn_storyboard(d, turn_id, "before") or not get_turn_storyboard(d, turn_id, "after"):
+        raise ApiError(410, "Bản nháp trước lượt này không còn lưu; chỉ giữ 20 lượt gần nhất.", code="undo_unavailable")
+
+    touched_ids = {c["shot_id"] for c in turn.get("changes", []) if c.get("shot_id")}
+    try:
+        with _storyboard_lock(request, pid, d):
+            new_rev = undo_apply(d, turn_id, touched_ids, force=force)
+    except UndoConflict as e:
+        raise ApiError(409, "undo conflict: some shots were modified since this turn", code="undo_conflict", conflicts=e.conflicts)
+    except LookupError:
+        raise ApiError(410, "Bản nháp trước lượt này không còn lưu; chỉ giữ 20 lượt gần nhất.", code="undo_unavailable")
+    except Exception as e:      # noqa: BLE001
+        if hasattr(e, "issues"):
+            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [])
+        raise
+
+    update_turn(d, turn_id, status="undone")
+    return {"ok": True, "status": "undone", "rev": new_rev, "after_rev": new_rev}
+
+
+@router.get("/edit/{turn_id}/frames/{shot_id}/{when}.jpg")
+def get_turn_frame(pid: str, turn_id: str, shot_id: str, when: str, request: Request):
+    d = _pdir(request, pid)
+    if when not in ("before", "after"):
+        raise ApiError(404, "when must be 'before' or 'after'")
+
+    from bti.draft.thread import get_turn_storyboard
+    sb = get_turn_storyboard(d, turn_id, when)
+    if not sb:
+        raise ApiError(404, "turn storyboard not found")
+
+    shot = next((s for s in sb.get("shots", []) if isinstance(s, dict) and s.get("id") == shot_id), None)
+    if not shot:
+        raise ApiError(404, "shot not found")
+
+    # Compute frame time t
+    t = None
+    if shot.get("_t0") is not None and shot.get("_t1") is not None:
+        t = shot["_t0"] + 0.4 * (shot["_t1"] - shot["_t0"])
+    else:
+        try:
+            from bti.draft.inputs import read_json_file, normalize_timing
+            from bti.engine.timing import Timing
+            raw_t = read_json_file(d / "timing.json", "timing")
+            tm = Timing(normalize_timing(raw_t))
+            t0 = tm.resolve(shot["start"]) if isinstance(shot.get("start"), dict) else 0.0
+            t = t0 + 0.5
+        except Exception:
+            t = 0.5
+
+    from bti.editor import frames as frames_mod
+    engine = getattr(request.app.state, "engine", None)
+    p = engine.project(pid) if engine else None
+    if p is None:
+        from bti.editor.engine_adapter import EngineAdapter
+        root = d.parent
+        sroot = root.parent / "styles"
+        eng = EngineAdapter(root, sroot)
+        p = eng.project(pid)
+
+    data = frames_mod.render_jpeg(p, t, 320, draft=sb)
+    return Response(content=data, media_type="image/jpeg", headers={"Cache-Control": "public, max-age=3600"})
 
 
 @router.get("/thread")

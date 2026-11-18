@@ -82,7 +82,7 @@ def make_router(projects_root: Path) -> APIRouter:
 
     def row(w: dict, arts: dict, pidx: dict) -> dict:
         bid = w["id"].split("/")[0]
-        return {**{k: w.get(k) for k in ("id", "n", "title", "artist", "year", "headline", "pdf_pages", "words",
+        return {**{k: w.get(k) for k in ("id", "n", "title", "artist", "year", "year_raw", "headline", "pdf_pages", "words",
                                          "n_images", "artwork_key", "rights")},
                 "book_id": bid, "century": century(w), "also_in": others(w, arts),
                 "projects": pidx.get(w["id"], []),
@@ -185,7 +185,7 @@ def make_router(projects_root: Path) -> APIRouter:
         rt = d.get("rights") or {"status": "unknown", "basis": ""}
         return {"artwork_key": key, "title": d.get("identity", {}).get("title") or a["title"],
                 "artist": d.get("identity", {}).get("artist") or a.get("artist"),
-                "year": d.get("identity", {}).get("year") or a.get("year"), "kind": d.get("kind", "artwork"),
+                "year": d.get("identity", {}).get("year") or a.get("year"), "year_raw": a.get("year_raw"), "kind": d.get("kind", "artwork"),
                 "century": None if yn is None else ((yn - 1) // 100 + 1 if yn > 0 else 0),
                 "books": books_, "n_sources": len(ids), "words": (d.get("totals") or {}).get("words", 0),
                 "words_normal": (d.get("totals") or {}).get("words_normal", 0),
@@ -234,10 +234,12 @@ def make_router(projects_root: Path) -> APIRouter:
 
     @r.get("/artworks/{artwork_key}")
     def artwork(artwork_key: str):
-        a = catalogue.load_artworks().get(artwork_key) if segment_ok(artwork_key) else None
+        arts = catalogue.load_artworks()
+        cur = arts.resolve(artwork_key) if segment_ok(artwork_key) else None   # an old key (alias) opens the current artwork
+        a = arts.get(cur) if cur else None
         if a is None:
             raise ApiError(404, "artwork not found")
-        arts, pidx = catalogue.load_artworks(), project_index()
+        artwork_key, pidx = cur, project_index()
         ws = []
         for wid in a["works"]:
             bid, n = wid.split("/")
@@ -261,6 +263,7 @@ def make_router(projects_root: Path) -> APIRouter:
     def artwork_source(artwork_key: str, name: str):
         if not (segment_ok(artwork_key) and segment_ok(name)):
             raise ApiError(404, "dossier not found")
+        artwork_key = catalogue.resolve_key(artwork_key) or artwork_key
         d = dossiers.load(artwork_key)
         if d is None:
             raise ApiError(404, "dossier not found")

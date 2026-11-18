@@ -18,11 +18,13 @@ import time
 from pathlib import Path
 
 from . import spec as S
-from .inputs import (DraftError, DraftInputs, canon_hash, load_inputs,
+from .inputs import (DraftError, DraftInputs, canon_hash, clone_inputs, load_inputs,
                      normalize_timing, read_json_file, resolve_edit_scope)
 from bti.settings import model_for
 from .thread import (append_turn, clear_thread, format_previous_exchanges,
-                     load_thread, record_acceptance, update_turn)
+                     load_thread, record_acceptance, save_thread, thread_lock,
+                     turns_dir, update_turn)
+from bti.longjob import Part, PartError
 
 KIND = "draft"
 MODEL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,79}")
@@ -54,7 +56,57 @@ VI = {
     "edit_no_change": "Agent không thay đổi gì trong storyboard.",
     "compile_error": "Không thể ghép các cảnh do có lỗi thông số hoặc cú pháp.",
     "edit_degraded": "Lần sửa bị từ chối vì có cảnh bị hạ cấp hoặc không đầy đủ.",
+    "spec_invalid": "Mô hình trả lời sai dạng cần thiết, kể cả sau một lần chỉnh lại. Hãy thử lại hoặc chọn chế độ sâu.",
+    "escalate": "Yêu cầu này cần nhìn kỹ vào tranh hoặc sửa nhiều hơn phần đã chọn. Hãy chọn chế độ sâu.",
+    "real_models_off": "Máy này đang tắt việc gọi mô hình thật (chế độ thử), nên chưa sửa được.",
+    "bad_model": "Mô hình đã chọn không dùng được. Chọn mô hình khác trong phần cài đặt.",
+    "edit_failed": "Lần sửa gặp lỗi bất ngờ nên chưa có gì thay đổi. Hãy thử lại.",
 }
+
+# what a single-turn provider's error kind is called for the owner (codes the page already has a sentence for)
+PROVIDER_CODES = {"auth": "agy_auth", "rate_limit": "agy_rate_limit", "timeout": "agy_timeout", "config": "agy_config",
+                  "real_models_off": "real_models_off", "empty": "agy_no_result", "http": "agy_error", "blocked": "agy_error"}
+
+
+def _norm_model(model: str | None) -> str | None:
+    """One id form: a bare slug is an Antigravity model (`agy:<slug>`); ids that are configured models (`mock`, ...) stay."""
+    if not model or model.startswith("agy:"):
+        return model
+    from bti.script import models as models_mod
+    return model if models_mod.resolve(model) is not None else "agy:" + model
+
+
+def rate_limit_fields(seconds: int | None) -> dict:
+    """`retry_after_seconds` and `retry_at` (a local clock time) for a quota that resets in `seconds`; {} when agy printed no time."""
+    if not seconds:
+        return {}
+    from bti.script.providers.antigravity import retry_at
+    return {"retry_after_seconds": int(seconds), "retry_at": retry_at(int(seconds))}
+
+
+def rate_limit_sentence(code: str, seconds: int | None) -> str:
+    """The owner's sentence for a failure: the code's own sentence, with when to try again for a quota."""
+    base = vi(code)
+    if code != "agy_rate_limit" or not seconds:
+        return base
+    from bti.script.providers.antigravity import retry_at, wait_words
+    return "Hạn mức của gói Antigravity đã hết. Thử lại sau %s (khoảng %s)." % (wait_words(int(seconds)), retry_at(int(seconds)))
+
+
+def _fail_turn(project_dir: Path, turn_id: str | None, code: str, summary: str, *, start: float | None = None,
+               path: str | None = None, notes: str = "", retry_after_seconds: int | None = None) -> None:
+    """The turn's record of a failure: the code and one Vietnamese sentence (never empty), and the last-run record of the edit."""
+    if turn_id:
+        upd = {"status": "failed", "error": code, "summary": summary}
+        if start:
+            upd["seconds"] = round(time.time() - start, 2)
+        if path:
+            upd["path"] = path
+        if notes:
+            upd["notes"] = notes[:2000]
+        upd.update(rate_limit_fields(retry_after_seconds))
+        update_turn(project_dir, turn_id, **upd)
+    _write_last_edit(project_dir, turn_id, status="error", error=code)
 
 
 def vi(code: str, fallback: str = "") -> str:
@@ -94,6 +146,15 @@ def readiness(project_dir: Path) -> dict:
 
 def last_run(project_dir: Path) -> dict | None:
     f = _cache(project_dir) / "last_run.json"
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+        return d if isinstance(d, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def last_run_edit(project_dir: Path) -> dict | None:
+    f = _cache(project_dir) / "last_run_edit.json"
     try:
         d = json.loads(f.read_text(encoding="utf-8"))
         return d if isinstance(d, dict) else None
@@ -318,10 +379,12 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 update_turn(r.project_dir, r.turn_id, status="error", error="cancelled")
             return
         if a.status == "error":
-            _write_last(r, status="error", error=a.error_code, **info)
+            wait = a.retry_after_seconds if a.error_code == "agy_rate_limit" else None
+            _write_last(r, status="error", error=a.error_code, **rate_limit_fields(wait), **info)
             if r.turn_id:
-                update_turn(r.project_dir, r.turn_id, status="error", error=a.error_code)
-            raise PartError(a.error_code or "agy_error", vi(a.error_code or "agy_error", a.error_message))
+                update_turn(r.project_dir, r.turn_id, status="error", error=a.error_code, **rate_limit_fields(wait))
+            ctx.meta.update(rate_limit_fields(wait))
+            raise PartError(a.error_code or "agy_error", rate_limit_sentence(a.error_code, wait) if a.error_code == "agy_rate_limit" else vi(a.error_code or "agy_error", a.error_message))
         if a.status == "timeout":
             r.partial = True
 
@@ -499,23 +562,50 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
 
     st = EditState()
 
+    def guarded(fn):
+        """An error nobody planned for (a bug, a full disk) must still leave the turn `failed` with a sentence the owner can read,
+        not `running` until the thread is next read."""
+        def run_part(ctx):
+            try:
+                return fn(ctx)
+            except PartError:
+                raise
+            except DraftError as e:
+                _fail_turn(project_dir, turn_id, e.code, vi(e.code, e.message), start=st.start_time or None)
+                raise PartError(e.code, vi(e.code, e.message))
+            except Exception as e:      # noqa: BLE001
+                from bti.longjob import Cancelled
+                if isinstance(e, Cancelled):
+                    raise
+                _fail_turn(project_dir, turn_id, "edit_failed", vi("edit_failed"), start=st.start_time or None,
+                           notes="%s: %s" % (type(e).__name__, str(e)[:300]))
+                raise
+        run_part.__name__ = fn.__name__
+        return run_part
+
     def prepare(ctx):
         st.start_time = time.time()
-        st.inputs = load_inputs(project_dir, for_edit=True)
-        if not st.inputs.current:
-            raise DraftError("scope_needs_storyboard", "editing by prompt requires an existing storyboard")
-        from bti.editor.common import compute_rev
-        actual_rev = compute_rev(st.inputs.current)
-        if base_rev is not None and base_rev != actual_rev:
-            raise DraftError("stale_revision", "storyboard revision changed before edit preparation")
-        
-        edit_shots, scope_chapters, scope_words = resolve_edit_scope(st.inputs, edit_scope or {})
-        st.edit_shots = edit_shots
-        st.scope_chapters = scope_chapters
-        st.scope_words = scope_words
+        try:
+            st.inputs = load_inputs(project_dir, for_edit=True)
+            if not st.inputs.current:
+                raise DraftError("scope_needs_storyboard", "editing by prompt requires an existing storyboard")
+            from bti.editor.common import compute_rev
+            actual_rev = compute_rev(st.inputs.current)
+            if base_rev is not None and base_rev != actual_rev:
+                raise DraftError("stale_revision", "storyboard revision changed before edit preparation")
+            
+            edit_shots, scope_chapters, scope_words = resolve_edit_scope(st.inputs, edit_scope or {})
+            st.edit_shots = edit_shots
+            st.scope_chapters = scope_chapters
+            st.scope_words = scope_words
+        except DraftError as e:
+            _write_last_edit(project_dir, turn_id, status="error", error=e.code)
+            if turn_id:
+                update_turn(project_dir, turn_id, status="failed", error=e.code, summary=vi(e.code, e.message))
+            raise PartError(e.code, vi(e.code, e.message))
 
         if mode == "auto":
-            st.chosen_path = "fast" if len(edit_shots) <= 12 else "deep"
+            st.chosen_path = "deep" if (python is not None or guard_factory is not None or len(edit_shots) > 12) else "fast"
         else:
             st.chosen_path = mode
 
@@ -524,26 +614,43 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
         ctx.progress(1.0, f"Đã chuẩn bị ({len(edit_shots)} cảnh, chế độ {st.chosen_path}).")
 
     def edit(ctx):
-        guard = guard_factory(project_dir) if guard_factory else Guard(project_dir)
-
         # 1. Try fast path if chosen
         if st.chosen_path == "fast":
             ctx.progress(0.1, "Đang nghĩ…")
             from bti.draft.fastedit import fast_edit
-            m_fast = model or model_for("edit.fast")
-            outcome = fast_edit(st.inputs, instruction, st.edit_shots, model=m_fast, guard=guard)
+            from bti.script.providers import ProviderError
+            m_fast = _norm_model(model) or model_for("edit.fast")
+            # the fast path reads its scope from the inputs (inp.edit_shots, inp.scope): the same clone the deep path makes
+            fast_inp = clone_inputs(st.inputs, scope=st.scope_chapters, edit_shots=st.edit_shots)
+            prior = [t for t in load_thread(project_dir) if t.get("id") != turn_id]
+            try:
+                outcome = fast_edit(fast_inp, instruction, model=m_fast, thread_turns=prior, project_dir=project_dir,
+                                    cancel=ctx.cancelled)
+            except ProviderError as e:
+                if e.kind == "cancelled":
+                    if turn_id:
+                        update_turn(project_dir, turn_id, status="cancelled", error="cancelled")
+                    return
+                code = PROVIDER_CODES.get(e.kind, "agy_error")
+                wait = getattr(e, "retry_after_seconds", None) if code == "agy_rate_limit" else None
+                words = rate_limit_sentence(code, wait)
+                ctx.meta.update(rate_limit_fields(wait))            # the job's own record carries it too (never retried in this job)
+                _fail_turn(project_dir, turn_id, code, words, start=st.start_time, path="fast", notes=e.message, retry_after_seconds=wait)
+                raise PartError(code, words)
             ctx.progress(0.8, "Đang kiểm tra…")
 
             if outcome.status == "cannot":
                 elapsed = round(time.time() - st.start_time, 2)
+                words = (outcome.reason or outcome.summary or "").strip()
                 if turn_id:
-                    update_turn(project_dir, turn_id, status="no_change", summary=outcome.summary,
-                                notes=outcome.summary, seconds=elapsed, path="fast")
-                _write_last_edit(project_dir, turn_id, status="done", no_change=True, summary=outcome.summary)
-                ctx.progress(1.0, outcome.summary)
-                return {"status": "no_change", "no_change": True, "summary": outcome.summary}
+                    update_turn(project_dir, turn_id, status="no_change", summary=words,
+                                notes=words, seconds=elapsed, path="fast")
+                _write_last_edit(project_dir, turn_id, status="done", no_change=True, summary=words)
+                ctx.progress(1.0, words)
+                return {"status": "no_change", "no_change": True, "summary": words}
 
             if outcome.status == "escalate":
+                words = (outcome.reason or outcome.summary or "").strip()
                 if mode == "auto":
                     ctx.progress(0.2, "Chuyển sang phân tích sâu…")
                     st.chosen_path = "deep"
@@ -551,77 +658,120 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                     if turn_id:
                         update_turn(project_dir, turn_id, path="deep", escalated=True)
                 else:
-                    elapsed = round(time.time() - st.start_time, 2)
-                    if turn_id:
-                        update_turn(project_dir, turn_id, status="failed", error="escalate",
-                                    summary=outcome.summary, seconds=elapsed, path="fast")
-                    _write_last_edit(project_dir, turn_id, status="error", error="escalate", summary=outcome.summary)
-                    raise PartError("escalate", outcome.summary)
+                    _fail_turn(project_dir, turn_id, "escalate", words or vi("escalate"), start=st.start_time, path="fast")
+                    raise PartError("escalate", words or vi("escalate"))
 
-            elif outcome.status == "error":
-                elapsed = round(time.time() - st.start_time, 2)
-                err = outcome.error or "compile_error"
-                if turn_id:
-                    update_turn(project_dir, turn_id, status="failed", error=err,
-                                summary=outcome.summary, seconds=elapsed, path="fast")
-                _write_last_edit(project_dir, turn_id, status="error", error=err)
-                raise PartError(err, outcome.summary)
+            elif outcome.status == "failed":
+                err = outcome.code or "compile_error"
+                _fail_turn(project_dir, turn_id, err, vi(err), start=st.start_time, path="fast", notes=outcome.reason or "")
+                raise PartError(err, vi(err))
 
-            elif outcome.status == "ok":
+            elif outcome.status == "applied":
                 st.compiled_sb = outcome.storyboard
                 st.summary = outcome.summary
                 st.model_changes = outcome.changes
                 return
 
+            else:       # a status this code does not know is a bug in fastedit, never a silent pass
+                raise RuntimeError("fast_edit returned an unknown status %r" % (outcome.status,))
+
         # 2. Run deep path if chosen or escalated
         if st.chosen_path == "deep":
             from .providers import agy
             if not agy.find_agy():
-                raise DraftError("agy_missing", "agy (the Antigravity CLI) is not installed on this machine")
+                _fail_turn(project_dir, turn_id, "agy_missing", vi("agy_missing"), start=st.start_time, path="deep")
+                raise PartError("agy_missing", vi("agy_missing"))
             from . import workspace
             from .workspace import workspace_compile, read_out
             from .compile import compile_specs, summary_text
 
+            guard = guard_factory(project_dir) if guard_factory else Guard(project_dir)      # the deep run only
             deep_inputs = clone_inputs(st.inputs, scope=st.scope_chapters, edit_shots=st.edit_shots)
+            
+            # E6: Continue conversation if previous deep turn < 2 hours old, else copy last 3 turns
+            conv_id = None
+            turns = load_thread(project_dir)
+            now_ts = time.time()
+            for t in reversed(turns):
+                if t.get("id") != turn_id and t.get("conversation_id") and t.get("at"):
+                    try:
+                        t_struct = time.strptime(t["at"][:19], "%Y-%m-%dT%H:%M:%S")
+                        diff_s = now_ts - time.mktime(t_struct)
+                        if 0 <= diff_s < 2 * 3600:
+                            conv_id = t["conversation_id"]
+                            break
+                    except Exception:
+                        pass
             history = None
-            if followup:
-                turns = [t for t in load_thread(project_dir) if t.get("id") != turn_id]
-                history = format_previous_exchanges(turns)
+            if not conv_id:
+                history = format_previous_exchanges(turns, limit=3)
 
             workspace.clean_old()
             ws = workspace.build(deep_inputs, instruction=instruction, scope_words=st.scope_words, history=history, python=python)
+
+            def preserve_out():
+                if turn_id and ws and (ws.root / "out").is_dir():
+                    dest = turns_dir(project_dir) / turn_id / "out"
+                    dest.mkdir(parents=True, exist_ok=True)
+                    for f in (ws.root / "out").glob("*"):
+                        if f.is_file() and not f.is_symlink():
+                            try:
+                                shutil.copyfile(f, dest / f.name)
+                            except OSError:
+                                pass
 
             def on_progress(p):
                 ctx.progress(0.05 + 0.9 * min(1.0, p["steps"] / 10), f"Bước {p['steps']}, {p['last_action'] or 'đang chạy'}…")
 
             def check(turn):
                 res, _ = workspace_compile(ws.root, draw=True)
-                return summary_text(res) if res.errors else None
+                if res.violations:
+                    v_shots = sorted({str(v.get("shot_id") or v.get("shot")) for v in res.violations if (v.get("shot_id") or v.get("shot"))})
+                    return f"Scope violation: you modified shots outside the allowed scope ({', '.join(v_shots)}). Keep them unchanged."
+                if res.errors:
+                    return summary_text(res)
+                return None
 
-            m_deep = model or model_for("edit.deep")
+            m_deep = _norm_model(model) or model_for("edit.deep")
             cache_dir = _cache(project_dir) / time.strftime("%Y%m%d-%H%M%S")
             cache_dir.mkdir(parents=True, exist_ok=True)
-            run_res = agy.run(ws.root, model=m_deep, timeout=agent_timeout, check=check, cancel=ctx.cancelled,
+            run_res = agy.run(ws.root, model=m_deep, timeout=agent_timeout, max_repairs=2, check=check, cancel=ctx.cancelled,
                               runner=ctx.run_process, on_progress=on_progress, transcript_path=cache_dir / "events.jsonl",
-                              guard=guard, python=python)
+                              guard=guard, python=python, conversation_id=conv_id)
 
             if turn_id and getattr(run_res, "conversation_id", None):
                 update_turn(project_dir, turn_id, conversation_id=run_res.conversation_id)
 
-            if run_res.status == "error":
-                if turn_id:
-                    update_turn(project_dir, turn_id, status="failed", error=run_res.error_code)
-                _write_last_edit(project_dir, turn_id, status="error", error=run_res.error_code)
-                raise PartError(run_res.error_code or "agy_error", vi(run_res.error_code or "agy_error", run_res.error_message))
+            if run_res.status == "tampered":        # nothing is taken from a run that touched files outside its folder
+                preserve_out()
+                msg = vi("draft_tampered") + " (" + ", ".join(run_res.tampered[:5]) + ")"
+                _fail_turn(project_dir, turn_id, "draft_tampered", msg, start=st.start_time, path="deep", notes=run_res.error_message)
+                raise PartError("draft_tampered", msg)
+            if run_res.status in ("error", "timeout"):     # a run that did not finish applies nothing (a draft may use a partial result, an edit may not)
+                preserve_out()
+                code = run_res.error_code or "agy_error"
+                wait = getattr(run_res, "retry_after_seconds", None) if code == "agy_rate_limit" else None
+                msg = rate_limit_sentence(code, wait) if code == "agy_rate_limit" else vi(code, run_res.error_message)
+                ctx.meta.update(rate_limit_fields(wait))
+                _fail_turn(project_dir, turn_id, code, msg, start=st.start_time, path="deep", notes=run_res.error_message, retry_after_seconds=wait)
+                raise PartError(code, msg)
             if run_res.status == "cancelled":
+                preserve_out()
                 if turn_id:
                     update_turn(project_dir, turn_id, status="cancelled", error="cancelled")
                 return
 
+            preserve_out()
             out_data = read_out(ws.root, deep_inputs.in_scope(), {**deep_inputs.picks["assets"], **((deep_inputs.current or {}).get("assets") or {})})
             st.notes = out_data.notes
 
             if not out_data.specs:
+                if out_data.problems:
+                    err_msg = out_data.problems[0].get("message") if isinstance(out_data.problems[0], dict) else str(out_data.problems[0])
+                    if turn_id:
+                        update_turn(project_dir, turn_id, status="failed", error="compile_error", summary=vi("compile_error"), notes=st.notes or "")
+                    _write_last_edit(project_dir, turn_id, status="error", error="compile_error")
+                    raise PartError("compile_error", vi("compile_error", err_msg))
                 if out_data.notes and out_data.notes.strip():
                     elapsed = round(time.time() - st.start_time, 2)
                     if turn_id:
@@ -629,19 +779,41 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                     _write_last_edit(project_dir, turn_id, status="done", no_change=True)
                     ctx.progress(1.0, "Agent không thay đổi gì.")
                     return {"status": "no_change", "no_change": True, "notes": out_data.notes}
-                raise DraftError("draft_no_output", "no usable chapter file in out/")
+                if turn_id:
+                    update_turn(project_dir, turn_id, status="failed", error="draft_no_output", summary=vi("draft_no_output"))
+                _write_last_edit(project_dir, turn_id, status="error", error="draft_no_output")
+                raise PartError("draft_no_output", vi("draft_no_output"))
 
             c_res = compile_specs(deep_inputs, out_data.specs, regions=out_data.regions, spec_problems=out_data.problems, degrade=False, draw=True)
             if c_res.violations:
+                num_map = {s["id"]: i + 1 for i, s in enumerate(deep_inputs.current.get("shots", [])) if s.get("id")}
+                shot_ids = set()
+                for v in c_res.violations:
+                    sid = v.get("shot_id")
+                    if not sid and "shot " in v.get("message", ""):
+                        m = re.search(r"shot\s+([a-zA-Z0-9_-]+)", v["message"])
+                        if m:
+                            sid = m.group(1)
+                    if sid:
+                        shot_ids.add(sid)
+                shot_nums = sorted({num_map[sid] for sid in shot_ids if sid in num_map})
+                if shot_nums:
+                    if len(shot_nums) == 1:
+                        c_text = f"Cảnh {shot_nums[0]}"
+                    else:
+                        c_text = f"Cảnh {', '.join(str(n) for n in shot_nums[:-1])} và {shot_nums[-1]}"
+                    viol_msg = f"{c_text} nằm ngoài phần bạn chọn."
+                else:
+                    viol_msg = vi("edit_outside_scope")
                 if turn_id:
-                    update_turn(project_dir, turn_id, status="failed", error="edit_outside_scope", notes=st.notes or "")
+                    update_turn(project_dir, turn_id, status="failed", error="edit_outside_scope", summary=viol_msg, notes=st.notes or "")
                 _write_last_edit(project_dir, turn_id, status="error", error="edit_outside_scope")
-                raise PartError("edit_outside_scope", vi("edit_outside_scope"))
+                raise PartError("edit_outside_scope", viol_msg)
 
             errs = [e for e in c_res.errors if e not in c_res.violations]
             if errs:
                 if turn_id:
-                    update_turn(project_dir, turn_id, status="failed", error="compile_error", notes=st.notes or "")
+                    update_turn(project_dir, turn_id, status="failed", error="compile_error", summary=vi("compile_error"), notes=st.notes or "")
                 _write_last_edit(project_dir, turn_id, status="error", error="compile_error")
                 raise PartError("compile_error", vi("compile_error", errs[0].get("message") or "compile errors in edit"))
 
@@ -674,31 +846,35 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
             scope_shot_ids=st.edit_shots,
         )
         elapsed = round(time.time() - st.start_time, 2)
+        status = res["status"]
+        summary = st.summary if status != "no_change" else vi("edit_no_change")
         if turn_id:
             update_turn(
                 project_dir,
                 turn_id,
-                status=res["status"],
+                status=status,
                 before_rev=base_rev,
                 after_rev=res.get("after_rev"),
                 path=st.chosen_path,
                 escalated=st.escalated,
                 seconds=elapsed,
-                summary=st.summary,
+                summary=summary,
                 changes=res.get("changes", []),
                 conflicts=res.get("conflicts"),
                 notes=st.notes,
             )
-        _write_last_edit(project_dir, turn_id, status="done" if res["status"] in ("applied", "no_change") else "needs_choice",
+        _write_last_edit(project_dir, turn_id, status="done" if status in ("applied", "no_change") else "needs_choice",
                          changes=len(res.get("changes", [])))
-        msg = "Đã áp dụng thay đổi." if res["status"] == "applied" else ("Không có thay đổi." if res["status"] == "no_change" else "Cần lựa chọn ghi đè do xung đột.")
+        msg = "Đã áp dụng thay đổi." if status == "applied" else ("Không có thay đổi." if status == "no_change" else "Cần lựa chọn ghi đè do xung đột.")
         ctx.progress(1.0, msg)
-        return res
+        # the job's result is small: the stored storyboards live under cache/draft/turns/<turn_id>/
+        return {"status": status, "no_change": status == "no_change", "after_rev": res.get("after_rev"), "summary": summary,
+                "n_changes": len(res.get("changes", []))}
 
     return [
-        Part(key="prepare", title="Chuẩn bị dữ liệu", run=prepare, est_seconds=5),
-        Part(key="edit", title="Chỉnh sửa storyboard", run=edit, est_seconds=15),
-        Part(key="apply", title="Áp dụng thay đổi", run=apply_, est_seconds=5),
+        Part(key="prepare", title="Chuẩn bị dữ liệu", run=guarded(prepare), est_seconds=5),
+        Part(key="edit", title="Chỉnh sửa storyboard", run=guarded(edit), est_seconds=15),
+        Part(key="apply", title="Áp dụng thay đổi", run=guarded(apply_), est_seconds=5),
     ]
 
 
@@ -708,6 +884,8 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
           **kw) -> dict:
     """Start the draft or edit job. Raises DraftError (not ready, agy missing, ...) or bti.longjob.Busy."""
     if instruction is not None:
+        if provider != "agy":
+            raise DraftError("edit_needs_agy", "editing by prompt requires the agy agent provider")
         if not isinstance(instruction, str) or not instruction.strip():
             raise DraftError("edit_empty_instruction", "instruction cannot be empty")
         if len(instruction) > 2000:
@@ -749,7 +927,7 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
                 "chapter": (edit_scope or {}).get("chapter") if scope_kind == "chapter" else None,
             },
             "scope_words": scope_words,
-            "model": (model if (model and model.startswith("agy:")) else (f"agy:{model}" if model else default_model)),
+            "model": _norm_model(model) or default_model,
             "base_rev": effective_base_rev,
             "before_rev": effective_base_rev,
             "after_rev": None,
@@ -777,8 +955,10 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
             rec = m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=parts,
                           meta={"provider": provider, "model": model, "mode": "edit", "turn_id": turn_id, "instruction": instruction})
             update_turn(project_dir, turn_id, job_id=rec["id"])
-        except Exception as e:
-            update_turn(project_dir, turn_id, status="failed", error=getattr(e, "code", "busy") if type(e).__name__ == "Busy" else "start_failed")
+        except Exception:
+            with thread_lock(project_dir):
+                turns = [t for t in load_thread(project_dir) if t.get("id") != turn_id]
+                save_thread(project_dir, turns)
             raise
         return {**rec, "turn_id": turn_id}
 

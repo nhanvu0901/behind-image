@@ -159,7 +159,12 @@ Read `INSTRUCTION.md` first: it has the owner's words, unchanged, and the scope.
 2. Write `out/<chapter>.json` as a copy of the current file with your changes: keep every shot you do not change exactly as it is, including its `id`, `start_word`, `off`, `params` and `overlays`; delete the `in_scope`, `locked`, `start_s` and `end_s` fields only if you like (they are ignored). To change a shot, edit its fields (a slower zoom means a camera whose second key is further from the first and a longer shot, or a smaller zoom ratio; a ring around the mirror is one more overlay with technique AN-01 and `"params": {"at": "MIRROR"}`). To add a shot inside the scope, give it no `id`. To remove one, leave it out.
 3. Run the check. In edit mode it also compares your result with the saved storyboard and reports every change outside the scope (`edit_outside_scope`) and every change to a locked shot (`edit_locked_changed`). The result is refused while any such error remains.
 4. **If the request cannot be met** with the 71 techniques and the pictures the project has (it needs a new picture, a change of the narration or of the voice, a technique that does not exist): change nothing, copy the current files to `out/` as they are, and say so at the top of `out/notes.md`, with what the owner should do instead (for example: choose that picture in the Chọn hình step). A question back to the owner is a valid result: write it as the first line of `notes.md`.
-5. In `notes.md`, for each shot you changed write one line: its id and the reason. The owner sees the before and after frames and your line, and decides.
+5. Write `out/notes.json` (required):
+```json
+{"summary": "A one-sentence Vietnamese summary of what changed",
+ "changes": [{"shot": "<shot id>", "what": "A one-sentence Vietnamese explanation of this shot's change"}]}
+```
+6. Stop as soon as the check reports 0 error(s) and out/notes.json exists; reply with the single word `done`. Do not run extra commands or refine further.
 {{/EDIT}}
 
-When the check says `0 error(s)` and `out/notes.md` exists, reply with the single word `done`.
+When the check says `0 error(s)` and required output files exist, reply with the single word `done`.

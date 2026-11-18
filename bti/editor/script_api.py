@@ -167,9 +167,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     def put_brief_options(pid: str, body: dict = Body(...)):
         d = pdir(pid)
         try:
-            brief_mod.save_options(d, body)
+            brief_mod.save_options(d, body, library_root=library_root)
         except brief_mod.OptionsError as e:
-            raise ApiError(422, str(e))
+            code = getattr(e, "code", "options_error")
+            raise ApiError(422, str(e), code=code)
         return brief_for(d)["options"]
 
     @r.get("/projects/{pid}/prompt")
@@ -248,7 +249,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             o = store.load_outline(d)
             if o is None:
                 raise ApiError(404, "no outline to approve")
-            errs = validate.blocking(validate.validate_outline(o, None))
+            errs = validate.blocking(validate.validate_outline(o, brief_for(d)))
             if errs:
                 raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs)
             try:

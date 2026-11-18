@@ -62,6 +62,8 @@ const CATALOG = [
   [/give artwork_key or work_ids/i, 'Chọn tác phẩm hoặc chọn mục sách, không chọn cả hai.'],
   [/invalid work id/i, 'Mã mục sách không hợp lệ.'],
   [/exclude must be a list/i, 'Danh sách nguồn bỏ không hợp lệ.'],
+  /* worker dscript */
+  [/at least one source must stay/i, 'Phải giữ lại ít nhất một nguồn sách.'],
   [/key and with/i, 'Thiếu tác phẩm cần gộp.'],
   [/cannot merge an artwork with itself/i, 'Không gộp một tác phẩm với chính nó.'],
   [/artwork has only one source/i, 'Tác phẩm này chỉ có một nguồn nên không tách được.'],
@@ -142,6 +144,8 @@ const LONGJOB_CODES = {
   project_gone: 'Dự án đã bị xóa.',
   longjob_internal: 'Việc bị lỗi không mong đợi trên máy chủ.',
   accept_all_required: 'Dự án chưa có storyboard: chỉ chấp nhận được cả đề xuất, không chọn từng thay đổi.',
+  // --- draft and edit (page)
+  real_models_off: 'Bản ứng dụng này đang chạy ở chế độ thử nên không gọi mô hình hay dịch vụ bên ngoài. Hãy dùng bản chính.',
 };
 export const STAGE_CODES = {
   longjob: LONGJOB_CODES,
@@ -186,6 +190,8 @@ export const STAGE_CODES = {
     video_not_main: 'Video không đặt làm tranh chính được; hãy dùng ảnh tĩnh cho tranh chính.',
     youcom_key_missing: 'Chưa có khóa You.com (YDC_API_KEY) trên máy chủ.',
     tool_missing: 'Máy chủ thiếu công cụ yt-dlp hoặc ffmpeg để xử lý video.',
+    // --- dsources
+    source_no_key: 'Nguồn này chưa có khóa API trên máy chủ.',
   },
   export: {
     no_storyboard: 'Chưa có storyboard. Hãy dựng hình ở bước "Dựng hình" trước.',
@@ -232,6 +238,38 @@ export const STAGE_CODES = {
     edit_no_change: 'Agent không thay đổi gì trong storyboard.',
     compile_error: 'Không thể ghép các cảnh do có lỗi thông số hoặc cú pháp.',
     edit_degraded: 'Lần sửa bị từ chối vì có cảnh bị hạ cấp hoặc không đầy đủ.',
+    // --- dsources: draft turn and undo error codes
+    bad_action: 'Thao tác không hợp lệ.',
+    not_needs_choice: 'Lượt sửa này không cần chọn tiếp.',
+    turn_data_lost: 'Dữ liệu của lượt sửa này không còn lưu.',
+    already_undone: 'Lượt sửa này đã được hoàn tác trước đó rồi.',
+    turn_not_applied: 'Lượt sửa này chưa được áp dụng nên không hoàn tác được.',
+    undo_unavailable: 'Bản nháp trước lượt này không còn lưu.',
+    undo_conflict: 'Không hoàn tác được vì một số cảnh đã bị thay đổi sau lượt này.',
+    undo_failed: 'Hoàn tác lượt sửa thất bại.',
+    escalate: 'Yêu cầu này cần xem kỹ hơn hoặc sửa nhiều hơn phần đã chọn. Hãy chọn phần rộng hơn hoặc nói cụ thể hơn.',
+    // --- draft and edit (page)
+    stale_revision: 'Storyboard đã đổi ở nơi khác kể từ lúc bạn mở. Tải lại trang rồi gửi lại.',
+    edit_locked_changed: 'Có cảnh đang khóa bị đổi, nên lần sửa bị bỏ. Mở khóa cảnh đó rồi thử lại.',
+    compile_empty: 'Agent không đưa ra cảnh nào để ghép.',
+    main_asset_unreadable: 'Không đọc được tranh chính của dự án.',
+    picks_shape: 'Danh sách hình đã chọn bị sai cấu trúc. Làm lại bước Chọn hình.',
+    project_missing: 'Không tìm thấy dự án này.',
+    spec_invalid: 'Agent trả về các cảnh sai cấu trúc nên không ghép được.',
+    storyboard_corrupt: 'Tệp storyboard của dự án bị hỏng.',
+    template_missing: 'Máy chủ thiếu tệp lời nhắc cho việc này.',
+    timing_shape: 'Tệp thời điểm từng từ sai cấu trúc. Làm lại bước Giọng đọc.',
+    workspace_invalid: 'Thư mục làm việc của agent không dùng được. Thử lại.',
+    cancelled: 'Việc đã bị dừng.',
+    edit_failed: 'Lần sửa này không làm xong vì một lỗi không rõ. Thử lại, hoặc nói rõ hơn.',
+  },
+  // --- draft and edit (page): the model settings
+  settings: {
+    invalid_payload: 'Cài đặt gửi lên không hợp lệ.',
+    unknown_role: 'Có việc không có trong danh sách việc.',
+    invalid_model: 'Có việc chưa chọn mô hình.',
+    agentic_role_needs_agy: 'Việc dựng và sửa sâu cần mô hình chạy qua agy.',
+    unknown_model: 'Có mô hình không có trong danh sách.',
   },
 };
 const AMBIGUOUS = new Set(['busy', 'stale', 'not_found']);
@@ -261,6 +299,8 @@ const BY_CODE_HTTP = {
   project_file_damaged: () => 'Tệp project.json của dự án này bị hỏng nên ứng dụng không xóa được. Hãy sửa hoặc xóa thư mục dự án bằng tay trong máy chủ.',
   undrawable: () => 'Storyboard có chỗ không vẽ được nên chưa duyệt được. Xem danh sách các shot bị lỗi.',
   render_failed: (b) => renderFailText(b),
+  /* worker dscript */
+  at_least_one_source: () => 'Phải giữ lại ít nhất một nguồn sách.',
 };
 /** "Không dựng được shot s0012 (CAM-01): ..." from the 422 `render_failed` body ({shot, overlay, technique}). */
 export function renderFailText(b) {
@@ -340,6 +380,8 @@ const BUILD = {
   duplicate_fact: () => 'Hai dữ kiện đang dùng chung một mã.',
   fact_no_source: (i) => `Dữ kiện ${w(i.fact)} chưa dẫn đoạn nguồn nào.`,
   unknown_source_id: (i, r) => { const m = /cites (.+?),? (?:not in|which is not)/i.exec(r); return `Dữ kiện ${w(i.fact)} dẫn ${m ? m[1] : 'một mã'} không có trong tập sách.`; },
+  /* worker dscript */
+  source_excluded: (i) => i.level === 'error' ? `Dữ kiện ${w(i.fact)} có mọi nguồn đều đã bị bỏ.` : `Dữ kiện ${w(i.fact)} dẫn nguồn đã bị bỏ khỏi dự án.`,
   disputed_no_conflict: (i) => `Dữ kiện ${w(i.fact)} đang ghi là tranh cãi nhưng chưa mô tả chỗ mâu thuẫn.`,
   unknown_fact: (i, r) => { const f = (/\b(f\d+)\b/i.exec(r) || [])[1]; return i.beat ? `Dòng ${i.beat} dẫn dữ kiện ${f || ''} không có trong dàn ý.` : `${i.chapter ? 'Chương ' + i.chapter + ' dùng' : 'Có dòng dùng'} dữ kiện ${f || ''} không có trong bảng dữ kiện.`; },
   fact_unused: (i) => `Dữ kiện ${w(i.fact)} chưa chương nào dùng.`,
@@ -356,11 +398,15 @@ const BUILD = {
   markup_in_text: (i, r) => { const m = /has (.+?) in its text/i.exec(r); return `Dòng ${w(i.beat)} có ký hiệu${m ? ' ' + m[1] : ''} trong lời đọc; lời đọc chỉ gồm chữ để đọc.`; },
   spoken_chars: (i) => `Dòng ${w(i.beat)} có dấu câu mà giọng đọc không ngắt được (; : ( ) hoặc gạch ngang). Dùng dấu phẩy và dấu chấm.`,
   beat_too_long: (i, r) => { const m = /has (\d+) words/i.exec(r); return `Dòng ${w(i.beat)} dài ${m ? m[1] + ' từ' : 'quá'} (trên 90), nên tách ra.`; },
+  /* worker dscript */
+  long_sentence: (i, r) => { const m = /with (\d+) words/i.exec(r); return `Dòng ${w(i.beat)} có câu dài ${m ? m[1] + ' từ' : 'quá'} (trên 28 từ); nên tách ra.`; },
   no_show: (i) => `Dòng ${w(i.beat)} chưa có gợi ý hình sẽ hiện.`,
   words_under: (i, r) => { const m = /Only (\d+) words, under 70% of the target (\d+)/i.exec(r); return m ? `Mới có ${m[1]} từ, dưới 70% mục tiêu ${m[2]} từ.` : 'Lời dẫn quá ngắn so với mục tiêu.'; },
   words_off_target: (i, r) => { const m = /(\d+) words; the target is (\d+)/i.exec(r); return m ? `Có ${m[1]} từ, mục tiêu ${m[2]} từ (lệch hơn 15%).` : 'Số từ lệch mục tiêu quá 15%.'; },
   chapter_off_budget: (i, r) => { const m = /has (\d+) words; its budget is (\d+)/i.exec(r); return m ? `Chương ${w(i.chapter)} có ${m[1]} từ, ngân sách ${m[2]} từ (lệch hơn 30%).` : `Chương ${w(i.chapter)} lệch ngân sách quá 30%.`; },
   length: (i, r) => { const m = /(\d+) words, about ([\d.]+) minutes at ([\d.]+)/i.exec(r); return m ? `${m[1]} từ, khoảng ${m[2]} phút ở ${m[3]} từ/giây.` : 'Độ dài lời dẫn.'; },
+  /* worker dscript */
+  sentence_median: (i, r) => { const m = /Median sentence length: ([\d.]+) words/i.exec(r); return `Độ dài câu trung vị của kịch bản: ${m ? m[1] + ' từ' : 'đạt yêu cầu'}.`; },
   source_share: (i, r) => `Phần đoạn nguồn đứng sau các dữ kiện đã dùng: ${(/facts: (.+?)\.?$/i.exec(r) || [])[1] || ''}.`,
   overlap: (i, r) => { const m = /(\d+%)/.exec(r); return `${m ? m[1] : 'Một phần'} số từ nằm trong các đoạn chép từ 8 từ trở lên từ nguồn (chỉ để biết).`; },
   // paste (parse) issues

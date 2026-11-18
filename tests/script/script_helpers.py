@@ -17,7 +17,22 @@ def make_outline(approved: bool = False) -> Outline:
 
 
 def words(n: int, w: str = "word") -> str:
-    return " ".join([w] * (n - 1)) + " end."
+    if n <= 0:
+        return ""
+    chunk = 14
+    parts = []
+    rem = n
+    while rem > 0:
+        cur = min(rem, chunk)
+        if rem > chunk and rem - cur < 4:
+            cur = rem // 2
+        is_last = (rem - cur <= 0)
+        tail = " end." if is_last else " stop."
+        s = " ".join([w] * (cur - 1)) + tail if cur > 1 else ("End." if is_last else "Stop.")
+        s = s[0].upper() + s[1:]
+        parts.append(s)
+        rem -= cur
+    return " ".join(parts)
 
 
 def make_narration(sizes=(100, 200, 100), per_chapter: int = 2) -> Narration:

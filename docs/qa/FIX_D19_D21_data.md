@@ -39,7 +39,7 @@ Previously, `catalogue.build()` took titles, artists, and years exclusively from
 - Full before/after table written to `docs/qa/D19_library_changes.md`.
 
 ### Objections / Left open
-None. Existing projects (`arnolfini-from-books` with `eyck-the-arnolfini-portrait`) preserved keys intact.
+None.
 
 
 ## D21. Large files from Wikimedia Commons time out on the server (503)
@@ -98,3 +98,111 @@ None for D19 and D21.
 ### Objections / Left open
 None.
 
+
+## D19 Follow-up (TASK2): titles, artists, years, aliases
+
+Second pass by a new worker on 2026-11-18. The first pass of this follow-up (earlier worker, uncommitted) was read first; what was kept
+and what was redone is listed at the end.
+
+### 1. Title casing after an apostrophe: fixed
+`catalogue.title_case_words` re-cases a title only when it is ALL UPPER or all lower case; any other title is returned as written
+("The Artist’s Studio", "Merda d’Artista" are untouched). Small words (a, an, the, of, and, in, on, at, to, with, after, du, de, la, le)
+stay lower case except as the first word, a letter after an apostrophe is never capitalised ("Artist’s", "Velázquez’s"). One addition to
+the rule: the first word after a dash, after "word:" and after a plate number ("Mode: 1, The ...") counts as a first word, so
+"Rain, Steam and Speed – The Great Western Railway". Where a heading in capitals differs from the outline title only in case, the
+outline's casing is kept (`pick_fields`), and a hyphen broken at a line end ("Master- Stroke") is joined.
+
+### 2. A worse value replacing a better one: fixed by a trust order and `library/overrides/artists.json`
+- Every work records where each of its fields came from (`field_src`: override, clean or outline). `catalogue.regroup` takes each field
+  of an artwork from its most trusted work: override > clean text of a digital normal-trust book > clean text of a scanned normal-trust
+  book > PDF outline > any low-trust book (`catalogue.source_rank`; ties go to book order). A low-trust book (Grovier) gives only its
+  year from the clean text; its titles and names stay as in its outline.
+- `library/overrides/artists.json` is `{canonical name: [variants]}`. Lookup ignores case, accents, hyphens and apostrophes, so
+  "Eugene", "Eugéne" and "EUGÈNE" all give "Eugène Delacroix". It holds the 11 names you gave plus the ones below. "After X" is
+  split off into `attribution: "after"` (Cornelis van Dalem, The Legend of the Baker of Eeklo). The file lives only in
+  `library/overrides/` (the copy inside the code package `bti/library/overrides/` was a mistake and was removed).
+- A name that is in no file and is written in capitals gets particles in lower case (`name_case`): "Leonardo da Vinci", not "Da Vinci".
+
+Artists that had more than one spelling in the catalogue, and the form chosen (every one now has a single spelling; the check was
+"same normalised name" and "same last name"):
+
+| Chosen | Variants that occurred | Why |
+|---|---|---|
+| Hieronymus Bosch | Hieronymous Bosch | typo |
+| Pieter Bruegel the Elder | Bruegel the Elder | your list |
+| Eugène Delacroix | Eugene / Eugéne Delacroix | your list |
+| Caravaggio | Michelangelo da Caravaggio | your list |
+| Diego Velázquez | Diego Velazquez | your list |
+| Salvador Dalí | Salvador Dali | your list |
+| Édouard Manet, Jean-François Millet, Pierre-Auguste Renoir, Georgia O’Keeffe | accent, hyphen and apostrophe variants | your list |
+| Cornelis van Dalem | Cornelis Van Dalem, After Cornelis Van Dalem | your list, "after" is an attribution |
+| Rembrandt van Rijn | Rembrandt | the clean text of Hodge and Hagen says "Rembrandt van Rijn"; keys keep the word `rembrandt` (`key_name`, owner decision) |
+| Jan van Eyck, Rogier van der Weyden, Hugo van der Goes, Hilma af Klint | "Van", "Af" with a capital | the lower-case particle is the form of the clean text and of most entries |
+| Francisco de Goya | Francisco Goya | the clean text of every book that names him says "de Goya" |
+| Georges Seurat | Georges-Pierre Seurat | the clean text of Hodge, Hagen and Grovier says "Georges Seurat" |
+| Giovanni Battista Tiepolo | Giambattista Tiepolo | the clean text of Hodge and Hagen says "Giovanni Battista"; only the Hagen outline said "Giambattista" (2 entries against 1 before: check) |
+| Tintoretto | Jacopo Tintoretto | the clean text of Hodge, Hagen and Grovier says "Tintoretto" |
+| Johannes Vermeer | Jan Vermeer | the clean text of Payne, Hodge and Grovier says "Johannes Vermeer" |
+| Paolo Veronese | Paolo Caliari (Veronese) | the clean text of Hodge and Hagen says "Paolo Veronese" |
+| Vincent van Gogh | Vincent Van Gogh | owner decision; keys unchanged (`gogh-...`) |
+| Zhang Zeduan | Zhang Zeduan (Attrib.) | owner decision: `attribution: "attributed"`, key word `zhang` |
+| Joan Miró (not a double spelling: a single wrong one) | Joan Miré | one entry had "Miré", an obvious typo; fixed and listed because it changes a key |
+
+`artists.json` entries may be `{"variants": [...], "key_name": "word"}`: `key_name` is the first word of the artwork keys of that artist
+(`catalogue.artist_key_word`); without it the last word of the name is used. Used for Rembrandt (`rembrandt`) and Zhang Zeduan (`zhang`).
+Left alone: other names whose last word is a weak key (giotto di Bondone -> `bondone-`, Piero della Francesca -> `francesca-`, Joseph Wright of
+Derby -> `derby-`, Hildegard of Bingen, Apollodorus of Damascus, "The Limburg Brothers", "Master of the Transfiguration of the Virgin"): changing them
+would change old keys; give them a `key_name` if wanted. Titles keep the "St" / "St." of their most trusted source. Gentileschi's "Judith Slaying
+Holofernes" takes its year (1612–1613) from the most trusted source (Brooke-Hitching, digital); Hodge says c. 1620, so the two books may describe two
+versions of the painting: the owner may want to look.
+
+### 3. Years: fixed (`parse.parse_year`, `parse.print_year`)
+`parse_year` returns `{from, to, circa, era}` (era `AD`, `BC` or `BC-AD`) or None; `print_year` prints `1434`, `c. 1562–1566`,
+`c. 900 BC`, `645–635 BC`, `27 BC–AD 68` (an AD year below 1000 is printed `AD 113`, numbers of 10,000 and more with a comma,
+`38,000–33,000 BC`). `parse.normalise_year` gives `(year, year_raw)`. A BC span written ascending ("27-68 B.C.") is read as 27 BC to AD 68.
+`year_num` (used for matching and rights) still guesses a number from text that is not a year. In the Mac library every `year` now
+parses and prints to itself (checked on all works and artworks). 263 artworks have a year, 20 have only `year_raw`, 14 have neither (the
+12 ArtCurious chapters, "Betty", the Abramović chapter). The 20 that are not years:
+after 1066 (Bayeux Tapestry), after 1475 (The Conjurer), after 1630 (The Fortune Teller), after 1660 (The Chancellor Séguier),
+"About 60 B.C. - 50 years ago" (Villa of the Mysteries), "approximately 800 years" (Book of Kells), "approximately 1,000 years"
+(Travelers among Mountains and Streams), and 13 centuries (late second century, twelfth-thirteenth centuries, early thirteenth,
+thirteenth-nineteenth, fourteenth, fifteenth-seventeenth, sixteenth-eighteenth, seventeenth, seventeenth-twentieth, eighteenth, nineteenth,
+nineteenth-twentieth, twentieth). Decision for you: centuries and "after 1475" used to sit in `year` and now do not, as you asked; if the
+page should show them, show `year_raw` when `year` is empty.
+
+### 4. Aliases: done
+`regroup` compares the previous `library/artworks.json` with the new one and records every key that disappeared as an alias of the
+artwork that took over its works (`library/overrides/aliases.json`, `{old: current}`, also `aliases: [...]` inside the entry). An alias
+follows its artwork if the key changes again; a current key is never shadowed by an alias. `catalogue.load_artworks()` returns an
+`ArtworksDict`: `d[old_key]` and `d.get(old_key)` give the current artwork, `old_key in d`, iteration and `len` see current keys only (so
+merge, split and dossier clean-up are not confused). New: `catalogue.resolve_key(key)`, `catalogue.get_artwork(key)`;
+`dossiers.load(old_key)` opens the dossier of the current key. Ten keys changed against the pre-D19 catalogue (all recorded):
+bosch-the-conjuror, dali-the-temptation-of-saint-anthony, hogarth-marriage-a-la-mode-i, menzel-steel-mill, mire-the-hunter-catalan-landscape,
+rijn-the-night-watch, rijn-self-portrait-with-two-circles (now `rembrandt-...`), attrib-along-the-river-during-the (now `zhang-...`), turner-rail-steam-and-speed, velazquez-venus-at-her-mirror.
+`eyck-the-arnolfini-portrait` and `munch-the-scream` are unchanged (`PINNED_KEYS`; `regroup` reports `pinned_missing` if one ever
+disappears). Keys of artworks that a project in `projects/` already uses are still pinned to the project's key.
+
+### Rebuild
+`python -m bti.library build` and `python -m bti.library dossiers` on the Mac, starting from the backed-up catalogue so that the aliases
+cover the whole change since before D19. 297 artworks (same groups of works), 164 differ from the backup (210 changed fields), 33 are
+in two or more books. Full table: `docs/qa/D19_library_changes.md`.
+
+### Tests
+`tools/deploy/snapshot_test.sh ddata -- tests/library -q` on the Windows server: 140 passed, 0 failed, 0 skipped (`tests/library`); `tests/editor/test_library_api.py` 14 passed; `node --test tests/editor_frontend/*.test.mjs` 199 passed on the Mac. All new tests build a
+temporary library, so they do not depend on the server's (older) catalogue. Only `test_protected_keys_in_the_built_library` reads the real
+one (it checks the two protected keys, which the old and the new catalogue share).
+
+### What was kept and what was redone from the first pass of this follow-up
+Kept: the idea of `parse_year` / `print_year` and the `attribution` split in `parse_madman`; the seed list of `artists.json` (extended);
+the project pinning of keys (D19 first pass); `ArtworksDict` as the answer to "look-up by alias" (reshaped). Redone: title casing
+(capital after an apostrophe, small words, subtitles); the year parser (it had a hard-coded 27/68 case and accepted "after" as no-year only);
+the trust order (it ranked books, not sources, and did not know about overrides or `field_src`); canonical artists (no lookup by
+normalised name, no upper-case names); aliases (they were built from a hard-coded read of `.scratch/ddata_backup/`, and `in` / iteration
+counted aliases, which would have kept stale dossiers); the copy of the data files inside `bti/library/overrides/` (removed); the tests
+(they depended on the Mac's built library); the changes table. First-pass keys such as `pollock-one-number-31-1950` are gone: the key
+of that artwork is unchanged now.
+
+### Editor changes (owner-approved, small)
+`bti/editor/library_api.py`: `/artworks/<old key>` and its `/source/...` answer with the current key (test `test_artwork_by_old_key_answers_with_the_current_key`);
+the work and artwork rows carry `year_raw`. `bti/editor/static/js/views/library.js`: five places show `year_raw` when `year` is empty (works table,
+work page, artworks table, artwork page, merge list). `views/artwork.js` is the project page (its `p.year` is the project's own) and was not touched.

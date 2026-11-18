@@ -88,6 +88,20 @@ DOS = (config.LIB_DIR / "dossiers" / "eyck-the-arnolfini-portrait" / "dossier.js
 
 
 @pytest.mark.skipif(not DOS, reason="run python -m bti.library dossiers first")
+def test_artwork_by_old_key_answers_with_the_current_key(client, monkeypatch):
+    monkeypatch.setattr(catalogue, "load_aliases", lambda: {"arnolfini-old-key": "eyck-the-arnolfini-portrait"})
+    g = client.get
+    new = g("/api/library/artworks/eyck-the-arnolfini-portrait").json()
+    old = g("/api/library/artworks/arnolfini-old-key")
+    assert old.status_code == 200
+    j = old.json()
+    assert j["artwork_key"] == "eyck-the-arnolfini-portrait" and j["title"] == new["title"] and j["works"] == new["works"]
+    assert all("arnolfini-old-key" not in s["text_url"] for s in (j["dossier"] or {}).get("sources", []))
+    stem = (new["dossier"]["sources"][0]["text_url"]).rsplit("/", 1)[1]
+    assert g("/api/library/artworks/arnolfini-old-key/source/" + stem).status_code == 200
+    assert g("/api/library/artworks/not-an-old-key").status_code == 404
+
+
 def test_artworks_list_filters_sort(client):
     g = client.get
     rows = g("/api/library/artworks").json()

@@ -1,0 +1,344 @@
+// "Sửa video bằng lời": the pure parts (scope words, default scope, turn cards for every status, progress, clock, preview range,
+// settings rows) and the list of codes with their Vietnamese sentences.
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  EDIT_CODES, TURN_STATUS, clockTime, minSec, durationWords, chapterLabel, chapterAt, scopeWords, pickScope, retryScope, addToSelection,
+  codeText, normStatus, turnView, quotaView, parseMoment, whenWords, modelName, modelOptionText, modelListState, progressView, previewRange, takeInPlan, newlyChanged, modelRows, modelChanges, applyAllModels,
+} from '../../bti/editor/static/js/editlogic.js';
+import { stageErrorText, isVietnamese } from '../../bti/editor/static/js/errmsg.js';
+import { EDIT_LABELS, SETTINGS_LABELS } from '../../bti/editor/static/js/labels.js';
+
+const ROOT = new URL('../../', import.meta.url).pathname;
+const SHOTS = [{ id: 's0001', _t0: 0, _t1: 4 }, { id: 's0002', _t0: 4, _t1: 9 }, { id: 's0003', _t0: 9, _t1: 12 }, { id: 's0004', _t0: 12, _t1: 20 }];
+const CHAPS = [{ id: 'c01', name: 'Cold Open', start: 0, end: 9 }, { id: 'c02', name: 'The Merchant', start: 9, end: 20 }, { id: 'c03', name: 'c03', start: 20, end: 30 }];
+
+test('the clock is 24-hour and never follows the browser language', () => {
+  assert.equal(clockTime('2026-11-18T18:30:54'), '18:30:54');
+  assert.equal(clockTime('2026-11-18T01:00:00'), '01:00:00');
+  assert.equal(clockTime('2026-11-18 06:05:09.123'), '06:05:09');
+  assert.equal(clockTime(''), '');
+  assert.equal(clockTime('not a date'), '');
+  assert.doesNotMatch(clockTime('2026-11-18T18:30:54'), /AM|PM/i);
+});
+
+test('positions and durations in words', () => {
+  assert.equal(minSec(65.9), '1:05');
+  assert.equal(minSec(0), '0:00');
+  assert.equal(durationWords(2.45), '2,5 giây');
+  assert.equal(durationWords(80), '1 phút 20 giây');
+  assert.equal(durationWords(0), '');
+});
+
+test('scope words: shot numbers and chapter names, never a raw id', () => {
+  assert.equal(scopeWords({ kind: 'shots', shots: ['s0002'] }, { shots: SHOTS, current: true }), 'Cảnh 2 đang chọn');
+  assert.equal(scopeWords({ kind: 'shots', shots: ['s0003', 's0001'] }, { shots: SHOTS, current: true }), '2 cảnh đang chọn (1, 3)');
+  assert.equal(scopeWords({ kind: 'shots', shots: ['s0003', 's0001'] }, { shots: SHOTS }), '2 cảnh (1, 3)');
+  assert.equal(scopeWords({ kind: 'chapter', chapter: 'c02' }, { chapters: CHAPS }), 'Chương: The Merchant');
+  assert.equal(scopeWords({ kind: 'chapter', chapter: 'c03' }, { chapters: CHAPS }), 'Chương 3');            // a name that is the id is not shown
+  assert.equal(scopeWords({ kind: 'chapter', chapter: 'zz' }, { chapters: CHAPS }), 'Một chương');
+  assert.equal(scopeWords({ kind: 'all' }), 'Cả video');
+  const many = Array.from({ length: 9 }, (_, i) => ({ id: 'x' + i }));
+  assert.match(scopeWords({ kind: 'shots', shots: many.map((s) => s.id) }, { shots: many }), /và 3 cảnh nữa/);
+  for (const w of [scopeWords({ kind: 'shots', shots: ['s0002'] }, { shots: SHOTS }), scopeWords({ kind: 'chapter', chapter: 'c01' }, { chapters: CHAPS })]) assert.doesNotMatch(w, /\bs\d{4}\b|\bc\d\d\b/);
+  assert.equal(chapterLabel(null, -1), 'Chương 1');
+});
+
+test('the default scope is the selected shot, else the chapter at the playhead; choosing wins', () => {
+  const base = { shots: SHOTS, chapters: CHAPS, t: 10 };
+  let r = pickScope({ ...base, selected: ['s0002'] });
+  assert.deepEqual([r.kind, r.payload, r.ok], ['shots', { shots: ['s0002'] }, true]);
+  assert.equal(r.words, 'Cảnh 2 đang chọn');
+  r = pickScope({ ...base, selected: [] });
+  assert.deepEqual([r.kind, r.payload], ['chapter', { chapter: 'c02' }]);
+  assert.equal(r.words, 'Chương: The Merchant');
+  r = pickScope({ ...base, selected: ['s0002'], choice: 'chapter' });
+  assert.deepEqual(r.payload, { chapter: 'c02' });
+  r = pickScope({ ...base, selected: ['s0002'], choice: 'all' });
+  assert.deepEqual(r.payload, { all: true });
+  r = pickScope({ ...base, selected: ['gone'], choice: 'shots' });
+  assert.equal(r.ok, false);
+  assert.ok(r.why);
+  r = pickScope({ shots: SHOTS, chapters: [], selected: [], t: 0 });
+  assert.deepEqual(r.payload, { all: true });                                  // no chapters: the whole video, never an empty scope
+  r = pickScope({ ...base, selected: ['s0001', 's0004'], choice: 'shots' });
+  assert.deepEqual(r.payload, { shots: ['s0001', 's0004'] });
+});
+
+test('chapter at the playhead: by time, else by word range, else the first', () => {
+  assert.equal(chapterAt(CHAPS, 12).id, 'c02');
+  assert.equal(chapterAt([{ id: 'a', w0: 0, w1: 5 }, { id: 'b', w0: 5, w1: 9 }], 3, 6).id, 'b');
+  assert.equal(chapterAt([{ id: 'a' }], 3, -1).id, 'a');
+  assert.equal(chapterAt([], 3), null);
+});
+
+test('choosing several shots: clicks add only while the switch is on and the playhead is not moving the selection', () => {
+  assert.deepEqual(addToSelection(['s0001'], 's0003', { multi: true }), ['s0001', 's0003']);
+  assert.deepEqual(addToSelection(['s0001'], 's0001', { multi: true }), ['s0001']);
+  assert.deepEqual(addToSelection(['s0001'], 's0003', { multi: false }), ['s0001']);
+  assert.deepEqual(addToSelection(['s0001'], 's0003', { multi: true, playing: true }), ['s0001']);
+  assert.deepEqual(addToSelection([], null, { multi: true }), []);
+});
+
+test('retry keeps the scope of the old turn and drops shots that are gone', () => {
+  assert.deepEqual(retryScope({ scope: { kind: 'shots', shots: ['s0001', 'gone'] } }, SHOTS), { shots: ['s0001'] });
+  assert.equal(retryScope({ scope: { kind: 'shots', shots: ['gone'] } }, SHOTS), null);
+  assert.deepEqual(retryScope({ scope: { kind: 'chapter', chapter: 'c02' } }, SHOTS), { chapter: 'c02' });
+  assert.deepEqual(retryScope({ scope: { kind: 'all' } }, SHOTS), { all: true });
+});
+
+const TURN = {
+  id: 't1', at: '2026-11-18T18:00:09', instruction: 'zoom chậm hơn', scope: { kind: 'shots', shots: ['s0001', 's0002'] }, status: 'applied', has_undo: true,
+  path: 'fast', seconds: 2.45, summary: 'Đã làm chậm chuyển động zoom ở hai cảnh.',
+  changes: [{ shot_id: 's0001', number: 1, start: 0, op: 'changed', what: 'Giảm tốc độ zoom' }, { shot_id: 's0002', number: 2, start: 4, op: 'changed', what: 'Thêm vòng sáng quanh gương' }],
+};
+
+test('turn card: every status has a badge, a tone and its own actions', () => {
+  const env = { shots: SHOTS, chapters: CHAPS };
+  const by = (patch) => turnView({ ...TURN, ...patch }, env);
+  for (const s of TURN_STATUS) { const v = by({ status: s }); assert.equal(v.status, s); assert.ok(isVietnamese(v.badge), s); assert.ok(v.tone, s); }
+  let v = by({});
+  assert.equal(v.badge, 'Đã áp dụng');
+  assert.equal(v.time, '18:00:09');
+  assert.equal(v.scope, '2 cảnh (1, 2)');
+  assert.equal(v.headline, TURN.summary);
+  assert.equal(v.way, 'sửa nhanh · mất 2,5 giây');
+  assert.deepEqual(v.changes.map((c) => [c.title, c.opText, c.hasBefore, c.hasAfter]), [['Cảnh 1 · 0:00', 'Đổi', true, true], ['Cảnh 2 · 0:04', 'Đổi', true, true]]);
+  assert.deepEqual([v.actions.preview, v.actions.undo, v.actions.choices, v.actions.cancel, v.actions.retry], [true, 'yes', false, false, false]);
+  assert.equal(by({ has_undo: false }).actions.undo, 'gone');
+  v = by({ status: 'running', summary: '' });
+  assert.deepEqual([v.actions.cancel, v.actions.undo, v.actions.preview], [true, '', false]);
+  v = by({ status: 'needs_choice', conflicts: ['s0002'] });
+  assert.equal(v.actions.choices, true);
+  assert.match(v.extra, /cảnh 2/);
+  v = by({ status: 'needs_choice', conflicts: null });
+  assert.match(v.extra, /cảnh 1, 2/);                                            // no list from the server: the shots of the turn
+  v = by({ status: 'needs_choice', conflicts: [], changes: [] });
+  assert.match(v.extra, /cảnh 1, 2/);                                            // nothing recorded yet: the shots of the scope
+  v = by({ status: 'needs_choice', conflicts: [{ kind: 'shot', id: 's0002', reason: 'both sides modified shot' }] });
+  assert.match(v.extra, /cảnh 2\./);                                              // the server's own shape: {kind, id, reason}
+  v = by({ status: 'needs_choice', conflicts: [{ kind: 'list', reason: 'shot structure changed' }] });
+  assert.equal(v.extra, EDIT_LABELS.choiceLeadList);
+  v = by({ status: 'failed', error: 'undo_conflict', summary: '' });
+  assert.equal(v.actions.retry, true);
+  assert.equal(v.headline, stageErrorText('draft', { body: { code: 'undo_conflict' } }).text);
+  assert.match(v.detail, /undo_conflict/);                                      // the raw code only under "chi tiết"
+  assert.doesNotMatch(v.headline + v.extra, /undo_conflict/);
+  v = by({ status: 'cancelled', error: 'cancelled' });
+  assert.equal(v.headline, EDIT_LABELS.cancelled);
+  assert.deepEqual([v.actions.undo, v.actions.retry], ['', false]);
+  v = by({ status: 'undone' });
+  assert.equal(v.headline, EDIT_LABELS.undone);
+  assert.equal(v.showChanges, false);
+  v = by({ status: 'no_change', summary: 'Cần một tranh mới, dự án chưa có.' });
+  assert.equal(v.headline, 'Cần một tranh mới, dự án chưa có.');
+  assert.equal(v.extra, EDIT_LABELS.noChangeHelp);
+});
+
+test('turn card: English or id-like model text goes only under "chi tiết"', () => {
+  const v = turnView({ ...TURN, summary: 'Reduced zoom on s0001', notes: 'AN-01 reduced from 8', changes: [{ shot_id: 's0001', number: 1, start: 0, op: 'changed', what: 'slower pan' }] }, { shots: SHOTS });
+  assert.equal(v.headline, EDIT_LABELS.applied);
+  assert.equal(v.changes[0].what, '');
+  assert.match(v.detail, /Reduced zoom/);
+  assert.match(v.detail, /AN-01 reduced/);
+  assert.match(v.detail, /slower pan/);
+  const shown = [v.headline, v.extra, v.way, v.scope, v.badge, ...v.changes.map((c) => c.title + c.opText + c.what)].join(' ');
+  assert.doesNotMatch(shown, /s0001|AN-01|Reduced|slower/);
+});
+
+test('turn card: added and removed shots have one side of the pictures only; a removed shot cannot be previewed', () => {
+  const v = turnView({ ...TURN, changes: [{ shot_id: 'n1', number: 3, start: 9, op: 'added', what: 'Cảnh mới' }, { shot_id: 'o1', number: 4, start: 12, op: 'removed', what: 'Bỏ cảnh thừa' }] }, { shots: SHOTS });
+  assert.deepEqual(v.changes.map((c) => [c.opText, c.hasBefore, c.hasAfter]), [['Thêm', false, true], ['Xóa', true, false]]);
+  assert.equal(v.actions.preview, true);
+  assert.equal(turnView({ ...TURN, changes: [{ shot_id: 'o1', number: 4, start: 12, op: 'removed', what: 'Bỏ' }] }, {}).actions.preview, false);
+  assert.equal(turnView({ ...TURN, changes: [] }, {}).noChanges, true);
+});
+
+test('statuses of older threads are mapped: done is an old proposal, error and refused are failures', () => {
+  assert.equal(normStatus('done'), 'old');
+  assert.equal(normStatus('error'), 'failed');
+  assert.equal(normStatus('refused'), 'failed');
+  assert.equal(normStatus('???'), 'failed');
+  assert.equal(normStatus('applied'), 'applied');
+  const v = turnView({ id: 'x', instruction: 'a', status: 'refused', error: 'edit_outside_scope', summary: 'Cảnh 14 và 15 nằm ngoài phần bạn chọn.' }, {});
+  assert.equal(v.badge, EDIT_LABELS.status.failed);
+  assert.match(v.extra, /Cảnh 14 và 15/);
+});
+
+test('the list of codes: every code of the edit routes has a Vietnamese sentence and codeText never returns a code', () => {
+  for (const c of EDIT_CODES) {
+    const t = codeText(c);
+    assert.ok(isVietnamese(t), c);
+    assert.notEqual(t, EDIT_LABELS.failedGeneric, `${c} has no sentence of its own`);
+    assert.doesNotMatch(t, /[a-z]_[a-z]/, c);
+    assert.equal(stageErrorText('draft', { status: 409, body: { code: c } }).text, t, c);
+  }
+  assert.equal(codeText('something_new'), EDIT_LABELS.failedGeneric);
+  assert.equal(codeText(null), EDIT_LABELS.failedGeneric);
+});
+
+test('every error code the server raises for an edit, an undo, a resolve or a setting is in the list', () => {
+  const found = new Set();
+  const scan = (f) => {
+    const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    for (const m of src.matchAll(/(?:DraftError|PartError|SettingsError)\(\s*["']([a-z_]+)["']/g)) found.add(m[1]);
+    for (const m of src.matchAll(/\bcode\s*=\s*["']([a-z_]+)["']/g)) found.add(m[1]);
+    for (const m of src.matchAll(/\berror\s*=\s*["']([a-z_]+)["']/g)) found.add(m[1]);
+  };
+  for (const f of ['bti/editor/draft_api.py', 'bti/draft/run.py', 'bti/draft/thread.py', 'bti/draft/fastedit.py', 'bti/draft/merge.py']) scan(f);
+  // not an edit code: the picks/draft whole-video start, the settings (own table), or never shown
+  const OTHER = new Set(['bad_provider', 'bad_chapters', 'draft_not_ready', 'picks_missing', 'timing_missing', 'busy', 'longjob_running']);
+  const missing = [...found].filter((c) => !EDIT_CODES.includes(c) && !OTHER.has(c) && !stageErrorText('draft', { body: { code: c } }).text.startsWith('Có lỗi'));
+  assert.deepEqual(missing, []);
+  const unsaid = [...found].filter((c) => !isVietnamese(stageErrorText('draft', { status: 422, body: { code: c } }).text));
+  assert.deepEqual(unsaid, []);
+});
+
+test('the settings codes have sentences too', () => {
+  for (const c of ['invalid_payload', 'unknown_role', 'invalid_model', 'agentic_role_needs_agy', 'unknown_model']) assert.ok(isVietnamese(stageErrorText('settings', { status: 422, body: { code: c } }).text), c);
+});
+
+test('progress line: words from labels, never the model\'s raw text', () => {
+  const P = EDIT_LABELS.progress;
+  const j = (key, note, progress = 0.3) => ({ progress, parts: [{ key: 'prepare', state: 'done' }, { key, state: 'running', note }] });
+  assert.equal(progressView(j('edit', 'Đang nghĩ…')).line, P.think);
+  assert.equal(progressView(j('edit', 'Đang kiểm tra…')).line, P.check);
+  assert.equal(progressView(j('edit', 'Chuyển sang phân tích sâu…')).line, P.deep);
+  assert.equal(progressView(j('agent', 'Bước 86, agent_response; đã viết 1/1 chương.')).line, P.agentStep(86));
+  assert.doesNotMatch(progressView(j('agent', 'Bước 86, agent_response')).line, /agent_response/);
+  assert.equal(progressView(j('apply', '')).line, P.write);
+  assert.equal(progressView({ progress: 0, parts: [{ key: 'prepare', state: 'queued' }] }).line, P.prepare);
+  assert.equal(progressView({ progress: 0, parts: [] }).line, P.queued);
+  assert.equal(progressView({ progress: 7, parts: [] }).fraction, 1);
+  assert.equal(progressView(null).fraction, 0);
+});
+
+test('preview range: the changed shots as they are now, at most 10 seconds', () => {
+  assert.deepEqual(previewRange(TURN, SHOTS), { t0: 0, t1: 9 });
+  assert.deepEqual(previewRange({ changes: [{ shot_id: 's0004', op: 'changed', start: 12 }] }, SHOTS), { t0: 12, t1: 20 });
+  assert.deepEqual(previewRange({ changes: [{ shot_id: 's0001', op: 'changed', start: 0 }, { shot_id: 's0004', op: 'changed', start: 12 }] }, SHOTS), { t0: 0, t1: 10 });
+  assert.deepEqual(previewRange({ changes: [{ shot_id: 'gone', op: 'changed', start: 30 }] }, SHOTS), { t0: 30, t1: 34 });
+  assert.equal(previewRange({ changes: [{ shot_id: 's0001', op: 'removed', start: 0 }] }, SHOTS), null);
+  assert.equal(previewRange({}, SHOTS), null);
+});
+
+test('taking a turn in: reload with no unsaved edits, merge with unsaved ones; only a new state of an applied or undone turn counts', () => {
+  assert.equal(takeInPlan(false), 'reload');
+  assert.equal(takeInPlan(true), 'merge');
+  const seen = new Map();
+  assert.deepEqual(newlyChanged([{ id: 'a', status: 'applied' }], seen, true), []);                          // the first look only remembers
+  assert.deepEqual(newlyChanged([{ id: 'a', status: 'applied' }], seen, false), []);
+  assert.deepEqual(newlyChanged([{ id: 'a', status: 'applied' }, { id: 'b', status: 'running' }], seen, false), []);
+  assert.deepEqual(newlyChanged([{ id: 'a', status: 'applied' }, { id: 'b', status: 'applied' }], seen, false).map((t) => t.id), ['b']);   // job ended
+  assert.deepEqual(newlyChanged([{ id: 'a', status: 'undone' }, { id: 'b', status: 'applied' }], seen, false).map((t) => t.id), ['a']);       // undone elsewhere
+  assert.deepEqual(newlyChanged([{ id: 'c', status: 'failed' }, { id: 'a', status: 'undone' }], seen, false), []);                           // a failure changes nothing
+  assert.deepEqual(newlyChanged([{ id: 'c', status: 'needs_choice' }], seen, false), []);
+  assert.deepEqual(newlyChanged([{ id: 'c', status: 'applied' }], seen, false).map((t) => t.id), ['c']);                                      // chosen: overwrite
+});
+
+const RESP = {
+  roles: [
+    { role: 'draft', label: 'Dựng', value: 'agy:a', model: 'agy:a', source: 'setting', agentic: true },
+    { role: 'edit.fast', label: 'Sửa nhanh', value: 'agy:a', source: 'default', agentic: false },
+    { role: 'script.outline', label: 'Dàn ý', value: 'mock', source: 'default', agentic: false },
+  ],
+  models: [{ id: 'agy:a', name: 'Model A' }, { id: 'agy:b', name: 'Model B' }, { id: 'mock', name: 'Mock' }],
+};
+
+test('settings: a row per role, agentic roles only offer agy models, only changed roles are saved, "all" skips roles that cannot use it', () => {
+  const rows = modelRows(RESP);
+  assert.deepEqual(rows.map((r) => r.role), ['draft', 'edit.fast', 'script.outline']);
+  assert.deepEqual(rows[0].options, ['agy:a', 'agy:b']);
+  assert.deepEqual(rows[1].options, ['agy:a', 'agy:b', 'mock']);
+  assert.equal(rows[0].fromSetting, true);
+  const values = Object.fromEntries(rows.map((r) => [r.role, r.value]));
+  assert.deepEqual(modelChanges(rows, values), {});
+  assert.deepEqual(modelChanges(rows, { ...values, 'edit.fast': 'agy:b' }), { 'edit.fast': 'agy:b' });
+  const all = applyAllModels(rows, values, 'agy:b');
+  assert.deepEqual(modelChanges(rows, all), { draft: 'agy:b', 'edit.fast': 'agy:b', 'script.outline': 'agy:b' });
+  const mock = applyAllModels(rows, values, 'mock');
+  assert.deepEqual(modelChanges(rows, mock), { 'edit.fast': 'mock' });
+  assert.deepEqual(modelRows(null), []);
+});
+
+test('the words of the box and the dialog are Vietnamese', () => {
+  const walk = (o, where) => {
+    for (const [k, v] of Object.entries(o)) {
+      if (typeof v === 'string') { if (!['you'].includes(k)) assert.ok(isVietnamese(v) || /^(chi tiết)$/.test(v) || v.length < 4, `${where}.${k}: ${v}`); }
+      else if (v && typeof v === 'object') walk(v, `${where}.${k}`);
+    }
+  };
+  walk(EDIT_LABELS, 'EDIT'); walk(SETTINGS_LABELS, 'SETTINGS');
+});
+
+const NOW = new Date(2026, 10, 18, 10, 0, 0);                                   // 18 Nov 2026, 10:00 local
+
+test('quota used up: a time today, a time next week, a time in another year, only a span, and nothing at all', () => {
+  const q = (patch) => quotaView({ status: 'failed', error: 'rate_limit', ...patch }, NOW);
+  assert.deepEqual(q({ retry_at: '2026-11-18T14:20:00', retry_after_seconds: 15600 }), { headline: 'Mô hình đã dùng hết hạn mức.', extra: 'Mở lại lúc 14:20. Bạn có thể chọn mô hình khác.' });
+  assert.equal(q({ retry_at: '2026-11-25T14:20:00' }).extra, 'Mở lại lúc 14:20 ngày 25/11. Bạn có thể chọn mô hình khác.');
+  assert.equal(q({ retry_at: '2027-01-02T09:05:00' }).extra, 'Mở lại lúc 09:05 ngày 02/01/2027. Bạn có thể chọn mô hình khác.');
+  assert.equal(q({ retry_after_seconds: 3 * 3600 }).extra, 'Mở lại lúc 13:00. Bạn có thể chọn mô hình khác.');              // only a span: the time is worked out
+  assert.equal(q({ retry_after_seconds: 7 * 86400 }).extra, 'Mở lại lúc 10:00 ngày 25/11. Bạn có thể chọn mô hình khác.');
+  assert.equal(q({}).extra, 'Chưa rõ khi nào mở lại. Bạn có thể chọn mô hình khác.');                                              // fields absent
+  assert.equal(q({ retry_at: null, retry_after_seconds: null }).extra, 'Chưa rõ khi nào mở lại. Bạn có thể chọn mô hình khác.');
+  assert.equal(q({ retry_at: 'không phải giờ' }).extra, 'Chưa rõ khi nào mở lại. Bạn có thể chọn mô hình khác.');
+  assert.equal(quotaView({ error: 'agy_rate_limit' }, NOW).headline, 'Mô hình đã dùng hết hạn mức.');
+  assert.equal(quotaView({ error: 'agy_timeout' }, NOW), null);
+  assert.equal(quotaView({ error: 'compile_error' }, NOW), null);
+  assert.equal(parseMoment(Math.floor(new Date(2026, 10, 18, 14, 20).getTime() / 1000)).getHours(), 14);            // epoch seconds
+  assert.match(whenWords(new Date(2026, 10, 18, 7, 3), NOW), /^lúc 07:03$/);
+});
+
+test('the failed card for a used-up quota: the sentence, the time, a link to the settings, and the raw code only under "chi tiết"', () => {
+  const turn = { id: 't', instruction: 'x', status: 'failed', error: 'rate_limit', retry_at: '2026-11-18T14:20:00', summary: 'Hết lượt.', scope: { kind: 'all' } };
+  const v = turnView(turn, { shots: SHOTS, chapters: CHAPS, now: NOW });
+  assert.equal(v.headline, 'Mô hình đã dùng hết hạn mức.');
+  assert.match(v.extra, /Mở lại lúc 14:20/);
+  assert.match(v.extra, /chọn mô hình khác/);
+  assert.equal(v.actions.settings, true);
+  assert.equal(v.actions.retry, true);
+  assert.doesNotMatch(v.headline + v.extra, /rate_limit/);
+  assert.match(v.detail, /rate_limit/);
+  const w = turnView({ ...turn, retry_at: undefined }, { shots: SHOTS, now: NOW });                                   // fields absent: still reads well
+  assert.match(w.extra, /^Chưa rõ khi nào mở lại\. Bạn có thể chọn mô hình khác\.$/);
+  assert.equal(w.actions.settings, true);
+  assert.equal(turnView({ ...turn, error: 'compile_error', retry_at: undefined }, { shots: SHOTS, now: NOW }).actions.settings, false);
+});
+
+const REAL = {                                                                  // the shape of a real answer of GET /api/settings/models
+  roles: [
+    { role: 'draft', label: 'Dựng storyboard', value: 'agy:gemini-3.8-flash-high', agentic: true, source: 'default' },
+    { role: 'edit.fast', label: 'Sửa nhanh', value: 'agy:gemini-3.8-flash-medium', agentic: false, source: 'setting' },
+    { role: 'picks', label: 'Chọn hình', value: 'agy:gone-model', agentic: false, source: 'default' },
+  ],
+  models: [
+    { id: 'agy:gemini-3.8-flash-high', label: 'Antigravity CLI: Gemini 3.8 Flash (High)', provider: 'antigravity', enabled: true, agy: { ok: true, reason: null } },
+    { id: 'agy:gemini-3.8-flash-medium', label: 'Antigravity CLI: Gemini 3.8 Flash (Medium)', provider: 'antigravity', enabled: true, agy: { ok: true, reason: null } },
+    { id: 'mock', label: 'Mock (thử, không gọi mạng)', provider: 'mock', enabled: true },
+    { id: 'openrouter-claude', label: 'Claude qua OpenRouter', provider: 'openrouter', enabled: false, message: 'thiếu biến OPENROUTER_API_KEY' },
+  ],
+};
+const DOWN = { roles: REAL.roles, models: [{ id: 'agy', label: 'Antigravity CLI', provider: 'antigravity', enabled: false, agy: { ok: false, reason: 'config' }, message: 'agy chưa cài' }, REAL.models[2]] };
+
+test('settings, normal case: the name with the id as secondary text, only usable models, a missing current value keeps its note', () => {
+  assert.equal(modelListState(REAL), 'ok');
+  assert.equal(modelName(REAL.models, 'agy:gemini-3.8-flash-high'), 'Antigravity CLI: Gemini 3.8 Flash (High)');
+  assert.equal(modelOptionText(REAL.models, 'agy:gemini-3.8-flash-high'), 'Antigravity CLI: Gemini 3.8 Flash (High) (agy:gemini-3.8-flash-high)');
+  assert.equal(modelOptionText(REAL.models, 'mock'), 'Mock (thử, không gọi mạng) (mock)');
+  assert.equal(modelOptionText(REAL.models, 'agy:gone-model'), 'agy:gone-model');                                       // not in the list: no name to show
+  const rows = modelRows(REAL);
+  assert.deepEqual(rows[0].options, ['agy:gemini-3.8-flash-high', 'agy:gemini-3.8-flash-medium']);                    // agent role: agy only
+  assert.deepEqual(rows[1].options, ['agy:gemini-3.8-flash-high', 'agy:gemini-3.8-flash-medium', 'mock']);            // the model without a key is not offered
+  assert.equal(rows[2].options.includes('agy:gone-model'), false);                                                   // the dialog adds it, with the note
+});
+
+test('settings, agy gave no list: one state for the whole dialog, agy entry is not a model', () => {
+  assert.equal(modelListState(DOWN), 'down');
+  assert.equal(modelListState({ roles: [], models: [] }), 'down');
+  assert.equal(modelListState(null), 'down');
+  assert.deepEqual(modelRows(DOWN)[1].options, ['mock']);
+  assert.deepEqual(modelRows(DOWN)[0].options, []);
+});

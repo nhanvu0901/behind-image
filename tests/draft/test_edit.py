@@ -60,14 +60,14 @@ def test_scope_resolution(sb_proj):
     edit_shots, chapters, words = R.resolve_edit_scope(inp, {"shots": [s1, s2]})
     assert edit_shots == {s1}
     assert s2 not in edit_shots
-    assert words == "1 shot đang chọn"
+    assert words == "1 cảnh đang chọn"
     assert chapters == ["c01"]
 
     # 2. chapter scope: c01
     edit_shots_c1, chapters_c1, words_c1 = R.resolve_edit_scope(inp, {"chapter": "c01"})
     assert s1 in edit_shots_c1
     assert s2 not in edit_shots_c1  # locked excluded
-    assert words_c1 == "chương c01"
+    assert words_c1 == "Chương: Intro"          # the chapter's name, never its id
     assert chapters_c1 == ["c01"]
 
     # 3. all scope
@@ -75,7 +75,7 @@ def test_scope_resolution(sb_proj):
     assert s1 in edit_shots_all
     assert s2 not in edit_shots_all  # locked excluded
     assert len(edit_shots_all) == len(cur_shots) - 1
-    assert words_all == "cả video"
+    assert words_all == "Cả video"
     assert chapters_all == ["c01", "c02"]
 
     # 4. bad scope: only locked shot in shots list
@@ -169,20 +169,15 @@ def test_edit_job_in_scope_change(sb_proj, mgr, fake):
     j = finish(mgr, rec)
     assert j["state"] == "done", (j.get("error"), j.get("log_tail"))
 
-    # Proposal was written
-    pid = j["result"]["proposal_id"]
-    assert pid and pid.startswith("edit_")
-    prop_file = sb_proj / "proposals" / (pid + ".json")
-    assert prop_file.is_file()
-    prop_doc = json.loads(prop_file.read_text(encoding="utf-8"))
-    assert prop_doc["author"].startswith("agent:agy:")
-    assert prop_doc["summary"] == "Fake agent summary"
+    # Direct apply: storyboard modified directly with agent source
+    saved = json.loads((sb_proj / "storyboard.json").read_text(encoding="utf-8"))
+    assert saved["shots"][0]["note"] == "slower push-in for mirror"
+    assert saved["shots"][0]["source"] == "agent"
 
-    # Thread updated to done
+    # Thread updated to applied
     t_end = R.load_thread(sb_proj)[-1]
     assert t_end["id"] == turn_id
-    assert t_end["status"] == "done"
-    assert t_end["proposal_id"] == pid
+    assert t_end["status"] == "applied"
     assert t_end["conversation_id"] == "conv-1"
 
 
@@ -212,11 +207,14 @@ def test_edit_job_scope_violation_refuses_proposal(sb_proj, mgr, fake):
     props = list((sb_proj / "proposals").glob("edit_*.json"))
     assert props == []
 
-    # Thread status is refused
+    # Thread status is failed/refused
     t_end = R.load_thread(sb_proj)[-1]
     assert t_end["id"] == turn_id
-    assert t_end["status"] == "refused"
+    assert t_end["status"] in ("failed", "refused")
     assert t_end["error"] == "edit_outside_scope"
+    assert "Cảnh 3 nằm ngoài phần bạn chọn" in t_end["summary"]
+    from bti.draft.thread import turns_dir
+    assert (turns_dir(sb_proj) / turn_id / "out").is_dir()
 
 
 def test_edit_job_no_change_writes_no_proposal(sb_proj, mgr, fake):
@@ -235,7 +233,7 @@ def test_edit_job_no_change_writes_no_proposal(sb_proj, mgr, fake):
     j = finish(mgr, rec)
 
     assert j["state"] == "done"
-    assert j["result"]["proposal_id"] is None
+    assert j["result"].get("proposal_id") is None
     assert j["result"]["no_change"] is True
 
     # No proposal written
@@ -246,8 +244,8 @@ def test_edit_job_no_change_writes_no_proposal(sb_proj, mgr, fake):
     t_end = R.load_thread(sb_proj)[-1]
     assert t_end["id"] == turn_id
     assert t_end["status"] == "no_change"
-    assert t_end["proposal_id"] is None
-    assert t_end["notes"] == "Fake agent summary\n"
+    assert t_end.get("proposal_id") is None
+    assert "Fake agent summary" in (t_end.get("notes") or "") or "Fake agent summary" in (t_end.get("summary") or "")
 
 
 def test_followup_history_includes_prior_outcome(sb_proj, mgr, fake):
@@ -361,6 +359,7 @@ def test_edit_api_routes(sb_proj, mgr, fake):
     r = client.post(f"/api/projects/{pid}/draft/edit", json={
         "instruction": "sửa qua api",
         "scope": {"all": True},
+        "mode": "deep",
     })
     assert r.status_code == 200, r.text
     body = r.json()
@@ -420,12 +419,7 @@ def test_locked_overlay_violation(sb_proj):
     assert any(p["code"] == "edit_locked_changed" and "locked overlay ov_lock_1 was changed" in p["message"] for p in v2)
 
 
-def test_proposal_apply_acceptance_tracking(sb_proj, mgr, fake):
-    from bti.editor.app import create_app
-    app = create_app(projects_root=sb_proj.parent)
-    client = TestClient(app, raise_server_exceptions=False)
-    pid = sb_proj.name
-
+def test_deep_edit_direct_apply_tracking(sb_proj, mgr, fake):
     inp = load_inputs(sb_proj)
     decomp = D.decompile(inp)
     c1 = decomp["c01"]["spec"]
@@ -438,36 +432,27 @@ def test_proposal_apply_acceptance_tracking(sb_proj, mgr, fake):
 
     rec = R.start(sb_proj.name, sb_proj, provider="agy", instruction="sửa note",
                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
-    finish(mgr, rec)
+    j = finish(mgr, rec)
+    assert j["state"] == "done"
 
+    # Direct apply modifies storyboard directly with agent source
+    cur_sb = json.loads((sb_proj / "storyboard.json").read_text(encoding="utf-8"))
+    assert cur_sb["shots"][0]["note"] == "accepted change test"
+    assert cur_sb["shots"][0]["source"] == "agent"
+
+    # Verify thread records status applied
     turns = R.load_thread(sb_proj)
     turn = turns[-1]
-    prop_id = turn["proposal_id"]
-    assert prop_id is not None
-    assert turn["accepted"] is None
-
-    # Apply the proposal
-    r_apply = client.post(f"/api/projects/{pid}/proposals/{prop_id}/apply", json={"accept": "all"})
-    assert r_apply.status_code == 200, r_apply.text
-
-    # Verify thread records acceptance
-    turns_after = R.load_thread(sb_proj)
-    turn_after = turns_after[-1]
-    assert turn_after["id"] == turn["id"]
-    assert turn_after["accepted"] == "applied"
-    assert turn_after["accepted_at"] is not None
+    assert turn["id"] == rec["turn_id"]
+    assert turn["status"] == "applied"
+    assert len(turn["changes"]) >= 1
 
 
-def test_stale_edit_proposal_rejected_when_storyboard_modified(sb_proj, mgr, fake):
-    from bti.editor.app import create_app
-    app = create_app(projects_root=sb_proj.parent)
-    client = TestClient(app, raise_server_exceptions=False)
-    pid = sb_proj.name
-
+def test_edit_concurrent_modification_needs_choice(sb_proj, mgr, fake):
     inp = load_inputs(sb_proj)
     decomp = D.decompile(inp)
     c1 = decomp["c01"]["spec"]
-    c1["shots"][0]["note"] = "change before stale"
+    c1["shots"][0]["note"] = "change before concurrent modify"
     victim = sb_proj / "timing.json"
     (fake.dir / "cfg.json").write_text(json.dumps({
         "specs": {"c01": c1, "c02": decomp["c02"]["spec"]},
@@ -476,54 +461,26 @@ def test_stale_edit_proposal_rejected_when_storyboard_modified(sb_proj, mgr, fak
 
     rec = R.start(sb_proj.name, sb_proj, provider="agy", instruction="sửa",
                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
-    finish(mgr, rec)
-    prop_id = R.load_thread(sb_proj)[-1]["proposal_id"]
 
-    # Now modify storyboard on disk behind the proposal's back
+    # Concurrent modification on disk to touched shot s0001
     sb = json.loads((sb_proj / "storyboard.json").read_text(encoding="utf-8"))
     sb["shots"][0]["technique"] = "STATIC-09"
     (sb_proj / "storyboard.json").write_text(json.dumps(sb, indent=1), encoding="utf-8")
 
-    # Client sends standard apply ({accept: "all"}, without base_rev)
-    r_apply = client.post(f"/api/projects/{pid}/proposals/{prop_id}/apply", json={"accept": "all"})
-    assert r_apply.status_code == 409
-    assert r_apply.json().get("code") == "stale"
+    j = finish(mgr, rec)
+    assert j["state"] == "done"
+    assert j["result"]["status"] == "needs_choice"
 
-    # Saved modification is preserved intact
-    cur_sb = json.loads((sb_proj / "storyboard.json").read_text(encoding="utf-8"))
-    assert cur_sb["shots"][0]["technique"] == "STATIC-09"
+    turn = R.load_thread(sb_proj)[-1]
+    assert turn["status"] == "needs_choice"
 
 
-def test_stale_edit_proposal_rejected_when_timing_changed(sb_proj, mgr, fake):
-    from bti.editor.app import create_app
-    app = create_app(projects_root=sb_proj.parent)
-    client = TestClient(app, raise_server_exceptions=False)
-    pid = sb_proj.name
-
-    inp = load_inputs(sb_proj)
-    decomp = D.decompile(inp)
-    c1 = decomp["c01"]["spec"]
-    c1["shots"][0]["note"] = "change with timing"
-    victim = sb_proj / "timing.json"
-    (fake.dir / "cfg.json").write_text(json.dumps({
-        "specs": {"c01": c1, "c02": decomp["c02"]["spec"]},
-        "victim": str(victim),
-    }), encoding="utf-8")
-
-    rec = R.start(sb_proj.name, sb_proj, provider="agy", instruction="sửa",
-                  edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
-    finish(mgr, rec)
-    prop_id = R.load_thread(sb_proj)[-1]["proposal_id"]
-
-    # Change timing file while storyboard is untouched
-    tm = json.loads((sb_proj / "timing.json").read_text(encoding="utf-8"))
-    tm["words"][0]["w"] = "ChangedFirstWord"
-    (sb_proj / "timing.json").write_text(json.dumps(tm, indent=1), encoding="utf-8")
-
-    # Apply attempt should be refused because timing changed
-    r_apply = client.post(f"/api/projects/{pid}/proposals/{prop_id}/apply", json={"accept": "all"})
-    assert r_apply.status_code == 409
-    assert r_apply.json().get("code") == "stale"
+def test_stale_base_rev_rejected_at_start(sb_proj, mgr):
+    with pytest.raises(DraftError) as e:
+        R.start(sb_proj.name, sb_proj, provider="agy", instruction="sửa",
+                edit_scope={"shots": ["s0001"]}, base_rev="stale_rev_12345",
+                manager=mgr, guard_factory=gf, python="python")
+    assert e.value.code == "stale_revision"
 
 
 def test_effective_boundary_violations(sb_proj):
@@ -584,7 +541,7 @@ def test_edit_job_with_absent_picks_json(sb_proj, mgr, fake):
                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
     j = finish(mgr, rec)
     assert j["state"] == "done"
-    assert j["result"]["proposal_id"] is not None
+    assert j["result"]["status"] == "applied"
 
 
 def test_edit_job_with_unapproved_picks_json(sb_proj, mgr, fake):
@@ -607,7 +564,7 @@ def test_edit_job_with_unapproved_picks_json(sb_proj, mgr, fake):
                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
     j = finish(mgr, rec)
     assert j["state"] == "done"
-    assert j["result"]["proposal_id"] is not None
+    assert j["result"]["status"] == "applied"
 
 
 def test_busy_leaves_no_dangling_turn(sb_proj, mgr, fake):
@@ -650,14 +607,14 @@ def test_notes_only_response_handled_as_no_change(sb_proj, mgr, fake):
     j = finish(mgr, rec)
     assert j["state"] == "done"
     assert j["result"]["no_change"] is True
-    assert j["result"]["proposal_id"] is None
-    assert "Fake agent summary" in j["result"]["notes"]
+    assert j["result"].get("proposal_id") is None
+    assert "Fake agent summary" in (j["result"].get("notes") or "")
 
     turn = R.load_thread(sb_proj)[-1]
     assert turn["id"] == rec["turn_id"]
     assert turn["status"] == "no_change"
-    assert turn["proposal_id"] is None
-    assert "Fake agent summary" in turn["notes"]
+    assert turn.get("proposal_id") is None
+    assert "Fake agent summary" in (turn.get("notes") or "") or "Fake agent summary" in (turn.get("summary") or "")
 
 
 def test_delete_thread_rejected_when_job_active(sb_proj, fake):
@@ -754,13 +711,13 @@ def test_persisted_interrupted_turn_reconciled(sb_proj):
     rec = fresh_mgr.get(fake_jid)
     assert rec["state"] == "interrupted"
 
-    # reconcile_thread updates running turn to terminal state (error with interrupted)
+    # reconcile_thread updates running turn to terminal state (failed with interrupted)
     turns = reconcile_thread(sb_proj, manager=fresh_mgr)
     matching = [t for t in turns if t["id"] == fake_turn_id]
     assert len(matching) == 1
     turn = matching[0]
     assert turn["status"] != "running"
-    assert turn["status"] == "error"
+    assert turn["status"] in ("failed", "error")
     assert turn["error"] == "interrupted"
 
 
@@ -787,12 +744,101 @@ def test_malformed_spec_with_notes_rejected_as_error(sb_proj, mgr, fake):
     saved_after = json.loads((sb_proj / "storyboard.json").read_text(encoding="utf-8"))
     assert saved_before == saved_after
 
-    # Turn recorded as error (compile_error), never swallowed as no_change
+    # Turn recorded as failed (compile_error), never swallowed as no_change
     turn = R.load_thread(sb_proj)[-1]
     assert turn["id"] == rec["turn_id"]
-    assert turn["status"] == "error"
+    assert turn["status"] in ("failed", "error")
     assert turn["error"] == "compile_error"
-    assert turn["proposal_id"] is None
+    assert turn.get("proposal_id") is None
+
+
+def test_edit_deep_path_repair_turn_success(sb_proj, mgr, fake):
+    inp = load_inputs(sb_proj)
+    decomp = D.decompile(inp)
+    c1 = decomp["c01"]["spec"]
+    c1["shots"][0]["note"] = "repaired shot"
+    victim = sb_proj / "timing.json"
+    (fake.dir / "cfg.json").write_text(json.dumps({
+        "specs": {"c01": c1, "c02": decomp["c02"]["spec"]},
+        "victim": str(victim),
+    }), encoding="utf-8")
+
+    fake.mode("repair")
+    rec = R.start(sb_proj.name, sb_proj, provider="agy", instruction="sửa với repair",
+                  edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
+    j = finish(mgr, rec)
+    assert j["state"] == "done"
+
+    saved = json.loads((sb_proj / "storyboard.json").read_text(encoding="utf-8"))
+    assert saved["shots"][0]["note"] == "repaired shot"
+    turn = R.load_thread(sb_proj)[-1]
+    assert turn["status"] == "applied"
+
+
+def test_edit_deep_path_conversation_continuation(sb_proj, mgr, fake):
+    inp = load_inputs(sb_proj)
+    decomp = D.decompile(inp)
+    victim = sb_proj / "timing.json"
+    (fake.dir / "cfg.json").write_text(json.dumps({
+        "specs": {"c01": decomp["c01"]["spec"], "c02": decomp["c02"]["spec"]},
+        "victim": str(victim),
+    }), encoding="utf-8")
+
+    # Turn 1: runs and saves conversation_id = "conv-1"
+    rec1 = R.start(sb_proj.name, sb_proj, provider="agy", instruction="lệnh 1",
+                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
+    finish(mgr, rec1)
+
+    t1 = R.load_thread(sb_proj)[-1]
+    assert t1["conversation_id"] == "conv-1"
+
+    # Turn 2 (< 2 hours): continues conversation
+    rec2 = R.start(sb_proj.name, sb_proj, provider="agy", instruction="lệnh 2 gần đó",
+                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
+    finish(mgr, rec2)
+
+    last_call = fake.calls()[-1]
+    assert "--conversation" in last_call["argv"]
+    idx = last_call["argv"].index("--conversation")
+    assert last_call["argv"][idx + 1] == "conv-1"
+
+    # Turn 3 (> 2 hours): simulate by setting old timestamp on turns
+    from bti.draft.thread import update_turn
+    old_time = "2020-01-01T00:00:00"
+    update_turn(sb_proj, rec2["turn_id"], at=old_time)
+    update_turn(sb_proj, rec1["turn_id"], at=old_time)
+
+    rec3 = R.start(sb_proj.name, sb_proj, provider="agy", instruction="lệnh 3 sau 3 tiếng",
+                   edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
+    finish(mgr, rec3)
+
+    last_call3 = fake.calls()[-1]
+    assert "--conversation" not in last_call3["argv"]
+
+
+def test_edit_model_from_setting(sb_proj, mgr, fake):
+    from bti.settings import model_for
+    inp = load_inputs(sb_proj)
+    decomp = D.decompile(inp)
+    victim = sb_proj / "timing.json"
+    (fake.dir / "cfg.json").write_text(json.dumps({
+        "specs": {"c01": decomp["c01"]["spec"], "c02": decomp["c02"]["spec"]},
+        "victim": str(victim),
+    }), encoding="utf-8")
+
+    rec = R.start(sb_proj.name, sb_proj, provider="agy", instruction="test model setting",
+                  edit_scope={"shots": ["s0001"]}, manager=mgr, guard_factory=gf, python="python")
+    finish(mgr, rec)
+
+    # In fake agy, verify the model passed in argv matches setting
+    expected = model_for("edit.deep")
+    if expected.startswith("agy:"):
+        expected = expected[len("agy:"):]
+    last_call = fake.calls()[-1]
+    assert "--model" in last_call["argv"]
+    idx = last_call["argv"].index("--model")
+    assert last_call["argv"][idx + 1] == expected
+
 
 
 

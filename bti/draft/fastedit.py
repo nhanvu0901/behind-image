@@ -32,6 +32,7 @@ class FastEditResult:
     status: str       # "applied" | "cannot" | "escalate" | "failed"
     summary: str = ""
     reason: str | None = None
+    code: str | None = None       # for "failed": spec_invalid (not JSON or wrong shape) | edit_outside_scope | compile_error | bad_model
     changes: list[dict] = field(default_factory=list)
     storyboard: dict | None = None
     issues: list[str] = field(default_factory=list)
@@ -273,7 +274,7 @@ def try_compile(
     # Draw check of changed shots only
     if not issues and (project_dir is not None or inp.project_dir is not None):
         try:
-            draw_issues = _draw_check_changed_shots(inp, res.storyboard, allowed_shots)
+            draw_issues = _draw_check_changed_shots(inp, res.storyboard)
             for di in draw_issues:
                 issues.append(f"Draw error in shot {di.get('shot')}: {di.get('message')}")
         except Exception as e:
@@ -284,17 +285,53 @@ def try_compile(
     return res, []
 
 
-def _draw_check_changed_shots(inp: DraftInputs, new_sb: dict, in_scope_ids: set) -> list[dict]:
-    if not inp.project_dir or not (Path(inp.project_dir) / "storyboard.json").is_file():
-        return []
+def _draw_check_changed_shots(inp: DraftInputs, new_sb: dict) -> list[dict]:
+    """Draw check of what the edit can have affected (see bti/draft/drawcheck.py). A check that cannot run is an issue, never a
+    silent pass."""
+    from bti.draft.drawcheck import draw_changed
+    return draw_changed(inp, new_sb).issues
+
+
+def _issue_code(issues: list[str], json_failed: bool) -> str:
+    """The error code the page shows for a failed fast edit, from the issue texts the checks produced."""
+    if json_failed:
+        return "spec_invalid"
+    text = " ".join(issues)
+    if "outside the allowed edit scope" in text or "Scope violation" in text or "outside the scope" in text or "is locked" in text:
+        return "edit_outside_scope"
+    if "Compile error" in text or "Draw error" in text or "Draw check" in text or "Compilation error" in text:
+        return "compile_error"
+    return "spec_invalid"
+
+
+def _warm_engine(inp: DraftInputs) -> None:
+    """Best effort, never raises: the first use of the engine in a process (style registry, picture decoding, the scene of the
+    saved storyboard) takes seconds. It runs while the model thinks, so the checks after the answer find everything warm."""
     try:
-        from bti.draft.compile import DraftProject
-        eng = DraftProject(inp.project_dir, new_sb, inp.timing)
-        issues = eng.draw_check(new_sb)
-        eng.close()
-        return [i for i in issues if i.get("shot") in in_scope_ids]
-    except Exception:
-        return []
+        from bti.draft.engine import DraftProject
+        cur = inp.current
+        shots = [s for s in (cur or {}).get("shots", []) if isinstance(s, dict) and s.get("id") in (inp.edit_shots or ())]
+        eng = DraftProject(inp.project_dir, cur, inp.timing)
+        try:
+            eng.validate(cur)
+            eng.use_draft(cur)
+            tm = Timing({"duration": inp.timing["duration"], "words": inp.timing["words"]})
+            if shots and isinstance(shots[0].get("start"), dict):
+                eng.frame_at(tm.resolve(shots[0]["start"]) + 0.2, 320)
+        finally:
+            eng.close()
+    except Exception:       # noqa: BLE001
+        pass
+
+
+class _CancelFlag:
+    """What the providers want (`is_set()`) from what a long job has (`cancelled()`)."""
+
+    def __init__(self, fn):
+        self._fn = fn
+
+    def is_set(self) -> bool:
+        return bool(self._fn())
 
 
 def fast_edit(
@@ -306,10 +343,17 @@ def fast_edit(
     bundle = None,
     project_dir: Path | None = None,
     on_progress: Callable | None = None,
-    cancel: threading.Event | None = None,
+    cancel: Any = None,
     max_repairs: int = 1,
+    timeout: float = 240.0,
 ) -> FastEditResult:
-    """Run one fast edit turn with up to max_repairs repair call."""
+    """Run one fast edit turn with up to `max_repairs` repair calls. `inp` must carry the scope (`inp.edit_shots`, `inp.scope`).
+    `cancel` is a threading.Event or a callable returning True once the job is cancelled. A provider error is raised as
+    bti.script.providers.ProviderError (the caller decides what the owner is told)."""
+    if inp.edit_shots is None:
+        raise ValueError("fast_edit needs inp.edit_shots (the scope); use inputs.clone_inputs(inp, scope=..., edit_shots=...)")
+    if callable(cancel):
+        cancel = _CancelFlag(cancel)
     model_id = model or model_for("edit.fast")
     bundle = bundle or R.load_bundle(inp.style)
     prompt = prepare_prompt(inp, instruction, thread_turns=thread_turns, bundle=bundle)
@@ -320,95 +364,45 @@ def fast_edit(
 
     spec = models_mod.resolve(model_id)
     if spec is None:
-        return FastEditResult(status="failed", summary="", reason=f"unknown model: {model_id}")
+        return FastEditResult(status="failed", code="bad_model", reason=f"unknown model: {model_id}")
     provider_fn = get_provider(spec["provider"])
 
-    # First turn
-    raw_text = provider_fn(spec, system_prompt, prompt, timeout=60.0, on_progress=on_progress, cancel=cancel)
-    data, json_err = extract_json(raw_text)
-
     issues: list[str] = []
-    if json_err:
-        issues.append(json_err)
-    else:
+    json_failed = False
+    raw_text = ""
+    warm = threading.Thread(target=_warm_engine, args=(inp,), daemon=True, name="fastedit-warm")
+    warm.start()
+    for attempt in range(max_repairs + 1):
+        if attempt == 0:
+            ask = prompt
+        else:
+            ask = (f"{prompt}\n\n[REPAIR TURN]\nYour previous response had the following issues:\n"
+                   + "\n".join(f"- {iss}" for iss in issues)
+                   + "\n\nPlease fix all issues and output the complete JSON object again.")
+        raw_text = provider_fn(spec, system_prompt, ask, timeout=timeout, on_progress=on_progress, cancel=cancel)
+        warm.join(30)                       # never compile while the warm-up still runs
+        used_repair = attempt > 0
+        data, json_err = extract_json(raw_text)
+        issues = []
+        json_failed = False
+        if json_err:
+            issues.append(json_err)
+            json_failed = True
+            continue
         shape_issues = check_shape(data)
         if shape_issues:
             issues.extend(shape_issues)
-        elif data.get("result") in ("cannot", "escalate"):
-            return FastEditResult(
-                status=data["result"],
-                summary=data.get("summary") or "",
-                reason=data.get("reason") or "",
-                raw_answer=raw_text,
-                repair_used=False,
-            )
-        else:
-            comp_res, comp_issues = try_compile(inp, data["shots"], data.get("regions"), bundle, project_dir)
-            if comp_issues:
-                issues.extend(comp_issues)
-            else:
-                return FastEditResult(
-                    status="applied",
-                    summary=data.get("summary") or "",
-                    changes=data.get("changes") or [],
-                    storyboard=comp_res.storyboard if comp_res else None,
-                    repair_used=False,
-                    raw_answer=raw_text,
-                )
+            json_failed = True
+            continue
+        if data.get("result") in ("cannot", "escalate"):
+            return FastEditResult(status=data["result"], summary=data.get("summary") or "", reason=data.get("reason") or "",
+                                  raw_answer=raw_text, repair_used=used_repair)
+        comp_res, comp_issues = try_compile(inp, data["shots"], data.get("regions"), bundle, project_dir)
+        if comp_issues:
+            issues.extend(comp_issues)
+            continue
+        return FastEditResult(status="applied", summary=data.get("summary") or "", changes=data.get("changes") or [],
+                              storyboard=comp_res.storyboard if comp_res else None, repair_used=used_repair, raw_answer=raw_text)
 
-    # Repair cycle (one repair call if max_repairs >= 1)
-    if max_repairs >= 1:
-        repair_prompt = (
-            f"{prompt}\n\n"
-            f"[REPAIR TURN]\n"
-            f"Your previous response had the following issues:\n"
-            + "\n".join(f"- {iss}" for iss in issues)
-            + "\n\nPlease fix all issues and output the complete JSON object again."
-        )
-        repair_raw = provider_fn(spec, system_prompt, repair_prompt, timeout=60.0, on_progress=on_progress, cancel=cancel)
-        r_data, r_json_err = extract_json(repair_raw)
-        r_issues: list[str] = []
-        if r_json_err:
-            r_issues.append(r_json_err)
-        else:
-            r_shape_issues = check_shape(r_data)
-            if r_shape_issues:
-                r_issues.extend(r_shape_issues)
-            elif r_data.get("result") in ("cannot", "escalate"):
-                return FastEditResult(
-                    status=r_data["result"],
-                    summary=r_data.get("summary") or "",
-                    reason=r_data.get("reason") or "",
-                    raw_answer=repair_raw,
-                    repair_used=True,
-                )
-            else:
-                r_comp_res, r_comp_issues = try_compile(inp, r_data["shots"], r_data.get("regions"), bundle, project_dir)
-                if r_comp_issues:
-                    r_issues.extend(r_comp_issues)
-                else:
-                    return FastEditResult(
-                        status="applied",
-                        summary=r_data.get("summary") or "",
-                        changes=r_data.get("changes") or [],
-                        storyboard=r_comp_res.storyboard if r_comp_res else None,
-                        repair_used=True,
-                        raw_answer=repair_raw,
-                    )
-        return FastEditResult(
-            status="failed",
-            summary="",
-            reason="; ".join(r_issues),
-            issues=r_issues,
-            repair_used=True,
-            raw_answer=repair_raw,
-        )
-
-    return FastEditResult(
-        status="failed",
-        summary="",
-        reason="; ".join(issues),
-        issues=issues,
-        repair_used=False,
-        raw_answer=raw_text,
-    )
+    return FastEditResult(status="failed", summary="", reason="; ".join(issues), issues=issues, code=_issue_code(issues, json_failed),
+                          repair_used=max_repairs >= 1, raw_answer=raw_text)

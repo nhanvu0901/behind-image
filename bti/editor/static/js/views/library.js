@@ -21,7 +21,7 @@ const qParam = (q) => { const f = fold(q).trim(); return f || q.trim(); };
 const rightsTag = (r) => h('span', { class: 'tag ' + r.status, title: `Ước lượng tự động, chỉ để tham khảo. Căn cứ: ${r.basis}`, text: RIGHTS[r.status] + ' (ước lượng)' });
 const stageTag = (s) => h('span', { class: 'tag stage ' + s, text: STAGE[s] || s });
 const centuryLabel = (c) => (c === null || c === undefined ? '' : c <= 0 ? 'trước CN' : `TK ${c}`);
-const yearTxt = (w) => w.year || '';
+const yearTxt = (w) => w.year || w.year_raw || '';
 
 let mainEl = null;
 function nav(active) {
@@ -151,7 +151,7 @@ async function workDetail(bid, n) {
     h('div', { style: { display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' } },
       h('h1', { class: 'lib-h', text: w.title }), h('span', { class: 'grow' }),
       h('button', { class: 'primary', text: 'Tạo dự án', onclick: () => createDialog(w, also) })),
-    h('div', { class: 'muted', text: [w.artist, w.year, `trang PDF ${w.pdf_pages[0]}-${w.pdf_pages[1]}`, `${w.words} từ`].filter(Boolean).join(' · ') }),
+    h('div', { class: 'muted', text: [w.artist, w.year || w.year_raw, `trang PDF ${w.pdf_pages[0]}-${w.pdf_pages[1]}`, `${w.words} từ`].filter(Boolean).join(' · ') }),
     w.headline ? h('div', { class: 'sub', text: w.headline }) : null,
     h('div', { class: 'tags', style: { margin: '8px 0' } }, rightsTag(w.rights), ...mine.map((p) => stageTag(p.stage)), h('a', { class: 'lnk', href: `#/library/artwork/${w.artwork_key}`, text: 'Xem hồ sơ tác phẩm (đã gộp các sách)' })),
     h('div', { class: 'detail' },
@@ -238,7 +238,7 @@ function artworksTable(rows) {
     h('tbody', null, rows.map((a) => h('tr', { class: 'wrow', onclick: () => { go(`#/library/artwork/${a.artwork_key}`); } },
       h('td', { class: 'thumb' }, h('img', { src: a.thumb_url, loading: 'lazy', alt: '' })),
       h('td', null, h('div', { class: 'ttl', text: a.title }), a.n_conflicts ? h('div', { class: 'sub conflict', text: `${a.n_conflicts} chỗ các sách ghi khác nhau` }) : null),
-      h('td', { text: a.artist || '' }), h('td', { text: a.year || '' }),
+      h('td', { text: a.artist || '' }), h('td', { text: a.year || a.year_raw || '' }),
       h('td', null, bookBadges(a.books, a.low_trust_books), a.only_low_trust ? h('div', { class: 'sub conflict', text: 'Chỉ có trong bản dịch máy, không dùng làm nguồn sự kiện' }) : null),
       h('td', { class: 'num', title: 'Số chữ của các nguồn thường; dòng nhỏ bên dưới là số chữ bản dịch máy. Sắp xếp "Nhiều chữ nhất" tính cả hai.' }, a.words_normal, a.words_low ? h('div', { class: 'sub', text: `+ ${a.words_low} (dịch máy)` }) : null, textTag(a.text_source)),
       h('td', null, rightsTag(a.rights)),
@@ -285,7 +285,7 @@ async function artworkDetail(key) {
     h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } }, h('h1', { class: 'lib-h', text: idn.title }), h('span', { class: 'grow' }),
       h('button', { text: 'Gộp với…', onclick: () => mergeDialog(a) }),
       h('button', { class: 'primary', text: 'Tạo dự án', onclick: () => createArtworkDialog(a) })),
-    h('div', { class: 'idrow' }, cell('Tên tác phẩm', 'title', idn.title), cell('Hoạ sĩ', 'artist', idn.artist), cell('Năm', 'year', idn.year)),
+    h('div', { class: 'idrow' }, cell('Tên tác phẩm', 'title', idn.title), cell('Hoạ sĩ', 'artist', idn.artist), cell('Năm', 'year', idn.year || a.year_raw)),
     d.conflicts.length ? h('div', { class: 'panel conflictbox' }, h('h4', { text: 'Các sách ghi khác nhau' }),
       d.conflicts.map((c) => h('div', null, h('b', { text: { title: 'Tên', artist: 'Hoạ sĩ', year: 'Năm' }[c.field] + ': ' }),
         c.values.map((v) => h('span', { class: 'tag', title: v.work_id, text: `${shortBook(v.work_id.split('/')[0])}: ${v.value}` }))))) : null,
@@ -335,7 +335,7 @@ function mergeDialog(a) {
     rows = rows.filter((r) => r.artwork_key !== a.artwork_key);
     more.textContent = rows.length > LIMIT ? `Đang hiện ${LIMIT} trong ${rows.length} tác phẩm. Gõ tên tranh hoặc họa sĩ để lọc.` : `${rows.length} tác phẩm.`;
     res.replaceChildren(...rows.slice(0, LIMIT).map((r) => h('div', { class: 'alsoitem' }, h('img', { src: r.thumb_url, alt: '' }),
-      h('div', { style: { flex: 1 } }, h('div', { class: 'ttl', text: r.title }), h('div', { class: 'sub', text: `${r.artist || ''} ${r.year || ''} · ${r.books.map(shortBook).join(', ')}` })),
+      h('div', { style: { flex: 1 } }, h('div', { class: 'ttl', text: r.title }), h('div', { class: 'sub', text: `${r.artist || ''} ${r.year || r.year_raw || ''} · ${r.books.map(shortBook).join(', ')}` })),
       h('button', { class: 'small primary', text: 'Gộp', onclick: async () => {
         if (!(await confirmDialog(`Gộp "${r.title}" vào "${a.dossier.identity.title}"?`, { title: 'Gộp tác phẩm', ok: 'Gộp' }))) return;
         try { const o = await post('/api/library/artworks/merge', { key: a.artwork_key, with: r.artwork_key }); m.close(); toast('Đã gộp', 'ok'); go(`#/library/artwork/${o.artwork_key}`); }

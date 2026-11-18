@@ -1,511 +1,302 @@
-// Prompt-based storyboard editing in Step 5 ("Sửa video bằng prompt", design 7.4).
-// Mounted under the preview in the storyboard view:
-//   const unmount = mountPromptEdit(container, { pid, scope, save, onProposal, onJobEnd });
+// "Sửa video bằng lời" (step 5): type what to change, see what changed, undo it.
+// One box beside the preview: the text field, the scope in words, the send button, then the thread of turns.
+// A turn changes the saved storyboard on the server (fast or deep path); a card lists the changes with before and after pictures.
+//   const unmount = mountPromptEdit(container, { pid, scope, takeIn, onPreview, onJobEnd });
+//   takeIn(): the editor takes the new saved storyboard in (reload, or the merge with unsaved edits)
+//   onPreview({t0, t1}): the existing preview clip of a range
+// The decisions are in editlogic.js (pure, tested); the words are in labels.js (EDIT_LABELS); errors go through errmsg.js.
 import { api } from './api.js';
-import { h, toast, confirmDialog } from './util.js';
-import { stageErrorText, stageJobErrorText } from './errmsg.js';
+import { h, kids, toast, confirmDialog, detailFold } from './util.js';
+import { stageErrorText } from './errmsg.js';
+import { EDIT_LABELS as L } from './labels.js';
 import { ctx, bus } from './ctx.js';
 import { wordIndexAt } from './logic.js';
+import { watchIdle, jobWatcher } from './idlewatch.js';
+import { openModelSettings } from './settings.js';
+import { ACTIVE, pickScope, retryScope, addToSelection, turnView, progressView, previewRange, newlyChanged, shotNumber } from './editlogic.js';
 
-const ACTIVE = new Set(['queued', 'waiting', 'running']);
-
-export function mountPromptEdit(container, { pid, scope = null, save = null, onProposal = null, onJobEnd = null } = {}) {
-  let dead = false, timer = null, jobId = null, job = null;
-  let models = null, defaultModel = 'gemini-pro-orchestrator-g1-pro';
-  let thread = [];
-  let userScopeChoice = 'auto'; // 'auto' | 'shots' | 'chapter' | 'all'
-  let selectedShotIds = new Set();
-  let explicitMultiShots = false;
+export function mountPromptEdit(container, { pid, scope = null, takeIn = null, onPreview = null, onJobEnd = null } = {}) {
+  let dead = false, timer = null, jobId = null, job = null, thread = [], first = true, busy = false;
+  let choice = 'auto', multi = false, selected = [], lastSig = '';
+  const seenTurns = new Map(), shownStatus = new Map();
+  let shownFirst = true;
+  const seenJobs = jobWatcher();
+  const P = `/api/projects/${encodeURIComponent(pid)}`;
 
   const root = h('div', { class: 'prompt-edit' });
   container.replaceChildren(root);
 
-  const formBox = h('div', { class: 'prompt-form' });
-  const progressBox = h('div', { class: 'prompt-progress-container' });
-  const threadBox = h('div', { class: 'prompt-thread-wrap' });
-  root.append(formBox, progressBox, threadBox);
-
-  // Form controls
+  // ---------------------------------------------------------------- the form
   const ta = h('textarea', {
-    class: 'prompt-instruction',
-    placeholder: 'Bạn muốn sửa gì? (ví dụ: ở đoạn nói về chiếc gương, zoom chậm hơn và thêm vòng sáng quanh gương)',
-    rows: 2,
-    onkeydown: (e) => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        submit();
-      }
-    },
+    class: 'prompt-instruction', rows: 2, placeholder: L.placeholder, 'aria-label': L.title,
+    onkeydown: (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); submit(); } },
   });
+  const btnSend = h('button', { class: 'primary prompt-btn-submit', onclick: () => submit(), text: L.send, title: L.sendHint });
+  const pills = {};
+  const pillRow = h('div', { class: 'prompt-pills', role: 'group', 'aria-label': L.scopeLead },
+    ...[['shots', L.scopeShots], ['chapter', L.scopeChapter], ['all', L.scopeAll]].map(([k, text]) =>
+      (pills[k] = h('button', { type: 'button', class: 'pill', text, onclick: () => { choice = k; paintScope(true); } }))));
+  const multiBox = h('input', { type: 'checkbox', class: 'prompt-multi', onchange: (e) => setMulti(e.target.checked) });
+  const multiLabel = h('label', { class: 'chk prompt-multi-label', title: L.multiHint }, multiBox, h('span', { text: L.multi }));
+  const wordsLine = h('div', { class: 'prompt-scope-words' });
+  const chipsBox = h('div', { class: 'prompt-shots-chips' });
+  const form = h('div', { class: 'prompt-form' },
+    ta,
+    pillRow, wordsLine, chipsBox,
+    h('div', { class: 'prompt-send-row' }, multiLabel,
+      h('button', { type: 'button', class: 'small text-btn prompt-model-link', text: L.modelLink, title: L.modelLinkHint, onclick: () => openModelSettings() }),
+      h('span', { class: 'grow' }), btnSend));
+  const threadHead = h('div', { class: 'prompt-thread-header' });
+  const threadList = h('div', { class: 'prompt-thread-list', tabindex: 0, 'aria-label': L.thread });
+  root.append(form, threadHead, threadList);
 
-  const scopeSel = h('select', {
-    class: 'prompt-scope',
-    onchange: (e) => {
-      userScopeChoice = e.target.value;
-      updateScopeUi();
-    },
-  },
-    h('option', { value: 'shots', text: '0 shot đang chọn' }),
-    h('option', { value: 'chapter', text: 'Chương tại đầu phát' }),
-    h('option', { value: 'all', text: 'Cả video' })
-  );
-
-  const modelSel = h('select', { class: 'prompt-model' },
-    h('option', { value: '', text: `Mặc định (${defaultModel})` })
-  );
-
-  const followupChk = h('label', { class: 'chk prompt-followup-label', title: 'Tiếp tục chuỗi yêu cầu trước đó' },
-    h('input', { type: 'checkbox', class: 'prompt-followup', checked: false }),
-    h('span', { text: 'Tiếp tục hội thoại trước' })
-  );
-
-  const btnSubmit = h('button', {
-    class: 'primary prompt-btn-submit',
-    onclick: submit,
-    text: 'Gửi cho agent',
-    title: 'Gửi yêu cầu sửa (Ctrl+Enter)',
-  });
-
-  const shotsChipsWrap = h('div', { class: 'prompt-shots-chips', style: { display: 'none' } });
-
-  formBox.append(
-    h('div', { class: 'prompt-input-row' }, ta),
-    h('div', { class: 'prompt-controls-row' },
-      h('div', { class: 'prompt-ctl-group' },
-        h('span', { class: 'prompt-ctl-label', text: 'Phạm vi: ' }),
-        scopeSel,
-        h('span', { class: 'prompt-ctl-label', text: 'Mô hình: ' }),
-        modelSel,
-        followupChk
-      ),
-      btnSubmit
-    ),
-    shotsChipsWrap
-  );
-
-  const poll = () => {
-    clearTimeout(timer);
-    if (!dead) timer = setTimeout(tick, 1500);
+  // ---------------------------------------------------------------- the scope
+  const draftShots = () => ctx.store?.draft?.shots || [];
+  const chapters = () => ctx.store?.timing?.chapters || [];
+  const scopeNow = () => {
+    const t = ctx.t || 0;
+    return pickScope({ choice, selected, shots: draftShots(), chapters: chapters(), t, wIdx: chapters().some((c) => c.start == null) ? wordIndexAt(ctx.words(), t) : -1 });
   };
-
-  scope?.add?.(() => unmount());
-
-  // Listen to store events and timeline playhead
+  function setMulti(on) {
+    multi = on;
+    if (on) choice = 'shots';
+    else { selected = ctx.store?.sel?.shot ? [ctx.store.sel.shot] : []; choice = 'auto'; }
+    paintScope(true);
+  }
+  function paintScope(force = false) {
+    if (dead) return;
+    const valid = new Set(draftShots().map((s) => s.id));
+    selected = selected.filter((id) => valid.has(id));
+    const sc = scopeNow();
+    const sig = [sc.kind, sc.words, selected.join(','), multi, busy].join('|');
+    if (!force && sig === lastSig) return;
+    lastSig = sig;
+    for (const [k, b] of Object.entries(pills)) { b.classList.toggle('on', sc.kind === k); b.disabled = busy; }
+    multiBox.checked = multi; multiBox.disabled = busy;
+    wordsLine.textContent = multi && sc.kind === 'shots' && selected.length < 2 ? `${L.scopeLead} ${sc.words}. ${L.multiOn}` : `${L.scopeLead} ${sc.words}`;
+    const shots = draftShots();
+    chipsBox.replaceChildren(...(multi || selected.length > 1 ? selected.map((id) => {
+      const n = shotNumber(shots, id);
+      return h('span', { class: 'prompt-shot-chip' }, h('span', { text: `Cảnh ${n ?? ''}`.trim() }),
+        h('button', { type: 'button', class: 'prompt-shot-chip-del', title: L.dropShot(n ?? ''), disabled: busy, text: '×',
+          onclick: () => { selected = selected.filter((x) => x !== id); paintScope(true); } }));
+    }) : []));
+    btnSend.disabled = busy || !sc.ok;
+  }
   const offStore = ctx.store.on((kind) => {
     if (kind === 'select') {
-      if (!explicitMultiShots && ctx.store.sel?.shot) {
-        selectedShotIds = new Set([ctx.store.sel.shot]);
-      }
-      updateScopeUi();
-    } else if (kind === 'draft' || kind === 'load') {
-      updateScopeUi();
-    }
+      const id = ctx.store.sel?.shot;
+      selected = multi ? addToSelection(selected, id, { multi, playing: ctx.playing }) : (id ? [id] : []);
+      paintScope();
+    } else if (kind === 'draft' || kind === 'load') paintScope();
   });
+  const offTime = bus.on('time', () => paintScope());
+  const offTick = bus.on('tick', () => { if (choice === 'chapter' || choice === 'auto') paintScope(); });
+  scope?.add?.(() => { offStore?.(); offTime?.(); offTick?.(); });
 
-  const offBus = bus.on('time', () => updateScopeUi());
-
-  scope?.add?.(() => {
-    offStore?.();
-    offBus?.();
-  });
-
+  // ---------------------------------------------------------------- the thread
   async function loadThread() {
-    try {
-      const r = await api.get(`/api/projects/${encodeURIComponent(pid)}/draft/thread`);
+    let r = null;
+    try { r = await api.get(`${P}/draft/thread`); } catch { /* the old list stays; the next look tries again */ }
+    if (dead) return;
+    if (r) {
       thread = r.turns || [];
-      if (r.active_job_id && !jobId) {
-        jobId = r.active_job_id;
-        renderProgress();
-        tick();
-      }
-      const chk = followupChk.querySelector('input');
-      if (chk && !chk.dataset.userToggled) {
-        chk.checked = thread.length > 0;
-      }
-    } catch {
-      thread = [];
+      const fresh = newlyChanged(thread, seenTurns, first);
+      first = false;
+      if (r.active_job_id && !jobId) { jobId = r.active_job_id; seenJobs.know(jobId); job = null; busy = true; setTimeout(tick, 0); }
+      if (fresh.length && takeIn) { try { await takeIn(fresh[fresh.length - 1]); } catch { /* takeIn reports its own errors */ } }
     }
-    if (!dead) renderThread();
+    if (!dead) { renderThread(); paintScope(true); }
   }
 
-  async function loadModels() {
-    try {
-      const r = await api.get(`/api/projects/${encodeURIComponent(pid)}/draft/models`);
-      models = r.models || [];
-      if (r.default) defaultModel = r.default;
-      modelSel.replaceChildren(
-        h('option', { value: '', text: `Mặc định (${defaultModel})` }),
-        ...(models || []).map((m) => h('option', { value: m.slug, text: m.label ? `${m.label} (${m.slug})` : m.slug }))
-      );
-    } catch {
-      models = [];
-    }
+  function setBusy(on) {
+    busy = on;
+    ta.disabled = on;
+    paintScope(true);
   }
 
   async function tick() {
     if (dead || !jobId) return;
-    try {
-      job = await api.get(`/api/longjobs/${encodeURIComponent(jobId)}`);
-    } catch {
-      if (!dead) poll();
-      return;
-    }
+    try { job = await api.get(`/api/longjobs/${encodeURIComponent(jobId)}`); } catch { if (!dead) timer = setTimeout(tick, 1500); return; }
     if (dead) return;
     if (!ACTIVE.has(job.state)) {
-      jobId = null;
-      renderProgress();
-      setFormDisabled(false);
+      jobId = null; job = null; setBusy(false);
       await loadThread();
       onJobEnd?.();
       return;
     }
-    renderProgress();
-    poll();
+    paintProgress();
+    timer = setTimeout(tick, 1200);
   }
 
-  function getScopeInfo() {
-    const allShots = ctx.store?.draft?.shots || [];
-    const validIds = new Set(allShots.map((s) => s.id));
-
-    // Cleanup any removed shots
-    for (const sid of selectedShotIds) {
-      if (!validIds.has(sid)) selectedShotIds.delete(sid);
-    }
-
-    if (!explicitMultiShots && selectedShotIds.size === 0 && ctx.store?.sel?.shot && validIds.has(ctx.store.sel.shot)) {
-      selectedShotIds.add(ctx.store.sel.shot);
-    }
-
-    const selShots = Array.from(selectedShotIds);
-    const hasShots = selShots.length > 0;
-    const shotsLabel = hasShots ? `${selShots.length} shot đang chọn` : '0 shot đang chọn';
-
-    const chapters = ctx.store?.timing?.chapters || [];
-    const t = ctx.t || 0;
-    let curChap = chapters.find((c) => c.start != null && c.end != null && c.start <= t && t < c.end);
-    if (!curChap && chapters.length) {
-      const words = ctx.words();
-      const wIdx = wordIndexAt(words, t);
-      curChap = chapters.find((c) => c.w0 <= wIdx && wIdx < c.w1) || chapters[0];
-    }
-    const chapName = curChap ? (curChap.name || curChap.id) : '';
-    const chapLabel = chapName ? `Chương ${chapName}` : 'Chương tại đầu phát';
-
-    return { selShots, hasShots, shotsLabel, curChap, chapLabel, allShots };
-  }
-
-  function updateScopeUi() {
-    if (dead) return;
-    const { selShots, hasShots, shotsLabel, chapLabel, allShots } = getScopeInfo();
-
-    const optShots = scopeSel.querySelector('option[value="shots"]');
-    const optChap = scopeSel.querySelector('option[value="chapter"]');
-    if (optShots) {
-      optShots.textContent = shotsLabel;
-      optShots.disabled = !hasShots;
-    }
-    if (optChap) {
-      optChap.textContent = chapLabel;
-    }
-
-    const effectiveScope = userScopeChoice === 'auto' ? (hasShots ? 'shots' : 'chapter') : userScopeChoice;
-    scopeSel.value = effectiveScope;
-
-    // Render multi-shot selector chips when scope is 'shots'
-    if (effectiveScope === 'shots') {
-      shotsChipsWrap.style.display = 'flex';
-      const chips = selShots.map((sid) => {
-        const sObj = allShots.find((s) => s.id === sid);
-        const lk = sObj?.locked ? ' [Khóa]' : '';
-        return h('span', { class: 'prompt-shot-chip' },
-          h('span', { text: `${sid}${lk}` }),
-          h('button', {
-            type: 'button',
-            class: 'prompt-shot-chip-del',
-            title: `Bỏ chọn shot ${sid}`,
-            onclick: (e) => {
-              e.preventDefault();
-              selectedShotIds.delete(sid);
-              explicitMultiShots = true;
-              updateScopeUi();
-            },
-            text: '×'
-          })
-        );
-      });
-
-      // Add-shot selector for additional shots
-      const remainingShots = allShots.filter((s) => !selectedShotIds.has(s.id));
-      let addSelect = null;
-      if (remainingShots.length > 0) {
-        addSelect = h('select', {
-          class: 'prompt-add-shot',
-          title: 'Thêm shot vào phạm vi sửa',
-          onchange: (e) => {
-            const val = e.target.value;
-            if (val) {
-              selectedShotIds.add(val);
-              explicitMultiShots = true;
-              updateScopeUi();
-            }
-          }
-        },
-          h('option', { value: '', text: '+ Thêm shot...' }),
-          ...remainingShots.map((s) => h('option', { value: s.id, text: `${s.id} (${s.technique || 'shot'})` }))
-        );
-      }
-
-      shotsChipsWrap.replaceChildren(
-        h('span', { class: 'prompt-ctl-label', text: 'Cảnh đã chọn: ' }),
-        ...chips,
-        ...(addSelect ? [addSelect] : [])
-      );
-    } else {
-      shotsChipsWrap.style.display = 'none';
-      shotsChipsWrap.replaceChildren();
-    }
-  }
-
-  function setFormDisabled(disabled) {
-    ta.disabled = disabled;
-    scopeSel.disabled = disabled;
-    modelSel.disabled = disabled;
-    btnSubmit.disabled = disabled;
-    followupChk.querySelector('input').disabled = disabled;
-    const addSel = shotsChipsWrap.querySelector('select');
-    if (addSel) addSel.disabled = disabled;
-    shotsChipsWrap.querySelectorAll('button').forEach((b) => { b.disabled = disabled; });
-  }
-
-  async function submit() {
-    const text = ta.value.trim();
-    if (!text) {
-      toast('Hãy nhập yêu cầu muốn sửa.', 'warn', 4000);
-      ta.focus();
-      return;
-    }
-    if (text.length > 2000) {
-      toast('Yêu cầu không được quá 2000 ký tự.', 'warn', 4000);
-      return;
-    }
-
-    // Save unsaved draft changes first if present
-    if (ctx.store && ctx.store.snap() !== ctx.store.savedSnap) {
-      const ok = await confirmDialog('Bạn có thay đổi chưa lưu trên storyboard. Lưu lại trước khi gửi cho agent?', {
-        title: 'Lưu thay đổi trước khi sửa',
-        ok: 'Lưu và tiếp tục',
-      });
-      if (!ok) return;
-      if (typeof save === 'function') {
-        await save();
-        if (ctx.store && ctx.store.snap() !== ctx.store.savedSnap) {
-          toast('Không lưu được storyboard. Hãy kiểm tra lỗi trước khi gửi.', 'err', 5000);
-          return;
-        }
-      }
-    }
-
-    const { selShots, hasShots, curChap } = getScopeInfo();
-    const effectiveScope = userScopeChoice === 'auto' ? (hasShots ? 'shots' : 'chapter') : userScopeChoice;
-
-    let scopePayload;
-    if (effectiveScope === 'shots') {
-      if (!hasShots) {
-        toast('Chưa chọn shot nào trong phạm vi sửa.', 'warn', 4000);
-        return;
-      }
-      scopePayload = { shots: selShots };
-    } else if (effectiveScope === 'chapter') {
-      const chapters = ctx.store?.timing?.chapters || [];
-      const chapIdx = curChap ? chapters.indexOf(curChap) : -1;
-      const normalizedId = curChap?.id || `c${String(Math.max(0, chapIdx) + 1).padStart(2, '0')}`;
-      scopePayload = { chapter: normalizedId };
-    } else {
-      scopePayload = { all: true };
-    }
-
-    const model = modelSel.value || undefined;
-    const followup = Boolean(followupChk.querySelector('input')?.checked);
-    const base_rev = ctx.store?.rev;
-
-    setFormDisabled(true);
-
+  async function submit(retry = null) {
+    if (busy || dead) return;
+    const text = (retry ? retry.instruction : ta.value).trim();
+    if (!text) { toast(L.emptyInstruction, 'warn', 4000); ta.focus(); return; }
+    if (text.length > 2000) { toast(L.tooLong, 'warn', 4000); return; }
+    if (!draftShots().length) { toast(L.noStoryboard, 'warn', 4000); return; }
+    let payload;
+    if (retry) { payload = retryScope(retry, draftShots()); if (!payload) { toast(L.noShotChosen, 'warn', 4000); return; } }
+    else { const sc = scopeNow(); if (!sc.ok) { toast(sc.why, 'warn', 4000); return; } payload = sc.payload; }
+    setBusy(true);
     try {
-      const res = await api.post(`/api/projects/${encodeURIComponent(pid)}/draft/edit`, {
-        instruction: text,
-        scope: scopePayload,
-        model,
-        followup,
-        base_rev,
-      });
-      jobId = res.job_id;
-      ta.value = '';
-      renderProgress();
+      const res = await api.post(`${P}/draft/edit`, { instruction: text, scope: payload, mode: 'auto', base_rev: ctx.store?.rev });
+      jobId = res.job_id; seenJobs.know(jobId); job = null;
+      if (!retry) ta.value = '';
       await loadThread();
       tick();
-    } catch (e) {
-      toast('Không gửi được: ' + stageErrorText('draft', e).text, 'err', 8000);
-      setFormDisabled(false);
-    }
+    } catch (e) { toast(L.sendFail + stageErrorText('draft', e).text, 'err', 8000); setBusy(false); }
   }
 
   async function cancel() {
     if (!jobId) return;
+    try { await api.post(`/api/longjobs/${encodeURIComponent(jobId)}/cancel`, {}); tick(); }
+    catch (e) { toast(L.cancelFail + stageErrorText('draft', e).text, 'err', 8000); }
+  }
+
+  /** One call on a turn (undo, resolve); then the editor takes the new storyboard in and the thread is read again. */
+  async function act(turn, path, body, okText) {
     try {
-      await api.post(`/api/longjobs/${encodeURIComponent(jobId)}/cancel`, {});
-      tick();
+      const res = await api.post(`${P}/draft/edit/${encodeURIComponent(turn.id)}/${path}`, body);
+      if (okText) toast(okText, 'ok', 3000);
+      return res || {};
     } catch (e) {
-      toast('Không dừng được: ' + stageErrorText('draft', e).text, 'err', 8000);
+      if (path === 'undo' && e.status === 409 && e.body?.code === 'undo_conflict' && !body.force) return await undoConflict(turn, e.body.conflicts || []);
+      toast(L.actionFail + stageErrorText('draft', e).text, 'err', 8000);
+      return null;
     }
+  }
+  async function undoConflict(turn, ids) {
+    const nums = ids.map((id) => shotNumber(draftShots(), id)).filter((n) => n != null).sort((a, b) => a - b);
+    const words = nums.length ? `cảnh ${nums.join(', ')}` : 'các cảnh này';
+    const ok = await confirmDialog(L.undoConflictLead(words), { title: L.undoConflictTitle, ok: L.undoForce, danger: true });
+    return ok ? await act(turn, 'undo', { force: true }, L.undoDone) : null;
+  }
+  async function afterChange(turn, status) {
+    seenTurns.set(turn.id, status);                // this page changed it: loadThread must not take it in a second time
+    if (takeIn) { try { await takeIn({ ...turn, status }); } catch { /* takeIn reports its own errors */ } }
+    await loadThread();
+  }
+  async function undo(turn) {
+    const r = await act(turn, 'undo', { force: false }, L.undoDone);
+    if (r && (r.ok || r.status)) await afterChange(turn, 'undone');
+  }
+  async function resolve(turn, action) {
+    const r = await act(turn, 'resolve', { action }, L.resolved);
+    if (!r) return;
+    if (action === 'overwrite') await afterChange(turn, 'applied'); else await loadThread();
+  }
+  function preview(turn) {
+    const r = previewRange(turn, draftShots());
+    if (r) onPreview?.(r);
   }
 
   async function clearHistory() {
-    try {
-      await api.del(`/api/projects/${encodeURIComponent(pid)}/draft/thread`);
-      thread = [];
-      renderThread();
-      toast('Đã xóa lịch sử hội thoại.', 'ok');
-    } catch (e) {
-      toast('Không xóa được: ' + stageErrorText('draft', e).text, 'err', 8000);
-    }
+    if (!(await confirmDialog(L.clearAsk, { title: L.clear, ok: L.clearOk, danger: true }))) return;
+    try { await api.del(`${P}/draft/thread`); thread = []; seenTurns.clear(); renderThread(); toast(L.cleared, 'ok', 2500); }
+    catch (e) { toast(L.actionFail + stageErrorText('draft', e).text, 'err', 8000); }
   }
 
-  function fmtTime(iso) {
-    if (!iso) return '';
-    try {
-      const d = new Date(iso);
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    } catch {
-      return iso;
-    }
+  // ---------------------------------------------------------------- the cards
+  const frameUrl = (turn, shotId, when) => api.url(`${P}/draft/edit/${encodeURIComponent(turn.id)}/frames/${encodeURIComponent(shotId)}/${when}.jpg`);
+  function frame(turn, c, when, has) {
+    const cap = h('figcaption', { text: when === 'before' ? L.before : L.after });
+    if (!has || !c.shotId) return h('figure', { class: 'prompt-frame none' }, h('div', { class: 'prompt-frame-box', text: L.noFrame }), cap);
+    const box = h('div', { class: 'prompt-frame-box' });
+    const img = h('img', { src: frameUrl(turn, c.shotId, when), alt: `${cap.textContent}, ${c.title}`, loading: 'lazy' });
+    img.addEventListener('error', () => { box.textContent = L.frameFailed; box.classList.add('bad'); });
+    box.append(img);
+    return h('figure', { class: 'prompt-frame' }, box, cap);
   }
-
-  function renderProgress() {
-    const running = Boolean(jobId && job && ACTIVE.has(job.state)) || Boolean(jobId && !job);
-    if (running) {
-      const parts = (job?.parts || []).map((p) =>
-        h('div', { class: 'hint' }, `${p.title}: ${p.state}${p.note ? ' - ' + p.note : ''}`)
-      );
-      progressBox.replaceChildren(
-        h('div', { class: 'prompt-progress-banner banner' },
-          h('div', { class: 'row', style: { width: '100%', alignItems: 'center' } },
-            h('b', { text: 'Agent đang sửa video...' }),
-            h('progress', { class: 'prompt-progress', max: 1, value: job?.progress ?? 0, style: { flex: 1, minWidth: '100px' } }),
-            h('button', { class: 'small prompt-btn-cancel', onclick: cancel, text: 'Hủy' })
-          ),
-          ...parts
-        )
-      );
-    } else if (job && job.state === 'error') {
-      progressBox.replaceChildren(
-        h('div', { class: 'banner warn' },
-          h('span', { text: stageJobErrorText('draft', job).text })
-        )
-      );
+  function changeRow(turn, c) {
+    return h('div', { class: 'prompt-change' },
+      h('div', { class: 'prompt-change-head' }, h('span', { class: 'op ' + c.op, text: c.opText }), h('b', { text: c.title })),
+      c.what ? h('div', { class: 'prompt-change-what', text: c.what }) : null,
+      h('div', { class: 'prompt-frames' }, frame(turn, c, 'before', c.hasBefore), frame(turn, c, 'after', c.hasAfter)));
+  }
+  /** The buttons of a card: the only things the owner has to do on it. They sit right under the header line, above everything else. */
+  function actionRow(turn, v) {
+    const a = v.actions, btns = [];
+    if (a.cancel) btns.push(h('button', { class: 'small prompt-btn-cancel', onclick: cancel, text: L.cancel }));
+    if (a.choices) btns.push(
+      h('button', { class: 'small primary prompt-btn-overwrite', text: L.choiceOverwrite, title: L.choiceOverwriteHelp, onclick: () => resolve(turn, 'overwrite') }),
+      h('button', { class: 'small prompt-btn-discard', text: L.choiceDiscard, title: L.choiceDiscardHelp, onclick: () => resolve(turn, 'discard') }));
+    if (a.preview) btns.push(h('button', { class: 'small prompt-btn-preview', text: L.preview, title: L.previewHint, onclick: () => preview(turn) }));
+    if (a.undo) btns.push(h('button', { class: 'small prompt-btn-undo', text: L.undo, title: a.undo === 'gone' ? L.undoNone : L.undoHint, disabled: a.undo === 'gone', onclick: () => undo(turn) }));
+    if (a.retry) btns.push(h('button', { class: 'small prompt-btn-retry', text: L.retry, disabled: busy, onclick: () => submit(turn) }));
+    if (a.settings) btns.push(h('button', { class: 'small prompt-btn-model', text: L.quota.choose, onclick: () => openModelSettings() }));
+    return btns.length ? h('div', { class: 'prompt-turn-actions' }, ...btns) : null;
+  }
+  function card(turn) {
+    const v = turnView(turn, { shots: draftShots(), chapters: chapters() });
+    const kidsOf = [
+      h('div', { class: 'prompt-turn-head' },
+        h('span', { class: 'chip prompt-badge ' + v.tone, text: v.badge }),
+        h('span', { class: 'chip', text: v.scope }),
+        h('span', { class: 'grow' }),
+        h('span', { class: 'muted prompt-turn-time', text: v.time })),
+      actionRow(turn, v),
+      h('div', { class: 'prompt-turn-instruction' }, h('b', { text: L.you + ': ' }), v.instruction),
+    ];
+    if (v.status === 'running') {
+      kidsOf.push(h('div', { class: 'prompt-run' },
+        h('span', { class: 'prompt-run-line', text: L.running }),
+        h('progress', { class: 'prompt-progress', max: 1, value: 0 })));
     } else {
-      progressBox.replaceChildren();
+      if (v.headline) kidsOf.push(h('div', { class: 'prompt-turn-summary ' + v.tone, text: v.headline }));
+      if (v.extra) kidsOf.push(h('div', { class: 'prompt-turn-extra hint', text: v.extra }));
+      if (v.actions.choices) kidsOf.push(h('div', { class: 'hint prompt-choice-help', text: `${L.choiceOverwrite}: ${L.choiceOverwriteHelp} ${L.choiceDiscard}: ${L.choiceDiscardHelp}` }));
+      if (v.showChanges) kidsOf.push(h('div', { class: 'prompt-changes' }, ...v.changes.map((c) => changeRow(turn, c))));
+      if (v.noChanges) kidsOf.push(h('div', { class: 'prompt-turn-extra hint', text: L.changesNone }));
+      if (v.way) kidsOf.push(h('div', { class: 'prompt-turn-way muted', text: v.way }));
+      if (v.detail) kidsOf.push(detailFold(v.detail, 'err-detail prompt-detail'));
+    }
+    return h('div', { class: 'prompt-turn-card st-' + v.status, 'data-turn': turn.id, 'data-status': v.status }, ...kidsOf);
+  }
+  function paintProgress() {
+    const pv = progressView(job);
+    for (const el of threadList.querySelectorAll('.prompt-run')) {
+      const line = el.querySelector('.prompt-run-line'), bar = el.querySelector('progress');
+      if (line) line.textContent = pv.line;
+      if (bar) bar.value = pv.fraction;
     }
   }
-
   function renderThread() {
-    const threadItems = thread.map((t) => {
-      let badgeCls = 'partial';
-      let badgeText = 'Đang xử lý';
-      if (t.status === 'done') {
-        badgeCls = 'ok';
-        badgeText = t.accepted === 'applied' ? 'Đã duyệt áp dụng' : (t.accepted === 'partially_applied' ? 'Áp dụng một phần' : 'Đã có đề xuất');
-      } else if (t.status === 'no_change') {
-        badgeCls = 'partial';
-        badgeText = 'Không đổi';
-      } else if (t.status === 'refused') {
-        badgeCls = 'missing';
-        badgeText = 'Từ chối (ngoài phạm vi)';
-      } else if (t.status === 'cancelled' || (t.status === 'error' && t.error === 'cancelled')) {
-        badgeCls = 'missing';
-        badgeText = 'Đã hủy';
-      } else if (t.status === 'error') {
-        badgeCls = 'missing';
-        badgeText = t.error === 'interrupted' ? 'Bị gián đoạn' : 'Lỗi';
-      }
-
-      const itemKids = [
-        h('div', { class: 'prompt-turn-head' },
-          h('span', { class: 'chip ' + badgeCls, text: badgeText }),
-          h('span', { class: 'chip', text: t.scope_words || 'cả video' }),
-          h('span', { class: 'muted prompt-turn-time', text: fmtTime(t.at) }),
-          h('span', { class: 'grow' }),
-          t.proposal_id && onProposal
-            ? h('button', {
-                class: 'small primary prompt-btn-open',
-                onclick: () => onProposal(t.proposal_id),
-                text: 'Mở đề xuất',
-              })
-            : null
-        ),
-        h('div', { class: 'prompt-turn-instruction' },
-          h('b', { text: 'Bạn: ' }),
-          h('span', { text: t.instruction })
-        ),
-      ];
-
-      if (t.notes) {
-        itemKids.push(
-          h('div', { class: 'prompt-turn-notes' },
-            h('b', { text: 'Agent: ' }),
-            h('span', { text: t.notes })
-          )
-        );
-      }
-
-      if (t.error) {
-        const errObj = stageErrorText('draft', { body: { code: t.error } });
-        itemKids.push(
-          h('div', { class: 'prompt-turn-error hint warn' },
-            h('span', { text: `Lỗi: ${errObj.text}` })
-          )
-        );
-      }
-
-      return h('div', { class: 'prompt-turn-card' }, ...itemKids);
-    });
-
-    const threadHeader = h('div', { class: 'prompt-thread-header' },
-      h('h5', { text: `Lịch sử sửa bằng prompt (${thread.length})` }),
-      h('span', { class: 'grow' }),
-      thread.length > 0
-        ? h('button', {
-            class: 'small text-btn',
-            onclick: clearHistory,
-            text: 'Xóa lịch sử',
-            title: 'Xóa danh sách các lượt hội thoại trước',
-          })
-        : null
-    );
-
-    threadBox.replaceChildren(
-      threadHeader,
-      thread.length
-        ? h('div', { class: 'prompt-thread-list' }, ...threadItems)
-        : h('div', { class: 'empty muted', style: { padding: '8px 4px' }, text: 'Chưa có yêu cầu nào. Gõ yêu cầu vào ô trên để agent sửa.' })
-    );
+    threadHead.replaceChildren(...kids(h('h5', { text: `${L.thread} (${thread.length})` }), h('span', { class: 'grow' }),
+      thread.length ? h('button', { class: 'small text-btn prompt-btn-clear', text: L.clear, onclick: clearHistory }) : null));
+    const keepScroll = threadList.scrollTop;
+    threadList.replaceChildren(...(thread.length
+      ? thread.slice().reverse().map(card)                                   // the newest on top
+      : [h('div', { class: 'empty muted', text: L.threadEmpty })]));
+    threadList.scrollTop = keepScroll;
+    // a turn that started, ended or needs a choice: its card goes to the top of the visible area (the first look at the page only remembers)
+    const changed = thread.slice().reverse().filter((t) => shownStatus.get(t.id) !== t.status);
+    for (const t of thread) shownStatus.set(t.id, t.status);
+    if (shownFirst) shownFirst = false;
+    else if (changed.length) {
+      const el = threadList.querySelector(`[data-turn="${CSS.escape(changed[0].id)}"]`);
+      if (el) threadList.scrollTop += el.getBoundingClientRect().top - threadList.getBoundingClientRect().top;
+    }
+    if (jobId) paintProgress();
   }
 
-  function unmount() {
-    dead = true;
-    clearTimeout(timer);
-    offStore?.();
-    offBus?.();
-    root.remove();
+  function unmount() { dead = true; clearTimeout(timer); offStore?.(); offTime?.(); offTick?.(); root.remove(); }
+  scope?.add?.(() => unmount());
+
+  // a job started in another tab or window shows up here within a few seconds (one cheap GET: the list of draft jobs)
+  if (scope) {
+    watchIdle(scope, { root: () => root, idle: () => !dead && !jobId,
+      check: async () => {
+        const r = await api.get(`${P}/longjobs?kind=draft`);
+        const what = seenJobs(r);
+        if (what === 'active' || what === 'changed') await loadThread();
+      } });
   }
 
-  // Initial setup
-  followupChk.querySelector('input')?.addEventListener('change', (e) => {
-    e.target.dataset.userToggled = 'true';
-  });
-
-  updateScopeUi();
-  loadModels();
+  const sel0 = ctx.store?.sel?.shot;
+  selected = sel0 ? [sel0] : [];
+  paintScope(true);
+  renderThread();
   loadThread();
-
   return unmount;
 }

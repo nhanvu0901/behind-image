@@ -16,6 +16,8 @@ from typing import Protocol
 
 from bti.script import store as sstore
 
+from bti.media.errors import RealModelsOff
+
 from . import context, doc
 from .errors import PicksError
 
@@ -28,7 +30,8 @@ PART_ERRORS = {"suggest_off": "Gợi ý hình đang tắt trong cấu hình.", "
                "suggest_key_refused": "You.com từ chối khóa của máy chủ. Cần kiểm tra khóa.",
                "suggest_quota": "Tài khoản You.com hết hạn mức hoặc cần thanh toán.",
                "suggest_timeout": "You.com trả lời quá chậm (hết thời gian chờ). Thử lại sau.",
-               "suggest_bad_answer": "You.com từ chối yêu cầu hoặc trả lời sai dạng."}
+               "suggest_bad_answer": "You.com từ chối yêu cầu hoặc trả lời sai dạng.",
+               "real_models_off": "Máy này đang chạy ở chế độ thử, không gọi dịch vụ thật."}
 _KIND_CODE = {"key_refused": "suggest_key_refused", "quota": "suggest_quota", "timeout": "suggest_timeout",
               "bad_answer": "suggest_bad_answer", "failed": "suggest_failed"}
 _longjob = None          # tests put a fake module here; None means `bti.longjob`
@@ -92,6 +95,8 @@ class YouComProvider:
         client = YouComClient(api_key=script_env.get_key("YDC_API_KEY") or "")      # LR-001: the key may live only in the project's .env
         try:
             found = research.visual_research(beat["text"], ctx, client=client, live=True)
+        except RealModelsOff as e:       # A7: raised by the client where the paid request would start; kept as its own code
+            raise PicksError(409, str(e)[:200], "real_models_off")
         except research.LiveCallDisabled as e:
             raise PicksError(409, str(e)[:200], "suggest_no_key")
         except research.ResearchError as e:
@@ -100,7 +105,10 @@ class YouComProvider:
             raise PicksError(502, raw[:500], _KIND_CODE.get(e.kind, "suggest_failed"))
         out = []
         for s in found[: self.limit_suggestions]:
-            cands = research.resolve_suggestion(s)[: self.limit_candidates]
+            try:
+                cands = research.resolve_suggestion(s)[: self.limit_candidates]
+            except RealModelsOff as e:   # A7: the picture sources refuse the same way
+                raise PicksError(409, str(e)[:200], "real_models_off")
             out.append({**s, "candidates": cands})
         return out
 

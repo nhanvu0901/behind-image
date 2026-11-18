@@ -15,6 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from .safety import refuse_if_real_models_off
 
 RESEARCH_API = "https://api.you.com/v1/research"
 SEARCH_API = "https://api.you.com/v1/search"
@@ -47,9 +48,10 @@ class YouComClient:
 
     is_live = True  # spends money; bti.media.research refuses to use it unless live=True
 
-    def __init__(self, api_key: str | None = None, *, timeout: float = _DEFAULT_TIMEOUT):
+    def __init__(self, api_key: str | None = None, *, timeout: float = _DEFAULT_TIMEOUT, opener=None):
         self.api_key = api_key if api_key is not None else os.environ.get("YDC_API_KEY", "").strip()
         self.timeout = timeout
+        self.opener = opener         # tests inject a fake transport here; None means the real one (and the A7 switch applies)
 
     def research(
         self,
@@ -100,8 +102,12 @@ class YouComClient:
     def _call(self, request: urllib.request.Request, api: str) -> RawCall:
         if not self.api_key:
             return RawCall(api=api, payload={}, error="YDC_API_KEY is not set")
+        opener = self.opener
+        if opener is None:               # a real, paid request would start here (A7 safety switch)
+            refuse_if_real_models_off("You.com")
+            opener = urllib.request.urlopen
         try:
-            with urllib.request.urlopen(request, timeout=self.timeout) as response:
+            with opener(request, timeout=self.timeout) as response:
                 return _decode_response(api, response)
         except urllib.error.HTTPError as exc:
             return _error_response(api, exc, status_code=exc.code)

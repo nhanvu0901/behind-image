@@ -104,12 +104,55 @@ def check_cli(agy: str, env: dict | None = None) -> None:
         raise ProviderError("config", err)
 
 
+_RESET_RE = re.compile(r"(?:resets?|retry(?:ing)?)\s+(?:in|after)\s+((?:\d+\s*[dhms]\s*)+)", re.I)
+_UNIT_S = {"d": 86400, "h": 3600, "m": 60, "s": 1}
+
+
+def parse_reset_seconds(text: str) -> int | None:
+    """Seconds until the quota resets, from what agy prints: `Resets in 2m56s`, `22m20s`, `167h12m29s` (days too). None when the
+    text names no time."""
+    m = _RESET_RE.search(text or "")
+    if not m:
+        return None
+    total = sum(int(n) * _UNIT_S[u.lower()] for n, u in re.findall(r"(\d+)\s*([dhms])", m.group(1), re.I))
+    return total if total > 0 else None
+
+
+def wait_words(seconds: int) -> str:
+    """'2 phút 56 giây', '167 giờ 12 phút': the two largest non-zero units, in Vietnamese."""
+    parts = []
+    for unit, size in (("ngày", 86400), ("giờ", 3600), ("phút", 60), ("giây", 1)):
+        n, seconds = divmod(int(seconds), size)
+        if n:
+            parts.append("%d %s" % (n, unit))
+    return " ".join(parts[:2]) or "vài giây"
+
+
+def retry_at(seconds: int, now: float | None = None) -> str:
+    """The local clock time `seconds` from now: 'HH:MM' today, 'dd/mm HH:MM' on another day."""
+    import datetime
+    t0 = datetime.datetime.fromtimestamp(now if now is not None else time.time())
+    t = t0 + datetime.timedelta(seconds=int(seconds))
+    return t.strftime("%H:%M") if t.date() == t0.date() else t.strftime("%d/%m %H:%M")
+
+
+def _error_lines(out: str) -> str:
+    """The lines of stdout that are not events (plain sentences such as `Individual quota reached ... Resets in 2m56s.`) and the
+    JSON lines that carry an `error_code`."""
+    return "\n".join(ln for ln in (out or "").splitlines() if ln.strip() and (not ln.lstrip().startswith("{") or "error_code" in ln))[-3000:]
+
+
 def classify(text: str, status: str | None = None) -> ProviderError:
     t = (text or "").lower()
     if any(k in t for k in ("authentication required", "not logged in", "please log in", "login required", "sign in", "unauthenticated", "credentials")):
         return ProviderError("auth", "agy chưa đăng nhập. " + LOGIN_HINT)
     if any(k in t for k in ("quota", "exhausted", "rate limit", "rate_limit", "429", "resource_exhausted", "too many requests")):
-        return ProviderError("rate_limit", "Hạn mức của gói Antigravity đã dùng hết hoặc bị giới hạn lượt gọi. Đợi hết chu kỳ hoặc chọn mô hình khác.")
+        wait = parse_reset_seconds(text)
+        msg = "Hạn mức của gói Antigravity đã dùng hết hoặc bị giới hạn lượt gọi. "
+        msg += ("Thử lại sau %s (khoảng %s)." % (wait_words(wait), retry_at(wait))) if wait else "Đợi hết chu kỳ hoặc chọn mô hình khác."
+        err = ProviderError("rate_limit", msg)
+        err.retry_after_seconds = wait          # None when agy printed no time; a rate limit is never retried inside the same job
+        return err
     if "model" in t and any(k in t for k in ("unknown", "not found", "invalid", "unsupported", "not available")):
         return ProviderError("config", "agy không nhận ra tên mô hình này. Tải lại trang để lấy danh sách mới (`agy models`).")
     if "timeout" in t or "timed out" in t or "deadline" in t:
@@ -175,22 +218,31 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 900, on_pro
             raise ProviderError("timeout", "một lần gọi agy khác đang chạy quá lâu")
     work = tempfile.mkdtemp(prefix="bti-agy-")
     proc = None
+    feed_path = None
+    feed_file = None
     try:
+        # The prompt goes to the program through a FILE used as its standard input, never through a pipe fed by communicate():
+        # on macOS and Linux communicate() writes only as much as the pipe holds (16 KB, 64 KB) while the program has not started
+        # reading, and the retries of a polling loop pass no input, so the rest was never written and stdin never closed (the
+        # call hung until the timeout). A file has no such limit and the program sees the end of its input at once. The file is
+        # outside the work folder (the check for files the program created there stays meaningful) and is deleted in every outcome.
+        fd, feed_path = tempfile.mkstemp(prefix="bti-agy-in-", suffix=".ndjson")
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(user_line(prompt).encode("ascii"))          # ASCII-only JSON (see user_line)
+        feed_file = open(feed_path, "rb")
         try:
             proc = subprocess.Popen(build_command(agy, spec.get("model"), timeout), cwd=work, env=env0,
-                                    stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    stdin=feed_file, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                     text=True, encoding="utf-8", errors="replace", **group_kwargs())
         except OSError as e:
             raise ProviderError("config", f"không chạy được agy: {type(e).__name__}")
         out = err = ""
         started = time.time()
-        feed = user_line(prompt)                               # communicate() writes it, then closes stdin
         while True:
             try:
-                out, err = proc.communicate(input=feed, timeout=0.2)
+                out, err = proc.communicate(timeout=0.2)      # no input: it only reads the two output pipes
                 break
             except subprocess.TimeoutExpired:
-                feed = None                                    # already handed to the pipe; do not send it twice
                 if cancel is not None and cancel.is_set():
                     _kill(proc)
                     raise ProviderError("cancelled", "cancelled")
@@ -203,7 +255,7 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 900, on_pro
             raise classify(raw, None) if raw.strip() else ProviderError("empty", "agy không in ra gì")
         status = str(env.get("status") or "")
         if status != "SUCCESS" or proc.returncode not in (0, None):
-            raise classify(f"{env.get('error') or ''} {err}", status)
+            raise classify(f"{env.get('error') or ''} {err} {_error_lines(out)}", status)
         if int(env.get("num_turns") or 1) > 1:
             raise ProviderError("http", f"agy đã chạy {env.get('num_turns')} lượt thay vì 1 (có dấu hiệu dùng công cụ). Bỏ kết quả.")
         used = sorted(x for x in steps if x and (x in tools or x in TOOL_STEPS))
@@ -223,6 +275,16 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 900, on_pro
     finally:
         if proc is not None and proc.poll() is None:
             _kill(proc)
+        if feed_file is not None:
+            try:
+                feed_file.close()
+            except OSError:
+                pass
+        if feed_path is not None:
+            try:
+                os.remove(feed_path)                       # it holds the owner's text
+            except OSError:
+                pass
         shutil.rmtree(work, ignore_errors=True)
         LOCK.release()
 

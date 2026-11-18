@@ -9,6 +9,7 @@ import { h, toast, errorToast, modal, debounce, fmtTime, setStatus, ask, confirm
 import { stripDerived } from '../logic.js';
 import { mergeStoryboard, mergedNote } from '../sbmerge.js';
 import { jobFailText } from '../errmsg.js';
+import { EDIT_LABELS } from '../labels.js';
 import { initPreview, requestFrame } from '../preview.js';
 import { initTimeline, seek, ensureVisible, fitView, zoomToShowWords } from '../timeline.js';
 import { initInspector, setTab } from '../inspector.js';
@@ -140,13 +141,7 @@ export async function mount(host, mctx) {
   await loadProject(pid);
   const promptBox = $('#prompt-edit-container');
   if (promptBox) {
-    mountPromptEdit(promptBox, {
-      pid: ctx.pid,
-      scope,
-      save,
-      onProposal: (id) => openProposals(applied, id),
-      onJobEnd: () => refreshProposalCount(),
-    });
+    mountPromptEdit(promptBox, { pid: ctx.pid, scope, takeIn: takeInTurn, onPreview: ({ t0, t1 }) => previewClip(t0, t1) });
   }
   applyUrlParams();
   window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api };
@@ -339,7 +334,7 @@ function wireTopbar() {
     const dlg = modal({ title: 'Bản nháp storyboard', body: slot, onClose: () => off?.() });
     off = mountDraftPanel(slot, { pid: ctx.pid, scope, inDialog: true, onJobEnd: () => shell.refreshPipeline(), onProposal: (id) => { dlg.close(); openProposals(applied, id); } });
   };
-  $('#btn-clip').onclick = previewClip;
+  $('#btn-clip').onclick = () => previewClip();
   $('#t-prev').onclick = () => stepShot(-1); $('#t-next').onclick = () => stepShot(1);
   $('#t-play').onclick = () => togglePlay();
   $('#tl-split').onclick = () => A.splitAtPlayhead();
@@ -357,6 +352,34 @@ async function validateNow() {
   const r = await runValidate();
   if (!r && st.draft) { await runValidate(); }
   toast(ctx.issues.length ? `${ctx.issues.length} vấn đề` : 'Không có vấn đề', ctx.issues.length ? 'warn' : 'ok');
+}
+
+/** A turn of "Sửa video bằng lời" changed the saved storyboard (applied, chosen, undone): the editor takes the new one in.
+ *  No unsaved edits: reload and keep the selection and the playhead. Unsaved edits: the same rebase merge as with another tab (fresh undo history). */
+async function takeInTurn() {
+  let theirs;
+  try { theirs = await api.project(ctx.pid); } catch (e) { errorToast(e, EDIT_LABELS.tookInFail); return; }
+  if (!st.dirty) {
+    const sel = st.sel.shot, ov = st.sel.overlay, t = ctx.t;
+    st.load(theirs.storyboard, theirs.timing, theirs.rev);
+    setIssues(theirs.issues || []);
+    const keep = st.shotById(sel);
+    st.select(keep ? sel : (st.draft.shots[0]?.id || null), keep && ov && (keep.overlays || []).some((o) => o.id === ov) ? ov : null);
+    seek(t);
+    refreshProposalCount(); updateTop(); shell.refreshPipeline();
+    toast(EDIT_LABELS.tookIn, 'ok', 3500);
+    return;
+  }
+  const base = JSON.parse(st.savedSnap || '{}'), mine = JSON.parse(st.snap()), m = mergeStoryboard(base, mine, JSON.parse(snapOfBoard(theirs.storyboard)));
+  let bad = m.status === 'conflict';
+  if (!bad) {
+    try { bad = ((await api.validate(ctx.pid, m.value)).issues || []).some((i) => i.level === 'error'); }
+    catch (e) { errorToast(e, EDIT_LABELS.tookInFail, 7000); return; }
+  }
+  if (bad) { await conflictDialog(theirs, 2); return; }
+  st.rebase(m.value, theirs.storyboard, theirs.rev, undefined, { fresh: true });
+  setIssues(theirs.issues || []); validateSoon(); shell.refreshPipeline();
+  toast(EDIT_LABELS.tookInMerged, 'ok', 7000);
 }
 
 function applied(res) {
@@ -445,8 +468,8 @@ async function conflictDialog(theirs, tries) {
   return false;                                              // "Để sau": the draft stays, the next save asks again
 }
 
-async function previewClip() {
-  const t0 = ctx.t, t1 = Math.min(ctx.duration(), t0 + 10);
+async function previewClip(from = null, to = null) {
+  const t0 = from ?? ctx.t, t1 = to ?? Math.min(ctx.duration(), t0 + 10);
   const btn = $('#btn-clip'); btn.disabled = true;
   try {
     const { job_id } = await api.preview(ctx.pid, { t0, t1, width: 640, fps: 15, storyboard: ctx.draftPlain() });

@@ -77,3 +77,16 @@ def test_templates_on_disk_have_all_sections():
 def test_real_project_prompt(real_project):
     t = build_prompt("outline", real_project)["text"]
     assert "[PAY-01]" in t and "D5 THE MIRROR" in t and len(t) > 10000
+
+
+def test_sentence_length_targets_and_split_examples(tproj):
+    o = make_outline(approved=True)
+    p = build_prompt("script", tproj, outline=o, narration=None)
+    t = p["text"]
+    # Check target numbers: 8 to 18 words, none over 28, one idea per sentence
+    assert "8 to 18" in t
+    assert "28" in t
+    assert "one idea per sentence" in t.lower()
+    # Check that examples of split sentences are present
+    assert "split" in t.lower() or "splitting" in t.lower()
+

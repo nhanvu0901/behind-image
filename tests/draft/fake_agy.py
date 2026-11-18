@@ -38,6 +38,8 @@ def write_specs(good=True):
             sp["shots"][1]["technique"] = "NOPE-9"
         open(os.path.join("out", cid + ".json"), "w").write(json.dumps(sp))
     open(os.path.join("out", "notes.md"), "w").write("Fake agent summary\n")
+    if cfg.get("notes_json"):                                # the Vietnamese summary and changes of an edit (contract A2)
+        open(os.path.join("out", "notes.json"), "w", encoding="utf-8").write(json.dumps(cfg["notes_json"], ensure_ascii=False))
 
 
 turn = 0
@@ -67,6 +69,15 @@ for line in sys.stdin:
         result()
     elif mode == "error":
         result("ERROR", response="", error="something broke")
+        sys.exit(1)
+    elif mode == "quota":                # what agy prints when the quota is used up: a sentence on stderr and a JSON line on stdout
+        sys.stderr.write("Individual quota reached. Please wait for your quota to reset. Resets in 2m56s.\n")
+        print(json.dumps({"error_code": 429, "message": "RESOURCE_EXHAUSTED"}), flush=True)
+        result("ERROR", response="", error="429")
+        sys.exit(1)
+    elif mode == "quota_stdout":         # the sentence only on stdout, no stderr and no result event
+        print("Individual quota reached. Resets in 167h12m29s.", flush=True)
+        print(json.dumps({"error_code": 429}), flush=True)
         sys.exit(1)
     elif mode == "auth":
         sys.stderr.write("authentication required\n")

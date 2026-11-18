@@ -12,7 +12,7 @@ import { h, kids, toast, errorToast, setStatus, modal, ask, confirmDialog, debou
 import { makeSpaces } from '../coords.js';
 import { createQueue } from '../queue.js';
 import { describeError, jobErrorText, STAGE_CODES } from '../errmsg.js';
-import { PICKS_LABELS } from '../labels.js';
+import { PICKS_LABELS, SOURCE_LABELS } from '../labels.js';
 import { projectHash } from '../router.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
 import * as L from './picks_logic.js';
@@ -27,7 +27,7 @@ const fail = (e, prefix = '') => { const t = ERR[e?.body?.code]; if (t) toast(pr
 // ------------------------------------------------------------------ state
 let root = null, scope = null, shell = null;
 const $ = (s) => root?.querySelector(s);
-const S = { pid: null, data: null, beat: null, tab: 'main', q: { text: '', sources: { commons: true, met: true }, res: null, busy: false, for: '' },
+const S = { pid: null, data: null, beat: null, tab: 'main', q: { text: '', sources: { commons: true, met: true, pexels: true, pixabay: true, osm: false }, res: null, busy: false, for: '' },
   v: { text: '', res: null, busy: false, importing: false }, books: null, sugg: { beats: {} }, job: null };
 let D = null, R = null, dirty = false, editVersion = 0, Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') }), pollId = null;
 
@@ -259,36 +259,89 @@ function useButtons(imp, { mainOnly = false } = {}) {
     mainOnly ? null : h('button', { class: 'primary small', text: 'Thêm vào dòng', disabled: !beat, title: beat ? 'Thêm vào dòng đang chọn' : 'Chọn một dòng ở cột trái', onclick: () => act(false) }));
 }
 function candCard(c, opts) {
+  const isVid = c.kind === 'video' || String(c.mime || '').startsWith('video/');
+  const srcName = SOURCE_LABELS[c.source] || c.source;
+  const beat = S.beat;
+  const imp = (asMain) => api.post(`${P()}/import`, { source: c.source, source_id: c.source_id, as_main: asMain });
+  const act = (asMain) => serverOp(() => imp(asMain), (r) => {
+    if (!asMain && beat && r?.asset_key) {
+      L.addItem(D, beat, { asset: r.asset_key, role: isVid ? 'video' : null });
+      touch();
+      renderAll();
+    }
+    if (asMain) {
+      toast('Đã chọn tranh chính.', 'ok');
+      S.tab = 'search';
+      renderAll();
+    }
+  });
+
+  const cardBtns = h('div', { class: 'pk-cardbtns' },
+    !isVid ? h('button', { class: opts?.mainOnly ? 'primary small' : 'small', text: 'Làm tranh chính', onclick: () => act(true) }) : null,
+    opts?.mainOnly ? null : h('button', {
+      class: 'primary small',
+      text: isVid ? 'Thêm video vào dòng' : 'Thêm vào dòng',
+      disabled: !beat,
+      title: beat ? 'Thêm vào dòng đang chọn' : 'Chọn một dòng ở cột trái',
+      onclick: () => act(false),
+    }));
+
   return h('div', { class: 'pk-card' },
     h('img', { src: c.thumb_url, loading: 'lazy', alt: '' }),
     h('div', { class: 'pk-cardbody' },
-      h('div', { class: 'pk-cardtitle', text: c.title || c.source_id, title: c.title }),
+      h('div', { class: 'pk-cardtitle' },
+        isVid ? h('span', { class: 'tag', text: 'Video' }, ' ') : null,
+        c.title || c.source_id),
       h('div', { class: 'muted', text: [c.author, c.licence || 'chưa rõ giấy phép'].filter(Boolean).join(' · ') }),
-      h('div', { class: 'muted' }, L.sizeText(c.width, c.height), ' · ', c.source === 'met' ? 'The Met' : 'Wikimedia Commons', c.page_url ? [' · ', h('a', { class: 'lnk', href: c.page_url, target: '_blank', rel: 'noopener', text: 'trang nguồn' })] : null),
+      h('div', { class: 'muted' },
+        c.width && c.height ? [L.sizeText(c.width, c.height), ' · '] : null,
+        srcName,
+        c.page_url ? [' · ', h('a', { class: 'lnk', href: c.page_url, target: '_blank', rel: 'noopener', text: 'trang nguồn' })] : null),
       flagBadge(c.flag),
       c.imported ? h('div', { class: 'tag', text: 'Đã có trong dự án' }) : null),
-    useButtons((asMain) => api.post(`${P()}/import`, { source: c.source, source_id: c.source_id, as_main: asMain }), opts));
+    cardBtns);
 }
 function searchForm(initial) {
   const q = h('input', { type: 'search', class: 'grow', placeholder: 'Từ khóa, ví dụ tên tranh và tác giả', value: S.q.text || initial || '' });
   const go = () => runSearch(q.value);
   q.onkeydown = (e) => { if (e.key === 'Enter') go(); };
-  const src = (k, t) => h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: S.q.sources[k], onchange: (e) => { S.q.sources[k] = e.target.checked; } }), ' ' + t);
-  return h('div', { class: 'pk-searchform' }, h('div', { class: 'pk-row' }, q, h('button', { class: 'primary', text: 'Tìm', onclick: go, disabled: S.q.busy })), h('div', { class: 'pk-row' }, src('commons', 'Wikimedia Commons'), src('met', 'The Met')));
+  const srcInfo = (k) => S.data?.sources?.[k] || { available: true, has_key: true };
+  const src = (k, defaultLabel) => {
+    const info = srcInfo(k);
+    const hasKey = info.has_key !== false;
+    const label = hasKey ? (SOURCE_LABELS[k] || defaultLabel) : `${SOURCE_LABELS[k] || defaultLabel} (chưa có khóa)`;
+    return h('label', { class: 'cb' + (!hasKey ? ' muted' : '') },
+      h('input', {
+        type: 'checkbox',
+        checked: hasKey && !!S.q.sources[k],
+        disabled: !hasKey,
+        onchange: (e) => { S.q.sources[k] = e.target.checked; },
+      }),
+      ' ' + label);
+  };
+  return h('div', { class: 'pk-searchform' },
+    h('div', { class: 'pk-row' }, q, h('button', { class: 'primary', text: 'Tìm', onclick: go, disabled: S.q.busy })),
+    h('div', { class: 'pk-row pk-sources-row' },
+      src('commons', 'Wikimedia Commons'),
+      src('met', 'The Met'),
+      src('pexels', 'Pexels'),
+      src('pixabay', 'Pixabay'),
+      src('osm', 'OpenStreetMap (Bản đồ)')));
 }
 function results(opts) {
   const r = S.q.res;
   if (S.q.busy) return h('div', { class: 'muted pad', text: 'Đang tìm...' });
   if (!r) return h('div', { class: 'muted pad', text: 'Chưa tìm gì. Gõ từ khóa rồi bấm Tìm.' });
   return h('div', null,
-    (r.errors || []).map((e) => h('div', { class: 'pk-banner warn', text: `${e.source === 'met' ? 'The Met' : 'Wikimedia Commons'}: ${ERR[e.code] || 'không tìm được.'}` })),
+    (r.errors || []).map((e) => h('div', { class: 'pk-banner warn', text: `${SOURCE_LABELS[e.source] || e.source}: ${ERR[e.code] || 'không tìm được.'}` })),
     r.items.length ? h('div', { class: 'pk-grid' }, r.items.map((c) => candCard(c, opts))) : h('div', { class: 'muted pad', text: `Không có kết quả cho "${r.query}".` }));
 }
 async function runSearch(text, beat = null) {
-  const sources = Object.keys(S.q.sources).filter((k) => S.q.sources[k]);
+  const srcInfo = (k) => S.data?.sources?.[k] || { available: true, has_key: true };
+  const sources = Object.keys(S.q.sources).filter((k) => S.q.sources[k] && srcInfo(k).has_key !== false);
   if (!sources.length) return toast('Chọn ít nhất một nguồn.', 'warn');
   S.q.text = text; S.q.busy = true; paintRight();
-  try { S.q.res = await api.post(`${P()}/search`, { query: text, beat, sources }); S.q.text = S.q.res.query; }
+  try { S.q.res = await api.post(`${P()}/search`, { query: text, beat, sources, kind: 'all' }); S.q.text = S.q.res.query; }
   catch (e) { S.q.res = null; fail(e, 'Không tìm được: '); }
   S.q.busy = false; paintRight();
 }

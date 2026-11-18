@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from .stats import WPS_DEFAULT, count_words, minutes, narration_stats
+from .stats import WPS_DEFAULT, count_words, minutes, narration_stats, sentences
 from .store import Narration, Outline, chapter_order_differs
 from .. import textfold
 
@@ -182,6 +182,13 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
                 out.append(issue("warning", "spoken_chars", f"Beat {b.id} in {c.id} has punctuation the voice does not pause on (; : ( ) or a dash); use commas and full stops.", **where))
             if w > 90:
                 out.append(issue("warning", "beat_too_long", f"Beat {b.id} in {c.id} has {w} words (more than 90); split it.", **where))
+            b_sentences = sentences(b.text)
+            long_s = [s for s in b_sentences if count_words(s) > 28]
+            if long_s:
+                max_w = max(count_words(s) for s in long_s)
+                out.append(issue("warning", "long_sentence",
+                                 f"Beat {b.id} in {c.id} has a sentence with {max_w} words (more than 28); split it.",
+                                 **where))
             if not b.show:
                 out.append(issue("warning", "no_show", f"Beat {b.id} in {c.id} has no hint of what is on screen.", **where))
             if known is not None:
@@ -199,6 +206,9 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
         if ch["budget"] and ch["id"] in have and ch["words"] and abs(ch["words"] / ch["budget"] - 1) > 0.30:
             out.append(issue("warning", "chapter_off_budget", f"Chapter {ch['id']} {ch['title']} has {ch['words']} words; its budget is {ch['budget']} (more than 30% away).", chapter=ch["id"]))
     out.append(issue("info", "length", f"{st['words']} words, about {st['minutes']:.1f} minutes at {wps} words per second."))
+    med = st["sentence_profile"]["median"]
+    med_str = f"{med:.1f}".rstrip("0").rstrip(".") if isinstance(med, float) else f"{med}"
+    out.append(issue("info", "sentence_median", f"Median sentence length: {med_str} words (target 8 to 18, none over 28)."))
     for note in st["sentence_profile"]["notes"]:
         out.append(issue("info", "sentence_profile", note))
     if outline and brief:

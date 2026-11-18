@@ -38,6 +38,16 @@ test('every code of the stage packages has a Vietnamese sentence', () => {
   assert.deepEqual(missing, []);
 });
 
+test('real_models_off (test mode refuses models and outside services) has a sentence for every stage that can answer it', () => {
+  for (const stage of ['draft', 'picks', 'voice', 'export']) {
+    const t = stageErrorText(stage, { status: 409, body: { code: 'real_models_off' } }).text;
+    assert.match(t, /chế độ thử/, stage);
+    assert.ok(isVietnamese(t));
+  }
+  assert.match(stageJobErrorText('picks', { error_code: 'real_models_off' }).text, /chế độ thử/);
+  assert.match(describeHttp(409, { detail: 'x', code: 'real_models_off' }).text, /chế độ thử/);
+});
+
 test('stage tables win over the shared one, and a failed job speaks through its error_code', () => {
   assert.match(stageErrorText('picks', { status: 409, body: { code: 'busy' } }).text, /gợi ý/);
   assert.match(stageErrorText('export', { status: 409, body: { code: 'busy' } }).text, /xuất video/);

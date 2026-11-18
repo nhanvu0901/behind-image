@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 
 import pytest
 
@@ -155,3 +156,53 @@ def test_unknown_source_and_kind():
         api.search("x", "flickr")
     with pytest.raises(ValueError):
         api.search("x", "commons", "audio")
+
+
+def test_get_new_sources():
+    for name in ("pexels", "pixabay", "osm"):
+        src = api.get_source(name)
+        assert src.name == name
+
+
+def test_import_video_candidate(tmp_path, monkeypatch):
+    class FakeVideoSource:
+        name = "testvideo"
+
+        def fetch_meta(self, sid):
+            return {
+                "source": "testvideo",
+                "source_id": sid,
+                "title": "A Video Clip",
+                "kind": "video",
+                "mime": "video/mp4",
+                "url": "https://example.com/video.mp4",
+                "author": "Videographer",
+                "licence": "CC BY 4.0",
+                "licence_url": "https://example.com/lic",
+            }
+
+        def download(self, meta, dest, **kw):
+            Path(dest).write_bytes(b"fake-video-bytes")
+            return dest
+
+        def credit(self, meta):
+            return {
+                "source": "testvideo",
+                "source_url": meta.get("url", ""),
+                "author": meta.get("author", ""),
+                "licence": meta.get("licence", ""),
+                "licence_url": meta.get("licence_url", ""),
+            }
+
+    monkeypatch.setitem(api._SOURCES, "testvideo", FakeVideoSource())
+    monkeypatch.setattr("bti.media.clips.normalize", lambda src, dest, **kw: Path(dest).write_bytes(Path(src).read_bytes()))
+    monkeypatch.setattr("bti.media.api._probe_upload_video", lambda p: {"width": 1920, "height": 1080, "duration": 12.5})
+
+    proj = tmp_path / "proj"
+    res = api.import_candidate(proj, "testvideo", "vid1")
+    assert res["asset"]["kind"] == "video"
+    assert res["asset"]["duration"] == 12.5
+    assert res["asset"]["width"] == 1920
+    assert res["asset"]["height"] == 1080
+    assert (proj / res["asset"]["file"]).is_file()
+

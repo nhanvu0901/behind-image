@@ -41,9 +41,113 @@ def fix_digits(tok: str) -> str:
     return re.sub(r"\b[xXiIlO\d]{4}\b", f, tok)
 
 
+_ERA = r"(?:b\.?\s?c\.?(?:e\.?)?|a\.?\s?d\.?|c\.?\s?e\.?)"
+_CIRCA = r"(?:c\.?|ca\.?|circa|about|approx\.?|approximately)"
+_NUM = r"(?P<{0}>\d{{1,5}})"
+YEAR_RE = re.compile(
+    r"^(?P<c0>{circa}\s*)?(?:between\s+)?"
+    r"(?:(?P<ea0>{era})\s*)?{n1}(?:\s*(?P<eb0>{era}))?"
+    r"(?:\s*(?:-|/|and|to)\s*(?P<c1>{circa}\s*)?(?:(?P<ea1>{era})\s*)?{n2}(?:\s*(?P<eb1>{era}))?)?$".format(
+        circa=_CIRCA, era=_ERA, n1=_NUM.format("a"), n2=_NUM.format("b")), re.I)
+
+
+def _era_of(tok: str | None) -> str | None:
+    if not tok:
+        return None
+    return "BC" if tok.lower().replace(" ", "").startswith("b") else "AD"
+
+
+def parse_year(s: str | None) -> dict | None:
+    """A year field -> {"from": int, "to": int | None, "circa": bool, "era": "AD" | "BC" | "BC-AD"}, or None when the
+    text is not a year or a span of years (durations such as "approximately 800 years", centuries, "after 1475").
+    `era` says how `from` and `to` are to be read: "AD" both in the Christian era (the default when no era is written),
+    "BC" both before it (a BC span runs downwards: 645 to 635), "BC-AD" from a BC year to an AD year.
+    A short end year borrows the digits of the first ("1562-66", "1907-8"); "/" and "between X and Y" are spans too."""
+    if not s or not isinstance(s, str):
+        return None
+    t = fix_digits(unicodedata.normalize("NFKC", s)).strip().strip("()[]")
+    t = re.sub(r"[\u2010-\u2015\u2212]", "-", t)
+    t = re.sub(r"(?<=\d),(?=\d{3}\b)", "", t)          # 38,000 -> 38000
+    t = re.sub(r"\s+", " ", t).strip()
+    m = YEAR_RE.match(t)
+    if not m:
+        return None
+    circa = bool(m.group("c0") or m.group("c1"))
+    f, ts = int(m.group("a")), m.group("b")
+    e_a = _era_of(m.group("ea0") or m.group("eb0"))
+    e_b = _era_of(m.group("ea1") or m.group("eb1"))
+    if ts is None:
+        era = e_a or "AD"
+        if m.group("a") and era == "AD" and not e_a and f < 100:
+            return None                                   # a bare "60" is not a year
+        if era == "AD" and f > 2100:
+            return None
+        return {"from": f, "to": None, "circa": circa, "era": era}
+    ln = len(ts)
+    to = int(ts)
+    if e_a is None and e_b == "BC":
+        e_a = "BC"
+    if e_a is None and e_b is None:
+        e_a = e_b = "AD"
+        if ln < len(m.group("a")):                        # 1562-66, 1907-8, 1473-5
+            unit = 10 ** ln
+            to = f // unit * unit + to
+            if to < f:
+                to += unit
+    elif e_a == "BC" and e_b is None:
+        e_b = "BC" if to <= f and ln >= len(m.group("a")) else "AD"
+    elif e_b is None:
+        e_b = e_a
+    if e_a == "AD" and e_b == "BC":
+        return None
+    if e_a == "BC" and e_b == "BC" and to > f:
+        e_b = "AD"                                        # "27-68 B.C." can only mean 27 BC to AD 68
+    era = "BC-AD" if (e_a, e_b) == ("BC", "AD") else e_a
+    if era == "AD" and (to < f or to > 2100):
+        return None
+    if era == "BC" and to > f:
+        return None
+    if era == "AD" and f < 100 and not (m.group("ea0") or m.group("eb0")):
+        return None
+    return {"from": f, "to": to, "circa": circa, "era": era}
+
+
+def _fmt_int(n: int) -> str:
+    return f"{n:,}" if n >= 10000 else str(n)
+
+
+def print_year(p: dict | None) -> str | None:
+    """The one printed form of a parsed year: `1434`, `c. 1562–1566` (en dash, both years in full), `c. 900 BC`,
+    `645–635 BC`, `27 BC–AD 68`; an AD year below 1000 gets "AD" (`AD 113`) so that it cannot be read as a count."""
+    if not p:
+        return None
+    f, t, era = p["from"], p.get("to"), p.get("era") or "AD"
+    pre = "c. " if p.get("circa") else ""
+    if era == "BC-AD":
+        return f"{pre}{_fmt_int(f)} BC–AD {t}"
+    if era == "BC":
+        return f"{pre}{_fmt_int(f)}{'' if t in (None, f) else '–' + _fmt_int(t)} BC"
+    ad = "AD " if f < 1000 else ""
+    return f"{pre}{ad}{f}{'' if t in (None, f) else '–' + str(t)}"
+
+
+def normalise_year(s: str | None) -> tuple[str | None, str | None]:
+    """-> (year, year_raw): the printed year when `s` parses, else (None, s) so that the text is kept but never shown
+    as a year."""
+    if not s or not str(s).strip():
+        return None, None
+    py = parse_year(s)
+    return (print_year(py), None) if py else (None, str(s).strip())
+
+
 def year_num(year: str | None) -> int | None:
+    """A number to sort and compare by: the first year (negative for BC); for text that is not a year a best guess
+    ("after 1475" -> 1475, "seventeenth century" -> 1650, "approximately 800 years" -> 800), as before."""
     if not year:
         return None
+    p = parse_year(year)
+    if p:
+        return -p["from"] if p["era"] in ("BC", "BC-AD") else p["from"]
     y = fix_digits(year)
     low = y.lower()
     if "bc" in low:
@@ -55,7 +159,7 @@ def year_num(year: str | None) -> int | None:
     m = re.search(r"([a-z]+(?:-first)?)\s*(?:-|–)?\s*(?:[a-z-]+\s+)?centur", low)
     if m and m.group(1) in ORD:
         return (ORD[m.group(1)] - 1) * 100 + 50
-    m = re.search(r"\b(\d{3})\b", y)
+    m = re.search(r"(?<![\d,])\b(\d{3})\b", y)
     return int(m.group(1)) if m else None
 
 
@@ -154,14 +258,17 @@ def parse_madman(doc) -> list[dict]:
                 extra = tail[1:].strip()[len(a):].strip() or None
             elif tail:
                 extra = tail.strip(") ")
-            if artist and artist.startswith("after "):
-                artist = artist[6:]
+            attr = None
+            if artist and re.match(r"^after\s+", artist, flags=re.I):
+                artist = re.sub(r"^after\s+", "", artist, flags=re.I).strip()
+                attr = "after"
             pm = re.match(r"^([A-Z][\w.]*(?:\s+(?:[a-z]+\s+)?[A-Z][\w.]*)+)’s\s+(.+)$", title)
             if pm and not artist and not pm.group(1).startswith(("Mr ", "Mrs ", "Dr ", "St ")):
                 artist, title = pm.group(1), pm.group(2)
         title = title.replace("´", "")
         w = dict(n=i + 1, title=title, artist=artist, year=year, pdf_pages=[p, end],
-                 **({"headline": extra} if extra else {}))
+                 **({"headline": extra} if extra else {}),
+                 **({"attribution": attr} if attr else {}))
         w.update(MADMAN_EXC.get(i + 1, {}))
         out.append(w)
     return out

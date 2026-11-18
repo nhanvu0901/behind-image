@@ -179,3 +179,63 @@ def test_fastedit_fails_after_repair(synth_edit_setup):
     assert res.status == "failed"
     assert res.repair_used is True
     assert any("requires a non-empty list of 'shots'" in iss for iss in res.issues)
+
+
+def test_the_draw_check_of_changed_shots_really_runs(synth_edit_setup):
+    """It once imported DraftProject from the wrong module and the ImportError was swallowed: the check never ran."""
+    import copy
+    from bti.draft.fastedit import _draw_check_changed_shots
+    inp_edit, first_shot_id = synth_edit_setup
+    sb = copy.deepcopy(inp_edit.current)
+    assert _draw_check_changed_shots(inp_edit, sb) == []                    # nothing changed: nothing to draw, nothing wrong
+    sb["shots"][0]["note"] = "changed"
+    assert _draw_check_changed_shots(inp_edit, sb) == []                    # a drawable change passes
+    sb["assets"]["A"]["file"] = "media/does_not_exist.jpg"                  # a picture that is not there cannot be drawn
+    issues = _draw_check_changed_shots(inp_edit, sb)
+    assert issues and all(i["level"] == "error" for i in issues), issues
+
+
+def test_the_draw_check_draws_only_what_the_edit_can_have_affected(synth_edit_setup):
+    """Counts the frames drawn (no timing): a note change on one shot draws that shot only (and the transition into the next one)."""
+    import copy
+    from bti.draft.drawcheck import affected_shots, draw_changed
+    inp_edit, first_id = synth_edit_setup
+    cur = inp_edit.current
+    ids = [s["id"] for s in cur["shots"]]
+    assert len(ids) >= 5
+
+    # nothing changed: no frame at all
+    rep = draw_changed(inp_edit, copy.deepcopy(cur))
+    assert rep.frames == [] and rep.shots == set()
+
+    # one shot changed, same times: only its frames (3 plus overlay frames), and at most the transition into the next shot
+    sb = copy.deepcopy(cur)
+    sb["shots"][0]["note"] = "changed"
+    rep = draw_changed(inp_edit, sb)
+    assert rep.full == {first_id}
+    assert rep.shots <= {ids[0], ids[1]}, rep.shots
+    assert all(sid == ids[0] or path.endswith("transition_in") for sid, path, _ in rep.frames), rep.frames
+    assert len(rep.frames) < len(ids), rep.frames                            # far fewer frames than a full check (3 per shot)
+
+    # the start of shot 2 moves later: shot 1 (its end) and shot 2 are affected; shots 3 and later are not drawn
+    sb = copy.deepcopy(cur)
+    st = sb["shots"][1]["start"]
+    assert "w" in st
+    st["off"] = float(st.get("off") or 0.0) + 0.5
+    full, trans = affected_shots(inp_edit, sb)
+    assert full == {ids[0], ids[1]}, (full, trans)
+    rep = draw_changed(inp_edit, sb)
+    assert set(ids[3:]).isdisjoint(rep.shots), rep.shots
+    assert {ids[0], ids[1]} <= rep.shots
+
+
+def test_a_removed_and_added_shot_marks_the_neighbours_whose_times_moved(synth_edit_setup):
+    import copy
+    from bti.draft.drawcheck import affected_shots
+    inp_edit, first_id = synth_edit_setup
+    cur = inp_edit.current
+    ids = [s["id"] for s in cur["shots"]]
+    sb = copy.deepcopy(cur)
+    del sb["shots"][1]                               # shot 1's range is now covered by the shot before it
+    full, _ = affected_shots(inp_edit, sb)
+    assert ids[0] in full and ids[1] not in full and set(ids[3:]).isdisjoint(full), full

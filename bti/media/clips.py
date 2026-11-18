@@ -26,8 +26,9 @@ from pathlib import Path
 
 from . import assets as _assets
 from ..proc import group_kwargs, kill_tree
-from .errors import LicenceRejected, MediaError
+from .errors import LicenceRejected, MediaError, RealModelsOff
 from .licence import check_licence, flag_for_text
+from .safety import refuse_if_real_models_off
 from .youcom import YouComClient
 from bti.fsio import atomic_replace
 
@@ -109,7 +110,9 @@ def _kill_tree(proc: subprocess.Popen) -> None:
 
 
 def _run_capture(cmd: list[str], *, timeout: float | None) -> subprocess.CompletedProcess:
-    """subprocess with a real timeout that kills the whole process tree."""
+    """subprocess with a real timeout that kills the whole process tree. The only place that starts yt-dlp (the default of
+    every `runner` argument): refused under the A7 safety switch."""
+    refuse_if_real_models_off("yt-dlp")
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                             encoding="utf-8", errors="replace", **group_kwargs())
     try:
@@ -194,6 +197,8 @@ def video_metadata_with_cues(url: str, work_dir: Path | None = None, *, timeout:
                    "-o", str(target_dir / "%(id)s.%(ext)s"), "--", canon_url]
             try:
                 _run_capture(cmd, timeout=min(timeout, 45))
+            except RealModelsOff:
+                raise
             except Exception:
                 pass
             vtts = sorted(target_dir.glob("*.vtt"))
@@ -284,6 +289,8 @@ def gather_candidates(queries: list[str], *, search=None, log=None) -> list[dict
     for q in queries:
         try:
             rows = search_fn(q)
+        except RealModelsOff:                     # never turned into a plain "search failed"
+            raise
         except Exception as exc:
             errors.append(str(exc))
             if log:
@@ -457,6 +464,8 @@ def moment_search(desc: str, *, limit: int = 6, extra_queries: list[str] | tuple
         try:
             with tempfile.TemporaryDirectory() as td:
                 info, cues = meta_fn(c["url"], Path(td))
+        except RealModelsOff:                     # not a row that failed: nothing may run at all
+            raise
         except Exception as exc:
             return {**c, "error": str(exc)[:200]}
         return _candidate_row(desc, c, info, cues, len(queries))

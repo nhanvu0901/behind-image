@@ -179,7 +179,9 @@ def scope_violations(inp: DraftInputs, new_doc: dict, scope_ids: set) -> list[di
     out: list[dict] = []
 
     def bad(code, sid, msg):
-        out.append(S.problem(code, None, None, "shot %s: %s" % (sid, msg)))
+        p = S.problem(code, None, None, "shot %s: %s" % (sid, msg))
+        p["shot_id"] = sid
+        out.append(p)
 
     spans = [(rc["t0"], rc["t1"]) for sid, rc in cur.items() if sid in scope_ids and not rc["shot"].get("locked")]
     for sid, rc in cur.items():

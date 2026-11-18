@@ -17,6 +17,9 @@ from .licence import check_licence as _check_licence, check_text, flag_for_meta,
 from .sources.commons import CommonsSource, ext_for
 from .sources.bookpage import BookPageSource
 from .sources.met import MetSource
+from .sources.pexels import PexelsSource
+from .sources.pixabay import PixabaySource
+from .sources.osm import OsmSource
 
 __all__ = ["search", "import_candidate", "add_upload", "moment_search", "inspect_video_url",
            "import_clip", "check_licence", "LicenceRejected", "VideoDamaged", "MIN_SHORT_SIDE"]
@@ -31,7 +34,14 @@ class VideoDamaged(ValueError):
 
 MIN_SHORT_SIDE = 1200
 _SOURCES: dict = {}          # name -> source instance; tests may replace entries
-_FACTORIES = {"commons": CommonsSource, "met": MetSource, "book": BookPageSource}
+_FACTORIES = {
+    "commons": CommonsSource,
+    "met": MetSource,
+    "book": BookPageSource,
+    "pexels": PexelsSource,
+    "pixabay": PixabaySource,
+    "osm": OsmSource,
+}
 _VIDEO_EXT = {".mp4", ".webm", ".ogv", ".mov", ".mkv", ".m4v"}
 
 
@@ -50,6 +60,7 @@ def check_licence(meta: dict) -> tuple[bool, str, str]:
 def _candidate(meta: dict) -> dict:
     ok, name, reason = _check_licence(meta)
     w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
+    is_vid = meta.get("kind") == "video" or str(meta.get("mime") or "").startswith("video/")
     return {
         "source": meta.get("source", ""), "source_id": meta.get("source_id", ""),
         "title": meta.get("title", ""), "thumb_url": meta.get("thumb_url", ""),
@@ -57,7 +68,7 @@ def _candidate(meta: dict) -> dict:
         "height": meta.get("height", 0), "mime": meta.get("mime", ""),
         "author": meta.get("author", ""), "licence": name or meta.get("licence", ""),
         "licence_ok": ok, "licence_reason": reason,
-        "flag": with_size_flag(flag_for_meta(meta), w, h, MIN_SHORT_SIDE),
+        "flag": flag_for_meta(meta) if is_vid else with_size_flag(flag_for_meta(meta), w, h, MIN_SHORT_SIDE),
     }
 
 
@@ -98,25 +109,43 @@ def _import(project_dir: Path, source: str, source_id: str, min_short_side: int 
     kind = meta.get("kind", "image")
     key = _assets.make_key(meta.get("title") or source_id, ident, _assets.taken_keys(project_dir, idx))
     media = _assets.media_dir(project_dir, require_root)
-    dest = media / f"{key}{ext_for(meta)}"
+    dest_ext = ".mp4" if kind == "video" else ext_for(meta)
+    dest = media / f"{key}{dest_ext}"
     floor = MIN_SHORT_SIDE if min_short_side is None else min_short_side
+    duration: float | None = None
     try:
-        src.download(meta, dest, min_short_side=0)          # the size floor only sets a flag, it never refuses
-        if kind == "image":
+        if kind == "video":
+            raw_tmp = dest.with_name(f"{key}_raw{ext_for(meta)}")
+            try:
+                src.download(meta, raw_tmp, min_short_side=0)
+                try:
+                    _clips.normalize(raw_tmp, dest, strip_audio=True)
+                except MediaError as exc:
+                    if isinstance(exc, _clips.ToolMissing):
+                        shutil.copyfile(raw_tmp, dest)
+                    else:
+                        raise VideoDamaged(f"video cannot be processed: {exc}", "video_unreadable") from None
+                p2 = _probe_upload_video(dest)
+                w, h, duration = p2["width"], p2["height"], p2["duration"]
+            finally:
+                raw_tmp.unlink(missing_ok=True)
+        else:
+            src.download(meta, dest, min_short_side=0)          # the size floor only sets a flag, it never refuses
             bad = image_problem(dest)
             if bad:
                 raise ImageDamaged(bad[1], bad[0])
+            w, h = (meta.get("width") or 0, meta.get("height") or 0)
+            if not (w and h):
+                w, h = image_size(dest)
     except BaseException:
         dest.unlink(missing_ok=True)            # nothing of a refused download stays in media/
         raise
-    w, h = (meta.get("width") or 0, meta.get("height") or 0)
-    if kind == "image" and not (w and h):
-        w, h = image_size(dest)
     credit = dict(src.credit(meta))
     credit["flag"] = with_size_flag(lic_flag, w, h, floor) if kind == "image" else lic_flag
     asset = _assets.build_asset(
         f"media/{dest.name}", kind, meta.get("title", ""), meta.get("author", ""),
-        _assets.year_of(meta.get("year") or meta.get("date") or ""), w, h, credit)
+        _assets.year_of(meta.get("year") or meta.get("date") or ""), w, h, credit,
+        duration=duration)
     _assets.register(project_dir, ident, key, asset, require_root)
     return {"asset_key": key, "asset": asset}
 

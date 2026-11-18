@@ -8,6 +8,7 @@ import { createScope } from './lifecycle.js';
 import { parseHash, projectHash, legacyTarget } from './router.js';
 import { renderStepper, landing } from './stepper.js';
 import { setNavigator } from './nav.js';
+import { openModelSettings } from './settings.js';
 import { stageLabel, waitText, OPEN_STEP } from './labels.js';
 
 const $ = (s) => document.querySelector(s);
@@ -273,6 +274,7 @@ async function boot() {
   document.title = (MOCK ? '[MOCK] ' : '') + document.title;
   setNavigator(go);
   $('#btn-new').onclick = () => go('#/library');
+  $('#btn-settings').onclick = () => openModelSettings();
   $('#project-pick').onchange = (e) => { const v = e.target.value; if (!v) go('#/'); else go(projectHash(v)); setTimeout(() => { $('#project-pick').value = S.pid || ''; }, 0); };
   document.addEventListener('click', (e) => {            // every in-app link goes through go(), so unsaved work is asked about
     const a = e.target.closest?.('a[href^="#/"]');

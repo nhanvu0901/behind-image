@@ -159,6 +159,29 @@ def _alive(pid):
         return False
 
 
+def test_the_quota_reset_time_is_kept(fake, ws):
+    """`Individual quota reached ... Resets in 2m56s.` and a JSON line with error_code 429 (canned output of a fake program)."""
+    fake.mode("quota")
+    r = agy.run(ws.root, timeout=60)
+    assert r.status == "error" and r.error_code == "agy_rate_limit"
+    assert r.retry_after_seconds == 2 * 60 + 56
+    assert len(fake.calls()) == 1                                  # a rate limit is never retried inside the run
+
+
+def test_the_quota_reset_time_is_kept_when_only_stdout_has_it(fake, ws):
+    fake.mode("quota_stdout")
+    r = agy.run(ws.root, timeout=60)
+    assert r.status == "error" and r.error_code == "agy_rate_limit"
+    assert r.retry_after_seconds == 167 * 3600 + 12 * 60 + 29
+    assert len(fake.calls()) == 1
+
+
+@pytest.mark.parametrize("text,seconds", [("Resets in 2m56s.", 176), ("quota ... resets in 22m20s", 1340), ("Resets in 167h12m29s", 601949),
+                                          ("Resets in 45s", 45), ("Resets in 1d2h", 93600), ("quota reached, no time", None), ("", None)])
+def test_reset_seconds_forms(text, seconds):
+    assert agy.reset_seconds(text) == seconds
+
+
 def test_tampering_is_detected(fake, ws, proj):
     fake.mode("tamper")
     r = agy.run(ws.root, timeout=60, guard=Guard(proj, extra=lambda: None, repo_root=proj.parent))

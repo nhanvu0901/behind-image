@@ -347,7 +347,7 @@ def resolve_edit_scope(inp: DraftInputs, scope: dict | None) -> tuple[set[str], 
         unlocked = [s["id"] for s in cur_shots if not s.get("locked")]
         if not unlocked:
             raise DraftError("edit_bad_scope", "all shots in video are locked")
-        return set(unlocked), inp.chapter_ids(), "cả video"
+        return set(unlocked), inp.chapter_ids(), "Cả video"
 
     if has_chapter:
         cid = scope.get("chapter")
@@ -369,7 +369,7 @@ def resolve_edit_scope(inp: DraftInputs, scope: dict | None) -> tuple[set[str], 
         unlocked = [s["id"] for s in chap_shots if not s.get("locked")]
         if not unlocked:
             raise DraftError("edit_bad_scope", f"all shots in chapter {cid} are locked")
-        return set(unlocked), [cid], f"chương {cid}"
+        return set(unlocked), [cid], "Chương: %s" % (known[cid].get("name") or cid)
 
     # has_shots
     shot_list = scope.get("shots")
@@ -385,7 +385,7 @@ def resolve_edit_scope(inp: DraftInputs, scope: dict | None) -> tuple[set[str], 
     scope_chapters = D.chapters_of_shots(inp, set(unlocked))
     if not scope_chapters:
         scope_chapters = inp.chapter_ids()
-    words = f"{len(unlocked)} shot đang chọn"
+    words = f"{len(unlocked)} cảnh đang chọn"
     return set(unlocked), scope_chapters, words
 
 

@@ -23,7 +23,7 @@ import { issueText, jobErrorText, parseFailText } from '../errmsg.js';
 let root = null, scope = null, shell = null;     // the view root, its lifecycle scope and the shell (set by mount)
 const $ = (s) => root?.querySelector(s);
 const modal = (o) => uiModal({ ...o, cls: (o.cls || '') + ' v-scr' });   // dialogs opened here carry the scope class of this view
-const S = { pid: null, brief: null, models: [], modelsState: 'loading', model: null, tab: null, search: '', hl: [], focus: 'narr' };
+const S = { pid: null, brief: null, models: [], roleModels: {}, modelsState: 'loading', model: null, tab: null, search: '', hl: [], focus: 'narr' };
 const D = { outline: null, narr: null };                       // drafts (what is on screen)
 const R = { outline: null, narr: null };                       // revisions of the saved files
 const B = { outline: null, narr: null };                       // the last saved documents the page knew (base of the merges)
@@ -33,7 +33,7 @@ const hist = { outline: { past: [], future: [], key: '', at: 0 }, narr: { past: 
 const PASTE = { outline: '', narration: '' };                  // text typed in the paste dialog survives closing the dialog
 let jobPoll = null, currentJob = null, lastRun = null, Q = createQueue();
 function resetState() {
-  Object.assign(S, { pid: null, brief: null, models: [], model: null, tab: null, search: '', hl: [], focus: 'narr' });
+  Object.assign(S, { pid: null, brief: null, models: [], roleModels: {}, model: null, tab: null, search: '', hl: [], focus: 'narr' });
   D.outline = D.narr = null; R.outline = R.narr = null; B.outline = B.narr = null; ST.outline = {}; ST.narr = {};
   dirty.outline = dirty.narr = false;
   for (const k of ['outline', 'narr']) hist[k] = { past: [], future: [], key: '', at: 0 };
@@ -322,9 +322,12 @@ function srcBody() {
   kids.push(h('h3', { class: 'sh', text: 'Sách' }),
     h('div', { class: 'tabs' }, b.sources.map((s) => h('button', { class: (s.code === S.tab ? 'active ' : '') + (s.low_trust ? 'low' : ''), onclick: () => { S.tab = s.code; renderSources(); }, text: `${s.code} ${s.book_id.split('_')[0]}` }))));
   if (src) {
+    const chkLabel = src.low_trust
+      ? 'Dùng sách này làm nguồn (đã đọc và chấp nhận rủi ro)'
+      : 'Dùng sách này làm nguồn';
     kids.push(h('div', { class: 'src-head' }, h('b', { text: src.book_title }), h('span', { class: 'muted', text: `${src.paragraphs.length} đoạn, ${src.words} từ` }),
       src.low_trust ? h('span', { class: 'tag lowtrust', title: src.trust_note, text: 'bản dịch máy, không dùng làm nguồn sự kiện' }) : null),
-      src.low_trust ? h('label', { class: 'chk', style: { display: 'flex', gap: '6px', marginBottom: '6px' } }, h('input', { type: 'checkbox', checked: src.included, 'data-low': src.book_id, onchange: (e) => tickLow(src, e.target) }), 'Dùng sách này làm nguồn (đã đọc và chấp nhận rủi ro)') : null,
+      h('label', { class: 'chk', style: { display: 'flex', gap: '6px', marginBottom: '6px' } }, h('input', { type: 'checkbox', checked: src.included, 'data-src': src.book_id, onchange: (e) => toggleSource(src, e.target) }), chkLabel),
       h('input', { type: 'search', placeholder: 'Tìm trong sách này (không cần gõ dấu)', value: S.search, style: { width: '100%', marginBottom: '8px' }, oninput: (e) => { S.search = e.target.value; renderParas(); } }),
       h('div', { id: 'paras' }));
   }
@@ -371,9 +374,23 @@ function setOption(o, { redrawSources = false } = {}) {
     } catch (e) { errorToast(e); if (redrawSources && root) srcBody(); }
   });
 }
-async function tickLow(src, box) {
-  const cur = new Set(S.brief.options.include_low); box.checked ? cur.add(src.book_id) : cur.delete(src.book_id);
-  await setOption({ include_low: [...cur] }, { redrawSources: true });
+async function toggleSource(src, box) {
+  const curLow = new Set(S.brief.options.include_low || []);
+  const curExc = new Set(S.brief.options.exclude || []);
+  if (box.checked) {
+    curExc.delete(src.book_id);
+    curExc.delete(src.work_id);
+    curExc.delete(src.code);
+    if (src.low_trust) curLow.add(src.book_id);
+  } else {
+    if (src.low_trust) {
+      curLow.delete(src.book_id);
+      curLow.delete(src.work_id);
+      curLow.delete(src.code);
+    }
+    curExc.add(src.book_id);
+  }
+  await setOption({ include_low: [...curLow], exclude: [...curExc] }, { redrawSources: true });
 }
 function refreshMinutes() {
   const wps = S.brief?.options.wps || 2.41;
@@ -647,6 +664,13 @@ async function jobEnded(j) {
 function retryLast() { if (lastRun) startJob(lastRun.kind, lastRun.body); }
 
 function runDialog(kind, chapters) {
+  const roleKey = kind === 'outline' ? 'script.outline' : 'script.narration';
+  const roleModel = S.roleModels?.[roleKey];
+  if (roleModel && S.models.some((m) => m.id === roleModel && m.enabled)) {
+    S.model = roleModel;
+    const mp = $('#model-pick');
+    if (mp) mp.value = roleModel;
+  }
   const model = S.models.find((m) => m.id === S.model);
   if (!model || !model.enabled) return toast((model?.message || 'Chưa chọn mô hình') + ' (xem docs/APP_GUIDE.md). Có thể chọn "Mock" để thử.', 'err', 9000);
   if (S.brief && S.brief.totals.included === 0) return toast('Chưa có nguồn nào được dùng, mô hình sẽ không có gì để viết. Ở cột Nguồn, tick "Dùng sách này làm nguồn" cho một sách dịch máy (nếu chấp nhận rủi ro).', 'err', 10000);
@@ -898,11 +922,26 @@ async function loadModels(refresh = false) {
   S.modelsState = 'loading'; S.models = []; paintModels();
   const pid = S.pid;
   try {
-    const list = await J(refresh ? '/api/models?refresh=1' : '/api/models');
+    const [list, settings] = await Promise.all([
+      J(refresh ? '/api/models?refresh=1' : '/api/models'),
+      J(refresh ? '/api/settings/models?refresh=1' : '/api/settings/models').catch(() => null),
+    ]);
     if (!root || S.pid !== pid) return;
     S.models = list; S.modelsState = 'ok';
+    S.roleModels = {};
+    if (settings && Array.isArray(settings.roles)) {
+      for (const r of settings.roles) {
+        if (r.role && r.model) S.roleModels[r.role] = r.model;
+      }
+    }
     const saved = store.get('bti.script.model');
-    S.model = (S.models.find((m) => m.id === saved && m.enabled) || S.models.find((m) => m.default && m.enabled) || S.models.find((m) => m.enabled) || S.models[0])?.id || null;
+    const roleKey = (D.outline && ST.outline?.approved) ? 'script.narration' : 'script.outline';
+    const roleModel = S.roleModels[roleKey];
+    S.model = (S.models.find((m) => m.id === saved && m.enabled) ||
+               S.models.find((m) => m.id === roleModel && m.enabled) ||
+               S.models.find((m) => m.default && m.enabled) ||
+               S.models.find((m) => m.enabled) ||
+               S.models[0])?.id || null;
   } catch (e) {
     if (!root || S.pid !== pid) return;
     S.modelsState = 'failed'; errorToast(e, 'Không tải được danh sách mô hình: ');

@@ -12,7 +12,8 @@ from bti.media import licence as _lic
 from . import context, doc
 from .errors import PicksError
 
-SOURCES = ("commons", "met")
+SOURCES = ("commons", "met", "pexels", "pixabay", "osm")
+KEYED_SOURCES = {"pexels": "PEXELS_API_KEY", "pixabay": "PIXABAY_API_KEY"}
 MIN_SHORT_SIDE = 1200
 _media = None            # tests replace this with a module-like object; None means `bti.media.api`
 
@@ -57,12 +58,21 @@ def payload(pdir: Path, pid: str, suggest_info: dict | None = None) -> dict:
     ident = context.identity(pdir)
     det = context.details(pdir)
     from bti.media import clips
+    from bti.script import env
     vtools = clips.tool_status()
+    sources_info = {
+        "commons": {"available": True, "has_key": True},
+        "met": {"available": True, "has_key": True},
+        "pexels": {"available": env.has_key("PEXELS_API_KEY"), "has_key": env.has_key("PEXELS_API_KEY")},
+        "pixabay": {"available": env.has_key("PIXABAY_API_KEY"), "has_key": env.has_key("PIXABAY_API_KEY")},
+        "osm": {"available": True, "has_key": True},
+    }
     return {"project": pid, "exists": d is not None, "picks": cur, "rev": rev, "approved": ap["approved"], "approval_reason": ap["reason"],
             "issues": iss, "narration": nv, "identity": ident, "details": det,
             "default_main_query": " ".join(x for x in (ident["title"], ident["artist"]) if x),
             "suggest": suggest_info or {"available": False},
-            "video_tools": vtools}
+            "video_tools": vtools,
+            "sources": sources_info}
 
 
 
@@ -121,7 +131,7 @@ def _register(pdir: Path, key: str, asset: dict, as_main: bool) -> dict:
 
 
 def import_asset(pdir: Path, source: str, source_id: str, as_main: bool = False) -> dict:
-    """Download a candidate (Commons, Met) into media/ and add it to the picks. Never refused for its licence or its size:
+    """Download a candidate (Commons, Met, Pexels, Pixabay, OSM) into media/ and add it to the picks. Never refused for its licence or its size:
     the asset's `credit.flag` says what is doubtful. Returns `{asset_key, asset}`."""
     if source not in SOURCES:
         raise PicksError(422, f"unknown source {source[:30]!r}", "unknown_source")
@@ -133,6 +143,8 @@ def import_asset(pdir: Path, source: str, source_id: str, as_main: bool = False)
         raise
     except Exception as e:      # noqa: BLE001
         raise _translate(e)
+    if as_main and res.get("asset", {}).get("kind") == "video":
+        raise PicksError(422, "a video cannot be set as the main painting", "video_not_main")
     asset = _register(pdir, res["asset_key"], res["asset"], as_main)
     return {"asset_key": res["asset_key"], "asset": asset}
 
@@ -163,9 +175,9 @@ def upload(pdir: Path, file_path: Path, meta: dict, as_main: bool = False) -> di
 
 
 # ---------------------------------------------------------------- search
-def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit: int = 18) -> dict:
-    """Candidates from Commons and the Met. With no `query`, the first query of `beat` (its `show` words). Each source that fails
-    is reported in `errors`; the others still answer. Candidates already imported say so (`imported`)."""
+def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit: int = 18, kind: str = "image") -> dict:
+    """Candidates from Commons, Met, Pexels, Pixabay, OSM. With no `query`, the first query of `beat` (its `show` words).
+    Each source that fails is reported in `errors`; the others still answer. Candidates already imported say so (`imported`)."""
     query = (query or "").strip()
     if not query and beat:
         nv = context.narration_view(pdir)
@@ -175,13 +187,29 @@ def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit:
         query = context.default_query(b["show"], context.details(pdir), context.identity(pdir))
     if not query:
         raise PicksError(422, "query is required", "query_required")
-    srcs = [s for s in (sources or SOURCES) if s in SOURCES] or list(SOURCES)
+    from bti.script import env
+    if sources is not None:
+        srcs = [s for s in sources if s in SOURCES]
+    else:
+        srcs = [s for s in SOURCES if s not in KEYED_SOURCES or env.has_key(KEYED_SOURCES[s])]
     limit = max(1, min(int(limit), 40))
     items, errors = [], []
     seen = set()
     for s in srcs:
+        if s in KEYED_SOURCES and not env.has_key(KEYED_SOURCES[s]):
+            errors.append({"source": s, "code": "source_no_key", "message": "chưa có khóa"})
+            continue
         try:
-            found = media().search(query, source=s, kind="image", limit=limit)
+            if kind == "all":
+                found = media().search(query, source=s, kind="image", limit=limit)
+                if s in ("pexels", "pixabay", "commons"):
+                    try:
+                        vfound = media().search(query, source=s, kind="video", limit=limit)
+                        found = (found + vfound)[:limit]
+                    except Exception:
+                        pass
+            else:
+                found = media().search(query, source=s, kind=kind if kind in ("image", "video") else "image", limit=limit)
         except Exception as e:      # noqa: BLE001
             pe = _translate(e)
             errors.append({"source": s, "code": pe.code, "message": pe.detail})

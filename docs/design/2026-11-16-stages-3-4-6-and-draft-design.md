@@ -168,18 +168,23 @@ A second provider, `auto`, needs no model: one shot per beat, the first pick of 
 
 **The live test** (owner asked for it): one real run on the server for one chapter of a real project, then the whole video, with the transcript of events kept under the project's cache. It needs `agy` signed in on the server and the app running in the owner's desktop session (see section 9).
 
-### 7.4 Editing by prompt (owner's request, 2026-11-16, late evening)
+### 7.4 Editing by prompt (updated per 2026-11-17 decisions contract)
 
-The owner does not want to learn the editing tools. In step 5 they type what they want ("ở đoạn nói về chiếc gương, zoom chậm hơn và thêm vòng sáng quanh gương") and the agent changes that part. This is the draft run with two more inputs, so it reuses everything in 7.1 to 7.3:
+The owner edits the storyboard by typing plain instructions ("ở đoạn nói về chiếc gương, zoom chậm hơn và thêm vòng sáng quanh gương").
+Changes are applied directly to the storyboard (no proposal to accept), explained in plain Vietnamese, and can be undone.
 
-- **Inputs added to the workspace:** `INSTRUCTION.md` (the owner's words, unchanged, plus the scope) and `inputs/current/` (the saved storyboard as draft specs by chapter, each shot marked `in_scope`, `locked`, or neither). The scope is the selected shots, or the chapter at the playhead, or the whole video; the default is the smallest that contains the selection.
-- **What the agent may change:** only shots in scope, plus regions it adds. Everything else must come back identical; the compiler checks this and refuses a result that touched anything outside the scope or any locked shot.
-- **What it must do when the request cannot be met** with the 71 techniques and the images the project has (a new image, a change to the narration or the voice): change nothing and say so in `out/notes.md`, with what the owner should do instead. A question back to the owner is a valid result.
-- **Result:** a proposal, as always. The page shows, for each changed shot, the frame before and after, the agent's one-line reason, and a preview clip of the changed range; the owner accepts all, some, or none. Nothing in the project changes before that. Undo works on an accepted change like on any other edit.
-- **Conversation:** one thread per project, kept under the project's cache: each instruction, the agent's notes, what was accepted. A follow-up ("nhanh hơn chút nữa") is sent to the same `agy` conversation when it is still available, and otherwise starts a new run with the last exchanges copied into `INSTRUCTION.md`.
-- **Page:** a prompt box under the preview in step 5, with the scope shown in words ("3 shot đang chọn", "chương 2", "cả video") and the thread beside it. The manual tools stay, as the way to fine-tune.
-- **Routes:** `POST /api/projects/{pid}/draft/edit {instruction, scope: {shots?: [...], chapter?: "c02", all?: true}, model?}` (a long job), `GET /api/projects/{pid}/draft/thread`.
-- **Order of work:** after the first real draft run has worked on the server, because how fast and how reliable the agent is decides the details (whether a one-shot change takes twenty seconds or three minutes).
+- **Two paths behind one route (`mode: "auto" | "fast" | "deep"`, default `"auto"`):**
+  - **Fast path** (`bti/draft/fastedit.py`, `skills/storyboard_edit/FAST.template.md`): Single-turn provider call without file tools, used when scope has $\le 12$ shots. Returns strict JSON (`edit`, `cannot`, `escalate`). One repair turn on issue; applies or fails. May escalate to deep path in `auto` mode.
+  - **Deep path** (`bti/draft/run.py`, `skills/storyboard_draft/TASK.template.md`): Agentic run for complex or $>12$ shot edits. Automatically resumes conversation if previous deep turn is $< 2$ hours old, else copies up to 3 recent turns to `INSTRUCTION.md`. Up to 2 repair turns; stops early as soon as compiler check reports 0 error(s). Writes Vietnamese summary and changes to `out/notes.json`. Preserves output under `cache/draft/turns/<turn_id>/out/` even on refusal.
+- **Model configuration:** Models are settings (`config/agents.json`, `bti/settings.py`), default `agy:gemini-3.8-flash-high` for `edit.fast` and `edit.deep`.
+- **Direct apply & three-way merge (contract A3):**
+  - If current equals base: writes result directly.
+  - If concurrent manual edits occurred on other shots: merges per shot, marking changed shots `source: "agent"`.
+  - If a shot the result touches was modified in current: sets turn to `needs_choice`, resolved via `POST .../draft/edit/{turn_id}/resolve {action: "overwrite" | "discard"}`.
+- **Undo (contract A4):** `POST /api/projects/{pid}/draft/edit/{turn_id}/undo {force?: bool}` restores pre-turn state from stored `before.json`. Detects conflicts with 409 `undo_conflict` unless forced. Keeps full before/after storyboards for the last 20 turns under `cache/draft/turns/<turn_id>/`.
+- **Frame thumbnails:** `GET /api/projects/{pid}/draft/edit/{turn_id}/frames/{shot_id}/{before|after}.jpg` renders 320px JPEG thumbnails on demand.
+- **Thread & statuses:** Stored in `cache/draft/thread.json`. Turn recorded before job start. Statuses: `running`, `applied`, `no_change`, `needs_choice`, `failed`, `cancelled`, `undone`.
+- **Routes:** `POST /api/projects/{pid}/draft/edit {instruction, scope, model?, mode?, base_rev?}`, `POST .../edit/{turn_id}/resolve`, `POST .../edit/{turn_id}/undo`, `GET .../edit/{turn_id}/frames/{shot_id}/{when}.jpg`, `GET .../draft/thread`, `DELETE .../draft/thread`.
 
 ## 8. Step 6: export (EXPORT)
 

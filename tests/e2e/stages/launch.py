@@ -43,10 +43,10 @@ def say(*a):
 reuse = A.tmp is not None
 tmp = Path(A.tmp) if reuse else Path(tempfile.mkdtemp(prefix="bti-stages-"))
 projects, lib = tmp / "projects", tmp / "library"
-IGN = shutil.ignore_patterns("cache", "history")
+IGN = shutil.ignore_patterns("cache", "history", "export")
 if not reuse:
     projects.mkdir()
-    for n in ("arnolfini", "arnolfini-from-books", "demo_stub"):
+    for n in ("arnolfini", "arnolfini-from-books", "demo_stub", "arnolfini-live"):   # arnolfini-live: a real storyboard with timing and picks, for the edit by instruction
         if (DATA / "projects" / n).is_dir():
             shutil.copytree(DATA / "projects" / n, projects / n, ignore=IGN)
     shutil.copytree(DATA / "library", lib, ignore=IGN)
@@ -54,7 +54,8 @@ if not reuse:
     cfg["provider"] = "fake"
     cfg["aligner"] = {**cfg.get("aligner", {}), "provider": "even"}
     (tmp / "voice.json").write_text(json.dumps(cfg), encoding="utf-8")
-    (tmp / "models.json").write_text(json.dumps([{"id": "mock", "label": "Mock (thử, không gọi mạng)", "provider": "mock", "model": "mock",
+    (tmp / "models.json").write_text(json.dumps([{"id": "agy", "label": "Antigravity CLI", "provider": "antigravity", "timeout": 900},    # its models come from the fake list below
+                                                  {"id": "mock", "label": "Mock (thử, không gọi mạng)", "provider": "mock", "model": "mock",
                                                    "key_env": None, "default": True}]), encoding="utf-8")
 say("TMP=%s" % tmp)
 say("PID=%d" % os.getpid())
@@ -64,6 +65,9 @@ os.environ["BTI_NO_REAL_MODELS"] = "1"
 os.environ["BTI_PROJECTS_ROOT"] = str(projects)
 os.environ["BTI_ENV_FILE"] = str(tmp / "no.env")
 os.environ["BTI_MODELS_FILE"] = str(tmp / "models.json")
+os.environ["BTI_SETTINGS_FILE"] = str(tmp / "settings.json")     # the owner's model choices live here, never in the repo's run/ folder
+if not reuse:
+    (tmp / "settings.json").write_text(json.dumps({"models": {"edit.fast": "mock"}}), encoding="utf-8")   # the fast edit asks the mock model
 os.environ["PYTHONUTF8"] = "1"
 for k in list(os.environ):
     if k.upper() in ("OPENROUTER_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "YDC_API_KEY", "YOU_API_KEY"):
@@ -87,7 +91,49 @@ from bti.voice import config as vconfig  # noqa: E402
 vconfig.VOICE_CONFIG = tmp / "voice.json"
 
 from bti.script import models as script_models  # noqa: E402
-script_models.agy_models = lambda refresh=False: (None, "`agy` chưa dùng được trên máy này (bản thử).")
+# the fake `agy models`: a list like the real one (a slug and a display name), so the settings dialog shows the normal case; no program is run
+script_models.agy_models = lambda refresh=False: ([{"slug": "gemini-3.8-flash-high", "label": "Gemini 3.8 Flash (High)"},
+                                                   {"slug": "gemini-3.8-flash-medium", "label": "Gemini 3.8 Flash (Medium)"},
+                                                   {"slug": "gemini-3.8-flash-low", "label": "Gemini 3.8 Flash (Low)"}], None)
+
+# the mock model answers an edit by instruction with a canned edit built from the shots in the prompt (no network, no real model):
+#   "tranh mới" in the instruction -> {"result": "cannot"};  "[mock:broken]" -> not JSON (the turn fails);  "[mock:slow]" -> the mock waits ~10 s first (cancel can be tried);
+#   anything else -> every shot of the scope kept, with its note changed (so the server sees a change in each of them)
+import re  # noqa: E402
+from bti.script.providers import mock as _mock  # noqa: E402
+_mock_complete = _mock.complete
+_KEEP = ("id", "beat", "start_word", "off", "technique", "intent", "slots", "params", "overlays", "note", "transition_in", "locked")
+
+
+def _edit_answer(user):
+    ins = re.search(r"## Instruction\n(.*?)\n\n## Previous", user, re.S)
+    instruction = ins.group(1) if ins else ""
+    if "tranh mới" in instruction:
+        return json.dumps({"result": "cannot", "summary": "", "reason": "Yêu cầu này cần một bức tranh mới mà dự án chưa có. Hãy thêm tranh ở bước Chọn hình."}, ensure_ascii=False)
+    if "[mock:broken]" in instruction:                       # an answer that is not JSON, twice: the turn fails
+        return "Xin lỗi, tôi không làm được việc này {{{"
+    m = re.search(r"length\.\n(\[.*?\])\n\n## Neighbour Shots", user, re.S)
+    shots = json.loads(m.group(1)) if m else []
+    out, changes = [], []
+    for sh in shots:
+        keep = {k: sh[k] for k in _KEEP if k in sh}
+        keep["note"] = "Làm chậm chuyển động (bản thử)"
+        out.append(keep)
+        changes.append({"shot": sh.get("id"), "what": "Làm chậm chuyển động của cảnh này"})
+    return json.dumps({"result": "edit", "summary": "Đã làm chậm chuyển động ở %d cảnh." % len(out), "shots": out, "regions": [], "changes": changes}, ensure_ascii=False)
+
+
+def _complete(spec, system, user, **kw):
+    if "# Edit Storyboard by Instruction" in user:
+        if "[mock:slow]" in user:
+            _mock.set_canned([_edit_answer(user)])
+            return _mock_complete(spec, system, user, **kw)
+        _mock.CALLS.append({"model": spec.get("id"), "user_len": len(user), "retry": False, "user": user})
+        return _edit_answer(user)
+    return _mock_complete(spec, system, user, **kw)
+
+
+_mock.complete = _complete
 
 from bti.longjob import manager, HeavySlot  # noqa: E402
 from bti.longjob.config import ServerConfig  # noqa: E402

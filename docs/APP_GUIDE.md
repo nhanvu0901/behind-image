@@ -26,6 +26,7 @@ Khung nằm cố định trên cùng, bên dưới là **một màn hình tại 
 | **Ô chọn dự án** | Chuyển sang dự án khác; mở dự án ở bước mà giai đoạn của nó cần làm tiếp. |
 | **Tên dự án, tên tác phẩm, giai đoạn** | Dự án đang mở. |
 | **Dòng trạng thái** | "đang lưu...", "đang mở dự án..." và các thông báo ngắn. Thông báo nổi hiện ở góc dưới phải; hộp thoại hiện giữa màn hình. Chỉ có một hệ thống thông báo cho cả ứng dụng. |
+| **Cài đặt** | Hộp "Mô hình cho từng việc" (xem mục 7, "Cài đặt: mô hình cho từng việc"). |
 | **+ Tạo video mới** | Đi tới thư viện để chọn tác phẩm. |
 | **Huy hiệu engine/media** | Tình trạng backend. |
 | **Thanh các bước** | Sáu bước của dự án, xem mục 3. |
@@ -357,7 +358,7 @@ Trên timeline: nhấp vào shot luôn chọn shot đó và dời đầu phát t
 
 Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard, bước Dựng hình không mở một bảng trống: nó hiện khung **Bản nháp storyboard**. Khi đã có storyboard, nút **Bản nháp** trên thanh công cụ mở cùng khung đó.
 
-1. Khung cho biết giọng đọc và chọn hình đã xong chưa. Chọn mô hình trong ô *Mô hình* (mặc định "Orchestrator (Argon)", chạy qua chương trình agy) rồi bấm **Dựng bản nháp**. Nút **Dựng tự động (không dùng agent)** làm mỗi dòng lời dẫn một cảnh từ hình bạn đã chọn, không gọi mô hình nào: dùng khi agy chưa đăng nhập, hoặc để so sánh.
+1. Khung cho biết giọng đọc và chọn hình đã xong chưa. Ô *Mô hình* bắt đầu ở mô hình đã đặt trong Cài đặt cho việc dựng storyboard (có thể đổi riêng cho lần này) rồi bấm **Dựng bản nháp**. Nút **Dựng tự động (không dùng agent)** làm mỗi dòng lời dẫn một cảnh từ hình bạn đã chọn, không gọi mô hình nào: dùng khi agy chưa đăng nhập, hoặc để so sánh.
 2. Bạn có thể rời trang; khung hiện số bước và việc agent đang làm. **Dừng** dừng agent ngay.
 3. Kết quả không bao giờ tự ghi vào dự án. Nó là một **đề xuất**; bấm **Mở đề xuất** để xem. Với dự án chưa có storyboard, bấm **Áp dụng** (chấp nhận cả đề xuất) biến nó thành storyboard đầu tiên; chọn từng thay đổi chưa dùng được ở bước này. Mục nào còn dở được ghi trong đề xuất để bạn sửa tiếp.
 4. Dựng lại sau này: cảnh bạn đã khóa không bao giờ bị đổi. Nếu giọng đọc hoặc danh sách hình đã đổi sau khi dựng, khung báo "dựng từ giọng đọc hoặc danh sách hình đã đổi" và đề xuất cũ vẫn xem được.
@@ -366,20 +367,29 @@ Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard,
 
 ### Đề xuất của agent
 
-Agent ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu (trừ bản nháp đầu tiên của dự án chưa có storyboard, xem trên). Đề xuất soạn trên một bản đã cũ (storyboard đã lưu thêm kể từ đó) có dải cảnh báo "dựa trên bản cũ" và hỏi lại trước khi áp dụng. Áp dụng khi bản nháp chưa lưu cũng hỏi (hộp thoại của ứng dụng, không dùng hộp thoại của trình duyệt).
+Bản nháp cả video (không phải sửa bằng lời) ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu (trừ bản nháp đầu tiên của dự án chưa có storyboard, xem trên). Đề xuất soạn trên một bản đã cũ (storyboard đã lưu thêm kể từ đó) có dải cảnh báo "dựa trên bản cũ" và hỏi lại trước khi áp dụng. Áp dụng khi bản nháp chưa lưu cũng hỏi (hộp thoại của ứng dụng, không dùng hộp thoại của trình duyệt).
 
-### Sửa video bằng prompt
+### Sửa video bằng lời
 
-Dưới khung xem trước ở bước Dựng hình có ô nhập **Sửa video bằng prompt** để bạn yêu cầu agent chỉnh sửa storyboard bằng ngôn ngữ tự nhiên (ví dụ: *"ở đoạn nói về chiếc gương, zoom chậm hơn và thêm vòng sáng quanh gương"*):
+Bên phải khung xem trước ở bước Dựng hình có ô **Sửa video bằng lời**. Bạn gõ điều muốn đổi, ví dụ *"zoom chậm hơn vào chiếc gương và thêm một vòng sáng quanh nó"*, và agent sửa thẳng storyboard. Không còn "đề xuất" để chấp nhận: mỗi lần sửa được ghi lại thành một thẻ, có ảnh trước và sau, và hoàn tác được.
 
-1. **Nhập yêu cầu**: gõ điều bạn muốn thay đổi vào ô *"Bạn muốn sửa gì?"*.
-2. **Chọn phạm vi**:
-   - *N shot đang chọn*: cho phép chọn một hoặc nhiều shot cụ thể (có danh sách chip shot và nút thêm/bỏ shot) để chỉ sửa đúng các shot đó.
-   - *Chương <tên>*: cho phép sửa các shot thuộc chương tại vị trí đầu phát.
-   - *Cả video*: cho phép sửa toàn bộ video.
-   Các cảnh bạn đã khóa (`locked`) luôn được bảo vệ, agent không được phép sửa.
-3. **Mô hình & hội thoại**: chọn mô hình muốn dùng; tick *"Tiếp tục hội thoại trước"* nếu muốn agent tiếp nối các lượt yêu cầu trước đó (ví dụ: *"nhanh hơn chút nữa"*).
-4. **Kết quả**: agent chỉ sửa trong phạm vi cho phép và không bao giờ tự ý áp dụng đè lên storyboard của bạn. Kết quả tạo ra một **đề xuất** mới (hiển thị trong danh sách hội thoại kèm trạng thái duyệt áp dụng). Bấm **Mở đề xuất** để xem chi tiết từng thay đổi trước/sau và chọn chấp nhận hay từ chối. Nếu yêu cầu không làm được hoặc không có thay đổi nào, agent sẽ ghi chú lại trong hội thoại để bạn đọc.
+1. **Gõ yêu cầu** vào ô, bấm **Gửi** (hoặc Ctrl+Enter).
+2. **Phần sẽ sửa** nằm ngay dưới ô, nói bằng chữ: "Cảnh 12 đang chọn", "2 cảnh đang chọn (12, 13)", "Chương: tên chương", "Cả video". Mặc định là cảnh đang chọn; bấm **Cả chương** hoặc **Cả video** để đổi. Muốn sửa nhiều cảnh: bật **Chọn nhiều cảnh**, rồi bấm vào từng cảnh trên thanh thời gian; mỗi cảnh thành một thẻ nhỏ, bấm × để bỏ. Cảnh đã khóa không bao giờ bị đổi.
+3. **Khi đang làm**, thẻ của lần sửa hiện một dòng tiến độ ("Đang nghĩ...", "Đang kiểm tra...") và nút **Dừng**. Việc nhỏ (tối đa 12 cảnh) chạy nhanh trong vài giây; việc lớn hơn chạy sâu hơn, có thể mất vài phút. Bạn có thể rời trang, lần sửa vẫn chạy.
+4. **Kết quả** là một trong các trạng thái:
+   - **Đã áp dụng**: thẻ có một câu tóm tắt và từng thay đổi (số cảnh, thời điểm, một câu mô tả, ảnh **Trước** và **Sau**). Trình biên tập tự lấy storyboard mới: nếu bạn chưa có sửa đổi chưa lưu thì tải lại và giữ nguyên cảnh đang chọn và vị trí đầu phát; nếu có, các sửa của bạn được ghép với lần sửa này (Hoàn tác của trình biên tập bắt đầu lại từ chỗ ghép).
+   - **Không đổi**: agent không làm được (ví dụ cần một bức tranh mới); thẻ nói lý do và gợi ý nói rõ hơn hoặc chọn phần khác.
+   - **Cần bạn chọn**: trong lúc agent làm, bạn cũng lưu sửa đúng các cảnh đó. Chọn **Dùng bản của agent** (các sửa tay của bạn từ lúc đó sẽ mất) hoặc **Giữ bản của bạn** (bỏ lần sửa này).
+   - **Không làm được**: một câu nói vì sao, kèm nút **Thử lại**. Chữ gốc của máy chủ nằm dưới "chi tiết".
+   - **Đã hủy**, **Đã hoàn tác**.
+5. **Xem thử** dựng một đoạn ngắn (tối đa 10 giây) ở chỗ vừa sửa. **Hoàn tác** đưa các cảnh về như trước lần sửa. Nếu sau lần sửa bạn đã đổi chính các cảnh đó, ứng dụng hỏi trước ("Hoàn tác sẽ bỏ sửa đổi của bạn"); chọn **Vẫn hoàn tác** để tiếp tục. Chỉ 20 lần sửa gần nhất còn hoàn tác được.
+6. Lần sửa bắt đầu ở thẻ trình duyệt khác cũng hiện ở đây sau vài giây. **Xóa lịch sử** hỏi một lần; nó chỉ xóa danh sách, không đổi video.
+
+Mô hình không chọn ở đây: nó là một **cài đặt** (xem dưới). Liên kết nhỏ **Mô hình** cạnh nút Gửi mở cài đặt đó.
+
+### Cài đặt: mô hình cho từng việc
+
+Nút **Cài đặt** ở thanh trên cùng mở hộp **Mô hình cho từng việc**: mỗi việc (dàn ý kịch bản, lời dẫn kịch bản, dựng storyboard, sửa nhanh bằng lời, sửa sâu bằng lời, chọn hình) có một ô chọn mô hình. Mặc định tất cả là Gemini 3.8 Flash (High) qua agy. Ô **Dùng một mô hình cho tất cả** chọn một mô hình rồi bấm **Áp dụng cho tất cả**; các việc chạy qua agent (dựng storyboard, sửa sâu) chỉ nhận mô hình của agy nên giữ nguyên nếu mô hình đó không dùng được cho chúng. Bấm **Lưu** để ghi (vào `run/settings.json`, được giữ qua các lần triển khai); lần chạy sau dùng mô hình mới. Khung **Bản nháp storyboard** bắt đầu ở mô hình của việc "dựng storyboard".
 
 ### Xem thử 10 giây
 

@@ -16,6 +16,7 @@ import re
 from typing import Any, Callable
 from urllib.parse import urlparse
 
+from .errors import RealModelsOff
 from .youcom import YouComClient, compact_search_query, strict
 
 DOMAINS = [
@@ -301,6 +302,8 @@ def resolve_suggestion(suggestion: dict, *, limit_per_term: int = 6, max_terms: 
         for source, k in plan:
             try:
                 found = search_fn(term, source=source, kind=k, limit=limit_per_term)
+            except RealModelsOff:       # the A7 switch is not "one failing source": it must reach the caller
+                raise
             except Exception:           # one failing source must not sink the rest
                 continue
             for c in found:

@@ -113,7 +113,10 @@ def search_picks(pid: str, request: Request, body: dict = Body(...)):
     limit = body.get("limit", 18)
     if isinstance(limit, bool) or not isinstance(limit, int):
         raise ApiError(422, "limit must be an integer")
-    return service.search(d, _str(body, "query"), beat, srcs, limit)
+    kind = body.get("kind")
+    if kind is not None and kind not in ("image", "video", "all"):
+        raise ApiError(422, "kind must be 'image', 'video' or 'all'")
+    return service.search(d, _str(body, "query"), beat, srcs, limit, kind=kind or "image")
 
 
 @router.post("/projects/{pid}/picks/import")

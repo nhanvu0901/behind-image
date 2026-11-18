@@ -24,8 +24,17 @@ PARTICLES = {"van", "von", "de", "da", "di", "del", "della", "le", "la", "the", 
 ARTICLES = {"the", "a", "an", "la", "le", "les", "il", "el", "l", "un", "une"}
 RIGHTS_NOTE = "Ước lượng tự động, chỉ để tham khảo; cần người kiểm tra."
 YEAR_PD = 71  # years after the artist's death
-FIELDS_OVERRIDABLE = {"title", "artist", "year", "headline", "pdf_pages", "artwork_key", "rights", "notes",
-                      "artist_death", "artist_alive"}
+FIELDS_OVERRIDABLE = {"title", "artist", "attribution", "year", "year_raw", "headline", "pdf_pages", "artwork_key",
+                      "rights", "notes", "artist_death", "artist_alive"}
+# Source trust, most trusted first. Every field of a work records where its value came from (field_src), and the
+# artwork takes each field from the most trusted source that has one:
+#   library/overrides  >  clean text of a digital book  >  clean text of a scanned (OCR) book  >  PDF outline
+#   >  anything from a low-trust (machine-translated) book.
+SRC_RANK = {"override": 0, "clean_digital": 1, "clean_scan": 2, "outline": 3, "low_trust": 4}
+# Keys that projects already use (the server's projects point at them): a rebuild must never move them.
+PINNED_KEYS = ("eyck-the-arnolfini-portrait", "munch-the-scream")
+# A low-trust book gives only these fields from its clean text (its names and titles are machine-translated).
+CLEAN_FIELDS = {"grovier_nws": ("year",)}
 
 
 # ------------------------------------------------------------------ json io
@@ -105,157 +114,278 @@ def slug(s: str, words: int = 6) -> str:
     return "-".join(norm(s).split()[:words]) or "x"
 
 
+SMALL_WORDS = {"a", "an", "the", "of", "and", "in", "on", "at", "to", "with", "after", "du", "de", "la", "le"}
+_APOS = ("’", "'")
+
+
+def _cap(p: str) -> str:
+    """Upper-case the first letter, lower-case the rest ("“the" -> "“The")."""
+    for i, ch in enumerate(p):
+        if ch.isalpha():
+            return p[:i] + ch.upper() + p[i + 1:].lower()
+    return p
+
+
 def title_case_words(s: str) -> str:
-    if not s:
+    """Re-case a title that is ALL UPPER or all lower case; a title in any other case is returned exactly as written.
+    Small words (a, an, the, of, and, in, on, at, to, with, after, du, de, la, le) stay lower case except as the first
+    word (and the first word after a dash or a colon), and a letter after an apostrophe inside a word is never capitalised ("Artist’s", not "Artist’S")."""
+    if not s or not (s.isupper() or s.islower()):
         return s
-    minor = {"a", "an", "the", "and", "but", "or", "for", "nor", "on", "at", "to", "from", "by", "of", "in", "with",
-             "du", "des", "de", "la", "le"}
-    words = s.split()
     out = []
+    words = s.split()
     for i, w in enumerate(words):
-        parts = re.split(r"([-\/’\'])", w)
-        cased_parts = []
-        for p in parts:
-            if re.match(r"^([-\/’\']|\d+)$", p):
-                cased_parts.append(p)
+        prev = words[i - 1] if i else ""
+        # a subtitle starts like a title: after a dash, after "word:" and after a plate number ("Mode: 1, The ...")
+        first = i == 0 or prev in ("-", "–", "—") or prev.endswith(":") or (prev.endswith(",") and prev[:-1].isdigit())
+        parts = re.split(r"([-/’'])", w)          # odd indices are the separators
+        cased = []
+        for j, p in enumerate(parts):
+            if j % 2 == 1 or not p:
+                cased.append(p)
+                continue
+            low = p.lower()
+            if j >= 2 and parts[j - 1] in _APOS and any(c.isalpha() for c in parts[j - 2]):
+                cased.append(low)
+            elif (not first or j > 0) and re.sub(r"\W", "", low) in SMALL_WORDS:
+                cased.append(low)
             else:
-                low = p.lower()
-                if i > 0 and low in minor:
-                    cased_parts.append(low)
-                else:
-                    cased_parts.append(p.capitalize())
-        out.append("".join(cased_parts))
+                cased.append(_cap(p))
+        out.append("".join(cased))
     return " ".join(out)
 
 
-def extract_clean_meta(bid: str, w: dict) -> dict[str, str | None]:
-    """Take title, artist, year (and headline) from cleaned text of the work's first page if present."""
+# ------------------------------------------------------------------ canonical artist names
+def artists_path() -> Path:
+    return config.LIB_DIR / "overrides" / "artists.json"
+
+
+_ARTISTS_CACHE: dict = {}
+
+
+def _artist_tables() -> tuple[dict[str, str], dict[str, str]]:
+    """-> ({norm(spelling): canonical name}, {canonical name: key word}); both empty when the file is missing or damaged."""
+    f = artists_path()
+    try:
+        st = f.stat()
+        stamp = (str(f), st.st_mtime_ns, st.st_size)
+    except OSError:
+        return {}, {}
+    if _ARTISTS_CACHE.get("stamp") != stamp:
+        index: dict[str, str] = {}
+        keys: dict[str, str] = {}
+        try:
+            d = read_json(f)
+        except ValueError:
+            d = {}
+        for can, ent in (d.items() if isinstance(d, dict) else []):
+            if isinstance(ent, dict):
+                variants, kn = ent.get("variants"), ent.get("key_name")
+            else:
+                variants, kn = ent, None
+            if not isinstance(can, str) or not isinstance(variants or [], list):
+                continue
+            if isinstance(kn, str) and norm(kn):
+                keys[can] = norm(kn).replace(" ", "-")
+            for v in [can] + [x for x in (variants or []) if isinstance(x, str)]:
+                index.setdefault(norm(v), can)
+        _ARTISTS_CACHE.update(stamp=stamp, index=index, keys=keys)
+    return _ARTISTS_CACHE["index"], _ARTISTS_CACHE["keys"]
+
+
+def load_artist_names() -> dict[str, str]:
+    """library/overrides/artists.json is {canonical name: [variant spellings]}, or {canonical name: {"variants": [...],
+    "key_name": "word"}} where key_name is the word artwork keys start with when the last word of the name is a poor key
+    ("Rembrandt van Rijn" -> rembrandt-...). -> {norm(spelling): canonical name}, so that case, accents, hyphens and
+    apostrophes never matter. Missing or damaged file: no canonical names."""
+    return _artist_tables()[0]
+
+
+def artist_key_word(artist: str | None) -> str:
+    """The word an artwork key starts with: the artist's `key_name` from artists.json, else the last word of the name
+    (not counting particles such as "van"), else "unknown"."""
+    kn = _artist_tables()[1].get(artist or "")
+    if kn:
+        return kn
+    tk = artist_tokens(artist)
+    return tk[-1] if tk else "unknown"
+
+
+NAME_PARTICLES = {"van", "von", "der", "den", "de", "da", "di", "del", "della", "du", "des", "dos", "la", "le", "af", "y"}
+
+
+def name_case(s: str) -> str:
+    """A person's name in capitals (or all lower case) -> usual case: particles (van, de, da, di, la, af ...) stay lower
+    case except first, "O’Keeffe" and "Mc" keep a capital. Names that are written in mixed case are never passed here."""
+    out = []
+    for i, w in enumerate(s.split()):
+        parts = re.split(r"([-’'])", w)
+        cased = []
+        for j, p in enumerate(parts):
+            if j % 2 == 1 or not p:
+                cased.append(p)
+            elif i > 0 and j == 0 and p.lower() in NAME_PARTICLES:
+                cased.append(p.lower())
+            else:
+                c = _cap(p)
+                cased.append(re.sub(r"^(Mc)([a-z])", lambda m: m.group(1) + m.group(2).upper(), c))
+        out.append("".join(cased))
+    return " ".join(out)
+
+
+def split_attribution(raw: str | None) -> tuple[str | None, str | None]:
+    """"After Cornelis van Dalem" -> ("Cornelis van Dalem", "after"); "Zhang Zeduan (Attrib.)" -> ("Zhang Zeduan",
+    "attributed"); a plain name -> (name, None)."""
+    if not raw or not isinstance(raw, str) or not raw.strip():
+        return None, None
+    name = raw.strip()
+    m = re.match(r"^after\s+(.+)$", name, flags=re.I)
+    if m:
+        return m.group(1).strip(), "after"
+    m = re.match(r"^(.+?)\s*\((?:attrib\.?|attributed)\)$", name, flags=re.I)
+    if m:
+        return m.group(1).strip(), "attributed"
+    return name, None
+
+
+def canonical_artist(raw: str | None) -> tuple[str | None, str | None]:
+    """An artist as written in a source -> (the one spelling used in the whole catalogue, attribution or None).
+    The spelling comes from library/overrides/artists.json; a name that is not in it is kept as written (re-cased
+    only when it is all upper case)."""
+    name, attr = split_attribution(raw)
+    if not name:
+        return None, None
+    can = load_artist_names().get(norm(name))
+    if can:
+        return can, attr
+    return (name_case(name) if name.isupper() or name.islower() else name), attr
+
+
+# ------------------------------------------------------------------ the title, artist and year in the clean text
+def _clean_header(bid: str, w: dict) -> tuple[str | None, list[str]] | None:
+    """(# heading, [meta] lines) of the first page of the work that has them (a plate may come first), or None."""
     a, b = w["pdf_pages"]
-    clean_lines: list[str] | None = None
     for p in ((a, a + 1) if a < b else (a,)):
         cf = config.LIB_DIR / "clean_text" / bid / f"page_{p:04d}.txt"
         if not cf.is_file():
             continue
         try:
             lines = [ln.strip() for ln in cf.read_text(encoding="utf-8").splitlines() if ln.strip()]
-        except Exception:
+        except (OSError, UnicodeDecodeError):
             continue
-        has_h1 = any(re.match(r"^#\s+", ln) for ln in lines)
-        has_meta = any(re.match(r"^\[meta\]", ln, re.I) for ln in lines)
-        if has_h1 or has_meta:
-            clean_lines = lines
-            break
-    if not clean_lines:
+        h1, metas = None, []
+        for ln in lines:
+            if re.match(r"^#\s+", ln) and h1 is None:
+                h1 = re.sub(r"^#\s+", "", ln).strip()
+            elif re.match(r"^\[meta\]", ln, re.I):
+                metas.append(re.sub(r"^\[meta\]\s*", "", ln, flags=re.I).strip())
+        if h1 or metas:
+            return h1, metas
+    return None
+
+
+def extract_clean_meta(bid: str, w: dict) -> dict[str, str]:
+    """What the cleaned text of a work's first page says, as written: {title, artist, year, headline}, only the keys
+    it has. Nothing is re-cased or reformatted here (`pick_fields` does that, once, for every source)."""
+    head = _clean_header(bid, w)
+    if head is None:
         return {}
-
-    h1 = None
-    metas: list[str] = []
-    for ln in clean_lines:
-        if re.match(r"^#\s+", ln) and not h1:
-            h1 = re.sub(r"^#\s+", "", ln).strip()
-        elif re.match(r"^\[meta\]", ln, re.I):
-            metas.append(re.sub(r"^\[meta\]\s*", "", ln, flags=re.I).strip())
-
-    orig_title = w.get("title")
-    orig_artist = w.get("artist")
-    res: dict[str, str | None] = {}
-
-    if bid == "payne_gae":
+    h1, metas = head
+    res: dict[str, str] = {}
+    if bid in ("payne_gae", "hodge_aid"):
         if h1:
-            if orig_title and norm(h1) == norm(orig_title):
-                res["title"] = orig_title
-            else:
-                res["title"] = title_case_words(h1)
+            res["title"] = h1
         for m in metas:
             if re.match(r"^CHAPTER\s+\d+$", m, re.I):
                 continue
-            elif parse.year_num(m) is not None:
-                res["year"] = re.sub(r"\s*[-–—]\s*", "-", m)
-            else:
-                if orig_artist and norm(m) == norm(orig_artist):
-                    res["artist"] = orig_artist
-                else:
-                    res["artist"] = title_case_words(m)
-
-    elif bid == "hodge_aid":
-        if h1:
-            if orig_title and h1.lower() == orig_title.lower():
-                res["title"] = orig_title
-            else:
-                res["title"] = title_case_words(h1)
-        if len(metas) >= 1:
-            m_artist = metas[0]
-            if orig_artist and m_artist.lower() == orig_artist.lower():
-                res["artist"] = orig_artist
-            else:
-                res["artist"] = title_case_words(m_artist)
-        if len(metas) >= 2:
-            res["year"] = re.sub(r"\s*[-–—]\s*", "-", metas[1])
-
+            key = "year" if re.search(r"\d", m) else "artist"
+            res.setdefault(key, m)
     elif bid == "hagen_wgps":
         if metas and ":" in metas[0]:
             art_part, _, rest = metas[0].partition(": ")
             t_part, y_part = parse.split_year_tail(rest)
-            art_part = parse.fix_ocr(art_part.strip())
-            t_part = parse.fix_ocr(t_part.strip())
-            if art_part.lower().startswith("artist unknown"):
-                res["artist"] = None
-            else:
+            art_part, t_part = parse.fix_ocr(art_part.strip()), parse.fix_ocr(t_part.strip())
+            if art_part and not art_part.lower().startswith("artist unknown"):
                 res["artist"] = art_part
-            res["title"] = t_part
+            if t_part:
+                res["title"] = t_part
             if y_part:
-                res["year"] = re.sub(r"\s*[-–—]\s*", "-", y_part)
+                res["year"] = y_part
         if h1:
             res["headline"] = h1
-
     elif bid == "grovier_nws":
-        if h1:
-            m = re.match(r"^\d\d\s+(.*)$", h1)
-            body = m.group(1).strip() if m else h1.strip()
-            if ", " in body and not body.startswith("The "):
-                a_str, _, t_str = body.partition(", ")
-                res["artist"] = a_str.strip()
-                res["title"] = t_str.strip()
-            else:
-                res["title"] = body
         if metas:
             ym = re.search(r"^\((.*)\)$", metas[0])
-            y_str = ym.group(1).strip() if ym else metas[0].strip()
-            res["year"] = re.sub(r"\s*[-–—]\s*", "-", y_str)
-
+            res["year"] = (ym.group(1) if ym else metas[0]).strip()
     elif bid == "brookehitching_mad":
-        if h1:
-            m = re.match(r"^(.*?)\s*\(([^()]*\d[^()]*|[^()]*centur[^()]*)\)(.*)$", h1)
-            if m:
-                t_str, y_str, tail = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
-                a_str = None
-                if tail.startswith(","):
-                    a_sub = tail[1:].strip()
-                    a_str = re.split(r"\s+and\s+", a_sub, flags=re.I)[0].strip() or None
-                pm = re.match(r"^([A-Z][\w.]*(?:\s+(?:[a-z]+\s+)?[A-Z][\w.]*)+)’s\s+(.+)$", t_str, re.I)
-                if pm and not a_str and not pm.group(1).lower().startswith(("mr ", "mrs ", "dr ", "st ")):
-                    a_str, t_str = pm.group(1), pm.group(2)
-                if orig_title and norm(t_str) == norm(orig_title):
-                    res["title"] = orig_title
-                else:
-                    res["title"] = title_case_words(t_str)
-                if a_str:
-                    if orig_artist and norm(a_str) == norm(orig_artist):
-                        res["artist"] = orig_artist
-                    else:
-                        res["artist"] = title_case_words(a_str)
-                if y_str:
-                    res["year"] = re.sub(r"\s*[-–—]\s*", "-", y_str)
-        if w.get("n") in parse.MADMAN_EXC:
-            for k, v in parse.MADMAN_EXC[w["n"]].items():
-                if k in ("title", "artist"):
-                    res[k] = v
-
+        m = re.match(r"^(.*?)\s*\(([^()]*\d[^()]*|[^()]*centur[^()]*)\)(.*)$", h1 or "")
+        if m:
+            t_str, y_str, tail = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
+            a_str = None
+            if tail.startswith(","):
+                a_str = re.split(r"\s+and\s+", tail[1:].strip(), flags=re.I)[0].strip() or None
+            pm = re.match(r"^([A-Z][\w.]*(?:\s+(?:[a-z]+\s+)?[A-Z][\w.]*)+)’s\s+(.+)$", t_str, re.I)
+            if pm and not a_str and not pm.group(1).lower().startswith(("mr ", "mrs ", "dr ", "st ")):
+                a_str, t_str = pm.group(1), pm.group(2)
+            res["title"] = t_str
+            if a_str:
+                res["artist"] = a_str
+            if y_str:
+                res["year"] = y_str
     elif bid == "dasal_artcurious":
         if h1:
             res["title"] = h1
+    return {k: v for k, v in res.items() if v}
 
-    return res
+
+def pick_fields(bid: str, outline: dict, clean: dict) -> tuple[dict, dict]:
+    """The title, artist, attribution and year of one work: each field from the clean text if it has one, else from the
+    PDF outline. Everything is normalised here and nowhere else: title_case_words for the title, canonical_artist for the
+    artist (an "after" goes to `attribution`), parse_year / print_year for the year (text that is not a year goes to
+    `year_raw`, never to `year`). -> (fields, field_src) where field_src[field] is "clean" or "outline"."""
+    use = CLEAN_FIELDS.get(bid)
+    if use is not None:
+        clean = {k: v for k, v in clean.items() if k in use}
+    scan = config.BOOK_BY_ID[bid]["pdf_type"] == "scan"
+    fields: dict = {}
+    src: dict = {}
+
+    def same_but_case(a: str, b: str | None) -> bool:
+        """`a` is written in capitals (or all lower case) and `b` is the same text in better case."""
+        return bool(b) and (a.isupper() or a.islower()) and a.casefold() == b.casefold()
+
+    for name, d in (("clean", clean), ("outline", outline)):
+        t = (d.get("title") or "").strip()
+        if t and "title" not in fields:
+            t = re.sub(r"(?<=[^\W\d_])-\s+(?=[^\W\d_])", "-", t)      # "Master- Stroke": a line break in the print
+            t = parse.fix_ocr(t) if scan and name == "clean" else t
+            o = (outline.get("title") or "").strip()
+            fields["title"] = o if name == "clean" and same_but_case(t, o) else title_case_words(t)
+            src["title"] = name
+        a = (d.get("artist") or "").strip()
+        if a and "artist" not in fields:
+            o = split_attribution(outline.get("artist"))[0]
+            a_name, a_attr = split_attribution(a)
+            if name == "clean" and same_but_case(a_name or a, o):
+                a = o                                           # same name, the outline's case is better
+            fields["artist"], attr = canonical_artist(a)
+            attr = attr or a_attr or d.get("attribution")
+            if attr:
+                fields["attribution"] = attr
+            src["artist"] = name
+    raw = None
+    for name, d in (("clean", clean), ("outline", outline)):
+        year, yraw = parse.normalise_year(d.get("year"))
+        if year:
+            fields["year"], src["year"], raw = year, name, None
+            break
+        if yraw and raw is None:
+            raw = (name, yraw)
+    else:
+        if raw:
+            fields["year"], fields["year_raw"], src["year"] = None, raw[1], raw[0]
+    fields.setdefault("year", None)
+    return fields, src
 
 
 # ------------------------------------------------------------------ rights estimate
@@ -296,7 +426,9 @@ def load_overrides(book_id: str) -> dict:
 
 def apply_overrides(works: list[dict], overrides: dict) -> list[dict]:
     """Merge overrides (`{work_id: {field: value}}`, a bare number key like "7" also works) over the works, by
-    work id and field. Only known fields; `rights` is merged key by key."""
+    work id and field. Only known fields; `rights` is merged key by key. An overridden field is marked
+    field_src[field] = "override" (the most trusted source); a year is parsed and printed like any other, an artist
+    gets its canonical spelling."""
     out = []
     for w in works:
         o = overrides.get(w["id"]) or overrides.get(str(w["n"])) or {}
@@ -306,10 +438,22 @@ def apply_overrides(works: list[dict], overrides: dict) -> list[dict]:
                 continue
             if k == "rights" and isinstance(v, dict):
                 w["rights"] = {**(w.get("rights") or {}), **v}
+                continue
+            if k == "year":
+                w["year"], yraw = parse.normalise_year(v)
+                if yraw:
+                    w["year_raw"] = yraw
+                else:
+                    w.pop("year_raw", None)
+            elif k == "artist" and isinstance(v, str):
+                w["artist"], attr = canonical_artist(v)
+                if attr:
+                    w["attribution"] = attr
             else:
                 w[k] = v
-        if "year" in o:
-            w["year_num"] = parse.year_num(w.get("year"))
+            w["field_src"] = {**(w.get("field_src") or {}), ("year" if k == "year_raw" else k): "override"}
+        if "year" in o or "year_raw" in o:
+            w["year_num"] = parse.year_num(w.get("year") or w.get("year_raw"))
         out.append(w)
     return out
 
@@ -369,12 +513,72 @@ def load_work(book_id: str, n: int) -> dict | None:
     return None
 
 
-def load_artworks() -> dict:
+class ArtworksDict(dict):
+    """The artworks by key. Iteration, `in`, `len` and `keys()` see only the current keys; `d[key]` and `d.get(key)` also
+    accept an OLD key (an alias, see aliases.json) and answer with the current artwork, so that a link made before a key
+    changed still opens."""
+
+    def __init__(self, data: dict, aliases: dict[str, str] | None = None):
+        super().__init__(data)
+        self.aliases: dict[str, str] = {}
+        for k, v in data.items():
+            for a in (v.get("aliases") or []) if isinstance(v, dict) else []:
+                if isinstance(a, str) and a not in data:
+                    self.aliases[a] = k
+        for a, k in (aliases or {}).items():
+            if isinstance(a, str) and isinstance(k, str) and a not in data and k in data:
+                self.aliases[a] = k
+
+    def resolve(self, key):
+        """The current key of `key` (itself when it is current), or None when there is no such artwork."""
+        if dict.__contains__(self, key):
+            return key
+        return self.aliases.get(key) if isinstance(key, str) else None
+
+    def __getitem__(self, key):
+        k = self.resolve(key)
+        if k is None:
+            raise KeyError(key)
+        return dict.__getitem__(self, k)
+
+    def get(self, key, default=None):
+        k = self.resolve(key)
+        return default if k is None else dict.__getitem__(self, k)
+
+
+def aliases_path() -> Path:
+    return config.LIB_DIR / "overrides" / "aliases.json"
+
+
+def load_aliases() -> dict[str, str]:
+    """library/overrides/aliases.json: {old artwork key: current artwork key}. Kept by regroup (it adds every key that
+    a rebuild changed or merged away); a person may add lines too."""
+    f = aliases_path()
+    if not f.is_file():
+        return {}
+    try:
+        d = read_json(f)
+    except ValueError:
+        return {}
+    return {k: v for k, v in d.items() if isinstance(k, str) and isinstance(v, str)} if isinstance(d, dict) else {}
+
+
+def load_artworks() -> ArtworksDict:
     f = config.LIB_DIR / "artworks.json"
     d = read_json(f) if f.is_file() else {}
     if not isinstance(d, dict):
         raise LibraryDataError("artworks.json is corrupt: the top level must be an object")
-    return d
+    return ArtworksDict(d, load_aliases())
+
+
+def resolve_key(key: str) -> str | None:
+    """The current artwork key for a current or an old key; None when unknown."""
+    return load_artworks().resolve(key)
+
+
+def get_artwork(key: str) -> dict | None:
+    """The artwork for a current or an old key (see ArtworksDict)."""
+    return load_artworks().get(key)
 
 
 # ------------------------------------------------------------------ build
@@ -414,21 +618,22 @@ def build(only: list[str] | None = None, log=print) -> dict:
         raw = parse.PARSERS[bid](d)
         works = []
         for r in raw:
-            w = {"id": f"{bid}/{r['n']:03d}", "n": r["n"], "title": r["title"], "artist": r.get("artist"),
-                 "year": r.get("year")}
-            if r.get("headline"):
-                w["headline"] = r["headline"]
-            w["pdf_pages"] = r["pdf_pages"]
+            w = {"id": f"{bid}/{r['n']:03d}", "n": r["n"], "pdf_pages": r["pdf_pages"]}
+            outline = {k: r.get(k) for k in ("title", "artist", "year", "attribution")}
+            clean = extract_clean_meta(bid, w)
+            fields, src = pick_fields(bid, outline, clean)
+            exc = parse.MADMAN_EXC.get(r["n"], {}) if bid == "brookehitching_mad" else {}
+            for k, v in exc.items():          # hand-made corrections of the outline in parse.py: as good as an override
+                fields[k], src[k] = (canonical_artist(v)[0] if k == "artist" else v), "override"
+            w.update(fields)
+            headline = clean.get("headline") or r.get("headline")
+            if headline:
+                w["headline"] = headline
             for k in ("artist_death", "artist_alive", "artist_dates", "pages_inferred"):
                 if r.get(k) is not None:
                     w[k] = r[k]
-            clean_meta = extract_clean_meta(bid, w)
-            for k in ("title", "artist", "year"):
-                if clean_meta.get(k) is not None:
-                    w[k] = clean_meta[k]
-            if clean_meta.get("headline"):
-                w["headline"] = clean_meta["headline"]
-            w["year_num"] = parse.year_num(w["year"])
+            w["field_src"] = src
+            w["year_num"] = parse.year_num(w.get("year") or w.get("year_raw"))
             works.append(w)
         works = apply_overrides(works, load_overrides(bid))
         for w in works:
@@ -485,17 +690,89 @@ def save_artwork_overrides(d: dict) -> None:
     write_json(artwork_overrides_path(), {"merge": d.get("merge", []), "split": d.get("split", [])})
 
 
+def source_rank(bid: str, src: str | None, trust: dict[str, str] | None = None) -> int:
+    """How far a value is trusted (lower = more): see SRC_RANK. `src` is a field_src value: override, clean or outline."""
+    if src == "override":
+        return SRC_RANK["override"]
+    low = (trust or {}).get(bid, book_trust(bid)["trust"]) == "low"
+    if low:
+        return SRC_RANK["low_trust"]
+    if src == "clean":
+        return SRC_RANK["clean_scan"] if config.BOOK_BY_ID[bid]["pdf_type"] == "scan" else SRC_RANK["clean_digital"]
+    return SRC_RANK["outline"]
+
+
+def _project_pins(groups: dict[str, list[tuple[str, dict]]]) -> dict[str, str]:
+    """group leader -> the artwork_key a project in projects/ already uses for (most of) its works."""
+    pins: dict[str, str] = {}
+    pdir = Path(getattr(config, "PROJECTS_DIR", None) or "projects")
+    if not pdir.is_dir():
+        return pins
+    for pj in sorted(pdir.glob("*/project.json")):
+        try:
+            pdata = json.loads(pj.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        pk = pdata.get("artwork_key") if isinstance(pdata, dict) else None
+        pwids = {s.get("work_id") for s in (pdata.get("sources") or []) if isinstance(s, dict) and s.get("work_id")} \
+            if isinstance(pdata, dict) else set()
+        if not (isinstance(pk, str) and pk and pwids):
+            continue
+        best, best_n = None, 0
+        for leader, members in groups.items():
+            n = len({w["id"] for _, w in members} & pwids)
+            if n > best_n:
+                best, best_n = leader, n
+        if best is not None:
+            pins[best] = pk
+    return pins
+
+
+def update_aliases(previous: dict, artworks: dict, log=print) -> dict[str, str]:
+    """Record every artwork key that this regroup changed or merged away as an alias of the artwork that took over its
+    works (the most shared works). Aliases from earlier rebuilds follow their artwork when its key changes again; an alias
+    that is also a current key is dropped (the current key wins). Writes library/overrides/aliases.json when it changes."""
+    old = load_aliases()
+    moved: dict[str, str] = {}
+    for key, art in previous.items():
+        if key in artworks or not isinstance(art, dict):
+            continue
+        ids = set(art.get("works") or [])
+        best, best_n = None, 0
+        for k, a in artworks.items():
+            n = len(ids & set(a["works"]))
+            if n > best_n:
+                best, best_n = k, n
+        if best:
+            moved[key] = best
+    out: dict[str, str] = {}
+    for a, k in list(old.items()) + list(moved.items()):
+        seen = set()
+        while k in moved and k not in seen:       # the target itself moved on
+            seen.add(k)
+            k = moved[k]
+        if a != k and a not in artworks and k in artworks:
+            out[a] = k
+    out = dict(sorted(out.items()))
+    if out != old and (out or aliases_path().is_file()):
+        write_json(aliases_path(), out)
+    return out
+
+
 def regroup(log=print) -> dict:
     """Recompute artwork groups, keys and rights from works.json (no PDF access), honouring
     library/overrides/artworks.json: `merge` = lists of work ids forced into one artwork, `split` = work ids that
-    stay alone (never auto-merged). Writes works.json and artworks.json."""
+    stay alone (never auto-merged). Writes works.json and artworks.json.
+    Each field of an artwork (title, artist, attribution, year) comes from the most trusted of its works (source_rank of
+    the work's field_src, then book order); keys that change are kept as aliases (update_aliases)."""
     order = [b["id"] for b in config.BOOKS]
     all_works = {bid: load_works(bid) for bid in order}
+    trust = {bid: book_trust(bid)["trust"] for bid in order}
     ovr = load_artwork_overrides()
     splits = set(ovr["split"])
     for ws in all_works.values():
         for w in ws:
-            w["year_num"] = parse.year_num(w.get("year")) if w.get("year") else None
+            w["year_num"] = parse.year_num(w.get("year") or w.get("year_raw"))
             w.pop("year_from_group", None)
     flat = [(bid, w) for bid in order for w in all_works[bid]]
     parent = {w["id"]: w["id"] for _, w in flat}
@@ -528,52 +805,43 @@ def regroup(log=print) -> dict:
     for bid, w in flat:
         groups.setdefault(find(w["id"]), []).append((bid, w))
 
-    project_pinned_groups: dict[str, str] = {}
-    pdir = getattr(config, "PROJECTS_DIR", None) or Path("projects")
-    pdir = Path(pdir)
-    if pdir.is_dir():
-        for pj in pdir.glob("*/project.json"):
-            try:
-                pdata = json.loads(pj.read_text(encoding="utf-8"))
-                pk = pdata.get("artwork_key")
-                if pk:
-                    pwids = {s.get("work_id") for s in pdata.get("sources", []) if s.get("work_id")}
-                    if pwids:
-                        best_leader = None
-                        best_overlap = 0
-                        for leader, members in groups.items():
-                            ws_ids = {w["id"] for _, w in members}
-                            overlap = len(ws_ids & pwids)
-                            if overlap > best_overlap:
-                                best_overlap = overlap
-                                best_leader = leader
-                        if best_leader is not None:
-                            project_pinned_groups[best_leader] = pk
-            except Exception:
-                pass
-
+    pins = _project_pins(groups)
     known = [w for w in all_works.get("hodge_aid", []) if w.get("artist_death") or w.get("artist_alive")]
     keys_used: dict[str, int] = {}
     artworks: dict[str, dict] = {}
     for leader, members in groups.items():
         ws = [w for _, w in members]
-        rep = next((w for w in ws if w.get("artist")), ws[0])
-        year = next((w["year"] for w in ws if w.get("year")), None)
+
+        def best(field, usable=lambda v: bool(v)):
+            """The work whose `field` is the most trusted among the works that have it."""
+            cands = [(source_rank(bid, (w.get("field_src") or {}).get(field if field != "year_raw" else "year",
+                                                                     "outline"), trust),
+                      order.index(bid), w["n"], w) for bid, w in members if usable(w.get(field))]
+            return min(cands, key=lambda c: c[:3])[3] if cands else None
+
+        tw, aw, yw = best("title"), best("artist"), best("year")
+        yrw = None if yw else best("year_raw")
+        title = tw["title"] if tw else ws[0]["title"]
+        artist, attribution = canonical_artist(aw["artist"]) if aw else (None, None)
+        attribution = attribution or (aw.get("attribution") if aw else None)
+        if artist and not attribution:
+            attribution = next((w["attribution"] for w in ws if w.get("attribution") and canonical_artist(w.get("artist"))[0] == artist), None)
+        year = yw["year"] if yw else None
         ynum = next((w["year_num"] for w in ws if w.get("year_num") is not None), None)
         themed = config.BOOK_BY_ID[members[0][0]]["unit"] == "themed_chapter"
         if themed:
             base = f"theme-{members[0][0]}-{members[0][1]['n']:02d}"
         else:
-            tk = artist_tokens(rep.get("artist"))
-            base = f"{tk[-1] if tk else 'unknown'}-{slug(rep['title'], 5)}"
+            base = f"{artist_key_word(artist)}-{slug(title, 5)}"
         keys_used[base] = keys_used.get(base, 0) + 1
         key = base if keys_used[base] == 1 else f"{base}-{keys_used[base]}"
-        pinned_key = project_pinned_groups.get(leader)
-        final_key = pinned_key or key
-        art_entry = {"title": rep["title"], "artist": rep.get("artist"), "year": year,
-                     "works": [w["id"] for w in ws]}
-        if pinned_key and pinned_key != key:
-            art_entry["alias"] = key
+        final_key = pins.get(leader) or key
+        art_entry = {"title": title, "artist": artist, "year": year}
+        if attribution:
+            art_entry["attribution"] = attribution
+        if yrw:
+            art_entry["year_raw"] = yrw["year_raw"]
+        art_entry["works"] = [w["id"] for w in ws]
         artworks[final_key] = art_entry
         for w in ws:
             w["artwork_key"] = final_key
@@ -598,15 +866,25 @@ def regroup(log=print) -> dict:
             k = w["artwork_key"]
             rebuilt.setdefault(k, {**artworks.get(k, {"title": w["title"], "artist": w.get("artist"),
                                                        "year": w.get("year")}), "works": []})["works"].append(w["id"])
-    write_json(config.LIB_DIR / "artworks.json", rebuilt)
+    af = config.LIB_DIR / "artworks.json"
+    try:
+        previous = read_json(af) if af.is_file() else {}
+    except ValueError:
+        previous = {}
+    aliases = update_aliases(previous if isinstance(previous, dict) else {}, rebuilt, log)
+    for old_key, k in aliases.items():
+        rebuilt[k].setdefault("aliases", []).append(old_key)
+    write_json(af, rebuilt)
     multi = {k: a for k, a in rebuilt.items() if len({x.split("/")[0] for x in a["works"]}) >= 2}
-    return {"artworks": len(rebuilt), "multi_book": {k: a["works"] for k, a in multi.items()}}
+    gone = [k for k in PINNED_KEYS if k in previous and k not in rebuilt]
+    return {"artworks": len(rebuilt), "multi_book": {k: a["works"] for k, a in multi.items()},
+            "aliases": len(aliases), "pinned_missing": gone}
 
 
 def _public(w: dict) -> dict:
     """Stored shape: the spec fields first, helper fields after."""
-    keys = ["id", "n", "title", "artist", "year", "headline", "pdf_pages", "words", "n_images", "headings",
-            "artwork_key", "rights"]
+    keys = ["id", "n", "title", "artist", "attribution", "year", "year_raw", "headline", "pdf_pages", "words",
+            "n_images", "headings", "artwork_key", "rights"]
     out = {k: w[k] for k in keys if k in w}
     for k, v in w.items():
         if k not in out:

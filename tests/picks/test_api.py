@@ -13,6 +13,8 @@ from bti.media import api as media_api
 from bti.media.sources.bookpage import BookPageSource
 from bti.media.sources.commons import CommonsSource
 from bti.media.sources.met import MetSource
+from bti.media.sources.osm import OsmSource
+from bti.script import env
 from bti.script import store
 
 PAGES = {p["pageid"]: p for p in load_fix("commons_search.json")["query"]["pages"]}
@@ -35,6 +37,9 @@ def sources(monkeypatch):
     met = FakeNet([("/search", {"total": 1, "objectIDs": [436535]}), ("/objects/436535", load_fix("met_object.json")),
                    ("images.metmuseum.org", png_bytes(1500, 1300))])
     monkeypatch.setitem(media_api._SOURCES, "met", MetSource(opener=met, sleep=lambda s: None))
+    # the keyless map source is in the default list: a fake transport that finds no place (never a real request), and no keys for the others
+    monkeypatch.setitem(media_api._SOURCES, "osm", OsmSource(opener=FakeNet([("nominatim", [])]), sleep=lambda s: None))
+    monkeypatch.setattr(env, "has_key", lambda name: False)
     monkeypatch.setitem(media_api._SOURCES, "book", BookPageSource(renderer=lambda b, k, r, dest: dest.write_bytes(png_bytes(1358, 1600))))
     return net, met
 

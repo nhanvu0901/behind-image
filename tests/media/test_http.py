@@ -111,3 +111,13 @@ def test_retry_after_http_date():
     assert len(waits) == 1
     # Should be around 11-13 seconds
     assert 10.0 <= waits[0] <= 14.0
+
+
+def test_error_messages_never_carry_a_key_from_the_query():
+    """Pixabay takes its key in the query string; a failing request must not put it into the message."""
+    def opener(req, timeout=None):
+        raise urllib.error.HTTPError(req.full_url, 403, "Forbidden", {}, None)
+
+    with pytest.raises(MediaHTTPError) as e:
+        open_url("https://pixabay.com/api/?key=SECRET-KEY-123&q=rocks", sleep=lambda s: None, opener=opener)
+    assert "SECRET-KEY-123" not in str(e.value) and "q=rocks" in str(e.value) and e.value.status == 403

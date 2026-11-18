@@ -132,6 +132,8 @@ def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
         "notes": str(raw.get("notes") or ""),
         "error": raw.get("error"),
         "conflicts": raw.get("conflicts"),
+        "retry_after_seconds": raw.get("retry_after_seconds"),
+        "retry_at": raw.get("retry_at"),
         "has_undo": has_undo,
         "accepted": raw.get("accepted"),
         "accepted_at": raw.get("accepted_at"),

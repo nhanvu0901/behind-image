@@ -51,6 +51,7 @@ class AgyResult:
     conversation_id: str | None = None
     error_code: str | None = None
     error_message: str = ""
+    retry_after_seconds: int | None = None   # for agy_rate_limit: seconds until the quota resets, when agy printed it
     tampered: list = field(default_factory=list)
     elapsed: float = 0.0
     returncode: int | None = None
@@ -105,6 +106,12 @@ def user_line(text: str) -> str:
 def repair_text(problems: str) -> str:
     return ("The check found problems in your files in out/. Fix them in the same files, run the check again, and repeat until it "
             "reports no errors. Do not change anything else. Problems:\n\n" + problems)
+
+
+def reset_seconds(text: str) -> int | None:
+    """`Resets in 2m56s` and the like (one parser, shared with the single-turn provider)."""
+    from bti.script.providers.antigravity import parse_reset_seconds
+    return parse_reset_seconds(text)
 
 
 def classify(text: str) -> tuple[str, str]:
@@ -232,7 +239,7 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
     res = AgyResult()
     cancelled = _cancel_fn(cancel)
     runner = runner or DefaultRunner(cancelled).run_process
-    S = types.SimpleNamespace(handle=None, pending=None, final=False, timed_out=False, err="", respawns=0, last_tick=0.0)
+    S = types.SimpleNamespace(handle=None, pending=None, final=False, timed_out=False, err="", quota="", respawns=0, last_tick=0.0)
     seen_steps: set = set()
     tf = None
     t0 = time.time()
@@ -286,7 +293,10 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
             if status == "CANCELED":
                 return finish("cancelled")
             if status != "SUCCESS":
-                code, msg = classify("%s %s" % (r.get("error") or "", S.err))
+                text = "%s %s %s" % (r.get("error") or "", S.err, S.quota)
+                code, msg = classify(text)
+                if code == "agy_rate_limit":
+                    res.retry_after_seconds = reset_seconds(text + " " + res.response)
                 return finish("error", code, msg)
             problems = check(res.turns) if check is not None else None
             if problems and res.repairs < max_repairs:
@@ -310,6 +320,9 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
             except (OSError, ValueError):
                 pass
         line = line.strip()
+        low = line.lower()
+        if "quota" in low or "429" in low or "resets in" in low or "reset in" in low:      # kept: the reset time is printed there
+            S.quota = (S.quota + line + "\n")[-4000:]
         if not line.startswith("{") or S.final:
             return
         try:
@@ -362,8 +375,10 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
                 S.respawns += 1                          # the program ended after its turn: continue the same conversation
                 extra, first = ["--conversation", res.conversation_id], S.pending
                 continue
-            code, msg = classify(S.err)
-            if S.err.strip():
+            code, msg = classify(S.err + " " + S.quota)
+            if code == "agy_rate_limit":
+                res.retry_after_seconds = reset_seconds(S.err + " " + S.quota)
+            if S.err.strip() or S.quota.strip():
                 finish("error", code, msg)
             else:
                 finish("error", "agy_no_result", "agy ended without a result")
@@ -377,6 +392,13 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
     finally:
         done.set()
         res.stderr_tail = S.err[-2000:]
+        if res.status == "error":
+            # the result event can arrive before the reader of stderr has the quota sentence: look again with everything read
+            full = S.err + " " + S.quota
+            if res.error_code in (None, "agy_error") and classify(full)[0] == "agy_rate_limit":
+                res.error_code, res.error_message = classify(full)
+            if res.error_code == "agy_rate_limit" and res.retry_after_seconds is None:
+                res.retry_after_seconds = reset_seconds(full + " " + res.response)
         if tf is not None:
             try:
                 tf.close()
