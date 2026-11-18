@@ -320,10 +320,15 @@ class _Compiler:
         slots = {k: {"asset": v["asset"]} for k, v in (ss.get("slots") or {}).items()}
         regs = {k: v.get("region") for k, v in (ss.get("slots") or {}).items()}
         pick0 = beat_picks_[0] if beat_picks_ else None
+        if spec is not None and "footage" not in slots and any(sd["name"] == "footage" for sd in spec["slots"]):
+            vpick = next((p for p in beat_picks_ if (self.assets.get(p.get("asset")) or {}).get("kind") == "video"), pick0)
+            if vpick:
+                slots["footage"] = {"asset": vpick["asset"]}
         if spec is not None and "image" not in slots and any(sd["name"] == "image" and sd.get("type") == "image" for sd in spec["slots"]):
-            slots["image"] = {"asset": pick0["asset"] if pick0 else self.main}
-            if pick0 and pick0.get("region"):
-                regs.setdefault("image", pick0["region"])
+            ipick = next((p for p in beat_picks_ if self.is_image(p.get("asset"))), None)
+            slots["image"] = {"asset": ipick["asset"] if ipick else self.main}
+            if ipick and ipick.get("region"):
+                regs.setdefault("image", ipick["region"])
         pslot, akey = SB.primary_slot({"slots": slots})
         region = regs.get(pslot) if pslot else None
         if region is None and akey and pick0 and pick0["asset"] == akey:
@@ -745,6 +750,8 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
         issues = _dedupe(c.base_issues + [S.problem("compile_empty", None, None, "no shot could be built: write the chapter files in out/")])
         return CompileResult({"schema": SB.SCHEMA, "shots": [], "assets": {}}, issues, [], [], {"shots": 0}, False)
     c.assign_ids(recs)
+    if c.inp.edit_shots is not None:
+        degrade = False
     degraded: list = []
     for r in recs:
         r.setdefault("fb_stage", -1)

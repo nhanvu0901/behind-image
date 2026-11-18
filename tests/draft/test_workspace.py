@@ -112,6 +112,39 @@ def test_workspace_compile_matches_the_project_compile(proj, tmp_path):
     assert strip(res.storyboard) == strip(ref.storyboard)
 
 
+def test_workspace_handles_video_assets_and_compiles_foot_01(proj, tmp_path):
+    import cv2
+    import numpy as np
+    vpath = proj / "media" / "clip.mp4"
+    wr = cv2.VideoWriter(str(vpath), cv2.VideoWriter_fourcc(*"mp4v"), 10, (320, 180))
+    for i in range(15):
+        wr.write(np.full((180, 320, 3), 50 + i * 10, dtype=np.uint8))
+    wr.release()
+    pk = json.loads((proj / "picks.json").read_text(encoding="utf-8"))
+    pk["assets"]["V"] = {
+        "file": "media/clip.mp4", "kind": "video", "title": "Process clip", "artist": "", "year": "",
+        "width": 320, "height": 180, "duration": 1.5,
+        "credit": {"source": "upload", "source_url": "", "author": "Me", "licence": "CC0", "licence_url": "", "flag": None},
+        "regions": {},
+    }
+    pk["beats"]["b0001"] = {"items": [{"asset": "V", "region": None, "role": "video", "note": "first sentence"}], "status": "picked", "note": ""}
+    (proj / "picks.json").write_text(json.dumps(pk), encoding="utf-8")
+
+    inp = load_inputs(proj)
+    ws = W.build(inp, root=tmp_path / "ws_vid")
+    assert (ws.root / "images" / "V.jpg").is_file() and (ws.root / "images" / "V.mp4").is_file()
+    va = json.loads((ws.root / "inputs" / "assets.json").read_text(encoding="utf-8"))["assets"]["V"]
+    assert va["kind"] == "video" and va["file"] == "images/V.jpg" and "FOOT-01" in va["note"]
+
+    specs = auto.draft(inp)
+    assert specs["c01"]["shots"][0]["technique"] == "FOOT-01"
+    for cid, sp in specs.items():
+        (ws.root / "out" / (cid + ".json")).write_text(json.dumps(sp), encoding="utf-8")
+    res, _ = W.workspace_compile(ws.root, draw=True)
+    assert not res.errors, res.errors
+    assert res.storyboard["shots"][0]["technique"] == "FOOT-01"
+
+
 def _run(module, ws, *args):
     env = {k: v for k, v in os.environ.items() if k in ("PATH", "SYSTEMROOT", "TEMP", "TMP", "HOME", "USERPROFILE")}
     env["PYTHONPATH"] = str(REPO)

@@ -183,13 +183,13 @@ The owner does not want to learn the editing tools. In step 5 they type what the
 
 ## 8. Step 6: export (EXPORT)
 
-**Input:** an approved storyboard, the mix, the timing. **Output:** under `projects/<pid>/export/`: `<slug>.mp4`, `<slug>.srt`, `description.txt`, `chapters.txt`, `export.json`.
+**Input:** an approved storyboard, the mix, the timing. **Output:** under `projects/<pid>/export/`: `<slug>.mp4`, `description.txt`, `chapters.txt`, `export.json`.
 
 1. **Render in parts** (heavy): the timeline is cut at shot boundaries into parts of about 240 s of video (about 8 minutes of compute each at the measured 2.0 minutes per minute). Each part is `python -m bti.engine render --quality final` as a child process, its progress lines read. A part whose file exists for the same storyboard revision and range is not redone. Parts are joined by stream copy; the frame count is checked against duration × 30.
-2. **Subtitles:** cues from the timing words: at most two lines of 42 characters, broken at sentence ends and pauses, no cue under 0.8 s or over 6 s, no two cues overlapping. Written as a sidecar `.srt` and as a soft `mov_text` track. Never drawn into the picture.
-3. **Mux:** video by copy, the mix by copy, the subtitle track, chapter marks from `timing.chapters`, `+faststart`.
-4. **Description:** title; the artwork line; chapters as `mm:ss Title`; the books used; one credit line per asset that appears in a shot (title, author, licence, link), with a note on any flagged one; "Subtitles available". Wording comes from a template file so the new channel identity can change it later.
-5. **Checks, shown as a report card:** duration, frame count, integrated loudness and true peak measured from the file, subtitle track present, cue count, file size.
+2. **Narration timing:** retain word timestamps for synchronizing shots; no narration subtitle files or streams are generated.
+3. **Mux:** video by copy, the mix by copy, chapter marks from `timing.chapters`, `+faststart`.
+4. **Description:** title, artwork, chapters, books and asset credits with flagged notes.
+5. **Checks:** duration, frame count, loudness, true peak, audio, chapter marks and file size.
 
 **Page.** What will be made and how long it should take; "Xuất video"; progress by part; cancel; the result with a player, the report card, the description with a copy button, and links to the files. A stale export says why.
 

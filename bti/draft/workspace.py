@@ -99,14 +99,65 @@ def _copy_image(src: Path, dst: Path) -> tuple[int, int, int, int] | None:
     return w, h, out.shape[1], out.shape[0]
 
 
-def _rewrite_assets(assets: dict, copies: dict) -> dict:
+def _copy_video(src: Path, dst_video: Path, dst_sheet: Path) -> tuple[int, int, int, int, str, float] | None:
+    """Copy a video asset into the workspace and render a 2x2 contact sheet JPEG for visual inspection.
+    -> (source w, source h, sheet w, sheet h, video filename, duration_s) or None if unreadable."""
+    import cv2
+    import numpy as np
+    cap = cv2.VideoCapture(str(src))
+    try:
+        if not cap.isOpened():
+            return None
+        w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+        h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+        fps = float(cap.get(cv2.CAP_PROP_FPS) or 0.0) or 25.0
+        n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+        ok0, fr0 = cap.read()
+        if not ok0 or fr0 is None:
+            return None
+        if w <= 0 or h <= 0:
+            h, w = fr0.shape[:2]
+        dur = (n / fps) if n > 0 else 0.0
+        idxs = [min(max(0, int(round(f * max(n - 1, 0)))), max(n - 1, 0)) for f in (0.15, 0.4, 0.65, 0.85)] if n >= 4 else [0]
+        frames = []
+        for idx in idxs:
+            if idx == 0:
+                frames.append(fr0)
+            else:
+                cap.set(cv2.CAP_PROP_POS_FRAMES, idx)
+                ok, fr = cap.read()
+                frames.append(fr if ok and fr is not None else fr0)
+    finally:
+        cap.release()
+    tile_w = min(640, MAX_IMAGE_PX // 2)
+    tile_h = max(2, int(round(tile_w * (h / float(max(w, 1))))))
+    tiles = [cv2.resize(fr, (tile_w, tile_h), interpolation=cv2.INTER_AREA) for fr in frames]
+    if len(tiles) == 4:
+        sheet = np.vstack([np.hstack([tiles[0], tiles[1]]), np.hstack([tiles[2], tiles[3]])])
+    else:
+        sheet = tiles[0]
+    dst_sheet.parent.mkdir(parents=True, exist_ok=True)
+    if not cv2.imwrite(str(dst_sheet), sheet, [cv2.IMWRITE_JPEG_QUALITY, 88]):
+        return None
+    dst_video.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(src, dst_video)
+    return w, h, sheet.shape[1], sheet.shape[0], dst_video.name, round(float(dur), 2)
+
+
+def _rewrite_assets(assets: dict, copies: dict, video_copies: dict | None = None) -> dict:
     """The assets that have a copy in the workspace, with `file` pointing at it and `width`/`height` the SOURCE size."""
     out = {}
+    vc = video_copies or {}
     for k, a in assets.items():
         if k in copies:
             b = copy.deepcopy(a)
             b["file"] = "images/%s.jpg" % k
             b["width"], b["height"] = copies[k][0], copies[k][1]
+            out[k] = b
+        elif k in vc:
+            b = copy.deepcopy(a)
+            b["file"] = "images/%s" % vc[k][4]
+            b["width"], b["height"] = vc[k][0], vc[k][1]
             out[k] = b
     return out
 
@@ -155,7 +206,7 @@ def render_template(text: str, mode: str, values: dict) -> str:
 
 
 def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = None, instruction: str | None = None,
-          scope_words: str = "", repo_root: Path | None = None, template: Path | None = None) -> Workspace:
+          scope_words: str = "", history: str | None = None, repo_root: Path | None = None, template: Path | None = None) -> Workspace:
     """Make the workspace. `instruction` switches to edit mode (design 7.4); `inp.edit_shots` is then the set of shot ids in scope."""
     import sys
     repo = Path(repo_root or REPO_ROOT)
@@ -169,25 +220,38 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
         (root / sub).mkdir(parents=True, exist_ok=True)
     bundle = R.load_bundle(inp.style)
 
-    # pictures
+    # pictures and video clips
     all_assets = dict(inp.picks["assets"])
     for k, a in ((inp.current or {}).get("assets") or {}).items():
         if isinstance(a, dict):
             all_assets[k] = a
     copies: dict = {}
+    video_copies: dict = {}
     for k, a in all_assets.items():
         f = Path(inp.project_dir) / a["file"] if isinstance(a.get("file"), str) and a["file"] and ".." not in a["file"].replace("\\", "/").split("/") else None
-        if a.get("kind") == "image" and f is not None and f.is_file():
+        if f is None or not f.is_file():
+            continue
+        if a.get("kind") == "image":
             got = _copy_image(f, root / "images" / ("%s.jpg" % k))
             if got:
                 copies[k] = got
+        elif a.get("kind") == "video":
+            ext = f.suffix.lower() or ".mp4"
+            got_v = _copy_video(f, root / "images" / ("%s%s" % (k, ext)), root / "images" / ("%s.jpg" % k))
+            if got_v:
+                video_copies[k] = got_v
     assets_doc = {}
     for k, a in all_assets.items():
         c = copies.get(k)
+        vc = video_copies.get(k)
         rec = {"title": a.get("title"), "artist": a.get("artist"), "year": a.get("year"), "kind": a.get("kind"),
                "credit": a.get("credit"), "regions": (a.get("regions") or {})}
         if c:
             rec.update(file="images/%s.jpg" % k, source_size=[c[0], c[1]], image_size=[c[2], c[3]], scale=round(c[0] / float(c[2]), 4))
+        elif vc:
+            rec.update(file="images/%s.jpg" % k, source_size=[vc[0], vc[1]], image_size=[vc[2], vc[3]],
+                       duration=a.get("duration") or vc[5],
+                       note="video clip: images/%s.jpg is a contact sheet of frames from the clip; use technique FOOT-01 (slot 'footage') or LAY-04 (slot 'inset')" % k)
         else:
             rec.update(file=None, note="no picture file is available for this asset: do not use it")
         assets_doc[k] = rec
@@ -211,9 +275,9 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
     # what the helpers compile from
     current = copy.deepcopy(inp.current) if inp.current else None
     if current:
-        current["assets"] = _rewrite_assets(current.get("assets") or {}, copies)
+        current["assets"] = _rewrite_assets(current.get("assets") or {}, copies, video_copies)
     picks = copy.deepcopy(inp.picks)
-    picks["assets"] = _rewrite_assets(picks["assets"], copies)
+    picks["assets"] = _rewrite_assets(picks["assets"], copies, video_copies)
     if picks["main_asset"] not in picks["assets"]:
         raise DraftError("main_asset_unreadable", "the main painting has no readable picture file")
     _json(root / "inputs" / "compile_input.json", {
@@ -237,8 +301,12 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
         raise DraftError("template_missing", "skills/storyboard_draft/TASK.template.md is missing")
     _write(root / "TASK.md", render_template(tpl.read_text(encoding="utf-8"), mode, values))
     if instruction is not None:
-        _write(root / "INSTRUCTION.md", "# The owner's instruction\n\n%s\n\n# Scope\n\n%s\n\nShots marked `in_scope: true` in inputs/current/ are the only ones you may change.\n"
-               % (instruction, scope_words or "the whole video"))
+        parts = []
+        if history and history.strip():
+            parts.append(history.strip())
+        parts.append("# The owner's instruction\n\n%s\n\n# Scope\n\n%s\n\nShots marked `in_scope: true` in inputs/current/ are the only ones you may change.\n"
+                     % (instruction, scope_words or "the whole video"))
+        _write(root / "INSTRUCTION.md", "\n\n".join(parts))
     return Workspace(root=root, inputs=inp, mode=mode, scale={k: v[0] / float(v[2]) for k, v in copies.items()})
 
 

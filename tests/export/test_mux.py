@@ -6,7 +6,7 @@ FF = ["ffmpeg"]
 
 
 def cmd(**kw):
-    a = dict(video="v.mp4", audio="a.m4a", srt="s.srt", meta="m.txt", out="o.mp4", duration=12.5)
+    a = dict(video="v.mp4", audio="a.m4a", meta="m.txt", out="o.mp4", duration=12.5)
     a.update(kw)
     return mux.mux_command(FF, **a)
 
@@ -21,12 +21,12 @@ def test_no_video_filter_anywhere():
 
 def test_mux_maps_copies_and_faststart():
     c = cmd()
-    assert c[c.index("-c:s") + 1] == "mov_text"
+    assert "-c:s" not in c and "mov_text" not in c
     assert c[c.index("-c:a") + 1] == "copy"
     assert "+faststart" in c
     assert c[c.index("-t") + 1] == "12.500"
-    assert "-map_chapters" in c and "3" == c[c.index("-map_chapters") + 1]
-    assert [c[i + 1] for i, a in enumerate(c) if a == "-map"] == ["0:v:0", "1:a:0", "2:s:0"]
+    assert "-map_chapters" in c and "2" == c[c.index("-map_chapters") + 1]
+    assert [c[i + 1] for i, a in enumerate(c) if a == "-map"] == ["0:v:0", "1:a:0"]
     assert c[-1] == "o.mp4"
 
 

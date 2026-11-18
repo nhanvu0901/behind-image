@@ -38,7 +38,7 @@ You do not write a finished storyboard and you do not render anything. You write
 | `inputs/techniques.md` | The 71 techniques: when to use each, slots, parameters with bounds and defaults, and an index by intent. |
 | `inputs/style.json` | The channel's constants (pacing, card timings, label strips...). |
 | `inputs/current/<chapter>.json` | Only when the project already has a storyboard: its shots as specs, with `id`, `locked`{{#EDIT}}, `in_scope`{{/EDIT}}, `start_s`, `end_s`. |
-| `images/<key>.jpg` | The pictures, at most 1568 px on the long side. Look at them. |
+| `images/<key>.jpg` | The pictures, at most 1568 px on the long side. Look at them. For `kind: "video"` assets, `images/<key>.jpg` is a contact sheet of frames from the clip. |
 | `out/` | Where you write. `look/` is where `still` draws frames for you. |
 
 ## 3. How to read the inputs
@@ -122,6 +122,7 @@ Habits that make a draft good:
 - A spotlight or ring starts on the word that names the thing and ends when the sentence moves on.
 - Vary: do not use the same technique four times in a row; the check warns.
 - Facts about the painter, the city or the commission are the moments for a context picture if the owner picked one; if not, stay on the painting and move.
+- **Video clips (`kind: "video"` or `role: "video"`):** when the owner picked a video clip for a beat, check its `title` and `note` in `inputs/beats.json` (plus the contact sheet `images/<key>.jpg`) to find the exact spoken sentence it matches, and start the shot at that `start_word` using `FOOT-01` (`"slots": {"footage": {"asset": "<key>"}}`) for full-frame footage or `LAY-04` (`"slots": {"image": {"asset": "A"}, "inset": {"asset": "<key>"}}`) for a picture-in-picture inset over the painting. Video clip audio is muted automatically.
 
 ## 6. Pacing numbers
 

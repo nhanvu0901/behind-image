@@ -138,7 +138,7 @@ function paint() {
   const d = S.data;
   root.replaceChildren(...kids(
     h('h1', { text: '6. Xuất video' }),
-    h('div', { class: 'ex-sub muted', text: 'Dựng bản cuối từ storyboard đã duyệt và giọng đọc: video MP4 có phụ đề bên trong, tệp phụ đề riêng, mô tả và mục lục.' }),
+    h('div', { class: 'ex-sub muted', text: 'Dựng bản cuối từ storyboard đã duyệt và giọng đọc: video MP4, mô tả và mục lục.' }),
     staleBox(d), blockedBox(d), lastErrorBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d)));
   paintJob();
 }
@@ -212,7 +212,7 @@ function resultBox(d) {
   return h('div', { class: 'ex-result' },
     h('div', { class: 'box' }, h('h4', { text: 'Video đã xuất' }),
       video ? h('video', { class: 'ex-video', controls: true, preload: 'metadata', src: api.url(video.url) }) : h('div', { class: 'muted', text: 'Không còn tệp video.' }),
-      h('div', { class: 'muted', text: `${fmtDuration(m.duration)} · ${m.cues} dòng phụ đề · ${m.chapters} mục lục · xuất lúc ${String(m.created || '').replace('T', ' ').slice(0, 16)}` })),
+      h('div', { class: 'muted', text: `${fmtDuration(m.duration)} · ${m.chapters} mục lục · xuất lúc ${String(m.created || '').replace('T', ' ').slice(0, 16)}` })),
     h('div', { class: 'box' }, h('h4', { text: 'Phiếu kiểm tra' }), h('table', { class: 'ex-card' }, card),
       (m.notes || []).length ? h('div', { class: 'hint warn', text: 'Có hình cần kiểm tra giấy phép trước khi đăng (xem ghi chú trong mô tả).' }) : null),
     h('div', { class: 'box' }, h('h4', { text: 'Mô tả video' }), h('textarea', { class: 'ex-desc', readOnly: true, rows: 14, value: desc }),

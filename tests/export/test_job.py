@@ -19,26 +19,26 @@ def test_full_export_writes_every_file_and_a_manifest(patch_run, project, settin
     specs = specs_of(project, settings)
     assert [p["key"] for p in job["parts"]] == ["prepare"] + ["render-%d" % (i + 1) for i in range(len(specs))] + ["join", "mux", "finish"]
     edir = project / "export"
-    assert sorted(f.name for f in edir.iterdir()) == ["arnolfini.mp4", "arnolfini.srt", "chapters.txt", "description.txt", "export.json"]
+    assert sorted(f.name for f in edir.iterdir()) == ["arnolfini.mp4", "chapters.txt", "description.txt", "export.json"]
+    assert not list((project / "cache" / "export").glob("*.srt"))
     m = run.read_manifest(project)
     assert m["frames"] == 24625 and m["duration"] == 820.833 and m["fps"] == 30 and m["chapters"] == 8
-    assert m["cues"] == (edir / "arnolfini.srt").read_text(encoding="utf-8").count("-->") > 100
-    assert m["cue_problems"] == []
     assert m["report_status"] == "ok", [i for i in m["report"] if i["status"] != "ok"]
     assert len(m["parts"]) == len(specs)
-    assert "Subtitles available" in (edir / "description.txt").read_text(encoding="utf-8")
+    assert "Subtitles available" not in (edir / "description.txt").read_text(encoding="utf-8")
     assert len(fake_tools.calls("engine")) == len(specs)
     assert run.state(project, manager)["state"] == "done"
 
 
-def test_the_mux_command_has_no_video_filter_and_a_soft_track(patch_run, project, settings, fake_tools):
+def test_the_mux_command_has_no_video_filter_or_subtitle_track(patch_run, project, settings, fake_tools):
     run.start(project, settings=settings)
     cmds = [c["argv"] for c in fake_tools.calls("ffmpeg")]
     assert cmds
     for argv in cmds:
         s = " ".join(argv)
         assert "-vf" not in s and "subtitles=" not in s and "-filter_complex" not in s and "ass=" not in s
-    mux = next(a for a in cmds if "mov_text" in a)
+    mux = next(a for a in cmds if "-map_chapters" in a)
+    assert "-c:s" not in mux and not any(x.endswith(":s:0") for x in mux)
     assert mux[mux.index("-c:v") + 1] == "copy"
 
 
@@ -135,7 +135,7 @@ def test_state_goes_stale_when_the_storyboard_or_audio_or_files_change(patch_run
     approve(project)
     run.start(project, settings=settings)
     assert run.state(project, manager)["state"] == "done"
-    (project / "export" / "arnolfini.srt").unlink()
+    (project / "export" / "chapters.txt").unlink()
     assert run.state(project, manager)["reason"] == "files"
 
 

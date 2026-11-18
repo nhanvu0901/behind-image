@@ -15,6 +15,7 @@ import { initInspector, setTab } from '../inspector.js';
 import { openGallery } from '../gallery.js';
 import { openProposals } from '../proposals.js';
 import { mountDraftPanel } from '../draftpanel.js';
+import { mountPromptEdit } from '../promptedit.js';
 import * as A from '../actions.js';
 import { shotIndexAt, wordIndexAt, clone } from '../logic.js';
 import * as E from '../edit.js';
@@ -67,6 +68,7 @@ const HTML = `
         <span id="t-audio" class="muted" hidden>Không có âm thanh</span>
         <span id="t-shot" class="muted"></span>
       </div>
+      <div id="prompt-edit-container"></div>
     </section>
     <aside id="inspector">
       <nav id="tabs">
@@ -136,6 +138,16 @@ export async function mount(host, mctx) {
   try { setRegistry(await api.style(STYLE_ID)); }
   catch (e) { errorToast(e, 'Không tải được danh sách kỹ thuật: ', 9000); return view; }
   await loadProject(pid);
+  const promptBox = $('#prompt-edit-container');
+  if (promptBox) {
+    mountPromptEdit(promptBox, {
+      pid: ctx.pid,
+      scope,
+      save,
+      onProposal: (id) => openProposals(applied, id),
+      onJobEnd: () => refreshProposalCount(),
+    });
+  }
   applyUrlParams();
   window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api };
   return view;

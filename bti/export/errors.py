@@ -20,8 +20,7 @@ VI = {
     "frames_mismatch": "Số khung hình của video không đúng với kế hoạch, nên đã dừng để không tạo ra tệp sai.",
     "join_failed": "Không ghép được các đoạn video lại với nhau.",
     "part_missing": "Thiếu một đoạn video đã dựng. Bấm Xuất video lần nữa.",
-    "mux_failed": "Không ghép được tiếng, phụ đề và mục lục vào video.",
-    "no_subtitles": "Không tạo được phụ đề từ tệp thời điểm của từng từ.",
+    "mux_failed": "Không ghép được tiếng và mục lục vào video.",
     "project_gone": "Dự án đã bị xóa.",
 }
 

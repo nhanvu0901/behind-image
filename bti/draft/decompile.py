@@ -101,22 +101,21 @@ def is_card(bundle, shot: dict) -> bool:
     return bool(sp and sp.get("kind") == "card")
 
 
-def resolved_current(inp: DraftInputs, tm: Timing) -> list[dict]:
-    """[{shot, t0, t1}] of the saved storyboard (shots whose start cannot be resolved are skipped)."""
-    cur = inp.current
-    if not isinstance(cur, dict):
+def resolve_shots(doc: dict | None, tm: Timing, default_dur: float) -> list[dict]:
+    """[{shot, t0, t1}] for a storyboard document."""
+    if not isinstance(doc, dict):
         return []
-    shots = [s for s in cur.get("shots") or [] if isinstance(s, dict)]
+    shots = [s for s in doc.get("shots") or [] if isinstance(s, dict)]
     ts = []
     for s in shots:
         try:
             ts.append(tm.resolve(s["start"]))
         except (AnchorError, KeyError, TypeError):
             ts.append(None)
-    end_t = inp.timing["duration"]
+    end_t = default_dur
     try:
-        if isinstance(cur.get("end"), dict):
-            end_t = tm.resolve(cur["end"])
+        if isinstance(doc.get("end"), dict):
+            end_t = tm.resolve(doc["end"])
     except AnchorError:
         pass
     out = []
@@ -126,6 +125,11 @@ def resolved_current(inp: DraftInputs, tm: Timing) -> list[dict]:
         nxt = next((ts[j] for j in range(i + 1, len(shots)) if ts[j] is not None), end_t)
         out.append({"shot": s, "t0": ts[i], "t1": nxt})
     return out
+
+
+def resolved_current(inp: DraftInputs, tm: Timing) -> list[dict]:
+    """[{shot, t0, t1}] of the saved storyboard (shots whose start cannot be resolved are skipped)."""
+    return resolve_shots(inp.current, tm, inp.timing["duration"])
 
 
 def decompile(inp: DraftInputs, scope_ids: set | None = None) -> dict:
@@ -171,6 +175,7 @@ def scope_violations(inp: DraftInputs, new_doc: dict, scope_ids: set) -> list[di
     tm = Timing({"duration": inp.timing["duration"], "words": inp.timing["words"]})
     cur = {rc["shot"].get("id"): rc for rc in resolved_current(inp, tm)}
     new = {s.get("id"): s for s in new_doc.get("shots") or [] if isinstance(s, dict)}
+    new_resolved = {rc["shot"].get("id"): rc for rc in resolve_shots(new_doc, tm, inp.timing["duration"])}
     out: list[dict] = []
 
     def bad(code, sid, msg):
@@ -181,6 +186,19 @@ def scope_violations(inp: DraftInputs, new_doc: dict, scope_ids: set) -> list[di
         s = rc["shot"]
         free = sid in scope_ids and not s.get("locked")
         if free:
+            cur_ovs = [o for o in s.get("overlays") or [] if isinstance(o, dict) and o.get("locked")]
+            if cur_ovs:
+                if sid not in new:
+                    bad("edit_locked_changed", sid, "in-scope shot with locked overlays was removed")
+                    continue
+                new_s = new[sid]
+                new_ovs_by_id = {o.get("id"): o for o in new_s.get("overlays") or [] if isinstance(o, dict) and o.get("id")}
+                for lk_o in cur_ovs:
+                    oid = lk_o.get("id")
+                    if not oid or oid not in new_ovs_by_id:
+                        bad("edit_locked_changed", sid, "locked overlay %s was removed" % (oid or "unknown"))
+                    elif clean(lk_o) != clean(new_ovs_by_id[oid]):
+                        bad("edit_locked_changed", sid, "locked overlay %s was changed" % oid)
             continue
         why = "a locked shot" if s.get("locked") else "outside the scope"
         if sid not in new:
@@ -190,6 +208,14 @@ def scope_violations(inp: DraftInputs, new_doc: dict, scope_ids: set) -> list[di
         if a != b:
             keys = sorted(k for k in set(a) | set(b) if a.get(k) != b.get(k))
             bad("edit_locked_changed" if s.get("locked") else "edit_outside_scope", sid, "was changed (%s): %s" % (why, ", ".join(keys)))
+        n_rc = new_resolved.get(sid)
+        if n_rc is not None:
+            if abs(n_rc["t0"] - rc["t0"]) > 1e-3:
+                bad("edit_locked_changed" if s.get("locked") else "edit_outside_scope", sid,
+                    "effective start was changed (%.3f s -> %.3f s) by neighbor edit" % (rc["t0"], n_rc["t0"]))
+            if abs(n_rc["t1"] - rc["t1"]) > 1e-3:
+                bad("edit_locked_changed" if s.get("locked") else "edit_outside_scope", sid,
+                    "effective end was changed (%.3f s -> %.3f s) by neighbor edit" % (rc["t1"], n_rc["t1"]))
     for sid, s in new.items():
         if sid in cur:
             continue
@@ -198,7 +224,7 @@ def scope_violations(inp: DraftInputs, new_doc: dict, scope_ids: set) -> list[di
         except (AnchorError, KeyError, TypeError):
             bad("edit_outside_scope", sid, "is new and its start cannot be read")
             continue
-        if not any(a - 1e-6 <= t < b + 1e-6 for a, b in spans):
+        if not any(a - 1e-6 <= t < b - 1e-6 for a, b in spans):
             bad("edit_outside_scope", sid, "is new and starts at %.2f s, outside the time of the shots in scope" % t)
     cur_assets = (inp.current or {}).get("assets") or {}
     for key, a in cur_assets.items():

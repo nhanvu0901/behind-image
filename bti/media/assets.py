@@ -95,9 +95,12 @@ def year_of(text: str) -> str:
 
 
 def build_asset(file_rel: str, kind: str, title: str, artist: str, year: str,
-                width: int, height: int, credit: dict) -> dict:
-    return {"file": file_rel, "kind": kind, "title": title, "artist": artist, "year": year,
-            "width": int(width), "height": int(height), "credit": credit}
+                width: int, height: int, credit: dict, *, duration: float | None = None) -> dict:
+    out = {"file": file_rel, "kind": kind, "title": title, "artist": artist, "year": year,
+           "width": int(width), "height": int(height), "credit": credit}
+    if kind == "video" and duration is not None and duration > 0:
+        out["duration"] = round(float(duration), 2)
+    return out
 
 
 def register(project_dir: Path, ident: str, key: str, asset: dict, require_root: bool = False) -> None:

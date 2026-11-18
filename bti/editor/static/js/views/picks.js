@@ -28,7 +28,7 @@ const fail = (e, prefix = '') => { const t = ERR[e?.body?.code]; if (t) toast(pr
 let root = null, scope = null, shell = null;
 const $ = (s) => root?.querySelector(s);
 const S = { pid: null, data: null, beat: null, tab: 'main', q: { text: '', sources: { commons: true, met: true }, res: null, busy: false, for: '' },
-  books: null, sugg: { beats: {} }, job: null };
+  v: { text: '', res: null, busy: false, importing: false }, books: null, sugg: { beats: {} }, job: null };
 let D = null, R = null, dirty = false, editVersion = 0, Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') }), pollId = null;
 
 const P = () => `/api/projects/${S.pid}/picks`;
@@ -205,18 +205,20 @@ function paintMid() {
 }
 function trayItem(beatId, it, i, n) {
   const a = assets()[it.asset];
-  const regions = a ? Object.keys(a.regions || {}) : [];
+  const isVideo = a?.kind === 'video';
+  const regions = a && !isVideo ? Object.keys(a.regions || {}) : [];
   const sel = (vals, cur, lab) => { const s = h('select'); for (const v of vals) s.append(h('option', { value: v, text: lab(v), selected: v === cur })); return s; };
   const reg = sel(['', ...regions], it.region || '', (v) => (v ? (a.regions[v].label ? `${v}: ${a.regions[v].label}` : v) : 'Cả bức ảnh'));
   reg.onchange = () => { L.setItem(D, beatId, i, { region: reg.value || null }); touch(); paintMid(); };
   const role = sel(L.ROLES, it.role, (v) => LBL.role[v]);
   role.onchange = () => { L.setItem(D, beatId, i, { role: role.value }); touch(); };
-  const bad = !a || (it.region && !(it.region in (a.regions || {})));
+  const bad = !a || (!isVideo && it.region && !(it.region in (a.regions || {})));
+  const vTag = isVideo ? h('span', { class: 'pk-vbadge', text: a.duration ? `VIDEO · ${Number(a.duration).toFixed(1)}s` : 'VIDEO' }) : null;
   return h('div', { class: 'pk-item' + (bad ? ' bad' : '') },
     thumb(a, it.region, 64),
     h('div', { class: 'pk-itembody' },
-      h('div', { class: 'pk-itemtitle' }, a ? (a.title || it.asset) : `(hình ${it.asset} không còn)`, ' ', a ? flagBadge(credit(a).flag) : null),
-      h('div', { class: 'pk-itemrow' }, a ? reg : null, role),
+      h('div', { class: 'pk-itemtitle' }, vTag, a ? (a.title || it.asset) : `(hình ${it.asset} không còn)`, ' ', a ? flagBadge(credit(a).flag) : null),
+      h('div', { class: 'pk-itemrow' }, a && !isVideo ? reg : null, role),
       h('input', { type: 'text', placeholder: 'Ghi chú', value: it.note || '', oninput: (e) => { L.setItem(D, beatId, i, { note: e.target.value }); touch(); } })),
     h('div', { class: 'pk-itembtns' },
       h('button', { class: 'small', text: '▲', title: 'Lên', disabled: i === 0, onclick: () => { L.moveItem(D, beatId, i, -1); touch(); paintMid(); } }),
@@ -231,7 +233,7 @@ function paintRight() {
   const tabs = h('div', { class: 'tabs' }, Object.entries(LBL.tabs).map(([k, t]) => h('button', { class: S.tab === k ? 'active' : '', text: t, onclick: () => { S.tab = k; paintRight(); if (k === 'books') loadBooks(); if (k === 'suggest') loadSuggestions(); } })));
   const body = h('div', { class: 'pk-tabbody' });
   col.replaceChildren(tabs, body);
-  ({ main: tabMain, search: tabSearch, books: tabBooks, suggest: tabSuggest, upload: tabUpload })[S.tab](body);
+  ({ main: tabMain, search: tabSearch, books: tabBooks, suggest: tabSuggest, video: tabVideo, upload: tabUpload })[S.tab](body);
 }
 /** Buttons of a candidate card: it becomes the main painting, or is added to the current beat. `imp` imports it and answers the state. */
 function useButtons(imp, { mainOnly = false } = {}) {
@@ -309,24 +311,145 @@ function tabBooks(body) {
 }
 function tabUpload(body) {
   const f = (label, name, ph = '') => h('label', { class: 'lb' }, label, h('input', { type: 'text', name, placeholder: ph }));
+  const mainCb = h('input', { type: 'checkbox', name: 'as_main' });
   const form = h('form', { class: 'pk-upload' },
-    h('p', { class: 'muted', text: 'Ảnh của bạn (jpg, png, webp, tối đa 80 MB). Các ô dưới đây không bắt buộc; để trống giấy phép thì ảnh được gắn cờ "Chưa rõ giấy phép".' }),
-    h('input', { type: 'file', name: 'file', accept: '.jpg,.jpeg,.png,.webp', required: true }),
-    f('Tên ảnh', 'title'), f('Tác giả', 'author'), f('Nguồn (đường dẫn)', 'source_url'), f('Giấy phép', 'licence', 'ví dụ CC BY 4.0, public domain'),
-    h('label', { class: 'cb' }, h('input', { type: 'checkbox', name: 'as_main' }), ' Đặt làm tranh chính'),
+    h('p', { class: 'muted', text: 'Ảnh (jpg, png, webp) hoặc video (mp4, mov, webm, m4v), tối đa 80 MB. Các ô dưới đây không bắt buộc; âm thanh gốc của video sẽ tự động tắt khi dựng.' }),
+    h('input', { type: 'file', name: 'file', accept: '.jpg,.jpeg,.png,.webp,.mp4,.webm,.mov,.m4v', required: true }),
+    f('Tên ảnh / video', 'title'), f('Tác giả', 'author'), f('Nguồn (đường dẫn)', 'source_url'), f('Giấy phép', 'licence', 'ví dụ CC BY 4.0, public domain'),
+    h('label', { class: 'cb' }, mainCb, ' Đặt làm tranh chính (chỉ dùng cho ảnh)'),
     h('button', { class: 'primary', type: 'submit', text: 'Tải lên' }));
   form.onsubmit = (ev) => {
     ev.preventDefault();
     const fd = new FormData(form);
-    if (!fd.get('file')?.size) return toast('Chọn một tệp ảnh.', 'warn');
-    fd.set('as_main', form.elements.as_main.checked ? '1' : '');
-    const beat = S.beat, asMain = form.elements.as_main.checked;
+    const fileObj = fd.get('file');
+    if (!fileObj?.size) return toast('Chọn một tệp ảnh hoặc video.', 'warn');
+    const isVid = /\.(mp4|webm|mov|m4v)$/i.test(fileObj.name || '');
+    if (isVid && mainCb.checked) return toast(ERR.video_not_main, 'warn');
+    fd.set('as_main', mainCb.checked ? '1' : '');
+    const beat = S.beat, asMain = mainCb.checked;
     serverOp(() => api.post(`${P()}/upload`, fd), (r) => {
-      if (!asMain && beat && r.asset_key) { L.addItem(D, beat, { asset: r.asset_key }); touch(); renderAll(); }
-      toast(asMain ? 'Đã chọn tranh chính.' : 'Đã tải ảnh lên.', 'ok');
+      if (!asMain && beat && r.asset_key) {
+        L.addItem(D, beat, { asset: r.asset_key, role: r.asset?.kind === 'video' ? 'video' : null });
+        touch(); renderAll();
+      }
+      toast(asMain ? 'Đã chọn tranh chính.' : (r.asset?.kind === 'video' ? 'Đã tải video lên.' : 'Đã tải ảnh lên.'), 'ok');
     });
   };
   body.append(form);
+}
+
+// ------------------------------------------------------------------ video (YouTube link or You.com search)
+function fmtDur(s) {
+  const t = Math.max(0, Math.round(Number(s || 0)));
+  return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`;
+}
+async function runVideoInspect(urlText) {
+  const url = String(urlText || '').trim();
+  if (!url) return toast('Dán link YouTube để xem.', 'warn');
+  S.v.text = url; S.v.busy = true; paintRight();
+  try { S.v.res = await api.post(`${P()}/video-search`, { url, query: '' }); }
+  catch (e) { S.v.res = null; fail(e, 'Không đọc được video: '); }
+  S.v.busy = false; paintRight();
+}
+async function runVideoSearchPaid(queryText, beat = null) {
+  const q = String(queryText || '').trim();
+  if (!q && !beat) return toast('Gõ từ khóa tìm kiếm trước.', 'warn');
+  const ok = await confirmDialog('Tìm đoạn video trên YouTube qua You.com sẽ tốn tiền API. Bạn muốn tiếp tục?', { title: 'Tìm video qua You.com', ok: 'Tìm' });
+  if (!ok) return;
+  S.v.text = q; S.v.busy = true; paintRight();
+  try {
+    S.v.res = await api.post(`${P()}/video-search`, { query: q, beat, confirm_paid: true });
+    if (S.v.res?.query) S.v.text = S.v.res.query;
+  } catch (e) { S.v.res = null; fail(e, 'Không tìm được video: '); }
+  S.v.busy = false; paintRight();
+}
+function videoCard(v) {
+  if (v.error) {
+    return h('div', { class: 'pk-vcard' },
+      h('div', { class: 'pk-cardtitle' }, h('a', { class: 'lnk', href: v.url, target: '_blank', rel: 'noopener', text: v.title || v.url })),
+      h('div', { class: 'muted', text: `Không đọc được thông tin video: ${v.error}` }));
+  }
+  const first = (v.moments || [])[0] || { start: 0, end: Math.min(Number(v.duration || 10), 10) };
+  const s0 = Number(first.start || 0), e0 = Math.max(s0 + 1, Number(first.end || s0 + 8));
+  const iframe = v.embeddable !== false ? h('iframe', {
+    class: 'pk-vframe',
+    src: `https://www.youtube.com/embed/${encodeURIComponent(v.id)}?start=${Math.floor(s0)}&end=${Math.ceil(e0)}`,
+    allow: 'autoplay; encrypted-media', allowfullscreen: true, referrerpolicy: 'strict-origin-when-cross-origin',
+  }) : null;
+  const player = iframe || h('a', { href: `${v.url}&t=${Math.floor(s0)}s`, target: '_blank', rel: 'noopener' },
+    v.thumb_url ? h('img', { src: v.thumb_url, alt: '', style: { width: '100%', aspectRatio: '16/9', objectFit: 'cover', borderRadius: '4px' } }) : null,
+    h('div', { class: 'muted', text: 'Video này tắt nhúng — bấm để mở trên YouTube ↗' }));
+  const startIn = h('input', { type: 'number', min: 0, step: 0.5, value: String(s0.toFixed(1)) });
+  const endIn = h('input', { type: 'number', min: 0.5, step: 0.5, value: String(e0.toFixed(1)) });
+  const noteIn = h('input', { type: 'text', class: 'grow', placeholder: 'Ghi chú (khớp với câu nào trong lời dẫn)' });
+  const momentsEl = (v.moments || []).length ? h('div', { class: 'pk-vmoments' },
+    h('div', { class: 'muted', text: 'Đoạn gợi ý:' }),
+    v.moments.map((m) => h('div', { class: 'pk-vmoment' },
+      h('button', { class: 'small', text: `▶ ${Number(m.start).toFixed(1)}–${Number(m.end).toFixed(1)}s`, onclick: () => {
+        startIn.value = Number(m.start).toFixed(1);
+        endIn.value = Number(m.end).toFixed(1);
+        if (iframe) iframe.src = `https://www.youtube.com/embed/${encodeURIComponent(v.id)}?autoplay=1&start=${Math.floor(m.start)}&end=${Math.ceil(m.end)}`;
+      } }),
+      h('span', { class: 'muted', text: m.why || '' }))))
+    : h('div', { class: 'muted', text: 'Không có mốc tự động — chỉnh giây bắt đầu/kết thúc bên dưới.' });
+  const beat = S.beat;
+  const impBtn = h('button', {
+    class: 'primary small', text: S.v.importing ? 'Đang cắt...' : 'Cắt & thêm vào dòng',
+    disabled: !beat || S.v.importing,
+    title: beat ? 'Tải đoạn này (tắt tiếng) và thêm vào dòng đang chọn' : 'Chọn một dòng ở cột trái',
+    onclick: async () => {
+      const a = Number(startIn.value), b = Number(endIn.value);
+      if (!Number.isFinite(a) || !Number.isFinite(b) || a < 0 || b - a < 0.5 || b - a > 120) {
+        return toast(ERR.video_bad_range, 'warn');
+      }
+      S.v.importing = true; impBtn.disabled = true; impBtn.textContent = 'Đang cắt...';
+      try {
+        await serverOp(() => api.post(`${P()}/import-clip`, { url: v.url, start: a, end: b, title: v.title || '' }), (r) => {
+          if (beat && r?.asset_key) {
+            L.addItem(D, beat, { asset: r.asset_key, role: 'video', note: noteIn.value.trim() });
+            touch(); renderAll();
+          }
+          toast('Đã cắt đoạn video và thêm vào dòng.', 'ok');
+        });
+      } finally { S.v.importing = false; paintRight(); }
+    },
+  });
+  const metaText = [v.channel, fmtDur(v.duration), v.height ? `${v.height}p` : '', v.vertical ? 'dọc' : '', v.match != null ? `khớp ${v.match}` : ''].filter(Boolean).join(' · ');
+  return h('div', { class: 'pk-vcard' },
+    h('div', { class: 'pk-vhead' },
+      h('div', { class: 'pk-cardtitle' }, h('a', { class: 'lnk', href: v.url, target: '_blank', rel: 'noopener', text: v.title || v.url })),
+      h('div', { class: 'muted', text: metaText }),
+      flagBadge(v.flag)),
+    player, momentsEl,
+    h('div', { class: 'pk-vtrim' },
+      h('label', null, 'Từ giây', startIn),
+      h('label', null, 'Đến giây', endIn),
+      noteIn, impBtn));
+}
+function tabVideo(body) {
+  const b = beatOf(S.beat);
+  const qIn = h('input', { type: 'search', class: 'grow', placeholder: 'Dán link YouTube (miễn phí) hoặc nhập từ khóa tìm đoạn video...', value: S.v.text || '' });
+  const looksLikeUrl = (s) => /youtube\.com|youtu\.be/i.test(String(s || ''));
+  qIn.onkeydown = (e) => {
+    if (e.key === 'Enter') {
+      if (looksLikeUrl(qIn.value)) runVideoInspect(qIn.value);
+      else runVideoSearchPaid(qIn.value);
+    }
+  };
+  const r = S.v.res;
+  const list = S.v.busy ? h('div', { class: 'muted pad', text: 'Đang tìm thông tin video và gợi ý đoạn...' })
+    : !r ? h('div', { class: 'muted pad', text: 'Dán link YouTube (miễn phí) hoặc tìm bằng You.com rồi cắt đoạn 0,5–120 giây.' })
+      : r.items?.length ? h('div', { class: 'pk-vlist' }, r.items.map(videoCard))
+        : h('div', { class: 'muted pad', text: 'Không tìm thấy video phù hợp.' });
+  body.append(
+    h('p', { class: 'muted', text: 'Dán link YouTube trực tiếp (miễn phí) hoặc tìm trên YouTube qua You.com (tốn tiền). Video cắt ra tự động tắt âm thanh gốc.' }),
+    h('div', { class: 'pk-searchform' },
+      h('div', { class: 'pk-row' }, qIn),
+      h('div', { class: 'pk-row' },
+        h('button', { text: 'Xem link (miễn phí)', disabled: S.v.busy, onclick: () => runVideoInspect(qIn.value) }),
+        h('button', { class: 'primary', text: 'Tìm trên YouTube (You.com, tốn tiền)', disabled: S.v.busy, onclick: () => runVideoSearchPaid(qIn.value) }),
+        b ? h('button', { class: 'small', text: 'Dùng chữ gợi ý của dòng này', disabled: S.v.busy, onclick: () => runVideoSearchPaid('', S.beat) }) : null)),
+    list);
 }
 
 // ------------------------------------------------------------------ suggestions (paid)
@@ -442,6 +565,7 @@ export async function mount(host, ctx) {
   scope = ctx.scope; shell = ctx.shell;
   Object.assign(S, { pid: ctx.pipeline.project, data: null, beat: null, tab: 'main', books: null, sugg: { beats: {} }, job: null });
   S.q = { text: '', sources: { commons: true, met: true }, res: null, busy: false };
+  S.v = { text: '', res: null, busy: false, importing: false };
   D = null; R = null; dirty = false; editVersion = 0; pollId = null; seen = jobWatcher();
   Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') });
   root = h('div', { class: 'pk-root v-pk' }); root.innerHTML = BAR; host.append(root);

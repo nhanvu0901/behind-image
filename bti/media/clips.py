@@ -1,17 +1,19 @@
-"""Video by URL: metadata, licence gate, section download, H.264 30 fps, contact sheet.
+"""Video by URL and moment discovery: You.com YouTube search, metadata + timing signals,
+licence gate (strict or advisory), section download, silent H.264 30 fps, contact sheet.
 
 Adapted from comic-book-pipeline/stages/clip_fetch.py (read-only source): _ytdlp_cmd,
 ytdlp_section_args, _kill_tree, _run_capture, DownloadTimeout, _ytdlp_error, normalize,
-sheet_times, contact_sheet. Changes: no `config` import, no `.env` reading, no writes
-outside the project (cache is `<project>/cache/clips/`), 16:9 friendly normalisation,
-and a licence gate in front of every download.
+sheet_times, contact_sheet, parse_search_results, youtube_search, gather_candidates,
+parse_vtt, heatmap_peaks, find_moments, score_video, moment_search.
+Changes: no `config` import, no direct `.env` parsing (uses bti.script.env.get_key),
+no writes outside the project (cache is `<project>/cache/clips/`), muted normalized clips
+(-an), and `strict_licence` option (True by default; False records advisory flag in credit).
 
 The module imports fine without yt-dlp; `ToolMissing` is raised on use.
-Only a licence of Creative Commons (or public domain) passes. The standard YouTube
-licence is rejected.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import math
 import os
@@ -25,10 +27,20 @@ from pathlib import Path
 from . import assets as _assets
 from ..proc import group_kwargs, kill_tree
 from .errors import LicenceRejected, MediaError
-from .licence import check_licence
+from .licence import check_licence, flag_for_text
+from .youcom import YouComClient
 from bti.fsio import atomic_replace
 
+_VIDEO_URL = re.compile(r"(youtube\.com/(?:watch\?|shorts/|embed/|live/)|youtu\.be/)", re.I)
 _YT_ID = re.compile(r"(?:v=|youtu\.be/|shorts/|embed/|live/)([A-Za-z0-9_-]{11})")
+_CUE = re.compile(r"(?:(\d+):)?(\d\d):(\d\d)[.,](\d+)\s+-->\s+(?:(\d+):)?(\d\d):(\d\d)[.,](\d+)")
+_SUB_LANGS = ("en", "en-US", "en-GB", "en-orig")
+_STOP = {
+    "a", "an", "and", "are", "as", "at", "be", "but", "by", "for", "from", "had", "has",
+    "have", "he", "her", "his", "in", "into", "is", "it", "its", "of", "on", "or", "she",
+    "that", "the", "their", "them", "there", "they", "this", "to", "was", "were", "who",
+    "with", "you", "your", "painting", "work", "detail", "scene", "clip", "video",
+}
 SECTION_TIMEOUT = float(os.getenv("CLIP_SECTION_TIMEOUT", "180"))
 META_TIMEOUT = 120
 
@@ -99,21 +111,325 @@ def _ytdlp_error(res) -> str:
     return msg
 
 
-# --------------------------------------------------------------------------- metadata + gate
+# --------------------------------------------------------------------------- metadata + moment search
 
 def video_id(url: str) -> str | None:
+    """The 11-character YouTube id of a watch/shorts/embed/live/youtu.be URL, else None."""
+    if not _VIDEO_URL.search(url or ""):
+        return None
     m = _YT_ID.search(url or "")
     return m.group(1) if m else None
 
 
+def _ytdlp_flags() -> list[str]:
+    flags = ["--skip-download", "--no-playlist"]
+    if shutil.which("node"):
+        flags.extend(["--js-runtimes", "node"])
+    return flags
+
+
 def video_metadata(url: str, *, timeout: int = META_TIMEOUT) -> dict:
     """yt-dlp info dict, no download. Raises when the info cannot be read."""
-    cmd = [*_ytdlp_cmd(), "--skip-download", "--no-playlist", "--dump-single-json", url]
+    cmd = [*_ytdlp_cmd(), *_ytdlp_flags(), "--dump-single-json", url]
     res = _run_capture(cmd, timeout=timeout)
     try:
         return json.loads(res.stdout or "")
     except ValueError:
         raise MediaError(f"no metadata ({' '.join((res.stderr or '').split())[-160:] or 'private, removed or blocked?'})") from None
+
+
+def video_metadata_with_cues(url: str, work_dir: Path | None = None, *, timeout: int = META_TIMEOUT) -> tuple[dict, list]:
+    """(yt-dlp info dict, subtitle cues) WITHOUT downloading the video. Subtitles are fetched
+    best-effort only when English captions exist (HTTP 429 on captions never fails the video)."""
+    info = video_metadata(url, timeout=timeout)
+    langs = [lg for lg in _SUB_LANGS
+             if lg in (info.get("subtitles") or {}) or lg in (info.get("automatic_captions") or {})]
+    cues: list = []
+    if langs:
+        td_ctx = tempfile.TemporaryDirectory() if work_dir is None else None
+        target_dir = Path(td_ctx.name) if td_ctx else Path(work_dir)
+        try:
+            target_dir.mkdir(parents=True, exist_ok=True)
+            cmd = [*_ytdlp_cmd(), *_ytdlp_flags(), "--write-subs", "--write-auto-subs",
+                   "--sub-langs", langs[0], "--sub-format", "vtt",
+                   "-o", str(target_dir / "%(id)s.%(ext)s"), url]
+            try:
+                _run_capture(cmd, timeout=min(timeout, 45))
+            except Exception:
+                pass
+            vtts = sorted(target_dir.glob("*.vtt"))
+            if vtts:
+                cues = parse_vtt(vtts[0].read_text(encoding="utf-8", errors="replace"))
+        finally:
+            if td_ctx is not None:
+                td_ctx.cleanup()
+    return info, cues
+
+
+def _ydc_key() -> str:
+    key = os.environ.get("YDC_API_KEY", "").strip()
+    if key:
+        return key
+    try:
+        from bti.script.env import get_key
+        return (get_key("YDC_API_KEY") or "").strip()
+    except Exception:
+        return ""
+
+
+def parse_search_results(payload: dict) -> list[dict]:
+    """You.com Search payload -> [{"title","url","snippet","is_video"}], deduped by video id."""
+    results = payload.get("results") if isinstance(payload, dict) else None
+    rows: list = []
+    if isinstance(results, dict):
+        for key in ("web", "news"):
+            if isinstance(results.get(key), list):
+                rows.extend(results[key])
+    elif isinstance(results, list):
+        rows = results
+    out, seen = [], set()
+    for r in rows:
+        if not isinstance(r, dict):
+            continue
+        url = str(r.get("url") or "").strip()
+        vid = video_id(url)
+        key = vid or url
+        if not url or key in seen:
+            continue
+        seen.add(key)
+        snips = r.get("snippets") or []
+        snippet = str(r.get("description") or (snips[0] if snips else "") or "")
+        out.append({"title": str(r.get("title") or ""), "url": url,
+                    "snippet": " ".join(snippet.split())[:200],
+                    "is_video": bool(vid)})
+    return out
+
+
+def youtube_search(query: str, *, client: YouComClient | None = None) -> list[dict]:
+    """Paid You.com Web Search restricted to youtube.com. Raises MediaError on an API error."""
+    key = _ydc_key() if client is None else getattr(client, "api_key", "")
+    client = client or YouComClient(api_key=key, timeout=60)
+    call = client.search(query, {"include_domains": ["youtube.com"]})
+    if not call.ok:
+        raise MediaError(f"You.com search failed: {call.error}")
+    return parse_search_results(call.payload)
+
+
+def _stem(w: str) -> str:
+    for suf in ("ing", "ed", "es", "s"):
+        if len(w) > len(suf) + 3 and w.endswith(suf):
+            return w[:-len(suf)]
+    return w
+
+
+def _terms(text: str) -> set[str]:
+    words = re.findall(r"[a-z0-9]+", (text or "").lower())
+    return {_stem(w) for w in words if len(w) > 1 and w not in _STOP}
+
+
+def moment_queries(desc: str, extra: list[str] | tuple = ()) -> list[str]:
+    """Phased queries for art-history / documentary footage, deduped in order."""
+    out: list[str] = []
+    for q in (desc, f"{desc} documentary", f"{desc} art history", *extra):
+        q = " ".join(str(q).split())
+        if q and q not in out:
+            out.append(q)
+    return out
+
+
+def gather_candidates(queries: list[str], *, search=None, log=None) -> list[dict]:
+    """Run queries, dedup videos by id with query consensus (`hits`) and `best_rank`."""
+    search_fn = youtube_search if search is None else search
+    by_id: dict[str, dict] = {}
+    errors: list[str] = []
+    for q in queries:
+        try:
+            rows = search_fn(q)
+        except Exception as exc:
+            errors.append(str(exc))
+            if log:
+                log(f"[moment] query failed ({exc}): {q}")
+            continue
+        for rank, r in enumerate(r for r in rows if r.get("is_video")):
+            vid = video_id(r["url"])
+            if not vid:
+                continue
+            c = by_id.setdefault(vid, {"id": vid, "url": f"https://www.youtube.com/watch?v={vid}",
+                                       "title": r.get("title", ""), "snippet": r.get("snippet", ""),
+                                       "hits": 0, "best_rank": rank})
+            c["hits"] += 1
+            c["best_rank"] = min(c["best_rank"], rank)
+    if not by_id and errors and len(errors) == len(queries):
+        raise MediaError(errors[0])
+    return sorted(by_id.values(), key=lambda c: (-c["hits"], c["best_rank"]))
+
+
+def parse_vtt(text: str) -> list[tuple[float, float, str]]:
+    """WebVTT -> [(start, end, text)], tags stripped, consecutive repeats collapsed."""
+    def _t(h, m, s, frac):
+        return int(h or 0) * 3600 + int(m) * 60 + int(s) + float(f"0.{frac}")
+    cues: list[tuple[float, float, str]] = []
+    lines = (text or "").splitlines()
+    i = 0
+    while i < len(lines):
+        m = _CUE.search(lines[i])
+        if not m:
+            i += 1
+            continue
+        a, b = _t(*m.groups()[:4]), _t(*m.groups()[4:])
+        i += 1
+        body = []
+        while i < len(lines) and lines[i].strip():
+            body.append(re.sub(r"<[^>]+>", "", lines[i]).strip())
+            i += 1
+        txt = " ".join(x for x in body if x)
+        if txt and not (cues and cues[-1][2] == txt):
+            cues.append((a, b, txt))
+    return cues
+
+
+def heatmap_peaks(heatmap: list | None, duration: float, *, k: int = 3,
+                  min_value: float = 0.35, min_gap: float = 8.0) -> list[tuple[float, float]]:
+    """[(centre_seconds, value)] of up to k local maxima of YouTube's 'most replayed' graph."""
+    segs = [(float(h["start_time"]), float(h["end_time"]), float(h["value"]))
+            for h in heatmap or [] if isinstance(h, dict) and "value" in h]
+    head = max(3.0, 0.02 * (duration or 0))
+    peaks = []
+    for i, (a, b, v) in enumerate(segs):
+        if a < head or v < min_value:
+            continue
+        prev = segs[i - 1][2] if i else -1.0
+        nxt = segs[i + 1][2] if i + 1 < len(segs) else -1.0
+        if v >= prev and v >= nxt:
+            peaks.append(((a + b) / 2, v))
+    chosen: list[tuple[float, float]] = []
+    for c, v in sorted(peaks, key=lambda p: -p[1]):
+        if all(abs(c - c2) >= min_gap for c2, _ in chosen):
+            chosen.append((round(c, 1), round(v, 2)))
+        if len(chosen) == k:
+            break
+    return chosen
+
+
+def find_moments(desc: str, info: dict, cues: list | None = None, *, k: int = 3) -> list[dict]:
+    """Up to k candidate windows in one video from chapters, subtitle cues, and replay heatmap."""
+    q = _terms(desc)
+    locate = q - _terms(info.get("title") or "")
+    need = 1 if len(q) <= 2 else 2
+
+    def hit(text: str) -> set[str]:
+        if not q:
+            return set()
+        shared = q & _terms(text)
+        ok = bool(shared & locate) if locate else len(shared) >= need
+        return shared if ok else set()
+
+    dur = float(info.get("duration") or 0)
+    out: list[dict] = []
+    for ch in info.get("chapters") or []:
+        shared = hit(ch.get("title", ""))
+        if shared:
+            a = float(ch.get("start_time") or 0)
+            b = min(float(ch.get("end_time") or a + 10), a + 10)
+            out.append({"start": round(a, 1), "end": round(b, 1), "strength": 0.6 + 0.1 * len(shared),
+                        "why": f"chapter \"{ch.get('title', '')}\""})
+    for a, b, txt in cues or []:
+        shared = hit(txt)
+        if shared:
+            out.append({"start": round(max(0.0, a - 1), 1), "end": round(min(dur or b + 2, b + 2), 1),
+                        "strength": 0.5 + 0.1 * len(shared), "why": f"subtitle \"{txt[:70]}\""})
+    for c, v in heatmap_peaks(info.get("heatmap"), dur):
+        out.append({"start": round(max(0.0, c - 3), 1), "end": round(min(dur or c + 3, c + 3), 1),
+                    "strength": v, "why": f"most replayed ({v:.2f})"})
+    out.sort(key=lambda m: -m["strength"])
+    picked: list[dict] = []
+    for m in out:
+        if all(m["end"] <= p["start"] or m["start"] >= p["end"] for p in picked):
+            picked.append(m)
+        if len(picked) == k:
+            break
+    return sorted(picked, key=lambda m: m["start"])
+
+
+def score_video(desc: str, cand: dict, info: dict, moments: list[dict], n_queries: int) -> dict:
+    """Heuristic ranking combining description match, query consensus, timing signal, duration and resolution."""
+    q = _terms(desc) or {""}
+    title = _terms(info.get("title") or cand.get("title", ""))
+    body = _terms(" ".join([info.get("description") or cand.get("snippet", ""),
+                            " ".join(info.get("tags") or [])]))
+    match = 0.7 * len(q & title) / len(q) + 0.3 * len(q & (title | body)) / len(q)
+    consensus = cand.get("hits", 1) / max(1, n_queries)
+    timing = min(1.0, max((m["strength"] for m in moments), default=0.0))
+    dur = float(info.get("duration") or 0)
+    length_fit = 1.0 if 30 <= dur <= 600 else (0.5 if dur and dur <= 1200 else 0.0)
+    res = 1.0 if (info.get("height") or 0) >= 720 else 0.0
+    score = 0.45 * match + 0.25 * consensus + 0.15 * timing + 0.1 * length_fit + 0.05 * res
+    return {"score": round(score, 3), "match": round(match, 2),
+            "consensus": f"{cand.get('hits', 1)}/{n_queries}", "timing": round(timing, 2)}
+
+
+def _candidate_row(desc: str, cand: dict, info: dict, cues: list, n_queries: int) -> dict:
+    vid = info.get("id") or cand.get("id") or ""
+    moments = find_moments(desc, info, cues)
+    ok, lic_name, _reason = clip_licence(info)
+    raw_lic = str(info.get("license") or "").strip()
+    lic_label = lic_name or raw_lic or "Standard YouTube License"
+    flag = None if ok else flag_for_text(lic_label)
+    row = {
+        "id": vid,
+        "url": info.get("webpage_url") or cand.get("url") or f"https://www.youtube.com/watch?v={vid}",
+        "title": info.get("title") or cand.get("title") or vid,
+        "channel": info.get("channel") or info.get("uploader") or "",
+        "duration": round(float(info.get("duration") or 0), 1),
+        "height": info.get("height"),
+        "width": info.get("width"),
+        "subtitles": bool(cues),
+        "vertical": bool(info.get("width") and info.get("height") and info["height"] > info["width"]),
+        "thumb_url": info.get("thumbnail") or (f"https://i.ytimg.com/vi/{vid}/hqdefault.jpg" if vid else ""),
+        "embeddable": info.get("playable_in_embed", True) is not False,
+        "licence": lic_label,
+        "licence_ok": ok,
+        "flag": flag,
+        "moments": moments,
+    }
+    row.update(score_video(desc, cand, info, moments, n_queries))
+    return row
+
+
+def inspect_video_url(url: str, desc: str = "", *, metadata=None) -> dict:
+    """Inspect a pasted YouTube URL via yt-dlp (free, no You.com call). Returns one candidate row."""
+    vid = video_id(url)
+    if not vid:
+        raise ValueError("not a supported YouTube URL")
+    meta_fn = video_metadata_with_cues if metadata is None else metadata
+    canon_url = f"https://www.youtube.com/watch?v={vid}"
+    with tempfile.TemporaryDirectory() as td:
+        info, cues = meta_fn(canon_url, Path(td))
+    cand = {"id": vid, "url": canon_url, "title": info.get("title") or "", "snippet": "", "hits": 1}
+    return _candidate_row(desc, cand, info, cues, 1)
+
+
+def moment_search(desc: str, *, limit: int = 6, extra_queries: list[str] | tuple = (),
+                  search=None, metadata=None, log=None) -> list[dict]:
+    """You.com YouTube search + parallel yt-dlp metadata/moment extraction, best first."""
+    queries = moment_queries(desc, extra_queries)
+    cands = gather_candidates(queries, search=search, log=log)[:max(1, min(int(limit), 12))]
+    meta_fn = video_metadata_with_cues if metadata is None else metadata
+
+    def one(c):
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                info, cues = meta_fn(c["url"], Path(td))
+        except Exception as exc:
+            return {**c, "error": str(exc)[:200]}
+        return _candidate_row(desc, c, info, cues, len(queries))
+
+    if not cands:
+        return []
+    with ThreadPoolExecutor(max_workers=min(4, len(cands))) as pool:
+        rows = list(pool.map(one, cands))
+    ok_rows = sorted((r for r in rows if "error" not in r), key=lambda r: -r["score"])
+    return ok_rows + [r for r in rows if "error" in r]
 
 
 def clip_licence(info: dict) -> tuple[bool, str, str]:
@@ -129,11 +445,12 @@ def ytdlp_section_args(url: str, out_dir: Path, *, start: float, end: float,
     if end <= start:
         raise ValueError("end must be after start")
     fmt = f"bv*[height<={max_height}]+ba/b[height<={max_height}]/bv*+ba/b"
-    return [*_ytdlp_cmd(), "--no-playlist", "-f", fmt,
+    args = [*_ytdlp_cmd(), "--no-playlist", "-f", fmt,
             "--download-sections", f"*{start:.2f}-{end:.2f}", "--force-keyframes-at-cuts",
             "--force-overwrites", "--merge-output-format", "mp4", "--write-info-json",
             "--no-progress", "-o", str(Path(out_dir) / f"%(id)s_sec_{start:.1f}_{end:.1f}.%(ext)s"),
             "--print", "after_move:filepath", url]
+    return args
 
 
 def probe_video(path: Path) -> dict:
@@ -149,17 +466,18 @@ def probe_video(path: Path) -> dict:
         raise MediaError(f"cannot probe {path}") from None
 
 
-def normalize(src: Path, out: Path, *, max_short_side: int = 1080) -> Path:
-    """H.264 yuv420p, constant 30 fps, short side <= max_short_side, AAC if audio exists."""
+def normalize(src: Path, out: Path, *, max_short_side: int = 1080, strip_audio: bool = True) -> Path:
+    """H.264 yuv420p, constant 30 fps, short side <= max_short_side, muted by default (-an)."""
     info = probe_video(src)
     w, h = info["width"], info["height"]
     k = min(1.0, max_short_side / min(w, h))
     tw, th = max(2, int(round(w * k / 2)) * 2), max(2, int(round(h * k / 2)) * 2)
     tmp = out.with_name(out.stem + ".part.mp4")
-    cmd = [_ffmpeg(), "-y", "-i", str(src), "-map", "0:v:0", "-map", "0:a:0?",
+    audio_args = ["-an"] if strip_audio else ["-map", "0:a:0?", "-c:a", "aac", "-b:a", "128k"]
+    cmd = [_ffmpeg(), "-y", "-i", str(src), "-map", "0:v:0",
            "-vf", f"fps=30,scale={tw}:{th}:flags=lanczos,setsar=1,format=yuv420p",
            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
-           "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", str(tmp)]
+           *audio_args, "-movflags", "+faststart", str(tmp)]
     res = subprocess.run(cmd, capture_output=True, text=True)
     if res.returncode != 0:
         tmp.unlink(missing_ok=True)
@@ -219,48 +537,61 @@ def contact_sheet(video: Path, out: Path, *, every: float = 2.0, cols: int = 6, 
 # --------------------------------------------------------------------------- pipeline
 
 def fetch_section(project_dir: Path, url: str, start: float, end: float, *, info: dict | None = None,
-                  sheet: bool = True, max_height: int = 1080) -> dict:
-    """Gate, download one section, normalise, contact sheet. Everything lands in
-    `<project>/cache/clips/`. Returns {id, file, sheet, info, licence, credit}.
-    Raises LicenceRejected BEFORE any download."""
+                  sheet: bool = True, max_height: int = 1080, strict_licence: bool = True,
+                  runner=None) -> dict:
+    """Check licence (raising LicenceRejected if `strict_licence=True`, else recording advisory `credit.flag`),
+    download one section, normalise (silent 30fps H.264), contact sheet. Everything lands in `<project>/cache/clips/`."""
+    run_fn = _run_capture if runner is None else runner
     info = info or video_metadata(url)
     ok, name, reason = clip_licence(info)
-    if not ok:
+    if not ok and strict_licence:
         raise LicenceRejected(reason, name)
+    lic_name = name or str(info.get("license") or "Standard YouTube License").strip()
     cache = Path(project_dir) / "cache" / "clips"
     raw_dir = cache / "src"
     raw_dir.mkdir(parents=True, exist_ok=True)
     vid = info.get("id") or video_id(url) or "clip"
     out = cache / f"{vid}_{start:.1f}_{end:.1f}.mp4"
     if not out.is_file():
-        res = _run_capture(ytdlp_section_args(url, raw_dir, start=start, end=end, max_height=max_height),
-                           timeout=SECTION_TIMEOUT)
+        res = run_fn(ytdlp_section_args(url, raw_dir, start=start, end=end, max_height=max_height),
+                     timeout=SECTION_TIMEOUT)
         lines = [ln.strip() for ln in (res.stdout or "").splitlines() if ln.strip()]
         raw = Path(lines[-1]) if lines else None
         if res.returncode != 0 or raw is None or not raw.is_file():
             raise MediaError(f"yt-dlp failed (exit {res.returncode}): {_ytdlp_error(res)}")
         normalize(raw, out)
     sheet_path = contact_sheet(out, cache / f"{out.stem}_sheet.jpg") if sheet else None
-    credit = {"source": "youtube" if "youtu" in url else "web",
-              "source_url": info.get("webpage_url") or url,
-              "author": info.get("channel") or info.get("uploader") or "unknown",
-              "licence": name, "licence_url": ""}
+    credit: dict = {"source": "youtube" if "youtu" in url else "web",
+                    "source_url": info.get("webpage_url") or url,
+                    "author": info.get("channel") or info.get("uploader") or "unknown",
+                    "licence": lic_name, "licence_url": ""}
+    if not ok:
+        credit["flag"] = flag_for_text(lic_name) or "rejected"
+    else:
+        credit["flag"] = None
     return {"id": vid, "file": str(out), "sheet": str(sheet_path) if sheet_path else "",
             "info": {k: info.get(k) for k in ("id", "title", "channel", "duration", "license")},
-            "licence": name, "credit": credit}
+            "licence": lic_name, "credit": credit}
 
 
-def import_clip(project_dir: Path, url: str, start: float, end: float, *, info: dict | None = None) -> dict:
+def import_clip(project_dir: Path, url: str, start: float, end: float, *, info: dict | None = None,
+                strict_licence: bool = True, require_root: bool = False, runner=None) -> dict:
     """Fetch a section and return `{"asset_key", "asset"}` like api.import_candidate."""
     project_dir = Path(project_dir)
-    r = fetch_section(project_dir, url, start, end, info=info)
+    if require_root and not project_dir.is_dir():
+        raise FileNotFoundError(f"project folder {project_dir.name!r} does not exist")
+    r = fetch_section(project_dir, url, start, end, info=info, strict_licence=strict_licence, runner=runner)
     p = probe_video(Path(r["file"]))
     ident = f"clip:{r['id']}:{start:.1f}-{end:.1f}"
     idx = _assets.load_index(project_dir)
+    hit = idx["items"].get(ident)
+    if hit and (project_dir / hit["asset"]["file"]).is_file():
+        return {"asset_key": hit["key"], "asset": hit["asset"]}
     key = _assets.make_key(r["info"].get("title") or r["id"], ident, _assets.taken_keys(project_dir, idx))
-    dest = _assets.media_dir(project_dir) / f"{key}.mp4"
+    dest = _assets.media_dir(project_dir, require_root) / f"{key}.mp4"
     shutil.copyfile(r["file"], dest)
     asset = _assets.build_asset(f"media/{dest.name}", "video", r["info"].get("title") or "",
-                                r["credit"]["author"], "", p["width"], p["height"], r["credit"])
-    _assets.register(project_dir, ident, key, asset)
+                                r["credit"]["author"], "", p["width"], p["height"], r["credit"],
+                                duration=p.get("duration"))
+    _assets.register(project_dir, ident, key, asset, require_root)
     return {"asset_key": key, "asset": asset}

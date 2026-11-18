@@ -20,7 +20,9 @@ from bti.script.store import make_parent
 from .common import ApiError, valid_pid
 
 router = APIRouter(prefix="/api")
-UPLOAD_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+IMG_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+VID_EXT = {".mp4", ".webm", ".mov", ".m4v"}
+UPLOAD_EXT = IMG_EXT | VID_EXT
 MAX_UPLOAD = 80 * 1024 * 1024
 
 
@@ -152,6 +154,8 @@ def upload_picks(pid: str, request: Request, file: UploadFile = File(...), title
     ext = Path(file.filename or "").suffix.lower()
     if ext not in UPLOAD_EXT:
         raise ApiError(422, f"unsupported file type {ext!r}; use {sorted(UPLOAD_EXT)}")
+    if ext in VID_EXT and _flag(as_main):
+        raise ApiError(422, "a video cannot be set as the main painting", code="video_not_main")
     tmpdir = d / "cache" / "uploads"
     make_parent(tmpdir / "x", 2)
     fd, tmp = tempfile.mkstemp(suffix=ext, dir=str(tmpdir))
@@ -169,6 +173,55 @@ def upload_picks(pid: str, request: Request, file: UploadFile = File(...), title
     finally:
         Path(tmp).unlink(missing_ok=True)
     return _full(request, pid, d, asset_key=res["asset_key"], asset=res["asset"])
+
+
+# ------------------------------------------------------------------ video search & clip import
+@router.post("/projects/{pid}/picks/video-search")
+@guard
+def video_search_picks(pid: str, request: Request, body: dict = Body(...)):
+    d = _pdir(request, pid)
+    beat = body.get("beat")
+    if beat is not None and not isinstance(beat, str):
+        raise ApiError(422, "beat must be a string")
+    limit = body.get("limit", 6)
+    if isinstance(limit, bool) or not isinstance(limit, int):
+        raise ApiError(422, "limit must be an integer")
+    search_fn = getattr(request.app.state, "video_search_fn", None)
+    metadata_fn = getattr(request.app.state, "video_metadata_fn", None)
+    return service.video_search(
+        d,
+        query=_str(body, "query"),
+        beat=beat,
+        url=_str(body, "url", max_len=600),
+        confirm_paid=_flag(body.get("confirm_paid")),
+        limit=limit,
+        search_fn=search_fn,
+        metadata_fn=metadata_fn,
+    )
+
+
+@router.post("/projects/{pid}/picks/import-clip")
+@guard
+def import_clip_picks(pid: str, request: Request, body: dict = Body(...)):
+    d = _pdir(request, pid)
+    url = _str(body, "url", True, 600)
+    beat_id = body.get("beat_id")
+    if beat_id is not None and not isinstance(beat_id, str):
+        raise ApiError(422, "beat_id must be a string")
+    role = _str(body, "role", max_len=40) or "video"
+    clip_imp = getattr(request.app.state, "clip_importer", None)
+    out = service.import_video_clip(
+        d,
+        url,
+        body.get("start"),
+        body.get("end"),
+        title=_str(body, "title", max_len=200),
+        beat_id=beat_id,
+        role=role,
+        note=_str(body, "note", max_len=400),
+        clip_importer=clip_imp,
+    )
+    return _full(request, pid, d, asset_key=out["asset_key"], asset=out["asset"])
 
 
 # ------------------------------------------------------------------ regions

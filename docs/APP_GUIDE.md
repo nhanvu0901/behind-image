@@ -54,7 +54,7 @@ Các địa chỉ cũ vẫn dùng được và tự chuyển vào ứng dụng: 
 | 3. Giọng đọc | Máy đọc lời dẫn đã duyệt thành tệp âm thanh và đo thời điểm từng từ (mục 6). |
 | 4. Chọn hình | Chọn tranh chính, vùng chi tiết và hình cho từng dòng lời dẫn (mục 6). |
 | 5. Dựng hình | Dựng bản nháp storyboard rồi sửa trong trình biên tập (mục 7). |
-| 6. Xuất video | Máy dựng video hoàn chỉnh, phụ đề, mô tả và mục lục (mục 9). |
+| 6. Xuất video | Máy dựng video hoàn chỉnh, mô tả và mục lục (mục 9). |
 
 Mỗi bước trên thanh các bước có một trạng thái, do máy chủ tính (`GET /api/projects/<id>/pipeline`):
 
@@ -368,6 +368,19 @@ Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard,
 
 Agent ghi `projects/<id>/proposals/<id>.json`. Nút *Đề xuất* mở danh sách; mở một đề xuất để xem từng thay đổi (trước/sau), chọn Chấp nhận hoặc Từ chối cho từng cái rồi *Áp dụng*. Thay đổi chạm vào mục khóa bị gạch và không áp dụng được. Đề xuất áp lên bản đã lưu, không phải bản nháp chưa lưu (trừ bản nháp đầu tiên của dự án chưa có storyboard, xem trên). Đề xuất soạn trên một bản đã cũ (storyboard đã lưu thêm kể từ đó) có dải cảnh báo "dựa trên bản cũ" và hỏi lại trước khi áp dụng. Áp dụng khi bản nháp chưa lưu cũng hỏi (hộp thoại của ứng dụng, không dùng hộp thoại của trình duyệt).
 
+### Sửa video bằng prompt
+
+Dưới khung xem trước ở bước Dựng hình có ô nhập **Sửa video bằng prompt** để bạn yêu cầu agent chỉnh sửa storyboard bằng ngôn ngữ tự nhiên (ví dụ: *"ở đoạn nói về chiếc gương, zoom chậm hơn và thêm vòng sáng quanh gương"*):
+
+1. **Nhập yêu cầu**: gõ điều bạn muốn thay đổi vào ô *"Bạn muốn sửa gì?"*.
+2. **Chọn phạm vi**:
+   - *N shot đang chọn*: cho phép chọn một hoặc nhiều shot cụ thể (có danh sách chip shot và nút thêm/bỏ shot) để chỉ sửa đúng các shot đó.
+   - *Chương <tên>*: cho phép sửa các shot thuộc chương tại vị trí đầu phát.
+   - *Cả video*: cho phép sửa toàn bộ video.
+   Các cảnh bạn đã khóa (`locked`) luôn được bảo vệ, agent không được phép sửa.
+3. **Mô hình & hội thoại**: chọn mô hình muốn dùng; tick *"Tiếp tục hội thoại trước"* nếu muốn agent tiếp nối các lượt yêu cầu trước đó (ví dụ: *"nhanh hơn chút nữa"*).
+4. **Kết quả**: agent chỉ sửa trong phạm vi cho phép và không bao giờ tự ý áp dụng đè lên storyboard của bạn. Kết quả tạo ra một **đề xuất** mới (hiển thị trong danh sách hội thoại kèm trạng thái duyệt áp dụng). Bấm **Mở đề xuất** để xem chi tiết từng thay đổi trước/sau và chọn chấp nhận hay từ chối. Nếu yêu cầu không làm được hoặc không có thay đổi nào, agent sẽ ghi chú lại trong hội thoại để bạn đọc.
+
 ### Xem thử 10 giây
 
 Dựng clip 10 giây từ đầu phát (kèm âm thanh) bằng bản nháp hiện tại, rồi phát trong cửa sổ nổi. Mất vài giây. Dự án không có file âm thanh vẫn xem thử được (không có tiếng) và timeline ghi rõ "chưa có file âm thanh".
@@ -392,8 +405,8 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 2. Hộp **Sẽ làm ra** cho biết video dài bao lâu, chia thành mấy đoạn và khoảng bao lâu máy làm xong (máy chủ dựng bằng bộ xử lý nên khoảng 2 phút cho mỗi phút video; video 12 phút mất chừng nửa tiếng).
 3. Bấm **Xuất video**. Bạn có thể đóng trang, máy vẫn làm. Trang hiện từng đoạn đang chạy. Nếu máy đang bận việc khác, đoạn sẽ ở trạng thái "Chờ máy rảnh".
 4. Bấm **Hủy** nếu muốn dừng. Những đoạn đã dựng xong được giữ lại; bấm **Xuất video** lần nữa sẽ làm tiếp, không dựng lại từ đầu. Việc này cũng đúng khi máy chủ khởi động lại giữa chừng.
-5. Khi xong, bạn có: video để xem ngay trên trang, **phiếu kiểm tra** (độ dài, số khung hình, độ lớn tiếng, có phụ đề trong tệp, số dòng phụ đề, mục lục), **mô tả video** (có nút Chép mô tả: gồm mục lục, sách đã dùng, nguồn và giấy phép của từng hình) và các tệp để tải về: video MP4, phụ đề .srt, mô tả, mục lục.
-6. Phụ đề không bao giờ bị vẽ lên hình: có một tệp .srt riêng và một dòng phụ đề bật/tắt được nằm trong tệp MP4.
+5. Khi xong, bạn có: video để xem ngay trên trang, **phiếu kiểm tra** (độ dài, số khung hình, độ lớn tiếng, mục lục), **mô tả video** (có nút Chép mô tả: gồm mục lục, sách đã dùng, nguồn và giấy phép của từng hình) và các tệp để tải về: video MP4, mô tả, mục lục.
+6. Bản xuất mới không tạo phụ đề lời đọc; nhãn và chú thích nghệ thuật trong storyboard vẫn được giữ. Bản xuất cũ không bị thay đổi.
 7. Nếu bạn sửa storyboard hoặc giọng đọc sau khi xuất, trang báo "Cần xuất lại". Bản cũ vẫn xem được cho đến khi xuất bản mới.
 8. Hình nào chưa rõ giấy phép sẽ có ghi chú trong mô tả để bạn kiểm tra trước khi đăng; việc xuất không bị chặn.
 
@@ -417,7 +430,7 @@ Nút Quay lại của trình duyệt đã đổi địa chỉ trước khi ứng
 | `projects/<dự-án>/voice/`, `audio/`, `timing.json` | Giọng đọc: từng câu đã đọc, bảng phát âm, tệp ghép `audio/mix.m4a`, thời điểm từng từ. |
 | `projects/<dự-án>/picks.json`, `media/` | Chọn hình và các ảnh đã nhập. |
 | `projects/<dự-án>/proposals/` | Đề xuất (kể cả bản nháp do agent dựng). |
-| `projects/<dự-án>/export/` | Video, phụ đề, mô tả, mục lục và `export.json`. |
+| `projects/<dự-án>/export/` | Video, mô tả, mục lục và `export.json`. |
 | `projects/<dự-án>/cache/longjobs/` | Bản ghi và nhật ký các việc dài (giọng đọc, bản nháp, xuất video); xóa được, mất thì chỉ mất lịch sử. |
 | `library/overrides/artworks.json` | Gộp và tách tác phẩm. |
 

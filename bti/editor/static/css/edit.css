@@ -6,7 +6,7 @@
 #preview-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--border); }
 #preview-tools { display: flex; align-items: center; gap: 12px; padding: 6px 12px; border-bottom: 1px solid var(--border); background: var(--panel); }
 label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
-#stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: #08090c; padding: 8px; }
+#stage { flex: 1; min-height: 120px; display: flex; align-items: center; justify-content: center; background: #08090c; padding: 8px; }
 #stage-box { position: relative; background: #000; box-shadow: 0 0 0 1px var(--border); }
 #frame, #handles { position: absolute; inset: 0; width: 100%; height: 100%; }
 #handles { touch-action: none; }
@@ -143,3 +143,51 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 .draft-panel .banner { padding: 8px 12px; border-radius: var(--radius); border: 1px solid var(--border); background: var(--panel); }
 .draft-panel .banner.warn { border-color: #6a5410; background: #2a2410; }
 .draft-panel select.draft-model { min-width: 220px; }
+
+/* Prompt-based edit (promptedit.js) under preview */
+#prompt-edit-container { border-top: 1px solid var(--border); background: var(--panel); min-height: 0; max-height: 220px; display: flex; flex-direction: column; }
+.prompt-edit { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px; font-size: 13px; height: 100%; overflow: hidden; }
+.prompt-form { display: flex; flex-direction: column; gap: 6px; }
+.prompt-input-row textarea.prompt-instruction { width: 100%; resize: vertical; min-height: 42px; max-height: 80px; padding: 6px 8px; font-size: 13px; line-height: 1.4; background: #0c0e13; border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); }
+.prompt-controls-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.prompt-ctl-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.prompt-ctl-label { font-size: 11px; color: var(--muted); }
+.prompt-scope, .prompt-model { font-size: 12px; padding: 3px 6px; background: var(--elev); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); }
+.prompt-followup-label { font-size: 12px; color: var(--text); cursor: pointer; margin-left: 4px; }
+.prompt-btn-submit { padding: 4px 14px; font-weight: 600; white-space: nowrap; }
+
+.prompt-progress-banner { display: flex; flex-direction: column; gap: 4px; padding: 6px 10px; margin-bottom: 0; }
+.prompt-btn-cancel { margin-left: 8px; }
+
+.prompt-thread-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--border); padding-top: 6px; }
+.prompt-thread-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.prompt-thread-header h5 { margin: 0; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+.prompt-thread-header .text-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 11px; padding: 2px 4px; }
+.prompt-thread-header .text-btn:hover { color: var(--danger); }
+.prompt-thread-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding-right: 4px; max-height: 110px; }
+.prompt-turn-card { background: var(--elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; }
+.prompt-turn-head { display: flex; align-items: center; gap: 6px; }
+.prompt-turn-time { font-size: 11px; margin-left: 4px; }
+.prompt-turn-instruction { word-break: break-word; }
+.prompt-turn-notes { color: var(--muted); font-size: 11px; background: #0c0e13; padding: 4px 6px; border-radius: 4px; word-break: break-word; white-space: pre-wrap; max-height: 60px; overflow-y: auto; }
+.prompt-turn-error { font-size: 11px; margin-top: 2px; }
+.prompt-shots-chips { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.prompt-shot-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 6px; background: var(--elev); border: 1px solid var(--border); border-radius: 4px; }
+.prompt-shot-chip-del { cursor: pointer; color: var(--muted); font-size: 11px; line-height: 1; border: none; background: none; padding: 0 2px; }
+.prompt-shot-chip-del:hover { color: var(--danger); }
+.prompt-add-shot { font-size: 11px; padding: 1px 4px; background: var(--elev); border: 1px solid var(--border); border-radius: 4px; color: var(--text); }
+
+@media (max-height: 800px) {
+  .edit-root { grid-template-rows: 44px minmax(0, 1fr) 220px; }
+  #prompt-edit-container { max-height: 160px; }
+  .prompt-edit { padding: 4px 8px; gap: 4px; font-size: 12px; }
+  .prompt-form { gap: 4px; }
+  .prompt-input-row textarea.prompt-instruction { min-height: 30px; max-height: 44px; padding: 3px 6px; font-size: 12px; }
+  .prompt-controls-row { gap: 4px; }
+  .prompt-ctl-group { gap: 4px; }
+  .prompt-scope, .prompt-model { font-size: 11px; padding: 2px 4px; }
+  .prompt-btn-submit { padding: 3px 10px; font-size: 12px; }
+  .prompt-thread-wrap { padding-top: 4px; }
+  .prompt-thread-list { max-height: 65px; gap: 4px; }
+  .prompt-turn-card { padding: 4px 6px; font-size: 11px; }
+}

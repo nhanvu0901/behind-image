@@ -9,6 +9,7 @@ import shutil
 from pathlib import Path
 
 from . import assets as _assets
+from . import clips as _clips
 from . import http as _http
 from .errors import ImageTooSmall, LicenceRejected, MediaError, NotFound  # noqa: F401
 from .imageinfo import ImageDamaged, image_problem, image_size, readable_problem
@@ -17,10 +18,16 @@ from .sources.commons import CommonsSource, ext_for
 from .sources.bookpage import BookPageSource
 from .sources.met import MetSource
 
-__all__ = ["search", "import_candidate", "add_upload", "check_licence", "LicenceRejected",
-           "MIN_SHORT_SIDE"]
+__all__ = ["search", "import_candidate", "add_upload", "moment_search", "inspect_video_url",
+           "import_clip", "check_licence", "LicenceRejected", "VideoDamaged", "MIN_SHORT_SIDE"]
 # The licence gate and the size floor are ADVISORY: nothing is refused for them. `LicenceRejected` and `ImageTooSmall`
 # stay importable (the sources and the clip module still use them), but this facade never raises them.
+
+
+class VideoDamaged(ValueError):
+    def __init__(self, msg: str, code: str = "video_unreadable"):
+        super().__init__(msg)
+        self.code = code
 
 MIN_SHORT_SIDE = 1200
 _SOURCES: dict = {}          # name -> source instance; tests may replace entries
@@ -114,14 +121,34 @@ def _import(project_dir: Path, source: str, source_id: str, min_short_side: int 
     return {"asset_key": key, "asset": asset}
 
 
+def _probe_upload_video(path: Path) -> dict:
+    try:
+        info = _clips.probe_video(path)
+    except MediaError as exc:
+        if isinstance(exc, _clips.ToolMissing):
+            raise
+        raise VideoDamaged(f"video cannot be read: {exc}", "video_unreadable") from None
+    if info["width"] <= 0 or info["height"] <= 0 or info["duration"] <= 0:
+        raise VideoDamaged("video has no readable frames or zero duration", "video_unreadable")
+    return info
+
+
 def add_upload(project_dir: Path, file_path: Path, meta: dict, *, require_root: bool = False) -> dict:
     """Add a human-supplied file. `meta` may carry licence, source_url, author, title, artist, year, all optional: a
     missing licence is recorded as such (`credit.flag` "unknown"), never refused. The file itself must be a complete,
-    readable image (or a video file)."""
+    readable image or video file."""
     project_dir, file_path = Path(project_dir), Path(file_path)
+    if require_root and not project_dir.is_dir():
+        raise FileNotFoundError(f"project folder {project_dir.name!r} does not exist")
     if not file_path.is_file():
         raise NotFound(f"no such file: {file_path}")
-    if file_path.suffix.lower() not in _VIDEO_EXT:
+    ext = file_path.suffix.lower() or ".bin"
+    kind = "video" if ext in _VIDEO_EXT else "image"
+    duration: float | None = None
+    if kind == "video":
+        vinfo = _probe_upload_video(file_path)
+        w, h, duration = vinfo["width"], vinfo["height"], vinfo["duration"]
+    else:
         bad = image_problem(file_path)
         if bad:
             raise ImageDamaged(bad[1], bad[0])
@@ -134,20 +161,57 @@ def add_upload(project_dir: Path, file_path: Path, meta: dict, *, require_root: 
     ident = f"upload:{file_path.name}:{file_path.stat().st_size}"
     idx = _assets.load_index(project_dir)
     key = _assets.make_key(title, ident, _assets.taken_keys(project_dir, idx))
-    ext = file_path.suffix.lower() or ".bin"
-    dest = _assets.media_dir(project_dir, require_root) / f"{key}{ext}"
+    dest_ext = ".mp4" if kind == "video" else ext
+    dest = _assets.media_dir(project_dir, require_root) / f"{key}{dest_ext}"
     try:
-        shutil.copyfile(file_path, dest)
-        kind = "video" if ext in _VIDEO_EXT else "image"
-        w, h = image_size(dest) if kind == "image" else (int(meta.get("width") or 0), int(meta.get("height") or 0))
+        if kind == "video":
+            try:
+                _clips.normalize(file_path, dest, strip_audio=True)
+            except MediaError as exc:
+                if isinstance(exc, _clips.ToolMissing):
+                    shutil.copyfile(file_path, dest)
+                else:
+                    raise VideoDamaged(f"video cannot be processed: {exc}", "video_unreadable") from None
+            p2 = _probe_upload_video(dest)
+            w, h, duration = p2["width"], p2["height"], p2["duration"]
+        else:
+            shutil.copyfile(file_path, dest)
+            w, h = image_size(dest)
         credit = {"source": "upload", "source_url": str(meta.get("source_url") or "").strip(),
                   "author": str(meta.get("author") or "").strip() or "unknown",
                   "licence": name if ok else licence_text, "licence_url": meta.get("licence_url", ""),
                   "flag": with_size_flag(lic_flag, w, h, MIN_SHORT_SIDE) if kind == "image" else lic_flag}
         asset = _assets.build_asset(f"media/{dest.name}", kind, title, meta.get("artist", ""),
-                                    str(meta.get("year", "")), w, h, credit)
+                                    str(meta.get("year", "")), w, h, credit, duration=duration)
         _assets.register(project_dir, ident, key, asset, require_root)
     except BaseException:
         dest.unlink(missing_ok=True)          # what this call wrote is removed when it fails
         raise
     return {"asset_key": key, "asset": asset}
+
+
+def moment_search(desc: str, *, limit: int = 6, extra_queries: list[str] | tuple = (),
+                  search=None, metadata=None) -> list[dict]:
+    """Search YouTube via You.com + read yt-dlp metadata/moment signals without downloading video."""
+    return _clips.moment_search(desc, limit=limit, extra_queries=extra_queries,
+                                search=search, metadata=metadata)
+
+
+def inspect_video_url(url: str, desc: str = "", *, metadata=None) -> dict:
+    """Inspect a pasted YouTube URL via yt-dlp metadata/moments (free, no You.com search)."""
+    return _clips.inspect_video_url(url, desc=desc, metadata=metadata)
+
+
+def import_clip(project_dir: Path, url: str, start: float, end: float, *, info: dict | None = None,
+                strict_licence: bool = False, require_root: bool = False, runner=None) -> dict:
+    """Download [start, end] of a video into `<project>/media/` and return `{"asset_key", "asset"}`."""
+    project_dir = Path(project_dir)
+    if require_root:
+        token = _http.NO_NEW_PARENTS.set(True)
+        try:
+            return _clips.import_clip(project_dir, url, start, end, info=info,
+                                      strict_licence=strict_licence, require_root=True, runner=runner)
+        finally:
+            _http.NO_NEW_PARENTS.reset(token)
+    return _clips.import_clip(project_dir, url, start, end, info=info,
+                              strict_licence=strict_licence, require_root=False, runner=runner)

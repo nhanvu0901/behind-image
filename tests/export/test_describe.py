@@ -19,7 +19,7 @@ def test_arnolfini_description():
     assert "Chapters:\n00:00 Cold Open\n" in d
     assert "Great Art Explained \u2014 James Payne" in d and "hodge_aid" in d
     assert "Images and credits:" in d and "https://commons.wikimedia.org/wiki/File:Van_Eyck" in d and "(PD)" in d
-    assert d.rstrip().endswith("Subtitles available - turn on CC.")
+    assert "Subtitles available" not in d
     assert r["chapters"].splitlines()[0] == "00:00 Cold Open" and len(r["chapters"].splitlines()) == 8
     assert r["notes"] == []
 
@@ -27,7 +27,7 @@ def test_arnolfini_description():
 def test_empty_sections_are_dropped():
     r = describe.build_description({"title": "T", "shots": [], "assets": {}}, {"chapters": []}, {}, duration=10)
     assert "Chapters" not in r["description"] and "Sources" not in r["description"] and "credits" not in r["description"]
-    assert r["description"].startswith("T\n") and "Subtitles available" in r["description"]
+    assert r["description"].startswith("T\n") and "Subtitles available" not in r["description"]
 
 
 def test_flagged_asset_gets_a_note_and_nothing_is_refused():

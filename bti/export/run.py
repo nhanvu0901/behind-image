@@ -1,5 +1,4 @@
-"""The export as one long job (design section 4 and 8): subtitles and description first (cheap, so a bad timing fails before
-the render), then the render parts (heavy, resumable), the join, the mux, and the checks that publish the files.
+"""The export as one long job (design section 4 and 8): description and chapter metadata first, then the render parts (heavy, resumable), the join, the mux, and the checks that publish the files.
 
     start(project_dir)  -> the long-job record      state(project_dir) -> {"state": none|running|stale|done, "detail": ...}
     plan_for(project_dir)  what will be made and how long it should take
@@ -14,14 +13,14 @@ from pathlib import Path
 from bti.editor.common import compute_rev, file_signature, read_json, storyboard_approval
 from bti.script import store
 
-from . import check, describe, mux, plan, render, subtitles
+from . import check, describe, mux, plan, render
 from .errors import ExportError, part_error
 from .settings import Settings, load_settings
 from bti.fsio import atomic_replace
 
 KIND = "export"
 SCHEMA = "bti.export/1"
-FILE_NAMES = ("video", "subtitles", "description", "chapters")
+FILE_NAMES = ("video", "description", "chapters")
 
 
 # ---------------------------------------------------------------------------------------------------------------- paths
@@ -38,7 +37,7 @@ def manifest_path(project_dir: Path) -> Path:
 
 
 def file_names(pid: str) -> dict:
-    return {"video": pid + ".mp4", "subtitles": pid + ".srt", "description": "description.txt", "chapters": "chapters.txt"}
+    return {"video": pid + ".mp4", "description": "description.txt", "chapters": "chapters.txt"}
 
 
 def read_manifest(project_dir: Path) -> dict | None:
@@ -238,19 +237,13 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
 
     def prepare(ctx):
         ctx.progress(0.1)
-        cues = subtitles.cues_from_timing(inp.timing)
-        if not cues:
-            raise ExportError("no_subtitles", "no subtitle cue could be made from the timing", 409)
-        st["cues"] = cues
-        st["srt"] = subtitles.to_srt(cues)
-        st["problems"] = subtitles.check_cues(cues)
         d = describe.build_description(inp.storyboard, inp.timing, inp.project_meta, duration=end, titles=describe.library_titles())
         st["desc"] = d
         st["marks"] = mux.chapter_marks(inp.timing.get("chapters"), end)      # the marks inside the file stay as they are
         st["merged"] = d["merged_chapters"]
-        ctx.log("%d subtitle cues, %d chapters, %d credit lines" % (len(cues), len(st["marks"]), len(d["credits"])))
+        ctx.log("%d chapters, %d credit lines" % (len(st["marks"]), len(d["credits"])))
         ctx.progress(1.0)
-        return {"cues": len(cues), "cue_problems": len(st["problems"])}
+        return {"chapters": len(st["marks"])}
 
     def make_render(spec):
         def run(ctx):
@@ -286,7 +279,6 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
         if ctx.cancelled():
             return None
         video = st["video"]
-        store.write_text_atomic(cdir / "subtitles.srt", st["srt"], 2)
         store.write_text_atomic(cdir / "chapters.ffmeta", mux.ffmetadata(st["marks"], str(inp.storyboard.get("title") or "")), 2)
         try:
             ainfo = check.probe(tools.ffprobe, inp.audio)
@@ -296,7 +288,7 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
             codec = None
         tmp = cdir / "final.partial.mp4"
         tmp.unlink(missing_ok=True)
-        cmd = mux.mux_command(tools.ffmpeg, video, inp.audio, cdir / "subtitles.srt", cdir / "chapters.ffmeta", tmp, end,
+        cmd = mux.mux_command(tools.ffmpeg, video, inp.audio, cdir / "chapters.ffmeta", tmp, end,
                               audio_copy=(codec == "aac"), language=settings.language)
         tail: list[str] = []
         rc = ctx.run_process(cmd, cwd=str(cdir), env=tools.env, on_line=lambda ln: tail.append(ln.strip()[:200]) if ln.strip() else None)
@@ -321,13 +313,13 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
         except check.ToolError as e:
             ctx.log("loudness not measured: %s" % e)
             loud = None
-        card = check.report_card(info, loud, expected_frames=frames, expected_duration=end, cues=len(st["cues"]), fps=settings.fps,
+        card = check.report_card(info, loud, expected_frames=frames, expected_duration=end, fps=settings.fps,
                                   audio_duration=st.get("audio_duration"), merged_chapters=st.get("merged", 0))
         ctx.progress(0.7, "Lưu tệp")
         d = st["desc"]
         manifest = {"schema": SCHEMA, "pid": pid, "slug": pid, "storyboard_rev": inp.rev, "audio_sig": inp.audio_sig,
                     "audio_file": inp.storyboard.get("audio") or "audio/mix.m4a", "duration": round(end, 3), "frames": frames, "fps": settings.fps,
-                    "width": settings.width, "cues": len(st["cues"]), "cue_problems": st["problems"], "chapters": len(st["marks"]), "chapters_merged": st.get("merged", 0),
+                    "width": settings.width, "chapters": len(st["marks"]), "chapters_merged": st.get("merged", 0),
                     "parts": st["rendered"], "files": names, "report": card, "report_status": check.worst(card), "loudness": loud,
                     "credits": d["credits"], "notes": d["notes"], "created": store.now_iso(), "seconds": round(time.time() - st["t0"], 1)}
         edir = export_dir(project_dir)
@@ -337,7 +329,6 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
             store.make_parent(edir / "x", 1)
             manifest_path(project_dir).unlink(missing_ok=True)        # while the files change the export is "not made", never half
             atomic_replace(final, edir / names["video"])
-            store.write_text_atomic(edir / names["subtitles"], st["srt"], 1)
             store.write_text_atomic(edir / names["description"], d["description"], 1)
             store.write_text_atomic(edir / names["chapters"], d["chapters"], 1)
             store.write_json_atomic(manifest_path(project_dir), manifest, 1)
@@ -359,9 +350,9 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
         return is_done
 
     est = lambda s: max(1, int(plan.estimate_seconds(s.seconds, settings.render_speed)))   # noqa: E731
-    parts = [Part(key="prepare", title="Làm phụ đề và mô tả", run=guard(prepare), heavy=False, est_seconds=5)]
+    parts = [Part(key="prepare", title="Làm mô tả và mục lục", run=guard(prepare), heavy=False, est_seconds=5)]
     parts += [Part(key="render-%d" % (s.index + 1), title="Dựng đoạn %d/%d" % (s.index + 1, n), run=guard(make_render(s)), heavy=True, est_seconds=est(s), is_done=render_done(s)) for s in specs]
     parts += [Part(key="join", title="Ghép các đoạn", run=guard(join), heavy=False, est_seconds=30),
-              Part(key="mux", title="Ghép tiếng, phụ đề và mục lục", run=guard(do_mux), heavy=False, est_seconds=60),
+              Part(key="mux", title="Ghép tiếng và mục lục", run=guard(do_mux), heavy=False, est_seconds=60),
               Part(key="finish", title="Kiểm tra và lưu tệp", run=guard(finish), heavy=False, est_seconds=60)]
     return parts

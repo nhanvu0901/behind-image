@@ -108,9 +108,13 @@ def _asset(a: Any) -> dict | None:
         rr = _region(r)
         if rr is not None and isinstance(name, str) and name:
             regions[name] = rr
-    return {"file": _s(a["file"]), "kind": "video" if a.get("kind") == "video" else "image", "title": _s(a.get("title")),
-            "artist": _s(a.get("artist")), "year": _s(a.get("year")), "width": _int(a.get("width")),
-            "height": _int(a.get("height")), "credit": credit, "regions": regions}
+    out = {"file": _s(a["file"]), "kind": "video" if a.get("kind") == "video" else "image", "title": _s(a.get("title")),
+           "artist": _s(a.get("artist")), "year": _s(a.get("year")), "width": _int(a.get("width")),
+           "height": _int(a.get("height")), "credit": credit, "regions": regions}
+    dur = _num(a.get("duration"), 0.0)
+    if out["kind"] == "video" and dur > 0:
+        out["duration"] = round(float(dur), 2)
+    return out
 
 
 def _item(i: Any) -> dict | None:

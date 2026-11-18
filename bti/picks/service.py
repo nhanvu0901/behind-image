@@ -27,11 +27,17 @@ def media():
 def _translate(e: BaseException) -> PicksError:
     """Map what the media facade raises to an error the page can show. Nothing here is about the licence: it is advisory."""
     n = type(e).__name__
+    if n == "ToolMissing":
+        return PicksError(503, str(e)[:200], "tool_missing")
+    if n == "DownloadTimeout":
+        return PicksError(504, str(e)[:200], "video_timeout", retryable=True)
     if n == "MediaHTTPError":
         st = getattr(e, "status", None)
         if st in (429, 502, 503, 504, None):
             return PicksError(503, "the image source is busy or not answering (HTTP %s)" % (st or "?"), "source_unreachable", retryable=True)
         return PicksError(502, "the image source answered with an error (HTTP %s)" % st, "source_error")
+    if n == "MediaError":
+        return PicksError(502, str(e)[:240], "video_fetch_failed")
     if n == "NotFound":
         return PicksError(404, str(e)[:200], "not_found")
     if isinstance(e, ValueError):
@@ -100,7 +106,8 @@ def _register(pdir: Path, key: str, asset: dict, as_main: bool) -> dict:
             a["regions"] = dict(a.get("regions") or {})
             credit = dict(a.get("credit") or {})
             if "flag" not in credit:             # an asset imported before the flag existed
-                credit["flag"] = _lic.with_size_flag(_lic.flag_for_text(credit.get("licence")), a.get("width", 0), a.get("height", 0), MIN_SHORT_SIDE)
+                lf = _lic.flag_for_text(credit.get("licence"))
+                credit["flag"] = lf if a.get("kind") == "video" else _lic.with_size_flag(lf, a.get("width", 0), a.get("height", 0), MIN_SHORT_SIDE)
             a["credit"] = credit
             d["assets"][key] = a
         if as_main:
@@ -186,6 +193,104 @@ def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit:
         hit = idx.get(f"{c.get('source')}:{c.get('source_id')}")
         c["imported"] = hit["key"] if hit else None
     return {"query": query, "items": items, "errors": errors}
+
+
+# ---------------------------------------------------------------- video search & clip import
+MAX_CLIP_S = 120.0
+MIN_CLIP_S = 0.5
+
+
+def video_search(pdir: Path, query: str = "", beat: str | None = None, url: str = "",
+                 confirm_paid: bool = False, limit: int = 6, *, search_fn=None, metadata_fn=None) -> dict:
+    """Find candidate YouTube moments either by inspecting a pasted URL (`url`, free yt-dlp metadata)
+    or via You.com Search (`confirm_paid=True` required)."""
+    from bti.media import clips
+
+    url = (url or "").strip()
+    query = (query or "").strip()
+    if not query and beat:
+        nv = context.narration_view(pdir)
+        b = next((x for c in nv["chapters"] for x in c["beats"] if x["id"] == beat), None)
+        if b is None:
+            raise PicksError(404, "beat not found", "not_found")
+        query = context.default_query(b["show"], context.details(pdir), context.identity(pdir))
+    if not url and query and clips.video_id(query):
+        url, query = query, ""
+    if url:
+        if not clips.video_id(url):
+            raise PicksError(422, "not a supported YouTube URL", "video_bad_url")
+        try:
+            row = media().inspect_video_url(url, desc=query, metadata=metadata_fn)
+        except FileNotFoundError:
+            raise
+        except PicksError:
+            raise
+        except Exception as e:      # noqa: BLE001
+            raise _translate(e)
+        return {"query": query, "url": url, "paid": False, "items": [row]}
+    if not confirm_paid:
+        raise PicksError(422, "confirm_paid must be true before calling You.com search", "confirm_required")
+    if not query:
+        raise PicksError(422, "query is required", "query_required")
+    if search_fn is None and not clips._ydc_key():
+        raise PicksError(503, "YDC_API_KEY is not set", "youcom_key_missing")
+    lim = max(1, min(int(limit), 12))
+    try:
+        rows = media().moment_search(query, limit=lim, search=search_fn, metadata=metadata_fn)
+    except FileNotFoundError:
+        raise
+    except PicksError:
+        raise
+    except Exception as e:      # noqa: BLE001
+        raise _translate(e)
+    return {"query": query, "url": "", "paid": True, "items": rows}
+
+
+def import_video_clip(pdir: Path, url: str, start: float, end: float, *, title: str = "",
+                      beat_id: str | None = None, role: str = "video", note: str = "",
+                      clip_importer=None) -> dict:
+    """Download [start, end] of a YouTube video (silent 30fps MP4, advisory licence flag)
+    outside the lock, then register it in picks.json (and optionally attach it to `beat_id`)."""
+    from bti.media import clips
+
+    url = (url or "").strip()
+    if not clips.video_id(url):
+        raise PicksError(422, "not a supported YouTube URL", "video_bad_url")
+    try:
+        s_val = float(start)
+        e_val = float(end)
+    except (TypeError, ValueError):
+        raise PicksError(422, "start and end must be numbers", "video_bad_range")
+    import math
+    span = e_val - s_val
+    if not (math.isfinite(s_val) and math.isfinite(e_val)) or s_val < 0 or not (MIN_CLIP_S <= span <= MAX_CLIP_S):
+        raise PicksError(422, f"clip range must be between {MIN_CLIP_S:g} and {MAX_CLIP_S:g} seconds", "video_bad_range")
+    if beat_id is not None and not doc.BEAT_ID_RE.fullmatch(beat_id):
+        raise PicksError(422, f"invalid beat id {beat_id!r}", "invalid")
+    imp = clip_importer or (lambda *a, **k: media().import_clip(*a, **k))
+    try:
+        res = imp(pdir, url, s_val, e_val, strict_licence=False, require_root=True)
+    except FileNotFoundError:
+        raise
+    except PicksError:
+        raise
+    except Exception as e:      # noqa: BLE001
+        raise _translate(e)
+    asset = dict(res["asset"])
+    if title.strip():
+        asset["title"] = title.strip()[:120]
+    key = res["asset_key"]
+    saved = _register(pdir, key, asset, False)
+    if beat_id:
+        with doc.Held(pdir):
+            d = doc.load_or_new(pdir)
+            b = d["beats"].setdefault(beat_id, {"items": [], "status": "todo", "note": ""})
+            use_role = role if role in doc.ROLES else "video"
+            b["items"].append({"asset": key, "region": None, "role": use_role, "note": str(note or "")[:400]})
+            b["status"] = "picked"
+            doc.save(pdir, d)
+            saved = d["assets"].get(key, saved)
+    return {"asset_key": key, "asset": saved}
 
 
 # ---------------------------------------------------------------- regions

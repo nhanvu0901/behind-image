@@ -15,7 +15,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import Response, StreamingResponse
 
-from bti.export import run
+from bti.export import check, run
 from bti.export.errors import ExportError
 from bti.export.settings import load_settings
 
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/api")
 
 NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,120}")
 CHUNK = 1024 * 1024
-TYPES = {".mp4": "video/mp4", ".srt": "application/x-subrip; charset=utf-8", ".txt": "text/plain; charset=utf-8", ".json": "application/json"}
+TYPES = {".mp4": "video/mp4", ".txt": "text/plain; charset=utf-8", ".json": "application/json"}
 
 
 def project_dir(request: Request, pid: str) -> Path:
@@ -86,6 +86,8 @@ def export_file(d: Path, name: str, range_header: str | None, head: bool = False
     edir = d / "export"
     if not NAME_RE.fullmatch(name or "") or ".." in name:
         raise ApiError(404, "not found")
+    if Path(name).suffix.lower() in (".srt", ".ass", ".ssa"):
+        raise ApiError(404, "not found")
     p = edir / name
     try:
         if p.is_symlink() or not p.is_file() or p.resolve().parent != edir.resolve():
@@ -93,6 +95,25 @@ def export_file(d: Path, name: str, range_header: str | None, head: bool = False
         size = p.stat().st_size
     except OSError:
         raise ApiError(404, "not found")
+    if name == "description.txt":
+        try:
+            original = p.read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            raise ApiError(404, "not found")
+        cleaned = clean_description(original)
+        if cleaned != original:
+            data = cleaned.encode("utf-8")
+            base = {"Accept-Ranges": "bytes", "Content-Disposition": '%s; filename="%s"' % ("attachment" if download else "inline", name), "Cache-Control": "no-cache"}
+            try:
+                rng = parse_range(range_header, len(data))
+            except RangeNotSatisfiable:
+                return Response(status_code=416, headers={**base, "Content-Range": "bytes */%d" % len(data)})
+            first, last = rng if rng else (0, len(data) - 1)
+            headers = {**base, "Content-Length": str(max(0, last - first + 1))}
+            if rng:
+                headers["Content-Range"] = "bytes %d-%d/%d" % (first, last, len(data))
+            return Response(content=b"" if head else data[first:last + 1], status_code=206 if rng else 200,
+                            headers=headers, media_type="text/plain; charset=utf-8")
     ctype = TYPES.get(p.suffix.lower()) or mimetypes.guess_type(name)[0] or "application/octet-stream"
     base = {"Accept-Ranges": "bytes", "Content-Disposition": '%s; filename="%s"' % ("attachment" if download else "inline", name), "Cache-Control": "no-cache"}
     try:
@@ -118,6 +139,24 @@ def _job_dict(manager, pid: str):
         return None
 
 
+def clean_description(text: str) -> str:
+    """Remove the obsolete stock CC promise from a legacy description in responses."""
+    return re.sub(r"(?im)^\s*Subtitles available\s*[-—]\s*turn on CC\.\s*$", "", text).rstrip() + "\n"
+
+
+def public_manifest(m: dict | None) -> dict | None:
+    if m is None:
+        return None
+    out = dict(m)
+    names = m.get("files") if isinstance(m.get("files"), dict) else {}
+    out["files"] = {k: v for k, v in names.items() if k in run.FILE_NAMES}
+    out.pop("cues", None)
+    out.pop("cue_problems", None)
+    out["report"] = [item for item in (m.get("report") or []) if item.get("key") not in ("subtitles", "cues")]
+    out["report_status"] = check.worst(out["report"])
+    return out
+
+
 def payload(d: Path, manager=None) -> dict:
     """The page's picture of the export. Never raises for a project that is simply not ready: `blocked` says why."""
     pid = d.name
@@ -130,7 +169,7 @@ def payload(d: Path, manager=None) -> dict:
     st = run.state(d, manager=mgr if mgr is not None else _NoManager())
     m = run.read_manifest(d)
     out: dict = {"state": st["state"], "detail": st["detail"], "reason": st.get("reason"), "job": job, "blocked": None, "plan": None,
-                 "manifest": m, "files": [], "description": None}
+                 "manifest": public_manifest(m), "files": [], "description": None}
     try:
         inp = run.load_inputs(d)
         out["plan"] = run.plan_for(d, settings, inputs=inp)
@@ -148,7 +187,7 @@ def payload(d: Path, manager=None) -> dict:
                 out["files"].append({"key": key, "name": n, "size": f.stat().st_size, "url": base + n})
         try:
             if isinstance(names.get("description"), str):
-                out["description"] = (d / "export" / names["description"]).read_text(encoding="utf-8")[:20000]
+                out["description"] = clean_description((d / "export" / names["description"]).read_text(encoding="utf-8")[:20000])
         except OSError:
             pass
     return out

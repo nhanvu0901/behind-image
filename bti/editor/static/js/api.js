@@ -87,7 +87,7 @@ const real = {
   importAsset: (pid, source, source_id) => request('POST', `${P(pid)}/assets/import`, { source, source_id }),
   proposals: (pid) => request('GET', `${P(pid)}/proposals`),
   proposal: (pid, id) => request('GET', `${P(pid)}/proposals/${encodeURIComponent(id)}`),
-  applyProposal: (pid, id, accept) => request('POST', `${P(pid)}/proposals/${encodeURIComponent(id)}/apply`, { accept }),
+  applyProposal: (pid, id, accept, base_rev) => request('POST', `${P(pid)}/proposals/${encodeURIComponent(id)}/apply`, { accept, base_rev }),
 };
 
 export const api = MOCK ? (await import('./mockapi.js')).mockApi : real;

@@ -1,5 +1,4 @@
-"""Step 6: export. From an approved storyboard, the audio mix and the timing to the finished MP4 (soft subtitle track),
-a sidecar .srt, the video description and a report card.
+"""Step 6: export. From an approved storyboard, the audio mix and the timing to the finished MP4, chapter metadata, video description and report card.
 
 The rest of the app sees exactly two things (design 2026-11-16, section 3): `bti.editor.export_api.router` and `state()`.
 """

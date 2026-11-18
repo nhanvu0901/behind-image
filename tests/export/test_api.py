@@ -46,7 +46,7 @@ def test_start_then_everything_is_served(client):
     assert r.status_code == 200 and r.json()["job_id"]
     j = client.get("/api/projects/arnolfini/export").json()
     assert j["state"] == "done"
-    assert [f["key"] for f in j["files"]] == ["video", "subtitles", "description", "chapters"]
+    assert [f["key"] for f in j["files"]] == ["video", "description", "chapters"]
     assert "Chapters:" in j["description"] and j["manifest"]["report_status"] == "ok"
     url = next(f["url"] for f in j["files"] if f["key"] == "video")
     full = client.get(url)
@@ -62,8 +62,6 @@ def test_start_then_everything_is_served(client):
     h = client.head(url)
     assert h.status_code == 200 and int(h.headers["content-length"]) == len(body) and h.content == b""
     assert "attachment" in client.get(url + "?download=1").headers["content-disposition"]
-    srt = client.get(url.replace("arnolfini.mp4", "arnolfini.srt"))
-    assert srt.headers["content-type"].startswith("application/x-subrip") and "-->" in srt.text
 
 
 def test_second_start_while_the_manager_says_busy(client, manager):
@@ -104,3 +102,53 @@ def test_parse_range(hdr, size, want):
 def test_parse_range_unsatisfiable(hdr, size):
     with pytest.raises(export_api.RangeNotSatisfiable):
         export_api.parse_range(hdr, size)
+
+
+def test_legacy_manifest_hides_subtitles_without_requiring_srt(client, project):
+    client.post('/api/projects/arnolfini/export/start')
+    path = project / 'export' / 'export.json'
+    m = json.loads(path.read_text(encoding='utf-8'))
+    m['files']['subtitles'] = 'arnolfini.srt'
+    m['report'] += [{'key': 'subtitles', 'status': 'fail'}, {'key': 'cues', 'status': 'fail'}]
+    m['report_status'] = 'fail'
+    path.write_text(json.dumps(m), encoding='utf-8')
+    (project / 'export' / 'arnolfini.srt').write_text('legacy', encoding='utf-8')
+    assert client.get('/api/projects/arnolfini/export/files/arnolfini.srt').status_code == 404
+    (project / 'export' / 'arnolfini.srt').unlink()
+    desc = project / 'export' / 'description.txt'
+    desc.write_text('Title\n\nSubtitles available - turn on CC.\n', encoding='utf-8')
+    j = client.get('/api/projects/arnolfini/export').json()
+    assert j['state'] == 'done'
+    assert 'subtitles' not in j['manifest']['files']
+    assert not {'subtitles', 'cues'} & {i['key'] for i in j['manifest']['report']}
+    assert j['manifest']['report_status'] == 'ok'
+    assert 'Subtitles available' not in j['description']
+    url = '/api/projects/arnolfini/export/files/description.txt'
+    response = client.get(url)
+    assert 'Subtitles available' not in response.text
+    part = client.get(url, headers={'Range': 'bytes=0-3'})
+    assert part.status_code == 206 and part.content == response.content[:4]
+    assert desc.read_text(encoding='utf-8').endswith('turn on CC.\n')
+
+
+def test_readable_legacy_manifest_with_malformed_files_does_not_crash(client, project):
+    client.post('/api/projects/arnolfini/export/start')
+    path = project / 'export' / 'export.json'
+    manifest = json.loads(path.read_text(encoding='utf-8'))
+    manifest['files'] = ['unexpected']
+    path.write_text(json.dumps(manifest), encoding='utf-8')
+    response = client.get('/api/projects/arnolfini/export')
+    assert response.status_code == 200
+    assert response.json()['state'] == 'stale'
+    assert response.json()['manifest']['files'] == {}
+
+
+def test_legacy_report_preserves_unrelated_failures(client, project):
+    client.post('/api/projects/arnolfini/export/start')
+    path = project / 'export' / 'export.json'
+    manifest = json.loads(path.read_text(encoding='utf-8'))
+    manifest['report'] = [{'key': 'subtitles', 'status': 'fail'}, {'key': 'video', 'status': 'fail'}]
+    path.write_text(json.dumps(manifest), encoding='utf-8')
+    result = client.get('/api/projects/arnolfini/export').json()['manifest']
+    assert result['report'] == [{'key': 'video', 'status': 'fail'}]
+    assert result['report_status'] == 'fail'

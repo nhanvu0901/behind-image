@@ -210,7 +210,7 @@ class DefaultRunner:
 
 def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max_repairs: int = 2, check=None, cancel=None,
         on_progress=None, transcript_path: Path | None = None, guard=None, prompt: str = PROMPT, python: str | None = None,
-        agy: str | None = None, out_dir_name: str = "out", runner=None) -> AgyResult:
+        agy: str | None = None, out_dir_name: str = "out", runner=None, conversation_id: str | None = None) -> AgyResult:
     """Run the agent. `runner` is `ctx.run_process` of the long job (cancel, the part limit and the process-tree kill are then the
     job's); without it a `DefaultRunner` is used. Raises DraftError before the program starts (not installed, too old, another
     run in progress); once it has started, everything is reported in the returned AgyResult (never raised).
@@ -341,6 +341,9 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
         res.turns = 1
         threading.Thread(target=watchdog, daemon=True).start()
         first, extra = user_line(prompt), []
+        if conversation_id:
+            res.conversation_id = str(conversation_id)
+            extra = ["--conversation", str(conversation_id)]
         while True:
             try:
                 rc = runner(cmd + extra, cwd=Path(ws_root), env=env, on_line=on_line, stdin=first, on_start=on_start,

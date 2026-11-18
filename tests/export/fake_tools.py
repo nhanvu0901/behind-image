@@ -60,12 +60,11 @@ def concat(argv):
 
 def mux(argv):
     ins = [argv[i + 1] for i, a in enumerate(argv) if a == "-i"]
-    video, audio, srt, meta = ins
+    video, audio, meta = ins
     v = load(video)
     a = load(audio)
     out = {"kind": "mux", "frames": v["frames"], "fps": v["fps"], "duration": float(arg(argv, "-t")) if "-t" in argv else v["duration"],
            "audio": {"codec": a.get("codec", "aac") if arg(argv, "-c:a") == "copy" else "aac"},
-           "subtitle": {"codec": arg(argv, "-c:s")}, "cues": open(srt, encoding="utf-8").read().count("-->"),
            "chapters": [], "size_hint": 123456}
     text = open(meta, encoding="utf-8").read()
     for m in re.finditer(r"START=(\d+)\nEND=(\d+)\ntitle=(.*)", text):
@@ -96,7 +95,6 @@ def ffprobe(argv):
                         "nb_read_packets": str(doc["frames"]), "duration": str(doc["duration"])})
     if kind == "mux":
         streams.append({"codec_type": "audio", "codec_name": doc["audio"]["codec"], "sample_rate": "48000", "channels": 2, "duration": str(doc["duration"])})
-        streams.append({"codec_type": "subtitle", "codec_name": doc["subtitle"]["codec"], "tags": {"language": "eng"}})
         chapters = [{"start_time": str(c["start"]), "end_time": str(c["end"]), "tags": {"title": c["title"]}} for c in doc["chapters"]]
     if kind == "audio":
         streams.append({"codec_type": "audio", "codec_name": doc.get("codec", "aac"), "sample_rate": "48000", "channels": 2, "duration": "10"})

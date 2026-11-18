@@ -56,7 +56,8 @@ for _ext, _mt in ((".m4a", "audio/mp4"), (".mp4", "video/mp4"), (".webp", "image
     mimetypes.add_type(_mt, _ext)
 
 IMG_EXT = {".jpg", ".jpeg", ".png", ".webp"}
-UPLOAD_EXT = IMG_EXT
+VID_EXT = {".mp4", ".webm", ".mov", ".m4v"}
+UPLOAD_EXT = IMG_EXT | VID_EXT
 MAX_UPLOAD = 80 * 1024 * 1024
 
 
@@ -735,11 +736,23 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                     if size > MAX_UPLOAD:
                         raise ApiError(413, "file too large")
                     out.write(chunk)
-            from bti.media import imageinfo
-            bad = imageinfo.readable_problem(Path(tmp)) and imageinfo.image_problem(Path(tmp))
-            if bad:
-                confirm_alive(d)        # the folder may have been deleted while the file was checked: that is a 404, not a bad image
-                raise ApiError(422, bad[1], code=bad[0], reason=bad[1])
+            if ext in VID_EXT:
+                from bti.media import clips
+                try:
+                    info = clips.probe_video(Path(tmp))
+                    if info["width"] <= 0 or info["height"] <= 0 or info["duration"] <= 0:
+                        confirm_alive(d)
+                        raise ApiError(422, "video has no readable frames", code="video_unreadable",
+                                       reason="video has no readable frames")
+                except clips.MediaError as exc:
+                    confirm_alive(d)
+                    raise ApiError(422, str(exc), code="video_unreadable", reason=str(exc))
+            else:
+                from bti.media import imageinfo
+                bad = imageinfo.readable_problem(Path(tmp)) and imageinfo.image_problem(Path(tmp))
+                if bad:
+                    confirm_alive(d)        # the folder may have been deleted while the file was checked: that is a 404, not a bad image
+                    raise ApiError(422, bad[1], code=bad[0], reason=bad[1])
             title = title.strip() or title_from_filename(file.filename)       # never the name of our own temp file
             meta = {"title": title, "artist": artist, "year": year, "licence": licence, "source_url": source_url,
                     "author": author, "original_name": title_from_filename(file.filename)}
@@ -855,16 +868,44 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     def apply_proposal(pid: str, prop_id: str, body: dict = Body(...)):
         doc = load_proposal(pid, prop_id)
         if not has_storyboard(pid):
-            return adopt_first_draft(pid, doc, body.get("accept"))
+            res = adopt_first_draft(pid, doc, body.get("accept"))
+            from bti.draft.thread import record_acceptance
+            record_acceptance(pdir(pid), prop_id, "applied")
+            return res
         p = project(pid)
         with slock(pid):
             saved = saved_storyboard(pid)
+            cur_rev = compute_rev(saved)
+            # Edit proposal contract: must match base_rev and timing snapshot
+            prop_base_rev = doc.get("base_rev") or (doc.get("made_from") or {}).get("base_rev")
+            is_edit_proposal = prop_id.startswith("edit_")
+            if is_edit_proposal:
+                if prop_base_rev is None or prop_base_rev != cur_rev:
+                    raise ApiError(409, "a storyboard was saved in the meantime; open the proposal again", code="stale")
+                made_from = doc.get("made_from") or {}
+                made_timing = made_from.get("timing")
+                if made_timing:
+                    try:
+                        from bti.draft.inputs import load_inputs
+                        cur_inp = load_inputs(pdir(pid), for_edit=True)
+                        cur_timing_hash = cur_inp.hashes().get("timing")
+                        if cur_timing_hash != made_timing:
+                            raise ApiError(409, "timing has changed since this proposal was created; re-run edit", code="stale")
+                    except ApiError:
+                        raise
+                    except Exception:
+                        raise ApiError(409, "timing has changed or is unavailable; re-run edit", code="stale")
+            elif body.get("base_rev") is not None and body["base_rev"] != cur_rev:
+                raise ApiError(409, "a storyboard was saved in the meantime; open the proposal again", code="stale")
             new, applied, skipped = prop_mod.apply(saved, doc["storyboard"], body.get("accept"))
             if not applied:
                 out = save_result(pid, p)
             else:
                 new["approvals"] = saved.get("approvals") or {"storyboard": None}
                 out = commit(pid, p, new)
+            from bti.draft.thread import record_acceptance
+            status = "applied" if applied and body.get("accept") == "all" else ("partially_applied" if applied else "none")
+            record_acceptance(pdir(pid), prop_id, status, accepted_shots=applied)
             return {**out, "applied": applied, "skipped_locked": skipped}
 
     def forget_project(pid: str) -> None:
@@ -1029,10 +1070,28 @@ def _thumb_response(pdir_: Path, f: Path, w: int) -> Response:
                     atomic_replace(tmp, out)
             else:
                 tmp = out.with_suffix(".tmp.jpg")
-                r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(f), "-frames:v", "1",
-                                    "-vf", f"scale={w}:-2", str(tmp)], capture_output=True, timeout=60)
-                if r.returncode != 0 or not tmp.is_file():
-                    raise ApiError(415, "cannot make a thumbnail of this file")
+                ff = shutil.which("ffmpeg")
+                ok = False
+                if ff:
+                    r = subprocess.run([ff, "-y", "-v", "error", "-nostdin", "-i", str(f), "-frames:v", "1",
+                                        "-vf", f"scale={w}:-2", str(tmp)], capture_output=True, timeout=60)
+                    ok = (r.returncode == 0 and tmp.is_file())
+                if not ok:
+                    import cv2
+                    cap = cv2.VideoCapture(str(f))
+                    try:
+                        got, fr = cap.read()
+                    finally:
+                        cap.release()
+                    if not got or fr is None:
+                        raise ApiError(415, "cannot make a thumbnail of this file")
+                    h0, w0 = fr.shape[:2]
+                    if w0 > 0:
+                        nh = max(2, int(round(h0 * (w / float(w0)))))
+                        fr = cv2.resize(fr, (w, nh), interpolation=cv2.INTER_AREA)
+                    cv2.imwrite(str(tmp), fr, [cv2.IMWRITE_JPEG_QUALITY, 82])
+                    if not tmp.is_file():
+                        raise ApiError(415, "cannot make a thumbnail of this file")
                 atomic_replace(tmp, out)
         except ApiError:
             raise

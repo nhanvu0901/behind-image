@@ -1,8 +1,4 @@
-"""The ffmpeg commands that finish the video: join the parts by stream copy, then one mux with the audio, the soft subtitle
-track and the chapter marks. Pure: they only build argument lists.
-
-NO video filter is ever used here: subtitles are never drawn into the picture (a `.srt` sidecar plus a `mov_text` track).
-"""
+"""Build ffmpeg commands to join video and mux audio and chapter metadata."""
 from __future__ import annotations
 
 import re
@@ -64,16 +60,14 @@ def ffmetadata(chapters, title: str = "") -> str:
     return "\n".join(out) + "\n"
 
 
-def mux_command(ffmpeg: list[str], video, audio, srt, meta, out, duration: float, *, audio_copy: bool = True, language: str = "eng") -> list[str]:
-    """Video by copy, audio by copy (or AAC 192k when the mix is not already AAC), the `.srt` as `mov_text`, the chapter
-    marks from the ffmetadata file, `+faststart`; the length is the video's."""
+def mux_command(ffmpeg: list[str], video, audio, meta, out, duration: float, *, audio_copy: bool = True, language: str = "eng") -> list[str]:
+    """Copy video, add audio and chapter marks, and enable fast start."""
     cmd = [*ffmpeg, "-y", "-v", "error", "-nostdin",
-           "-i", str(video), "-i", str(audio), "-i", str(srt), "-i", str(meta),
-           "-map", "0:v:0", "-map", "1:a:0", "-map", "2:s:0",
-           "-map_metadata", "3", "-map_chapters", "3",
+           "-i", str(video), "-i", str(audio), "-i", str(meta),
+           "-map", "0:v:0", "-map", "1:a:0", "-map_metadata", "2", "-map_chapters", "2",
            "-c:v", "copy"]
     cmd += ["-c:a", "copy"] if audio_copy else ["-c:a", "aac", "-b:a", "192k"]
-    cmd += ["-c:s", "mov_text", "-metadata:s:a:0", "language=" + language, "-metadata:s:s:0", "language=" + language,
+    cmd += ["-metadata:s:a:0", "language=" + language,
             "-movflags", "+faststart", "-t", "%.3f" % duration, str(out)]
     return cmd
 

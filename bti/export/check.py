@@ -93,11 +93,11 @@ def _item(key, ok, value, expected=None, level="fail", note=""):
     return {"key": key, "status": "ok" if ok else level, "value": value, "expected": expected, "note": note}
 
 
-def report_card(info: dict, loud: dict | None, *, expected_frames: int, expected_duration: float, cues: int, fps: int = 30, audio_duration: float | None = None, merged_chapters: int = 0) -> list[dict]:
+def report_card(info: dict, loud: dict | None, *, expected_frames: int, expected_duration: float, fps: int = 30, audio_duration: float | None = None, merged_chapters: int = 0) -> list[dict]:
     """The report card: a list of `{key, status: ok|warn|fail, value, expected, note}`.
 
-    Keys: audio_length (the mix against the video, 0.5 s allowed), chapters_merged, duration, frames, loudness, true_peak, audio, subtitles, cues, chapters, size, video."""
-    v, a, s = info.get("video"), info.get("audio"), info.get("subtitle")
+    Keys: audio_length (the mix against the video, 0.5 s allowed), chapters_merged, duration, frames, loudness, true_peak, audio, chapters, size, video."""
+    v, a = info.get("video"), info.get("audio")
     items = []
     items.append(_item("video", bool(v and v.get("codec") == "h264"), (v or {}).get("codec"), "h264"))
     dur = info.get("duration") or 0.0
@@ -116,8 +116,6 @@ def report_card(info: dict, loud: dict | None, *, expected_frames: int, expected
         lu, tp = loud.get("lufs"), loud.get("true_peak")
         items.append(_item("loudness", lu is not None and abs(lu - LOUDNESS_TARGET) <= LOUDNESS_TOLERANCE, lu, LOUDNESS_TARGET, "warn"))
         items.append(_item("true_peak", tp is not None and tp <= PEAK_LIMIT, tp, PEAK_LIMIT, "warn"))
-    items.append(_item("subtitles", bool(s) and s.get("codec") == "mov_text", (s or {}).get("codec"), "mov_text"))
-    items.append(_item("cues", cues > 0, cues))
     ch = info.get("chapters") or []
     items.append(_item("chapters", len(ch) >= 2, len(ch), None, "warn"))
     items.append(_item("chapters_merged", merged_chapters == 0, merged_chapters, 0, "warn"))

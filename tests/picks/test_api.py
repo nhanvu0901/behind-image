@@ -243,3 +243,74 @@ def test_deleted_project_is_not_recreated(client, sources):
     shutil.rmtree(client.pdir)
     r = client.post(client.u("/import"), json={"source": "commons", "source_id": PD_ID})
     assert r.status_code == 404 and not client.pdir.exists()
+
+
+def _mp4_bytes(w: int = 320, h: int = 180, frames: int = 12) -> bytes:
+    import shutil
+    import subprocess
+    import tempfile
+    from pathlib import Path
+    with tempfile.TemporaryDirectory() as td:
+        out = Path(td) / "clip.mp4"
+        ff = shutil.which("ffmpeg")
+        if ff:
+            subprocess.run([ff, "-y", "-v", "error", "-f", "lavfi", "-i", f"color=c=blue:s={w}x{h}:d=1:r=12",
+                            "-c:v", "libx264", "-pix_fmt", "yuv420p", str(out)], check=True)
+        else:
+            import cv2
+            import numpy as np
+            wr = cv2.VideoWriter(str(out), cv2.VideoWriter_fourcc(*"mp4v"), 12, (w, h))
+            for _ in range(frames):
+                wr.write(np.full((h, w, 3), 120, dtype=np.uint8))
+            wr.release()
+        return out.read_bytes()
+
+
+def test_video_search_paid_gate_and_url_inspect(client):
+    assert client.post(client.u("/video-search"), json={"query": "van eyck"}).json()["code"] == "confirm_required"
+
+    fake_info = {
+        "id": "dQw4w9WgXcQ", "title": "Van Eyck Oil Technique", "channel": "Museum",
+        "duration": 90.0, "height": 1080, "width": 1920, "license": "Standard YouTube License",
+        "chapters": [{"title": "glazing oil technique", "start_time": 12, "end_time": 24}],
+    }
+    client.app.state.video_search_fn = lambda q: [{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "title": "VE", "snippet": "", "is_video": True}]
+    client.app.state.video_metadata_fn = lambda u, td: (fake_info, [])
+
+    r = client.post(client.u("/video-search"), json={"query": "oil technique", "confirm_paid": True})
+    assert r.status_code == 200 and r.json()["paid"] is True and len(r.json()["items"]) == 1
+    assert r.json()["items"][0]["moments"][0]["start"] == 12.0
+
+    free = client.post(client.u("/video-search"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "query": "oil"})
+    assert free.status_code == 200 and free.json()["paid"] is False and free.json()["items"][0]["id"] == "dQw4w9WgXcQ"
+    assert client.post(client.u("/video-search"), json={"url": "https://example.org/not-yt"}).json()["code"] == "video_bad_url"
+
+
+def test_import_clip_and_upload_video(client):
+    import_(client, PD_ID, as_main=True)
+    mp4 = _mp4_bytes()
+
+    def fake_imp(pdir, url, s, e, *, strict_licence=False, require_root=True):
+        m = pdir / "media"
+        m.mkdir(exist_ok=True)
+        (m / "ve_clip.mp4").write_bytes(mp4)
+        return {"asset_key": "ve_clip", "asset": {
+            "file": "media/ve_clip.mp4", "kind": "video", "title": "Glaze Clip",
+            "artist": "Museum", "year": "", "width": 320, "height": 180, "duration": e - s,
+            "credit": {"source": "youtube", "source_url": url, "author": "Museum", "licence": "Standard", "licence_url": "", "flag": "rejected"},
+        }}
+
+    client.app.state.clip_importer = fake_imp
+    assert client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 5, "end": 5.1}).json()["code"] == "video_bad_range"
+    r = client.post(client.u("/import-clip"), json={"url": "https://youtu.be/dQw4w9WgXcQ", "start": 10, "end": 18, "beat_id": "b0001", "note": "when talking about glaze"})
+    assert r.status_code == 200 and r.json()["asset"]["kind"] == "video" and r.json()["asset"]["duration"] == 8.0
+    items = r.json()["picks"]["beats"]["b0001"]["items"]
+    assert items[0]["asset"] == "ve_clip" and items[0]["role"] == "video" and items[0]["note"] == "when talking about glaze"
+
+    bad_main = client.post(client.u("/upload"), files={"file": ("clip.mp4", mp4, "video/mp4")}, data={"as_main": "1"})
+    assert bad_main.status_code == 422 and bad_main.json()["code"] == "video_not_main"
+
+    up = client.post(client.u("/upload"), files={"file": ("brushwork.mp4", mp4, "video/mp4")}, data={"title": "Brush"})
+    assert up.status_code == 200 and up.json()["asset"]["kind"] == "video" and up.json()["asset"]["width"] == 320
+    th = client.get(f"/api/projects/{client.pid}/files/{up.json()['asset']['file']}?w=160")
+    assert th.status_code == 200 and th.headers["content-type"] == "image/jpeg"

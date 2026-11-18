@@ -165,6 +165,33 @@ class MediaAdapter:
             except Exception as e:  # noqa: BLE001
                 raise _translate(e)
         ok, name, reason = _licence_ok(meta.get("licence", ""))         # advisory: no licence, source or author is required
+        ext_in = file_path.suffix.lower()
+        if ext_in in {".mp4", ".webm", ".mov", ".m4v"}:
+            import cv2
+            cap = cv2.VideoCapture(str(file_path))
+            try:
+                got, _ = cap.read()
+                w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH) or 0)
+                h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT) or 0)
+                fps = float(cap.get(cv2.CAP_PROP_FPS) or 0)
+                cnt = float(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
+            finally:
+                cap.release()
+            if not got or w <= 0 or h <= 0:
+                raise ApiError(422, "file is not a readable video", code="video_unreadable", reason="file is not a readable video")
+            key = self._next_key(project_dir)
+            rel = f"media/upload_{key}{ext_in}"
+            dest = safe_join(project_dir, "media") / f"upload_{key}{ext_in}"
+            dest.parent.mkdir(exist_ok=True)
+            shutil.copyfile(file_path, dest)
+            dur = round(cnt / fps, 2) if fps > 0 and cnt > 0 else None
+            asset = {"file": rel, "kind": "video", "title": meta.get("title") or "", "artist": meta.get("artist") or "",
+                     "year": meta.get("year") or "", "width": w, "height": h,
+                     "credit": {"source": "upload", "source_url": meta.get("source_url") or "", "author": meta.get("author") or "",
+                                "licence": name, "licence_url": "", "flag": _flag(meta.get("licence", ""), 0, 0)}, "regions": {}}
+            if dur:
+                asset["duration"] = dur
+            return {"asset_key": key, "asset": asset}
         try:
             with Image.open(file_path) as im:
                 w, h = im.size

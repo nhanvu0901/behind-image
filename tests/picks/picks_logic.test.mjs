@@ -8,10 +8,12 @@ const chapters = [{ beats: [{ id: 'b1' }, { id: 'b2' }] }, { beats: [{ id: 'b3' 
 
 test('addItem picks a role and marks the beat picked', () => {
   const d = doc();
+  d.assets.V = { kind: 'video' };
   assert.equal(L.addItem(d, 'b1', { asset: 'A' }), 0);
   L.addItem(d, 'b1', { asset: 'A', region: 'MIRROR' });
   L.addItem(d, 'b1', { asset: 'B' });
-  assert.deepEqual(d.beats.b1.items.map((i) => i.role), ['main', 'detail', 'context']);
+  L.addItem(d, 'b1', { asset: 'V' });
+  assert.deepEqual(d.beats.b1.items.map((i) => i.role), ['main', 'detail', 'context', 'video']);
   assert.equal(d.beats.b1.status, 'picked');
 });
 

@@ -36,7 +36,7 @@ The answer is a closed, predefined set of techniques plus a declarative file:
 These come later and plug into the same files.
 
 **Anti-goals:**
-- Subtitles burned into the picture (owner's rule, restated 2026-11-16). The narration text is never rendered into frames, in previews or in final renders. Subtitles exist only as a sidecar `subtitles.srt`, with an optional soft subtitle track in the mp4. The on-screen text that IS rendered is the channel's own techniques from the registry: labels, cards, year text, quotes.
+- Subtitles burned into the picture (owner's rule, restated 2026-11-16). The narration text is never rendered into frames, in previews or in final renders. New exports do not include narration subtitle files or tracks. The on-screen text that IS rendered is the channel's own techniques from the registry: labels, cards, year text, quotes.
 - An agent or a page that can produce an animation that is not in the registry.
 - Any change to the comic repo.
 - Any careless use of the Windows production server (see the rule below).

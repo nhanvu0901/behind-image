@@ -224,8 +224,10 @@ class DraftInputs:
                 "narration": canon_hash(self.narration) if self.narration else None}
 
 
-def load_inputs(project_dir: Path, chapters: list[str] | None = None) -> DraftInputs:
-    """Read a project's draft inputs. DraftError with a stable code when a piece is missing or unusable."""
+def load_inputs(project_dir: Path, chapters: list[str] | None = None, *, for_edit: bool = False) -> DraftInputs:
+    """Read a project's draft inputs. DraftError with a stable code when a piece is missing or unusable.
+    When `for_edit=True`, requires a saved storyboard and allows deriving picks from storyboard assets
+    if picks.json is missing or unapproved."""
     project_dir = Path(project_dir)
     narration = None
     nf = project_dir / "script" / "narration.json"
@@ -240,11 +242,45 @@ def load_inputs(project_dir: Path, chapters: list[str] | None = None) -> DraftIn
         current = read_json_file(sf, "storyboard")
         if not isinstance(current, dict):
             raise DraftError("storyboard_corrupt", "storyboard.json is not an object")
+    if for_edit and current is None:
+        raise DraftError("scope_needs_storyboard", "Dự án chưa có storyboard để chỉnh sửa.")
+
     timing_file = "timing.json"
     if isinstance(current, dict) and isinstance(current.get("timing"), str) and current["timing"]:
         timing_file = current["timing"]
     timing = normalize_timing(read_json_file(project_dir / timing_file, "timing"), narration)
-    picks = check_picks(read_json_file(project_dir / "picks.json", "picks"))
+
+    picks = None
+    if (project_dir / "picks.json").is_file():
+        try:
+            raw_picks = read_json_file(project_dir / "picks.json", "picks")
+            if for_edit:
+                if isinstance(raw_picks, dict) and isinstance(raw_picks.get("assets"), dict) and raw_picks["assets"]:
+                    p_copy = copy.deepcopy(raw_picks)
+                    p_copy.setdefault("approval", {"approved": True})
+                    if not (isinstance(p_copy.get("main_asset"), str) and p_copy["main_asset"] in p_copy["assets"]):
+                        p_copy["main_asset"] = next((k for k, a in p_copy["assets"].items() if isinstance(a, dict) and a.get("kind") == "image"), next(iter(p_copy["assets"].keys())))
+                    picks = check_picks(p_copy)
+                else:
+                    picks = None
+            else:
+                picks = check_picks(raw_picks)
+        except DraftError:
+            if not for_edit:
+                raise
+    if picks is None:
+        if for_edit and isinstance(current, dict) and isinstance(current.get("assets"), dict) and current["assets"]:
+            main = current.get("main_asset")
+            if not (isinstance(main, str) and main in current["assets"]):
+                main = next((k for k, a in current["assets"].items() if isinstance(a, dict) and a.get("kind") == "image"), None)
+                if not main:
+                    main = next(iter(current["assets"].keys()), None)
+            beats = {b["id"]: {"items": [], "status": "picked"} for b in timing.get("beats", [])}
+            picks = {"schema": "bti.picks/1", "main_asset": main, "assets": copy.deepcopy(current["assets"]),
+                     "beats": beats, "approval": {"approved": True}}
+        else:
+            picks = check_picks(read_json_file(project_dir / "picks.json", "picks"))
+
     if chapters:
         known = {c["id"] for c in timing["chapters"]}
         bad = [c for c in chapters if c not in known]
@@ -268,7 +304,7 @@ def load_inputs(project_dir: Path, chapters: list[str] | None = None) -> DraftIn
         reserved += [s.get("id") for s in current.get("shots") or [] if isinstance(s, dict) and isinstance(s.get("id"), str)]
     pdir = project_dir / "proposals"
     if pdir.is_dir():
-        for f in sorted(pdir.glob("draft_*.json"))[-20:]:
+        for f in sorted(list(pdir.glob("draft_*.json")) + list(pdir.glob("edit_*.json")))[-20:]:
             try:
                 doc = json.loads(f.read_text(encoding="utf-8"))
                 reserved += [s.get("id") for s in (doc.get("storyboard") or {}).get("shots") or []
@@ -279,6 +315,78 @@ def load_inputs(project_dir: Path, chapters: list[str] | None = None) -> DraftIn
                        style=(current or {}).get("style") or "gae", audio=audio if isinstance(audio, str) else None,
                        project_dir=project_dir, scope=list(chapters) if chapters else None,
                        reserved_ids=sorted(set(reserved)), timing_file=timing_file)
+
+
+def resolve_edit_scope(inp: DraftInputs, scope: dict | None) -> tuple[set[str], list[str], str]:
+    """Validate and resolve an edit request's scope: `{shots?: list[str], chapter?: str, all?: bool}`.
+    Returns: `(unlocked_edit_shot_ids, in_scope_chapter_ids, scope_words)`.
+    Raises DraftError on empty, unknown, ambiguous, or fully-locked scopes."""
+    from . import decompile as D
+    from bti.engine.timing import Timing
+    if inp.current is None:
+        raise DraftError("scope_needs_storyboard", "editing by prompt requires an existing storyboard")
+    if not isinstance(scope, dict):
+        raise DraftError("edit_bad_scope", "scope must be an object")
+
+    has_all = bool(scope.get("all"))
+    has_chapter = scope.get("chapter") is not None
+    has_shots = scope.get("shots") is not None
+
+    targets_set = sum([has_all, has_chapter, has_shots])
+    if targets_set == 0:
+        raise DraftError("edit_bad_scope", "scope must specify shots, chapter, or all")
+    if targets_set > 1:
+        raise DraftError("edit_bad_scope", "scope must specify only one of shots, chapter, or all")
+
+    cur_shots = [s for s in inp.current.get("shots") or [] if isinstance(s, dict) and isinstance(s.get("id"), str)]
+    if not cur_shots:
+        raise DraftError("scope_needs_storyboard", "storyboard has no shots to edit")
+    by_id = {s["id"]: s for s in cur_shots}
+
+    if has_all:
+        unlocked = [s["id"] for s in cur_shots if not s.get("locked")]
+        if not unlocked:
+            raise DraftError("edit_bad_scope", "all shots in video are locked")
+        return set(unlocked), inp.chapter_ids(), "cả video"
+
+    if has_chapter:
+        cid = scope.get("chapter")
+        if not isinstance(cid, str):
+            raise DraftError("edit_bad_scope", "chapter must be a string")
+        cid = cid.strip()
+        known = {c["id"]: c for c in inp.timing["chapters"]}
+        if cid not in known:
+            raise DraftError("unknown_chapter", f"no such chapter: {cid}")
+        tm = Timing({"duration": inp.timing["duration"], "words": inp.timing["words"]})
+        chap_shots = []
+        for rc in D.resolved_current(inp, tm):
+            s = rc["shot"]
+            if not isinstance(s.get("id"), str):
+                continue
+            w, _ = D._word_of(tm, s.get("start") or {}, rc["t0"])
+            if D.chapter_of(inp, w) == cid:
+                chap_shots.append(s)
+        unlocked = [s["id"] for s in chap_shots if not s.get("locked")]
+        if not unlocked:
+            raise DraftError("edit_bad_scope", f"all shots in chapter {cid} are locked")
+        return set(unlocked), [cid], f"chương {cid}"
+
+    # has_shots
+    shot_list = scope.get("shots")
+    if not isinstance(shot_list, list) or not shot_list or not all(isinstance(x, str) for x in shot_list):
+        raise DraftError("edit_bad_scope", "shots must be a non-empty list of shot ids")
+    target_ids = list(dict.fromkeys(shot_list))
+    unknown = [sid for sid in target_ids if sid not in by_id]
+    if unknown:
+        raise DraftError("edit_bad_scope", f"unknown shot ids: {', '.join(unknown)}")
+    unlocked = [sid for sid in target_ids if not by_id[sid].get("locked")]
+    if not unlocked:
+        raise DraftError("edit_bad_scope", "no unlocked shots in scope")
+    scope_chapters = D.chapters_of_shots(inp, set(unlocked))
+    if not scope_chapters:
+        scope_chapters = inp.chapter_ids()
+    words = f"{len(unlocked)} shot đang chọn"
+    return set(unlocked), scope_chapters, words
 
 
 def clone_inputs(inp: DraftInputs, **changes) -> DraftInputs:

@@ -20,7 +20,7 @@ class Settings:
     width: int = 1920
     ffmpeg: str = "ffmpeg"
     ffprobe: str = "ffprobe"
-    language: str = "eng"            # language tag of the audio and subtitle tracks (the narration is English)
+    language: str = "eng"            # language tag of the audio track (the narration is English)
 
 
 def load_settings(path: Path | None = None, platform: str | None = None) -> Settings:

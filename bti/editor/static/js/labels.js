@@ -131,7 +131,7 @@ export const PICKS_LABELS = {
     small: 'Ảnh dưới 1200 px ở cạnh ngắn, có thể bị mờ khi phóng to. Vẫn dùng được.',
   },
   role: { main: 'Cả bức tranh', detail: 'Chi tiết', context: 'Bối cảnh', compare: 'So sánh', document: 'Tài liệu', map: 'Bản đồ', video: 'Video' },
-  tabs: { main: 'Tranh chính', search: 'Tìm kiếm', books: 'Sách', suggest: 'Gợi ý', upload: 'Tải lên' },
+  tabs: { main: 'Tranh chính', search: 'Tìm kiếm', books: 'Sách', suggest: 'Gợi ý', video: 'Video', upload: 'Tải lên' },
   issue: {
     no_main: 'Chưa chọn tranh chính.', asset_file_missing: (i) => `Thiếu tệp ảnh của hình ${i.asset}.`,
     unknown_asset: (i) => `Dòng ${i.beat} dùng hình ${i.asset} không còn trong danh sách.`,
@@ -175,12 +175,12 @@ export const EXPORT_LABELS = {
   job: { queued: 'Đang chờ', waiting: 'Đang chờ máy rảnh', running: 'Đang xuất', done: 'Đã xong', error: 'Bị lỗi', cancelled: 'Đã hủy', interrupted: 'Bị gián đoạn vì máy chủ khởi động lại' },
   report: {
     video: 'Loại video', audio_length: 'Độ dài tiếng đọc (giây)', chapters_merged: 'Mục lục ngắn đã gộp (dưới 10 giây)', duration: 'Độ dài (giây)', frames: 'Số khung hình', audio: 'Âm thanh', loudness: 'Độ lớn tiếng (LUFS)',
-    true_peak: 'Đỉnh âm lớn nhất (dB)', subtitles: 'Phụ đề trong tệp', cues: 'Số dòng phụ đề', chapters: 'Số mục lục', size: 'Dung lượng',
+    true_peak: 'Đỉnh âm lớn nhất (dB)', chapters: 'Số mục lục', size: 'Dung lượng',
   },
   reportHelp: {
-    frames: 'phải bằng độ dài nhân 30', audio_length: 'phải khớp độ dài video (lệch tối đa 0,5 giây)', chapters_merged: 'chỉ gộp trong tệp mục lục và mô tả', loudness: 'mục tiêu khoảng -15', true_peak: 'nên dưới -1', subtitles: 'phải có (mov_text)', chapters: 'từ 2 mục trở lên',
+    frames: 'phải bằng độ dài nhân 30', audio_length: 'phải khớp độ dài video (lệch tối đa 0,5 giây)', chapters_merged: 'chỉ gộp trong tệp mục lục và mô tả', loudness: 'mục tiêu khoảng -15', true_peak: 'nên dưới -1', chapters: 'từ 2 mục trở lên',
   },
   status: { ok: 'Đạt', warn: 'Xem lại', fail: 'Lỗi' },
   stale: { storyboard: 'Storyboard đã đổi sau lần xuất trước, nên video này không còn khớp.', audio: 'Giọng đọc đã đổi sau lần xuất trước, nên video này không còn khớp.', files: 'Một số tệp của lần xuất trước không còn nữa.' },
-  files: { video: 'Video (MP4, có phụ đề bên trong)', subtitles: 'Phụ đề (.srt)', description: 'Mô tả video', chapters: 'Mục lục (chapters.txt)' },
+  files: { video: 'Video (MP4)', description: 'Mô tả video', chapters: 'Mục lục (chapters.txt)' },
 };

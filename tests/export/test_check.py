@@ -35,7 +35,7 @@ def test_parse_probe():
 
 
 def card(info=None, loud=None, **kw):
-    a = dict(expected_frames=24625, expected_duration=820.8333, cues=300)
+    a = dict(expected_frames=24625, expected_duration=820.8333)
     a.update(kw)
     return {i["key"]: i for i in check.report_card(check.parse_probe(info or PROBE), loud if loud is not False else None, **a)}
 
@@ -50,10 +50,8 @@ def test_each_failure_is_named():
     c = card(expected_frames=24624, loud={"lufs": -20.0, "true_peak": -0.2})
     assert c["frames"]["status"] == "fail" and c["frames"]["note"] == "+1"
     assert c["loudness"]["status"] == "warn" and c["true_peak"]["status"] == "warn"
-    bad = dict(PROBE, streams=PROBE["streams"][:2])
-    assert card(bad, loud=False)["subtitles"]["status"] == "fail"
+    assert not {"subtitles", "cues"} & card(dict(PROBE, streams=PROBE["streams"][:2]), loud=False).keys()
     assert card(loud=False)["loudness"]["status"] == "warn"
-    assert card(cues=0)["cues"]["status"] == "fail"
     assert card(expected_duration=900)["duration"]["status"] == "fail"
 
 

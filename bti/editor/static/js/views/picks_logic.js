@@ -11,8 +11,9 @@ export function ensureBeat(doc, id) {
   return doc.beats[id];
 }
 
-/** Role of a new item: the whole main painting is "main", a region of anything is a "detail", any other picture is "context". */
+/** Role of a new item: a video asset is "video", the whole main painting is "main", a region of anything is a "detail", any other picture is "context". */
 export function defaultRole(doc, assetKey, region) {
+  if (doc?.assets?.[assetKey]?.kind === 'video') return 'video';
   if (region) return 'detail';
   return doc.main_asset === assetKey ? 'main' : 'context';
 }
