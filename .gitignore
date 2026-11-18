@@ -57,4 +57,5 @@ run/
 # Runtime folders of a deployed copy (the server is a git checkout; these never belong to the repository)
 /logs/
 /cache/
+/.cache/
 /_deploy/
