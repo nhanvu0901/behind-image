@@ -52,3 +52,8 @@ demo_runs/codex/
 
 # Machine-local settings and run state (owner model choices, voice timing stats, snapshots)
 run/
+
+# Runtime folders of a deployed copy (the server is a git checkout; these never belong to the repository)
+/logs/
+/cache/
+/_deploy/
