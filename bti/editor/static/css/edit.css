@@ -235,3 +235,13 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
   .prompt-thread-header { padding-top: 4px; }
   .prompt-turn-card { padding: 6px 8px; font-size: 12px; }
 }
+
+/* idapply: the selector "Kiểu mở đầu và mốc chương" in the tools row of step 5 */
+.identity-pick { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.identity-pick[hidden] { display: none; }
+.identity-pick .identity-label { color: var(--muted); white-space: nowrap; }
+.identity-pick .identity-select { max-width: 200px; padding: 2px 6px; }
+.identity-pick .identity-note { max-width: 330px; }
+.identity-skipped { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: 12px; color: var(--warn); border-top: 1px solid var(--border); padding-top: 4px; }
+.identity-skipped ul { margin: 0; padding-left: 14px; }
+.identity-skipped[hidden] { display: none; }

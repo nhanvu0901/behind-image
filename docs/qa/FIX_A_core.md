@@ -605,3 +605,25 @@ The edit part of `skills/storyboard_draft/TASK.template.md` got the same camera 
 Also check `turn.summary_source`/`what_source` over several runs: how often the model's own sentence passes the check (if rarely, the template's examples need work).
 
 Counts for 13.3 (Windows server, snapshot `acore2`): `tests/draft` 214 passed; `tests/editor` 415 passed.
+
+### 13.4 Real probes of 2026-11-18 (coordinator; Gemini 3.8 Flash high through agy, Mac, private instance on a clean copy of commit `a049001`, copy of `projects/arnolfini`)
+
+Fast path v2, `mode: "fast"`, one model call each:
+
+| # | Scope and instruction | Result | Wall time | Notes |
+|---|---|---|---|---|
+| 1 | `s0007,s0008`, "làm chậm cú zoom ở hai cảnh này" | applied, 2 shots | 20.2 s (was 34 s) | facts "Máy quay đi chậm hơn", "Máy quay chuyển động mượt hơn"; `what_source: code` |
+| 2 | `s0024..s0029`, "bỏ vòng khoanh ở các cảnh này và làm máy quay mượt hơn" | applied, 5 shots listed (the untouched one is not) | 29.2 s (was 127 s) | ring removed on `s0029`; also "Chỉnh: dòng chữ" on it, which was not asked |
+| 3 | `s0004`, "khoanh tròn cái gương" | applied, AN-01 at `MIRROR` | 14.1 s | also "Chỉnh: rọi sáng vùng ở Mirror", "... Latin inscription", "Chỉnh: dòng chữ": existing overlays reported as changed |
+| 4a | `s0078`, "zoom sát vào cái nhẫn" | `escalate`: turn failed, Vietnamese sentence, nothing changed | 12.1 s | as designed |
+| 5 | `s0078`, "đọc lại câu này chậm hơn" | `cannot`: `no_change` | 11.1 s | the model's reason was English and was replaced by the fixed sentence |
+| 6a | `s0031,s0032`, "cho cảnh đầu dài hơn một giây" | applied: `s0032` starts 1 s later | 29.3 s | fact "Cảnh bắt đầu muộn hơn 1 giây" |
+| 6b | `s0031` alone, same wish | `cannot`: `no_change` | 14.2 s | the model's reason (English) said to select the next shot too; the fixed Vietnamese sentence shown instead talks about a new picture or the voice, so the owner is not told what to do |
+
+Open points from these runs:
+1. Existing overlays of a returned shot are reported as changed ("Chỉnh: ...") when the instruction did not touch them (probes 2 and 3). Either the model re-emits them with different fields or the normalisation does not cover overlays; needs the exact diff.
+2. A `cannot` whose reason fails the Vietnamese check loses its useful content (probe 6b). The model should return a reason code from a short list, mapped to fixed Vietnamese sentences.
+3. With this model every `what_source` and `summary_source` was `code`: its own sentences never passed the check (they were English).
+4. Region labels come from the project and were English in the facts ("Mirror", "Dog", "Latin inscription").
+
+Deep path, `mode: "auto"` on probe 4 (`s0078`, "zoom sát vào cái nhẫn"): **did not finish.** The fast call escalated, the agent ran 8 minutes (183 model responses, 181 tool calls, 746,155 input tokens, 37,435 output and thinking tokens), ended its turn with `result: SUCCESS` saying it had updated the shot; the runner then sent one more input (`step 459 user_input`), no further event arrived, and the job stayed `running` (progress 0.77) for 21 more minutes until I stopped the instance. Two defects: the wait after the first result has no working time limit, and one small edit cost three quarters of a million input tokens. The leftover `agy` process of the run was stopped by hand (pid 52699).

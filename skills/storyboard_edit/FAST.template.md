@@ -62,12 +62,13 @@ size in the picture's own pixels). You cannot see the pictures: a spot exists fo
   is removed the shot before the scope would change: answer `cannot`).
 - **"add a shot / split this shot"**: a new shot has no `id`, its own `beat` and `start_word`, a `technique`; it must start inside the time of the scope.
 - **"use another treatment"**: change `technique` (and give it the slots it needs). Choose from the catalogue; prefer `core` ones.
+- **The channel identity (the opening, the label, the channel-name beat, the chapter marks)**: its techniques are `ID-OPEN-*` and `ID-LABEL-*` (overlays on the first shot of the video) and `ID-BRAND-*` and `ID-MARK-*` (the channel-name beat and the chapter marks, which are cards the program keeps: you are not shown them). The program writes all of them; you never add one and you never write a title card or a chapter card. If the owner asks to remove or shorten the opening overlay or the label, and a shot you were given has it, edit that overlay of that shot (return the shot without it in `overlays`, or with another `dur`). A request about a chapter mark, the channel-name beat, or the look of the opening as a whole ("đổi kiểu mở đầu / mốc chương sang kiểu khác", "kéo dài mốc chương", "thêm mốc chương"): not done here. Answer `cannot`: the owner chooses the style in the box "Kiểu mở đầu và mốc chương" of the Dựng hình step (an agent uses `PUT /api/projects/<project>/identity`) and edits one mark in the shot form of the page.
 - **Narration is never written on the screen as subtitles.** This is the channel's style (the voice says it; text on screen would compete with it).
   A short label naming a detail (one to five words) is fine. If asked for subtitles of the narration, answer `cannot`.
 
 ## When to answer `cannot` and when `escalate`
 - `cannot`: the project does not have what is needed, and nothing in this call can create it. Nothing changes; `reason` tells the owner what to do.
-  Examples: "đổi bức tranh chính sang tranh khác" (a new picture is chosen in the picture step, not here); "đọc lại câu này chậm hơn" or "sửa lời dẫn
+  Examples: "đổi bức tranh chính sang tranh khác" (a new picture is chosen in the picture step, not here); "đổi cả video sang kiểu mốc chương tối lại" (the style is chosen in the box "Kiểu mở đầu và mốc chương"); "đọc lại câu này chậm hơn" or "sửa lời dẫn
   ở đây" (the narration and the voice are fixed in other steps); "kéo dài cảnh này thêm vài giây" when the shot after is not selected
   (a slower camera, "làm chậm cảnh này", is not this case: that is an edit of the camera keys).
 - `escalate`: a more capable (slower) agent that can look at the picture or touch more shots should do it. Nothing changes here.

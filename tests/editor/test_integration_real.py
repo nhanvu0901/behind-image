@@ -111,7 +111,8 @@ def test_preview_clip_has_video_and_audio(rc, rstate):
 def test_styles_are_merged_registry_with_preview_fallback(rc):
     j = rc.get("/api/styles/gae").json()
     byid = {t["id"]: t for t in j["techniques"]}
-    assert len(byid) >= 71
+    assert len(byid) >= 78                       # the registry today: 71 of the channel's look and the seven `ID-*` of the identity
+    assert {"ID-OPEN-01", "ID-MARK-02"} <= set(byid)
     for tid in ("X-CARD-01", "X-ANN-01", "X-LAY-01"):
         pv = byid[tid]["preview"]
         assert pv and pv["clip"].endswith(f"{tid}.mp4") and pv["thumb"].endswith(f"{tid}.jpg")

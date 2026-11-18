@@ -12188,6 +12188,1296 @@
     "scene-sync/longform-cases.md goya-continuous-s05/s09, supper-continuous-s11",
     "scene-sync/dynamic-cases.md raphael-perspective 721-747"
    ]
+  },
+  {
+   "id": "ID-OPEN-01",
+   "key": "open_raking_light",
+   "name": "Opening: raking light",
+   "label_vi": "Mở đầu: vệt sáng quét",
+   "category": "highlight",
+   "kind": "overlay",
+   "intents": [
+    "establish"
+   ],
+   "description": "The picture starts black, rises to a dark frame, a soft band of light travels across it and leaves the picture half lit behind it, then the whole picture rises to full brightness.",
+   "usage_rule": "Overlay on the first shot of a video, from its start (nominal 9.0 s). The camera of the shot is not changed. Style `raking` of the channel identity.",
+   "channel_usage": "core",
+   "slots": [],
+   "params": [
+    {
+     "name": "floor",
+     "type": "number",
+     "default": 0.1,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "wake",
+     "type": "number",
+     "default": 0.45,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "black_s",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "rise_s",
+     "type": "number",
+     "default": 0.8,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_start_s",
+     "type": "number",
+     "default": 1.5,
+     "min": 0,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_s",
+     "type": "number",
+     "default": 6.0,
+     "min": 0.2,
+     "max": 60,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "direction",
+     "type": "enum",
+     "default": "right_to_left",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "right_to_left",
+      "left_to_right"
+     ],
+     "measured": null
+    },
+    {
+     "name": "band_width_pct",
+     "type": "number",
+     "default": 14,
+     "min": 2,
+     "max": 60,
+     "unit": "% W",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "feather",
+     "type": "number",
+     "default": 0.4,
+     "min": 0.05,
+     "max": 1,
+     "unit": "ratio",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "angle_deg",
+     "type": "number",
+     "default": 10,
+     "min": -45,
+     "max": 45,
+     "unit": "deg",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "release_s",
+     "type": "number",
+     "default": 1.5,
+     "min": 0,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "warm",
+     "type": "number",
+     "default": 0.14,
+     "min": 0,
+     "max": 1,
+     "unit": "alpha",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 9.0,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.OpenRaking",
+    "reason": null,
+    "notes": "Light only (a gain on the frame, soft band at reduced resolution). Nominal length = sweep_start_s + sweep_s + release_s. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 9.0,
+    "clip": "previews/ID-OPEN-01.mp4",
+    "thumb": "previews/ID-OPEN-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
+   "id": "ID-LABEL-01",
+   "key": "label_plain",
+   "name": "Artwork label without a strip",
+   "label_vi": "Nhãn tác phẩm không nền",
+   "category": "text",
+   "kind": "overlay",
+   "intents": [
+    "context"
+   ],
+   "description": "Two lines at the bottom left, directly on the picture: the title in italic, then the artist and year. No strip or box; a soft shadow keeps it readable.",
+   "usage_rule": "Overlay on the opening shot, about 6 s into the video, 4.5 s long. Style `raking` of the channel identity.",
+   "channel_usage": "core",
+   "slots": [],
+   "params": [
+    {
+     "name": "title",
+     "type": "string",
+     "default": "The Arnolfini Portrait",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "artist_year",
+     "type": "string",
+     "default": "Jan van Eyck, 1434",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "x_pct",
+     "type": "number",
+     "default": 4,
+     "min": 0,
+     "max": 60,
+     "unit": "% W",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "bottom_pct",
+     "type": "number",
+     "default": 92,
+     "min": 20,
+     "max": 100,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_cap_pct",
+     "type": "number",
+     "default": 3.0,
+     "min": 0.5,
+     "max": 10,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "second_cap_pct",
+     "type": "number",
+     "default": 2.3,
+     "min": 0.5,
+     "max": 8,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "fade_in_s",
+     "type": "number",
+     "default": 0.5,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "fade_out_s",
+     "type": "number",
+     "default": 0.5,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "nominal_s",
+     "type": "number",
+     "default": 4.5,
+     "min": 1.5,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 4.5,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.LabelPlain",
+    "reason": null,
+    "notes": "Sizes are cap heights in % of the frame height. The second line's baseline is at bottom_pct. The fades are scaled when the overlay is shorter than nominal_s."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 4.5,
+    "clip": "previews/ID-LABEL-01.mp4",
+    "thumb": "previews/ID-LABEL-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
+   "id": "ID-OPEN-02",
+   "key": "open_dim_name",
+   "name": "Opening: dim and name",
+   "label_vi": "Mở đầu: tối lại, hiện tên",
+   "category": "text",
+   "kind": "overlay",
+   "intents": [
+    "establish"
+   ],
+   "description": "The frame dims, the title of the painting fades in low in the frame in italic, then a small line with the artist and the year; at the end the text fades and the light returns.",
+   "usage_rule": "Overlay on the opening shot, about 7 s into the video, 5.0 s long. Style `dim` of the channel identity.",
+   "channel_usage": "core",
+   "slots": [],
+   "params": [
+    {
+     "name": "title",
+     "type": "string",
+     "default": "The Arnolfini Portrait",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "sub",
+     "type": "string",
+     "default": "Jan van Eyck · 1434",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "dim",
+     "type": "number",
+     "default": 0.45,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "ramp_in_s",
+     "type": "number",
+     "default": 1.0,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "ramp_out_s",
+     "type": "number",
+     "default": 1.0,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_cap_pct",
+     "type": "number",
+     "default": 5.0,
+     "min": 1,
+     "max": 15,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_y_pct",
+     "type": "number",
+     "default": 78,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_cap_pct",
+     "type": "number",
+     "default": 2.2,
+     "min": 0.5,
+     "max": 8,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_y_pct",
+     "type": "number",
+     "default": 85.5,
+     "min": 5,
+     "max": 98,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_tracking_pct",
+     "type": "number",
+     "default": 14,
+     "min": 0,
+     "max": 60,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_fade_in_s",
+     "type": "number",
+     "default": 0.8,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_delay_s",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_fade_in_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_opacity",
+     "type": "number",
+     "default": 0.9,
+     "min": 0,
+     "max": 1,
+     "unit": "alpha",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "nominal_s",
+     "type": "number",
+     "default": 5.0,
+     "min": 1.5,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 5.0,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.OpenDim",
+    "reason": null,
+    "notes": "The title ends its fade when the dim ramp ends; the sub line follows sub_delay_s later and is drawn in capitals. The last ramp_out_s of the overlay returns text and light. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 5.0,
+    "clip": "previews/ID-OPEN-02.mp4",
+    "thumb": "previews/ID-OPEN-02.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
+   "id": "ID-BRAND-01",
+   "key": "brand_raking_light",
+   "name": "Channel name written by light",
+   "label_vi": "Tên kênh: vệt sáng quét",
+   "category": "card",
+   "kind": "base",
+   "intents": [
+    "structure"
+   ],
+   "description": "The picture dims and a band of light sweeps across it; the channel name in wide-tracked capitals is revealed along the band's path and stays.",
+   "usage_rule": "Its own shot after the hook (nominal 5.0 s), then a hard cut. The picture is the one that was on screen. Style `raking`.",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text",
+     "type": "string",
+     "default": "RAKING LIGHT",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "dim_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "floor",
+     "type": "number",
+     "default": 0.12,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "wake",
+     "type": "number",
+     "default": 0.26,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_delay_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_s",
+     "type": "number",
+     "default": 2.4,
+     "min": 0.2,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "direction",
+     "type": "enum",
+     "default": "left_to_right",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "right_to_left",
+      "left_to_right"
+     ],
+     "measured": null
+    },
+    {
+     "name": "band_width_pct",
+     "type": "number",
+     "default": 16,
+     "min": 2,
+     "max": 60,
+     "unit": "% W",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "feather",
+     "type": "number",
+     "default": 0.4,
+     "min": 0.05,
+     "max": 1,
+     "unit": "ratio",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "angle_deg",
+     "type": "number",
+     "default": 10,
+     "min": -45,
+     "max": 45,
+     "unit": "deg",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "warm",
+     "type": "number",
+     "default": 0.14,
+     "min": 0,
+     "max": 1,
+     "unit": "alpha",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 8.0,
+     "min": 1,
+     "max": 20,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "tracking_pct",
+     "type": "number",
+     "default": 25,
+     "min": 0,
+     "max": 100,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "y_pct",
+     "type": "number",
+     "default": 42,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "nominal_s",
+     "type": "number",
+     "default": 5.0,
+     "min": 1.5,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 5.0,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.BrandRaking",
+    "reason": null,
+    "notes": "The picture is drawn exactly as CAM-01 draws it (same camera keys); `text` comes from identity.channel_name of style.json and is drawn in capitals. After the sweep the shot holds its state. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 5.0,
+    "clip": "previews/ID-BRAND-01.mp4",
+    "thumb": "previews/ID-BRAND-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
+   "id": "ID-BRAND-02",
+   "key": "brand_dim_name",
+   "name": "Channel name on a dimmed picture",
+   "label_vi": "Tên kênh: tối lại, hiện tên",
+   "category": "card",
+   "kind": "base",
+   "intents": [
+    "structure"
+   ],
+   "description": "The picture dims and the channel name in wide-tracked capitals fades in over it, holds and fades out before the hard cut.",
+   "usage_rule": "Its own shot after the hook (nominal 4.0 s), then a hard cut. Style `dim`.",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text",
+     "type": "string",
+     "default": "RAKING LIGHT",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "dim",
+     "type": "number",
+     "default": 0.25,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "ramp_in_s",
+     "type": "number",
+     "default": 0.8,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text_in_delay_s",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "fade_in_s",
+     "type": "number",
+     "default": 1.0,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "fade_out_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 7.0,
+     "min": 1,
+     "max": 20,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "tracking_pct",
+     "type": "number",
+     "default": 25,
+     "min": 0,
+     "max": 100,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "y_pct",
+     "type": "number",
+     "default": 46,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "nominal_s",
+     "type": "number",
+     "default": 4.0,
+     "min": 1.5,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 4.0,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.BrandDim",
+    "reason": null,
+    "notes": "The picture is drawn exactly as CAM-01 draws it. The fade-out ends at the end of the shot. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 4.0,
+    "clip": "previews/ID-BRAND-02.mp4",
+    "thumb": "previews/ID-BRAND-02.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
+   "id": "ID-MARK-01",
+   "key": "mark_raking_light",
+   "name": "Chapter mark written by light",
+   "label_vi": "Mốc chương: vệt sáng quét",
+   "category": "card",
+   "kind": "base",
+   "intents": [
+    "structure"
+   ],
+   "description": "The first picture of the chapter appears dark; a band of light sweeps across it and writes one line, number then title, which stays until the picture is released to full brightness.",
+   "usage_rule": "Its own shot at the start of a chapter (nominal 3.2 s); hard cut in. The picture flows into the next shot. Style `raking`.",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "default": "5. The Mirror",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "floor",
+     "type": "number",
+     "default": 0.12,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "wake",
+     "type": "number",
+     "default": 0.55,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_delay_s",
+     "type": "number",
+     "default": 0.1,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_s",
+     "type": "number",
+     "default": 2.0,
+     "min": 0.2,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "direction",
+     "type": "enum",
+     "default": "left_to_right",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "right_to_left",
+      "left_to_right"
+     ],
+     "measured": null
+    },
+    {
+     "name": "band_width_pct",
+     "type": "number",
+     "default": 18,
+     "min": 2,
+     "max": 60,
+     "unit": "% W",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "feather",
+     "type": "number",
+     "default": 0.4,
+     "min": 0.05,
+     "max": 1,
+     "unit": "ratio",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "angle_deg",
+     "type": "number",
+     "default": 10,
+     "min": -45,
+     "max": 45,
+     "unit": "deg",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "release_at_s",
+     "type": "number",
+     "default": 2.5,
+     "min": 0,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "release_s",
+     "type": "number",
+     "default": 0.7,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text_fade_out_s",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 4.5,
+     "min": 1,
+     "max": 15,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "y_pct",
+     "type": "number",
+     "default": 50,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "warm",
+     "type": "number",
+     "default": 0.14,
+     "min": 0,
+     "max": 1,
+     "unit": "alpha",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 3.2,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.MarkRaking",
+    "reason": null,
+    "notes": "The picture is drawn exactly as CAM-01 draws it, so the mark can end on the next shot's first camera key. Nominal length = release_at_s + release_s. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 3.2,
+    "clip": "previews/ID-MARK-01.mp4",
+    "thumb": "previews/ID-MARK-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
+   "id": "ID-MARK-02",
+   "key": "mark_dim_name",
+   "name": "Chapter mark on a dimmed picture",
+   "label_vi": "Mốc chương: tối lại, hiện tên",
+   "category": "card",
+   "kind": "base",
+   "intents": [
+    "structure"
+   ],
+   "description": "The picture of the new chapter is shown dimmed and one line, number then title, fades in over it, then fades out while the light returns.",
+   "usage_rule": "Its own shot at the start of a chapter (nominal 3.0 s), usually entered by a 0.75 s dissolve (TR-01). Style `dim`.",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "default": "5. The Mirror",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "dim",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "ramp_in_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text_in_delay_s",
+     "type": "number",
+     "default": 0.3,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text_fade_in_s",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text_out_at_s",
+     "type": "number",
+     "default": 2.4,
+     "min": 0,
+     "max": 30,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text_fade_out_s",
+     "type": "number",
+     "default": 0.4,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "release_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 4.5,
+     "min": 1,
+     "max": 15,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "y_pct",
+     "type": "number",
+     "default": 50,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 3.0,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.MarkDim",
+    "reason": null,
+    "notes": "The picture is drawn exactly as CAM-01 draws it. The text and the light leave together from text_out_at_s. Nominal length = text_out_at_s + release_s. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 3.0,
+    "clip": "previews/ID-MARK-02.mp4",
+    "thumb": "previews/ID-MARK-02.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
   }
  ]
 }

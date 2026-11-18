@@ -49,10 +49,13 @@ def test_import_writes_file_and_entry(commons_net, tmp_path):
     res = api.import_candidate(proj, "commons", sid, min_short_side=1200)
     key, asset = res["asset_key"], res["asset"]
     assert key == "arnolfini_portrait"
-    assert set(asset) == {"file", "kind", "title", "artist", "year", "width", "height", "credit"}
+    assert set(asset) == {"file", "kind", "title", "artist", "year", "width", "height", "original_width", "original_height", "credit"}
     assert asset["file"] == "media/arnolfini_portrait.jpg" and (proj / asset["file"]).is_file()
     assert asset["kind"] == "image" and asset["artist"] == "Jan van Eyck" and asset["year"] == "1434"
-    assert (asset["width"], asset["height"]) == (4386, 6000)
+    # CHANGED (the stored size rule): width and height are the pixels of the stored file (the fake download is 1300 x 1250);
+    # this used to assert the 4386 x 6000 that Commons says about the original, which is now kept as original_width / original_height
+    assert (asset["width"], asset["height"]) == (1300, 1250)
+    assert (asset["original_width"], asset["original_height"]) == (4386, 6000)
     assert asset["credit"]["licence"] == "PD" and asset["credit"]["source"] == "commons"
     assert not (proj / "storyboard.json").exists()       # the backend merges, we do not
     n = len(commons_net.urls)

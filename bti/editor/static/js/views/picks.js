@@ -11,7 +11,7 @@ import { api } from '../api.js';
 import { h, kids, toast, errorToast, setStatus, modal, ask, confirmDialog, debounce } from '../util.js';
 import { makeSpaces } from '../coords.js';
 import { createQueue } from '../queue.js';
-import { describeError, jobErrorText, STAGE_CODES } from '../errmsg.js';
+import { describeError, jobErrorText, sourceLimitText, STAGE_CODES } from '../errmsg.js';
 import { PICKS_LABELS, SOURCE_LABELS } from '../labels.js';
 import { projectHash } from '../router.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
@@ -22,6 +22,8 @@ const LBL = PICKS_LABELS;
 // error `code` of the picks routes -> sentence (errmsg.js); anything else goes through describeError
 const ERR = { ...STAGE_CODES.longjob, ...STAGE_CODES.picks };
 const failText = (e) => ERR[e?.body?.code] || describeError(e).text;
+/** The reason in a search banner, for one entry of `errors` ({source, code, retry_after}): a source that limits downloads says for how long, else the table's sentence. */
+export const searchErrorText = (e) => (e?.code === 'source_rate_limited' ? sourceLimitText(e) : ERR[e?.code] || 'không tìm được.');
 const fail = (e, prefix = '') => { const t = ERR[e?.body?.code]; if (t) toast(prefix + t, 'err', 8000); else errorToast(e, prefix); };
 
 // ------------------------------------------------------------------ state
@@ -333,7 +335,7 @@ function results(opts) {
   if (S.q.busy) return h('div', { class: 'muted pad', text: 'Đang tìm...' });
   if (!r) return h('div', { class: 'muted pad', text: 'Chưa tìm gì. Gõ từ khóa rồi bấm Tìm.' });
   return h('div', null,
-    (r.errors || []).map((e) => h('div', { class: 'pk-banner warn', text: `${SOURCE_LABELS[e.source] || e.source}: ${ERR[e.code] || 'không tìm được.'}` })),
+    (r.errors || []).map((e) => h('div', { class: 'pk-banner warn', text: `${SOURCE_LABELS[e.source] || e.source}: ${searchErrorText(e)}` })),
     r.items.length ? h('div', { class: 'pk-grid' }, r.items.map((c) => candCard(c, opts))) : h('div', { class: 'muted pad', text: `Không có kết quả cho "${r.query}".` }));
 }
 async function runSearch(text, beat = null) {

@@ -97,8 +97,17 @@ def comparable(spec_shot: dict) -> dict:
 
 
 def is_card(bundle, shot: dict) -> bool:
+    """A card: a technique of kind `card` (the old title and chapter cards), or a title slot / chapter mark of the channel identity
+    (kind `base`, intent `structure`, a technique of the `brand` or `mark` role of the style's `identity` block): cards in everything
+    but their kind. A style without an identity block has only the first kind."""
     sp = bundle.spec(shot.get("technique"))
-    return bool(sp and sp.get("kind") == "card")
+    if sp and sp.get("kind") == "card":
+        return True
+    if shot.get("intent") != "structure":
+        return False
+    from bti.identity import read as read_identity
+    cfg = read_identity(bundle.style)
+    return bool(cfg) and cfg.is_identity_card(shot.get("technique"))
 
 
 def resolve_shots(doc: dict | None, tm: Timing, default_dur: float) -> list[dict]:

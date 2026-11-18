@@ -9,6 +9,11 @@
 
 The field names are read by the storyboard draft agent: do not rename them. `assets` has the shape of `storyboard.assets`.
 
+An asset's `width` and `height` are the pixels of its stored file, and its regions are in that space. `original_width` /
+`original_height` (optional) are what the source said its original was; they can be larger. `load` enforces the rule on
+documents written before it existed (`bti.media.assets.reconcile_sizes`): a declared size that differs from the stored file is
+corrected, the regions of that asset are scaled with it, and the correction reaches the disk with the next `save`.
+
 Revision = sha1 of the canonical JSON without the `approval` block (the same rule as the script documents). An approval
 stores that revision and the revision of the narration it was given against; it stands only while both still match and the
 narration itself is approved. Saving a changed document drops the approval. Writes are atomic, take the picks lock, and
@@ -23,6 +28,7 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from bti.media import assets as _mediaassets
 from bti.script import store as sstore
 from bti.script.store import DocumentCorrupt, ProjectGone, StaleRevision  # noqa: F401  (re-exported)
 
@@ -111,6 +117,9 @@ def _asset(a: Any) -> dict | None:
     out = {"file": _s(a["file"]), "kind": "video" if a.get("kind") == "video" else "image", "title": _s(a.get("title")),
            "artist": _s(a.get("artist")), "year": _s(a.get("year")), "width": _int(a.get("width")),
            "height": _int(a.get("height")), "credit": credit, "regions": regions}
+    for k in ("original_width", "original_height"):          # the source's own size, kept apart from the stored one
+        if _int(a.get(k)) > 0:
+            out[k] = _int(a.get(k))
     dur = _num(a.get("duration"), 0.0)
     if out["kind"] == "video" and dur > 0:
         out["duration"] = round(float(dur), 2)
@@ -210,9 +219,14 @@ def path(pdir: Path) -> Path:
 
 def load(pdir: Path) -> dict | None:
     """The saved document (normalised), None when there is none. DocumentCorrupt (409 `data_error: "picks"`) when the file
-    is there but unreadable."""
+    is there but unreadable. An image asset whose declared size differs from its stored file comes back corrected (size and
+    regions, see the module doc); nothing is written here, so the revision of such a document is that of the corrected one."""
     raw = sstore.read_object(path(pdir), "picks")
-    return None if raw is None else normalize(raw)
+    if raw is None:
+        return None
+    d = normalize(raw)
+    _mediaassets.reconcile_sizes(d["assets"], pdir)          # in memory only: the disk is rewritten by the next save
+    return d
 
 
 def load_or_new(pdir: Path) -> dict:

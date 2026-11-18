@@ -285,7 +285,7 @@ Phụ đề không bao giờ được vẽ vào hình; bước này không đưa
 
 **Chọn hình là gì?** Sau khi lời dẫn được duyệt, bạn quyết định mỗi dòng lời dẫn sẽ cho xem hình gì: bức tranh chính, một chi tiết của nó, hay một hình khác. Bước này nằm giữa Kịch bản và Dựng hình.
 
-**1. Chọn tranh chính (làm đầu tiên).** Mở tab "Tranh chính" ở cột bên phải. Ô tìm đã có sẵn tên tranh và tác giả; bấm "Tìm". Kết quả lấy từ Wikimedia Commons và The Met, mỗi ảnh cho biết kích thước và giấy phép. Bấm "Làm tranh chính" ở ảnh bạn muốn. Cũng có thể lấy ảnh từ sách (tab "Sách") hoặc tải ảnh của bạn lên (tab "Tải lên").
+**1. Chọn tranh chính (làm đầu tiên).** Mở tab "Tranh chính" ở cột bên phải. Ô tìm đã có sẵn tên tranh và tác giả; bấm "Tìm". Kết quả lấy từ Wikimedia Commons và The Met, mỗi ảnh cho biết kích thước (của bản gốc ở nguồn) và giấy phép. Ảnh quá lớn được lấy bản thu nhỏ do chính nguồn cung cấp; kích thước ghi trong dự án và các vùng bạn vẽ luôn tính theo đúng tệp đã lưu. Bấm "Làm tranh chính" ở ảnh bạn muốn. Cũng có thể lấy ảnh từ sách (tab "Sách") hoặc tải ảnh của bạn lên (tab "Tải lên").
 
 **2. Cờ cảnh báo.** Ảnh có thể mang một cờ: "Giấy phép bị hạn chế", "Chưa rõ giấy phép" hoặc "Ảnh nhỏ" (dưới 1200 px). Cờ chỉ để bạn biết: ảnh vẫn dùng được và không bao giờ bị từ chối. Nguồn và giấy phép luôn được ghi lại để điền vào phần mô tả video.
 
@@ -297,7 +297,7 @@ Phụ đề không bao giờ được vẽ vào hình; bước này không đưa
 
 **6. Duyệt.** Bấm "Kiểm tra" để xem lỗi (phải sửa: chưa có tranh chính, hình hoặc vùng không còn) và cảnh báo (không chặn: dòng chưa có hình, ảnh có cờ). Rồi bấm "Duyệt chọn hình". Chỉ duyệt được khi lời dẫn đã duyệt. Nếu sau đó bạn sửa hình hoặc sửa lời dẫn, bước này cần duyệt lại và bước Dựng hình sẽ nói bản nháp cũ không còn khớp.
 
-**Nếu có sự cố.** "Nguồn ảnh đang bận": đợi vài giây rồi tìm lại, hoặc bỏ tick một nguồn. "Tệp ảnh bị cắt dở": tải lại tệp đầy đủ. "Chọn hình đã đổi ở nơi khác": trang tự tải lại bản mới nhất; phần bạn vừa sửa chưa lưu sẽ mất.
+**Nếu có sự cố.** "Nguồn ảnh đang bận": đợi vài giây rồi tìm lại, hoặc bỏ tick một nguồn. "Nguồn ảnh đang giới hạn lượt tải. Thử lại sau khoảng N phút": nguồn (thường là Wikimedia Commons) tự báo phải chờ; ứng dụng không thử lại dồn dập, hãy đợi đúng số phút đó rồi bấm lại, hoặc dùng nguồn khác. "Tệp ảnh bị cắt dở": tải lại tệp đầy đủ. "Chọn hình đã đổi ở nơi khác": trang tự tải lại bản mới nhất; phần bạn vừa sửa chưa lưu sẽ mất.
 
 ## 7. Bước 5: Dựng hình (trình biên tập storyboard)
 
@@ -365,6 +365,32 @@ Trên timeline: nhấp vào shot luôn chọn shot đó và dời đầu phát t
 - **Lưu** gửi bản nháp kèm `base_rev`. Chỉ phần đã gửi được coi là đã lưu: nếu bạn gõ thêm trong lúc đang lưu, phần đó vẫn giữ nguyên và dấu "chưa lưu" vẫn bật cho tới lần lưu sau. Vùng (region) là một phần của bản nháp: tạo, đổi tên, dời, xóa vùng đều Hoàn tác được và chỉ ghi lên đĩa khi Lưu; vùng đang được lớp phủ dùng thì không xóa được (trang nói rõ mục nào dùng), đổi tên thì hỏi có cập nhật các tham chiếu không. Đổi hình của slot mà các lớp phủ đang trỏ vùng của hình cũ thì trang hỏi: giữ tên vùng (sẽ báo lỗi) hoặc đổi thành tọa độ. Nếu server đã đổi (409) trang hỏi giữ nháp hay tải lại. Nếu còn lỗi (422) trang không lưu và mở tab *Lỗi*; bấm vào một lỗi để chọn đúng mục.
 - **Duyệt** chỉ chạy khi đã lưu, không còn lỗi và không còn mục chưa đủ (nếu còn, bấm Duyệt sẽ mở danh sách các mục đó). Trạng thái: *Chưa duyệt*, *Đã duyệt*, *Duyệt cũ (đã sửa)*. Duyệt gắn với phiên bản (`rev`), sửa xong lưu lại thì phải duyệt lại.
 
+### Kiểu mở đầu và mốc chương
+
+Ở thanh công cụ phía trên khung xem trước có ô **Kiểu mở đầu và mốc chương**: cách video mở đầu (hình hiện dần dưới một vệt sáng, hoặc tối lại rồi hiện tên), lúc hiện tên kênh sau đoạn mở đầu, và các mốc chương "1. Tên chương" ở đầu mỗi chương. Có hai kiểu: **Vệt sáng quét** và **Tối lại, hiện tên**. Video làm bằng bản nháp mới tự có kiểu **Vệt sáng quét**; video cũ vẫn ở **Kiểu cũ** (thẻ tiêu đề và thẻ chương nền đen) cho tới khi bạn chọn một kiểu.
+
+1. Chọn một kiểu trong ô. Máy đổi ngay trên storyboard đã lưu, khung xem trước hiện kiểu mới, và có một dòng nói đã đổi mấy chỗ. Không cần bấm Lưu: việc đổi kiểu là một lần lưu (bản trước nằm trong `history/`).
+2. Nút **Hoàn tác** cạnh ô trả storyboard về đúng như trước khi đổi kiểu (kể cả "Kiểu cũ"). Nút này chỉ có sau lần đổi vừa xong và mất khi bạn Lưu hoặc tải lại trang; khi đó dùng bản trong `history/`.
+3. Cảnh **đã khóa** không bao giờ bị đổi. Chỗ nào không đổi được thì trang ghi bằng chữ dưới ô: cảnh nào đang khóa, video chưa có thẻ tiêu đề, không cảnh nào đủ dài (3 giây) cho phần mở đầu, cảnh ngắn quá (dưới 1,5 giây). Tab *Lỗi* cũng hiện một cảnh báo cho mỗi thẻ còn kiểu khác với kiểu đã chọn.
+4. Nếu bạn đang có sửa đổi chưa lưu, trang làm đúng như với một lần sửa bằng lời: ghép sửa đổi của bạn với bản mới của máy chủ (hỏi bạn chỉ khi cả hai cùng sửa một cảnh).
+5. **Sửa video bằng lời** không đổi kiểu này (agent trả lời "không làm được" và chỉ về ô này); nó chỉ sửa chữ của một mốc chương hoặc thêm một mốc mới, đúng kỹ thuật của kiểu đang dùng.
+6. Bước **Xuất video** ghi kiểu nào sẽ dùng trong hộp *Sẽ làm ra* (dòng "Kiểu mở đầu và mốc chương"); đổi kiểu thì phải duyệt lại storyboard rồi xuất lại.
+
+**For an agent** (HTTP, the same choice as the page; an agent never writes title cards or chapter cards by hand, and a draft ignores such shots):
+
+```
+GET  /api/projects/{pid}/identity
+  -> {"style": null, "default": "raking", "options": [{"id": "raking", "label": "Vệt sáng quét"}, {"id": "dim", "label": "Tối lại, hiện tên"}]}
+     `style` is null while nothing was chosen (the old cards); `default` is the style a new draft gets.
+
+PUT  /api/projects/{pid}/identity
+     {"style": "dim", "base_rev": "<rev of GET /api/projects/{pid}>"}
+  -> {"rev": "<new revision>", "style": "dim", "changed": ["s0001", "s0004", "s0005"],
+      "skipped": [{"shot": "s0015", "reason": "locked", "what": "mark", "message": "..."}]}
+```
+
+The style is applied to the saved storyboard under the same lock, revision rule and `history/` copy as `PUT /api/projects/{pid}/storyboard`: `409` (with the current `rev`) when `base_rev` is stale, nothing written; `422` for a style that is not in `options` (`code: identity_style_unknown`, `allowed`) or a missing `style` or `base_rev`; `404` for an unknown project or a project without a storyboard. `skipped` lists what was left as it is (`reason`: `locked`, `no_title_slot`, `extra_title`, `no_title`, `too_short`, `no_room`, `no_time`; `what`: `open`, `label`, `brand`, `mark`; `shot` is null when no shot is concerned). The same style twice changes nothing; `raking`, `dim`, `raking` gives what `raking` alone gives. To undo, `PUT /api/projects/{pid}/storyboard` the previous document with the new `rev`, or restore the copy in `history/`. A `PUT .../identity` does not touch the instruction box's undo (edit by instruction never re-applies the identity). The techniques of a style are in the `identity` block of `style/gae/style.json`. A shot or overlay of any `ID-*` technique shorter than its registry `timing.min_s` (1.5 s for all seven) is a validation error `element_too_short` (args `technique`, `min`, `got`): the save is refused (`422`), so lengthen it or remove it; the applier never makes one (a card under the floor stays an old card and is reported as `too_short`). The technique catalogue given to the draft and edit models lists the `ID-*` techniques marked `PROGRAM ONLY` and leaves them out of the choice by intent: a model never writes them.
+
 ### Bản nháp storyboard
 
 Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard, bước Dựng hình không mở một bảng trống: nó hiện khung **Bản nháp storyboard**. Khi đã có storyboard, nút **Bản nháp** trên thanh công cụ mở cùng khung đó.
@@ -414,7 +440,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 
 - Khung camera chỉ có núm ở bốn góc của khóa đang chọn (không có núm ở cạnh); khung to hơn phần ảnh hiển thị bị cắt ở mép khung xem trước, và ảnh gốc tự thu nhỏ khi mở camera đó để chứa hết các khung.
 - Chỉ Wikimedia Commons và The Met (chưa có AIC, Rijksmuseum, Europeana).
-- Cả 71 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 60 `done`, 11 `partial` ở chip "Engine"). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
+- Cả 78 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 67 `done`, 11 `partial` ở chip "Engine"; 7 trong số đó, họ `ID-*`, là kỹ thuật của kiểu mở đầu và mốc chương: mỗi cái ngắn hơn 1,5 giây thì không lưu được và trang nói rõ phần nào cần dài thêm). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
 - Chưa có chỉnh âm thanh trong trình biên tập (giọng đọc và tốc độ nằm ở bước 3; bản cuối ở bước 6).
 - Lịch sử hoàn tác chỉ nằm trong trình duyệt, mất khi tải lại trang. Bản lưu cũ nằm trong `history/`.
 
@@ -423,7 +449,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 **Xuất video** là bước cuối: máy dựng bản video hoàn chỉnh từ storyboard đã duyệt và giọng đọc.
 
 1. Vào bước **Xuất video**. Nếu trang báo "Chưa xuất được", làm theo nút bên dưới (thường là duyệt storyboard ở bước Dựng hình, hoặc làm xong Giọng đọc).
-2. Hộp **Sẽ làm ra** cho biết video dài bao lâu, chia thành mấy đoạn và khoảng bao lâu máy làm xong (máy chủ dựng bằng bộ xử lý nên khoảng 2 phút cho mỗi phút video; video 12 phút mất chừng nửa tiếng).
+2. Hộp **Sẽ làm ra** cho biết video dài bao lâu, chia thành mấy đoạn và khoảng bao lâu máy làm xong (máy chủ dựng bằng bộ xử lý nên khoảng 2 phút cho mỗi phút video; video 12 phút mất chừng nửa tiếng), và dòng **Kiểu mở đầu và mốc chương** cho biết video được xuất với kiểu nào (đổi ở bước Dựng hình).
 3. Bấm **Xuất video**. Bạn có thể đóng trang, máy vẫn làm. Trang hiện từng đoạn đang chạy. Nếu máy đang bận việc khác, đoạn sẽ ở trạng thái "Chờ máy rảnh".
 4. Bấm **Hủy** nếu muốn dừng. Những đoạn đã dựng xong được giữ lại; bấm **Xuất video** lần nữa sẽ làm tiếp, không dựng lại từ đầu. Việc này cũng đúng khi máy chủ khởi động lại giữa chừng.
 5. Khi xong, bạn có: video để xem ngay trên trang, **phiếu kiểm tra** (độ dài, số khung hình, độ lớn tiếng, mục lục), **mô tả video** (có nút Chép mô tả: gồm mục lục, sách đã dùng, nguồn và giấy phép của từng hình) và các tệp để tải về: video MP4, mô tả, mục lục.

@@ -664,7 +664,6 @@ def import_clip(project_dir: Path, url: str, start: float, end: float, *, info: 
     if require_root and not project_dir.is_dir():
         raise FileNotFoundError(f"project folder {project_dir.name!r} does not exist")
     r = fetch_section(project_dir, url, start, end, info=info, strict_licence=strict_licence, runner=runner)
-    p = probe_video(Path(r["file"]))
     ident = f"clip:{r['id']}:{start:.1f}-{end:.1f}"
     idx = _assets.load_index(project_dir)
     hit = idx["items"].get(ident)
@@ -673,6 +672,11 @@ def import_clip(project_dir: Path, url: str, start: float, end: float, *, info: 
     key = _assets.make_key(r["info"].get("title") or r["id"], ident, _assets.taken_keys(project_dir, idx))
     dest = _assets.media_dir(project_dir, require_root) / f"{key}.mp4"
     shutil.copyfile(r["file"], dest)
+    try:
+        p = probe_video(dest)        # the size is that of the STORED file (the same rule as images: see api.stored_image_size)
+    except BaseException:
+        dest.unlink(missing_ok=True)
+        raise
     Path(r["file"]).unlink(missing_ok=True)
     if r.get("sheet"):
         Path(r["sheet"]).unlink(missing_ok=True)

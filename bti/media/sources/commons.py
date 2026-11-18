@@ -21,17 +21,38 @@ MAX_VIDEO_BYTES = 400 * 1024 * 1024
 MAX_ORIGINAL_PIXELS = 25_000_000
 MAX_ORIGINAL_BYTES = 40 * 1024 * 1024
 SCALED_LONGEST_SIDE = 6000
+# The only widths Wikimedia serves for a scaled rendition ("thumbnail steps"). Read from MediaWiki's own documentation,
+# "Common thumbnail sizes" (https://www.mediawiki.org/wiki/Common_thumbnail_sizes) and `$wgThumbnailSteps`
+# (https://www.mediawiki.org/wiki/Manual:$wgThumbnailSteps): 20, 40, 60, 120, 250, 330, 500, 960, 1280, 1920, 3840 px.
+# Any other width is rounded up to a step by the API, and a request for a rendition of a non-standard width is throttled
+# by Wikimedia (HTTP 429, "Use thumbnail steps"). So this app never asks for a width that is not in this list.
+THUMB_STEPS = (20, 40, 60, 120, 250, 330, 500, 960, 1280, 1920, 3840)
+CARD_THUMB_WIDTH = 330          # the small picture of a search card (a step: it used to be 320, which is not)
 _TAG = re.compile(r"<[^>]+>")
 _VIDEO_MIMES = ("video/", "application/ogg")
 
 
-def _scaled_width(w: int, h: int, longest: int = SCALED_LONGEST_SIDE) -> int:
-    """Calculate target width for Commons thumbnail so the longest side is `longest` px."""
-    if w and h:
-        if w >= h:
-            return min(w, longest) if w > longest else longest
-        return max(1, int(round(w * longest / h)))
-    return longest
+def standard_width(limit: int) -> int | None:
+    """The largest width of `THUMB_STEPS` that is at most `limit`, or None when `limit` is under the smallest step."""
+    fit = [s for s in THUMB_STEPS if s <= limit]
+    return max(fit) if fit else None
+
+
+def rendition_width(w: int, h: int, longest: int = SCALED_LONGEST_SIDE, max_pixels: int = MAX_ORIGINAL_PIXELS) -> int | None:
+    """The width to ask Commons for when a scaled rendition of a `w` x `h` original is wanted: the largest standard width that
+    is smaller than the original and gives a rendition that is no longer "too big" by the app's own rule (a longest side of at
+    most `longest` px, or at most `max_pixels` pixels: the same two limits that decide when a scaled rendition is wanted at
+    all). None when no standard width fits (the caller then downloads the original). Without a known size: the largest
+    standard width that is at most `longest`."""
+    if not (w and h):
+        return standard_width(longest)
+    for step in sorted(THUMB_STEPS, reverse=True):
+        if step >= w:
+            continue
+        rh = h * step / w
+        if max(step, rh) <= longest or step * rh <= max_pixels:
+            return step
+    return None
 
 
 def _text(v: Any) -> str:
@@ -112,7 +133,7 @@ class CommonsSource:
         data = self._api({
             "generator": "search", "gsrsearch": f"{query} filetype:{ftype}", "gsrnamespace": "6",
             "gsrlimit": str(max(1, min(int(limit), 50))), "prop": "imageinfo", "iiprop": IIPROP,
-            "iiurlwidth": "320",
+            "iiurlwidth": str(CARD_THUMB_WIDTH),
         })
         out = []
         for page in sorted((data.get("query") or {}).get("pages") or [], key=lambda p: p.get("index", 0)):
@@ -126,7 +147,7 @@ class CommonsSource:
         if not title.lower().startswith("file:"):
             title = "File:" + title
         data = self._api({"titles": title.replace("_", " "), "prop": "imageinfo",
-                          "iiprop": IIPROP, "iiurlwidth": "320"})
+                          "iiprop": IIPROP, "iiurlwidth": str(CARD_THUMB_WIDTH)})
         for page in (data.get("query") or {}).get("pages") or []:
             meta = parse_page(page)
             if meta:
@@ -143,7 +164,10 @@ class CommonsSource:
                  max_bytes: int | None = None) -> Path:
         """Download the file. Images shorter than `min_short_side` (default 1200 px)
         are refused with ImageTooSmall before any bytes are fetched.
-        Large images (> 25 megapixels or > 40 MB) request a scaled rendering (longest side 6000 px).
+        Large images (> 25 megapixels with a side over 6000 px, or > 40 MB) request a scaled rendition: the largest of
+        Wikimedia's standard widths (`THUMB_STEPS`) that is smaller than the original and keeps the longest side within 6000 px.
+        The size of the stored file can therefore differ from `meta["width"]` x `meta["height"]` (the original's): whoever
+        records the asset measures the file (`api.stored_image_size`).
         Files over 60 MB (or max_bytes) after all that are refused with FileTooLarge."""
         dest = Path(dest)
         kind = meta.get("kind") or kind_of(meta.get("mime", ""))
@@ -159,22 +183,24 @@ class CommonsSource:
         scaled = False
 
         if kind == "image" and ((max(w, h) > SCALED_LONGEST_SIDE and w * h > MAX_ORIGINAL_PIXELS) or (size > MAX_ORIGINAL_BYTES)):
-            target_w = _scaled_width(w, h, SCALED_LONGEST_SIDE)
-            title = unquote(str(meta.get("source_id") or "").strip())
-            if not title.lower().startswith("file:"):
-                title = "File:" + title
-            data = self._api({
-                "titles": title.replace("_", " "),
-                "prop": "imageinfo",
-                "iiprop": "url|size|mime",
-                "iiurlwidth": str(target_w),
-            })
-            for page in (data.get("query") or {}).get("pages") or []:
-                infos = page.get("imageinfo") or []
-                if infos and infos[0].get("thumburl"):
-                    download_url = infos[0]["thumburl"]
-                    scaled = True
-                    break
+            target_w = rendition_width(w, h, SCALED_LONGEST_SIDE)
+            if target_w:
+                title = unquote(str(meta.get("source_id") or "").strip())
+                if not title.lower().startswith("file:"):
+                    title = "File:" + title
+                data = self._api({
+                    "titles": title.replace("_", " "),
+                    "prop": "imageinfo",
+                    "iiprop": "url|size|mime",
+                    "iiurlwidth": str(target_w),
+                })
+                for page in (data.get("query") or {}).get("pages") or []:
+                    infos = page.get("imageinfo") or []
+                    thumb = infos[0].get("thumburl") if infos else None
+                    if thumb and thumb != meta["url"]:          # the same address as the original is no rendition
+                        download_url = thumb
+                        scaled = True
+                        break
 
         if not scaled and meta.get("size") and int(meta["size"]) > cap:
             raise http.FileTooLarge(f"{meta.get('source_id')}: {meta['size']} bytes exceeds cap {cap}")

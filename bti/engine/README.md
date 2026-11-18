@@ -28,7 +28,7 @@ codes). The rule behind the registry is: whatever `validate` accepts without an 
 `min_items`/`max_items` (points/lines) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
 frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
 `RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
-four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 71 techniques and all twelve param types.
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 78 techniques and all twelve param types.
 
 ## Layout
 
@@ -41,7 +41,7 @@ four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for al
 | `scene.py` | compile a resolved storyboard into a `Scene`: `frame_at`, `render_range`, transitions, end fade |
 | `base.py` | the renderer interfaces, `Ctx`, and the process-wide LRU caches |
 | `vfx.py` | pixel primitives lifted from the benchmark (`Img`, `Cam`, `compose_matte`, `text_layer`, `spotlight`, `ring` ...) |
-| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions` |
+| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions`, `identity` (the ID family, below) |
 
 Frame pipeline: shot lookup (bisect on shot starts) -> base renderer -> overlays in list order -> optional `transition_in`
 (both shots are rendered during the overlap) -> end fade (`end.fade_s`, default 1.6 s, `inout_sine`) -> uint8 -> resize.
@@ -188,9 +188,70 @@ The reel functions in `demo_runs/claude_code/build_reel.py` have the signature `
 turn `(t, d)` into `render(t)` using `self.t0`/`self.t1`, replace `S()["A"]` / `view(...)` by `ctx.image(slot_asset)`, replace the module-global text cache by `ctx.layer`, replace the global `W, H` by `ctx.w, ctx.h`.
 Check it against the reel's own frame the same way `tests/engine/equivalence_check.py` checks the episode (PSNR >= 40 dB, same Mac).
 
+## Channel identity: the family ID (`techniques/identity.py`)
+
+The opening, the channel-name beat and the chapter marks of "Raking Light", in two styles that the owner (or an agent) picks per video.
+Contract and numbers: `docs/design/2026-11-18-identity-raking-light.md` (sections 2 to 5); moving mock-ups: `docs/design/2026-11-18-d13-identity-mock.html`.
+
+| id | kind | style | what it draws |
+|---|---|---|---|
+| `ID-OPEN-01` | overlay | raking | the opening: black, the picture rises to `floor`, a band of light sweeps across and leaves it at `wake`, then 100 % (nominal 9.0 s) |
+| `ID-LABEL-01` | overlay | raking | two-line artwork label bottom left, no strip, soft shadow (4.5 s) |
+| `ID-BRAND-01` | base | raking | the channel name written by a band over the dimmed picture (5.0 s) |
+| `ID-MARK-01` | base | raking | one chapter-mark line written by a band, then the picture is released (3.2 s) |
+| `ID-OPEN-02` | overlay | dim | the frame dims, the title (italic) and a small "ARTIST · YEAR" line fade in, then out (5.0 s) |
+| `ID-BRAND-02` | base | dim | the channel name fades in over the dimmed picture, then out (4.0 s) |
+| `ID-MARK-02` | base | dim | one chapter-mark line fades in over the dimmed picture (3.0 s) |
+
+`style/gae/style.json` has a block `identity` (`channel_name`, `default_style`, and per style the technique of each role `open`, `label`,
+`brand`, `mark`, the `mark_transition` and the `nominal` start and length of each role); the applier reads it, never constants of its own.
+
+Rules that hold for all seven (and that a new technique of the family must keep):
+
+- **Nominal timeline, scaled.** Times in the params are nominal seconds from the start of the element (the overlay; the shot for a base
+  technique). An element shorter than its nominal length (`nominal_s`, or the sum of its own times for `ID-OPEN-01`, `ID-MARK-*`) scales every
+  time by actual / nominal; a longer one keeps the nominal times (the brand beats hold their last state and fade out at the real end; opening and
+  marks end plain). An element is meant to be >= 1.5 s (`timing.min_s`, `style.identity.min_element_s`).
+- **The picture is CAM-01's.** The four base techniques derive from `camera.MatteShot`: same `camera` keys, slot `image` and `shadow`, same `view()`,
+  so overlays work on them. Light and text come after the picture. With neutral light (`floor`/`wake`/`dim` = 1, no text) the frame equals CAM-01's.
+- **Light is a gain on brightness**, never a box or strip: `vfx.Band` (below) for the raking style, a smoothstep dim for the dim style.
+- **Text** is one line, EB Garamond, with a soft shadow, placed by cap height in percent of the frame height (the font size comes from the real
+  glyph H of the font, `vfx.cap_ratio`) and centred at `y_pct` (the middle of the capitals). A line wider than 88 % of the frame is made
+  smaller, never wrapped. Capital-only lines (channel name, small-caps line) are upper-cased by the renderer and tracked per letter.
+- **Revealed by the band** means: the opacity of the text at a pixel is the largest value the band's mask has had there so far. For a band that
+  moves in one direction at constant speed that is `Band.reveal(s)`: 1 behind the band's centre line, the band's own shoulder ahead of it. No
+  accumulation over frames, so a frame is a pure function of time.
+
+### The band primitive (`vfx.Band`)
+
+`Band(w, h, width_pct, feather, angle_deg, direction)`: a strip with straight edges tilted `angle_deg` from the vertical ("/" for positive), a
+plateau of full brightness (`core`) and smoothstep shoulders (`edge`). `width_pct` is the width at half brightness, `feather` the part of it that
+one shoulder takes. It moves along the axis perpendicular to its edges; the progress `q` runs 0..1 from just off the canvas on the entering side
+to just off the canvas on the leaving side (with a 13 % run-in), at constant speed. `s` is the signed distance in px ahead of the centre line.
+`Band.light(frame, q, ahead, wake, warm)` multiplies the frame (in place) by `ahead` in front of the band, 1 in it, `wake` behind it, and adds the
+warm screen tint; the gain is a map at 1/4 resolution enlarged bilinearly (as `spotlight` does) and only the columns where it varies are touched.
+`Band.reveal_box(q, x0, y0, x1, y1)` gives the reveal mask of a text box; `vfx.composite_layer_masked(frame, layer, mask_fn, env)` draws a
+text layer through it. Measured on the Windows server (1080p frame, warm caches): see `docs/qa/FIX_identity_engine.md`.
+
+### Font kinds
+
+`vfx.font(kind, size)` knows three bundled kinds besides the old system faces: `eb_regular`, `eb_italic`, `eb_medium` = `EBGaramond-Regular.ttf`,
+`-Italic.ttf`, `-Medium.ttf` in `style/gae/fonts/` (static files from github.com/octaviopardo/EBGaramond12, SIL Open Font Licence in `OFL.txt` next to
+them). They load from that folder on every machine; a missing or unreadable file raises `vfx.BundledFontError` (a `FileNotFoundError`) that names the
+file and the folder. There is no fallback to another face and `fonts.map` of style.json cannot replace them. The file size is part of
+`font_signature()`, so a replaced file never returns a stale text layer.
+
+### Tests and previews
+
+`tests/engine/test_identity.py` draws frames of a flat grey (or black) picture that fills the canvas and measures: band position, the three zones,
+text only behind the band, the dim levels, end state = plain picture, time scaling, cap heights, fonts, every param at min and max.
+`tests/engine/identity_lab.py` adds one item per ID technique to a copy of `projects/technique_lab` for the registry sweeps. Preview clips of the
+family are 640x360, 30 fps, as long as the nominal timeline; since the server gets its code by `git pull`, `style/gae/previews/*.mp4` is tracked
+(`.gitignore` no longer ignores it).
+
 ## Known behaviour worth knowing
 
-- Fonts keep the benchmark's behaviour: Windows faces first, then the macOS fallback (Futura for `reg`/`bold`, Arial Bold, Georgia Italic). `style.json` `fonts.stand_in_label_mac` can override the Futura path and an optional
+- Fonts keep the benchmark's behaviour for the old kinds: Windows faces first, then the macOS fallback (Futura for `reg`/`bold`, Arial Bold, Georgia Italic); the three EB Garamond kinds of the ID family are bundled and never fall back (see above). `style.json` `fonts.stand_in_label_mac` can override the Futura path and an optional
   `fonts.map = {kind: [paths]}` replaces a whole list (`vfx.configure_fonts`). The font choice is part of every layer cache key.
 - `shots[0]` also covers `t < its start`; `end` may carry `fade_s`.
 - A storyboard with validation errors can still be drawn through `use_draft` (the editor needs live previews), but `save` refuses it.

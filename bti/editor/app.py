@@ -924,6 +924,9 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(draft_router)
     app.include_router(export_router)
     app.include_router(settings_router)
+    from .identity_api import make_router as _identity_router        # opening, channel-name beat and chapter marks (needs this app's save path)
+    app.include_router(_identity_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
+                                        load_style=lambda sid: engine.load_style(sid).get("style") or {}))
     from .pipeline_api import make_router as _pipeline_router
     app.include_router(_pipeline_router(root, script_jobs=script_jobs, preview_jobs=jobs, longjobs=longjob_manager, on_delete=forget_project))  # steps of a project (stepper, home) and delete-project
 

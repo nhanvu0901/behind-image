@@ -82,6 +82,11 @@ def _translate(e: Exception) -> Exception:
         return ApiError(422, str(e)[:300], reason=str(e)[:300])
     if n == "MediaHTTPError":
         st = getattr(e, "status", None)
+        if getattr(e, "rate_limited", False):
+            # the source said "too many requests": the page names the wait it asked for (seconds; null when it gave none),
+            # the same code and body as bti.picks.service, so the same sentence is shown (errmsg.js `sourceLimitText`)
+            return ApiError(503, "the image source limits downloads: wait before trying again (HTTP %s)" % st, code="source_rate_limited",
+                            retryable=True, retry_after=getattr(e, "retry_after", None))
         if st in (429, 503, 502, 504, None):
             return ApiError(503, "Nguồn ảnh đang giới hạn tốc độ hoặc không phản hồi (HTTP %s). Hãy thử lại sau vài giây." % (st or "?"),
                             retryable=True, retry_after=10)

@@ -24,7 +24,7 @@ from bti.fsio import atomic_replace
 SCHEMA = "bti.storyboard/1"
 MIN_SHOT_S = 0.2
 EPS = 1e-6
-SOURCES = ("import", "agent", "human")
+SOURCES = ("import", "agent", "human", "identity")      # `identity`: written by bti.identity.apply_identity
 INTENTS = ["establish", "explore", "point_at", "isolate", "reveal", "compare", "context", "quantify",
            "explain_mechanism", "quote", "structure", "transition"]
 
@@ -351,6 +351,19 @@ def _check_media(path: Path, kind: str) -> tuple[str, str] | None:
     return None
 
 
+def size_mismatch(path: Path, a: dict) -> tuple[int, int] | None:
+    """`(stored width, stored height)` when asset `a` declares a positive `width` and `height` that differ from the pixels of the
+    image file at `path` (the size the engine draws; `bti.media.assets.stored_size`, header only, remembered per path, modification
+    time and file size, so a validation on every edit does not read an unchanged file again), else None. A size that is not
+    declared, a file that cannot be measured, or a size that agrees all give None."""
+    w, h = a.get("width"), a.get("height")
+    if not (R._is_num(w) and R._is_num(h) and w > 0 and h > 0):
+        return None
+    from bti.media.assets import stored_size
+    sw, sh = stored_size(path)
+    return (sw, sh) if sw and sh and (sw != w or sh != h) else None
+
+
 def image_problem(path: Path) -> str | None:
     """Short reason when `path` is not an intact image, else None (kept for older callers; see `media_problem`)."""
     m = media_problem(path, "image")
@@ -422,6 +435,7 @@ ISSUE_CODES = {
     "asset_file_unreadable": "An image or mask file is not a readable image (zero bytes, not an image, cannot be read). args: file, asset.",
     "asset_file_truncated": "An image or mask file is cut off: its header reads but its picture does not decode completely. args: file, asset.",
     "asset_video_unreadable": "A video file cannot be opened or has no frame. args: file, asset.",
+    "asset_size_mismatch": "An image or mask asset declares a width/height that differs from the pixels of its stored file (warning): its regions and the camera keys (cx, cy, zoom) written for it are in the wrong space. Nothing is rewritten. args: asset, width, height, stored_width, stored_height.",
     "credit_not_object": "An asset's credit is not an object. args: asset.",
     "asset_size": "An asset width/height is not a positive number. args: field, asset.",
     "regions_not_object": "An asset's regions are not an object. args: asset.",
@@ -433,7 +447,7 @@ ISSUE_CODES = {
     "slot_asset_kind": "The asset in a slot has the wrong kind. args: slot, asset, takes, got.",
     "slot_not_object": "A slot value is not an object. args: slot.",
     "locked_not_bool": "`locked` is not true/false. args: none.",
-    "unknown_source": "`source` is not import, agent or human (warning). args: source.",
+    "unknown_source": "`source` is not import, agent, human or identity (warning). args: source.",
     "unknown_intent": "`intent` is not in the fixed list (warning). args: intent.",
     "region_undefined": "A region name that the asset does not define. args: region, asset, param.",
     "end_required": "The `end` anchor is missing. args: none.",
@@ -497,7 +511,10 @@ ISSUE_CODES = {
     "camera_key_missing_field": "A camera key lacks at, cx, cy or zoom. args: param, technique, index, field.",
     "camera_key_numbers": "A camera key cx/cy/zoom is not a number or zoom <= 0. args: param, technique, index.",
     "camera_key_range": "A camera key cx/cy/zoom is out of range. args: param, technique, index, limit, zoom_max.",
-    "camera_key_anchor": "A camera key `at` is not an anchor. args: param, technique, index."
+    "camera_key_anchor": "A camera key `at` is not an anchor. args: param, technique, index.",
+    "identity_style_unknown": "`identity` is not an object with a `style` the style's identity block lists (error). args: style, allowed.",
+    "element_too_short": "A shot or overlay of the channel identity (technique id starting `ID-`) is shorter than the technique's `timing.min_s` (error). args: technique, min, got.",
+    "identity_technique_mismatch": "A structure shot (title slot or chapter card) uses a technique that is not the one of the chosen identity style (warning). args: shot, technique, style, wanted."
 }
 
 
@@ -587,6 +604,12 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                     err(p + ".file", msg, "asset_video_unreadable", file=a["file"], asset=key)
                 elif m:
                     err(p + ".file", msg, "asset_file_unreadable", file=a["file"], asset=key)
+                elif a["kind"] in ("image", "mask"):
+                    got = size_mismatch(f, a)
+                    if got:
+                        warn(p, "asset %r is recorded as %sx%s but its file is %sx%s pixels: its regions and camera keys are in the wrong space"
+                             % (key, a["width"], a["height"], got[0], got[1]), "asset_size_mismatch",
+                             asset=key, width=a["width"], height=a["height"], stored_width=got[0], stored_height=got[1])
         for k in ("title", "artist", "year"):
             v = a.get(k)
             if v is not None and (isinstance(v, bool) or not isinstance(v, (str, int))):
@@ -757,6 +780,9 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
             err(p + ".technique", "%s is a %s technique; a shot needs kind base or card" % (tid, spec["kind"]), "wrong_technique_kind", technique=tid, kind=spec["kind"], needs="base or card")
         if not bundle.available(tid):
             err(p + ".technique", "%s is not available in the engine yet" % tid, "technique_unavailable", technique=tid)
+        floor = _element_floor(spec)
+        if floor is not None and t0 is not None and t1 is not None and t1 - t0 < floor - EPS:
+            err(p, "%s lasts %.2f s but needs at least %s s" % (tid, t1 - t0, floor), "element_too_short", technique=tid, min=floor, got=t1 - t0)
         issues.extend(R.validate_params(spec, s.get("params") or {}, p + ".params"))
         check_asset_params(p + ".params", s.get("params"), spec)
         check_slots(p + ".slots", s.get("slots"), spec, tid)
@@ -880,6 +906,9 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                     ot1 = ot0 + o["dur"]
             elif t1 is not None:
                 ot1 = t1
+            ofloor = _element_floor(ospec)
+            if ofloor is not None and ot0 is not None and ot1 is not None and ot1 - ot0 < ofloor - EPS:
+                err(op, "%s lasts %.2f s but needs at least %s s" % (o["technique"], ot1 - ot0, ofloor), "element_too_short", technique=o["technique"], min=ofloor, got=ot1 - ot0)
             if ot0 is not None and t0 is not None and t1 is not None:
                 if ot0 < t0 - EPS or ot0 >= t1 - EPS:
                     err(op + ".start", "overlay starts outside its shot (%.2f s; shot spans %.2f-%.2f s)" % (ot0, t0, t1), "overlay_outside_shot", start=ot0, shot_start=t0, shot_end=t1)
@@ -891,4 +920,41 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
         err("end", "end is not after the last shot start", "end_before_last_start")
     if end_t is not None and tm.duration and end_t > tm.duration + 1.0:
         warn("end", "end %.2f s is after the audio/timing duration %.2f s" % (end_t, tm.duration), "end_after_audio", end=end_t, duration=tm.duration)
+    _check_identity(sb, shots, bundle, err, warn)
     return issues
+
+
+def _element_floor(spec: dict) -> float | None:
+    """The shortest an element of the channel identity (a technique whose id starts `ID-`) may be: the registry's `timing.min_s` of
+    that technique (contract 2026-11-18, section 3: "an element is never shorter than 1.5 s"); None for any other technique."""
+    tid = spec.get("id")
+    if not (isinstance(tid, str) and tid.startswith("ID-")):
+        return None
+    m = (spec.get("timing") or {}).get("min_s")
+    return float(m) if R._is_num(m) and m > 0 else None
+
+
+def _check_identity(sb: dict, shots: list, bundle: R.StyleBundle, err, warn) -> None:
+    """The optional top-level `identity: {"style": ...}` (contract 2026-11-18, section 5 and 6): the style must be one the style.json
+    block lists (error), and a structure shot whose technique is part of the identity but not of the chosen style is a warning."""
+    ident = sb.get("identity")
+    if ident is None:
+        return
+    from bti.identity import config as IDC
+    cfg = IDC.read(bundle.style)
+    allowed = cfg.ids() if cfg else []
+    sid = ident.get("style") if isinstance(ident, dict) else None
+    if not isinstance(ident, dict):
+        err("identity", "identity must be an object like {\"style\": \"%s\"}" % (allowed[0] if allowed else "raking"), "identity_style_unknown", style=None, allowed=allowed)
+        return
+    if not isinstance(sid, str) or sid not in allowed:
+        err("identity.style", "unknown identity style %r (choose one of: %s)" % (sid, ", ".join(allowed) or "none: this style has no identity block"),
+            "identity_style_unknown", style=sid if isinstance(sid, str) else None, allowed=allowed)
+        return
+    sd = cfg.style(sid)
+    for i, s in enumerate(shots):
+        if isinstance(s, dict) and s.get("intent") == "structure" and IDC.is_mismatch(cfg, sid, s.get("technique")):
+            t = s.get("technique")
+            wanted = sd.brand if (t in IDC.LEGACY_TITLE or cfg.is_family(t, "brand")) else sd.mark
+            warn("shots[%d].technique" % i, "%s does not belong to the identity style %r; its %s is %s" % (t, sid, "channel-name beat" if wanted == sd.brand else "chapter mark", wanted),
+                 "identity_technique_mismatch", shot=s.get("id"), technique=t, style=sid, wanted=wanted)

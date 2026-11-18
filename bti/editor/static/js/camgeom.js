@@ -46,6 +46,8 @@ export const TARGETS = {
   // camera.py MatteShot, camera_extra.py HoldAndLabel, annotations_extra.py DotField: the whole frame
   'CAM-01': { camera: MATTE() }, 'CAM-03': { camera: MATTE() }, 'CAM-04': { camera: MATTE() }, 'CAM-05': { camera: MATTE() },
   'CAM-06': { camera: MATTE() }, 'STATIC-01': { camera: MATTE() }, 'X-LAY-01': { camera: MATTE() }, 'AN-07': { camera: MATTE() },
+  // identity.py (the channel-name beat and the chapter marks of the two identity styles): the picture is drawn exactly as CAM-01 draws it
+  'ID-BRAND-01': { camera: MATTE() }, 'ID-BRAND-02': { camera: MATTE() }, 'ID-MARK-01': { camera: MATTE() }, 'ID-MARK-02': { camera: MATTE() },
   // camera_extra.py LayerRelativeMotion: each layer in the pixels of its own picture, both over the whole frame
   'CAM-02': { fg_camera: MATTE('foreground'), bg_camera: MATTE('background') },
   // highlights_extra.py FigureReveal: plate and figures are registered, the camera is in the plate's pixels

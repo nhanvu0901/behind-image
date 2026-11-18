@@ -452,5 +452,60 @@
    "value": 0.5,
    "source": "benchmark value: build_reel.py vpanel shadow"
   }
+ },
+ "identity": {
+  "channel_name": "RAKING LIGHT",
+  "default_style": "raking",
+  "styles": {
+   "raking": {
+    "label_vi": "Vệt sáng quét",
+    "open": "ID-OPEN-01",
+    "label": "ID-LABEL-01",
+    "brand": "ID-BRAND-01",
+    "mark": "ID-MARK-01",
+    "mark_transition": null,
+    "nominal": {
+     "open": {
+      "start_s": 0.0,
+      "dur_s": 9.0
+     },
+     "label": {
+      "start_s": 6.2,
+      "dur_s": 4.5
+     },
+     "brand": {
+      "dur_s": 5.0
+     },
+     "mark": {
+      "dur_s": 3.2
+     }
+    }
+   },
+   "dim": {
+    "label_vi": "Tối lại, hiện tên",
+    "open": "ID-OPEN-02",
+    "label": null,
+    "brand": "ID-BRAND-02",
+    "mark": "ID-MARK-02",
+    "mark_transition": {
+     "technique": "TR-01",
+     "dur": 0.75
+    },
+    "nominal": {
+     "open": {
+      "start_s": 7.0,
+      "dur_s": 5.0
+     },
+     "brand": {
+      "dur_s": 4.0
+     },
+     "mark": {
+      "dur_s": 3.0
+     }
+    }
+   }
+  },
+  "min_element_s": 1.5,
+  "source": "docs/design/2026-11-18-identity-raking-light.md sections 3 to 5. nominal.<role>.start_s = seconds from the start of the VIDEO at which the element starts (the opening overlays go on the shot on screen then); dur_s = nominal length, the engine scales the times of a shorter element; a role with null is not used by that style; mark_transition is the entry transition of the mark shot (null = hard cut)."
  }
 }

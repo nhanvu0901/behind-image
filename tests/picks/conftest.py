@@ -19,6 +19,15 @@ def _never_live(monkeypatch):
     yield
 
 
+@pytest.fixture(autouse=True)
+def _no_cooldown_between_tests():
+    """A source's "wait N seconds" is remembered per host for the life of the process: no test may inherit another's."""
+    from bti.media import http
+    http.reset_cooldowns()
+    yield
+    http.reset_cooldowns()
+
+
 @pytest.fixture
 def root(tmp_path):
     return tmp_path / "projects"

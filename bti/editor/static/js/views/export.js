@@ -8,6 +8,7 @@ import { EXPORT_LABELS } from '../labels.js';
 import { h, kids, toast, errorToast, errorInto, detailFold, confirmDialog } from '../util.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
 import { projectHash } from '../router.js';
+import { exportRow } from '../identitylogic.js';
 
 const POLL_MS = 2000;
 
@@ -62,6 +63,7 @@ const $ = (s) => root?.querySelector(s);
 
 async function load() {
   S.data = await api.get(`${P()}/export`);
+  try { S.identity = await api.get(`${P()}/identity`); } catch { S.identity = null; }       // the style of the opening and the chapter marks (a line of the plan)
   if (!S.job && isActive(S.data.job)) S.job = S.data.job;
   if (!S.job && !S.last) {
     // a failed or stopped run that left nothing behind: say what happened
@@ -170,8 +172,10 @@ function planBox(d) {
     rows.push(['Thời gian dự kiến', p.parts_done === p.parts ? 'ngắn: chỉ ghép lại' : `${fmtEstimate(p.estimate_seconds)} (máy chủ dựng bằng bộ xử lý, khoảng 2 phút máy cho 1 phút video)`]);
     rows.push(['Hình có trong video', `${p.assets_used} hình, mỗi hình có dòng ghi nguồn trong mô tả`]);
   }
+  const idRow = exportRow(S.identity);                    // which style of opening and chapter marks the video is exported with (chosen in step 5)
   return h('div', { class: 'box ex-plan' }, h('h4', { text: 'Sẽ làm ra' }),
     p ? h('table', { class: 'ex-kv' }, rows.map(([k, v]) => h('tr', null, h('th', { text: k }), h('td', { text: v })))) : h('div', { class: 'muted', text: 'Chưa có kế hoạch vì dự án chưa sẵn sàng.' }),
+    idRow ? h('div', { class: 'ex-identity muted', 'data-identity-line': '', style: { margin: '6px 0' } }, h('b', { text: idRow[0] + ': ' }), idRow[1]) : null,
     p?.flagged?.length ? h('div', { class: 'hint warn', text: `Có ${p.flagged.length} hình chưa rõ giấy phép: mô tả video sẽ có ghi chú để bạn kiểm tra trước khi đăng. Việc xuất không bị chặn.` }) : null,
     h('div', { class: 'ex-acts' },
       h('button', { id: 'ex-start', class: 'primary', text: d.state === 'done' ? 'Xuất lại video' : 'Xuất video', disabled: running || !p || null, onclick: start }),

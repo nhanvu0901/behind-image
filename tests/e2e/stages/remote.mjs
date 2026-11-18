@@ -25,6 +25,7 @@ const W_REPO = 'C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo';
 const REMOTE_PY = `D:\\code\\behind-the-image\\.venv\\Scripts\\python.exe ${W_REPO}\\tests\\e2e\\stages\\launch.py`;
 const SSH = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=30'];
 const PORT = 8562;
+const HOST = process.env.BTI_SSH_HOST || 'winbox-lan';        // away from the home network: BTI_SSH_HOST=winbox-cmd (the Tailscale route)
 
 export function deploy() {
   const r = spawnSync(path.join(REPO, 'tools/deploy/deploy_windows.sh'), [], { cwd: REPO, encoding: 'utf8' });
@@ -37,21 +38,21 @@ export function ship() {
   const m = /id (\S+?)\)/.exec(r.stdout || '');
   if (r.status !== 0 || !m) throw new Error('pack failed: ' + ((r.stdout || '') + (r.stderr || '')).slice(-400));
   const tgz = path.join(REPO, '.scratch/deploy/out', `code-${m[1]}.tgz`);
-  const sh = (c) => spawnSync('ssh', [...O, 'winbox-lan', c], { encoding: 'utf8' });
+  const sh = (c) => spawnSync('ssh', [...O, HOST, c], { encoding: 'utf8' });
   sh(`rmdir /s /q ${W_REPO}`);
-  const cp = spawnSync('scp', ['-q', ...O, tgz, 'winbox-lan:C:/Users/ADMIN/AppData/Local/Temp/bti-stages-repo.tgz']);
+  const cp = spawnSync('scp', ['-q', ...O, tgz, `${HOST}:C:/Users/ADMIN/AppData/Local/Temp/bti-stages-repo.tgz`]);
   if (cp.status !== 0) throw new Error('scp failed');
   const x = sh(`mkdir ${W_REPO} && tar -xzf C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo.tgz -C ${W_REPO}`);
   if (x.status !== 0) throw new Error('unpack failed: ' + x.stdout + x.stderr);
   fs.rmSync(tgz, { force: true });
 }
 export function unship() {
-  spawnSync('ssh', ['-o', 'BatchMode=yes', 'winbox-lan', `rmdir /s /q ${W_REPO} & del /q C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo.tgz`]);
+  spawnSync('ssh', ['-o', 'BatchMode=yes', HOST, `rmdir /s /q ${W_REPO} & del /q C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo.tgz`]);
 }
 
 function startRemote(tmp) {
   const cmd = REMOTE_PY + ` --port ${PORT}` + (tmp ? ` --tmp "${tmp}"` : '');
-  const proc = spawn('ssh', [...SSH, 'winbox-lan', cmd], { stdio: ['pipe', 'pipe', 'pipe'] });
+  const proc = spawn('ssh', [...SSH, HOST, cmd], { stdio: ['pipe', 'pipe', 'pipe'] });
   const h = { proc, tmp: tmp || null, pid: null, ready: false, exited: false, out: '' };
   proc.stdout.setEncoding('utf8');
   proc.stdout.on('data', (d) => {
@@ -81,7 +82,7 @@ async function daemon() {
   fs.mkdirSync(SCRATCH, { recursive: true });
   const localPort = await freePort();
   let remote = startRemote(null);
-  const tunnel = spawn('ssh', [...SSH, '-N', '-o', 'ExitOnForwardFailure=yes', '-L', `${localPort}:127.0.0.1:${PORT}`, 'winbox-lan'], { stdio: 'ignore' });
+  const tunnel = spawn('ssh', [...SSH, '-N', '-o', 'ExitOnForwardFailure=yes', '-L', `${localPort}:127.0.0.1:${PORT}`, HOST], { stdio: 'ignore' });
   const base = `http://127.0.0.1:${localPort}`;
   const write = () => fs.writeFileSync(STATE, JSON.stringify({ base, localPort, ctl: ctlPort, daemon: process.pid, tunnel: tunnel.pid, remotePid: remote.pid, tmp: remote.tmp, up: true }));
   let ctlPort = 0;

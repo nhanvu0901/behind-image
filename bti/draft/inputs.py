@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from bti.media import assets as media_assets
+
 SPEC_SCHEMA = "bti.draft/1"
 PICKS_SCHEMA = "bti.picks/1"
 CHAPTER_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,31}")
@@ -251,6 +253,7 @@ def load_inputs(project_dir: Path, chapters: list[str] | None = None, *, for_edi
     timing = normalize_timing(read_json_file(project_dir / timing_file, "timing"), narration)
 
     picks = None
+    picks_from_file = True        # False: the picks are the saved storyboard's own assets (see the size step below)
     if (project_dir / "picks.json").is_file():
         try:
             raw_picks = read_json_file(project_dir / "picks.json", "picks")
@@ -270,6 +273,7 @@ def load_inputs(project_dir: Path, chapters: list[str] | None = None, *, for_edi
                 raise
     if picks is None:
         if for_edit and isinstance(current, dict) and isinstance(current.get("assets"), dict) and current["assets"]:
+            picks_from_file = False
             main = current.get("main_asset")
             if not (isinstance(main, str) and main in current["assets"]):
                 main = next((k for k, a in current["assets"].items() if isinstance(a, dict) and a.get("kind") == "image"), None)
@@ -288,8 +292,16 @@ def load_inputs(project_dir: Path, chapters: list[str] | None = None, *, for_edi
             raise DraftError("unknown_chapter", "no such chapter: %s (chapters: %s)" % (", ".join(bad), ", ".join(sorted(known))))
         if not isinstance(current, dict):
             raise DraftError("scope_needs_storyboard", "a single chapter can only be re-drafted when the project already has a storyboard")
-    fill_sizes(picks["assets"], project_dir)
+    if picks_from_file:
+        # What was recorded must be what is stored: a size that disagrees with the file (an old import) is replaced by the file's
+        # and the regions follow, in memory, so a draft never compiles from it even before the corrected picks.json is written
+        # back (bti.picks.doc.load does the same). It also fills a missing size.
+        media_assets.reconcile_sizes(picks["assets"], project_dir)
+    else:
+        fill_sizes(picks["assets"], project_dir)           # a copy of the storyboard's assets: it must agree with `current`
     if isinstance(current, dict) and isinstance(current.get("assets"), dict):
+        # NOT reconciled: the storyboard's camera keys (cx, cy, zoom) and regions were written for the size it declares, so
+        # rescaling the copy would move them; the validator warns (`asset_size_mismatch`) when it disagrees with the file.
         fill_sizes(current["assets"], project_dir)
     title = ""
     for cand in (current or {}).get("title"), (narration or {}).get("title"):

@@ -22,7 +22,7 @@ from .common import (ApiError, SCHEMA, STYLE_RE, compute_rev, read_json, safe_jo
 
 MIN_SHOT = 0.2
 ITEM_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
-SOURCES = ("import", "agent", "human")
+SOURCES = ("import", "agent", "human", "identity")
 _REG_CACHE: dict[str, tuple[float, dict]] = {}
 _REG_LOCK = threading.Lock()
 

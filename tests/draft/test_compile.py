@@ -23,7 +23,7 @@ def times(inp, doc):
 
 def test_tiling_anchors_and_first_shot(proj):
     inp, specs = good(proj)
-    res = compile_specs(inp, specs, draw=False)
+    res = compile_specs(inp, specs, draw=False, identity=False)
     assert not res.errors, summary_text(res)
     ts = times(inp, res.storyboard)
     assert ts[0] == 0.0 and all(b > a for a, b in zip(ts, ts[1:]))
@@ -44,7 +44,7 @@ def test_ids_are_unique_and_sequential(proj):
 
 def test_chapter_card_sits_in_the_silence(proj):
     inp, specs = good(proj)
-    res = compile_specs(inp, specs, draw=False)
+    res = compile_specs(inp, specs, draw=False, identity=False)
     cards = [s for s in res.storyboard["shots"] if s["technique"] == "X-CARD-01"]
     assert len(cards) == 1 and cards[0]["params"]["title"] == "THE MIRROR"
     c2 = inp.timing["chapters"][1]
@@ -56,10 +56,10 @@ def test_chapter_card_sits_in_the_silence(proj):
 
 def test_title_card_only_when_the_silence_is_long(proj_title_card, proj):
     inp = load_inputs(proj_title_card)
-    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     assert [s["technique"] for s in res.storyboard["shots"]].count("X-CARD-02") == 1
     assert not res.errors, summary_text(res)
-    res2 = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    res2 = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     assert "X-CARD-02" not in [s["technique"] for s in res2.storyboard["shots"]]
 
 
@@ -132,7 +132,7 @@ def test_narration_on_screen_is_refused(proj):
     inp, specs = good(proj)
     text = " ".join(w["w"] for w in inp.timing["words"][12:18])
     specs["c01"]["shots"][1]["overlays"].append({"technique": "X-ANN-01", "start_word": 13, "dur": 2.0, "params": {"text": text}})
-    res = compile_specs(inp, specs, draw=False)
+    res = compile_specs(inp, specs, draw=False, identity=False)
     bad = [i for i in res.errors if i["code"] == "narration_on_screen"]
     assert bad and bad[0]["chapter"] == "c01" and bad[0]["shot"] == 2 and bad[0]["overlay"] == 2
     assert len(res.storyboard["shots"][1]["overlays"]) == 1
@@ -260,7 +260,7 @@ def test_cards_are_placed_from_the_lead_of_the_timing(proj):
     t["chapters"][1]["card"] = False                      # the lead decides, not the flag
     (proj / "timing.json").write_text(json.dumps(t))
     inp = load_inputs(proj)
-    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     assert not res.errors, summary_text(res)
     lead_end = round(w30 - 0.1, 3)
     cards = [s for s in res.storyboard["shots"] if s["technique"] == "X-CARD-01"]
@@ -273,7 +273,7 @@ def test_cards_are_placed_from_the_lead_of_the_timing(proj):
 def test_title_lead_at_the_very_start_gives_a_title_card_first(proj):
     _shift_timing(proj, 6.0, {"c01": {"kind": "title", "start": 0.0, "end": 6.4}})
     inp = load_inputs(proj)
-    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    res = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     assert not res.errors, summary_text(res)
     sh = res.storyboard["shots"]
     assert sh[0]["technique"] == "X-CARD-02" and sh[0]["start"]["t"] == 0.0
@@ -291,11 +291,11 @@ def test_plain_lead_places_no_card(proj):
 
 def test_a_locked_card_is_never_regenerated(proj):
     inp, specs = good(proj)
-    cur = compile_specs(inp, specs, draw=False).storyboard
+    cur = compile_specs(inp, specs, draw=False, identity=False).storyboard
     card = next(s for s in cur["shots"] if s["technique"] == "X-CARD-01")
     card["locked"] = True
     card["params"]["title"] = "OWNER TITLE"
     (proj / "storyboard.json").write_text(json.dumps(cur), encoding="utf-8")
-    res = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False)
+    res = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     cards = [s for s in res.storyboard["shots"] if s["technique"] == "X-CARD-01"]
     assert len(cards) == 1 and clean(cards[0]) == clean(card)

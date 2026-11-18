@@ -1,5 +1,5 @@
 // Save and reload for every technique of the registry, and a sample of 10 s preview clips. Run:
-//   node tests/e2e/storyboard/techniques71.mjs save      (all 71, or: save HI-01 AN-03 ...)
+//   node tests/e2e/storyboard/techniques71.mjs save      (every technique of the registry, 78 today, or: save HI-01 AN-03 ...)
 //   node tests/e2e/storyboard/techniques71.mjs clips
 // For each technique: put it on a shot of technique_lab (the page's own actions: the same code path as the gallery), fill every
 // required slot with an asset of the RIGHT kind from the project, fill required text, save with the real Lưu button, reload the

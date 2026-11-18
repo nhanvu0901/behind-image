@@ -12,7 +12,7 @@ from . import assets as _assets
 from . import clips as _clips
 from . import http as _http
 from .errors import ImageTooSmall, LicenceRejected, MediaError, NotFound  # noqa: F401
-from .imageinfo import ImageDamaged, image_problem, image_size, readable_problem
+from .imageinfo import ImageDamaged, drawn_size, image_problem, image_size, readable_problem  # noqa: F401
 from .licence import check_licence as _check_licence, check_text, flag_for_meta, flag_for_text, with_size_flag
 from .sources.commons import CommonsSource, ext_for
 from .sources.bookpage import BookPageSource
@@ -43,6 +43,17 @@ _FACTORIES = {
     "osm": OsmSource,
 }
 _VIDEO_EXT = {".mp4", ".webm", ".ogv", ".mov", ".mkv", ".m4v"}
+
+
+def stored_image_size(path: Path) -> tuple[int, int]:
+    """THE rule of this module: an asset's `width` and `height` are the pixels of the file that was STORED (as the engine
+    draws it and the page shows it), never what a source's metadata says about its original. Every place that writes an
+    asset record (import of any source, upload, book image) calls this on the stored file. The source's own claim is kept
+    apart as `original_width` / `original_height`."""
+    w, h = drawn_size(Path(path))
+    if not (w and h):
+        raise ImageDamaged("the stored image has no readable size", "image_unreadable")
+    return w, h
 
 
 def get_source(name: str):
@@ -102,6 +113,9 @@ def _import(project_dir: Path, source: str, source_id: str, min_short_side: int 
     idx = _assets.load_index(project_dir)
     hit = idx["items"].get(ident)
     if hit and (project_dir / hit["asset"]["file"]).is_file():
+        # a record written before the size rule (it carried the source's size): measure the stored file and keep the index right
+        if _assets.reconcile_sizes({hit["key"]: hit["asset"]}, project_dir):
+            _assets.register(project_dir, ident, hit["key"], hit["asset"], require_root)
         return {"asset_key": hit["key"], "asset": hit["asset"]}
 
     meta = src.fetch_meta(source_id)
@@ -134,9 +148,7 @@ def _import(project_dir: Path, source: str, source_id: str, min_short_side: int 
             bad = image_problem(dest)
             if bad:
                 raise ImageDamaged(bad[1], bad[0])
-            w, h = (meta.get("width") or 0, meta.get("height") or 0)
-            if not (w and h):
-                w, h = image_size(dest)
+            w, h = stored_image_size(dest)          # the pixels of what was stored, not the source's claim about its original
     except BaseException:
         dest.unlink(missing_ok=True)            # nothing of a refused download stays in media/
         raise
@@ -145,7 +157,7 @@ def _import(project_dir: Path, source: str, source_id: str, min_short_side: int 
     asset = _assets.build_asset(
         f"media/{dest.name}", kind, meta.get("title", ""), meta.get("author", ""),
         _assets.year_of(meta.get("year") or meta.get("date") or ""), w, h, credit,
-        duration=duration)
+        duration=duration, original_size=(meta.get("width"), meta.get("height")))
     _assets.register(project_dir, ident, key, asset, require_root)
     return {"asset_key": key, "asset": asset}
 
@@ -205,7 +217,7 @@ def add_upload(project_dir: Path, file_path: Path, meta: dict, *, require_root: 
             w, h, duration = p2["width"], p2["height"], p2["duration"]
         else:
             shutil.copyfile(file_path, dest)
-            w, h = image_size(dest)
+            w, h = stored_image_size(dest)
         credit = {"source": "upload", "source_url": str(meta.get("source_url") or "").strip(),
                   "author": str(meta.get("author") or "").strip() or "unknown",
                   "licence": name if ok else licence_text, "licence_url": meta.get("licence_url", ""),

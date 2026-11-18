@@ -34,6 +34,10 @@ def _translate(e: BaseException) -> PicksError:
         return PicksError(504, str(e)[:200], "video_timeout", retryable=True)
     if n == "MediaHTTPError":
         st = getattr(e, "status", None)
+        if getattr(e, "rate_limited", False):
+            # the source said "too many requests": its own code, and the wait it asked for (seconds, null when it gave none)
+            return PicksError(503, "the image source limits downloads: wait before trying again (HTTP %s)" % st, "source_rate_limited",
+                              retryable=True, retry_after=getattr(e, "retry_after", None))
         if st in (429, 502, 503, 504, None):
             return PicksError(503, "the image source is busy or not answering (HTTP %s)" % (st or "?"), "source_unreachable", retryable=True)
         return PicksError(502, "the image source answered with an error (HTTP %s)" % st, "source_error")
@@ -212,7 +216,8 @@ def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit:
                 found = media().search(query, source=s, kind=kind if kind in ("image", "video") else "image", limit=limit)
         except Exception as e:      # noqa: BLE001
             pe = _translate(e)
-            errors.append({"source": s, "code": pe.code, "message": pe.detail})
+            errors.append({"source": s, "code": pe.code, "message": pe.detail,
+                           **({"retry_after": pe.extra.get("retry_after")} if pe.code == "source_rate_limited" else {})})
             continue
         for c in found:
             ident = (c.get("source"), c.get("source_id"))

@@ -3,6 +3,7 @@ cannot drift from `style/gae/techniques.json`. It tells the agent WHEN to use a 
 from __future__ import annotations
 
 from bti.engine import registry as R
+from bti.identity import read as read_identity
 
 INTENT_HELP = {
     "establish": "show the whole work or set the scene", "explore": "let the eye travel over the work", "point_at": "name a detail and look at it",
@@ -39,8 +40,27 @@ def _slot(s: dict) -> str:
     return "%s%s%s" % (s["name"], "*" if s.get("required") else "", "(region ok)" if s.get("region") else "") + ("[%s]" % s["type"] if s["type"] != "image" else "")
 
 
+PROGRAM_ONLY = "PROGRAM ONLY: the channel identity, written by the compiler, never by you"
+
+
+def _identity_section(cfg) -> list:
+    """The channel identity as the style's `identity` block names it (so that it cannot drift): what the family is and what a model may do."""
+    roles = {"open": "opening overlay", "label": "artwork label overlay", "brand": "channel-name beat (a card)", "mark": "chapter mark (a card)"}
+    out = ["## The channel identity (written by the program, never by you)", "",
+           "The opening, the channel-name beat and the chapter marks of a video are made by the compiler in one of the styles the owner chose. "
+           "Their techniques are listed below, each marked PROGRAM ONLY: you are never offered them as a choice, and you never write a title card or a "
+           "chapter card. The opening overlay and the label sit on the first shot of the video (you may see them in its `overlays`); the channel-name "
+           "beat and the chapter marks are cards that the program keeps (you are not shown them)."]
+    for sid, sd in cfg.styles.items():
+        out.append("- style `%s` (%s): %s" % (sid, sd.label, "; ".join("%s = %s" % (roles[r], sd.technique(r)) for r in roles if sd.technique(r))))
+    out.append("")
+    return out
+
+
 def generate(bundle: R.StyleBundle) -> str:
     techs = [t for t in bundle.techniques if t.get("engine", {}).get("available") is True]
+    cfg = read_identity(bundle.style)
+    mine = (lambda tid: bool(cfg) and cfg.is_identity_technique(tid))            # a technique of the channel identity: listed, but not a choice
     out = ["# Techniques", "",
            "Generated from the registry. `*` = required. `[a..b]` = allowed range. `=x` = default. Parameters you do not write keep their default;",
            "the compiler also fills the camera keys, label texts and region sizes for you. Slots hold pictures: `{\"asset\": \"A\", \"region\": \"MIRROR\"}`.",
@@ -48,13 +68,16 @@ def generate(bundle: R.StyleBundle) -> str:
            "Write `camera` yourself only when the default move is wrong; `at` may also be a spoken word `{\"w\": index, \"off\": 0.0}`.", "",
            "## Choosing by intent (core first)", ""]
     for intent, hint in INTENT_HELP.items():
-        ids = sorted((t for t in techs if intent in (t.get("intents") or []) and t.get("channel_usage") != "shorts_only"),
+        ids = sorted((t for t in techs if intent in (t.get("intents") or []) and t.get("channel_usage") != "shorts_only" and not mine(t["id"])),
                      key=lambda t: (USAGE_ORDER.get(t.get("channel_usage"), 9), t["id"]))
         out.append("- **%s** (%s): %s" % (intent, hint, ", ".join("%s%s" % (t["id"], "" if t.get("channel_usage") == "core" else " (%s)" % t.get("channel_usage")) for t in ids)))
-    out += ["", "## The techniques", ""]
+    out.append("")
+    if cfg:
+        out += _identity_section(cfg)
+    out += ["## The techniques", ""]
     order = {"base": 0, "card": 1, "overlay": 2, "transition": 3}
     for t in sorted(techs, key=lambda t: (order.get(t["kind"], 9), t.get("category") or "", USAGE_ORDER.get(t.get("channel_usage"), 9), t["id"])):
-        out.append("### %s %s  [%s, %s]" % (t["id"], t["name"], t["kind"], USAGE_HELP.get(t.get("channel_usage"), t.get("channel_usage"))))
+        out.append("### %s %s  [%s, %s]" % (t["id"], t["name"], t["kind"], PROGRAM_ONLY if mine(t["id"]) else USAGE_HELP.get(t.get("channel_usage"), t.get("channel_usage"))))
         out.append("- used as: %s; intents: %s" % (KIND_WHERE.get(t["kind"], t["kind"]), ", ".join(t.get("intents") or [])))
         out.append("- what: %s" % (t.get("description") or ""))
         if t.get("usage_rule"):

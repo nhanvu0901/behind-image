@@ -1,0 +1,454 @@
+<title>Nhận diện kênh D13</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: one reading column; every option is a pair of playable 16:9 clips (opening, chapter mark) drawn in container
+   units and driven by one small timeline script, so each clip is a film moment with sound, not a still. */
+:root {
+  --bg: #eef0ee; --surface: #ffffff; --fg: #1b1f1d; --muted: #59625e; --line: #cdd4cf; --accent: #2a6a4c; --accent-soft: #dcebe3;
+  --screen: #000000; --video-ink: #f4efe4; --video-warm: rgba(255, 205, 140, .14); --voice-on: #c9862b;
+  --f-ui: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --f-video: "EB Garamond", "Iowan Old Style", "Palatino Linotype", Georgia, serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #111412; --surface: #1a1e1c; --fg: #e8ece9; --muted: #9da7a2; --line: #2d3531; --accent: #86c9a6; --accent-soft: #1f3329; --voice-on: #e0a44c; color-scheme: dark }
+}
+:root[data-theme="dark"] { --bg: #111412; --surface: #1a1e1c; --fg: #e8ece9; --muted: #9da7a2; --line: #2d3531; --accent: #86c9a6; --accent-soft: #1f3329; --voice-on: #e0a44c; color-scheme: dark }
+
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--fg); font: 400 16px/1.6 var(--f-ui) }
+.page { max-width: 1180px; margin: 0 auto; padding-block: 36px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 56px }
+h1 { font: 700 32px/1.18 var(--f-ui); margin: 0; text-wrap: balance; max-width: 26ch }
+h2 { font: 700 23px/1.2 var(--f-ui); margin: 0; text-wrap: balance }
+p { margin: 0; max-width: 68ch }
+.eyebrow { font: 600 12px/1 var(--f-ui); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.lede { font-size: 18px }
+.muted { color: var(--muted) }
+.stack { display: flex; flex-direction: column; gap: 14px }
+.stack-lg { display: flex; flex-direction: column; gap: 22px }
+.pick { background: var(--accent-soft); border: 1px solid var(--accent); border-radius: 6px; padding: 14px 16px; max-width: 780px }
+.pick b { color: var(--accent) }
+.facts { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; max-width: 70ch }
+.two { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 20px 36px; align-items: start }
+.clips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px }
+.clips.one { grid-template-columns: minmax(0, 640px) }
+.soundrow { display: flex; align-items: center; gap: 10px; font-size: 14.5px }
+.soundrow input { width: 18px; height: 18px; accent-color: var(--accent) }
+
+/* a clip */
+.clip { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0 }
+.screen { position: relative; width: 100%; max-width: 100%; aspect-ratio: 16 / 9; container-type: inline-size; overflow: hidden; background: var(--screen); border-radius: 3px; cursor: pointer; isolation: isolate }
+.screen:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.layer { position: absolute; inset: 0; overflow: hidden; pointer-events: none }
+.layer img { position: absolute; left: 0; top: 0; max-width: none; height: auto; display: block; user-select: none }
+.shade { position: absolute; inset: 0; background: #000; opacity: 0 }
+.warm { position: absolute; inset: 0; background: var(--video-warm); mix-blend-mode: screen }
+.m-after  { -webkit-mask-image: linear-gradient(100deg, transparent var(--p), #000 calc(var(--p) + 9%)); mask-image: linear-gradient(100deg, transparent var(--p), #000 calc(var(--p) + 9%)) }
+.m-before { -webkit-mask-image: linear-gradient(100deg, #000 calc(var(--p) - 9%), transparent var(--p)); mask-image: linear-gradient(100deg, #000 calc(var(--p) - 9%), transparent var(--p)) }
+.m-band   { -webkit-mask-image: linear-gradient(100deg, transparent calc(var(--p) - 9%), #000 calc(var(--p) - 3%), #000 calc(var(--p) + 3%), transparent calc(var(--p) + 9%)); mask-image: linear-gradient(100deg, transparent calc(var(--p) - 9%), #000 calc(var(--p) - 3%), #000 calc(var(--p) + 3%), transparent calc(var(--p) + 9%)) }
+.m-pool   { -webkit-mask-image: radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y), #000 0%, rgba(0, 0, 0, .6) 50%, transparent 100%); mask-image: radial-gradient(ellipse var(--rx) var(--ry) at var(--x) var(--y), #000 0%, rgba(0, 0, 0, .6) 50%, transparent 100%) }
+.vt { position: absolute; color: var(--video-ink); font-family: var(--f-video); text-shadow: 0 0 .9cqw rgba(0, 0, 0, .6); opacity: 0; white-space: nowrap }
+.label { left: 4cqw; bottom: 4.4cqw }
+.label .l1, .note .l1 { font: italic 400 2.75cqw/1.15 var(--f-video) }
+.label .l2, .note .l2 { font: 400 2.05cqw/1.35 var(--f-video) }
+.note { left: 6cqw; top: 45cqw }
+.note .l3 { font: 400 1.4cqw/1.7 var(--f-video); letter-spacing: .12em; text-transform: uppercase }
+.mark { left: 50%; top: 50%; transform: translate(-50%, -50%); font: 400 3.9cqw/1 var(--f-video) }
+.mark.low { top: 74% }
+.mark.left { left: 8cqw; top: auto; bottom: 10.6cqw; transform: none }
+.title { left: 50%; top: 78%; transform: translate(-50%, -50%); font: italic 400 4.4cqw/1 var(--f-video) }
+.sub { left: 50%; top: 85.5%; transform: translate(-50%, -50%); font: 400 1.75cqw/1 var(--f-video); letter-spacing: .14em; text-transform: uppercase }
+.brand { left: 50%; top: 42%; transform: translate(-50%, -50%); font: 500 6cqw/1 var(--f-video); letter-spacing: .26em; padding-left: .26em }
+svg.notes { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible }
+svg.notes * { fill: none; stroke: var(--video-ink) }
+.bar { display: flex; align-items: center; gap: 10px; min-width: 0 }
+.bar button { font: 600 13.5px/1 var(--f-ui); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 5px; padding: 8px 12px; min-width: 76px; cursor: pointer }
+.bar button.fs { min-width: 0; font-weight: 500; color: var(--muted) }
+.bar button:hover { border-color: var(--accent) }
+.bar button:focus-visible, .bar input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px }
+.bar input[type="range"] { flex: 1; min-width: 0; accent-color: var(--accent) }
+.bar .time { font: 500 13px/1 var(--f-ui); font-variant-numeric: tabular-nums; color: var(--muted); min-width: 48px; text-align: right }
+.voice { display: inline-flex; align-items: center; gap: 6px; font: 500 12.5px/1 var(--f-ui); color: var(--muted); white-space: nowrap }
+.voice i { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--muted); display: block }
+.voice.on { color: var(--fg) }
+.voice.on i { background: var(--voice-on); border-color: var(--voice-on) }
+figcaption { font-size: 13.5px; color: var(--muted) }
+figcaption b { color: var(--fg); font-weight: 600 }
+.ask { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 18px 20px; max-width: 780px }
+.ask code { font: 500 15px/1.5 ui-monospace, "SF Mono", Menlo, monospace; background: var(--bg); padding: 2px 6px; border-radius: 4px }
+
+@media (max-width: 800px) {
+  .page { gap: 44px; padding-block: 24px 56px }
+  h1 { font-size: 26px }
+  .two, .clips { grid-template-columns: minmax(0, 1fr) }
+  .voice span { display: none }
+}
+</style>
+
+<div class="page">
+
+  <header class="stack">
+    <div class="eyebrow">Nhóm D · mục D13 · bản 2 · chỉ là thiết kế, chưa đổi dòng code nào</div>
+    <h1>Raking Light: mở đầu và mốc chương, dựng như một đoạn phim</h1>
+    <p class="lede">Bạn đã chọn tên Raking Light, và chê thẻ mở đầu, thẻ chương của bản trước trông như slide. Agent đã đo từ khung hình của 11 video Great Art Explained và phần mở đầu của 8 phim nghệ thuật khác. Bốn cách làm dưới đây dựng theo đúng những gì đo được. Mỗi mẫu là một đoạn phim có lời dẫn thật của video Arnolfini: bấm vào hình hoặc nút Phát; nút Phóng to cho xem toàn màn hình.</p>
+    <label class="soundrow"><input type="checkbox" id="snd" checked> Phát kèm tiếng</label>
+  </header>
+
+  <section class="stack-lg" aria-labelledby="h-why">
+    <div class="stack">
+      <div class="eyebrow">Đo được gì</div>
+      <h2 id="h-why">Video thật khác slide ở năm điểm</h2>
+    </div>
+    <div class="two">
+      <ul class="facts">
+        <li><b>Phim không mở bằng thẻ tiêu đề.</b> Nó mở thẳng vào bức tranh đang chuyển động. Tên tranh hiện sau 6 đến 16 giây, chữ nhỏ ở góc dưới bên trái.</li>
+        <li><b>Chữ nằm ngay trên hình.</b> Không khung, không nền màu, không số thật to đứng cạnh.</li>
+        <li><b>Mốc chương chỉ là một dòng chữ nhỏ</b> đặt trên hình đầu tiên của chương sau, dài khoảng 3 giây: cắt thẳng vào, chữ hiện sau 0,2 đến 0,4 giây, rồi hình được "nhả" ra.</li>
+        <li><b>Lời dẫn ngừng khoảng 1 giây trước mốc chương</b> và trở lại khi mốc kết thúc. Thiếu khoảng lặng này, mốc chương trông như hình bị đứng.</li>
+        <li><b>Chỉ một thứ được to: tên kênh,</b> hiện một lần sau đoạn mở đầu.</li>
+      </ul>
+      <figure class="clip" data-clip="refMark">
+        <figcaption><b>Để so sánh: kênh tham chiếu làm mốc chương thế này.</b> Hình kế tiếp bị làm nhòe, một dòng chữ, rồi hình nét lại. Mình dựng lại theo số đo, không phải mẫu đề xuất.</figcaption>
+      </figure>
+    </div>
+    <p class="muted">Bản trước của mình sai ở cả năm điểm: mở bằng một tấm thẻ, chữ nằm trên bảng và khối màu, nhiều tầng chữ, số chương thật to, và không có thời gian lẫn âm thanh. Bốn mẫu dưới đây đều bỏ thẻ mở đầu: phim vào thẳng tranh, tên tranh đến sau.</p>
+  </section>
+
+  <section class="stack-lg" aria-labelledby="h-a">
+    <div class="stack">
+      <div class="eyebrow">Cách A · mình đề xuất</div>
+      <h2 id="h-a">Vệt sáng quét</h2>
+      <p>Chiếc đèn của thợ phục chế, làm đúng nghĩa đen. Tranh hiện ra trong tối, một vệt sáng quét ngang qua, chỗ nào vệt sáng đi qua thì sáng lên. Chữ không "hiện ra" mà được vệt sáng soi tới.</p>
+    </div>
+    <div class="clips">
+      <figure class="clip" data-clip="rakingOpen"><figcaption><b>Mở đầu.</b> Lời dẫn vào ngay từ giây đầu. Tên tranh hiện ở góc dưới trái khi vệt sáng vừa đi qua.</figcaption></figure>
+      <figure class="clip" data-clip="rakingMark"><figcaption><b>Mốc chương.</b> Lời dẫn ngừng, cắt sang hình của chương sau còn tối, vệt sáng quét qua và viết ra dòng "5. The Mirror".</figcaption></figure>
+    </div>
+    <div class="two">
+      <figure class="clip" data-clip="rakingBrand"><figcaption><b>Tên kênh.</b> Hiện một lần sau đoạn mở đầu, rồi cắt thẳng vào chương 1. Mẫu này không có tiếng.</figcaption></figure>
+      <ul class="facts">
+        <li>Được: tên kênh thành hình ảnh nhìn thấy được trong mọi video, và không giống kênh tham chiếu (họ dùng nhòe, mình dùng sáng).</li>
+        <li>Engine cần thêm: một dải sáng chạy ngang hình, và chữ lộ ra theo dải sáng. Đây là việc mới, cỡ vừa.</li>
+        <li>Rủi ro: ở mốc chương, chữ chưa đọc được trong nửa giây đầu. Mình giữ vệt sáng quét trong 2 giây để không chậm hơn.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="stack-lg" aria-labelledby="h-b">
+    <div class="stack">
+      <div class="eyebrow">Cách B</div>
+      <h2 id="h-b">Quầng đèn</h2>
+      <p>Cũng là ánh sáng, nhưng là một quầng đèn cầm tay. Tranh nằm trong tối, quầng sáng đi lần lượt qua từng chi tiết mà lời dẫn nhắc tới, rồi mở rộng ra cả bức tranh.</p>
+    </div>
+    <div class="clips">
+      <figure class="clip" data-clip="poolOpen"><figcaption><b>Mở đầu.</b> Quầng sáng dừng ở gương mặt, chiếc gương, đôi tay, rồi tỏa ra toàn tranh.</figcaption></figure>
+      <figure class="clip" data-clip="poolMark"><figcaption><b>Mốc chương.</b> Cắt sang hình tối, quầng sáng bật lên ở chi tiết của chương, chữ nằm ngay dưới quầng sáng.</figcaption></figure>
+    </div>
+    <ul class="facts">
+      <li>Được: dẫn mắt người xem rất rõ, hợp những tranh có nhiều chi tiết nhỏ.</li>
+      <li>Engine cần thêm: cho quầng sáng sẵn có đi theo một đường nhiều điểm. Việc mới, cỡ nhỏ.</li>
+      <li>Rủi ro: tranh tối lâu hơn cách A; kịch bản phải chỉ ra quầng sáng dừng ở đâu.</li>
+    </ul>
+  </section>
+
+  <section class="stack-lg" aria-labelledby="h-c">
+    <div class="stack">
+      <div class="eyebrow">Cách C</div>
+      <h2 id="h-c">Tối lại, hiện tên</h2>
+      <p>Cách lặng nhất. Không cắt, không vệt sáng: hình đang chạy tối bớt đi, một dòng chữ hiện trên đó, hình của chương sau hòa vào bên dưới.</p>
+    </div>
+    <div class="clips">
+      <figure class="clip" data-clip="dimOpen"><figcaption><b>Mở đầu.</b> Bắt đầu sát vào đôi tay, máy lùi dần ra. Khi thấy đủ hai người thì hình tối bớt và tên tranh hiện ở giữa, phía dưới.</figcaption></figure>
+      <figure class="clip" data-clip="dimMark"><figcaption><b>Mốc chương.</b> Hình cũ tối đi, hình mới hòa vào bên dưới, một dòng chữ ở giữa.</figcaption></figure>
+    </div>
+    <ul class="facts">
+      <li>Được: gần như không phải viết gì mới trong engine, làm được ngay.</li>
+      <li>Mất: không gợi gì tới cái tên Raking Light, và gần với cách vài kênh khác đang làm.</li>
+    </ul>
+  </section>
+
+  <section class="stack-lg" aria-labelledby="h-d">
+    <div class="stack">
+      <div class="eyebrow">Cách D</div>
+      <h2 id="h-d">Ghi chú bên lề</h2>
+      <p>Như hồ sơ của thợ phục chế. Tên tranh là một ghi chú nối bằng một nét mảnh tới chữ ký của họa sĩ trên tranh. Mốc chương là một vạch thước ở mép dưới, có một khấc cho mỗi chương, đặt đúng vị trí thời gian thật của video 13 phút 40 giây này.</p>
+    </div>
+    <div class="clips">
+      <figure class="clip" data-clip="notesOpen"><figcaption><b>Mở đầu.</b> Một vòng nhỏ khoanh chữ ký "Johannes de eyck fuit hic 1434", nét mảnh kéo ra lề, ghi chú ba dòng.</figcaption></figure>
+      <figure class="clip" data-clip="notesMark"><figcaption><b>Mốc chương.</b> Vạch thước kéo ngang, khấc thứ năm sáng lên, dòng chữ nằm bên trái.</figcaption></figure>
+    </div>
+    <ul class="facts">
+      <li>Được: khác hẳn mọi kênh đã xem; người xem biết mình đang ở đâu trong video.</li>
+      <li>Engine cần thêm: nét nối giữa hai điểm và hàng khấc. Việc mới, cỡ vừa.</li>
+      <li>Rủi ro: có hai thứ trên màn hình (chữ và vạch thước) thay vì một, nên dễ rối hơn các cách kia.</li>
+    </ul>
+  </section>
+
+  <section class="stack" aria-labelledby="h-ask">
+    <div class="eyebrow">Bạn trả lời</div>
+    <h2 id="h-ask">Một dòng là đủ</h2>
+    <div class="pick"><b>Mình đề xuất cách A</b> cho cả mở đầu, mốc chương và tên kênh, vì chỉ nó mang được cái tên Raking Light vào hình. Nếu muốn có ngay mà chưa cần viết thêm gì trong engine thì dùng cách C trước, rồi đổi sang A sau.</div>
+    <div class="ask stack">
+      <p>Ví dụ: <code>cách A</code>, hoặc trộn: <code>mở đầu kiểu C, mốc chương kiểu A</code>. Bạn cũng có thể nói chỗ nào còn giống slide để mình sửa tiếp.</p>
+      <p class="muted">Agent còn nêu hai cách nữa mà mình đã loại: lướt qua màn đen (gần giống thẻ đen năm 2020 của kênh tham chiếu) và mở từ vân sơn phóng thật to (cần ảnh gốc rất nét cho mọi bức tranh). Nhãn chi tiết và ảnh bìa YouTube mình làm lại sau khi bạn chọn xong phần này. Báo cáo đo đạc nằm ở <code>docs/design/research/R9_titles_in_real_videos.md</code>.</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var IMG = 'arnolfini2k.jpg', IMGH = 100 / (1200 / 1641);          // picture height in cqw when its width is 100cqw
+  var MIR = [0.503, 0.29], FACE_M = [0.276, 0.207], FACE_W = [0.767, 0.245], HANDS = [0.54, 0.41], SIG = [0.5, 0.213], ORANGE = [0.14, 0.42], WINDOW = [0.13, 0.26];
+  var TC = 4.3;                                                      // chapter clips: the cut. The voice stops at 3.28 s, one second before it.
+  var CH = [0.0975, 0.2078, 0.3644, 0.5084, 0.6793, 0.8153, 0.9525]; // real chapter starts of the 13:40 Arnolfini video
+
+  function lerp(a, b, u) { return a + (b - a) * u; }
+  function ss(u) { return u * u * (3 - 2 * u); }
+  function kf(t, pts, smooth) {
+    if (t <= pts[0][0]) return pts[0][1];
+    for (var i = 1; i < pts.length; i++) {
+      if (t <= pts[i][0]) { var u = (t - pts[i - 1][0]) / (pts[i][0] - pts[i - 1][0]); return lerp(pts[i - 1][1], pts[i][1], smooth ? ss(u) : u); }
+    }
+    return pts[pts.length - 1][1];
+  }
+  function el(cls, parent, html) { var d = document.createElement('div'); d.className = cls; if (html != null) d.innerHTML = html; parent.appendChild(d); return d; }
+  function pic(screen, cls) {
+    var l = el('layer' + (cls ? ' ' + cls : ''), screen), im = document.createElement('img');
+    im.src = IMG; im.alt = ''; im.draggable = false; l.appendChild(im);
+    return { l: l, im: im, k: el('shade', l) };
+  }
+  function cam(layers, z, fx, fy) {
+    var w = (z * 100) + 'cqw', tr = 'translate(' + (50 - fx * z * 100) + 'cqw,' + (28.125 - fy * z * IMGH) + 'cqw)';
+    for (var i = 0; i < layers.length; i++) { layers[i].im.style.width = w; layers[i].im.style.transform = tr; }
+  }
+  function at(pt, z, fx, fy) { return [50 + (pt[0] - fx) * z * 100, 28.125 + (pt[1] - fy) * z * IMGH]; }   // screen position in cqw
+  function text(screen, cls, html) { return el('vt ' + cls, screen, html); }
+  function label(screen) { return text(screen, 'label', '<div class="l1">The Arnolfini Portrait</div><div class="l2">Jan van Eyck, 1434</div>'); }
+  function prevCam(L, t) { cam([L], kf(t, [[0, 2.5], [TC, 2.66]]), ORANGE[0] + 0.03, ORANGE[1] - 0.02); }
+  function svg(screen, inner) { var d = el('layer', screen, '<svg class="notes" viewBox="0 0 1600 900" preserveAspectRatio="none">' + inner + '</svg>'); return d.firstChild; }
+
+  var CLIPS = {
+    // ---- the reference channel's chapter mark, rebuilt from the measurements, for comparison only
+    refMark: { dur: 11.2, poster: TC + 1.4, voice: [[0.08, 3.28], [TC + 3.2, TC + 6.6]], sounds: [['pre.mp3', 0], ['post.mp3', TC + 3.08]],
+      build: function (s) {
+        var prev = pic(s), next = pic(s), mk = text(s, 'mark', '5. The Mirror');
+        return function (t) {
+          prevCam(prev, t); prev.l.style.opacity = t < TC ? 1 : 0;
+          cam([next], kf(t, [[TC, 1.9], [11.2, 2.2]]), MIR[0], MIR[1]);
+          next.l.style.opacity = t < TC ? 0 : 1;
+          next.im.style.filter = 'blur(' + kf(t, [[TC + 2.85, 1.5], [TC + 3.2, 0]]) + 'cqw)';
+          next.k.style.opacity = kf(t, [[TC + 2.85, 0.25], [TC + 3.2, 0]]);
+          mk.style.opacity = kf(t, [[TC + 0.15, 0], [TC + 0.45, 1], [TC + 2.6, 1], [TC + 2.9, 0]]);
+        };
+      } },
+
+    // ---- A: raking pass
+    rakingOpen: { dur: 13, poster: 6.6, voice: [[1.0, 6.4], [7.05, 12.0]], sounds: [['open.mp3', 0.65]],
+      build: function (s) {
+        var base = pic(s), wake = pic(s, 'm-after'), band = pic(s, 'm-band'), lab;
+        el('warm', band.l); lab = label(s);
+        return function (t) {
+          cam([base, wake, band], kf(t, [[0, 1.22], [13, 1.54]]), kf(t, [[0, 0.52], [13, 0.5]]), 0.305);
+          var b = kf(t, [[0.4, 0], [1.2, 0.1], [7.5, 0.1], [9, 1]], true), p = kf(t, [[1.5, 122], [7.5, -22]]) + '%';
+          base.k.style.opacity = 1 - b;
+          wake.l.style.setProperty('--p', p); band.l.style.setProperty('--p', p);
+          wake.l.style.opacity = t < 1.5 ? 0 : 1; wake.k.style.opacity = 1 - Math.max(0.45, b);
+          band.l.style.opacity = (t < 1.5 || t > 7.6) ? 0 : 1;
+          lab.style.opacity = kf(t, [[6.2, 0], [6.7, 1], [10.6, 1], [11.1, 0]]);
+        };
+      } },
+    rakingMark: { dur: 11.2, poster: TC + 1.55, voice: [[0.08, 3.28], [TC + 3.2, TC + 6.6]], sounds: [['pre.mp3', 0], ['post.mp3', TC + 3.08]],
+      build: function (s) {
+        var prev = pic(s), base = pic(s), wake = pic(s, 'm-before'), band = pic(s, 'm-band'), tl, mk;
+        el('warm', band.l); tl = el('layer m-before', s); mk = text(tl, 'mark', '5. The Mirror');
+        return function (t) {
+          prevCam(prev, t); prev.l.style.opacity = t < TC ? 1 : 0;
+          cam([base, wake, band], kf(t, [[TC, 1.9], [11.2, 2.2]]), MIR[0], MIR[1]);
+          var on = t >= TC, b = kf(t, [[TC + 2.5, 0.12], [TC + 3.2, 1]], true), p = kf(t, [[TC + 0.1, -22], [TC + 2.1, 122]]) + '%';
+          base.l.style.opacity = on ? 1 : 0; base.k.style.opacity = 1 - b;
+          wake.l.style.setProperty('--p', p); band.l.style.setProperty('--p', p); tl.style.setProperty('--p', p);
+          wake.l.style.opacity = on ? 1 : 0; wake.k.style.opacity = 1 - Math.max(0.55, b);
+          band.l.style.opacity = (t >= TC + 0.1 && t <= TC + 2.2) ? 1 : 0;
+          mk.style.opacity = on ? kf(t, [[TC + 2.5, 1], [TC + 2.9, 0]]) : 0;
+        };
+      } },
+    rakingBrand: { dur: 7, poster: 3.6, voice: [], sounds: [],
+      build: function (s) {
+        var base = pic(s), wake = pic(s, 'm-before'), band = pic(s, 'm-band'), tl, br, next;
+        el('warm', band.l); tl = el('layer m-before', s); br = text(tl, 'brand', 'RAKING LIGHT'); next = pic(s);
+        return function (t) {
+          cam([base, wake, band], kf(t, [[0, 2.3], [5, 2.5]]), HANDS[0], HANDS[1]);
+          var p = kf(t, [[0.6, -22], [3.0, 122]]) + '%';
+          base.k.style.opacity = kf(t, [[0, 0], [0.6, 0.88]], true);
+          wake.l.style.setProperty('--p', p); band.l.style.setProperty('--p', p); tl.style.setProperty('--p', p);
+          wake.l.style.opacity = t >= 0.6 ? 1 : 0; wake.k.style.opacity = 0.74;
+          band.l.style.opacity = (t >= 0.6 && t <= 3.1) ? 1 : 0;
+          br.style.opacity = t < 5 ? 1 : 0;
+          cam([next], kf(t, [[5, 2.0], [7, 2.07]]), WINDOW[0] + 0.06, WINDOW[1]); next.l.style.opacity = t >= 5 ? 1 : 0;
+        };
+      } },
+
+    // ---- B: lamp pool
+    poolOpen: { dur: 13, poster: 4.8, voice: [[1.0, 6.4], [7.05, 12.0]], sounds: [['open.mp3', 0.65]],
+      build: function (s) {
+        var base = pic(s), pool = pic(s, 'm-pool'), lab;
+        el('warm', pool.l); lab = label(s);
+        return function (t) {
+          var z = kf(t, [[0, 1.3], [13, 1.52]]), fx = 0.52, fy = 0.305;
+          cam([base, pool], z, fx, fy);
+          var ix = kf(t, [[1, FACE_M[0]], [3, FACE_M[0]], [3.7, MIR[0]], [5.6, MIR[0]], [6.3, HANDS[0]], [8.2, HANDS[0]], [8.9, FACE_W[0]], [10, FACE_W[0]], [12, 0.5]], true),
+              iy = kf(t, [[1, FACE_M[1]], [3, FACE_M[1]], [3.7, MIR[1]], [5.6, MIR[1]], [6.3, HANDS[1]], [8.2, HANDS[1]], [8.9, FACE_W[1]], [10, FACE_W[1]], [12, 0.3]], true),
+              c = at([ix, iy], z, fx, fy), g = kf(t, [[10, 1], [12, 9]], true);
+          pool.l.style.setProperty('--x', c[0] + 'cqw'); pool.l.style.setProperty('--y', c[1] + 'cqw');
+          pool.l.style.setProperty('--rx', (23 * g) + 'cqw'); pool.l.style.setProperty('--ry', (18 * g) + 'cqw');
+          pool.l.style.opacity = kf(t, [[1.0, 0], [1.6, 1]]);
+          base.k.style.opacity = 1 - kf(t, [[0, 0.14], [10, 0.14], [12, 1]], true);
+          lab.style.opacity = kf(t, [[9.0, 0], [9.6, 1], [12.3, 1], [12.8, 0]]);
+        };
+      } },
+    poolMark: { dur: 11.1, poster: TC + 1.4, voice: [[0.08, 3.28], [TC + 3.1, TC + 6.5]], sounds: [['pre.mp3', 0], ['post.mp3', TC + 2.98]],
+      build: function (s) {
+        var prev = pic(s), base = pic(s), pool = pic(s, 'm-pool'), mk;
+        el('warm', pool.l); mk = text(s, 'mark low', '5. The Mirror');
+        return function (t) {
+          prevCam(prev, t); prev.l.style.opacity = t < TC ? 1 : 0;
+          var z = kf(t, [[TC, 1.75], [11.1, 2.0]]), fx = MIR[0], fy = MIR[1] + 0.045, on = t >= TC;
+          cam([base, pool], z, fx, fy);
+          var c = at(MIR, z, fx, fy), g = kf(t, [[TC + 2.4, 1], [TC + 3.1, 9]], true);
+          pool.l.style.setProperty('--x', c[0] + 'cqw'); pool.l.style.setProperty('--y', c[1] + 'cqw');
+          pool.l.style.setProperty('--rx', (25 * g) + 'cqw'); pool.l.style.setProperty('--ry', (20 * g) + 'cqw');
+          base.l.style.opacity = on ? 1 : 0; base.k.style.opacity = 1 - kf(t, [[TC + 2.4, 0.14], [TC + 3.1, 1]], true);
+          pool.l.style.opacity = on ? kf(t, [[TC + 0.1, 0], [TC + 0.6, 1]]) : 0;
+          mk.style.opacity = on ? kf(t, [[TC + 0.1, 0], [TC + 0.6, 1], [TC + 2.4, 1], [TC + 2.8, 0]]) : 0;
+        };
+      } },
+
+    // ---- C: dim and name
+    dimOpen: { dur: 13, poster: 9.2, voice: [[0.5, 5.9], [6.55, 11.5]], sounds: [['open.mp3', 0.15]],
+      build: function (s) {
+        var base = pic(s), ti = text(s, 'title', 'The Arnolfini Portrait'), su = text(s, 'sub', 'Jan van Eyck &nbsp;·&nbsp; 1434');
+        return function (t) {
+          var u = 1 - Math.pow(1 - Math.min(1, t / 12.5), 2.4);
+          cam([base], lerp(3.2, 1.22, u), lerp(HANDS[0], 0.5, u), lerp(HANDS[1], 0.3, u));
+          base.k.style.opacity = kf(t, [[7, 0], [8, 0.55], [11, 0.55], [12, 0]], true);
+          ti.style.opacity = kf(t, [[7.2, 0], [8.0, 1], [11, 1], [12, 0]]);
+          su.style.opacity = kf(t, [[7.6, 0], [8.2, 0.9], [11, 0.9], [12, 0]]);
+        };
+      } },
+    dimMark: { dur: 11, poster: TC + 1.5, voice: [[0.08, 3.28], [TC + 3.0, TC + 6.4]], sounds: [['pre.mp3', 0], ['post.mp3', TC + 2.88]],
+      build: function (s) {
+        var prev = pic(s), next = pic(s), dim = el('shade', el('layer', s)), mk = text(s, 'mark', '5. The Mirror');
+        return function (t) {
+          cam([prev], kf(t, [[0, 2.5], [TC + 1, 2.7]]), ORANGE[0] + 0.03, ORANGE[1] - 0.02);
+          cam([next], kf(t, [[TC, 1.9], [11, 2.2]]), MIR[0], MIR[1]);
+          next.l.style.opacity = kf(t, [[TC + 0.2, 0], [TC + 0.95, 1]]);
+          dim.style.opacity = kf(t, [[TC, 0], [TC + 0.6, 0.6], [TC + 2.4, 0.6], [TC + 3.0, 0]], true);
+          mk.style.opacity = kf(t, [[TC + 0.3, 0], [TC + 0.7, 1], [TC + 2.4, 1], [TC + 2.8, 0]]);
+        };
+      } },
+
+    // ---- D: margin notes
+    notesOpen: { dur: 13.5, poster: 9, voice: [[0.5, 5.9], [6.55, 11.5]], sounds: [['open.mp3', 0.15]],
+      build: function (s) {
+        var base = pic(s), g = svg(s, '<circle r="21" pathLength="1" stroke-width="3.2" stroke-dasharray="1"/><path pathLength="1" stroke-width="2.6" stroke-dasharray="1" stroke-opacity=".75"/>'),
+            ci = g.querySelector('circle'), ln = g.querySelector('path'),
+            nt = text(s, 'note', '<div class="l1">The Arnolfini Portrait</div><div class="l2">Jan van Eyck, 1434</div><div class="l3">Oil on oak · 82.2 × 60 cm · National Gallery, London</div>');
+        return function (t) {
+          var z = kf(t, [[0, 1.25], [13.5, 1.5]]), fx = 0.5, fy = 0.3;
+          cam([base], z, fx, fy);
+          var c = at(SIG, z, fx, fy), x = c[0] * 16, y = c[1] * 16;
+          ci.setAttribute('cx', x); ci.setAttribute('cy', y);
+          ln.setAttribute('d', 'M' + (x - 17) + ' ' + (y + 12) + ' L 96 702');
+          ci.style.strokeDashoffset = 1 - kf(t, [[6.0, 0], [6.4, 1]], true);
+          ci.style.opacity = kf(t, [[5.99, 0], [6.0, 1], [13.0, 1], [13.3, 0]]);
+          ln.style.strokeDashoffset = 1 - kf(t, [[6.4, 0], [7.0, 1], [12.6, 1], [13.0, 0]], true);
+          ln.style.opacity = (t < 6.4 || t > 13.0) ? 0 : 1;
+          nt.style.opacity = kf(t, [[7.0, 0], [8.0, 1], [12.0, 1], [12.6, 0]]);
+        };
+      } },
+    notesMark: { dur: 11.2, poster: TC + 1.6, voice: [[0.08, 3.28], [TC + 3.2, TC + 6.6]], sounds: [['pre.mp3', 0], ['post.mp3', TC + 3.08]],
+      build: function (s) {
+        var prev = pic(s), base = pic(s), ticks = '', i, x;
+        for (i = 0; i < CH.length; i++) { x = 128 + CH[i] * 1344; ticks += '<line data-x="' + x + '" x1="' + x + '" x2="' + x + '" y1="774" y2="' + (i === 4 ? 754 : 764) + '" stroke-width="' + (i === 4 ? 4 : 2.6) + '" stroke-opacity="' + (i === 4 ? 1 : 0.5) + '"/>'; }
+        var g = svg(s, '<path d="M128 774 L1472 774" pathLength="1" stroke-width="2.6" stroke-dasharray="1" stroke-opacity=".8"/>' + ticks),
+            ln = g.querySelector('path'), tk = g.querySelectorAll('line'), mk = text(s, 'mark left', '5. The Mirror');
+        return function (t) {
+          prevCam(prev, t); prev.l.style.opacity = t < TC ? 1 : 0;
+          cam([base], kf(t, [[TC, 1.9], [11.2, 2.2]]), MIR[0], MIR[1]);
+          var on = t >= TC, d = kf(t, [[TC + 0.1, 0], [TC + 0.7, 1], [TC + 2.8, 1], [TC + 3.2, 0]], true);
+          base.l.style.opacity = on ? 1 : 0; base.k.style.opacity = on ? kf(t, [[TC + 2.6, 0.3], [TC + 3.2, 0]], true) : 0;
+          ln.style.strokeDashoffset = 1 - d; ln.style.opacity = on && d > 0 ? 1 : 0;
+          for (var j = 0; j < tk.length; j++) tk[j].style.opacity = (on && (+tk[j].getAttribute('data-x') - 128) / 1344 <= d) ? 1 : 0;
+          mk.style.opacity = on ? kf(t, [[TC + 0.4, 0], [TC + 0.8, 1], [TC + 2.6, 1], [TC + 3.0, 0]]) : 0;
+        };
+      } }
+  };
+
+  var players = [], snd = document.getElementById('snd');
+  try { if (localStorage.getItem('d13-sound') === '0') snd.checked = false; } catch (e) {}
+
+  function mount(fig, def) {
+    var cap = fig.querySelector('figcaption'), screen = document.createElement('div'), bar = document.createElement('div');
+    screen.className = 'screen'; screen.tabIndex = 0; screen.setAttribute('role', 'button'); screen.setAttribute('aria-label', 'Phát hoặc dừng đoạn phim mẫu');
+    bar.className = 'bar';
+    bar.innerHTML = '<button type="button">Phát</button><input type="range" min="0" max="1000" value="0" aria-label="Tua"><span class="voice"><i></i><span>Lời dẫn</span></span><span class="time"></span><button type="button" class="fs">Phóng to</button>';
+    fig.insertBefore(screen, cap); fig.insertBefore(bar, cap);
+    var render = def.build(screen), btn = bar.querySelector('button'), fsb = bar.querySelector('.fs'), scrub = bar.querySelector('input'), voice = bar.querySelector('.voice'), time = bar.querySelector('.time');
+    var t = def.poster, playing = false, last = 0, fresh = true;
+    var sounds = def.sounds.map(function (x) { return { src: x[0], at: x[1], a: null, on: false }; });
+    function draw() {
+      render(t);
+      scrub.value = Math.round(t / def.dur * 1000);
+      time.textContent = t.toFixed(1).replace('.', ',') + ' s';
+      voice.classList.toggle('on', def.voice.some(function (v) { return t >= v[0] && t < v[1]; }));
+    }
+    function quiet() { sounds.forEach(function (x) { if (x.a && x.on) { try { x.a.pause(); } catch (e) {} } x.on = false; }); }
+    function sync() {
+      if (!snd.checked) { quiet(); return; }
+      sounds.forEach(function (x) {
+        var inside = t >= x.at && (!x.a || !x.a.duration || t < x.at + x.a.duration);
+        if (inside && !x.on) {
+          if (!x.a) { x.a = new Audio(x.src); x.a.preload = 'auto'; }
+          try { x.a.currentTime = Math.max(0, t - x.at); } catch (e) {}
+          var pr = x.a.play(); if (pr && pr.catch) pr.catch(function () {});
+          x.on = true;
+        } else if (!inside && x.on) { try { x.a.pause(); } catch (e) {} x.on = false; }
+      });
+    }
+    function frame(now) {
+      if (!playing) return;
+      t += Math.min(0.1, (now - last) / 1000); last = now;
+      if (t >= def.dur) { t = def.dur; playing = false; quiet(); btn.textContent = 'Phát lại'; draw(); return; }
+      sync(); draw(); requestAnimationFrame(frame);
+    }
+    var api = {
+      pause: function () { if (!playing) return; playing = false; quiet(); btn.textContent = 'Phát'; },
+      play: function () {
+        players.forEach(function (p) { if (p !== api) p.pause(); });
+        if (fresh || t >= def.dur - 0.05) t = 0;
+        fresh = false; playing = true; last = performance.now(); btn.textContent = 'Dừng'; requestAnimationFrame(frame);
+      },
+      toggle: function () { if (playing) api.pause(); else api.play(); }
+    };
+    btn.addEventListener('click', api.toggle);
+    fsb.addEventListener('click', function () {
+      var r = screen.requestFullscreen || screen.webkitRequestFullscreen;
+      if (!r) return;
+      try { var pr = r.call(screen); if (pr && pr.catch) pr.catch(function () {}); } catch (e) {}
+    });
+    screen.addEventListener('click', api.toggle);
+    screen.addEventListener('keydown', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); api.toggle(); } });
+    scrub.addEventListener('input', function () { api.pause(); fresh = false; t = scrub.value / 1000 * def.dur; draw(); });
+    players.push(api);
+    draw();
+  }
+
+  document.querySelectorAll('[data-clip]').forEach(function (fig) { var def = CLIPS[fig.getAttribute('data-clip')]; if (def) mount(fig, def); });
+  snd.addEventListener('change', function () {
+    try { localStorage.setItem('d13-sound', snd.checked ? '1' : '0'); } catch (e) {}
+    if (!snd.checked) players.forEach(function (p) { p.pause(); });
+  });
+})();
+</script>

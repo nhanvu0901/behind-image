@@ -343,3 +343,37 @@ export const CAMERA_LABELS = {
   selected: 'đang chọn trên ảnh',
   needSource: 'Bật "Ảnh gốc" để kéo khung camera của kỹ thuật này.',
 };
+// --- idapply: the selector "Kiểu mở đầu và mốc chương" (step 5) and its line in step 6 (identitylogic.js, identitypick.js, views/export.js)
+export const IDENTITY_LABELS = {
+  title: 'Kiểu mở đầu và mốc chương',
+  titleHint: 'Cách video mở đầu, lúc hiện tên kênh và các mốc chương. Đổi xong video đổi ngay; có nút Hoàn tác.',
+  old: 'Kiểu cũ',
+  oldNote: 'Video đang dùng kiểu cũ (thẻ tiêu đề và thẻ chương). Chọn một kiểu để đổi.',
+  loading: 'Đang tải...',
+  busy: 'Đang đổi kiểu...',
+  done: (label, n) => (n ? `Đã đổi sang kiểu "${label}" (${n} chỗ).` : `Video đã ở kiểu "${label}", không có gì phải đổi.`),
+  undo: 'Hoàn tác',
+  undoHint: 'Trả storyboard về như trước khi đổi kiểu.',
+  undone: 'Đã trả về như trước khi đổi kiểu.',
+  undoFail: 'Không hoàn tác được: ',
+  chooseFail: 'Không đổi được kiểu: ',
+  loadFail: 'Không đọc được kiểu mở đầu: ',
+  tookIn: 'Đã đổi kiểu mở đầu và mốc chương.',
+  tookInMerged: 'Đã đổi kiểu và ghép với các sửa chưa lưu của bạn. Hoàn tác không quay lại trước lúc ghép.',
+  tookInFail: 'Không tải được storyboard mới: ',
+  skippedLead: 'Chưa đổi được:',
+  close: 'Đóng',
+  // what a skipped item was, and why (reason codes of PUT /identity)
+  what: { open: 'phần mở đầu', label: 'nhãn tên tác phẩm', brand: 'đoạn hiện tên kênh', mark: 'mốc chương', opening: 'phần mở đầu' },
+  skip: {
+    locked: (what, n) => (n ? `Cảnh ${n} (${what}) đang khóa nên giữ nguyên.` : `Có cảnh đang khóa nên ${what} giữ nguyên.`),
+    no_title_slot: () => 'Video chưa có thẻ tiêu đề nên chưa có đoạn hiện tên kênh.',
+    extra_title: (what, n) => `Cảnh ${n || '?'} là thẻ tiêu đề thứ hai nên giữ nguyên.`,
+    no_title: (what, n) => `Cảnh ${n || '?'} chưa có chữ tiêu đề nên giữ nguyên.`,
+    too_short: (what, n) => `Cảnh ${n || '?'} ngắn quá (dưới 1,5 giây) cho kiểu mới nên giữ nguyên.`,
+    no_room: (what) => `Không có cảnh nào đủ dài (3 giây) cho ${what}.`,
+    no_time: (what, n) => `Không đọc được thời điểm của cảnh ${n || '?'}.`,
+    other: (what, n) => `Một chỗ (${what}) chưa đổi được.`,
+  },
+  export: { label: 'Kiểu mở đầu và mốc chương', old: 'Kiểu cũ (chưa chọn kiểu mới, đổi ở bước Dựng hình)', none: 'Chưa có' },
+};

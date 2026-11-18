@@ -1,6 +1,6 @@
 """R2B-012, permanent form: whatever `validate` accepts without an error, the engine can draw.
 
-For every one of the 71 techniques (taken from its reference configuration in `projects/technique_lab`) and for every
+For every one of the 78 techniques (taken from its reference configuration in `projects/technique_lab`; the seven ID-* ones from `identity_lab.py`) and for every
 parameter of every one of the twelve registry types (number, enum, bool, string, text, color, point, points, lines, box, camera,
 asset), the parameter is replaced one at a time by a set of odd values: wrong but well typed, extreme, empty, degenerate.
 The draft is validated; when validate reports no error the frame in the middle of the item MUST be drawn (no exception, and
@@ -154,6 +154,8 @@ def _locate(sb: dict, tid: str):
 def lab(tmp_path_factory):
     d = tmp_path_factory.mktemp("sweep") / "lab"
     shutil.copytree(LAB, d, ignore=shutil.ignore_patterns("cache", "history"))
+    from identity_lab import add_to_project_dir                       # the lab predates the ID-* family: its COPY gets one item per ID technique
+    add_to_project_dir(d)
     return open_project(d)
 
 

@@ -13,6 +13,9 @@ What it does (design section 7.2), in order:
   6. `validate` and `draw_check` of the engine; every issue is rewritten in the spec's terms (chapter, shot number, field);
   7. with `degrade=True` (the proposal run) a shot that still has an error is replaced by a plain push-in on a picture, an overlay
      with an error is dropped, a chapter with no usable shot is drafted by `auto`; so the document always validates.
+  8. the channel identity: before the check, `bti.identity.apply_identity` turns the title card, the chapter cards and the opening
+     overlays into the style the project chose (`identity.style` of the saved storyboard), else the style's default, so that a new
+     video has its identity with no step by anyone. Edit mode never applies it (it only carries `identity` over).
 
 Shot numbers count from 1 within a chapter's file. Nothing here calls a model.
 """
@@ -24,6 +27,7 @@ import statistics
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from bti import identity as ID
 from bti.engine import registry as R
 from bti.engine import storyboard as SB
 from bti.engine.timing import AnchorError, Timing, norm
@@ -53,6 +57,7 @@ class CompileResult:
     stats: dict = field(default_factory=dict)
     drawn: bool = False
     violations: list = field(default_factory=list)      # edit mode: changes outside the scope (an acceptable result has none)
+    identity: dict | None = None                        # report of the identity style that was applied ({style, changed, skipped}), else None
 
     @property
     def errors(self) -> list:
@@ -91,7 +96,7 @@ def _strings(obj, path=""):
 
 
 class _Compiler:
-    def __init__(self, inp: DraftInputs, specs: dict, regions: dict | None, engine, spec_problems: list):
+    def __init__(self, inp: DraftInputs, specs: dict, regions: dict | None, engine, spec_problems: list, identity: bool = True):
         self.inp = inp
         self.specs = specs or {}
         self.t = inp.timing
@@ -112,6 +117,7 @@ class _Compiler:
         self.cur = self._resolve_current()
         self.cur_by_id = {c["shot"].get("id"): c for c in self.cur}
         self.edit = inp.edit_shots is not None
+        self.identity_cfg = ID.read(self.bundle.style) if identity else None        # None: the old cards stay as they are
         self._counter = max([_num_tail(x) for x in inp.reserved_ids] + [_num_tail(c["shot"].get("id")) for c in self.cur] + [0])
         self.fallback_specs = None
 
@@ -196,7 +202,7 @@ class _Compiler:
                     )
                 )
                 for cc in self.cur:
-                    if D.is_card(self.bundle, cc["shot"]) and prev_end - EPS <= cc["t0"] < first_spoken - EPS:
+                    if self.is_card(cc["shot"]) and prev_end - EPS <= cc["t0"] < first_spoken - EPS:
                         z["kept_cards"].append(cc)
             elif lead and lead["kind"] in ("title", "card", "plain"):
                 # the voice says what the silence before the first word is for: place the cards from it
@@ -412,6 +418,10 @@ class _Compiler:
         last_t = None
         for ss in sorted(spec.get("shots") or [], key=lambda s: (self._t_of(s), s["_n"])):
             n, sw = ss["_n"], ss["start_word"]
+            if self.identity_card_spec(ss):
+                if not self.edit:
+                    self.base_issues.append(S.problem("card_written_by_agent", cid, n, "%s is a chapter mark or title slot of the channel identity: the compiler places those, so this shot was ignored" % ss.get("technique"), field="technique", level="warn"))
+                continue
             b = beats.get(ss["beat"])
             if b is None:
                 other = next((x for x in self.t["beats"] if x["id"] == ss["beat"]), None)
@@ -455,8 +465,24 @@ class _Compiler:
             last_t = t0
         return recs
 
+    def is_card(self, shot: dict) -> bool:
+        """A card of the compiler: `decompile.is_card` (the engine's card kinds and the identity's title slot and chapter marks)."""
+        return D.is_card(self.bundle, shot)
+
+    def identity_card_spec(self, ss: dict) -> bool:
+        """A spec shot that stands for a title slot or chapter mark of the identity the compiler handles itself: in a draft any such
+        shot is ignored (the compiler places the cards); in edit mode a copy of a saved one is (it is carried through as a card), a
+        new one without an id (the owner asked for one) is not."""
+        cfg = self.identity_cfg
+        if cfg is None or not cfg.is_identity_card(ss.get("technique")):
+            return False
+        if not self.edit:
+            return True
+        old = self.cur_by_id.get(ss.get("id")) if ss.get("id") else None
+        return old is not None and self.is_card(old["shot"])
+
     def locked_card_near(self, t: float) -> bool:
-        return any(c["locked"] and D.is_card(self.bundle, c["shot"]) and abs(c["t0"] - t) < 0.75 for c in self.cur)
+        return any(c["locked"] and self.is_card(c["shot"]) and abs(c["t0"] - t) < 0.75 for c in self.cur)
 
     def card_recs(self, zone) -> list:
         out = []
@@ -561,7 +587,7 @@ class _Compiler:
             r_card = r["kind"] in ("card", "title")
             for c in old:
                 oid = c["shot"].get("id")
-                if oid in taken or D.is_card(self.bundle, c["shot"]) != r_card:
+                if oid in taken or self.is_card(c["shot"]) != r_card:
                     continue
                 a, b = c["shot"].get("start") or {}, r["anchor"]
                 dt = abs(c["t0"] - r["t0"])
@@ -670,7 +696,31 @@ class _Compiler:
         for k in ("approvals",):
             if isinstance((self.inp.current or {}).get(k), dict):
                 doc[k] = copy.deepcopy(self.inp.current[k])
+        keep = (self.inp.current or {}).get("identity")
+        if isinstance(keep, dict) and self.identity_cfg is not None:      # the choice belongs to the project: carried over
+            placed = {}
+            for k, v in doc.items():
+                placed[k] = v
+                if k == "style":
+                    placed["identity"] = copy.deepcopy(keep)
+            doc = placed
         return doc, origin, issues
+
+    # ---------------------------------------------------------------- the channel identity
+    def apply_identity(self, doc: dict, origin: list) -> tuple[dict, dict | None]:
+        """The document in the identity style of the project (the saved storyboard's choice, else the style's default).
+        `origin` (one entry per shot) is brought in line with the new techniques and overlays. Not in edit mode."""
+        cfg = self.identity_cfg
+        if self.edit or cfg is None:
+            return doc, None
+        style_id = ID.chosen_style(self.inp.current, self.bundle.style) or cfg.default_style
+        new, report = ID.apply_identity(doc, style_id, self.bundle.style, self.tm, {"title": self.inp.title, "main_asset": self.main},
+                                        defaults=self.bundle.param_defaults)
+        for o, a, b in zip(origin, doc["shots"], new["shots"]):
+            o["technique"] = b.get("technique")
+            before = {ov.get("id"): m for ov, m in zip(a.get("overlays") or [], o["ov_map"])}
+            o["ov_map"] = [before.get(ov.get("id")) for ov in b.get("overlays") or []]
+        return new, report
 
     # ---------------------------------------------------------------- engine issues in spec terms
     def map_issue(self, iss: dict, origin: list) -> dict:
@@ -731,9 +781,10 @@ class _Compiler:
 
 
 def compile_specs(inp: DraftInputs, specs: dict, *, regions: dict | None = None, spec_problems: list | None = None,
-                  degrade: bool = False, draw: bool = True, engine=None, max_passes: int = 4) -> CompileResult:
-    """See the module docstring. `specs` maps chapter id -> a spec that already passed `spec.shape_problems` (its clean form)."""
-    c = _Compiler(inp, specs, regions, engine, spec_problems)
+                  degrade: bool = False, draw: bool = True, engine=None, max_passes: int = 4, identity: bool = True) -> CompileResult:
+    """See the module docstring. `specs` maps chapter id -> a spec that already passed `spec.shape_problems` (its clean form).
+    `identity=False` leaves the old cards (X-CARD-01, X-CARD-02) as the compiler places them: no identity style is applied."""
+    c = _Compiler(inp, specs, regions, engine, spec_problems, identity)
     try:
         return _run(c, degrade, draw, max_passes)
     finally:
@@ -767,6 +818,7 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
     result = None
     for p in range(max_passes + 1):
         doc, origin, build_issues = c.build_doc(recs)
+        doc, identity_report = c.apply_identity(doc, origin)
         mapped: list = []
         errs_engine = c.eng.validate(doc)
         mapped += [c.map_issue(i, origin) for i in errs_engine]
@@ -778,7 +830,7 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
         banned = [S.problem("shorts_only_technique", o["chapter"], o["n"], "%s is reserved for Shorts; choose another technique" % o["technique"], field="technique")
                   for o in origin if o.get("banned")]
         issues = _dedupe(c.base_issues + build_issues + banned + mapped + extra)
-        result = CompileResult(doc, issues, origin, degraded, stats, drawn)
+        result = CompileResult(doc, issues, origin, degraded, stats, drawn, identity=identity_report)
         if not degrade or p == max_passes:
             break
         changed = False

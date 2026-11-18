@@ -49,7 +49,7 @@
    "properties": {
     "id": {
      "type": "string",
-     "pattern": "^([A-Z]+-\\d{2}|X-[A-Z]+-\\d{2})$"
+     "pattern": "^([A-Z]+-\\d{2}|X-[A-Z]+-\\d{2}|ID-[A-Z]+-\\d{2})$"
     },
     "key": {
      "type": "string",

@@ -264,6 +264,18 @@ const BY_ARGS = {
   camera_key_numbers: (i, a) => `${P(a)}: mốc camera thứ ${Number(a.index ?? 0) + 1}: tâm và độ phóng phải là số, độ phóng lớn hơn 0.`,
   camera_key_range: (i, a) => `${P(a)}: mốc camera thứ ${Number(a.index ?? 0) + 1} nằm quá xa (tâm trong khoảng ±${num(a.limit)}, độ phóng tối đa ${num(a.zoom_max)}).`,
   camera_key_anchor: (i, a) => `${P(a)}: thời điểm của mốc camera thứ ${Number(a.index ?? 0) + 1} không xác định được.`,
+  // --- idapply: the channel identity of the storyboard (the selector "Kiểu mở đầu và mốc chương" of step 5)
+  identity_style_unknown: () => 'kiểu mở đầu và mốc chương của video không hợp lệ. Hãy chọn lại ở ô "Kiểu mở đầu và mốc chương" của bước Dựng hình.',
+  element_too_short: (i, a) => {
+    const t = String(a.technique || ''), vn = (x) => num(x).replace('.', ',');
+    const what = /^ID-OPEN-/.test(t) ? 'phần mở đầu' : /^ID-LABEL-/.test(t) ? 'nhãn tên tác phẩm' : /^ID-BRAND-/.test(t) ? 'đoạn hiện tên kênh' : /^ID-MARK-/.test(t) ? 'mốc chương' : 'phần này của kiểu mở đầu';
+    const need = a.min != null ? `${vn(a.min)} giây` : 'đủ lâu', has = a.got != null ? ` (hiện chỉ ${vn(a.got)} giây)` : '';
+    return `${what} cần dài ít nhất ${need}${has}. Kéo dài nó, hoặc bỏ nó đi.`;
+  },
+  identity_technique_mismatch: () => 'chưa theo kiểu mở đầu và mốc chương đã chọn cho video (còn là thẻ tiêu đề hoặc thẻ chương kiểu khác). Chọn lại kiểu để đổi một lượt; nếu shot đang khóa thì mở khóa trước.',
+  // --- sizefollow: a picture recorded with a size that is not the size of its stored file (the warning has no shot: the sentence stands alone).
+  // No advice to re-draft: a re-draft keeps the saved storyboard's own asset size today (tests/draft/test_size_follow.py says so).
+  asset_size_mismatch: (i, a) => `Hình ${q(a.asset ?? assetKey(i))} được ghi là ${num(a.width)} x ${num(a.height)} nhưng tệp đã lưu là ${num(a.stored_width)} x ${num(a.stored_height)}, nên khung hình sẽ lệch.`,
 };
 /** Codes of the table: the unit test compares them with ISSUE_CODES. */
 export const TEMPLATE_CODES = Object.keys(BY_ARGS);

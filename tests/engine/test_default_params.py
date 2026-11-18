@@ -81,7 +81,7 @@ def test_registry_file_is_valid_and_consistent():
     schema = json.loads((REPO / "style/gae/techniques.schema.json").read_text())
     reg = json.loads((REPO / "style/gae/techniques.json").read_text())
     jsonschema.validate(reg, schema)
-    assert len(reg["techniques"]) == 71
+    assert len(reg["techniques"]) == 78
     assert all("available" in t["engine"] for t in reg["techniques"])
     b = R.load_bundle("gae")
     from bti.engine import techniques  # noqa: F401
@@ -95,7 +95,7 @@ def test_registry_file_is_valid_and_consistent():
 
 def test_load_style_shape():
     s = load_style("gae")
-    assert set(s) == {"style", "techniques", "intents"} and len(s["techniques"]) == 71 and "point_at" in s["intents"]
+    assert set(s) == {"style", "techniques", "intents"} and len(s["techniques"]) == 78 and "point_at" in s["intents"]
 
 
 def test_ring_default_radius_is_relative_to_the_visible_frame(arnolfini):

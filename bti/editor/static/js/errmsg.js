@@ -85,6 +85,10 @@ const CATALOG = [
   [/a preview is limited|width must be|bins must be|w must be|t out of range|t must be a number|t0 and t1|t1 must be|width and fps/i, 'Thông số xem thử không hợp lệ.'],
   [/regions .* required|needs numeric x and y|source and source_id are required|\(object\) is required|storyboard must be an object/i, 'Dữ liệu gửi lên thiếu hoặc không đúng dạng.'],
   [/^not found$/i, 'Không tìm thấy mục này.'],
+  /* worker idapply: PUT /api/projects/{pid}/identity */
+  [/unknown identity style/i, 'Kiểu mở đầu này không có trong danh sách. Hãy chọn lại ở ô "Kiểu mở đầu và mốc chương".'],
+  [/style \(string\) is required/i, 'Chưa chọn kiểu mở đầu và mốc chương.'],
+  [/no `?identity`? block|identity styles/i, 'Kiểu dựng của video này chưa có các kiểu mở đầu và mốc chương.'],
 ];
 
 function opError(raw) {
@@ -301,7 +305,15 @@ const BY_CODE_HTTP = {
   render_failed: (b) => renderFailText(b),
   /* worker dscript */
   at_least_one_source: () => 'Phải giữ lại ít nhất một nguồn sách.',
+  /* worker mediafix */
+  source_rate_limited: (b) => sourceLimitText(b),
 };
+/* worker mediafix: a picture source answered "too many requests". `b` is the error body or a search error entry
+   ({code: 'source_rate_limited', retry_after: seconds | null}); the time is rounded UP to whole minutes, and left out when the source gave none. */
+export function sourceLimitText(b) {
+  const s = Number(b?.retry_after);
+  return Number.isFinite(s) && s > 0 ? `Nguồn ảnh đang giới hạn lượt tải. Thử lại sau khoảng ${Math.max(1, Math.ceil(s / 60))} phút.` : 'Nguồn ảnh đang giới hạn lượt tải. Thử lại sau.';
+}
 /** "Không dựng được shot s0012 (CAM-01): ..." from the 422 `render_failed` body ({shot, overlay, technique}). */
 export function renderFailText(b) {
   const where = b?.shot ? `shot ${b.shot}${b.overlay ? `, lớp phủ ${b.overlay}` : ''}` : 'một shot';

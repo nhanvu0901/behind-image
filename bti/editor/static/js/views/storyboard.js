@@ -9,7 +9,7 @@ import { h, toast, errorToast, modal, debounce, fmtTime, setStatus, ask, confirm
 import { stripDerived } from '../logic.js';
 import { mergeStoryboard, mergedNote } from '../sbmerge.js';
 import { jobFailText } from '../errmsg.js';
-import { EDIT_LABELS } from '../labels.js';
+import { EDIT_LABELS, IDENTITY_LABELS } from '../labels.js';
 import { initPreview, requestFrame } from '../preview.js';
 import { initTimeline, seek, ensureVisible, fitView, zoomToShowWords } from '../timeline.js';
 import { initInspector, setTab } from '../inspector.js';
@@ -17,6 +17,7 @@ import { openGallery } from '../gallery.js';
 import { openProposals } from '../proposals.js';
 import { mountDraftPanel } from '../draftpanel.js';
 import { mountPromptEdit } from '../promptedit.js';
+import { mountIdentityPick } from '../identitypick.js';
 import * as A from '../actions.js';
 import { shotIndexAt, wordIndexAt, clone } from '../logic.js';
 import * as E from '../edit.js';
@@ -54,6 +55,7 @@ const HTML = `
         <label class="chk"><input type="checkbox" id="view-regions"> Hiện vùng (region)</label>
         <span class="muted" id="map-note"></span>
         <span class="grow"></span>
+        <span id="identity-container"></span>
         <span class="muted" id="frame-state"></span>
       </div>
       <div id="stage"><div id="stage-box"><canvas id="frame"></canvas><svg id="handles"></svg></div></div>
@@ -143,6 +145,8 @@ export async function mount(host, mctx) {
   if (promptBox) {
     mountPromptEdit(promptBox, { pid: ctx.pid, scope, takeIn: takeInTurn, onPreview: ({ t0, t1 }) => previewClip(t0, t1) });
   }
+  const identityBox = $('#identity-container');          // "Kiểu mở đầu và mốc chương": changes the saved storyboard on the server, then it is taken in like a turn of the prompt box
+  if (identityBox) mountIdentityPick(identityBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: IDENTITY_LABELS.tookInMerged, fail: IDENTITY_LABELS.tookInFail }) });
   applyUrlParams();
   window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api };
   return view;
@@ -356,9 +360,10 @@ async function validateNow() {
 
 /** A turn of "Sửa video bằng lời" changed the saved storyboard (applied, chosen, undone): the editor takes the new one in.
  *  No unsaved edits: reload and keep the selection and the playhead. Unsaved edits: the same rebase merge as with another tab (fresh undo history). */
-async function takeInTurn() {
+async function takeInTurn(_turn, texts = null) {
+  const T = { ok: EDIT_LABELS.tookIn, merged: EDIT_LABELS.tookInMerged, fail: EDIT_LABELS.tookInFail, ...(texts || {}) };      // `ok: ''`: no toast when nothing was unsaved (the caller says it itself)
   let theirs;
-  try { theirs = await api.project(ctx.pid); } catch (e) { errorToast(e, EDIT_LABELS.tookInFail); return; }
+  try { theirs = await api.project(ctx.pid); } catch (e) { errorToast(e, T.fail); return; }
   if (!st.dirty) {
     const sel = st.sel.shot, ov = st.sel.overlay, t = ctx.t;
     st.load(theirs.storyboard, theirs.timing, theirs.rev);
@@ -367,19 +372,19 @@ async function takeInTurn() {
     st.select(keep ? sel : (st.draft.shots[0]?.id || null), keep && ov && (keep.overlays || []).some((o) => o.id === ov) ? ov : null);
     seek(t);
     refreshProposalCount(); updateTop(); shell.refreshPipeline();
-    toast(EDIT_LABELS.tookIn, 'ok', 3500);
+    if (T.ok) toast(T.ok, 'ok', 3500);
     return;
   }
   const base = JSON.parse(st.savedSnap || '{}'), mine = JSON.parse(st.snap()), m = mergeStoryboard(base, mine, JSON.parse(snapOfBoard(theirs.storyboard)));
   let bad = m.status === 'conflict';
   if (!bad) {
     try { bad = ((await api.validate(ctx.pid, m.value)).issues || []).some((i) => i.level === 'error'); }
-    catch (e) { errorToast(e, EDIT_LABELS.tookInFail, 7000); return; }
+    catch (e) { errorToast(e, T.fail, 7000); return; }
   }
   if (bad) { await conflictDialog(theirs, 2); return; }
   st.rebase(m.value, theirs.storyboard, theirs.rev, undefined, { fresh: true });
   setIssues(theirs.issues || []); validateSoon(); shell.refreshPipeline();
-  toast(EDIT_LABELS.tookInMerged, 'ok', 7000);
+  toast(T.merged, 'ok', 7000);
 }
 
 function applied(res) {

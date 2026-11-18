@@ -43,7 +43,8 @@ projects/*/audio/
 projects/*/cache/
 projects/*/history/
 
-# Keep the small technique previews (jpg thumbnails); clips are covered by *.mp4 above
+# Keep the technique previews: the thumbnails (jpg) and the clips (mp4, a few hundred KB each). The server gets them by `git pull`.
+!style/gae/previews/*.mp4
 
 # Other agents' benchmark outputs (not part of the pipeline)
 demo_runs/antigravity/

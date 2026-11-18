@@ -185,11 +185,14 @@ def test_regions(client):
     j = import_(client, PD_ID, as_main=True).json()
     key = j["asset_key"]
     url = client.u(f"/assets/{key}/regions")
-    ok = {"MIRROR": {"x": 2210, "y": 1730, "rx": 160, "ry": 160, "label": "Gương"}}
+    # CHANGED (the stored size rule): regions are in the pixels of the stored file (the fake download is 1300 x 1250), not of the
+    # original that Commons describes (4386 x 6000): (2210, 1730) used to be accepted only because of that wrong declared size
+    ok = {"MIRROR": {"x": 650, "y": 620, "rx": 160, "ry": 160, "label": "Gương"}}
     r = client.put(url, json={"regions": ok, "base_rev": j["rev"]})
     assert r.status_code == 200 and r.json()["picks"]["assets"][key]["regions"]["MIRROR"]["rx"] == 160
     assert client.put(url, json={"regions": ok, "base_rev": j["rev"]}).json()["code"] == "stale"
     assert client.put(url, json={"regions": {"A": {"x": 99999, "y": 1}}}).json()["code"] == "region_outside"
+    assert client.put(url, json={"regions": {"A": {"x": 2210, "y": 1730}}}).json()["code"] == "region_outside"      # inside the original, outside the file
     assert client.put(url, json={"regions": {"bad/name": {"x": 1, "y": 1}}}).json()["code"] == "region_name"
     assert client.put(url, json={"regions": {"A": {"x": "1", "y": 1}}}).json()["code"] == "region_shape"
     assert client.put(url, json={"regions": []}).status_code == 422
