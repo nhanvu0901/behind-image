@@ -51,6 +51,8 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 .issue .msg { flex: 1; min-width: 0; } .issue .path { font-size: 11px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
 .empty { color: var(--muted); padding: 24px 8px; text-align: center; }
 .kf { padding: 6px; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; background: #121620; }
+.kf.kf-sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); background: #16213a; }
+.kf .kf-tag { color: var(--accent); font-size: 11px; margin-left: 6px; font-weight: 400; }
 .kf .row { margin-bottom: 4px; } .kf .row > label { width: 54px; }
 .kf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
 .kf-grid label { color: var(--muted); font-size: 11px; display: block; }
@@ -78,6 +80,17 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 #handles .klab { stroke: none; paint-order: normal; font-size: 10px; }
 #handles .rname { font-size: 10px; fill: rgba(255,255,255,.8); }
 #handles.picking { cursor: crosshair; }
+/* camera frames (d-camera): one handler on the svg picks among them (camgeom.js hitTest), so the drawn parts never take the pointer */
+#handles { touch-action: none; }
+#handles .cframe { fill: rgba(79, 156, 255, .05); stroke-width: 1.5; stroke-dasharray: 5 3; vector-effect: non-scaling-stroke; pointer-events: none; }
+#handles .cframe.sel { fill: rgba(255, 255, 255, .08); stroke-width: 3; stroke-dasharray: none; }
+#handles .ctag text, #handles .ctag rect { pointer-events: none; }
+#handles .ctag.sel text { fill: #000; stroke: none; font-weight: 700; }
+#handles .kbg.sel { fill: rgba(30, 60, 110, .9); stroke: #fff; stroke-width: 1; }
+#handles .klab.sel { font-weight: 700; }
+#handles .hknob.ck { pointer-events: none; }
+.cam-pick select { margin-left: 4px; }
+.cam-pick[hidden] { display: none; }
 
 .gallery { width: min(1280px, 96vw); height: 88vh; }
 .gal-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--border); }

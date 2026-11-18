@@ -333,3 +333,13 @@ export const SETTINGS_LABELS = {
     'edit.fast': 'Sửa nhanh bằng lời', 'edit.deep': 'Sửa sâu bằng lời (agent)', picks: 'Chọn hình (để dành)',
   },
 };
+// --- d-camera: camera frames on the source view ("Ảnh gốc") and the selected key in the form (preview.js, formui.js)
+export const CAMERA_LABELS = {
+  undo: 'Kéo khung camera',
+  pick: 'Camera:',
+  pickHint: 'Camera đang vẽ trên ảnh gốc (kỹ thuật này có nhiều camera, mỗi camera nhìn một ảnh)',
+  key: (i, zoom) => `K${i + 1}  zoom ${zoom}`,
+  keyHint: 'Kéo trong khung để dời tâm, kéo góc để đổi zoom. Bấm vào khung để chọn khóa.',
+  selected: 'đang chọn trên ảnh',
+  needSource: 'Bật "Ảnh gốc" để kéo khung camera của kỹ thuật này.',
+};

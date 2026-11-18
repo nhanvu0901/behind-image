@@ -306,10 +306,21 @@ Bước này để xem và sửa `storyboard.json` của một video: shot, lớ
 ### Các khu vực
 
 - **Thanh công cụ của bước**: Lưu, Kiểm tra (số lỗi/cảnh báo), Hoàn tác, Làm lại, Đề xuất, Duyệt (và trạng thái duyệt), Xem thử 10 giây. Khi bản lưu đã được duyệt, nút **Tiếp tục** ở góc phải mở bước kế tiếp.
-- **Khung xem trước (trái trên)**: ảnh thật tại vị trí đầu phát. Các khung màu K1, K2... là khóa camera của shot, kéo để đổi `cx, cy`; kéo núm vuông ở góc để đổi zoom. Khi chọn lớp phủ (hoặc shot) có tham số điểm/khung, kéo chấm vàng để dời, kéo núm để đổi bán kính hoặc kích thước. Ô "Ảnh gốc" cho xem toàn ảnh để kéo khung dễ hơn. Ô "Hiện vùng" hiện tên các vùng (region) của hình. Khung xem trước luôn là khung **tại đầu phát**: chọn một shot hoặc lớp phủ (trên timeline, trong danh sách, hoặc bấm một lỗi) thì đầu phát tự vào trong mục đó, để ảnh và tay cầm cùng một thời điểm.
+- **Khung xem trước (trái trên)**: ảnh thật tại vị trí đầu phát. Các khung màu K1, K2... là khóa camera của shot (cách kéo ở mục "Kéo khung camera" ngay dưới). Khi chọn lớp phủ (hoặc shot) có tham số điểm/khung, kéo chấm vàng để dời, kéo núm để đổi bán kính hoặc kích thước. Ô "Ảnh gốc" cho xem toàn ảnh để kéo khung dễ hơn. Ô "Hiện vùng" hiện tên các vùng (region) của hình. Khung xem trước luôn là khung **tại đầu phát**: chọn một shot hoặc lớp phủ (trên timeline, trong danh sách, hoặc bấm một lỗi) thì đầu phát tự vào trong mục đó, để ảnh và tay cầm cùng một thời điểm.
 
 **Mỗi tham số điểm/khung sống trong đúng một hệ tọa độ**, ghi bên cạnh ô nhập: *px ảnh nguồn* (điểm trên ảnh gốc, qua camera, có thể là tên vùng), *px khung hình* (1920 x 1080), hoặc *tỉ lệ khung* (0 đến 1). Tay cầm được vẽ và ghi đúng hệ đó. Tham số mà xem trước không vẽ được (ví dụ `to_quad`) chỉ có ô số. Shot không có camera vẫn có tay cầm cho tham số theo px khung hình; tham số theo px ảnh nguồn của shot đó dùng ô số hoặc bật "Ảnh gốc". "Chọn trên ảnh" trả giá trị theo hệ của ô (tên vùng chỉ khi hệ là ảnh nguồn; Shift = luôn lấy x, y).
 - **Thanh phát**: shot trước/sau, phát/dừng, thời gian, từ đang đọc.
+
+### Kéo khung camera (bước Dựng hình, ô "Ảnh gốc")
+
+Mỗi khóa camera của shot là một khung trên ảnh gốc, **đúng phần ảnh mà camera nhìn thấy ở khóa đó**, có số (K1, K2...) và bảng ghi số cùng zoom ở góc trên trái. Kích thước khung = ô hiển thị chia cho zoom (zoom 2 thì khung bằng nửa ô), nên khung nhỏ là cận cảnh, khung lớn là xa. Khung luôn có tỉ lệ của ô mà camera nhìn qua: 16:9 với camera phủ cả khung hình, còn kỹ thuật bố cục thì là ô của nó (ví dụ LAY-01 mặc định 900 x 740, CMP-03 là 610 x 900), lấy từ chính tham số của shot (`panel_w_px`, `panel_h_px`...). Làm được với mọi kỹ thuật có tham số camera và với số khóa bất kỳ.
+- **Chọn**: bấm vào một khung. Khóa đó được tô đậm trên ảnh và khối "Khóa N" ở biểu mẫu bên phải sáng lên (có chữ "đang chọn trên ảnh") và tự cuộn tới. Ngược lại, bấm hoặc gõ vào khối của một khóa ở biểu mẫu thì khung của khóa đó được chọn trên ảnh.
+- **Dời tâm**: kéo bên trong khung. Khóa chưa chọn được chọn và kéo luôn trong một lần.
+- **Đổi zoom**: kéo một trong bốn núm vuông ở góc của khung đang chọn. Tâm giữ nguyên, khung giữ tỉ lệ; kéo ra xa thì zoom giảm, kéo vào thì zoom tăng. Kéo chéo theo đường chéo thì góc đi theo con trỏ.
+- **Giới hạn**: tâm không ra khỏi ảnh (khóa nào đã nằm ngoài ảnh thì không bị kéo ngược vào); zoom từ 0,01 đến 1000, tâm trong ±1.000.000, đúng giới hạn của ô nhập và của phần kiểm tra storyboard.
+- **Nhiều khung chồng nhau**: núm của khóa đang chọn luôn được ưu tiên; ở chỗ khác, khung nhỏ nhất dưới con trỏ được chọn, nên khung nhỏ nằm trong khung lớn vẫn bấm được. Các khóa giống hệt nhau (camera đứng yên lúc đầu) vẽ chồng đúng lên nhau: kéo thì dời khóa đang chọn, bấm không kéo thì chuyển sang khóa kế trong chồng.
+- **Kỹ thuật có nhiều camera** (LAY-01 `camera_left`/`camera_right`, LAY-02, LAY-07, CAM-02, CMP-02...): mỗi camera nhìn một ảnh khác nhau, nên ô "Camera:" cạnh "Ảnh gốc" chọn camera đang vẽ và ảnh gốc đổi theo ảnh của camera đó. Ở chế độ khung hình (không bật "Ảnh gốc") chỉ camera phủ cả khung hình được vẽ khung; camera của một ô thì trang nhắc bật "Ảnh gốc".
+- **Hoàn tác**: một lần kéo là **một** bước hoàn tác (kể cả khi dừng tay giữa chừng), ô số cập nhật theo, và storyboard được đánh dấu đã sửa như khi gõ số. Trong lúc kéo, trang không gọi máy chủ; chế độ khung hình dựng lại ảnh thật khi thả chuột.
 - **Bảng bên phải**: tab *Shot* (kỹ thuật, slot hình, thời điểm bắt đầu, tham số, chuyển cảnh, khóa, ghi chú), *Lớp phủ* (danh sách, và cho lớp phủ đang chọn: kỹ thuật, **slot hình của lớp phủ**, thời điểm, tham số), *Hình* (hình của dự án, vùng, tìm kiếm Commons/The Met, tải lên), *Lỗi*.
 
 **Slot hình chỉ nhận hình đúng loại**: ảnh, video và mặt nạ (mask) là ba loại khác nhau. Bấm "Chọn" ở một slot thì tab *Hình* chỉ hiện hình loại đó. Đổi kỹ thuật không bao giờ đặt bức tranh vào slot video hay mask: các slot ấy để trống. Lớp phủ có slot riêng như shot (ví dụ HI-03 cần `mask`); `image` của lớp phủ mặc định là hình của shot ("theo shot"), bấm "Bỏ" để quay lại như vậy.
@@ -401,7 +412,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 
 ### Chưa có
 
-- Camera của kỹ thuật có nhiều camera (ví dụ `camera_left`/`camera_right` của LAY-01) chỉ sửa được bằng ô số, chưa kéo khung được.
+- Khung camera chỉ có núm ở bốn góc của khóa đang chọn (không có núm ở cạnh); khung to hơn phần ảnh hiển thị bị cắt ở mép khung xem trước, và ảnh gốc tự thu nhỏ khi mở camera đó để chứa hết các khung.
 - Chỉ Wikimedia Commons và The Met (chưa có AIC, Rijksmuseum, Europeana).
 - Cả 71 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 60 `done`, 11 `partial` ở chip "Engine"). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
 - Chưa có chỉnh âm thanh trong trình biên tập (giọng đọc và tốc độ nằm ở bước 3; bản cuối ở bước 6).

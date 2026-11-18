@@ -1,12 +1,16 @@
 // Preview pane: engine still (POST /frame with the draft), draggable camera boxes and overlay handles.
 import { api } from './api.js';
 import { ctx, bus, primaryAsset } from './ctx.js';
-import { $, svg, debounce, fmtTime } from './util.js';
+import { $, h, svg, debounce, fmtTime } from './util.js';
 import { describeError, renderFailText } from './errmsg.js';
 import { DEBOUNCE_MS, MOCK } from './config.js';
-import { cameraLists, cameraAt, engineFitCamera, cameraToBox, boxToCamera, fixAspect, fitCamera, round, shotIndexAt, clone } from './logic.js';
+import { cameraLists, cameraAt, engineFitCamera, round, shotIndexAt, clone } from './logic.js';
 import { makeSpaces, dragPoint, boxToRect, paramSpace, splitSpace, resolvePoint, pickValue } from './coords.js';
-import { setParam, commitShot } from './actions.js';
+import { setParam } from './actions.js';
+import * as E from './edit.js';
+import * as G from './camgeom.js';
+import { camSel, setCamSel } from './camsel.js';
+import { CAMERA_LABELS } from './labels.js';
 import { paintAsset } from './placeholder.js';
 
 // DOM is looked up when the view is mounted (initPreview), never at import time: the module outlives the view.
@@ -17,6 +21,9 @@ let frozen = null; // mapping frozen during a drag
 let srcImg = null, srcImgKey = '';
 let lastReq = 0;
 let frameFail = null;   // {shot, text}: the frame at the playhead could not be drawn; nothing stale is shown meanwhile (R3U-004)
+let dragging = false;   // a camera-frame drag is going on: the picture is not asked from the server for every mouse move
+let camFrozenS = null;  // the spaces of the camera frames when the drag began (the mapping must not move under the pointer)
+let dragSeq = 0, viewCache = { sig: '', cam: null }, camPickEl = null;
 
 function fit() {
   const aw = stage.clientWidth - 16, ah = stage.clientHeight - 16;
@@ -120,14 +127,18 @@ function sourceImage(key, asset) {
 function currentMapping() {
   const shot = playheadShot();
   if (!shot) return null;
-  const pa = primaryAsset(shot);
+  const pa0 = primaryAsset(shot);
   const canvas = ctx.canvasDims(), view = { W, H };
-  const mk = (cam, canvasOk, mode) => ({ S: makeSpaces({ canvas, view, cam, canvasOk }), pa, shot, mode });
-  if (sourceChk.checked) return mk(pa ? fitCamera(pa.asset, canvas) : null, false, 'source');   // the picture shown is the source image, not the frame
+  const mk = (cam, canvasOk, mode, pa = pa0) => ({ S: makeSpaces({ canvas, view, cam, canvasOk }), pa, shot, mode });
+  if (sourceChk.checked) {   // the picture shown is the source image, not the frame: the picture of the camera being edited, else the shot's first picture
+    const cs = camState(shot);
+    const pa = cs.set ? { key: cs.set.assetKey, asset: cs.set.asset } : pa0;
+    return mk(pa ? sourceCam(shot, cs.set, pa, canvas) : null, false, 'source', pa);
+  }
   const keys = mainCamera(shot);
-  if (keys && pa) return mk(cameraAt(keys, ctx.t) || keys[0], true, 'camera');
+  if (keys && pa0) return mk(cameraAt(keys, ctx.t) || keys[0], true, 'camera');
   // a camera technique without a camera key: the engine shows the whole image at 95.5 % of the frame height
-  if (pa && ctx.tech(shot.technique)?.params.some((p) => p.type === 'camera')) return mk(engineFitCamera(pa.asset, canvas), true, 'static');
+  if (pa0 && ctx.tech(shot.technique)?.params.some((p) => p.type === 'camera')) return mk(engineFitCamera(pa0.asset, canvas), true, 'static');
   return mk(null, true, 'none');
 }
 const mainCamera = (shot) => (cameraLists(shot.params).find((l) => l.name === 'camera') || {}).keys || null;
@@ -143,7 +154,7 @@ function drawBase() {
   if (sourceChk.checked) {
     const cm = currentMapping();
     if (!cm?.pa) { c.fillStyle = '#8a93a6'; c.font = '14px sans-serif'; c.fillText('Shot này không có ảnh nguồn', 20, 30); return; }
-    const canvas = ctx.canvasDims(), cam = fitCamera(cm.pa.asset, canvas);
+    const canvas = ctx.canvasDims(), cam = cm.S.cam;
     const img = sourceImage(cm.pa.key, cm.pa.asset);
     if (img && img.complete && img.naturalWidth) {
       const [x0, y0] = cm.S.sourceToScreen(0, 0), k = cm.S.scale('source')[0];
@@ -161,6 +172,7 @@ function drawBase() {
 const COLORS = ['#4f9cff', '#f4b400', '#3ecf8e'];
 function drawHandles() {
   svgEl.replaceChildren();
+  syncCamPick(null);
   const d = ctx.store.draft;
   svgEl.classList.toggle('picking', !!ctx.pick);
   const note = $('#map-note');
@@ -184,44 +196,138 @@ function drawHandles() {
   if (wantRegions && asset && S.has('source')) for (const [name, r] of Object.entries(asset.regions || {})) {
     const [sx, sy] = S.sourceToScreen(r.x, r.y);
     const rrx = r.rx ?? 60, rry = r.ry ?? 60;   // a region may be only a point
-    svgEl.append(svg('ellipse', { cx: sx, cy: sy, rx: rrx * k, ry: rry * k, fill: 'none', stroke: 'rgba(255,255,255,.35)', 'stroke-dasharray': '3 4' }));
+    svgEl.append(svg('ellipse', { cx: sx, cy: sy, rx: rrx * k, ry: rry * k, fill: 'none', stroke: 'rgba(255,255,255,.35)', 'stroke-dasharray': '3 4', style: 'pointer-events:none' }));
     if (ctx.pick || regionsChk.checked) { const t = svg('text', { x: sx + 4, y: sy - rry * k - 4, class: 'rname' }); t.textContent = name; svgEl.append(t); }
   }
-  // camera boxes of the selected shot (source space)
-  const keys = mainCamera(shot);
-  if (keys && S.has('source')) keys.forEach((kk, i) => {
-    const b = cameraToBox(kk, canvas);
-    const [x, y] = S.sourceToScreen(b.x, b.y);
-    const w = b.w * k, hgt = b.h * k;
-    const col = i === 0 ? COLORS[0] : i === keys.length - 1 ? COLORS[2] : COLORS[1];
-    const r = svg('rect', { x, y, width: w, height: hgt, class: 'hbox' + (i === keys.length - 1 ? ' end' : ''), style: `stroke:${col}` });
-    const label = svg('g', { class: 'kleg' });   // legend in the top-left corner: never collides with region names
-    label.append(svg('rect', { x: 6, y: 6 + i * 17, width: 96, height: 15, rx: 3, class: 'kbg' }), svg('rect', { x: 9, y: 9 + i * 17, width: 9, height: 9, fill: col }));
-    const lt = svg('text', { x: 22, y: 17 + i * 17, class: 'klab' }); lt.textContent = `K${i + 1}  zoom ${round(kk.zoom, 3)}`; label.append(lt);
-    const knob = svg('rect', { x: x + w - 7, y: y + hgt - 7, width: 14, height: 14, class: 'hknob' });
-    svgEl.append(r, label, knob);
-    dragger(r, (ev0) => ({ start: clone(kk), ev0 }), (st, dx, dy) => {
-      setCam(shot.id, i, { ...st.start, cx: st.start.cx + dx / k, cy: st.start.cy + dy / k });
-    });
-    dragger(knob, (ev0) => ({ start: clone(kk), ev0 }), (st, dx) => {
-      const b0 = cameraToBox(st.start, canvas);
-      let nb = fixAspect({ x: b0.x, y: b0.y, w: Math.max(40, b0.w + dx / k), h: b0.h }, canvas);
-      nb = { ...nb, y: b0.y };
-      const c = boxToCamera(nb, canvas);
-      setCam(shot.id, i, { ...st.start, ...c });
-    });
-  });
+  // camera frames of the selected shot: what each key sees (camgeom.js), through the spaces of the view
+  const cv = camView(cm);
+  syncCamPick(cv?.cs);
+  if (cv?.rects) drawCameraFrames(cv);
+  else if (cv?.cs.set && !note.textContent) note.textContent = CAMERA_LABELS.needSource;
   // handles of the selected overlay, else of the shot
   const ov = ctx.store.overlay;
   if (ov) itemHandles(ov, 'overlay', M, shot);
   else itemHandles(shot, 'shot', M, shot);
 }
 
-function setCam(shotId, i, k) {
-  frozenKeep();
-  commitShot('Kéo khung camera', shotId, (s) => {
-    s.params.camera[i] = { ...s.params.camera[i], cx: round(k.cx, 1), cy: round(k.cy, 1), zoom: round(k.zoom, 4) };
-  }, 'cam' + i);
+// ---- camera frames (D22)
+// The cameras of the shot under the playhead that can be drawn, and which key of which camera is selected (camsel.js).
+function camState(shot) {
+  const sets = shot ? G.cameraSets(ctx.tech(shot.technique), shot, ctx.store.draft.assets, ctx.canvasDims()) : [];
+  const sel = G.resolveSelection(camSel(), shot?.id, sets);
+  return { sets, sel, set: sets.find((x) => x.name === sel.param) || null };
+}
+/** The "Ảnh gốc" view of the camera being edited: the picture, zoomed out only as far as its frames need. It is kept while the same
+ * camera stays open, so the picture does not change size under a drag or under a number typed in the form. */
+function sourceCam(shot, set, pa, canvas) {
+  const sig = [shot.id, set?.name, pa.key, set?.keys.length, canvas.w, canvas.h].join('|');
+  if (viewCache.sig !== sig) viewCache = { sig, cam: G.sourceViewCamera(pa.asset, canvas, set ? set.keys.map((k) => G.keyToRect(k, set.panel)) : []) };
+  return viewCache.cam;
+}
+/** Spaces of the frames: the source view itself; in the frame view only a camera whose panel is the whole frame (through the camera at the playhead). */
+function camSpaces(cm, set) {
+  if (!set) return null;
+  if (cm.mode === 'source') return cm.S;
+  const canvas = ctx.canvasDims();
+  if (set.panel.w !== canvas.w || set.panel.h !== canvas.h) return null;
+  return makeSpaces({ canvas, view: { W, H }, cam: cameraAt(set.keys, ctx.t) || set.keys[0], canvasOk: true });
+}
+/** Everything the frames need now: {cs, S, ks, rects (screen px, one per key)}; rects is missing when nothing can be drawn. */
+function camView(cm) {
+  if (!cm || failHere()) return null;
+  const sel = ctx.store.sel;
+  if (sel.shot && sel.shot !== cm.shot.id) return null;
+  const cs = camState(cm.shot);
+  const S = camFrozenS || camSpaces(cm, cs.set);
+  if (!cs.set || !S) return { cs };
+  const [ks] = S.scale('source');
+  const rects = cs.set.keys.map((k) => { const r = G.keyToRect(k, cs.set.panel); const [x, y] = S.sourceToScreen(r.x, r.y); return { x, y, w: r.w * ks, h: r.h * ks }; });
+  return { cs, S, ks, rects, shot: cm.shot, set: cs.set };
+}
+const KCOL = (i, n) => (i === 0 ? COLORS[0] : i === n - 1 ? COLORS[2] : COLORS[1]);
+function drawCameraFrames({ cs, rects, set }) {
+  const cur = camSel();
+  if (cur.shot !== cs.sel.shot || cur.param !== cs.sel.param || cur.index !== cs.sel.index) setCamSel(cs.sel.shot, cs.sel.param, cs.sel.index, 'preview');
+  const n = rects.length, si = cs.sel.index;
+  const legend = svg('g', { class: 'kleg' });
+  const order = rects.map((_, i) => i).filter((i) => i !== si).concat(si);                // the selected frame is drawn last, on top
+  for (const i of order) {
+    const r = rects[i], col = KCOL(i, n), isSel = i === si;
+    svgEl.append(svg('rect', { x: r.x, y: r.y, width: r.w, height: r.h, class: 'cframe' + (isSel ? ' sel' : ''), 'data-k': i + 1, style: `stroke:${col}` }));
+    const tx = Math.min(Math.max(r.x + 3, 2), W - 30), ty = Math.min(Math.max(r.y + 3, 2), H - 16);
+    const tag = svg('g', { class: 'ctag' + (isSel ? ' sel' : ''), 'data-k': i + 1 });
+    tag.append(svg('rect', { x: tx, y: ty, width: 8 + String(i + 1).length * 7 + 5, height: 14, rx: 3, style: `fill:${isSel ? col : 'rgba(0,0,0,.7)'}` }));
+    const tt = svg('text', { x: tx + 4, y: ty + 11, class: 'klab' }); tt.textContent = 'K' + (i + 1); tag.append(tt);
+    svgEl.append(tag);
+  }
+  if (n <= 10) rects.forEach((_, i) => {                                                    // legend in the top-left corner: number and zoom of every key
+    const col = KCOL(i, n);
+    legend.append(svg('rect', { x: 6, y: 6 + i * 17, width: 96, height: 15, rx: 3, class: 'kbg' + (i === si ? ' sel' : '') }), svg('rect', { x: 9, y: 9 + i * 17, width: 9, height: 9, fill: col }));
+    const lt = svg('text', { x: 22, y: 17 + i * 17, class: 'klab' + (i === si ? ' sel' : '') }); lt.textContent = CAMERA_LABELS.key(i, round(set.keys[i].zoom, 3)); legend.append(lt);
+  });
+  svgEl.append(legend);
+  for (const [name, p] of Object.entries(G.cornerPoints(rects[si]))) svgEl.append(svg('rect', { x: p[0] - 6, y: p[1] - 6, width: 12, height: 12, class: 'hknob ck', 'data-corner': name }));
+}
+/** One camera at a time is drawn; a technique with several (LAY-01: left and right) gets a small chooser next to the view switches. */
+function syncCamPick(cs) {
+  if (!camPickEl) return;
+  const sets = cs?.sets || [];
+  camPickEl.hidden = sets.length < 2;
+  const sel = camPickEl.querySelector('select');
+  if (sets.length < 2) return;
+  const names = sets.map((x) => x.name).join('|');
+  if (sel.dataset.names !== names) { sel.dataset.names = names; sel.replaceChildren(...sets.map((x) => h('option', { value: x.name, text: x.name }))); }
+  sel.value = cs.sel.param;
+}
+function commitKey(shotId, param, i, k, gesture) {
+  const rk = G.roundKey(k);
+  // one drag = one undo step: the gesture's own key keeps every move in the step it opened, however long it takes
+  ctx.store.commit(CAMERA_LABELS.undo, (d) => {
+    const s = d.shots.find((x) => x.id === shotId);
+    const key = s?.params?.[param]?.[i];
+    if (!key) return;
+    s.params[param][i] = { ...key, ...rk };
+    E.markHuman(s);
+  }, { coalesce: gesture, ms: Infinity });
+}
+function installCameraDrag() {
+  const ptOf = (e) => { const r = svgEl.getBoundingClientRect(); return [((e.clientX - r.left) * W) / r.width, ((e.clientY - r.top) * H) / r.height]; };
+  const hitAt = (e) => { const cv = camView(currentMapping()); return cv?.rects ? { cv, hit: G.hitTest(cv.rects, cv.cs.sel.index, ptOf(e)) } : null; };
+  scope.on(svgEl, 'pointermove', (e) => {
+    if (dragging || ctx.pick) return;
+    const over = hitAt(e)?.hit;
+    svgEl.style.cursor = !over ? '' : over.part === 'corner' ? G.cornerCursor(over.corner) : 'move';
+  });
+  scope.on(svgEl, 'pointerdown', (e) => {
+    if (ctx.pick || e.button !== 0 || dragging) return;
+    const found = hitAt(e);
+    if (!found?.hit) return;
+    const { cv, hit } = found, { set, shot } = cv, i = hit.index;
+    // equal frames lie on top of each other: a drag moves the selected one, a click without movement passes the selection on to the next
+    const cycle = hit.part === 'body' && hit.ties.length > 1 && hit.ties.includes(cv.cs.sel.index) ? G.nextInStack(hit.ties, cv.cs.sel.index) : null;
+    let moved = false;
+    e.preventDefault(); e.stopPropagation();
+    if (i !== cv.cs.sel.index) setCamSel(shot.id, set.name, i, 'preview');
+    const tab = document.querySelector('#tabs button[data-tab="shot"]');                     // the form of the key is in the Shot tab
+    if (tab && !tab.classList.contains('active')) tab.click();
+    camFrozenS = cv.S; dragging = true;                                                      // the mapping does not move under the pointer
+    const key0 = clone(set.keys[i]), bounds = G.centreBounds(set.asset, key0);
+    const x0 = e.clientX, y0 = e.clientY, sc = W / box.getBoundingClientRect().width, gesture = 'camdrag:' + (++dragSeq);
+    drawHandles();
+    const mv = (ev) => {
+      if (Math.abs(ev.clientX - x0) + Math.abs(ev.clientY - y0) > 3) moved = true;
+      const dx = ((ev.clientX - x0) * sc) / cv.ks, dy = ((ev.clientY - y0) * sc) / cv.ks;
+      commitKey(shot.id, set.name, i, hit.part === 'corner' ? G.resizeKey(key0, set.panel, hit.corner, dx, dy) : G.moveKey(key0, dx, dy, bounds), gesture);
+    };
+    const off = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up); };
+    const up = () => {
+      off(); dragging = false; camFrozenS = null;
+      if (cycle !== null && !moved) setCamSel(shot.id, set.name, cycle, 'preview');
+      drawHandles(); if (!sourceChk.checked) requestFrame();
+    };
+    window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+    scope.add(() => { off(); dragging = false; camFrozenS = null; });
+  });
 }
 const frozenKeep = () => { if (!frozen) frozen = currentMapping(); };
 
@@ -345,8 +451,13 @@ export function initPreview(viewRoot, viewScope) {
   canvasEl = $('#frame', root); svgEl = $('#handles', root); box = $('#stage-box', root); stage = $('#stage', root);
   sourceChk = $('#view-source', root); regionsChk = $('#view-regions', root);
   seq = 0; shown = 0; lastBitmap = null; frameFail = null; frozen = null; srcImg = null; srcImgKey = ''; lastReq = 0;
+  dragging = false; camFrozenS = null; viewCache = { sig: '', cam: null };
+  camPickEl = h('label', { class: 'chk cam-pick', title: CAMERA_LABELS.pickHint, hidden: true }, CAMERA_LABELS.pick + ' ', h('select', {
+    onchange: (e) => { const shot = playheadShot(); if (shot) { setCamSel(shot.id, e.target.value, 0, 'preview'); drawBase(); drawHandles(); } } }));
+  $('#map-note', root).before(camPickEl);
   scope.add(() => { alive = false; refreshDebounced.cancel(); });
-  installPick();
+  installPick(); installCameraDrag();
+  scope.add(bus.on('camsel', (e) => { if (e.from !== 'preview') { drawBase(); drawHandles(); } }));
   const ro = new ResizeObserver(fit); ro.observe(stage); scope.add(() => ro.disconnect());
   scope.on(sourceChk, 'change', () => { refresh(); drawBase(); drawHandles(); });
   scope.on(regionsChk, 'change', drawHandles);
@@ -355,7 +466,7 @@ export function initPreview(viewRoot, viewScope) {
     const sig = ctx.store.sel.shot + '|' + ctx.store.sel.overlay;
     if (kind === 'select' || kind === 'load' || sig !== lastSel) { lastSel = sig; drawBase(); }
     drawHandles();
-    if (kind !== 'select') requestFrame();
+    if (kind !== 'select' && !dragging) requestFrame();
   });
   bus.on('time', () => { if (!ctx.playing) requestFrame(); drawHandles(); if (sourceChk.checked || frameFail) drawBase(); });
   bus.on('tick', () => { requestFrameThrottled(250); });

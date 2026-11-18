@@ -1,9 +1,10 @@
 // Generic DOM form built from registry param definitions (see formgen.js). No per-technique code.
 import { h, fillSelect } from './util.js';
-import { valueLabel } from './labels.js';
+import { valueLabel, CAMERA_LABELS } from './labels.js';
 import { buildFields, coerce, pointToText } from './formgen.js';
 import { splitSpace, normBox } from './coords.js';
 import { ctx, bus } from './ctx.js';
+import { setCamSel, isCamSel } from './camsel.js';
 import { EASES, describeAnchor, anchorFromTime, round, clone, cameraAt } from './logic.js';
 
 const EASE_NAMES = Object.keys(EASES);
@@ -214,19 +215,34 @@ function makeWidget(f, opts) {
           const atIn = kind === 'rel' ? h('input', { type: 'number', step: 0.05, min: 0, max: 1, value: k.at?.rel ?? 0, onchange: (e) => { const v = typed(e, k.at?.rel, 0, 1); if (v !== null) mutate(i, (kk) => { kk.at = { rel: v }; }); } })
             : kind === 't' ? h('input', { type: 'number', step: 0.1, value: k.at.t, onchange: (e) => { const v = typed(e, k.at.t, 0); if (v !== null) mutate(i, (kk) => { kk.at = { t: v }; }); } })
               : h('span', { class: 'hint', text: describeAnchor(k.at, ctx.words()) });
-          wrap.append(h('div', { class: 'kf' },
-            h('div', { class: 'row' }, h('b', { text: 'Khóa ' + (i + 1), style: { flex: 1 } }),
+          const block = h('div', { class: 'kf', onclick: () => pick(i), title: CAMERA_LABELS.keyHint },
+            h('div', { class: 'row' }, h('b', { style: { flex: 1 } }, 'Khóa ' + (i + 1), h('span', { class: 'kf-tag', text: CAMERA_LABELS.selected, hidden: true })),
               h('button', { class: 'small danger', text: 'Xóa', onclick: () => { const n = clone(cur); n.splice(i, 1); cur = n; emit(n); build(n); } })),
             h('div', { class: 'row' }, h('label', { text: 'Thời điểm' }), h('div', { class: 'ctl' }, kindSel, atIn,
               h('button', { class: 'small', style: { whiteSpace: 'nowrap' }, title: 'Gắn vào từ tại đầu phát', text: '= đầu phát', onclick: () => mutate(i, (kk) => { kk.at = anchorFromTime(ctx.t, ctx.words(), false, Infinity); }, true) }))),
             h('div', { class: 'kf-grid' }, h('div', null, h('label', { text: 'cx' }), num('cx', 1)), h('div', null, h('label', { text: 'cy' }), num('cy', 1)), h('div', null, h('label', { text: 'zoom' }), num('zoom', 0.01))),
             h('div', { class: 'row', style: { marginTop: '4px' } }, h('label', { text: 'Chuyển động' }), h('div', { class: 'ctl' },
-              fillSelect(h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }), EASE_NAMES, k.ease || 'linear', (n) => valueLabel(n))))));
+              fillSelect(h('select', { onchange: (e) => mutate(i, (kk) => { kk.ease = e.target.value; }) }), EASE_NAMES, k.ease || 'linear', (n) => valueLabel(n)))));
+          block.addEventListener('focusin', () => pick(i));      // tabbing into a field of a key selects it on the picture too
+          wrap.append(block);
         });
         wrap.append(h('button', { class: 'small', text: '+ Thêm khóa camera', onclick: () => {
           const n = cur.length ? [...clone(cur), { ...clone(cur[cur.length - 1]), at: { rel: 1 } }] : [opts.newKey ? opts.newKey() : { at: { rel: 0 }, cx: 1000, cy: 1000, zoom: 0.5, ease: 'linear' }]; cur = n; emit(n); build(n);
         } }));
+        paint(false);
       };
+      // the key selected on the picture (camsel.js) is marked here, and a click or focus on a key's block selects it there
+      const pick = (i) => { const shot = ctx.store.sel.shot; if (shot) setCamSel(shot, f.name, i, 'form'); };
+      const paint = (scroll) => {
+        const shot = ctx.store.sel.shot;
+        [...wrap.children].filter((el) => el.classList.contains('kf')).forEach((el, i) => {
+          const on = !!shot && isCamSel(shot, f.name, i);
+          el.classList.toggle('kf-sel', on);
+          const tag = el.querySelector('.kf-tag'); if (tag) tag.hidden = !on;
+          if (on && scroll) el.scrollIntoView({ block: 'nearest' });
+        });
+      };
+      const off = bus.on('camsel', (e) => { if (!wrap.isConnected) { off(); return; } paint(e.from === 'preview'); });
       const mutate = (i, fn, rebuild) => { const n = clone(cur); fn(n[i]); cur = n; emit(n); if (rebuild) build(n); };
       build(cur);
       ctlNodes = [wrap];
