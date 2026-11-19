@@ -9,6 +9,8 @@ fixtures/claude/: 2026-11-18, Claude Code 2.1.327, `--model haiku`). Behaviour i
 
 The usage-limit answers are NOT recordings (a real usage limit could not be provoked); they follow the documented wording
 (`You've hit your session limit · resets 7pm (Asia/Saigon)`), the `rate_limit_event` shape recorded from the real program, and are named so.
+The "too old" answer (fixtures/claude/too_old.txt) is the TEXT a real call on the server printed (Claude Code 2.1.233, 2026-11-18); how that
+program frames it is not recorded, so the tests feed it every way: as the `result` of a call (mode `error`, `error_text`) and as a plain line (`stderr_only`, `stderr_text`).
 """
 import copy
 import json
@@ -199,6 +201,9 @@ emit(init)
 if mode == "stderr_auth":
     sys.stderr.write("Not logged in · Please run /login\n")
     sys.exit(1)
+if mode == "stderr_text":                # any failure text from cfg, printed as a plain sentence on stderr before anything runs (followups: fixtures/claude/too_old.txt)
+    sys.stderr.write(cfg["text"] + "\n")
+    sys.exit(1)
 if mode == "noresult_at_start":
     sys.exit(0)
 for line in sys.stdin:
@@ -246,6 +251,9 @@ for line in sys.stdin:
         sys.exit(1)
     elif mode == "wrong_model":
         result(is_error=True, result="There's an issue with the selected model (zzz). It may not exist or you may not have access to it.", api_error_status=404)
+        sys.exit(1)
+    elif mode == "error_text":               # any failure text from cfg as the result of the run: {"text": ..., "status": 404}
+        result(is_error=True, result=cfg["text"], api_error_status=cfg.get("status"))
         sys.exit(1)
     elif mode in ("quota", "quota_event"):    # NOT recordings: the documented wording and the recorded rate_limit_event shape
         if mode == "quota_event":

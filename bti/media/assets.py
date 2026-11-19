@@ -153,6 +153,17 @@ def _scaled(v, k: float):
     return int(round(out)) if isinstance(v, int) else round(out, 2)
 
 
+def scale_regions(regions: dict | None, kx: float, ky: float) -> None:
+    """Scale the regions of a picture IN PLACE when its size changes: x and rx by `kx` (new width / old width), y and ry by `ky`
+    (new height / old height). The one rule shared by `reconcile_sizes` and by the draft compiler (`bti.draft.compile`)."""
+    for r in (regions or {}).values():
+        if not isinstance(r, dict):
+            continue
+        for name, k in (("x", kx), ("y", ky), ("rx", kx), ("ry", ky)):
+            if _num(r.get(name)):
+                r[name] = _scaled(r[name], k)
+
+
 def reconcile_sizes(assets: dict, project_dir: Path) -> list[str]:
     """Make the declared `width` / `height` of every image asset in `assets` (a `picks.json` or `storyboard.json` `assets`
     object) equal the pixels of its stored file, IN PLACE, and return the keys that changed. No network, only file headers.
@@ -176,13 +187,7 @@ def reconcile_sizes(assets: dict, project_dir: Path) -> list[str]:
         if _pos(dw) and _pos(dh) and dw == sw and dh == sh:
             continue
         if _pos(dw) and _pos(dh):
-            kx, ky = sw / dw, sh / dh
-            for r in (a.get("regions") or {}).values():
-                if not isinstance(r, dict):
-                    continue
-                for name, k in (("x", kx), ("y", ky), ("rx", kx), ("ry", ky)):
-                    if _num(r.get(name)):
-                        r[name] = _scaled(r[name], k)
+            scale_regions(a.get("regions"), sw / dw, sh / dh)
             if "original_width" not in a and "original_height" not in a:
                 a["original_width"], a["original_height"] = int(round(dw)), int(round(dh))
         a["width"], a["height"] = sw, sh

@@ -142,6 +142,39 @@ def test_works_json_shape():
             assert w["rights"]["status"] in ("pd_likely", "copyright_likely", "unknown") and w["rights"]["basis"]
 
 
+# ---- followups item 5: `artist` is a key of every stored work (null when the book names none), and old files are read as that
+def old_record_without_artist(bid, n=1):
+    """A work as an older build stored it: the book names no artist, so `_public` left the key out (year stays, as null)."""
+    return {"id": f"{bid}/{n:03d}", "n": n, "title": "The Bayeux Tapestry", "year": None, "pdf_pages": [n, n + 1], "field_src": {"title": "clean"}}
+
+
+def test_a_stored_work_always_has_an_artist_key_null_when_the_book_names_none():
+    w = old_record_without_artist("hagen_wgps")
+    out = catalogue._public(w)
+    assert "artist" in out and out["artist"] is None
+    assert list(out)[:4] == ["id", "n", "title", "artist"]                              # the spec's order: the key sits after the title
+    assert "artist" not in w                                                             # the work given is not changed
+    assert catalogue._public({**w, "artist": "Jan van Eyck"})["artist"] == "Jan van Eyck"
+
+
+def test_a_works_file_written_before_the_fix_is_read_with_artist_null(lib):
+    (config.book_dir("hagen_wgps") / "works.json").write_text(json.dumps([old_record_without_artist("hagen_wgps"),
+                                                                           {**old_record_without_artist("hagen_wgps", 2), "artist": "Someone"}]), encoding="utf-8")
+    a, b = catalogue.load_works("hagen_wgps")
+    assert a["artist"] is None and b["artist"] == "Someone"
+    assert catalogue.load_work("hagen_wgps", 1)["artist"] is None
+
+
+def test_regroup_rewrites_an_old_works_file_with_the_artist_key_and_no_rebuild_is_needed(lib):
+    """The data on an already built library is brought to the documented shape by `python -m bti.library regroup` (no PDF access)."""
+    f = config.book_dir("hagen_wgps") / "works.json"
+    f.write_text(json.dumps([old_record_without_artist("hagen_wgps")]), encoding="utf-8")
+    assert "artist" not in json.loads(f.read_text(encoding="utf-8"))[0]
+    catalogue.regroup()
+    stored = json.loads(f.read_text(encoding="utf-8"))
+    assert all("artist" in w for w in stored) and stored[0]["artist"] is None
+
+
 # ---------------------------------------------------------------- overrides
 def test_overrides_merge_by_id_and_field(tmp_path, monkeypatch):
     monkeypatch.setattr(config, "LIB_DIR", tmp_path)

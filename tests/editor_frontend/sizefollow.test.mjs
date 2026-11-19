@@ -18,9 +18,9 @@ const WAIT = 'Nguồn ảnh đang giới hạn lượt tải. Thử lại sau';
 const mismatch = (args) => ({ level: 'warn', code: 'asset_size_mismatch', path: 'assets.scream', message: "asset 'scream' is recorded as 6703x8322 but its file is 3840x4767 pixels", args });
 const ARGS = { asset: 'scream', width: 6703, height: 8322, stored_width: 3840, stored_height: 4767 };
 
-test('asset_size_mismatch: the sentence names the picture, both sizes and what is wrong (no advice to re-draft: that would not clear it)', () => {
+test('asset_size_mismatch: the sentence names the picture, both sizes and what is wrong, and says what to do (a re-draft takes the stored size, followups item 4)', () => {
   const t = issueText(mismatch(ARGS));
-  assert.equal(t.text, 'Hình "scream" được ghi là 6703 x 8322 nhưng tệp đã lưu là 3840 x 4767, nên khung hình sẽ lệch.');
+  assert.equal(t.text, 'Hình "scream" được ghi là 6703 x 8322 nhưng tệp đã lưu là 3840 x 4767, nên khung hình sẽ lệch. Dựng nháp lại để cập nhật kích thước hình.');
   assert.ok(!t.generic);
   assert.equal(storyboardIssueText(mismatch(ARGS)).text, t.text);
   assert.match(t.text, VI);

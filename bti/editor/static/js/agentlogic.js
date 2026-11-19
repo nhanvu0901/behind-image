@@ -83,6 +83,25 @@ export function sourceWords(info, source) {
   return { paste: 'dán vào', manual: 'viết tay' }[source?.kind] || String(source?.kind || '');
 }
 
+/** Who wrote a proposal, in words. The server stores `author` as `agent:<model id>` (`agent:claude:claude-opus-5-5@high`, `agent:agy:gemini-x`),
+ *  `agent:auto` for the automatic draft, or a free text of an older build or another tool. An agent that the list offers is shown by its label
+ *  ("Opus 5.5 High"); an agent the list does not offer, as "Agent <model without the runner name>"; "human" as "Bạn"; anything else as stored.
+ *  Never throws and never returns the raw `agent:` id. */
+export function authorLabel(info, author) {
+  const raw = typeof author === 'string' ? author.trim() : '';
+  if (!raw) return '';
+  if (raw.toLowerCase() === 'human') return L.author.you;
+  if (!/^agent:/i.test(raw)) return raw;
+  const rest = raw.slice('agent:'.length);
+  if (rest === 'auto') return L.author.auto;
+  const own = findAgent(info, rest) || agentsOf(info).find((a) => a.model === rest);       // the stored form is the agent's id or its model id
+  if (own) return own.label;
+  return L.author.agent(rest.replace(/^(?:agy|claude):/, ''));
+}
+
+/** The grey line of a proposal in the list and in its header: author (by label), time, and the id when `withId`; empty parts are left out. */
+export const proposalLine = (info, p, withId = true) => [authorLabel(info, p?.author), p?.created_at, withId ? p?.id : ''].filter(Boolean).join(' | ');
+
 // ---------------------------------------------------------------- the quota message
 /** "4 giờ 30 phút": the two largest units, in Vietnamese ("2 phút", "1 ngày 3 giờ"). The time is rounded UP to whole minutes (a few seconds gone
  *  since the answer came must not turn "4 giờ 30 phút" into "4 giờ 29 phút"); under a minute is said as one minute. */

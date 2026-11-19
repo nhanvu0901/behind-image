@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { describeHttp, describeError, issueText, jobErrorText, parseFailText, rawDetail, isVietnamese, stageErrorText, stageJobErrorText } from '../../bti/editor/static/js/errmsg.js';
 import { ApiError } from '../../bti/editor/static/js/errors.js';
+import { isQuota } from '../../bti/editor/static/js/agentlogic.js';
+import { turnView } from '../../bti/editor/static/js/editlogic.js';
 
 const noEnglish = (t) => !/\b(the|must|not found|already|required|failed|error|is|are)\b/i.test(t);
 
@@ -136,4 +138,29 @@ test('a script job that Claude Code failed shows its own sentence, with the time
 test('the settings sentence no longer says only agy can run the deep work', () => {
   const t = describeHttp(422, { detail: "Role 'draft' requires an agent model", code: 'agentic_role_needs_agy' });
   assert.match(t.text, /agy hoặc qua Claude Code/);
+});
+
+// followups item 2: "Claude Code is too old for this model" has its own code, claude_outdated: it says to update, never to pick another model, never "hết hạn mức"
+const OUTDATED_FULL = 'Claude Code trên máy chủ quá cũ cho mô hình này (cần bản 2.1.280 trở lên, đang là 2.1.233). Chạy `claude update` trên máy chủ rồi thử lại.';
+const OUTDATED_BARE = 'Claude Code trên máy chủ quá cũ cho mô hình này. Chạy `claude update` trên máy chủ rồi thử lại.';
+test('claude_outdated: the draft job and the edit routes have a sentence of their own; with the versions the server gave, those are shown', () => {
+  const bare = stageJobErrorText('draft', { error_code: 'claude_outdated' }).text;
+  assert.equal(bare, OUTDATED_BARE);
+  assert.equal(stageErrorText('draft', { status: 409, body: { code: 'claude_outdated' } }).text, OUTDATED_BARE);
+  assert.equal(describeHttp(409, { code: 'claude_outdated', detail: 'x' }).text, OUTDATED_BARE);
+  assert.equal(stageJobErrorText('draft', { error_code: 'claude_outdated', error: OUTDATED_FULL }).text, OUTDATED_FULL);
+  // a server text that is not that sentence never replaces ours
+  assert.equal(stageJobErrorText('draft', { error_code: 'claude_outdated', error: 'Claude Code 2.1.233 does not support this model' }).text, OUTDATED_BARE);
+  for (const t of [bare, OUTDATED_FULL]) { assert.match(t, /claude update/); assert.doesNotMatch(t, /hết hạn mức|mô hình khác|chọn agent khác|Dựng tự động/); }
+});
+test('claude_outdated: a failed script job (kind config) shows the server sentence, and none of these is a quota answer', () => {
+  assert.equal(jobErrorText({ error_kind: 'config', error: OUTDATED_FULL }).text, OUTDATED_FULL);
+  assert.equal(isQuota({ error_kind: 'config', error: OUTDATED_FULL }), false);
+  assert.equal(isQuota({ error_code: 'claude_outdated' }), false);
+  assert.equal(isQuota({ error: 'claude_outdated' }), false);
+  const turn = turnView({ id: 't1', status: 'failed', error: 'claude_outdated', summary: OUTDATED_FULL, instruction: 'đổi' }, {});
+  assert.equal(turn.actions.settings, false);                         // the quota card ("Chọn mô hình khác") is not offered
+  assert.equal(turn.headline, OUTDATED_BARE);
+  assert.equal(turn.extra, OUTDATED_FULL);
+  assert.doesNotMatch(`${turn.headline} ${turn.extra}`, /hết hạn mức/);
 });

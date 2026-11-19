@@ -49,6 +49,7 @@ VI = {
     "claude_rate_limit": "Hạn mức của gói Claude Code đã dùng hết hoặc bị giới hạn. Đợi hết chu kỳ hoặc chọn agent khác.",
     "claude_model": "Claude Code không nhận ra tên mô hình này. Chọn mô hình khác.",
     "claude_config": "Claude Code trên máy chủ không dùng được cho việc này (quá cũ hoặc không chạy được). Chạy `claude update` trên máy chủ rồi thử lại.",
+    "claude_outdated": "Claude Code trên máy chủ quá cũ cho mô hình này. Chạy `claude update` trên máy chủ rồi thử lại.",       # the runner's own sentence adds the versions the answer stated
     "claude_error": "Claude Code báo lỗi khi chạy.",
     "claude_no_result": "Claude Code dừng mà không trả kết quả.",
     "claude_timeout": "Agent chạy quá thời gian cho phép nên đã bị dừng.",
@@ -151,9 +152,9 @@ def rate_limit_fields(seconds: int | None) -> dict:
     return {"retry_after_seconds": int(seconds), "retry_at": retry_at(int(seconds))}
 
 
-def rate_limit_sentence(code: str, seconds: int | None) -> str:
+def rate_limit_sentence(code: str, seconds: int | None, message: str = "") -> str:
     """The owner's sentence for a failure: the code's own sentence, with when to try again for a quota."""
-    base = vi(code)
+    base = vi(code, message) if code == "claude_outdated" else vi(code)
     if code not in RATE_LIMIT_CODES or not seconds:
         return base
     from bti.script.providers.antigravity import retry_at, wait_words
@@ -178,6 +179,10 @@ def _fail_turn(project_dir: Path, turn_id: str | None, code: str, summary: str, 
 
 
 def vi(code: str, fallback: str = "") -> str:
+    if code == "claude_outdated":          # the runner's message is already the owner's sentence, with the versions the answer stated
+        from bti.script.providers.claudecode import OUTDATED_HEAD
+        if fallback.startswith(OUTDATED_HEAD):
+            return fallback
     return VI.get(code) or fallback or code
 
 
@@ -711,7 +716,7 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                     return
                 code = provider_code(e, m_fast)
                 wait = getattr(e, "retry_after_seconds", None) if code in RATE_LIMIT_CODES else None
-                words = rate_limit_sentence(code, wait)
+                words = rate_limit_sentence(code, wait, e.message)
                 ctx.meta.update(rate_limit_fields(wait))            # the job's own record carries it too (never retried in this job)
                 _fail_turn(project_dir, turn_id, code, words, start=st.start_time, path="fast", notes=e.message, retry_after_seconds=wait)
                 raise PartError(code, words)

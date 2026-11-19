@@ -503,7 +503,8 @@ def load_works(book_id: str) -> list[dict]:
     f = config.book_dir(book_id) / "works.json"
     if not f.is_file():
         return []
-    return apply_overrides(read_json(f), load_overrides(book_id))
+    # A works.json written before `_public` always wrote `artist` has no such key for a work whose book names no artist: read it as null.
+    return [w if "artist" in w else {**w, "artist": None} for w in apply_overrides(read_json(f), load_overrides(book_id))]
 
 
 def load_work(book_id: str, n: int) -> dict | None:
@@ -882,9 +883,11 @@ def regroup(log=print) -> dict:
 
 
 def _public(w: dict) -> dict:
-    """Stored shape: the spec fields first, helper fields after."""
+    """Stored shape: the spec fields first, helper fields after. `artist` is always there (null when the book names none), like `year`:
+    the shape of docs/design/2026-11-16-library-design.md lists it, and a work without the key made the shape test fail on the built library."""
     keys = ["id", "n", "title", "artist", "attribution", "year", "year_raw", "headline", "pdf_pages", "words",
             "n_images", "headings", "artwork_key", "rights"]
+    w = w if "artist" in w else {**w, "artist": None}
     out = {k: w[k] for k in keys if k in w}
     for k, v in w.items():
         if k not in out:

@@ -284,6 +284,21 @@ def test_error_results_get_their_own_code(fakec, ws, mode, code):
     assert len(fakec.calls("run")) == 1
 
 
+# ---- followups item 2: Claude Code too old for the model (the text of a real call on the server: fixtures/claude/too_old.txt)
+TOO_OLD = (SCRIPT_FIX / "too_old.txt").read_text(encoding="utf-8").strip()
+TOO_OLD_SENTENCE = ("Claude Code trên máy chủ quá cũ cho mô hình này (cần bản 2.1.280 trở lên, đang là 2.1.233). "
+                    "Chạy `claude update` trên máy chủ rồi thử lại.")
+
+
+@pytest.mark.parametrize("mode,status", [("error_text", None), ("error_text", 404), ("stderr_text", None)])
+def test_claude_code_too_old_is_its_own_code_in_the_agent_run(fakec, ws, mode, status):
+    fakec.mode(mode, text=TOO_OLD, status=status)
+    r = dcc.run(ws.root, model=MODEL, timeout=30)
+    assert r.status == "error" and r.error_code == "claude_outdated", (r.error_code, r.error_message)
+    assert r.error_message == TOO_OLD_SENTENCE and not getattr(r, "retry_after_seconds", None)
+    assert len(fakec.calls("run")) == 1
+
+
 def test_the_usage_limit_reset_time_is_kept_from_the_text(fakec, ws):
     fakec.mode("quota")                                  # NOT a recording: `You've hit your session limit · resets 7pm (Asia/Saigon)`
     r = dcc.run(ws.root, model=MODEL, timeout=30)
@@ -423,9 +438,19 @@ def test_every_claude_code_is_a_sentence_for_the_owner_and_the_signed_out_one_is
     assert R.rate_limit_sentence("agy_rate_limit", 176).startswith("Hạn mức của gói Antigravity đã hết. Thử lại sau 2 phút 56 giây")      # the other runner is unchanged
 
 
+def test_claude_outdated_sentence_for_the_owner_with_and_without_the_versions():
+    assert R.vi("claude_outdated") == R.VI["claude_outdated"] == "Claude Code trên máy chủ quá cũ cho mô hình này. Chạy `claude update` trên máy chủ rồi thử lại."
+    assert R.vi("claude_outdated", TOO_OLD_SENTENCE) == TOO_OLD_SENTENCE                  # the runner's sentence names the versions the answer stated
+    assert R.vi("claude_outdated", "Claude Code 2.1.233 does not support this model") == R.VI["claude_outdated"]      # any other text never replaces ours
+    assert R.rate_limit_sentence("claude_outdated", None, TOO_OLD_SENTENCE) == TOO_OLD_SENTENCE
+    assert R.rate_limit_sentence("claude_outdated", None) == R.VI["claude_outdated"]
+    assert "claude_outdated" not in R.RATE_LIMIT_CODES                                   # not a quota
+    assert "hết hạn mức" not in R.VI["claude_outdated"] and "mô hình khác" not in R.VI["claude_outdated"]
+
+
 def test_the_page_has_the_same_codes():
     text = (HERE.parents[1] / "bti" / "editor" / "static" / "js" / "errmsg.js").read_text(encoding="utf-8")
-    for c in ("claude_missing", "claude_auth", "claude_rate_limit", "claude_model", "claude_config", "claude_error", "claude_no_result", "claude_timeout"):
+    for c in ("claude_missing", "claude_auth", "claude_rate_limit", "claude_model", "claude_config", "claude_outdated", "claude_error", "claude_no_result", "claude_timeout"):
         assert re.search(r"\b%s:" % c, text), c
     assert OWNER_SIGNED_OUT in text
 
@@ -498,6 +523,15 @@ def test_claude_error_codes_reach_the_job(proj, mgr, fakec, mode, code):
     assert j["error"] == R.vi(code)
     if code == "claude_auth":
         assert j["error"] == OWNER_SIGNED_OUT
+
+
+@pytest.mark.parametrize("mode,status", [("error_text", None), ("error_text", 404), ("stderr_text", None)])
+def test_claude_outdated_reaches_the_job_with_the_versions_and_is_not_a_quota(proj, mgr, fakec, mode, status):
+    fakec.mode(mode, text=TOO_OLD, status=status)
+    j = finish(mgr, R.start(proj.name, proj, provider="agy", model=MODEL, manager=mgr, guard_factory=gf, python="python"))
+    assert j["state"] == "error" and j["error_code"] == "claude_outdated", (j["error"], j["error_code"])
+    assert j["error"] == TOO_OLD_SENTENCE
+    assert not (j.get("meta") or {}).get("retry_after_seconds") and "hết hạn mức" not in j["error"]
 
 
 def test_the_usage_limit_reaches_the_job_with_the_time(proj, mgr, fakec):
@@ -576,6 +610,19 @@ def test_fast_edit_quota_and_signed_out_are_told_in_words(env, fakec):
     fakec.mode("not_signed_in")
     job, turn = env.run_edit("đổi", ids, mode="fast", model=MODEL)
     assert job["error_code"] == "claude_auth" and job["error"] == OWNER_SIGNED_OUT and turn["error"] == "claude_auth"
+
+
+def test_claude_outdated_is_told_in_words_on_the_fast_and_the_deep_path(env, fakec):
+    ids = env.content_ids("c01")[:1]
+    fakec.mode("error", text=TOO_OLD, status=404)                  # the single call (fast edit): a status that would otherwise read "unknown model"
+    job, turn = env.run_edit("đổi", ids, mode="fast", model=MODEL)
+    assert job["state"] == "error" and job["error_code"] == "claude_outdated" and job["error"] == TOO_OLD_SENTENCE, why(job)
+    assert turn["status"] == "failed" and turn["error"] == "claude_outdated" and turn["summary"] == TOO_OLD_SENTENCE and not turn.get("retry_after_seconds")
+    env.deep_cfg(fakec.dir, {ids[0]: {"note": "never applied"}})
+    fakec.mode("error_text", text=TOO_OLD, status=None)            # the agent in a folder (deep edit)
+    job, turn = env.run_edit("sửa", chapter="c01", mode="deep", model=MODEL)
+    assert job["state"] == "error" and job["error_code"] == "claude_outdated" and job["error"] == TOO_OLD_SENTENCE, why(job)
+    assert turn["status"] == "failed" and turn["error"] == "claude_outdated" and turn["summary"] == TOO_OLD_SENTENCE
 
 
 def test_deep_edit_with_claude_missing_or_signed_out_is_refused_before_a_turn_exists(env, fakec, monkeypatch):

@@ -424,4 +424,6 @@ export const AGENT_LABELS = {
     advancedHint: 'Chỉ dùng khi dự án và mặc định đều chưa chọn agent.',
     rolesTitle: 'Mô hình cho từng việc',
   },
+  // worker followups: who wrote a proposal (the list of proposals, agentlogic.js authorLabel)
+  author: { you: 'Bạn', auto: 'Dựng tự động', agent: (what) => `Agent ${what}` },
 };
