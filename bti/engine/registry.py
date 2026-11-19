@@ -303,9 +303,10 @@ def check_items(p: dict, v):
             if k not in defs:
                 return _P("item_unknown_field", "%s: unknown field %r (allowed: %s)" % (where, k, ", ".join(sorted(defs))), index=i, field=k, item=lab, allowed=sorted(defs))
         for k, d in defs.items():
-            if d.get("required") and it.get(k) is None:
+            empty = it.get(k) is None or (d["type"] == "ref" and it.get(k) == "")           # compover: a `ref` the page left blank ("") is a field left empty, like null
+            if d.get("required") and empty:
                 return _P("item_field_missing", "%s: field %r is required" % (where, k), index=i, field=k, item=lab)
-            if it.get(k) is None:
+            if empty:
                 continue
             bad = check_field(d, it[k])
             if bad:

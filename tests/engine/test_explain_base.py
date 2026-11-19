@@ -321,6 +321,31 @@ def test_the_accented_item_brightens_and_the_others_dim_by_the_stated_amount(tmp
     assert peak(frame(nothing, 3.0), lab) == peak(frame(nothing, 9.0), lab), "without an accented item nothing dims"
 
 
+def test_focus_s_is_a_param_of_type_at_and_a_word_makes_the_accent_come_on_that_word(tmp_path):
+    """`focus_s` is one moment (the parameter type `at`): seconds from the start of the shot, or a word of the narration (word 12 starts at 6.0 s in the test timing).
+    It is resolved and checked the way a camera key's `at` is."""
+    assert [x["type"] for x in spec("TIME-01")["params"] if x["name"] == "focus_s"] == ["at"] and R.at_params(spec("TIME-01")) == ["focus_s"]
+    word = {"w": 12, "off": 0.0, "text": "w12"}
+    p = time_project(tmp_path, FIVE, name="focusword", focus_s=word, dim_to=0.5)
+    assert errors(p) == []
+    assert p.resolve()["shots"][0]["params"]["focus_s"]["_t"] == pytest.approx(6.0)
+    assert renderer(p).focus_s == pytest.approx(6.0)
+    seconds = time_project(tmp_path, FIVE, name="focussec", focus_s=6.0, dim_to=0.5)
+    for t in (5.9, 6.4, 7.0):
+        assert np.array_equal(frame(p, t), frame(seconds, t)), "a word and its time in seconds draw the same frame at %s" % t
+    assert not np.array_equal(frame(p, 5.9), frame(p, 7.0)), "the others do dim after the word"
+    stale = copy.deepcopy(p.storyboard())
+    stale["shots"][0]["params"]["focus_s"] = {"w": 12, "off": 0.0, "text": "zzz"}
+    assert [(i["code"], i["path"]) for i in errors(p, stale)] == [("stale_anchor", "shots[0].params.focus_s")]
+    gone = copy.deepcopy(p.storyboard())
+    gone["shots"][0]["params"]["focus_s"] = {"w": 9999, "off": 0.0, "text": "x"}
+    assert [i["code"] for i in errors(p, gone)] == ["anchor_invalid"]
+    for bad, code in (("soon", "param_bad_at"), (-1, "param_below_min"), (601, "param_above_max")):
+        d = copy.deepcopy(p.storyboard())
+        d["shots"][0]["params"]["focus_s"] = bad
+        assert [i["code"] for i in errors(p, d)] == [code], bad
+
+
 def test_a_frame_is_a_pure_function_of_time_for_the_time_axis(tmp_path):
     p = time_project(tmp_path, NINE, name="pure")
     ts = [7.3, 0.4, 2.2, 9.9, 7.3, 5.0, 0.4]

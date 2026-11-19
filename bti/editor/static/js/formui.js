@@ -224,7 +224,7 @@ function makeWidget(f, opts) {
           node = h('div', { class: 'pt-ctl' }, kindSel, val, here);
         } else node = h('input', { type: 'text', value: typeof v === 'string' ? v : (v == null ? '' : JSON.stringify(v)), onchange: (e) => { set(e.target.value); show(cur[i][fd.name]); } });
         show(v);
-        return h('div', { class: 'item-field' + (fd.type === 'bool' ? ' item-bool' : '') }, h('label', { text: itemFieldLabel(fd.name), title: fd.name + (fd.unit ? ` (${fd.unit})` : '') }), node, note);
+        return h('div', { class: 'item-field' + (fd.type === 'bool' ? ' item-bool' : '') }, h('label', { text: itemFieldLabel(fd.name, d.name), title: fd.name + (fd.unit ? ` (${fd.unit})` : '') }), node, note);
       };
       const build = () => {
         wrap.replaceChildren();

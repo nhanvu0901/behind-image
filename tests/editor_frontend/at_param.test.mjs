@@ -19,6 +19,23 @@ test('region_at is a parameter of type at, and the form makes an at widget of it
   assert.equal(defaultParams(MAP.params).region_at, 0.6);
 });
 
+test('focus_s (TIME-01) and reading_at (DOC-01) are also parameters of type at, with their old defaults and range', () => {
+  for (const [id, name, def] of [['TIME-01', 'focus_s', 6], ['DOC-01', 'reading_at', 2.4]]) {
+    const t = REG.find((x) => x.id === id);
+    const d = t.params.find((p) => p.name === name);
+    assert.equal(d.type, 'at', id);
+    assert.equal(d.min, 0, id);
+    assert.equal(d.max, 600, id);
+    const f = buildFields(t.params).find((x) => x.name === name);
+    assert.equal(f.widget, 'at', id);
+    assert.equal(f.value, def, id);
+    assert.equal(f.problem, null, id);
+    assert.equal(defaultParams(t.params)[name], def, id);
+    assert.equal(validateValue(d, { w: 4, off: 0, text: 'x' }), null, id);
+    assert.equal(validateValue(d, 601), 'lớn hơn 600', id);
+  }
+});
+
 test('a moment is seconds held to the registry range, or a word anchor; the sentence is Vietnamese', () => {
   for (const ok of [0, 0.6, 600, { w: 4, off: 0, text: 'x' }, { t: 3 }, { rel: 0.5 }]) assert.equal(validateValue(REGION_AT, ok), null, JSON.stringify(ok));
   assert.equal(validateValue(REGION_AT, -1), 'nhỏ hơn 0');

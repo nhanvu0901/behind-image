@@ -28,7 +28,7 @@ codes). The rule behind the registry is: whatever `validate` accepts without an 
 `min_items`/`max_items` (points/lines/items), `fields` (items, below) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
 frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
 `RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
-four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 82 techniques and all fourteen param types.
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 85 techniques and all fourteen param types.
 
 ## Layout
 
@@ -42,7 +42,7 @@ four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for al
 | `scene.py` | compile a resolved storyboard into a `Scene`: `frame_at`, `render_range`, transitions, end fade |
 | `base.py` | the renderer interfaces, `Ctx`, and the process-wide LRU caches |
 | `vfx.py` | pixel primitives lifted from the benchmark (`Img`, `Cam`, `compose_matte`, `text_layer`, `spotlight`, `ring` ...) |
-| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions`, `identity` (the ID family, below), `maps` (MAP-01, below) |
+| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions`, `identity` (the ID family, below), `explain_base` (TIME-01, TREE-01, STATE-01, below), `maps` (MAP-01, below), `explain_over` (KEY-01, NUM-01, DOC-01, below) |
 
 Frame pipeline: shot lookup (bisect on shot starts) -> base renderer -> overlays in list order -> optional `transition_in`
 (both shots are rendered during the overlap) -> end fade (`end.fade_s`, default 1.6 s, `inout_sine`) -> uint8 -> resize.
@@ -281,7 +281,7 @@ A param of type `at` is ONE moment: a number of seconds from the start of the el
 `param_above_max`), resolved by `storyboard.resolve` in `_t` (absolute seconds, `rel` counts over the element) like every other anchor, and checked by `validate` (`stale_anchor`,
 `anchor_invalid`, with `param` in the args and no `index`). A renderer reads it with `registry.at_seconds(self.p["name"], self.t0)` (seconds from the start of the element);
 `registry.at_params(spec)` lists the names. The page (`formgen.js`, `formui.js`) edits it as "seconds | word" with a number field and the button "= đầu phát" (the word at the playhead),
-the same control as an `at` field of an items row. `MAP-01.region_at` is the first user; a technique with a single-moment param declares `"type": "at"` with `min`, `max` in seconds.
+the same control as an `at` field of an items row. `MAP-01.region_at`, `TIME-01.focus_s` and `DOC-01.reading_at` are the users; a technique with a single-moment param declares `"type": "at"` with `min`, `max` in seconds.
 
 ## The explanatory devices `TIME-01`, `TREE-01`, `STATE-01` (`techniques/explain_base.py`)
 
@@ -311,7 +311,7 @@ second lines and edge labels at 72 percent, sizes as cap heights of the bundled 
   `dissolve_s`, hold ..., alternating from `first`; the last state is held to the end, a shorter shot cuts the schedule. A hold is exactly one picture. **The camera does not move during a change**: its clock stands still through a
   dissolve and runs faster in the holds by the time lost, so the whole move of its keys is still made by the end of the shot; `view()` returns the camera and the regions of `a`, so overlays follow. Caption: small capitals,
   tracking 0.14 em, at 4.5 percent from the left, baseline 6 percent above the bottom, soft shadow; it fades in at 0.3 s, flips through a fade at the middle of every dissolve, fades out ending 0.1 s before the end.
-* A shot of these three shorter than 3 s is the error `element_too_short`. Word anchors in an item's `at` are the `items` machinery's; `focus_s` is seconds only. Tests: `tests/engine/test_explain_base.py`,
+* A shot of these three shorter than 3 s is the error `element_too_short`. Word anchors in an item's `at` are the `items` machinery's; `focus_s` is a param of type `at` (seconds, or a word anchor). Tests: `tests/engine/test_explain_base.py`,
   `tests/editor_frontend/explain_base.test.mjs`, `tests/draft/test_explainers_briefing.py` (the catalogue's filled example and the briefing part).
 
 ## The atlas map `MAP-01` (`techniques/maps.py`, `geo.py`, `style/gae/geo/`)
@@ -349,6 +349,37 @@ takes: `places` (id, name, lonlat, `at`, `label_side`), `route` (from, to, `via`
 * **Geography bundle** (`style/gae/geo/`, 2 MB, public domain, README there with sources, versions and sha256): land at 1:50m and 1:10m, countries at 1:50m with ISO
   codes, sea names with positions and outlines. Rebuild: `python tools/geo/build_bundle.py --downloads DIR --fetch` (numpy and OpenCV only; byte-identical output). Loaded once per process, no network.
 * **Stills, timings and the preview clip**: `python tools/geo/render_map_examples.py stills|timing|preview`.
+
+## The explanatory overlays `KEY-01`, `NUM-01`, `DOC-01` (`techniques/explain_over.py`)
+
+Three overlays that make one point visible over a picture (contract `docs/design/2026-11-18-explainer-components.md` sections 2 to 5; approved moving mock-up `docs/design/mock/2026-11-18-explainer/components.html`,
+functions `labels`, `number`, `doclit`). Report with the numbers and stills: `docs/qa/FIX_comp_over.md`. Times (`at`, `reading_at`, ...) are seconds from the start of the OVERLAY (a word anchor in an `at` or in `reading_at`, a param of type `at`, is resolved by
+`registry.at_seconds`); everything leaves by a fade that ends with the overlay (`leave_s`); text is EB Garamond sized by cap height, `#F1EADB` with a soft shadow, drawn at quarter-pixel positions (`Art`: the line is drawn once at
+four times the size and shifted by whole pixels of the big drawing before it is shrunk, because Pillow places glyphs on whole pixels and a label on a moving camera would advance in jumps); the picture is dimmed by a gain.
+
+| id | data | what it draws |
+|---|---|---|
+| `KEY-01` | `labels` (items: `text`, `ref`, `side`, `at`, `style`), `cap_pct`, `dim_picture_to`, `fade_s`, `leave_s`, `shadow`, `leader` | a label beside each detail, outside its region's ellipse on its side; follows the camera, keeps its size; a hairline only where `leader` says (default `auto`: for a label displaced from its detail or in doubt about it) |
+| `NUM-01` | `rows` (items: `label`, `value`, `units`, `count`, `at`; 1 to 4), `caption`, `source`, `dim_picture_to`, `cap_pct`, `align`, `marks_s`, `leave_s` | the figure of each row large with its units and `count` marks that appear one by one over `marks_s`; caption after the last mark |
+| `DOC-01` | `lit` (items: `ref`, `box`, `at`, `hold_s`; 1 to 6), `dim_to`, `ramp_s`, `edge_px`, `pad_px`, `reading`, `original`, `reading_at`, `leave_s` | the window (region ellipse box or `box`, grown by `pad_px`) is lit, the rest dims, soft edge, no outline; then the reading (italic) and the line as written (small capitals) |
+
+* **Through the camera.** `KEY-01` and `DOC-01` map a region name or `[x, y]` of the shot's picture with `view.to_screen` and sizes in source pixels with `view.z`, like `HI-01` and `AN-01`; the base shot's `view(t)` is also sampled
+  (seven times over the overlay and at every item's time) to decide, once, the side of every `auto` label and whether the reading goes above or below the windows. A frame is still a pure function of t.
+* **Valid on** every base technique whose renderer provides `view()` (`NeedsCamera.check_base`; today: `CAM-01` to `CAM-06`, `STATIC-01`, `X-LAY-01`, `LAY-01`, `LAY-04`, `LAY-05`, `HI-02`, `AN-07`, `CMP-01` to `CMP-05`, `X-CMP-01`, `X-CMP-02` and the four ID bases). `storyboard.validate` calls the overlay class's `check_base(base technique id)` and refuses
+  the others (`LAY-02`, `-03`, `-06`, `-07`, `-08`, `TXT-01`, `STATIC-06`, `-07`, `DIA-*`, `FOOT-01`, `SHORT-*`, `X-CARD-*`, `MAP-01`) with `overlay_needs_camera`; a shot without an `image` slot makes the overlay incomplete (the usual `incomplete` warning, skipped when drawn); a region name not on the picture is `region_undefined`.
+  A base that provides `view()` but returns None at some moment (a layout without a camera) draws nothing. `NUM-01` needs no picture and is valid on every shot.
+* **`KEY-01` placement.** Sides of `auto` labels: the first of e, w, n, s, ne, nw, se, sw whose box clears the other labels, the frame (margin 1.5 percent) and, at a smaller cost, the other details, at seven camera samples; a fixed `side` is kept. Per frame a label is held inside the frame and pushed
+  along its side's tangent just far enough to leave 0.6 percent of the height of air to the label before it; a detail that leaves the frame fades its label out over 8 percent of the height. The dim starts 0.4 s before the first label (0.6 s ramp).
+  Among the sides that are equally near, the one with the darker picture under the text wins (`ground_level`, read from the base image's pyramid at the camera samples; the order e, w, n, s ... breaks ties).
+  `leader` is `none`, `hairline` (a 2 px line in `#8D877A` from every label to the edge of its detail's ellipse, over a soft dark underlay) or `auto` (the default): a line only from a label that is farther from the edge of its detail than
+  max(2.2 natural gaps = 31 px, 0.35 of the detail's larger radius), or that lies over the ellipse of another label's detail (or within half its own distance of it); the line fades in over half of that distance and with its label.
+  The registry's usage rule tells the agent to put at most five labels on screen at a time and to show details that lie close together in two shots. The plan is cached with the picture's file and time in its key.
+* **`NUM-01` layout.** The mock-up's sizes at a figure of 8 percent, scaled by `cap_pct / 8`, rows stacked and centred on 53 percent of the height; when they do not fit between 8 and 85 percent the rows come closer, then everything shrinks by one factor.
+  Up to 40 marks make lines of 20, 41 to 60 lines of 30. The caption fades in when the first marks start to appear (0.6 s after the first row that has marks) and stays to the end; the units are as big as the row's label at 72 percent.
+* **`DOC-01` window.** Gain 1 inside and `dim_to` outside, a smoothstep edge `edge_px` wide centred on the border of a rounded rectangle (radius 22 px); windows share the dimming (`min(1, sum of their envelopes)`), so a crossfade between two lines keeps the surroundings dim.
+  A region without radii lights a default window (14 percent of the picture's width by 4 percent). The `ref` field of an item is for region names; the box is a text field (`box`, "x0, y0, x1, y1" in source pixels) because `ref` holds a region name or a point.
+* Issue codes: `overlay_needs_camera`, `doc_lit_no_target`, `doc_bad_box` (and the `items` codes). `registry.check_items` treats a `ref` that is `""` (a blank box on the page) as empty, like null.
+* **Stills, timings and previews**: `python tools/explain/render_examples.py stills|timing|preview`. Tests: `tests/engine/test_explain_over.py` (106), `tests/editor_frontend/explain_items.test.mjs` (7).
 
 ## Known behaviour worth knowing
 

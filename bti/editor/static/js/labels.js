@@ -462,4 +462,16 @@ export const ITEM_FIELD = {
 };
 // compbase: the fields of the rows of TIME-01 (date, label, side, at, accent) and TREE-01 (id, name, sub, row, col, at, strong; from, to, kind, label, at)
 Object.assign(ITEM_FIELD, { date: 'Năm', label: 'Chữ ghi', side: 'Phía', accent: 'Nhấn mạnh', sub: 'Dòng nhỏ', row: 'Hàng (-1 là tự xếp)', col: 'Cột (-1 là tự xếp)', strong: 'Nổi bật', kind: 'Loại quan hệ' });
-export const itemFieldLabel = (name) => ITEM_FIELD[name] || name;
+// A field name that means one thing in one list and another in a second list gets its word from ITEM_FIELD_OF (keyed by the name of the list param), not from ITEM_FIELD.
+export const ITEM_FIELD_OF = {};
+export const itemFieldLabel = (name, list) => ITEM_FIELD_OF[list]?.[name] || ITEM_FIELD[name] || name;
+
+// ---- compover: words of KEY-01 (labels), NUM-01 (rows of figures) and DOC-01 (lit lines): the choices and the fields of their rows
+Object.assign(VALUE, { italic: 'Nghiêng', regular: 'Thường', caps: 'Chữ hoa nhỏ', hairline: 'Nét mảnh' });
+Object.assign(PARAM_VALUE, { leader: { none: 'Không có nét nối', hairline: 'Nét mảnh cho mọi nhãn', auto: 'Chỉ khi nhãn bị đẩy xa chi tiết' } });
+Object.assign(ITEM_FIELD, {
+  text: 'Chữ', ref: 'Chi tiết của tranh', style: 'Kiểu chữ', value: 'Con số', units: 'Đơn vị', count: 'Số chấm',
+  box: 'Khung trong ảnh gốc', hold_s: 'Giữ sáng (giây)',
+});
+// `side` and `label` are also fields of TIME-01 ("Phía", "Chữ ghi"): here they mean the side of the detail where the text goes, and the small caption over a figure
+Object.assign(ITEM_FIELD_OF, { labels: { side: 'Phía đặt chữ' }, rows: { label: 'Nhãn nhỏ' } });

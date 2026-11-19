@@ -1,7 +1,7 @@
-"""Technique sweep: every one of the 82 registry techniques through the API, as the editing page uses it.
+"""Technique sweep: every one of the 85 registry techniques through the API, as the editing page uses it.
 Defaults -> draft -> validate -> three stills across the span; plus a 3 s preview for 22 of them (all transitions and
 cards included). Uses a copy of technique_lab as the reference configuration of each technique; the seven techniques of the channel
-identity (`ID-*`), `TIME-01`, `TREE-01`, `STATE-01` and `MAP-01` have no reference in technique_lab, so the fixture adds one for each to the COPY (never to the tracked project)."""
+identity (`ID-*`), `TIME-01`, `TREE-01`, `STATE-01`, `MAP-01` and the overlays `KEY-01`, `NUM-01` and `DOC-01` have no reference in technique_lab, so the fixture adds one for each to the COPY (never to the tracked project)."""
 from __future__ import annotations
 
 import pytest
@@ -43,7 +43,14 @@ def _identity_references(sb: dict) -> dict:
         t += dur
     sb["shots"].append({"id": "s9200", "start": {"t": round(t, 3)}, "technique": "MAP-01", "slots": {}, "params": {}, "intent": "context", "transition_in": None,
                         "overlays": [], "locked": False, "source": "import", "note": "MAP-01 reference (the default example)"})
-    sb["end"] = {"t": round(t + 8.0, 3), "fade_s": 0}
+    t += 8.0
+    for n, (tid, cams) in enumerate((("KEY-01", [(2220, 1410, 0.5), (2220, 1410, 0.54)]), ("NUM-01", [(3218, 2987, 0.822)] * 2), ("DOC-01", [(2220, 1302.5, 0.727), (2220, 1455, 1.2)]))):   # compover
+        camera = [{"at": {"rel": 0.0}, "cx": cams[0][0], "cy": cams[0][1], "zoom": cams[0][2], "ease": "linear"}, {"at": {"rel": 1.0}, "cx": cams[1][0], "cy": cams[1][1], "zoom": cams[1][2], "ease": "linear"}]
+        sb["shots"].append({"id": "s94%02d" % n, "start": {"t": round(t, 3)}, "technique": "CAM-01", "slots": {"image": {"asset": asset}}, "params": {"camera": camera}, "intent": "explore",
+                            "transition_in": None, "locked": False, "source": "import", "note": "host of " + tid,
+                            "overlays": [{"id": "o1", "technique": tid, "intent": "point_at", "start": {"t": round(t + 0.25, 3)}, "dur": 7.0, "params": {}, "slots": {}, "locked": False, "source": "import", "note": ""}]})
+        t += 7.5
+    sb["end"] = {"t": round(t, 3), "fade_s": 0}
     return sb
 
 
@@ -61,9 +68,9 @@ def lab_state(client, projects_root, data_root):
     shutil.rmtree(projects_root / "sweep_lab", ignore_errors=True)
 
 
-def test_registry_has_82_techniques(lab_state):
+def test_registry_has_85_techniques(lab_state):
     reg = lab_state[2]
-    assert len(reg) == len(_ids()) == 82                 # 71 of the channel's look, the seven `ID-*` of the identity, `TIME-01`, `TREE-01`, `STATE-01` and `MAP-01`
+    assert len(reg) == len(_ids()) == 85                 # 71 of the channel's look, the seven `ID-*` of the identity, `TIME-01`, `TREE-01`, `STATE-01`, `MAP-01` and the overlays `KEY-01`, `NUM-01`, `DOC-01`
     assert {t["kind"] for t in reg} == {"base", "overlay", "transition", "card"}
     assert len([t for t in reg if t["id"].startswith("ID-")]) == 7
 

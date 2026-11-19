@@ -407,7 +407,7 @@ def time_items_key(p) -> tuple:
 
 @technique("TIME-01", "base")
 class TimeAxis(BaseRenderer):
-    """TIME-01, the time axis with dates. Times (`at` of an item, `focus_s`) are seconds from the start of the shot; an `at` that is a word
+    """TIME-01, the time axis with dates. Times (`at` of an item, `focus_s`) are seconds from the start of the shot; an `at` or a `focus_s` that is a word
     anchor is the absolute time of that word, taken from the start of the shot (`registry.at_seconds`). The axis grows over the first 0.8 s;
     an item's stalk grows over 0.35 s from its `at` (an ease out), its year fades in from +0.2 s and its label from +0.35 s; the accented
     item gets a dot on the axis from its `at`; from `focus_s` (0.8 s) the accented items brighten and the others dim to `dim_to`."""
@@ -452,7 +452,7 @@ class TimeAxis(BaseRenderer):
         self.ticks, self.step = tick_years(self.a, self.b, p["tick_every"])
         self.has_accent = any(i["accent"] for i in self.items)
         self.dim_to = float(p["dim_to"])
-        self.focus_s = float(p["focus_s"])
+        self.focus_s = R.at_seconds(p["focus_s"], self.t0, 6.0)               # seconds, or a word anchor (a param of type `at`)
 
     def focus(self, tau) -> float:
         return seg(tau, self.focus_s, self.focus_s + FOCUS_S) if self.has_accent else 0.0

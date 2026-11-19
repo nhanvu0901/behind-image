@@ -1,4 +1,4 @@
-"""What the storyboard agents read about the explanatory devices (`MAP-01`, `TIME-01`, `TREE-01`, `STATE-01` here; `KEY-01`, `NUM-01`, `DOC-01` in the other checkout):
+"""What the storyboard agents read about the explanatory devices (`MAP-01`, `TIME-01`, `TREE-01`, `STATE-01`, `KEY-01`, `NUM-01`, `DOC-01`):
 the catalogue prints their fields and ONE filled example taken from the registry defaults, and the three briefings (draft, chapter and edit through
 `TASK.template.md`; the fast edit through `FAST.template.md`) carry one short part that says which kind of sentence each serves and how to use them."""
 from __future__ import annotations
@@ -36,7 +36,7 @@ def md():
     return techniques_md.generate(R.load_bundle("gae"))
 
 
-@pytest.mark.parametrize("tid", [t for t in ("MAP-01", "TIME-01", "TREE-01", "STATE-01") if t in {x["id"] for x in R.load_bundle("gae").techniques}])
+@pytest.mark.parametrize("tid", SEVEN)
 def test_the_catalogue_prints_the_fields_and_one_filled_example_that_the_registry_accepts(md, tid):
     sec = section(md, tid)
     sp = R.load_bundle("gae").spec(tid)
@@ -69,6 +69,12 @@ def test_the_examples_are_the_registry_defaults_with_the_filled_in_fields_left_o
     assert st == {"label_a": "Colour", "label_b": "Infrared", "holds": "1.5; 2.5; 1.5"}
     mp = example_of(md, "MAP-01")
     assert [p["id"] for p in mp["places"]] == ["bruges", "lucca"] and mp["region_iso"] == ["BE"] and mp["route"][0]["from"] == "bruges"
+    ky = example_of(md, "KEY-01")
+    assert [x["ref"] for x in ky["labels"]] == ["LIT", "INSCR", "MIRROR", "AMBER", "BRUSH"] and ky["labels"][1]["side"] == "n" and all("style" not in x for x in ky["labels"])
+    nm = example_of(md, "NUM-01")
+    assert [(r["value"], r["count"]) for r in nm["rows"]] == [("600", 12), ("2,000", 40)] and nm["caption"] == "each dot is fifty squirrel pelts"
+    dc = example_of(md, "DOC-01")
+    assert dc["lit"] == [{"ref": "INSCR"}] and dc["reading"] == "Jan van Eyck was here. 1434" and dc["original"].startswith("Johannes de eyck")
 
 
 def test_no_other_technique_gets_an_example_line(md):
@@ -81,6 +87,9 @@ def test_the_intent_index_serves_the_new_techniques(md):
     assert "TIME-01" in next(l for l in idx.splitlines() if l.startswith("- **quantify**"))
     assert "TREE-01" in next(l for l in idx.splitlines() if l.startswith("- **context**")) and "TIME-01" in next(l for l in idx.splitlines() if l.startswith("- **context**"))
     assert "STATE-01" in next(l for l in idx.splitlines() if l.startswith("- **compare**")) and "STATE-01" in next(l for l in idx.splitlines() if l.startswith("- **reveal**"))
+    line = lambda intent: next(l for l in idx.splitlines() if l.startswith("- **%s**" % intent))
+    assert "KEY-01" in line("point_at") and "KEY-01" in line("context") and "DOC-01" in line("point_at") and "DOC-01" in line("isolate") and "DOC-01" in line("context")
+    assert "NUM-01" in line("quantify") and "NUM-01" in line("context")
 
 
 def part(text: str) -> str:

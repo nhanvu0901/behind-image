@@ -42,8 +42,15 @@ def _compbase_codes():
     return {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r"(time|tree|state)_[a-z_]+", n.value)}
 
 
+def _explain_codes():
+    """The codes KEY-01 / DOC-01 return from `check_base` and `check_params` (hooks of the registry and of validate, so they are not in the two files scanned above)."""
+    import re
+    tree = ast.parse((ENGINE / "techniques" / "explain_over.py").read_text())
+    return {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r"(doc_[a-z_]+|overlay_needs_camera)", n.value)}
+
+
 def test_documented_codes_are_all_used():
-    used = _codes_in_source() | _map_codes() | {"undrawable", "incomplete", "not_an_object", "unreadable_structure", "style_unusable", "timing_unusable",
+    used = _codes_in_source() | _map_codes() | _explain_codes() | {"undrawable", "incomplete", "not_an_object", "unreadable_structure", "style_unusable", "timing_unusable",
                                  "params_not_object", "unknown_param"}
     used |= _compbase_codes()
     assert set(SB.ISSUE_CODES) - used == set()

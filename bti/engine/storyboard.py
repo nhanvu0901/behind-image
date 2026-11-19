@@ -567,6 +567,10 @@ ISSUE_CODES = {
     "map_bad_center": "A view centre of a MAP-01 is not `lon, lat` inside the world (lon -180..180, lat -85..85). args: param, technique.",
     "map_view_coarse": "The start or the end view of a MAP-01 is narrower than 300 km (warning): Natural Earth has no detail at that scale. args: param, technique, width_km.",
     "map_unknown_iso": "A region code of a MAP-01 is not an ISO 3166-1 alpha-2 code of the bundled countries. args: param, technique, index, code.",
+    # compover: KEY-01, NUM-01, DOC-01 (bti/engine/techniques/explain_over.py)
+    "overlay_needs_camera": "An overlay that places things on a picture (KEY-01, DOC-01) sits on a base shot that shows no picture through a camera (a card, a diagram, a map). args: technique, base.",
+    "doc_lit_no_target": "A line of a DOC-01 names neither a region (`ref`) nor a `box`. args: param, technique, index.",
+    "doc_bad_box": "The `box` of a line of a DOC-01 is not x0, y0, x1, y1 with x1 > x0 and y1 > y0 (source pixels). args: param, technique, index.",
     "element_too_short": "A shot or overlay of the channel identity (`ID-`) or of an explanatory component (`MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-`) is shorter than the technique's `timing.min_s` (error). args: technique, min, got.",
     "identity_technique_mismatch": "A structure shot (title slot or chapter card) uses a technique that is not the one of the chosen identity style (warning). args: shot, technique, style, wanted."
 }
@@ -953,6 +957,10 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
             if not bundle.available(o["technique"]):
                 err(op + ".technique", "%s is not available in the engine yet" % o["technique"], "technique_unavailable", technique=o["technique"])
             issues.extend(R.validate_params(ospec, o.get("params") or {}, op + ".params"))
+            base_check = getattr(R.RENDERERS.get(o["technique"], (None, None))[0], "check_base", None)      # compover: an overlay that needs the base shot's camera
+            bad_base = base_check(s.get("technique")) if base_check is not None else None
+            if bad_base:
+                err(op + ".technique", bad_base[1], bad_base[0], technique=o["technique"], base=s.get("technique"))
             check_asset_params(op + ".params", o.get("params"), ospec)
             check_slots(op + ".slots", o.get("slots"), ospec, o["technique"])
             for what, name in missing_of(ospec, o, "overlay", s):
