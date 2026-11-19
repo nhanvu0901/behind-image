@@ -1,9 +1,12 @@
 """Build docs/PAINTINGS.md: one row per artwork of the library, with what the pipeline needs to queue it.
 
-Run from the repository root:  python3 -I tools/paintings_table.py [--check]
+Run from the repository root:  python3 -I tools/paintings_table.py [--check] [path/to/index.json]
 Reads only: library/artworks.json, library/dossiers/*/dossier.json. The research columns (YouTube coverage, the Commons
 reproduction, the note) come from NOTES below: the findings of the research of 2026-11-19 (worker `nextpaint`), matched to
 artworks by words of the title and the artist. `--check` prints the matches instead of writing the file.
+
+With the path of a copy of the server's `output/index.json` (the index of the output folders, see bti/output/index.py) the table marks each artwork of the index
+as `done` (its folder holds the finished video) or `in-progress` with what the index says (the project, the step, the length), instead of the fixed list PROJECTS below.
 """
 from __future__ import annotations
 
@@ -26,6 +29,30 @@ PROJECTS = {
     "eyck-the-arnolfini-portrait": "arnolfini-opus (being made), arnolfini-live (rendered, old pipeline)",
     "munch-the-scream": "scream (pictures approved, draft not started)",
 }
+
+INDEX_MODE = False                              # set by `main` when an index.json was given: PROJECTS then comes from it
+
+
+def projects_from_index(doc: dict) -> dict[str, tuple[str, str]]:
+    """{artwork key: (status, text)} from `output/index.json`: `done` when the folder holds the finished video, else `in-progress`."""
+    out: dict[str, tuple[str, str]] = {}
+    for r in (doc.get("folders") or []) if isinstance(doc, dict) else []:
+        if not isinstance(r, dict) or not r.get("key"):
+            continue
+        done = r.get("status") == "done"
+        bits = [str(r.get("project") or "")]
+        if done:
+            sec = r.get("length_seconds")
+            bits.append("video %d:%02d" % (int(sec) // 60, int(sec) % 60) if isinstance(sec, (int, float)) else "video")
+        else:
+            bits.append("at step: %s" % (r.get("step") or "not started"))
+        if r.get("out_of_date"):
+            bits.append("out of date: " + ", ".join(r["out_of_date"]))
+        if r.get("last_run"):
+            bits.append(str(r["last_run"])[:10])
+        out[r["key"]] = ("done" if done else "in-progress", "%s (%s)" % (bits[0], ", ".join(b for b in bits[1:] if b)))
+    return out
+
 
 # status, youtube, reproduction, note; matched by (title words, artist word). First match wins.
 # status: recommended-N | runner-up | considered | covered | covered-assumed | not-flat
@@ -180,15 +207,16 @@ def status_of(r: dict) -> str:
     if r["kind"] != "artwork":
         return "theme"
     if r["key"] in PROJECTS:
-        return "in-progress"
-    if r["note"]:
+        return PROJECT_STATUS.get(r["key"], "in-progress")
+    if r["note"] and not (INDEX_MODE and r["note"]["status"] == "in-progress"):     # with an index, only the index says what is in progress
         return r["note"]["status"]
     if r["total"] >= MIN_WORDS or len(r["books"]) >= 2:
         return "candidate"
     return "thin-text"
 
 
-ORDER = ["in-progress", "recommended-1", "recommended-2", "recommended-3", "recommended-4", "recommended-5", "runner-up", "considered", "candidate",
+PROJECT_STATUS: dict[str, str] = {}              # artwork key -> `done` | `in-progress` (filled from an index.json)
+ORDER = ["done", "in-progress", "recommended-1", "recommended-2", "recommended-3", "recommended-4", "recommended-5", "runner-up", "considered", "candidate",
          "covered", "covered-assumed", "not-flat", "thin-text", "theme"]
 
 
@@ -196,10 +224,19 @@ def cell(s: str) -> str:
     return re.sub(r"\s+", " ", str(s)).replace("|", "/").strip()
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    global PROJECTS, INDEX_MODE
+    argv = list(sys.argv[1:] if argv is None else argv)
+    paths = [a for a in argv if not a.startswith("--")]
+    if paths:
+        doc = json.loads(Path(paths[0]).read_text(encoding="utf-8"))
+        found = projects_from_index(doc)
+        PROJECTS = {k: v[1] for k, v in found.items()}
+        PROJECT_STATUS.update({k: v[0] for k, v in found.items()})
+        INDEX_MODE = True
     rows = load()
     used = annotate(rows)
-    if "--check" in sys.argv:
+    if "--check" in argv:
         for i, (tw, aw, n) in enumerate(NOTES):
             print(("OK  " if len(used.get(i, [])) == 1 else "MANY" if i in used else "NONE"), "%-22s %-14s %-16s" % (tw, aw, n["status"]), used.get(i, []))
         return 0
@@ -215,7 +252,7 @@ def main() -> int:
     L = []
     L.append("# The paintings of the library, as a queue for the pipeline")
     L.append("")
-    L.append(f"Generated on {TODAY} by `tools/paintings_table.py` from `library/artworks.json` and `library/dossiers/` ({len(rows)} entries: "
+    L.append(f"Generated on {TODAY} by `tools/paintings_table.py` from `library/artworks.json` and `library/dossiers/`{' and an `output/index.json`' if INDEX_MODE else ''} ({len(rows)} entries: "
              f"{sum(1 for r in rows if r['kind'] == 'artwork')} artworks and {sum(1 for r in rows if r['kind'] != 'artwork')} themed chapters). "
              "Do not edit the table by hand: change the script's notes and run it again.")
     L.append("")
@@ -223,7 +260,11 @@ def main() -> int:
     L.append("")
     L.append("- **key**: the artwork key of the library; a project is created from it (`POST /api/library/projects` with `artwork_key`).")
     L.append("- **status**: where the artwork stands as a subject for a video.")
-    L.append("  - `in-progress`: a project exists.")
+    if INDEX_MODE:
+        L.append("  - `done`: the output folder of the artwork holds the finished video (from the `output/index.json` this table was made with).")
+        L.append("  - `in-progress`: a project exists and its output folder has no finished video yet (the project column says where it stands).")
+    else:
+        L.append("  - `in-progress`: a project exists.")
     L.append("  - `recommended-1` to `recommended-5`, `runner-up`: the ranking of the research of 2026-11-19 (interesting story, little coverage on YouTube, a large reproduction).")
     L.append("  - `considered`: looked at in that research, not shortlisted.")
     L.append(f"  - `candidate`: enough text for a twelve-minute script ({MIN_WORDS:,} words of source text or more, or two books or more); YouTube and the reproduction are not checked yet.")

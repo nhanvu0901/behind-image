@@ -68,9 +68,10 @@ MAX_UPLOAD = 80 * 1024 * 1024
 
 def create_app(projects_root: str | Path | None = None, style_root: str | Path | None = None,
                engine_module: Any = "auto", media_module: Any = "auto",
-               static_dir: str | Path | None = None, workers: int = 2) -> FastAPI:
+               static_dir: str | Path | None = None, workers: int = 2, output_root: "str | Path | bool | None" = None) -> FastAPI:
     """`engine_module` / `media_module`: "auto" imports the real facade lazily,
-    None forces the stub, a module object is used as given (tests)."""
+    None forces the stub, a module object is used as given (tests). `output_root` (outfolder): the output folder (bti/output/); None = beside the projects folder, unless
+    the projects folder was given explicitly (then none); False = none."""
     root = Path(projects_root or os.environ.get("BTI_PROJECTS_ROOT") or REPO_ROOT / "projects").resolve()
     sroot = Path(style_root or REPO_ROOT / "style").resolve()
     static = Path(static_dir or Path(__file__).parent / "static")
@@ -97,6 +98,12 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.state.engine, app.state.media, app.state.jobs = engine, media, jobs
     app.state.script_jobs = script_jobs
     app.state.projects_root = root
+    # outfolder: the output folder (bti/output/): where it is, and the hooks that fill it as the project moves (the last parts of the voice and export jobs look the root up here)
+    from bti.output import hooks as output_hooks, paths as output_paths
+    app.state.output_root = output_paths.output_root_for(root, output_root, projects_root_given=projects_root is not None)
+    output_hooks.register(root, app.state.output_root)
+    if app.state.output_root is not None:
+        app.add_middleware(output_hooks.OutputSyncMiddleware, projects_root=root, output_root=app.state.output_root)
 
     def reply(request: Request, body: dict, status: int, headers: dict | None = None) -> JSONResponse:
         """Every error answer carries `code`, `fix` and `retry` (bti/editor/hints.py); a key the error already has is never changed."""
@@ -948,6 +955,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(draft_router)
     app.include_router(export_router)
     app.include_router(settings_router)
+    from bti.output.api import router as _output_router              # outfolder: POST .../output/build, GET .../output
+    app.include_router(_output_router)
     from .agent_api import make_router as _agent_router              # which agent works on a project (step select)
     app.include_router(_agent_router(pdir=pdir))
     from .identity_api import make_router as _identity_router        # opening, channel-name beat and chapter marks (needs this app's save path)

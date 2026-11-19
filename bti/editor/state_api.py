@@ -175,6 +175,11 @@ SPECS: list[Spec] = [
               "Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops "
               "with a reason (see docs/AGENT_API.md, \"Chạy tự động\"). `cost` is the sum of what it may start: only the kinds the owner allowed."),
     Spec("auto.cancel", "export", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While an automatic run of the project goes on."),
+    # ---- outfolder: the output folder (bti/output/)
+    Spec("output.build", "export", "Ghi thư mục output", "POST", P + "/output/build",
+         when="Listed when the app has an output folder (`output/<artwork key>/`) and the project is not a reference project. Always ready: fills (or refills) the folder from the project as it stands "
+              "(the video, the readable documents, the log, the index); the body `{\"clean\": true}` also removes the working folder's caches when the export stands. A project of the same painting "
+              "as the folder's last project takes it over."),
 ]
 SPEC: dict[str, Spec] = {s.id: s for s in SPECS}
 assert len(SPEC) == len(SPECS), "duplicate action id"
@@ -247,6 +252,7 @@ class Ctx:
         self.undo_target: dict | None = None
         self.picks_agent_running = False                  # join2: the job of picks.auto runs (kind `picks`, meta.action `auto`): it holds the agent like a `draft` job does
         self.run_going = False                            # join2: an automatic run goes on (a job of kind `auto`): the request boxes are not started meanwhile
+        self.output_root = None                           # outfolder: the app's output folder (None: this app has none)
 
     # -- steps
     def page_state(self, sid: str) -> str:
@@ -822,6 +828,13 @@ def b_auto_run(c: Ctx):
     return E(["no_running_job"] if busy else [], {"until": None, "max_steps": 40}, step=c.pipe.get("current") or "export", run_cost=run_cost(c))
 
 
+def b_output_build(c: Ctx):
+    """outfolder: refill the project's output folder. Listed when the app has one and the project is not a reference project; nothing to wait for."""
+    if c.output_root is None or c.imported or c.pipe.get("protected"):
+        return None
+    return E([], {})
+
+
 BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "outline.generate": b_outline_generate, "outline.import": b_outline_import, "outline.approve": b_outline_approve,
     "narration.generate": b_narration_generate, "narration.import": b_narration_import, "narration.ops": b_narration_ops,
@@ -833,7 +846,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
     "draft.edit": b_draft_edit, "identity.set": b_identity_set,
-    "export.start": b_export_start, "auto.run": b_auto_run,
+    "export.start": b_export_start, "auto.run": b_auto_run, "output.build": b_output_build,
 }
 CANCELS = set(CANCEL_ID.values())
 
@@ -912,7 +925,7 @@ def damaged_answer(pid: str, why: str, code: str, fix: str | None = None) -> dic
             "auto": auto_mod.public(auto_mod.default_doc()), "approvals": {g: None for g in auto_mod.GATES}}      # c5cli
 
 
-def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, longjobs=None, picks_provider: Any = None) -> dict:
+def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, longjobs=None, picks_provider: Any = None, output_root: Any = None) -> dict:
     """The whole answer of GET /api/projects/{pid}/state."""
     d = root / pid
     try:
@@ -923,6 +936,7 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
         return damaged_answer(pid, str(e)[:300], "project_file_damaged" if "project.json" in str(e) else "document_corrupt")
     jobs = running_jobs(pid, d, script_jobs, preview_jobs, longjobs)
     c = Ctx(root, pid, pipe, jobs, picks_provider)
+    c.output_root = output_root                                      # outfolder
     if not c.imported:
         _try(lambda: _load_script(c))
         _try(lambda: _load_picks(c))
@@ -939,9 +953,15 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
             if p.get("vi") and p["vi"] not in s["detail"]:
                 s["detail"] = (s["detail"] + " " + p["vi"]).strip()
     problems = [{k: v for k, v in p.items() if k != "vi"} for p in c.problems]
-    return {"project": pid, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
-            "next_actions": build_actions(c), "jobs": jobs, "problems": problems,
-            "auto": auto_mod.public(c.auto), "approvals": _try(lambda: approvals_of(c), {g: None for g in auto_mod.GATES})}      # c5cli
+    answer = {"project": pid, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
+              "next_actions": build_actions(c), "jobs": jobs, "problems": problems,
+              "auto": auto_mod.public(c.auto), "approvals": _try(lambda: approvals_of(c), {g: None for g in auto_mod.GATES})}      # c5cli
+    if output_root is not None:                                      # outfolder: a problem with the output folder is a warning with its sentence (the key is there only then)
+        from bti.output import hooks as output_hooks
+        w = _try(lambda: output_hooks.warnings_for(output_root, d), [])
+        if w:
+            answer["warnings"] = w
+    return answer
 
 
 def make_router(projects_root: Path, *, pdir: Callable[[str], Path], script_jobs=None, preview_jobs=None, longjobs=None) -> APIRouter:
@@ -954,7 +974,7 @@ def make_router(projects_root: Path, *, pdir: Callable[[str], Path], script_jobs
         pdir(pid)
         mgr = getattr(request.app.state, "longjob_manager", None) or longjobs
         return build_state(root, pid, script_jobs=script_jobs, preview_jobs=preview_jobs, longjobs=mgr,
-                           picks_provider=getattr(request.app.state, "picks_provider", None))
+                           picks_provider=getattr(request.app.state, "picks_provider", None), output_root=getattr(request.app.state, "output_root", None))
 
     return r
 

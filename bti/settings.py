@@ -168,3 +168,23 @@ def get_model_settings(refresh: bool = False) -> dict:
             "agentic": r in AGENTIC_ROLES,
         })
     return {"roles": roles_list, "models": available_models}
+
+
+# ---- outfolder: the one switch of the output folder (bti/output/): clean the working folder's caches after a successful export (`run/settings.json`, key `output`)
+def get_output_settings() -> dict:
+    """`{"clean_after_export": bool}`; the cleaning is on unless the owner switched it off."""
+    block = load_user_settings().get("output")
+    val = block.get("clean_after_export") if isinstance(block, dict) else None
+    return {"clean_after_export": val if isinstance(val, bool) else True}
+
+
+def set_output_clean(flag: bool) -> dict:
+    """Switch the cleaning on or off; the other settings are kept. Returns `get_output_settings()`."""
+    if not isinstance(flag, bool):
+        raise SettingsError("invalid_payload", "clean_after_export must be true or false", 422)
+    current = load_user_settings()
+    block = dict(current.get("output")) if isinstance(current.get("output"), dict) else {}
+    block["clean_after_export"] = flag
+    current["output"] = block
+    _write_user_settings(current)
+    return get_output_settings()

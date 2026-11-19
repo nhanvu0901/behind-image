@@ -54,6 +54,7 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
 | `bti approve <project> <gate>` | Approve outline, narration, picks or storyboard; refused (exit 3) when the owner did not allow an agent to approve it. |
 | `bti ops <project> picks\|storyboard --file ops.json [--dry-run] [--note TEXT]` | Send a batch of typed operations (the command reads the current revision itself) and print the changes. |
 | `bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]` | Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); every step is in the run log. |
+| `bti output <project> [--clean]` | Fill (or refill) the project's folder output/<artwork key>/ (the video, the readable documents, the log) from the project as it stands; --clean also removes the working folder's caches when the export stands. |
 | `bti job <id> [--wait] [--cancel]` | Look at a long job, follow it to its end, or stop it. |
 | `bti undo <project> <batch>` | Undo one batch of operations. |
 | `bti changes <project> [picks\|storyboard]` | The change log of the project, newest batch first. |

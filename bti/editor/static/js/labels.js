@@ -866,3 +866,14 @@ export const CODE_FIXSCRIPT = {
   fact_for_owner: 'Dữ kiện có lời nhắn cho người duyệt', outline_note: 'Ghi chú của mô hình cho bạn',
 };
 Object.assign(CODE, CODE_FIXSCRIPT);
+
+// ---- outfolder: the output folder (bti/output/): the one switch in the settings dialog (outputswitch.js)
+export const OUTPUT_LABELS = {
+  loading: 'Đang tải...',
+  title: 'Thư mục output',
+  clean: 'Dọn thư mục làm việc sau khi xuất video',
+  hint: 'Mỗi tác phẩm có một thư mục riêng trong "output": video, lời dẫn, các cảnh và nhật ký. Khi xuất video xong, ứng dụng xóa các tệp tạm của dự án (bản dựng từng đoạn, ảnh xem thử, bản ghi từng lượt chạy của agent, nhật ký dài) để giải phóng chỗ trống. Tài liệu, hình, giọng đọc, lịch sử sửa và video không bị xóa. Tắt đi nếu bạn muốn giữ các tệp tạm; xuất lại cùng một storyboard sẽ nhanh hơn.',
+  saved: 'Đã lưu.',
+  saveFail: 'Chưa lưu được: ',
+  loadFail: 'Chưa đọc được cài đặt này: ',
+};

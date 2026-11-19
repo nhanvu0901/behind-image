@@ -8,13 +8,14 @@ import { SETTINGS_LABELS as T, AGENT_LABELS as AL } from './labels.js';
 import { modelRows, modelChanges, applyAllModels, modelListState, modelOptionText } from './editlogic.js';
 import { defaultView, findAgent } from './agentlogic.js';
 import { loadAgents } from './agentpick.js';
+import { outputSwitchBox } from './outputswitch.js';          // outfolder: the switch of the output folder
 
 export function openModelSettings() {
   const agentBox = h('div', { class: 'settings-agent', 'data-settings-agent': '' }, h('div', { class: 'hint', text: T.loading }));
   const advBody = h('div', { class: 'settings-adv-body' }, h('div', { class: 'hint', text: T.loading }));
   const adv = h('details', { class: 'settings-advanced' }, h('summary', { text: AL.settings.advanced }),
     h('div', { class: 'hint settings-adv-hint', text: AL.settings.advancedHint }), advBody);
-  const body = h('div', { class: 'body settings-body', style: { width: 'min(760px, 94vw)' } }, agentBox, adv);
+  const body = h('div', { class: 'body settings-body', style: { width: 'min(760px, 94vw)' } }, agentBox, outputSwitchBox(), adv);          // outfolder: + the switch
   const dlg = modal({ title: AL.settings.title, body });
   loadAgentBox();
   load();

@@ -26,6 +26,7 @@ The finished video as one MP4, with a check sheet, a description that lists the 
 | `export.cancel` | export | Dừng |  |  |  |
 | `auto.run` | export | Chạy tự động |  | machine_time: the sum of what it may start from where the project stands | yes |
 | `auto.cancel` | export | Dừng |  |  |  |
+| `output.build` | export | Ghi thư mục output |  |  |  |
 <!-- END GENERATED: actions -->
 
 The export is rendered in parts that are joined at the end. Cancelling (`bti job <id> --cancel`, or the `export.cancel` action) keeps the finished parts; starting again goes on from there, also after a server restart.
@@ -53,6 +54,12 @@ started job <job> (export.start)
 ...
 done: <any>
 ```
+
+## The output folder and the cleaning
+
+When the export is done the app also fills `output/<artwork key>/` (beside `projects/`; one folder per painting, named by the library's artwork key, or by the project id for a project made without one): `final.mp4` at its root, `README.md` (one page, in Vietnamese: where the video stands), `state.json`, and the parts `1_sources/`, `2_script/`, `3_voice/`, `4_pictures/`, `5_storyboard/` (with the contact sheets of the video), `6_export/` and `log/`. The folder fills as the project moves (each part when its gate is approved, the voice when it is done, the video when the export is) and marks a part as out of date when its document changes after it was published. The app writes it; never edit or delete anything in it. `bti output <project>` fills (or refills) it from the project as it stands (action `output.build`); `bti output <project> --clean` also does the cleaning below.
+
+After a SUCCESSFUL export the app removes the working folder's caches (`cache/export` render parts, preview frames and clips, the transcripts of the pictures agent's runs, job logs; the exact list is in `bti/output/clean.py`) and the folder's `README.md` says how much was freed. It never cleans after a failed export, while another job of the project runs, or when the owner switched it off in the settings. The documents, `changes/`, `history/`, `cache/draft/` and the job records stay, so the project opens, previews, edits and exports again; the only cost is that exporting the SAME storyboard again renders from the start. A problem writing the folder never fails the export: it is a `warnings` entry of `bti status` with its sentence. The video is never copied anywhere else by an agent: the owner fetches it with `tools/deploy/fetch_video.sh <artwork key>`.
 
 ## What a good result is
 
