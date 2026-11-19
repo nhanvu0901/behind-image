@@ -129,3 +129,60 @@ def test_every_error_of_the_operations_is_one_vocabulary_with_the_rest(oc):
     r = oc.put(f"/api/projects/{PID}/storyboard", json={"storyboard": {}, "base_rev": "old"})
     assert r.status_code == 409 and r.json()["code"] == "stale_revision" and r.json()["current_rev"] == sb_rev(oc)
     assert r.json()["fix"] == ERRORS["stale_revision"][2]                                      # one sentence for both
+
+
+# ---------------------------------------------------------------- c2box: the prompt boxes in the state answer
+def test_the_two_boxes_are_listed_with_a_template_their_routes_take(oc, monkeypatch):
+    """`draft.edit` (step 5) and `picks.edit` (step 4): the caller supplies the instruction and the scope (`fill`); the template names the revision
+    to read from and every other field the route takes. The step 4 route takes the template as it is (a scope of lines, a chapter or `all`)."""
+    import bti.draft.run as draft_run
+    s = state(oc)
+    sb, pk_ = action(s, "draft.edit"), action(s, "picks.edit")
+    assert sb["fill"] == ["instruction", "scope"] and sb["body_template"] == {"instruction": None, "scope": None, "base_rev": sb_rev(oc), "mode": "auto"}
+    assert pk_["method"] == "POST" and pk_["path"] == f"/api/projects/{PID}/picks/edit" and pk_["step"] == "picks"
+    assert pk_["fill"] == ["instruction", "scope"] and pk_["body_template"] == {"instruction": None, "scope": None, "base_rev": pk_rev(oc)}
+    assert pk_["body"] is None and pk_["long_job"] is True and pk_["uses_model"] is True and pk_["cost"]["kind"] == "model" and pk_["agent"]["id"]
+    assert pk_["follow"] == "GET /api/longjobs/{job_id}" and pk_["advances"] is False and pk_["gate"] is False
+    seen = {}
+
+    def fake_start(pid, d, **kw):
+        seen.update(kw)
+        return {"id": "fakejob", "turn_id": "t_x", "meta": {"model": "mock", "agent": None}}
+    monkeypatch.setattr(draft_run, "start_picks", fake_start)
+    for scope in ({"beats": ["b0003"]}, {"chapter": "c01"}, {"all": True}):
+        r = oc.post(pk_["path"], json={**pk_["body_template"], "instruction": "dòng này chỉ cho xem khuôn mặt", "scope": scope})
+        assert r.status_code == 200 and r.json()["job_id"] == "fakejob", r.text
+        assert seen["edit_scope"] == scope and seen["base_rev"] == pk_rev(oc)
+
+
+def test_the_picks_box_is_not_ready_while_an_edit_job_runs_or_when_its_agent_cannot_run(oc, monkeypatch):
+    import bti.agents as agents_mod
+    a = action(state(oc), "picks.edit")
+    assert a["ready"] is True and a["needs"] == []
+    from bti.editor import state_api
+    monkeypatch.setattr(state_api.Ctx, "busy", lambda self, family: family == "draft")
+    assert action(state(oc), "picks.edit")["needs"] == ["no_running_job"]
+
+
+def test_the_refusals_of_the_picks_box_routes_carry_code_fix_and_retry(oc):
+    u = f"/api/projects/{PID}/picks/edit"
+    for body, code in (({"instruction": "", "scope": {"all": True}}, "edit_empty_instruction"), ({"instruction": "x", "scope": {}}, "edit_bad_scope"),
+                       ({"instruction": "x", "scope": {"beats": ["b9999"]}}, "edit_bad_scope"), ({"instruction": "x" * 2001, "scope": {"all": True}}, "edit_bad_scope"),
+                       ({"instruction": "x", "scope": {"all": True}, "model": 5}, "bad_model"), ([], "invalid_request")):
+        r = oc.post(u, json=body)
+        assert r.status_code == 422 and r.json()["code"] == code and r.json()["fix"] and r.json()["retry"] in ("after_fix", "no", "later"), (body, r.text)
+    r = oc.post(u, json={"instruction": "x", "scope": {"all": True}, "base_rev": "0" * 40})
+    assert r.status_code == 409 and r.json()["code"] == "stale_revision" and r.json()["current_rev"] == pk_rev(oc)
+
+
+def test_the_change_log_of_a_box_turn_is_what_changes_undo_names(oc):
+    """The state names the newest batch that can be undone: the list of changes on both pages shows "Hoàn tác" on that row."""
+    from bti.ops import runner  # noqa: F401
+    r = oc.post(oc.sb, json={"base_rev": sb_rev(oc), "actor": "agent:mock", "note": "làm vòng sáng to hơn", "scope": {"shots": ["s0002"]},
+                             "ops": [{"op": "set_params", "shot": "s0002", "overlay": "o1", "params": {"rx": 260, "ry": 260}}]})
+    assert r.status_code == 200, r.text
+    s = state(oc)
+    u = action(s, "changes.undo")
+    assert u["path"].endswith("/changes/%s/undo" % r.json()["batch"]) and u["step"] == "edit" and u["body"]["base_rev"] == sb_rev(oc)
+    log = oc.get(f"/api/projects/{PID}/changes?doc=storyboard").json()["changes"]
+    assert log[0]["batch"] == r.json()["batch"] and log[0]["note"] == "làm vòng sáng to hơn" and log[0]["undone_by"] is None

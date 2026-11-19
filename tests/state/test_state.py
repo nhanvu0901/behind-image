@@ -8,7 +8,7 @@ import pytest
 from state_helpers import DEMO_SRC, PID, STAGES, action, build, ids, make_book_project, route_ok, wait_job
 
 SCRIPT_REDO = ["outline.generate", "outline.import", "narration.generate", "narration.import", "narration.ops"]
-PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.ops"]
+PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.ops", "picks.edit"]
 EDIT_OPEN = ["draft.start", "storyboard.validate", "storyboard.preview", "storyboard.put", "storyboard.ops", "draft.edit", "identity.set"]
 
 # The exact list of action ids at each stage, in the order the answer gives them: the repair of a damaged project, then what

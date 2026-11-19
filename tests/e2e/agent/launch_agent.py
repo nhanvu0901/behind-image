@@ -59,21 +59,8 @@ import bti.script.providers as P  # noqa: E402
 import re  # noqa: E402
 
 _get_provider = P.get_provider
-_HELPER_FIELDS = ("in_scope", "locked", "start_s", "end_s", "beat_text", "duration_s")
-
-
-def _edit_answer(user):
-    """A good answer to the fast edit of the CURRENT contract (only the shots the model changes, whole, id kept, helper fields not sent back):
-    every shot of the scope kept, with its note changed. (The canned answer of launch.py looks for the heading of an older template, so it never fires: the mock then answers "mock response", refused as `spec_invalid`.)"""
-    m = re.search(r"do not send them back\.\n(\[.*?\n\])\n\n### The words", user, re.S)
-    shots = json.loads(m.group(1)) if m else []
-    out, changes = [], []
-    for sh in shots:
-        sh = {k: v for k, v in sh.items() if k not in _HELPER_FIELDS}
-        sh["note"] = "Làm chậm chuyển động (bản thử)"
-        out.append(sh)
-        changes.append({"shot": sh.get("id"), "what": "Làm chậm chuyển động của cảnh này"})
-    return json.dumps({"result": "edit", "summary": "Đã làm chậm chuyển động ở %d cảnh." % len(out), "shots": out, "remove": [], "changes": changes}, ensure_ascii=False)
+sys.path.insert(0, str(HERE.parent / "stages"))
+import box_mock  # noqa: E402  (the canned answers of the two prompt boxes, worker c2box)
 
 
 def get_provider(name):
@@ -86,8 +73,9 @@ def get_provider(name):
             e = P.ProviderError("rate_limit", "Hạn mức của gói Claude Code đã hết. Thử lại sau 4 giờ 30 phút.")
             e.retry_after_seconds = 16200
             raise e
-        if "change a few shots of a video's storyboard" in user and "[mock:slow]" not in user:        # the heading of skills/storyboard_edit/FAST.template.md
-            return _edit_answer(user)
+        canned = box_mock.answer(user)                                                        # the briefings of the two prompt boxes
+        if canned is not None and "[mock:slow]" not in user:
+            return canned
         return fn(spec, system, user, **kw)
     return complete
 

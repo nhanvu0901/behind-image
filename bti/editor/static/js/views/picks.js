@@ -15,6 +15,7 @@ import { describeError, jobErrorText, sourceLimitText, STAGE_CODES } from '../er
 import { PICKS_LABELS, SOURCE_LABELS } from '../labels.js';
 import { projectHash } from '../router.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
+import { mountPromptEdit } from '../promptedit.js';          // c2box: the prompt box of this step
 import * as L from './picks_logic.js';
 
 // ------------------------------------------------------------------ words
@@ -172,7 +173,7 @@ function paintLeft() {
     return h('div', { class: 'pk-chap' }, h('div', { class: 'pk-chaph' }, h('b', { text: c.title || c.id }), h('span', { class: 'count' + (pr.done === pr.total ? '' : ' warnc'), text: `${pr.done}/${pr.total}` })),
       c.beats.map((b) => {
         const n = L.countPicks(D, b.id), st = L.beatStatus(D, b.id);
-        return h('button', { class: 'pk-beat' + (S.beat === b.id ? ' sel' : '') + (st === 'skip' ? ' skip' : ''), title: b.text, onclick: () => { S.beat = b.id; paintLeft(); paintMid(); paintRight(); } },
+        return h('button', { class: 'pk-beat' + (S.beat === b.id ? ' sel' : '') + (st === 'skip' ? ' skip' : ''), title: b.text, onclick: () => { S.beat = b.id; paintLeft(); paintMid(); paintRight(); fireSelect(); } },
           h('span', { class: 'bid', text: b.id }), h('span', { class: 'bt', text: b.text }),
           st === 'skip' ? h('span', { class: 'tag', text: 'bỏ qua' }) : h('span', { class: 'count' + (n ? '' : ' none'), text: String(n) }));
       }));
@@ -719,8 +720,27 @@ const BAR = `<div id="pk-top" class="pk-top"></div>
   <section class="pk-col"><div class="col-h"><h2>Dòng lời dẫn</h2></div><div id="pk-left" class="col-b"></div></section>
   <section class="pk-col"><div class="col-h"><h2>Dòng này</h2></div><div id="pk-mid" class="col-b"></div></section>
   <section class="pk-col"><div class="col-h"><h2>Tìm hình</h2></div><div id="pk-right" class="col-b"></div></section>
+  <section class="pk-col pk-col-box"><div class="col-h"><h2>Sửa chọn hình bằng lời</h2></div><div id="pk-box" class="col-b pk-box"></div></section>
 </div>`;
 function renderAll() { paintTop(); paintLeft(); paintMid(); paintRight(); }
+
+// ------------------------------------------------------------------ c2box: the prompt box of this step ("Sửa chọn hình bằng lời")
+const selectListeners = new Set();
+function fireSelect() { for (const fn of [...selectListeners]) { try { fn(S.beat); } catch { /* one listener never stops the others */ } } }
+/** A turn of the box changed picks.json on the server (or undid its batch): take the saved picks in; what the owner has not saved yet is put back. */
+async function takeInPicks() {
+  if (dirty) await recover(); else await reload();
+  pipeChanged();
+}
+const boxApi = {
+  chapters: () => chapters(),
+  currentBeat: () => S.beat,
+  onSelect: (fn) => { selectListeners.add(fn); return () => selectListeners.delete(fn); },
+  rev: () => R,
+  isDirty: () => dirty,
+  save: () => Q.run(saveNow).catch(() => null),
+  openSearch: () => { S.tab = 'search'; paintRight(); $('#pk-right')?.scrollIntoView?.({ block: 'nearest' }); },
+};
 
 export async function mount(host, ctx) {
   scope = ctx.scope; shell = ctx.shell;
@@ -733,6 +753,9 @@ export async function mount(host, ctx) {
   try { applyData(await api.get(P())); } catch (e) { root.replaceChildren(h('div', { class: 'view-msg', text: failText(e) })); return {}; }
   S.tab = D.main_asset ? 'search' : 'main';
   renderAll();
+  selectListeners.clear();
+  const boxHost = $('#pk-box');
+  if (boxHost) mountPromptEdit(boxHost, { pid: S.pid, scope, kind: 'picks', takeIn: takeInPicks, onJobEnd: pipeChanged, picks: boxApi });
   try { const r = await api.get(`/api/projects/${S.pid}/longjobs?kind=picks`); const run = (r.items || r || []).find?.((j) => ['queued', 'waiting', 'running'].includes(j.state)); if (run) watch(run.id); } catch { /* the runner may not answer */ }
   loadSuggestions();
   // a suggestion job started in another tab shows up here within a few seconds

@@ -1,10 +1,13 @@
-"""Edit by instruction, end to end through the HTTP routes (contract A2 to A4).
+"""Edit by instruction, end to end through the HTTP routes (contract A2 to A4), on the synthetic project.
 
-Why this file exists: the unit tests of `fastedit`, `merge` and `run` call the pieces one by one, or call `draft_run.start` with
-test-only hooks, so the real route `POST /api/projects/{pid}/draft/edit` never reached the real functions. The first real request
-failed with `TypeError: fast_edit() takes 2 positional arguments but 3 were given`. Everything here goes through the app (`create_app`
-and the test client): `POST /draft/edit`, the long-job route until the job ends, `GET /draft/thread`, the storyboard routes, `resolve`,
-`undo`, the frame route. NOTHING of `bti.draft` is replaced.
+Why this file exists: the unit tests of `merge` and `run` call the pieces one by one, or call `draft_run.start` with test-only hooks, so the
+real route `POST /api/projects/{pid}/draft/edit` never reached the real functions. Everything here goes through the app (`create_app` and
+the test client): `POST /draft/edit`, the long-job route until the job ends, `GET /draft/thread`, the storyboard routes, `resolve`, `undo`.
+NOTHING of `bti.draft` is replaced.
+
+Since worker c2box the fast path answers with typed operations and its tests are in `test_box_storyboard.py` (on the fixture project of
+`tests/ops`); the slow path writes through the same door and its tests are in `test_box_slow.py`. What stays here is what the two share:
+the plumbing of the job and the thread, the quota messages, the tampering guard, and the slow path on the synthetic project.
 
 The only stand-ins are the ones a real run also has outside the code under test:
   * the model of the fast path is the `mock` provider (selected through `PUT /api/settings/models`), whose canned answers are queued
@@ -144,29 +147,13 @@ class Env:
                     out.append(copy.deepcopy(s))
         return out
 
-    def edit_answer(self, ids: list[str], overrides: dict[str, dict], summary: str = "Đã đổi hai cảnh theo yêu cầu.") -> str:
-        """A good `edit` answer: the scope's shots echoed back as the prompt showed them (helper fields included), with `overrides`
-        applied by shot id."""
-        shots = self.spec_shots(ids)
-        for s in shots:
-            s.update(overrides.get(s["id"], {}))
-        return json.dumps({"result": "edit", "summary": summary, "shots": shots,
-                           "changes": [{"shot": sid, "what": "Đổi cảnh %d theo yêu cầu." % (i + 1)} for i, sid in enumerate(overrides)]},
+    def edit_answer(self, ids: list[str], overrides: dict | None = None, summary: str = "Đã đổi cách dựng của cảnh đầu.") -> str:
+        """A good answer of the fast path in the CURRENT contract (typed operations): the first shot of `ids` takes another core treatment."""
+        sb = self.saved()
+        first = next(s for s in sb["shots"] if s["id"] == ids[0])
+        tech = "CAM-03" if first["technique"] != "CAM-03" else "CAM-01"
+        return json.dumps({"status": "applied", "summary": summary, "reason": "", "ops": [{"op": "set_technique", "shot": ids[0], "technique": tech}]},
                           ensure_ascii=False)
-
-    def delta_answer(self, overrides: dict[str, dict], *, remove=(), new_shots=(), summary: str = "Đã đổi vài cảnh theo yêu cầu.",
-                     whats: dict[str, str] | None = None, **extra) -> str:
-        """The v2 contract: ONLY the shots the model changes (whole shot, id kept) and adds (no id), plus `remove`."""
-        shots = self.spec_shots(list(overrides))
-        for sh in shots:
-            sh.update(overrides[sh["id"]])
-            for k in ("in_scope", "locked", "start_s", "end_s", "beat_text", "duration_s"):
-                sh.pop(k, None)
-        whats = whats if whats is not None else {sid: "Đổi cảnh theo yêu cầu." for sid in overrides}
-        body = {"result": "edit", "summary": summary, "shots": shots + list(new_shots), "remove": list(remove),
-                "changes": [{"shot": sid, "what": w} for sid, w in whats.items()]}
-        body.update(extra)
-        return json.dumps(body, ensure_ascii=False)
 
     def deep_cfg(self, fake_dir, overrides: dict[str, dict], notes_json: dict | None = None) -> None:
         """What the fake agy writes into out/: every chapter's decompiled spec with `overrides` (by shot id) applied."""
@@ -230,174 +217,8 @@ def held(monkeypatch):
 
 
 # ----------------------------------------------------------------------------------------------------------- (a)
-def test_a_fast_two_shots_applied_then_undone(env):
-    ids = env.content_ids("c01")[:2]
-    assert len(ids) == 2
-    before = env.saved()
-    rev0 = env.rev()
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"technique": "CAM-03"}, ids[1]: {"note": "slow look at the mirror"}})])
-
-    job, turn = env.run_edit("zoom chậm hơn vào hai cảnh đầu", ids, mode="fast")
-
-    assert job["state"] == "done", why(job)
-    assert turn["status"] == "applied", turn
-    assert turn["path"] == "fast" and turn["escalated"] is False
-    assert turn["summary"] == "Đã đổi hai cảnh theo yêu cầu."
-    assert turn["before_rev"] == rev0
-    after = env.saved()
-    rev1 = env.rev()
-    assert rev1 != rev0 and turn["after_rev"] == rev1                    # the page reads the same revision the editor uses
-    # only the two shots differ
-    b = {s["id"]: s for s in before["shots"]}
-    a = {s["id"]: s for s in after["shots"]}
-    assert list(a) == list(b)                                           # no shot added or removed, same order
-    changed = {sid for sid in a if a[sid] != b[sid]}
-    assert changed == set(ids), changed
-    for sid in ids:
-        assert a[sid]["source"] == "agent"
-    assert a[ids[0]]["technique"] == "CAM-03" and a[ids[1]]["note"] == "slow look at the mirror"
-    assert {c["shot_id"] for c in turn["changes"]} == set(ids)
-    assert all(c["op"] == "changed" and c["what"] for c in turn["changes"])
-    assert turn["has_undo"] is True
-
-    # undo through the route
-    r = env.client.post(env.u("/draft/edit/%s/undo" % turn["id"]), json={})
-    assert r.status_code == 200, r.text
-    assert r.json()["status"] == "undone"
-    assert r.json()["rev"] == r.json()["after_rev"] == env.rev()          # the shapes of FIX_A_core.md section 10 (rev and after_rev)
-    assert env.turn(turn["id"])["status"] == "undone"
-    assert env.saved() == before
-    assert env.rev() == rev0
-
-
-# ----------------------------------------------------------------------------------------------------------- (b)
-def test_b_fast_cannot_is_no_change(env):
-    ids = env.content_ids("c01")[:1]
-    rev0 = env.rev()
-    raw0 = (env.pdir / "storyboard.json").read_bytes()
-    mock.set_canned([json.dumps({"result": "cannot", "summary": "", "reason": "Cần một bức tranh mới, dự án chưa có."}, ensure_ascii=False)])
-
-    job, turn = env.run_edit("thêm bức tranh của họa sĩ khác", ids, mode="fast")
-
-    assert job["state"] == "done", why(job)
-    assert turn["status"] == "no_change", turn
-    assert "Cần một bức tranh mới" in turn["summary"]                    # the owner sees why
-    assert turn["path"] == "fast"
-    assert env.rev() == rev0 and (env.pdir / "storyboard.json").read_bytes() == raw0
-    assert env.client.get(env.u("/draft")).json()["last_run"] is None    # E12: an edit never writes the draft's last run
-
-
-# ----------------------------------------------------------------------------------------------------------- (c)
-ESCALATE = {"result": "escalate", "summary": "", "reason": "Cần nhìn vào chi tiết trên tranh, chưa có vùng nào cho nó."}
-
-
-def test_c_fast_escalate_with_mode_fast_does_not_run_deep(env, fake):
-    ids = env.content_ids("c01")[:1]
-    rev0 = env.rev()
-    mock.set_canned([json.dumps(ESCALATE, ensure_ascii=False)])
-
-    job, turn = env.run_edit("zoom sát chiếc nhẫn", ids, mode="fast")
-
-    assert turn["status"] in ("failed", "no_change"), turn
-    assert "Cần nhìn vào chi tiết" in turn["summary"]
-    assert turn["path"] == "fast" and turn["escalated"] is False
-    assert fake.calls() == []                                            # agy was never started
-    assert env.rev() == rev0
-
-
-def test_c_fast_escalate_with_mode_auto_starts_the_deep_path(env, fake):
-    ids = env.content_ids("c01")[:2]
-    rev0 = env.rev()
-    mock.set_canned([json.dumps(ESCALATE, ensure_ascii=False)])
-    env.deep_cfg(fake.dir, {ids[0]: {"note": "close on the ring"}},
-                 notes_json={"summary": "Đã zoom sát chiếc nhẫn.", "changes": [{"shot": ids[0], "what": "Zoom sát chi tiết."}]})
-
-    job, turn = env.run_edit("zoom sát chiếc nhẫn", ids, mode="auto")
-
-    assert job["state"] == "done", why(job)
-    assert turn["status"] == "applied", turn
-    assert turn["path"] == "deep" and turn["escalated"] is True
-    assert len(fake.calls()) == 1                                        # the deep run happened, once
-    assert env.rev() != rev0
-    assert env.saved()["shots"][[s["id"] for s in env.saved()["shots"]].index(ids[0])]["note"] == "close on the ring"
-
-
-# ----------------------------------------------------------------------------------------------------------- (d)
-def test_d_manual_save_of_another_shot_while_the_job_waits_is_merged(env, held):
-    ids = env.content_ids("c01")[:2]
-    other = env.content_ids("c02")[0]
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"note": "agent note"}})])
-    r = env.post_edit("sửa cảnh đầu", ids, mode="fast")
-    assert r.status_code == 200, r.text
-    assert held.entered.wait(30), "the job never reached the model"
-
-    def touch(sb):
-        next(s for s in sb["shots"] if s["id"] == other)["note"] = "owner note"
-    env.manual_save(touch)
-    held.release.set()
-
-    job = env.wait_job(r.json()["job_id"])
-    turn = env.turn(r.json()["turn_id"])
-    assert job["state"] == "done", why(job)
-    assert turn["status"] == "applied", turn
-    by_id = {s["id"]: s for s in env.saved()["shots"]}
-    assert by_id[ids[0]]["note"] == "agent note" and by_id[ids[0]]["source"] == "agent"
-    assert by_id[other]["note"] == "owner note"                          # the owner's save is still there
-    assert env.rev() == turn["after_rev"]
-
-
-# ----------------------------------------------------------------------------------------------------------- (e)
-def _conflict(env, held):
-    ids = env.content_ids("c01")[:2]
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"note": "agent note"}})])
-    r = env.post_edit("sửa cảnh đầu", ids, mode="fast")
-    assert r.status_code == 200, r.text
-    assert held.entered.wait(30), "the job never reached the model"
-
-    def touch(sb):
-        next(s for s in sb["shots"] if s["id"] == ids[0])["note"] = "owner note"
-    owner_rev = env.manual_save(touch)
-    held.release.set()
-    job = env.wait_job(r.json()["job_id"])
-    turn = env.turn(r.json()["turn_id"])
-    assert job["state"] == "done", why(job)
-    assert turn["status"] == "needs_choice", turn
-    assert turn["conflicts"], turn
-    assert env.rev() == owner_rev                                        # nothing was written
-    return ids, turn, owner_rev
-
-
-def test_e_needs_choice_then_resolve_overwrite(env, held):
-    ids, turn, _ = _conflict(env, held)
-    other = env.content_ids("c02")[0]
-    # the owner also changes an unrelated shot while the turn waits for the choice: overwrite must not drop it
-    env.manual_save(lambda sb: next(s for s in sb["shots"] if s["id"] == other).update(note="owner note elsewhere"))
-
-    r = env.client.post(env.u("/draft/edit/%s/resolve" % turn["id"]), json={"action": "overwrite"})
-
-    assert r.status_code == 200, r.text
-    assert r.json()["status"] == "applied"
-    assert r.json()["rev"] == r.json()["after_rev"] == env.rev()
-    by_id = {s["id"]: s for s in env.saved()["shots"]}
-    assert by_id[ids[0]]["note"] == "agent note" and by_id[ids[0]]["source"] == "agent"
-    assert by_id[other]["note"] == "owner note elsewhere"
-    t = env.turn(turn["id"])
-    assert t["status"] == "applied" and t["after_rev"] == env.rev() and t["has_undo"] is True
-
-
-def test_e_needs_choice_then_resolve_discard(env, held):
-    ids, turn, owner_rev = _conflict(env, held)
-    r = env.client.post(env.u("/draft/edit/%s/resolve" % turn["id"]), json={"action": "discard"})
-    assert r.status_code == 200, r.text
-    assert env.turn(turn["id"])["status"] == "cancelled"
-    assert env.rev() == owner_rev
-    assert {s["id"]: s for s in env.saved()["shots"]}[ids[0]]["note"] == "owner note"
-    # a turn that is not waiting for a choice cannot be resolved again
-    assert env.client.post(env.u("/draft/edit/%s/resolve" % turn["id"]), json={"action": "overwrite"}).status_code == 409
-
-
-# ----------------------------------------------------------------------------------------------------------- (f)
 def test_f_deep_one_chapter_with_the_fake_agy(env, fake):
+    """The slow path writes through the typed operations: ONE batch of `replace_range` (change log, actor, note, undo)."""
     ids = env.content_ids("c01")
     rev0 = env.rev()
     before = env.saved()
@@ -412,74 +233,32 @@ def test_f_deep_one_chapter_with_the_fake_agy(env, fake):
     assert turn["summary"] == "Đã làm chậm cú đẩy máy ở cảnh đầu."
     assert turn["conversation_id"] == "conv-1"
     assert turn["scope"]["kind"] == "chapter" and turn["scope"]["chapter"] == "c01"
+    assert turn["limits"] == {"minutes": 30, "repairs": 2, "part_minutes": 35}               # told to the card when the slow path starts
     after = env.saved()
     b, a = {s["id"]: s for s in before["shots"]}, {s["id"]: s for s in after["shots"]}
-    assert {sid for sid in a if a[sid] != b[sid]} == {ids[0]}
-    assert a[ids[0]]["note"] == "slower push-in" and a[ids[0]]["source"] == "agent"
+    new = [sid for sid in a if sid not in b]
+    assert len(new) == 1 and ids[0] not in a                                                  # the shot was replaced by a new one (a new id)
+    assert a[new[0]]["note"] == "slower push-in" and a[new[0]]["source"] == "agent"
+    assert all(a[sid] == b[sid] for sid in a if sid in b)                                    # every other shot is byte for byte the same
     assert turn["after_rev"] == env.rev() != rev0
-    assert [c["shot_id"] for c in turn["changes"]] == [ids[0]]
-    # and it can be undone
+    # one batch of the change log, with the same actor and note as the fast path
+    log = env.client.get(env.u("/changes?doc=storyboard")).json()["changes"]
+    assert len(log) == 1 and log[0]["batch"] == turn["batch"] and log[0]["note"] == "làm chậm cú đẩy máy trong chương này"
+    assert log[0]["actor"].startswith("agent:") and [o["op"] for o in log[0]["ops"]] == ["replace_range"] and log[0]["ops"][0]["from_shot"] == ids[0]
+    assert log[0]["scope"]["shots"]
+    assert [c["shot_id"] for c in turn["changes"]] == new and turn["changes"][0]["before_id"] == ids[0] and turn["changes"][0]["after_id"] == new[0]
+    assert turn["batch_changes"] and turn["batch_changes"][0]["what"].startswith("Cảnh ")
+    # the frames of the card: before the old id, after the new one
+    for when in ("before", "after"):
+        r = env.client.get(env.u("/draft/edit/%s/frames/%s/%s.jpg" % (turn["id"], new[0], when)))
+        assert r.status_code == 200 and r.headers["content-type"] == "image/jpeg", (when, r.text[:200])
+    # and it can be undone through the card's route
     r = env.client.post(env.u("/draft/edit/%s/undo" % turn["id"]), json={})
     assert r.status_code == 200, r.text
     assert env.saved() == before
 
 
 # ----------------------------------------------------------------------------------------------------------- (g)
-def test_g_before_and_after_frames_of_an_applied_turn(env):
-    ids = env.content_ids("c01")[:2]
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"technique": "CAM-03"}, ids[1]: {"note": "x"}})])
-    _, turn = env.run_edit("đổi hai cảnh", ids, mode="fast")
-    assert turn["status"] == "applied", turn
-    for when in ("before", "after"):
-        for sid in ids:
-            r = env.client.get(env.u("/draft/edit/%s/frames/%s/%s.jpg" % (turn["id"], sid, when)))
-            assert r.status_code == 200, (when, sid, r.text[:200])
-            assert r.headers["content-type"] == "image/jpeg"
-            assert r.content[:3] == b"\xff\xd8\xff" and len(r.content) > 500
-    assert (turns_dir(env.pdir) / turn["id"] / "before.json").is_file()
-
-
-# ----------------------------------------------------------------------------------------------------------- more routes
-def test_fast_repair_call_through_the_route(env):
-    ids = env.content_ids("c01")[:1]
-    good = env.edit_answer(ids, {ids[0]: {"note": "after the repair"}}, summary="Đã sửa sau khi chỉnh lại.")
-    mock.set_canned(["this is not json at all", good])
-    _, turn = env.run_edit("sửa cảnh", ids, mode="fast")
-    assert turn["status"] == "applied", turn
-    assert len(mock.CALLS) >= 2
-
-
-def test_fast_failure_leaves_the_storyboard_and_says_why(env):
-    ids = env.content_ids("c01")[:1]
-    rev0 = env.rev()
-    mock.set_canned(["not json", "still not json"])
-    job, turn = env.run_edit("sửa cảnh", ids, mode="fast")
-    assert job["state"] == "error"
-    assert turn["status"] == "failed" and turn["error"], turn
-    assert turn["summary"]                                               # one sentence for the owner, not empty
-    assert env.rev() == rev0
-
-
-def test_fast_shot_outside_the_scope_is_refused(env):
-    ids = env.content_ids("c01")[:1]
-    other = env.content_ids("c02")[0]
-    rev0 = env.rev()
-    bad = env.edit_answer([ids[0], other], {ids[0]: {"note": "a"}, other: {"note": "b"}})
-    mock.set_canned([bad, bad])
-    job, turn = env.run_edit("sửa", ids, mode="fast")
-    assert turn["status"] == "failed", turn
-    assert env.rev() == rev0
-
-
-def test_edit_with_an_explicit_model_is_used_by_the_fast_path(env):
-    ids = env.content_ids("c01")[:1]
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"note": "n"}})])
-    _, turn = env.run_edit("sửa", ids, mode="fast", model="mock")
-    assert turn["status"] == "applied", turn
-    assert mock.CALLS and mock.CALLS[-1]["model"] == "mock"
-    assert turn["model"] == "mock"
-
-
 def test_deep_run_that_tampers_is_thrown_away(env, fake):
     from bti.editor.common import compute_rev
     ids = env.content_ids("c01")
@@ -499,60 +278,16 @@ def test_deep_without_agy_is_refused_before_a_turn_exists(env, monkeypatch):
     assert env.thread() == []
 
 
-def test_escalate_in_auto_without_agy_fails_the_turn_in_words(env, monkeypatch):
-    monkeypatch.setenv("BTI_AGY_BIN", "")
-    ids = env.content_ids("c01")[:1]
-    mock.set_canned([json.dumps(ESCALATE, ensure_ascii=False)])
-    job, turn = env.run_edit("zoom sát chiếc nhẫn", ids, mode="auto")
-    assert job["state"] == "error", job
-    assert turn["status"] == "failed" and turn["error"] == "agy_missing", turn
-    assert turn["summary"] and "agy" in turn["summary"]
-
-
-def test_auto_picks_fast_for_a_small_scope_and_the_turn_says_so_from_the_start(env, held):
-    ids = env.content_ids("c01")[:2]
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"note": "n"}})])
-    r = env.post_edit("sửa", ids, mode="auto")
-    assert r.status_code == 200, r.text
-    assert held.entered.wait(30)
-    t = env.turn(r.json()["turn_id"])
-    assert t["status"] == "running" and t["path"] == "fast" and t["job_id"] == r.json()["job_id"]
-    held.release.set()
-    env.wait_job(r.json()["job_id"])
-    assert env.turn(r.json()["turn_id"])["status"] == "applied"
-
-
-def test_a_model_answer_in_a_code_fence_with_words_around_it_is_read(env):
-    ids = env.content_ids("c01")[:1]
-    answer = "Đây là kết quả:\n```json\n" + env.edit_answer(ids, {ids[0]: {"note": "fenced"}}) + "\n```\nHết."
-    mock.set_canned([answer])
-    _, turn = env.run_edit("sửa", ids, mode="fast")
-    assert turn["status"] == "applied", turn
-    assert not mock.CALLS[-1]["retry"]
-
-
 def test_the_scope_is_said_in_words_for_every_kind_of_scope(env):
     """Contract A5: '2 cảnh đang chọn', 'Chương: <name>', 'Cả video'; never a raw id."""
     ids = env.content_ids("c01")[:2]
-    mock.set_canned([json.dumps({"result": "cannot", "reason": "Không làm được."}, ensure_ascii=False)] * 3)
+    mock.set_canned([json.dumps({"status": "cannot", "reason": "Không làm được.", "summary": "", "ops": []}, ensure_ascii=False)] * 3)
     _, t1 = env.run_edit("sửa", ids, mode="fast")
     _, t2 = env.run_edit("sửa", chapter="c02", mode="fast")
     _, t3 = env.run_edit("sửa", all_=True, mode="fast")
     assert t1["scope_words"] == "2 cảnh đang chọn"
     assert t2["scope_words"] == "Chương: The mirror"
     assert t3["scope_words"] == "Cả video"
-
-
-def test_a_fast_edit_of_a_whole_chapter_and_the_prompt_carries_the_thread(env):
-    ids1 = env.content_ids("c01")[:1]
-    mock.set_canned([env.edit_answer(ids1, {ids1[0]: {"note": "first"}}, summary="Đã đổi lần một.")])
-    _, t1 = env.run_edit("lần một", ids1, mode="fast")
-    assert t1["status"] == "applied", t1
-    ids2 = env.content_ids("c01")
-    mock.set_canned([env.edit_answer(ids2, {ids2[1]: {"note": "second"}}, summary="Đã đổi lần hai.")])
-    _, t2 = env.run_edit("lần hai", chapter="c01", mode="fast")
-    assert t2["status"] == "applied", t2
-    assert "lần một" in mock.CALLS[-1]["user"] and "Đã đổi lần một." in mock.CALLS[-1]["user"]     # the last turns are in the prompt
 
 
 def test_a_failed_turn_keeps_a_vietnamese_sentence_for_every_cause(env, monkeypatch):
@@ -571,106 +306,6 @@ def test_a_failed_turn_keeps_a_vietnamese_sentence_for_every_cause(env, monkeypa
 
 
 # ----------------------------------------------------------------------------------------------------------- the turn owns only the agent's shots
-def _start_held(env, held, ids, note="agent note", instruction="sửa cảnh đầu"):
-    mock.set_canned([env.edit_answer(ids, {ids[0]: {"note": note}})])
-    r = env.post_edit(instruction, ids, mode="fast")
-    assert r.status_code == 200, r.text
-    assert held.entered.wait(30), "the job never reached the model"
-    return r
-
-
-def _finish_held(env, held, r):
-    held.release.set()
-    job = env.wait_job(r.json()["job_id"])
-    assert job["state"] == "done", why(job)
-    return env.turn(r.json()["turn_id"])
-
-
-def _by_id(sb):
-    return {s["id"]: s for s in sb["shots"]}
-
-
-def test_h_the_owners_save_of_another_shot_is_not_the_turns_change_and_undo_keeps_it(env, held):
-    a = env.content_ids("c01")[:1]
-    b = env.content_ids("c02")[0]
-    before = env.saved()
-    r = _start_held(env, held, a)
-    env.manual_save(lambda sb: next(s for s in sb["shots"] if s["id"] == b).update(note="owner note on B"))
-    turn = _finish_held(env, held, r)
-
-    assert turn["status"] == "applied", turn
-    assert [c["shot_id"] for c in turn["changes"]] == a, turn["changes"]                     # (a) A only, not B
-    now = _by_id(env.saved())
-    assert now[a[0]]["note"] == "agent note" and now[b]["note"] == "owner note on B"          # (b) both changes are there
-    # the stored `after` is the document that was written, not a later read
-    from bti.draft.thread import get_turn_storyboard
-    assert strip(get_turn_storyboard(env.pdir, turn["id"], "after"))["shots"] == strip(env.raw())["shots"]
-
-    env.manual_save(lambda sb: sb.update(title="Owner title after the turn"))                 # a top-level part, changed after the turn
-    r = env.client.post(env.u("/draft/edit/%s/undo" % turn["id"]), json={})
-    assert r.status_code == 200, r.text                                                      # (c)
-    now = _by_id(env.saved())
-    assert now[a[0]]["note"] == _by_id(before)[a[0]]["note"]                                  # A is back to before the turn
-    assert now[a[0]].get("source") == _by_id(before)[a[0]].get("source")
-    assert now[b]["note"] == "owner note on B"                                               # B keeps the owner's change
-    assert env.raw().get("title") == "Owner title after the turn"                            # and so does everything else
-
-
-def test_h_overwrite_after_a_conflict_owns_only_the_conflicting_agent_shot(env, held):
-    a = env.content_ids("c01")[:1]
-    c = env.content_ids("c02")[1]
-    before = env.saved()
-    r = _start_held(env, held, a)
-    env.manual_save(lambda sb: next(s for s in sb["shots"] if s["id"] == a[0]).update(note="owner note on A"))
-    turn = _finish_held(env, held, r)
-    assert turn["status"] == "needs_choice", turn
-    env.manual_save(lambda sb: next(s for s in sb["shots"] if s["id"] == c).update(note="owner note on C"))   # while the turn waits
-
-    r = env.client.post(env.u("/draft/edit/%s/resolve" % turn["id"]), json={"action": "overwrite"})
-    assert r.status_code == 200, r.text
-    t = env.turn(turn["id"])
-    assert t["status"] == "applied" and [x["shot_id"] for x in t["changes"]] == a, t["changes"]   # (d) A only, not C
-    now = _by_id(env.saved())
-    assert now[a[0]]["note"] == "agent note" and now[c]["note"] == "owner note on C"
-
-    r = env.client.post(env.u("/draft/edit/%s/undo" % turn["id"]), json={})
-    assert r.status_code == 200, r.text
-    now = _by_id(env.saved())
-    assert now[a[0]]["note"] == _by_id(before)[a[0]]["note"]
-    assert now[c]["note"] == "owner note on C"                                                # C is still the owner's
-
-
-def test_h_a_shot_added_and_another_deleted_by_the_owner_meanwhile_are_not_the_turns(env, held):
-    a = env.content_ids("c01")[:1]
-    c02 = env.content_ids("c02")
-    split, gone = c02[1], c02[2]
-    r = _start_held(env, held, a)
-
-    def owner(sb):
-        shots = sb["shots"]
-        i = next(k for k, s in enumerate(shots) if s["id"] == split)
-        new = copy.deepcopy(shots[i])
-        new["id"] = "s0990"
-        new["start"] = {"w": new["start"]["w"] + 5, "off": 0.0}
-        new["source"] = "user"
-        shots.insert(i + 1, new)
-        sb["shots"] = [s for s in shots if s["id"] != gone]
-    env.manual_save(owner)
-    turn = _finish_held(env, held, r)
-
-    assert turn["status"] == "applied", turn                                                   # (e) not a conflict either
-    assert [c["shot_id"] for c in turn["changes"]] == a, turn["changes"]
-    now = _by_id(env.saved())
-    assert "s0990" in now and gone not in now and now[a[0]]["note"] == "agent note"
-
-    r = env.client.post(env.u("/draft/edit/%s/undo" % turn["id"]), json={})
-    assert r.status_code == 200, r.text
-    now = _by_id(env.saved())
-    assert "s0990" in now and gone not in now                                                  # both survive undo
-    assert now[a[0]]["note"] != "agent note"
-
-
-# ----------------------------------------------------------------------------------------------------------- quota reset time
 def test_quota_reset_time_reaches_the_turn_and_the_job_on_the_deep_path(env, fake):
     import re
     ids = env.content_ids("c01")
@@ -716,90 +351,6 @@ def test_a_quota_without_a_time_says_so_without_inventing_one(env, monkeypatch):
 
 
 # ----------------------------------------------------------------------------------------------------------- fast path v2: only changed shots, owner words, no leaked defaults
-def test_i_only_the_changed_shots_are_in_the_answer_and_the_others_stay_exactly(env):
-    ids = env.content_ids()
-    assert len(ids) == 6
-    before = env.saved()
-    mock.set_canned([env.delta_answer({ids[0]: {"note": "first"}, ids[3]: {"note": "fourth"}})])
-    _, turn = env.run_edit("đổi hai cảnh", ids, mode="fast")
-    assert turn["status"] == "applied", turn
-    b, a = {s["id"]: s for s in before["shots"]}, {s["id"]: s for s in env.saved()["shots"]}
-    assert {sid for sid in a if a[sid] != b[sid]} == {ids[0], ids[3]}
-    assert [c["shot_id"] for c in turn["changes"]] == [ids[0], ids[3]]
-    assert all(c["facts"] == ["Đổi ghi chú của cảnh"] and c["what_source"] == "model" for c in turn["changes"]), turn["changes"]
-    assert turn["summary_source"] == "model"
-
-
-def test_j_sentences_with_ids_or_english_are_replaced_by_descriptions_built_by_code(env):
-    ids = env.content_ids("c01")[:2]
-    mock.set_canned([env.delta_answer({ids[0]: {"note": "a"}, ids[1]: {"note": "b"}},
-                                      summary="Camera easing changed from linear to inout_cubic and zoom end reduced from 0.4075 to 0.3850.",
-                                      whats={ids[0]: "Làm chậm zoom ở %s và thêm AN-01." % ids[0], ids[1]: "Slower camera."})])
-    _, turn = env.run_edit("đổi", ids, mode="fast")
-    assert turn["status"] == "applied", turn
-    assert turn["summary"] == "Đã sửa 2 cảnh: Đổi ghi chú của cảnh." and turn["summary_source"] == "code"
-    assert [(c["what"], c["what_source"]) for c in turn["changes"]] == [("Đổi ghi chú của cảnh.", "code")] * 2
-    for c in turn["changes"]:
-        assert c["shot_id"] not in c["what"] and "AN-01" not in c["what"]
-
-
-def test_k_a_registry_default_the_saved_shot_did_not_carry_is_not_written(env):
-    ids = env.content_ids("c01")[:2]
-    raw = env.raw()
-    n_dropped = 0
-    for s in raw["shots"]:
-        if isinstance(s.get("params"), dict) and "shadow" in s["params"]:
-            del s["params"]["shadow"]                              # the saved storyboard never carried this default
-            n_dropped += 1
-    assert n_dropped, "the synthetic storyboard has no shot with a default `shadow` to test with"
-    (env.pdir / "storyboard.json").write_text(json.dumps(raw, indent=1), encoding="utf-8")
-    before = {s["id"]: s for s in env.saved()["shots"]}
-    # the model returns shot 1 changed and shot 2 UNCHANGED (as it was shown): the second is not a change
-    mock.set_canned([env.delta_answer({ids[0]: {"note": "changed"}, ids[1]: {}})])
-    _, turn = env.run_edit("đổi cảnh đầu", ids, mode="fast")
-    assert turn["status"] == "applied", turn
-    after = {s["id"]: s for s in env.saved()["shots"]}
-    assert [c["shot_id"] for c in turn["changes"]] == [ids[0]]
-    assert after[ids[1]] == before[ids[1]]                                                     # byte for byte
-    assert "shadow" not in (after[ids[0]].get("params") or {})
-    assert {k: v for k, v in after[ids[0]].items() if k not in ("note", "source")} == {k: v for k, v in before[ids[0]].items() if k not in ("note", "source")}
-
-
-def test_l_remove_and_add_through_the_route(env):
-    ids = env.content_ids("c01")
-    assert len(ids) == 3
-    before = env.saved()
-    dec = {s["id"]: s for s in env.spec_shots(ids)}
-    mid = dec[ids[2]]                                              # a shot with no overlay (splitting one with an overlay would cut it)
-    new = {"beat": mid["beat"], "start_word": mid["start_word"] + 5, "technique": "CAM-03", "slots": {"image": {"asset": "A"}}, "params": {},
-           "overlays": [], "note": "split"}
-    mock.set_canned([env.delta_answer({}, new_shots=[new])])
-    _, t1 = env.run_edit("thêm một cảnh", ids, mode="fast")
-    assert t1["status"] == "applied", t1
-    assert [c["op"] for c in t1["changes"]] == ["added"], t1["changes"]
-    added = [c for c in t1["changes"] if c["op"] == "added"]
-    assert added[0]["facts"] == ["Thêm cảnh: Kéo ra"] and added[0]["what"] == "Thêm cảnh: Kéo ra."
-    assert len(env.saved()["shots"]) == len(before["shots"]) + 1
-    # and remove the middle one of the original three
-    mock.set_canned([env.delta_answer({}, remove=[ids[1]])])
-    _, t2 = env.run_edit("bỏ cảnh giữa", env.content_ids("c01"), mode="fast")
-    assert t2["status"] == "applied", t2
-    assert ids[1] not in {s["id"] for s in env.saved()["shots"]}
-    assert [c["op"] for c in t2["changes"] if c["shot_id"] == ids[1]] == ["removed"]
-    assert [c for c in t2["changes"] if c["shot_id"] == ids[1]][0]["facts"] == ["Xóa cảnh"]
-
-
-def test_m_cannot_and_escalate_reasons_are_plain_vietnamese_or_replaced(env):
-    ids = env.content_ids("c01")[:1]
-    mock.set_canned([json.dumps({"result": "cannot", "reason": "The request needs a new picture."})])
-    _, turn = env.run_edit("thêm tranh khác", ids, mode="fast")
-    assert turn["status"] == "no_change" and turn["summary_source"] == "code"
-    assert "dự án chưa có" in turn["summary"]
-    mock.set_canned([json.dumps({"result": "escalate", "reason": "Needs to look at region RING (s0001)."})])
-    _, turn = env.run_edit("zoom vào nhẫn", ids, mode="fast")
-    assert turn["status"] == "failed" and "chế độ sâu" in turn["summary"]
-
-
 def test_n_the_deep_paths_change_list_gets_the_same_treatment(env, fake):
     ids = env.content_ids("c01")
     env.deep_cfg(fake.dir, {ids[0]: {"note": "slower push-in"}},
@@ -809,15 +360,3 @@ def test_n_the_deep_paths_change_list_gets_the_same_treatment(env, fake):
     assert turn["summary"] == "Đã sửa 1 cảnh: Đổi ghi chú của cảnh." and turn["summary_source"] == "code"
     assert turn["changes"][0]["what"] == "Đổi ghi chú của cảnh." and turn["changes"][0]["what_source"] == "code"
 
-
-def test_o_a_shot_id_that_does_not_exist_and_a_removal_outside_the_scope_are_refused(env):
-    ids = env.content_ids("c01")[:1]
-    other = env.content_ids("c02")[0]
-    rev0 = env.rev()
-    ghost = env.spec_shots(ids)[0]
-    ghost["id"] = "s9999"
-    mock.set_canned([json.dumps({"result": "edit", "summary": "Đã đổi.", "shots": [ghost], "remove": [], "changes": []}),
-                     json.dumps({"result": "edit", "summary": "Đã đổi.", "shots": [], "remove": [other], "changes": []})])
-    _, turn = env.run_edit("sửa", ids, mode="fast")
-    assert turn["status"] == "failed" and env.rev() == rev0
-    assert "does not exist" in mock.CALLS[-1]["user"]                      # the repair call names the problem to the model

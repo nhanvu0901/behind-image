@@ -9,7 +9,12 @@ Thread turns record:
 - scope_words: Vietnamese scope description (e.g., "1 shot đang chọn", "chương c01", "cả video")
 - model: model slug used
 - base_rev: storyboard revision at the start of the edit
-- status: "running" | "done" | "no_change" | "refused" | "error"
+- doc: "storyboard" (step 5, the default) | "picks" (step 4): which document the turn edited
+- status: "running" | "applied" | "no_change" | "escalate" | "needs_choice" | "failed" | "cancelled" | "undone" (older: "done" | "refused" | "error")
+- batch: the id of the batch the turn wrote in the change log (`projects/<pid>/changes/`); the card's undo is the undo of that batch
+- batch_changes: the batch's own `changes` (Vietnamese sentences with their target), what the card shows
+- reason: cannot / escalate: what is missing and what the owner can do (Vietnamese)
+- limits: the slow path's bounds, told to the card when it starts: {minutes, repairs, part_minutes}
 - job_id: longjob id
 - proposal_id: proposal id if created
 - conversation_id: provider conversation id if available
@@ -99,7 +104,10 @@ def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
     tid = str(raw.get("id") or "")
     status = str(raw.get("status") or "running")
     has_undo = bool(raw.get("has_undo", False))
-    if project_dir and tid:
+    batch = raw.get("batch") if isinstance(raw.get("batch"), str) and raw.get("batch") else None
+    if batch:
+        pass                                                    # the thread route reads the change log and says (bti/editor/draft_api.py)
+    elif project_dir and tid:
         has_before = (turns_dir(project_dir) / tid / "before.json").is_file()
         has_undo = has_before and (status in ("applied", "undone"))
 
@@ -114,7 +122,14 @@ def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
             "kind": kind,
             "shots": list(scope.get("shots")) if isinstance(scope.get("shots"), list) else None,
             "chapter": str(scope.get("chapter")) if scope.get("chapter") is not None else None,
+            "beats": list(scope.get("beats")) if isinstance(scope.get("beats"), list) else None,
         },
+        "doc": "picks" if raw.get("doc") == "picks" else "storyboard",
+        "batch": batch,
+        "batch_changes": [c for c in raw.get("batch_changes") if isinstance(c, dict)] if isinstance(raw.get("batch_changes"), list) else [],
+        "reason": str(raw.get("reason") or ""),
+        "repairs": int(raw.get("repairs") or 0),
+        "limits": raw.get("limits") if isinstance(raw.get("limits"), dict) else None,
         "scope_words": str(raw.get("scope_words") or ""),
         "model": str(raw.get("model") or ""),
         "agent": raw.get("agent") if isinstance(raw.get("agent"), dict) else None,         # {id, label, model, source} of the agent that ran the turn (bti.agents)
@@ -197,13 +212,14 @@ def update_turn(project_dir: Path, turn_id: str, **updates) -> dict | None:
         return target
 
 
-def clear_thread(project_dir: Path) -> None:
-    """Clear all turns under lock."""
+def clear_thread(project_dir: Path, doc: str | None = None) -> None:
+    """Clear the turns under lock: all of them, or only those of one document (`storyboard` or `picks`, the box of its step)."""
     f = thread_path(project_dir)
     with thread_lock(project_dir):
         if f.is_file():
             try:
-                write_atomic(f, json.dumps({"turns": []}, ensure_ascii=False, indent=1))
+                keep = [t for t in load_thread(project_dir) if doc is not None and t.get("doc") != doc]
+                write_atomic(f, json.dumps({"turns": keep}, ensure_ascii=False, indent=1))
             except OSError:
                 pass
 
@@ -291,7 +307,7 @@ def record_acceptance(project_dir: Path, proposal_id: str, status: str,
 
 def format_previous_exchanges(turns: list[dict], limit: int = 3) -> str:
     """Include recent completed exchanges in INSTRUCTION.md with clear prior outcomes."""
-    valid = [t for t in turns if t.get("instruction") and (t.get("notes") or t.get("status") in ("done", "no_change", "refused"))]
+    valid = [t for t in turns if t.get("doc") != "picks" and t.get("instruction") and (t.get("notes") or t.get("status") in ("done", "no_change", "refused"))]
     recent = valid[-limit:]
     if not recent:
         return ""

@@ -69,7 +69,7 @@ os.environ["BTI_ENV_FILE"] = str(tmp / "no.env")
 os.environ["BTI_MODELS_FILE"] = str(tmp / "models.json")
 os.environ["BTI_SETTINGS_FILE"] = str(tmp / "settings.json")     # the owner's model choices live here, never in the repo's run/ folder
 if not reuse:
-    (tmp / "settings.json").write_text(json.dumps({"models": {"edit.fast": "mock"}}), encoding="utf-8")   # the fast edit asks the mock model
+    (tmp / "settings.json").write_text(json.dumps({"models": {"edit.fast": "mock", "picks": "mock"}}), encoding="utf-8")   # the fast edit of both boxes asks the mock model
 os.environ["PYTHONUTF8"] = "1"
 for k in list(os.environ):
     if k.upper() in ("OPENROUTER_API_KEY", "GEMINI_API_KEY", "GOOGLE_API_KEY", "YDC_API_KEY", "YOU_API_KEY"):
@@ -98,44 +98,25 @@ script_models.agy_models = lambda refresh=False: ([{"slug": "gemini-3.8-flash-hi
                                                    {"slug": "gemini-3.8-flash-medium", "label": "Gemini 3.8 Flash (Medium)"},
                                                    {"slug": "gemini-3.8-flash-low", "label": "Gemini 3.8 Flash (Low)"}], None)
 
-# the mock model answers an edit by instruction with a canned edit built from the shots in the prompt (no network, no real model). The prompt
-# is the CURRENT fast-edit briefing (skills/storyboard_edit/FAST.template.md: the heading "Briefing: change a few shots of a video's storyboard",
-# the section "## The instruction", the scope shots between "do not send them back." and "### The words"); the answer follows its contract
-# (`result`, `summary`, whole `shots` without the helper fields, `remove`, `changes`):
-#   "tranh mới" in the instruction -> {"result": "cannot"};  "[mock:broken]" -> not JSON (the turn fails);  "[mock:slow]" -> the mock waits ~10 s first (cancel can be tried);
-#   anything else -> every shot of the scope kept, with its note changed (so the server sees a change in each of them)
+# the mock model answers the two prompt boxes (step 5 "Sửa video bằng lời", step 4 "Sửa chọn hình bằng lời") with canned typed operations built from the
+# data in the briefing (tests/e2e/stages/box_mock.py, worker c2box: the CURRENT briefings, answer shape {"status", "summary", "reason", "ops"}):
+#   "tranh mới" -> cannot;  "[mock:escalate]" / "bản đồ" -> escalate;  "[mock:refuse]" -> operations the server refuses twice;
+#   "[mock:broken]" -> not JSON (the turn fails);  "[mock:slow]" -> the mock waits ~10 s first (cancel can be tried);  anything else -> a real change
 import re  # noqa: E402
+sys.path.insert(0, str(HERE))
+import box_mock  # noqa: E402
 from bti.script.providers import mock as _mock  # noqa: E402
 _mock_complete = _mock.complete
-_HELPER_FIELDS = ("in_scope", "locked", "start_s", "end_s", "beat_text", "duration_s")     # read-only fields of the briefing: never sent back
-FAST_HEADING = "change a few shots of a video's storyboard"
-
-
-def _edit_answer(user):
-    ins = re.search(r"## The instruction\n(.*?)\n\n## The last turns", user, re.S)
-    instruction = ins.group(1) if ins else ""
-    if "tranh mới" in instruction:
-        return json.dumps({"result": "cannot", "summary": "", "reason": "Yêu cầu này cần một bức tranh mới mà dự án chưa có. Hãy thêm tranh ở bước Chọn hình."}, ensure_ascii=False)
-    if "[mock:broken]" in instruction:                       # an answer that is not JSON, twice: the turn fails
-        return "Xin lỗi, tôi không làm được việc này {{{"
-    m = re.search(r"do not send them back\.\n(\[.*?\n\])\n\n### The words", user, re.S)
-    shots = json.loads(m.group(1)) if m else []
-    out, changes = [], []
-    for sh in shots:
-        sh = {k: v for k, v in sh.items() if k not in _HELPER_FIELDS}
-        sh["note"] = "Làm chậm chuyển động (bản thử)"
-        out.append(sh)
-        changes.append({"shot": sh.get("id"), "what": "Làm chậm chuyển động của cảnh này"})
-    return json.dumps({"result": "edit", "summary": "Đã làm chậm chuyển động ở %d cảnh." % len(out), "shots": out, "remove": [], "changes": changes}, ensure_ascii=False)
 
 
 def _complete(spec, system, user, **kw):
-    if FAST_HEADING in user:
+    canned = box_mock.answer(user)
+    if canned is not None:
         if "[mock:slow]" in user:
-            _mock.set_canned([_edit_answer(user)])
+            _mock.set_canned([canned])
             return _mock_complete(spec, system, user, **kw)
         _mock.CALLS.append({"model": spec.get("id"), "user_len": len(user), "retry": False, "user": user})
-        return _edit_answer(user)
+        return canned
     return _mock_complete(spec, system, user, **kw)
 
 

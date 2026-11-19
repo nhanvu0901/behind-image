@@ -98,7 +98,7 @@ def part(text: str) -> str:
     return text[i:min(ends) if ends else len(text)]
 
 
-@pytest.mark.parametrize("text,name", [(TASK, "task"), (FAST, "fast")])
+@pytest.mark.parametrize("text,name", [(TASK, "task")])
 def test_the_briefings_carry_the_part_on_explanatory_devices(text, name):
     p = part(text)
     for tid in SEVEN:
@@ -117,15 +117,29 @@ def test_the_task_part_says_which_kind_of_sentence_each_device_serves_and_that_a
     assert "never two in a row" in p and "general talk" in p
 
 
-def test_the_fast_part_says_when_to_answer_cannot():
-    p = part(FAST)
-    assert "`cannot`" in p and "`escalate`" in p and "second picture" in p
+def test_the_fast_briefing_carries_the_rules_on_explanatory_devices():
+    """Since worker c2box the fast briefing is a template of its own for typed operations (`FAST.template.md`): the seven devices are named, a device is
+    used only when the sentence asks for that kind of point, a fact is never guessed, and what cannot be filled from the narration is `cannot` or `escalate`."""
+    i = FAST.index("**explanatory devices**")
+    p = FAST[i:FAST.index("\n- **subtitles**", i)]
+    for tid in SEVEN:
+        assert "`%s`" % tid in p, tid
+    for need in ("only when the owner's sentence asks for that kind of point", "never as decoration", "only if it is described above",
+                 "only from the narration and the project's sources", "**Never guess a fact.**", "`cannot`", "`escalate`"):
+        assert need in p, need
+
+
+def test_the_fast_briefing_says_when_to_answer_cannot_and_when_escalate():
+    i = FAST.index("## `cannot` and `escalate`")
+    p = FAST[i:FAST.index("## How to write", i)]
+    assert "`cannot`" in p and "`escalate`" in p and "another step's work" in p and "slower agent" in p and "Never `applied` with an empty or half-done list" in p
 
 
 def test_the_briefings_stay_short():
-    """The part is read on every call: the templates may not grow by more than 1.6 KB (task) and 1.2 KB (fast) over their size before the part (22,250 and 10,498 bytes)."""
-    assert len(part(TASK).encode("utf-8")) < 1900 and len(part(FAST).encode("utf-8")) < 1300
-    assert len(TASK.encode("utf-8")) < 22250 + 1700 and len(FAST.encode("utf-8")) < 10498 + 1300
+    """The part of the draft task is read on every call: it may not grow by more than 1.6 KB over its size before the part (22,250 bytes). The fast
+    briefing is rewritten for typed operations: its fixed text stays under 10 KB (the generated parts are measured by tests/draft/test_box_briefing.py)."""
+    assert len(part(TASK).encode("utf-8")) < 1900
+    assert len(TASK.encode("utf-8")) < 22250 + 1700 and len(FAST.encode("utf-8")) < 10_000
 
 
 def test_the_rendered_task_of_a_draft_and_of_an_edit_holds_the_part(proj, tmp_path):
@@ -138,8 +152,9 @@ def test_the_rendered_task_of_a_draft_and_of_an_edit_holds_the_part(proj, tmp_pa
     assert "Explanatory devices (" in t2 and "Mode: **edit**" in t2
 
 
-def test_the_fast_edit_prompt_holds_the_part_and_the_catalogue_with_the_examples():
+def test_the_fast_edit_prompt_describes_a_device_only_when_asked_and_the_full_catalogue_keeps_its_examples():
     from bti.draft import fastedit
     src = Path(fastedit.__file__).read_text(encoding="utf-8")
-    assert "FAST.template.md" in src and "TECHNIQUES_MD" in src
+    assert "FAST.template.md" in src and "DEVICE_WORDS" in src
+    assert set(fastedit.DEVICE_WORDS) == set(SEVEN)
     assert "- example (the defaults; replace ALL of its data):" in techniques_md.generate(R.load_bundle("gae"))

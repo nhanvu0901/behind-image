@@ -1,12 +1,12 @@
 /* "Chọn hình" view. Scoped under .v-pk (the view root and the dialogs it opens). Not yet linked from index.html: CORE adds the <link>. */
-.pk-root { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-width: 980px; }
+.pk-root { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-width: 1280px; }
 .v-pk .pk-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .v-pk .pk-main { display: flex; gap: 12px; align-items: center; flex: 1 1 320px; min-width: 0; }
 .v-pk .pk-maintitle { font-size: 15px; font-weight: 600; }
 .v-pk .pk-topbtns { display: flex; gap: 8px; align-items: center; }
 .v-pk .pk-banner { flex-basis: 100%; padding: 6px 10px; border-radius: var(--radius); font-size: 12px; background: var(--elev); border: 1px solid var(--border); margin: 4px 0; }
 .v-pk .pk-banner.warn { background: #3a2c10; border-color: #6a5410; }
-.v-pk .pk-body { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(340px, 1.2fr) minmax(380px, 1.4fr); min-height: 0; }
+.v-pk .pk-body { display: grid; grid-template-columns: minmax(230px, .8fr) minmax(340px, 1.2fr) minmax(380px, 1.4fr) minmax(300px, .9fr); min-height: 0; }
 .v-pk .pk-col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
 .v-pk .pk-col:last-child { border-right: 0; }
 .v-pk .col-h { padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); }
@@ -88,3 +88,8 @@
 .v-pk .pk-vtrim-btnwrap { display: inline-flex; gap: 6px; align-items: center; }
 .v-pk .pk-btn-reason { font-size: 11px; color: var(--muted); }
 .v-pk .pk-tray-video { flex-shrink: 0; }
+
+/* c2box: the prompt box and the list of changes of this step (promptedit.js, changeslist.js); the same classes as on the storyboard page */
+.v-pk .pk-box { padding: 0; display: flex; flex-direction: column; overflow: hidden; }
+.v-pk .pk-box .prompt-edit { flex: 1; min-height: 0; }
+.v-pk .prompt-sentences, .prompt-sentences { margin: 0; padding-left: 18px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }

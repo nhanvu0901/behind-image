@@ -215,15 +215,22 @@ def test_a_deep_edit_without_a_model_starts_the_agent_of_the_project(env, fake, 
 
 
 def test_an_escalated_edit_records_the_agent_that_did_the_deep_part(env, fake, agents):
+    """`escalate` never starts the slow path by itself any more: the owner's button sends the same request with mode deep, and THAT turn records the
+    agent of the deep part (the role `edit.deep`), while the first turn keeps the agent of the fast part."""
     from bti import settings
     settings.save_model_settings({"edit.deep": "agy:other-y"})        # the fast part runs on the mock model, the deep part on the agy agent
     ids = env.content_ids("c01")[:2]
-    mock.set_canned([json.dumps({"result": "escalate", "summary": "", "reason": "Cần nhìn kỹ vào tranh."}, ensure_ascii=False)])
-    env.deep_cfg(fake.dir, {ids[0]: {"note": "deep note"}})
+    mock.set_canned([json.dumps({"status": "escalate", "summary": "", "reason": "Cần nhìn kỹ vào tranh.", "ops": []}, ensure_ascii=False)])
     r = env.post_edit("sửa nhiều", ids, mode="auto")
     assert r.status_code == 200 and r.json()["agent"]["id"] == "mk"       # the turn starts on the fast path
     job = env.wait_job(r.json()["job_id"])
+    first = env.turn(r.json()["turn_id"])
+    assert job["state"] == "done", why(job)
+    assert first["status"] == "escalate" and first["path"] == "fast" and first["escalated"] is False and first["agent"]["id"] == "mk"
+    env.deep_cfg(fake.dir, {ids[0]: {"note": "deep note"}})
+    r = env.post_edit("sửa nhiều", ids, mode="deep")
+    job = env.wait_job(r.json()["job_id"])
     turn = env.turn(r.json()["turn_id"])
     assert job["state"] == "done", why(job)
-    assert turn["escalated"] is True and turn["path"] == "deep"
+    assert turn["path"] == "deep"
     assert turn["model"] == "agy:other-y" and turn["agent"] == {"id": "alt", "label": "Agent thứ hai", "model": "agy:other-y", "source": "role"}

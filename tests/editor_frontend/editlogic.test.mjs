@@ -187,7 +187,8 @@ test('every error code the server raises for an edit, an undo, a resolve or a se
     for (const m of src.matchAll(/\bcode\s*=\s*["']([a-z_]+)["']/g)) found.add(m[1]);
     for (const m of src.matchAll(/\berror\s*=\s*["']([a-z_]+)["']/g)) found.add(m[1]);
   };
-  for (const f of ['bti/editor/draft_api.py', 'bti/draft/run.py', 'bti/draft/thread.py', 'bti/draft/fastedit.py', 'bti/draft/merge.py']) scan(f);
+  for (const f of ['bti/editor/draft_api.py', 'bti/draft/run.py', 'bti/draft/thread.py', 'bti/draft/fastedit.py', 'bti/draft/merge.py',
+    'bti/draft/boxops.py', 'bti/draft/picksedit.py', 'bti/editor/boxroutes.py']) scan(f);          // c2box: the typed-operations box
   // not an edit code: the picks/draft whole-video start, the settings (own table), or never shown
   const OTHER = new Set(['bad_provider', 'bad_chapters', 'draft_not_ready', 'picks_missing', 'timing_missing', 'busy', 'longjob_running']);
   const missing = [...found].filter((c) => !EDIT_CODES.includes(c) && !OTHER.has(c) && !stageErrorText('draft', { body: { code: c } }).text.startsWith('Có lỗi'));
@@ -341,4 +342,138 @@ test('settings, agy gave no list: one state for the whole dialog, agy entry is n
   assert.equal(modelListState(null), 'down');
   assert.deepEqual(modelRows(DOWN)[1].options, ['mock']);
   assert.deepEqual(modelRows(DOWN)[0].options, []);
+});
+
+// ---------------------------------------------------------------- c2box: the box on typed operations (step 5 and step 4)
+import { pickBeatScope, retryBeatScope, beatNumbers } from '../../bti/editor/static/js/editlogic.js';
+import { BOX_LABELS } from '../../bti/editor/static/js/labels.js';
+import { boxErrorText } from '../../bti/editor/static/js/errmsg.js';
+
+const BATCH_TURN = {
+  id: 't2', at: '2026-11-19T10:00:09', instruction: 'làm vòng sáng to hơn', scope: { kind: 'shots', shots: ['s0002'] }, status: 'applied', doc: 'storyboard', has_undo: true,
+  path: 'fast', seconds: 14.2, summary: 'Vòng sáng ở cảnh này to hơn.', batch: 'batch_0003',
+  batch_changes: [{ target: { shot: 's0002', overlay: 'o1' }, time: '0:04', what: 'Cảnh 2: đổi thiết lập rx, ry của lớp phủ Rọi sáng' }],
+  changes: [{ shot_id: 's0002', number: 2, start: 4, op: 'changed', what: 'Cảnh 2: đổi thiết lập rx, ry của lớp phủ Rọi sáng', facts: ['Cảnh 2: đổi thiết lập rx, ry của lớp phủ Rọi sáng', 'Cảnh 2: thêm lớp phủ Vòng khoanh'], what_source: 'batch' }],
+};
+const PICKS_TURN = {
+  id: 't3', at: '2026-11-19T10:05:00', instruction: 'dòng này chỉ cho xem khuôn mặt', scope: { kind: 'beats', beats: ['b0003'], shots: null, chapter: null }, status: 'applied', doc: 'picks',
+  has_undo: true, path: 'fast', seconds: 9, summary: 'Dòng này giờ chỉ cho xem khuôn mặt.', batch: 'batch_0004',
+  batch_changes: [{ target: { beat: 'b0003' }, time: '0:48', what: 'Đoạn 3: thay 1 hình' }], changes: [],
+};
+
+test('c2box: a storyboard card shows the sentences of the batch under the shot, and its undo is the undo of the batch', () => {
+  const v = turnView(BATCH_TURN, { shots: SHOTS, chapters: CHAPS });
+  assert.equal(v.headline, BATCH_TURN.summary);
+  assert.equal(v.doc, 'storyboard');
+  assert.deepEqual(v.changes[0].lines, BATCH_TURN.changes[0].facts);                      // both sentences of the batch about this shot
+  assert.equal(v.changes[0].title, 'Cảnh 2 · 0:04');
+  assert.deepEqual([v.actions.undo, v.actions.preview, v.actions.escalate], ['yes', true, '']);
+  assert.equal(turnView({ ...BATCH_TURN, has_undo: false }, {}).actions.undo, 'gone');
+  assert.equal(turnView({ ...BATCH_TURN, status: 'undone' }, {}).actions.undo, '');
+});
+
+test('c2box: a card of the pictures box shows the batch sentences, has no frames and no preview', () => {
+  const v = turnView(PICKS_TURN, { shots: [], chapters: [] });
+  assert.equal(v.doc, 'picks');
+  assert.equal(v.headline, PICKS_TURN.summary);
+  assert.equal(v.showChanges, false);
+  assert.equal(v.showSentences, true);
+  assert.deepEqual(v.sentences, [{ text: 'Đoạn 3: thay 1 hình', time: '0:48' }]);
+  assert.equal(v.actions.preview, false);
+  assert.equal(v.actions.undo, 'yes');
+  assert.equal(v.noChanges, false);
+  assert.equal(turnView({ ...PICKS_TURN, summary: '' }, {}).headline, BOX_LABELS.pictures.applied);              // never an empty card
+});
+
+test('c2box: escalate offers the slower way on step 5 and the search by hand on step 4, and says plainly it changes nothing', () => {
+  const reason = 'Chi tiết này chưa có vùng nào trên tranh, cần bước xem tranh kỹ hơn.';
+  const sb = turnView({ id: 't4', instruction: 'zoom vào nhẫn', scope: { kind: 'shots', shots: ['s0001'] }, status: 'escalate', doc: 'storyboard', reason, summary: reason, path: 'fast' }, { shots: SHOTS });
+  assert.equal(sb.badge, BOX_LABELS.status.escalate);
+  assert.equal(sb.headline, reason);
+  assert.equal(sb.extra, BOX_LABELS.slow.hint);
+  assert.match(sb.extra, /vài phút/);
+  assert.equal(sb.actions.escalate, 'slow');
+  assert.deepEqual([sb.actions.undo, sb.actions.retry, sb.actions.preview], ['', false, false]);
+  const pk = turnView({ id: 't5', instruction: 'thêm bản đồ', scope: { kind: 'beats', beats: ['b0001'] }, status: 'escalate', doc: 'picks', reason, summary: reason }, {});
+  assert.equal(pk.actions.escalate, 'manual');
+  assert.equal(pk.extra, BOX_LABELS.pictures.escalate);
+  assert.match(pk.extra, /Agent chọn hình chưa có/);
+  assert.match(pk.extra, /tìm hình bằng tay/);
+  for (const v of [sb, pk]) for (const t of [v.badge, v.headline, v.extra]) assert.ok(isVietnamese(t), t);
+});
+
+test('c2box: a reason in English is never the headline of a card: a fixed sentence, the English under "chi tiết"', () => {
+  const v = turnView({ id: 't6', instruction: 'cho dài hơn', scope: { kind: 'all' }, status: 'escalate', doc: 'storyboard', reason: 'Select the next shot too.', summary: 'Select the next shot too.' }, {});
+  assert.equal(v.headline, BOX_LABELS.escalate);
+  assert.match(v.detail, /Select the next shot too/);
+  assert.ok(isVietnamese(v.headline));
+  const cannot = turnView({ id: 't7', instruction: 'x', scope: { kind: 'all' }, status: 'no_change', doc: 'storyboard', summary: 'Cần một tranh mới, dự án chưa có.', reason: 'Cần một tranh mới, dự án chưa có.' }, {});
+  assert.equal(cannot.headline, 'Cần một tranh mới, dự án chưa có.');
+});
+
+test('c2box: the slower way states its limits on the card when it starts', () => {
+  const v = turnView({ id: 't8', instruction: 'x', scope: { kind: 'all' }, status: 'running', path: 'deep', limits: { minutes: 30, repairs: 2, part_minutes: 35 } }, {});
+  assert.match(v.limits, /30 phút/);
+  assert.match(v.limits, /2 lần/);
+  assert.match(v.limits, /Dừng/);
+  assert.equal(turnView({ id: 't9', instruction: 'x', scope: { kind: 'all' }, status: 'running', path: 'fast' }, {}).limits, '');
+  assert.equal(turnView({ id: 't9', instruction: 'x', scope: { kind: 'all' }, status: 'running', path: 'deep' }, {}).limits, '');
+  assert.match(BOX_LABELS.slow.takes, /vài phút/);
+});
+
+test('c2box: a turn refused twice shows the sentence of the last refusal, in plain Vietnamese, with the code only under "chi tiết"', () => {
+  for (const code of ['out_of_scope', 'locked', 'unknown_asset', 'unknown_op', 'validation_failed', 'span_mismatch', 'spec_invalid', 'stale_revision']) {
+    const v = turnView({ id: 'tx', instruction: 'x', scope: { kind: 'all' }, status: 'failed', error: code, summary: 'Agent định sửa cả phần bạn chưa chọn nên chưa đổi gì.', doc: 'storyboard' }, {});
+    assert.ok(isVietnamese(v.headline), code);
+    assert.notEqual(v.headline, EDIT_LABELS.failedGeneric, code);
+    assert.doesNotMatch(v.headline + v.extra, new RegExp(code), code);
+    assert.equal(v.actions.retry, true);
+  }
+});
+
+test('c2box: no card of any status is empty or says an English word where the owner wrote Vietnamese', () => {
+  for (const doc of ['storyboard', 'picks']) for (const status of ['running', 'applied', 'no_change', 'needs_choice', 'failed', 'cancelled', 'undone', 'escalate']) {
+    const t = { id: 'tz', instruction: 'x', scope: { kind: 'all' }, status, doc, summary: '', reason: '', error: status === 'failed' ? 'edit_failed' : null, changes: [], batch_changes: [], path: 'fast' };
+    const v = turnView(t, {});
+    const shown = [v.badge, v.headline, v.extra].filter(Boolean);
+    assert.ok(v.badge && (v.headline || v.extra || v.status === 'running'), `${doc}/${status} has something to read`);
+    for (const x of shown) assert.ok(isVietnamese(x), `${doc}/${status}: ${x}`);
+  }
+});
+
+test('c2box: boxErrorText speaks for the errors of both boxes and never shows a code', () => {
+  const body = (code) => ({ status: 409, body: { code, detail: 'x', fix: 'y', retry: 'after_fix' } });
+  for (const c of ['undo_conflict', 'undo_unavailable', 'stale_revision', 'edit_empty_instruction', 'edit_bad_scope', 'busy', 'already_undone', 'turn_not_applied', 'out_of_scope', 'invalid_field']) {
+    const t = boxErrorText(body(c)).text;
+    assert.ok(isVietnamese(t), c);
+    assert.doesNotMatch(t, new RegExp(c), c);
+  }
+  assert.match(boxErrorText(body('undo_conflict')).text, /Không hoàn tác được|sửa tiếp/);
+});
+
+test('c2box: the scope of the pictures box: the line looked at, several lines, the chapter, the whole video', () => {
+  const chapters = [{ id: 'c01', title: 'Mở đầu', beats: [{ id: 'b0001' }, { id: 'b0002' }] }, { id: 'c02', title: 'c02', beats: [{ id: 'b0003' }, { id: 'b0004' }] }];
+  assert.deepEqual([...beatNumbers(chapters)], [['b0001', 1], ['b0002', 2], ['b0003', 3], ['b0004', 4]]);
+  let s = pickBeatScope({ chapters, selected: ['b0003'], beat: 'b0003' });
+  assert.deepEqual([s.kind, s.payload, s.words, s.ok], ['beats', { beats: ['b0003'] }, 'Dòng 3 đang chọn', true]);
+  s = pickBeatScope({ chapters, selected: ['b0004', 'b0001'], beat: 'b0004', choice: 'beats' });
+  assert.deepEqual([s.payload, s.words], [{ beats: ['b0004', 'b0001'] }, '2 dòng đang chọn (1, 4)']);
+  s = pickBeatScope({ chapters, beat: 'b0002' });                                          // nothing selected: the chapter of the line looked at
+  assert.deepEqual([s.kind, s.payload, s.words], ['chapter', { chapter: 'c01' }, 'Chương: Mở đầu']);
+  s = pickBeatScope({ chapters, beat: 'b0003', choice: 'chapter' });
+  assert.equal(s.words, 'Chương 2');                                                       // a title that is the id is not shown
+  s = pickBeatScope({ chapters, choice: 'all' });
+  assert.deepEqual([s.payload, s.words], [{ all: true }, 'Cả video']);
+  s = pickBeatScope({ chapters, choice: 'beats', selected: [] });
+  assert.deepEqual([s.ok, s.payload, s.why], [false, null, BOX_LABELS.pictures.noLineChosen]);
+  s = pickBeatScope({ chapters: [], choice: 'all' });
+  assert.deepEqual([s.ok, s.why], [false, BOX_LABELS.pictures.noNarration]);
+  for (const x of [pickBeatScope({ chapters, beat: 'b0002' }).words, pickBeatScope({ chapters, choice: 'beats' }).why]) assert.doesNotMatch(x, /\bb\d{4}\b|\bc\d\d\b/);
+});
+
+test('c2box: "Thử lại" on the pictures box drops lines that are gone', () => {
+  assert.deepEqual(retryBeatScope({ scope: { kind: 'beats', beats: ['b0003', 'b9999'] } }, ['b0001', 'b0003']), { beats: ['b0003'] });
+  assert.equal(retryBeatScope({ scope: { kind: 'beats', beats: ['b9999'] } }, ['b0001']), null);
+  assert.deepEqual(retryBeatScope({ scope: { kind: 'chapter', chapter: 'c02' } }, []), { chapter: 'c02' });
+  assert.deepEqual(retryBeatScope({ scope: { kind: 'all' } }, []), { all: true });
 });

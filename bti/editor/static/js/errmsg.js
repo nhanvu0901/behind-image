@@ -624,3 +624,21 @@ export function groupIssues(list) {
   }
   return out;
 }
+
+// ---- c2box: the prompt box on typed operations. A turn the server refused twice carries the code of the last refusal (the operations' own codes,
+// `STAGE_CODES.ops`); the box asks `boxErrorText` for a sentence for ANY error of its routes (step 5 and step 4), never a code.
+Object.assign(STAGE_CODES.draft, {
+  spec_invalid: 'Agent trả lời sai dạng nên chưa đổi gì. Thử gửi lại yêu cầu.',
+  invalid_field: 'Agent đưa ra một cách sửa không hợp lệ nên chưa đổi gì. Thử gửi lại yêu cầu.',
+  invalid_request: 'Yêu cầu gửi lên không hợp lệ. Tải lại trang rồi thử lại.',
+  turn_not_found: 'Không tìm thấy lần sửa này (có thể lịch sử đã bị xóa).',
+  validation_failed: 'Cách sửa này làm dữ liệu có lỗi nên chưa đổi gì. Thử nói lại yêu cầu theo cách khác.',
+  edit_running: 'Đang có một yêu cầu sửa chạy nên chưa xóa được lịch sử. Hãy dừng nó trước.',
+  timing_unusable: 'Không đọc được tệp thời điểm từng từ của dự án. Làm lại bước "Giọng đọc".',
+});
+/** One Vietnamese sentence for an error of a prompt box route or of a turn it made: the draft table, then the operations' table, then the rest. */
+export function boxErrorText(e) {
+  const code = e?.body && typeof e.body === 'object' ? e.body.code : null;
+  const t = typeof code === 'string' ? STAGE_CODES.draft[code] || STAGE_CODES.ops[code] || LONGJOB_CODES[code] : null;
+  return t ? { text: t, detail: '' } : describeError(e);
+}

@@ -262,3 +262,46 @@ def suggest_picks(pid: str, request: Request, body: dict = Body(...)):
 def get_suggestions(pid: str, request: Request):
     d = _pdir(request, pid)
     return suggest.load_suggestions(d)
+
+
+# ------------------------------------------------------------------ c2box: the prompt box of step 4 (typed picks operations; see boxroutes.py)
+@router.post("/projects/{pid}/picks/edit")
+def post_picks_edit(pid: str, request: Request, body: dict = Body(...)):
+    from . import boxroutes
+    return boxroutes.start_picks_edit(_pdir(request, pid), pid, body)
+
+
+@router.get("/projects/{pid}/picks/edit/thread")
+def get_picks_edit_thread(pid: str, request: Request):
+    from . import boxroutes
+    return boxroutes.picks_thread(_pdir(request, pid), request.app)
+
+
+@router.post("/projects/{pid}/picks/edit/{turn_id}/undo")
+def undo_picks_edit(pid: str, turn_id: str, request: Request):
+    from bti.draft.thread import load_thread
+    from . import boxroutes
+    d = _pdir(request, pid)
+    turn = next((t for t in boxroutes.turns_of(d, load_thread(d), "picks") if t.get("id") == turn_id), None)
+    if turn is None:
+        raise ApiError(404, "turn not found", code="turn_not_found")
+    if not turn.get("batch"):
+        raise ApiError(409, "turn was not applied", code="turn_not_applied")
+    return boxroutes.undo_batch_turn(d, turn)
+
+
+@router.delete("/projects/{pid}/picks/edit/thread")
+def delete_picks_edit_thread(pid: str, request: Request):
+    from bti.draft import run as draft_run
+    from bti.longjob import manager as global_mgr
+    d = _pdir(request, pid)
+    mgr = getattr(request.app.state, "longjob_manager", None) or global_mgr
+    try:
+        act = mgr.active(pid, "draft") if mgr else None
+        running = bool(act and (act.get("meta") or {}).get("mode") == "edit" and (act.get("meta") or {}).get("doc") == "picks")
+    except Exception:       # noqa: BLE001
+        running = False
+    if running:
+        raise ApiError(409, "Không thể xóa lịch sử khi đang có yêu cầu sửa đang chạy. Hãy hủy tác vụ trước.", code="edit_running")
+    draft_run.clear_thread(d, "picks")
+    return {"ok": True}

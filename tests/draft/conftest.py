@@ -48,3 +48,12 @@ def arnolfini(tmp_path):
     (dst / "picks.json").write_text(json.dumps({"schema": "bti.picks/1", "main_asset": "A", "assets": sb["assets"], "beats": beats,
                                                  "approval": {"approved": True}}), encoding="utf-8")
     return dst
+
+
+@pytest.fixture()
+def box(tmp_path, monkeypatch):
+    """The prompt box on typed operations, through the app, on a copy of the `tests/ops` fixture project (worker c2box)."""
+    import box_helpers as BH
+    b = BH.make_box(tmp_path, monkeypatch)
+    yield b
+    BH.cleanup(b)

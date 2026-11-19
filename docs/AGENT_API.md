@@ -136,6 +136,7 @@ loop:
 | `picks.put` | picks | `PUT /api/projects/{pid}/picks` |  |  |  |  | Once the picks step is open. The caller supplies the picks document (`fill`). |
 | `picks.approve` | picks | `POST /api/projects/{pid}/picks/approve` | yes |  |  |  | While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances. |
 | `picks.ops` | picks | `POST /api/projects/{pid}/picks/ops` |  |  |  |  | Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
+| `picks.edit` | picks | `POST /api/projects/{pid}/picks/edit` |  | yes | picks | model: about 30 seconds | Once the picks step is open. Ready unless a draft or edit job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`): {"beats": [ids]}, {"chapter": id} or {"all": true}. One call, typed picks operations (never an import), one batch in the change log. |
 | `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions or a clip) of the project runs. |
 | `draft.start` | edit | `POST /api/projects/{pid}/draft/start` |  | yes | draft | model: about 20 minutes | Once step 5 is open. Needs the voice and the approved picks, no draft job running and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. |
 | `proposal.apply` | edit | `POST /api/projects/{pid}/proposals/{prop_id}/apply` |  |  |  |  | While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date. |
@@ -281,7 +282,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `draft_not_ready` | after_fix | Make the voice (timing.json) and approve the picks first: GET /api/projects/{pid}/state shows which is missing. |
 | `draft_tampered` | after_fix | The agent changed files outside its workspace and its result was dropped: check the project, then run the draft again. |
 | `duplicate_ref` | after_fix | Give every ref in a batch a different name. |
-| `edit_bad_scope` | after_fix | Send scope as exactly one of {"shots": [ids]}, {"chapter": id} or {"all": true}, an instruction of 1 to 2000 characters and mode auto, fast or deep. |
+| `edit_bad_scope` | after_fix | Send scope as exactly one of {"shots": [ids]} (step 5), {"beats": [ids]} (step 4), {"chapter": id} or {"all": true}, an instruction of 1 to 2000 characters and, for step 5, mode auto, fast or deep. |
 | `edit_degraded` | after_fix | The edit was refused because a shot would be degraded or incomplete: narrow the instruction. |
 | `edit_empty_instruction` | after_fix | Send `instruction` as a non-empty text. |
 | `edit_failed` | later | The edit failed unexpectedly and nothing changed: call again. |
@@ -290,7 +291,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `edit_no_storyboard` | after_fix | Editing needs an existing storyboard: apply the first draft proposal first. |
 | `edit_outside_scope` | after_fix | The agent changed something outside the scope or a locked shot: narrow the instruction to the scope and call again. |
 | `edit_running` | later | An edit is running: cancel it (POST /api/longjobs/{job_id}/cancel) or wait, then delete the thread. |
-| `escalate` | after_fix | This request needs a closer look at the picture or more than the chosen scope: call again with mode deep. |
+| `escalate` | after_fix | This request needs a closer look at the picture, more than the chosen scope or a picture the project does not have: on step 5 call again with mode deep, on step 4 search for the picture by hand. |
 | `export_file_not_found` | no | Use a file name listed by GET /api/projects/{pid}/export (`files`). |
 | `file_too_large` | after_fix | Send a file of a supported kind (jpg, jpeg, png, webp, mp4, webm, mov or m4v) of at most 80 MB. |
 | `forbidden` | no | This call is not allowed on this project; read `detail` for the rule. |
@@ -411,7 +412,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `source_unavailable` | later | The service this call needs is not answering; call again in a minute. |
 | `source_unreachable` | later | Send the call again in a minute; nothing was written. |
 | `span_mismatch` | after_fix | Make the first new shot start where the replaced run starts and keep every other start inside the run. |
-| `spec_invalid` | later | The model answered in the wrong shape even after one repair: call again, or use mode deep. |
+| `spec_invalid` | later | The model answered in the wrong shape, or with operations the server refused, even after one repair: call again with the request said more plainly. |
 | `split_refused` | after_fix | Read `detail`: choose a work that can be split off. |
 | `stale` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |
 | `stale_revision` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |

@@ -555,7 +555,7 @@ def test_fast_edit_runs_through_claude_code_when_the_request_names_it(env, fakec
     (c,) = fakec.calls("run")
     a = c["argv"]
     assert a[a.index("--model") + 1] == "claude-opus-5-5" and a[a.index("--effort") + 1] == "high" and a[a.index("--tools") + 1] == ""
-    assert a[a.index("--system-prompt") + 1].startswith("You are an expert storyboard editor") and "--allowedTools" not in a
+    assert a[a.index("--system-prompt") + 1].startswith("You edit a video project for its owner") and "--allowedTools" not in a
 
 
 
@@ -572,7 +572,8 @@ def test_deep_edit_runs_through_claude_code_and_keeps_no_conversation(env, fakec
     assert "--input-format" in a and "--dangerously-skip-permissions" not in a and "--resume" not in a
     after = env.saved()
     b, n = {s["id"]: s for s in before["shots"]}, {s["id"]: s for s in after["shots"]}
-    assert {sid for sid in n if n[sid] != b[sid]} == {ids[0]}
+    assert [sid for sid in n if sid not in b] and ids[0] not in n                    # the slow path replaces the shot (a batch of replace_range): a new id
+    assert all(n[sid] == b[sid] for sid in n if sid in b)
     r = env.client.post(env.u("/draft/edit/%s/undo" % turn["id"]), json={})
     assert r.status_code == 200 and env.saved() == before
 

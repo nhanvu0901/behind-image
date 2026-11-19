@@ -46,7 +46,7 @@ Các địa chỉ cũ vẫn dùng được và tự chuyển vào ứng dụng: 
 
 ### Chọn agent
 
-Mọi bước gọi mô hình (bước 2 Kịch bản, bước 5 Dựng hình) có **cùng một ô chọn agent**: `Agent: [Gemini 3.8 Flash]`. Có hai agent, mỗi cái chạy bằng chương trình của chính hãng theo gói đăng ký của bạn:
+Mọi bước gọi mô hình (bước 2 Kịch bản, ô sửa bằng lời của bước 4 Chọn hình, bước 5 Dựng hình) có **cùng một ô chọn agent**: `Agent: [Gemini 3.8 Flash]`. Có hai agent, mỗi cái chạy bằng chương trình của chính hãng theo gói đăng ký của bạn:
 
 - **Gemini 3.8 Flash** chạy bằng Antigravity CLI (`agy`, mục 5.4).
 - **Opus 5.5 High** chạy bằng Claude Code (`claude`, mục 5.4b).
@@ -63,7 +63,7 @@ Mọi bước gọi mô hình (bước 2 Kịch bản, bước 5 Dựng hình) c
 
 Một agent chưa dùng được (ví dụ "Claude Code trên máy chủ chưa đăng nhập") vẫn hiện trong ô chọn, ghi "(chưa dùng được)"; chọn nó thì dòng dưới ô nói lý do, và bấm chạy sẽ báo lý do đó bằng tiếng Việt. Việc kiểm tra này không gọi mô hình.
 
-**Khi agent hết hạn mức**, thông báo nêu tên agent và giờ mở lại, ví dụ "Opus 5.5 High đã hết hạn mức, mở lại sau khoảng 4 giờ 30 phút.", kèm **đúng một nút**: "Chuyển sang Gemini 3.8 Flash và chạy lại". Nút này lưu agent kia làm lựa chọn của bước này rồi chạy lại đúng yêu cầu vừa rồi. Hệ thống **không bao giờ tự đổi agent**. Thông báo này hiện ở hộp thoại của bước Kịch bản, ở khung Bản nháp và ở thẻ lần sửa bằng lời của bước Dựng hình.
+**Khi agent hết hạn mức**, thông báo nêu tên agent và giờ mở lại, ví dụ "Opus 5.5 High đã hết hạn mức, mở lại sau khoảng 4 giờ 30 phút.", kèm **đúng một nút**: "Chuyển sang Gemini 3.8 Flash và chạy lại". Nút này lưu agent kia làm lựa chọn của bước này rồi chạy lại đúng yêu cầu vừa rồi. Hệ thống **không bao giờ tự đổi agent**. Thông báo này hiện ở hộp thoại của bước Kịch bản, ở khung Bản nháp và ở thẻ lần sửa bằng lời của bước Chọn hình và bước Dựng hình.
 
 Thứ tự quyết định agent cho một lần chạy: mô hình do yêu cầu nêu rõ (dành cho thử nghiệm và công cụ ngoài; trang không gửi mô hình) → lựa chọn riêng của bước → agent của dự án → agent mặc định trong Cài đặt → bảng mô hình cho từng việc ("Nâng cao"). Kết quả và nhật ký công việc ghi tên agent (nhãn, không phải mã mô hình).
 
@@ -334,6 +334,8 @@ Phụ đề không bao giờ được vẽ vào hình; bước này không đưa
 
 **6. Duyệt.** Bấm "Kiểm tra" để xem lỗi (phải sửa: chưa có tranh chính, hình hoặc vùng không còn) và cảnh báo (không chặn: dòng chưa có hình, ảnh có cờ). Rồi bấm "Duyệt chọn hình". Chỉ duyệt được khi lời dẫn đã duyệt. Nếu sau đó bạn sửa hình hoặc sửa lời dẫn, bước này cần duyệt lại và bước Dựng hình sẽ nói bản nháp cũ không còn khớp.
 
+**7. Sửa chọn hình bằng lời.** Ở cột bên phải cùng có ô **Sửa chọn hình bằng lời**, làm việc y như ô của bước Dựng hình (mục 7, "Sửa video bằng lời") nhưng trên chọn hình. Phần sẽ sửa là các **dòng lời dẫn** bạn chọn (mặc định dòng đang xem; **Chương** hoặc **Cả video** để rộng hơn; **Chọn nhiều dòng** rồi bấm các dòng ở cột trái). Agent nhận lời dẫn của các dòng đó, các hình của dự án với tên, vùng và nơi mỗi hình đang được dùng, và chỉ được **sắp lại, thêm, bỏ hình và vùng mà dự án đã có**; đổi tranh chính hoặc vùng chỉ có khi bạn chọn cả video. Một lần gọi không tìm hình và không nhìn hình, nên yêu cầu cần **một hình dự án chưa có** (một bản đồ, một tranh khác) hoặc cần ai đó **nhìn tranh** để tìm một chi tiết được trả lời **Cần làm kỹ hơn**: thẻ nói còn thiếu gì, nói rõ "Agent chọn hình chưa có" và có nút **Tìm hình bằng tay** mở ô tìm. Có thẻ kết quả, câu mô tả của từng thay đổi, **Hoàn tác** (hoàn tác lô) và **Lịch sử thay đổi** của chọn hình như ở bước Dựng hình. Agent chọn ở ô **Agent** của bước Chọn hình (xem mục 2).
+
 **Nếu có sự cố.** "Nguồn ảnh đang bận": đợi vài giây rồi tìm lại, hoặc bỏ tick một nguồn. "Nguồn ảnh đang giới hạn lượt tải. Thử lại sau khoảng N phút": nguồn (thường là Wikimedia Commons) tự báo phải chờ; ứng dụng không thử lại dồn dập, hãy đợi đúng số phút đó rồi bấm lại, hoặc dùng nguồn khác. "Tệp ảnh bị cắt dở": tải lại tệp đầy đủ. "Chọn hình đã đổi ở nơi khác": trang tự tải lại bản mới nhất; phần bạn vừa sửa chưa lưu sẽ mất.
 
 ## 7. Bước 5: Dựng hình (trình biên tập storyboard)
@@ -482,19 +484,21 @@ Bản nháp cả video (không phải sửa bằng lời) ghi `projects/<id>/pro
 
 ### Sửa video bằng lời
 
-Bên phải khung xem trước ở bước Dựng hình có ô **Sửa video bằng lời**. Bạn gõ điều muốn đổi, ví dụ *"zoom chậm hơn vào chiếc gương và thêm một vòng sáng quanh nó"*, và agent sửa thẳng storyboard. Không còn "đề xuất" để chấp nhận: mỗi lần sửa được ghi lại thành một thẻ, có ảnh trước và sau, và hoàn tác được.
+Bên phải khung xem trước ở bước Dựng hình có ô **Sửa video bằng lời**. Bạn gõ điều muốn đổi, ví dụ *"zoom chậm hơn vào chiếc gương và thêm một vòng sáng quanh nó"*, và agent sửa thẳng storyboard. Không còn "đề xuất" để chấp nhận: agent trả lời bằng **một danh sách ngắn các thao tác nhỏ** (cùng bộ thao tác của `docs/OPS.md`), máy chủ thử chạy trong đúng phần bạn đã chọn, nếu từ chối thì báo lại cho agent đúng một lần, rồi áp dụng **thành một lô** có tên trong lịch sử thay đổi. Mỗi lần sửa là một thẻ, có ảnh trước và sau, và hoàn tác được.
 
 1. **Gõ yêu cầu** vào ô, bấm **Gửi** (hoặc Ctrl+Enter).
-2. **Phần sẽ sửa** nằm ngay dưới ô, nói bằng chữ: "Cảnh 12 đang chọn", "2 cảnh đang chọn (12, 13)", "Chương: tên chương", "Cả video". Mặc định là cảnh đang chọn; bấm **Cả chương** hoặc **Cả video** để đổi. Muốn sửa nhiều cảnh: bật **Chọn nhiều cảnh**, rồi bấm vào từng cảnh trên thanh thời gian; mỗi cảnh thành một thẻ nhỏ, bấm × để bỏ. Cảnh đã khóa không bao giờ bị đổi.
-3. **Khi đang làm**, thẻ của lần sửa hiện một dòng tiến độ ("Đang nghĩ...", "Đang kiểm tra...") và nút **Dừng**. Việc nhỏ (tối đa 12 cảnh) chạy nhanh trong vài giây; việc lớn hơn chạy sâu hơn, có thể mất vài phút. Bạn có thể rời trang, lần sửa vẫn chạy.
+2. **Phần sẽ sửa** nằm ngay dưới ô, nói bằng chữ: "Cảnh 12 đang chọn", "2 cảnh đang chọn (12, 13)", "Chương: tên chương", "Cả video". Mặc định là cảnh đang chọn; bấm **Cả chương** hoặc **Cả video** để đổi. Muốn sửa nhiều cảnh: bật **Chọn nhiều cảnh**, rồi bấm vào từng cảnh trên thanh thời gian; mỗi cảnh thành một thẻ nhỏ, bấm × để bỏ. Máy chủ không bao giờ đổi cảnh ngoài phần bạn chọn, và không bao giờ đổi cảnh đã khóa (nó từ chối, bất kể agent có nghe lời hay không).
+3. **Khi đang làm**, thẻ của lần sửa hiện một dòng tiến độ ("Đang nghĩ...", "Đang kiểm tra...") và nút **Dừng**. Việc nhỏ (tối đa 12 cảnh) chạy nhanh, mục tiêu vài chục giây; bạn có thể rời trang, lần sửa vẫn chạy.
 4. **Kết quả** là một trong các trạng thái:
-   - **Đã áp dụng**: thẻ có một câu tóm tắt và từng thay đổi (số cảnh, thời điểm, một câu mô tả, ảnh **Trước** và **Sau**). Trình biên tập tự lấy storyboard mới: nếu bạn chưa có sửa đổi chưa lưu thì tải lại và giữ nguyên cảnh đang chọn và vị trí đầu phát; nếu có, các sửa của bạn được ghép với lần sửa này (Hoàn tác của trình biên tập bắt đầu lại từ chỗ ghép).
-   - **Không đổi**: agent không làm được (ví dụ cần một bức tranh mới); thẻ nói lý do và gợi ý nói rõ hơn hoặc chọn phần khác.
-   - **Cần bạn chọn**: trong lúc agent làm, bạn cũng lưu sửa đúng các cảnh đó. Chọn **Dùng bản của agent** (các sửa tay của bạn từ lúc đó sẽ mất) hoặc **Giữ bản của bạn** (bỏ lần sửa này).
-   - **Không làm được**: một câu nói vì sao, kèm nút **Thử lại**. Chữ gốc của máy chủ nằm dưới "chi tiết".
+   - **Đã áp dụng**: thẻ có một câu tóm tắt của agent, rồi **từng thay đổi do máy chủ mô tả** (số cảnh, thời điểm, một câu tiếng Việt, kể cả thay đổi ở lớp phủ), kèm ảnh **Trước** và **Sau** của cảnh đã đổi. Trình biên tập tự lấy storyboard mới: nếu bạn chưa có sửa đổi chưa lưu thì tải lại và giữ nguyên cảnh đang chọn và vị trí đầu phát; nếu có, các sửa của bạn được ghép với lần sửa này.
+   - **Không đổi**: agent không làm được (ví dụ cần một bức tranh mới); thẻ nói lý do bằng tiếng Việt và việc bạn có thể làm.
+   - **Cần làm kỹ hơn**: việc này cần nhìn kỹ vào tranh hoặc sửa nhiều hơn phần đã chọn. Không có gì bị đổi. Nút **Làm kỹ hơn** gửi lại đúng yêu cầu đó cho agent làm việc từng bước trong một thư mục riêng; thẻ nói trước là việc này **mất vài phút**, và khi nó bắt đầu thẻ nêu giới hạn: agent tự dừng sau tối đa 30 phút, chỉ được làm lại tối đa 2 lần sau câu trả lời đầu, và bạn bấm Dừng lúc nào cũng được. Kết quả của đường này cũng được ghi **thành một lô** (thay các cảnh đã đổi), có cùng nhật ký và cùng nút Hoàn tác; sửa đổi bạn lưu trong lúc agent làm vẫn được giữ.
+   - **Cần bạn chọn**: trong lúc agent làm, bạn cũng sửa đúng các cảnh đó (chỉ với đường **Làm kỹ hơn**). Chọn **Dùng bản của agent** (các sửa tay của bạn từ lúc đó sẽ mất) hoặc **Giữ bản của bạn** (bỏ lần sửa này).
+   - **Không làm được**: một câu nói vì sao (ví dụ "Cảnh 6 đang khóa nên không sửa được"), kèm nút **Thử lại**. Chữ gốc của máy chủ nằm dưới "chi tiết".
    - **Đã hủy**, **Đã hoàn tác**.
-5. **Xem thử** dựng một đoạn ngắn (tối đa 10 giây) ở chỗ vừa sửa. **Hoàn tác** đưa các cảnh về như trước lần sửa. Nếu sau lần sửa bạn đã đổi chính các cảnh đó, ứng dụng hỏi trước ("Hoàn tác sẽ bỏ sửa đổi của bạn"); chọn **Vẫn hoàn tác** để tiếp tục. Chỉ 20 lần sửa gần nhất còn hoàn tác được.
-6. Lần sửa bắt đầu ở thẻ trình duyệt khác cũng hiện ở đây sau vài giây. **Xóa lịch sử** hỏi một lần; nó chỉ xóa danh sách, không đổi video.
+5. **Xem thử** dựng một đoạn ngắn (tối đa 10 giây) ở chỗ vừa sửa. **Hoàn tác** là hoàn tác **lô** của lần sửa đó (qua nhật ký thay đổi): chỉ phần lô đã đổi được đưa về như trước, các sửa khác của bạn giữ nguyên. Nếu sau lần sửa bạn đã đổi chính phần đó, máy chủ nói rõ vì sao chưa hoàn tác được và không đổi gì; nếu bản lưu của lô đã bị xóa bớt (chỉ giữ 50 lô gần nhất) thẻ nói vậy. Các lần sửa làm trước bản này vẫn hoàn tác bằng cách cũ.
+6. **Lịch sử thay đổi** (dưới danh sách các lần sửa, bấm để mở): nhật ký của storyboard, mới nhất ở trên: giờ, ai làm ("Bạn" hoặc tên agent), yêu cầu của bạn và các câu mô tả, kèm nút **Hoàn tác** ở lô mà trạng thái của dự án cho biết hoàn tác được ngay. Cả sửa bằng lời, đường **Làm kỹ hơn** và các thao tác của agent ngoài đều nằm trong danh sách này.
+7. Lần sửa bắt đầu ở thẻ trình duyệt khác cũng hiện ở đây sau vài giây. **Xóa lịch sử** hỏi một lần; nó chỉ xóa danh sách các thẻ, không đổi video và không xóa nhật ký thay đổi.
 
 Agent làm việc này chọn ngay cạnh nút Gửi, bằng ô **Agent** (cùng ô với khung Bản nháp, bước "Dựng hình"; xem "Chọn agent" ở mục 2). Thẻ lần sửa xong ghi tên agent đã làm. Nếu agent hết hạn mức, thẻ nêu tên agent và giờ mở lại, kèm một nút "Chuyển sang <agent kia> và chạy lại" gửi lại đúng yêu cầu đó.
 

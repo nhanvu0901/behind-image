@@ -126,6 +126,9 @@ SPECS: list[Spec] = [
          when="While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances."),
     Spec("picks.ops", "picks", "Sửa chọn hình", "POST", P + "/picks/ops",
          when="Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md."),
+    Spec("picks.edit", "picks", "Nhờ agent sửa chọn hình", "POST", P + "/picks/edit", long_job=True, follow=LONGJOBS, role="picks",
+         cost=("model", "about 30 seconds"),
+         when="Once the picks step is open. Ready unless a draft or edit job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`): {\"beats\": [ids]}, {\"chapter\": id} or {\"all\": true}. One call, typed picks operations (never an import), one batch in the change log."),
     Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions or a clip) of the project runs."),
     # ---- storyboard (step 5, page step id `edit`)
     Spec("draft.start", "edit", "Dựng bản nháp", "POST", P + "/draft/start", long_job=True, follow=LONGJOBS, role="draft",
@@ -584,6 +587,14 @@ def b_picks_ops(c: Ctx):
     return E(["documents_readable"] if c.picks_error else [], body, fill=["ops"], template=template)
 
 
+def b_picks_edit(c: Ctx):
+    """c2box: the prompt box of step 4. The edit job is of the draft family (one agent call at a time), its model is the role `picks`."""
+    if not _picks_open(c):
+        return None
+    needs = (["documents_readable"] if c.picks_error else []) + (["no_running_job"] if c.busy("draft") else []) + _model_needs(c, "picks")
+    return E(needs, fill=["instruction", "scope"], template={"instruction": None, "scope": None, "base_rev": c.picks_ops_rev})
+
+
 def _edit_open(c: Ctx) -> bool:
     return c.open("edit")
 
@@ -691,7 +702,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "narration.approve": b_narration_approve, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
-    "picks.approve": b_picks_approve, "picks.ops": b_picks_ops,
+    "picks.approve": b_picks_approve, "picks.ops": b_picks_ops, "picks.edit": b_picks_edit,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,

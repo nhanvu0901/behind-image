@@ -2,6 +2,9 @@
 // (tests/e2e/stages/launch.py: fakes, BTI_NO_REAL_MODELS=1; the mock model answers an edit with a canned edit built from the prompt).
 // One PASS or FAIL line per check; exit code = number failing. Screenshots: .scratch/apage/shots/.
 // Usage: node tests/e2e/stages/prompt_edit.mjs [--keep-server]
+// NOTE (worker c2box): the box now works through typed operations (an answer is {"status", "summary", "reason", "ops"}, one batch in the change log, no
+// "needs_choice" on the fast path, "escalate" is a button). The old checks below about conflicts, the undo dialog with "force" and the English-answer
+// replacement describe the earlier contract and were NOT re-run or ported: tests/e2e/box/box.mjs is the browser check of the boxes now.
 import { up, down, readState } from './remote.mjs';
 import path from 'node:path';
 import { openBrowser, makeApi, check, finish, bodyText, rawLooking, leftovers, go, settle, sleep, REPO } from './common.mjs';

@@ -80,8 +80,9 @@ def test_the_workspace_file_and_the_briefings_say_the_same(bundle, proj, tmp_pat
     fast = (REPO / "skills" / "storyboard_edit" / "FAST.template.md").read_text(encoding="utf-8")
     for text in (task, fast):
         assert not re.search(r"\b71 techniques\b|The 71\b", text)
-        assert "ID-OPEN-*" in text and "ID-MARK-*" in text and "ID-BRAND-*" in text and "ID-LABEL-*" in text
         assert "never" in text and "Kiểu mở đầu và mốc chương" in text
-    assert "`cannot`" in fast and "PUT /api/projects/<project>/identity" in fast
+    assert "ID-OPEN-*" in task and "ID-MARK-*" in task and "ID-BRAND-*" in task and "ID-LABEL-*" in task
+    assert "`ID-*`" in fast and "the program writes them" in fast               # the fast briefing names the family; the catalogue it is given leaves every ID-* technique out
+    assert "`cannot`" in fast                                                  # the model only answers cannot: the owner chooses the style in the box (the route is the page's)
     rendered = (ws.root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in rendered and "PROGRAM ONLY" in rendered
