@@ -426,6 +426,9 @@ export const AGENT_LABELS = {
   },
 };
 
+// ---- compbase: the words of the choices of TIME-01, TREE-01 and STATE-01 (the words of their row fields are added after ITEM_FIELD, below)
+Object.assign(VALUE, { up: 'Phía trên', down: 'Phía dưới', descent: 'Con cháu (từ cha mẹ xuống con)', marriage: 'Hôn nhân', link: 'Quan hệ khác', a: 'Hình a (thứ nhất)', b: 'Hình b (thứ hai)' });
+
 // ---- mapbuild: rows of the list editor (parameter type `items`, formui.js) and the words of MAP-01's choices
 Object.assign(VALUE, {
   blue_grey: 'Xanh xám', fit: 'Vừa các địa điểm', manual: 'Tự đặt', curve: 'Đường cong', straight: 'Thẳng', dot: 'Chấm chạy',
@@ -440,4 +443,6 @@ export const ITEM_FIELD = {
   id: 'Mã', name: 'Tên', lonlat: 'Kinh độ, vĩ độ', at: 'Thời điểm', label_side: 'Phía đặt nhãn', from: 'Từ', to: 'Đến', via: 'Điểm uốn',
   shape: 'Dạng đường', draw_s: 'Thời gian vẽ', head: 'Đầu chạy',
 };
+// compbase: the fields of the rows of TIME-01 (date, label, side, at, accent) and TREE-01 (id, name, sub, row, col, at, strong; from, to, kind, label, at)
+Object.assign(ITEM_FIELD, { date: 'Năm', label: 'Chữ ghi', side: 'Phía', accent: 'Nhấn mạnh', sub: 'Dòng nhỏ', row: 'Hàng (-1 là tự xếp)', col: 'Cột (-1 là tự xếp)', strong: 'Nổi bật', kind: 'Loại quan hệ' });
 export const itemFieldLabel = (name) => ITEM_FIELD[name] || name;

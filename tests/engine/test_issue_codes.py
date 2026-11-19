@@ -35,9 +35,17 @@ def _map_codes():
     return {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r"map_[a-z_]+", n.value)}
 
 
+def _compbase_codes():
+    """The `time_*`, `tree_*` and `state_*` codes of TIME-01, TREE-01 and STATE-01 (returned by their `check_params` hooks in techniques/explain_base.py)."""
+    import re
+    tree = ast.parse((ENGINE / "techniques" / "explain_base.py").read_text())
+    return {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r"(time|tree|state)_[a-z_]+", n.value)}
+
+
 def test_documented_codes_are_all_used():
     used = _codes_in_source() | _map_codes() | {"undrawable", "incomplete", "not_an_object", "unreadable_structure", "style_unusable", "timing_unusable",
                                  "params_not_object", "unknown_param"}
+    used |= _compbase_codes()
     assert set(SB.ISSUE_CODES) - used == set()
 
 

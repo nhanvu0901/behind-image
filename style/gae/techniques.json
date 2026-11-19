@@ -13480,6 +13480,675 @@
    ]
   },
   {
+   "id": "TIME-01",
+   "key": "time_axis",
+   "name": "Time axis with dates",
+   "label_vi": "Trục thời gian có ngày",
+   "category": "diagram",
+   "kind": "base",
+   "intents": [
+    "quantify",
+    "context"
+   ],
+   "description": "A time axis with dates on the dark ground of the channel: a hairline axis grows from the left, ticks fade in, and each dated item grows a stalk from the axis and fades in its year and a short label at its own time. The technique chooses, for every item, the side of the axis, the length of the stalk and the place of the label so that no label touches another label or another stalk and every label stays inside the frame (two items or twelve, two in the same year, BC and AD together). At `focus_s` the accented item brightens, gets a dot on the axis, and the others dim.",
+   "usage_rule": "Use it when the narration places events in time: a run of dated events (\"in 1425 ... in 1431 ... in 1434\"), a span, the order of things. It is a dark shot of its own (no picture). Give `items`, one per dated moment the narration names: `date` (a whole year, negative for BC), `label` (a few words of your own, at most 48 characters, never a sentence of the narration), `at` (seconds from the start of the shot, or the word that names the event so that its stalk grows on that word), `side` (leave `auto`: the technique picks the side, the stalk length and the label's place) and `accent` true on the one moment the sentence is about (it brightens at `focus_s`, the others dim). Leave `from`, `to` empty and `tick_every` 0 unless the axis must run wider than the items (empty `from`/`to` = the items' range with one year of margin; a date outside the axis is an error). One to 12 items; items too close together to be laid out are refused. The default data is an example (Van Eyck, 1425 to 1434): ALWAYS replace all of `items`. Dates come from the narration and the project's sources: leave an item out rather than guess a year. Let the shot last about one second per item plus three.",
+   "channel_usage": "occasional",
+   "slots": [],
+   "params": [
+    {
+     "name": "items",
+     "type": "items",
+     "default": [
+      {
+       "date": 1425,
+       "label": "Painter to Philip the Good",
+       "side": "auto",
+       "at": 0.8,
+       "accent": false
+      },
+      {
+       "date": 1426,
+       "label": "Giovanni marries Costanza Trenta",
+       "side": "auto",
+       "at": 1.7,
+       "accent": false
+      },
+      {
+       "date": 1431,
+       "label": "Van Eyck settles in Bruges",
+       "side": "auto",
+       "at": 2.6,
+       "accent": false
+      },
+      {
+       "date": 1432,
+       "label": "The Ghent Altarpiece",
+       "side": "auto",
+       "at": 3.5,
+       "accent": false
+      },
+      {
+       "date": 1433,
+       "label": "Costanza is dead",
+       "side": "auto",
+       "at": 4.4,
+       "accent": false
+      },
+      {
+       "date": 1434,
+       "label": "The Arnolfini Portrait",
+       "side": "auto",
+       "at": 5.3,
+       "accent": true
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "items",
+     "values": null,
+     "measured": null,
+     "min_items": 1,
+     "max_items": 12,
+     "fields": [
+      {
+       "name": "date",
+       "type": "number",
+       "required": true,
+       "default": null,
+       "min": -4000,
+       "max": 3000,
+       "unit": "year",
+       "values": null
+      },
+      {
+       "name": "label",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{1,48}",
+       "pattern_hint": "Gõ một dòng, 1 đến 48 ký tự: tên ngắn của mốc, ví dụ Van Eyck đến Bruges."
+      },
+      {
+       "name": "side",
+       "type": "enum",
+       "required": false,
+       "default": "auto",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "auto",
+        "up",
+        "down"
+       ]
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "accent",
+       "type": "bool",
+       "required": false,
+       "default": false,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null
+      }
+     ]
+    },
+    {
+     "name": "from",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "\\s*(?:-?\\d{1,4})?\\s*",
+     "pattern_hint": "Gõ một năm, số âm là trước Công nguyên (ví dụ -500). Để trống thì lấy theo các mốc, chừa một năm ở hai đầu."
+    },
+    {
+     "name": "to",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "\\s*(?:-?\\d{1,4})?\\s*",
+     "pattern_hint": "Gõ một năm, số âm là trước Công nguyên (ví dụ 1500). Để trống thì lấy theo các mốc, chừa một năm ở hai đầu."
+    },
+    {
+     "name": "tick_every",
+     "type": "number",
+     "default": 0,
+     "min": 0,
+     "max": 1000,
+     "unit": "years",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "focus_s",
+     "type": "number",
+     "default": 6.0,
+     "min": 0,
+     "max": 600,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "dim_to",
+     "type": "number",
+     "default": 0.55,
+     "min": 0.2,
+     "max": 1.0,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 2.1,
+     "min": 1.4,
+     "max": 3.2,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 8.0,
+    "min_s": 3.0,
+    "max_s": 30.0,
+    "anchor": "word"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.explain_base.TimeAxis",
+    "reason": null,
+    "notes": "Dark ground #131519, text #E9E2D0, hairlines #8D877A. Times are seconds from the start of the shot (or word anchors in an item's `at`). The axis grows over 0.8 s; a stalk grows over 0.35 s from its `at`, the year fades in from +0.2 s, the label from +0.35 s; from `focus_s` (0.8 s ramp) the others dim to `dim_to`. Layout: depth first search over side, stalk length (3 above the axis, 2 below) and label place, accented items first; unsolvable data is refused (`time_crowded`). Label cap height `cap_pct`, the year is 1.44 times larger (EB Garamond, bundled)."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 8.0,
+    "clip": "previews/TIME-01.mp4",
+    "thumb": "previews/TIME-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (TIME-01)",
+    "docs/design/research/R10_explainer_components.md parts 4 and 5 (C5, C6)",
+    "docs/design/mock/2026-11-18-explainer/components.html (timeline)"
+   ]
+  },
+  {
+   "id": "TREE-01",
+   "key": "relation_tree",
+   "name": "Relations: family and patrons",
+   "label_vi": "Sơ đồ quan hệ: gia đình và người bảo trợ",
+   "category": "diagram",
+   "kind": "base",
+   "intents": [
+    "context"
+   ],
+   "description": "Relations between people on the dark ground of the channel: names with a smaller second line (dates or role), hairline connectors drawn one after another, a marriage as a short horizontal line between two names of one row, descent running down in right angles, relations such as patron or painter drawn the same way, and small italic edge labels. When `row` and `col` are left out the technique lays the tree out itself: generations by descent, spouses side by side, crossings reduced, everything inside the frame (the text is made smaller when the tree is wide).",
+   "usage_rule": "Use it when the narration explains who is related to whom or who worked for whom: a family, a patron and the painters he hired, a workshop, who married whom, who painted or bought which work. It is a dark shot of its own (no picture). `nodes`: `id` (short, no spaces), `name`, `sub` (a smaller second line: dates or a role), `strong` true for the one or two names the sentence is about, `at` (seconds from the start of the shot, or the word that names the person so that the name appears on it). `edges`: `from`, `to` (ids), `kind` (`descent` from parent to child, `marriage` between two names, `link` for any other relation such as patron to painter or painter to work), `label` (two or three words in small italic, for example 'married 1426'), `at` (when the line is drawn, from `from` to `to`). Leave `row` and `col` at -1: the technique lays the tree out itself (parents above children, spouses side by side); give both for every name only to place them by hand. Two to 14 names, at most five generations, a person has at most two marriages; a tree that cannot fit is refused. The default data is an example (Philip the Good, Van Eyck, the Arnolfini): ALWAYS replace `nodes` and `edges` together. Names, dates and relations come from the narration and the project's sources: leave out anything you are unsure of rather than guess. Let the shot last about one second per name plus three.",
+   "channel_usage": "occasional",
+   "slots": [],
+   "params": [
+    {
+     "name": "nodes",
+     "type": "items",
+     "default": [
+      {
+       "id": "duke",
+       "name": "Philip the Good",
+       "sub": "Duke of Burgundy",
+       "row": -1,
+       "col": -1,
+       "at": 0.5,
+       "strong": true
+      },
+      {
+       "id": "jan",
+       "name": "Jan van Eyck",
+       "sub": "painter",
+       "row": -1,
+       "col": -1,
+       "at": 1.5,
+       "strong": true
+      },
+      {
+       "id": "fam",
+       "name": "The Arnolfini",
+       "sub": "merchants from Lucca",
+       "row": -1,
+       "col": -1,
+       "at": 2.4,
+       "strong": true
+      },
+      {
+       "id": "gio",
+       "name": "Giovanni di Nicolao",
+       "sub": "Arnolfini",
+       "row": -1,
+       "col": -1,
+       "at": 3.3,
+       "strong": false
+      },
+      {
+       "id": "cos",
+       "name": "Costanza Trenta",
+       "sub": "dead by 1433",
+       "row": -1,
+       "col": -1,
+       "at": 4.2,
+       "strong": false
+      },
+      {
+       "id": "pic",
+       "name": "The Arnolfini Portrait",
+       "sub": "1434",
+       "row": -1,
+       "col": -1,
+       "at": 5.6,
+       "strong": true
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "names",
+     "values": null,
+     "measured": null,
+     "min_items": 2,
+     "max_items": 14,
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "[A-Za-z0-9_-]{1,24}",
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ jan."
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{1,40}",
+       "pattern_hint": "Gõ một dòng, 1 đến 40 ký tự: tên người hoặc tên tác phẩm."
+      },
+      {
+       "name": "sub",
+       "type": "string",
+       "required": false,
+       "default": "",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{0,48}",
+       "pattern_hint": "Gõ một dòng, tối đa 48 ký tự: năm hoặc vai trò hiện nhỏ dưới tên; để trống thì không có dòng này."
+      },
+      {
+       "name": "row",
+       "type": "number",
+       "required": false,
+       "default": -1,
+       "min": -1,
+       "max": 4,
+       "unit": "row",
+       "values": null
+      },
+      {
+       "name": "col",
+       "type": "number",
+       "required": false,
+       "default": -1,
+       "min": -1,
+       "max": 11,
+       "unit": "column",
+       "values": null
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "strong",
+       "type": "bool",
+       "required": false,
+       "default": false,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null
+      }
+     ]
+    },
+    {
+     "name": "edges",
+     "type": "items",
+     "default": [
+      {
+       "from": "duke",
+       "to": "jan",
+       "kind": "link",
+       "label": "court painter, 1425",
+       "at": 1.0
+      },
+      {
+       "from": "fam",
+       "to": "gio",
+       "kind": "descent",
+       "label": "",
+       "at": 2.8
+      },
+      {
+       "from": "gio",
+       "to": "cos",
+       "kind": "marriage",
+       "label": "married 1426",
+       "at": 3.8
+      },
+      {
+       "from": "jan",
+       "to": "pic",
+       "kind": "link",
+       "label": "paints",
+       "at": 5.0
+      },
+      {
+       "from": "gio",
+       "to": "pic",
+       "kind": "link",
+       "label": "buys",
+       "at": 5.2
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "relations",
+     "values": null,
+     "measured": null,
+     "min_items": 0,
+     "max_items": 24,
+     "fields": [
+      {
+       "name": "from",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "[A-Za-z0-9_-]{1,24}",
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ jan."
+      },
+      {
+       "name": "to",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "[A-Za-z0-9_-]{1,24}",
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ jan."
+      },
+      {
+       "name": "kind",
+       "type": "enum",
+       "required": false,
+       "default": "link",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "descent",
+        "marriage",
+        "link"
+       ]
+      },
+      {
+       "name": "label",
+       "type": "string",
+       "required": false,
+       "default": "",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{0,32}",
+       "pattern_hint": "Gõ một dòng, tối đa 32 ký tự: chữ nghiêng nhỏ cạnh đường nối; để trống thì không có chữ."
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      }
+     ]
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 2.55,
+     "min": 1.6,
+     "max": 3.4,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 8.0,
+    "min_s": 3.0,
+    "max_s": 30.0,
+    "anchor": "word"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.explain_base.RelationTree",
+    "reason": null,
+    "notes": "Dark ground #131519, text #E9E2D0, hairlines #8D877A (3 px), second line and edge labels at 72 percent. Times are seconds from the start of the shot (or word anchors in an `at`): a name fades in over 0.4 s, a connector is drawn over 0.7 s from `from`, its label fades in from +0.4 s. Layout when `row`/`col` are -1 for any name: longest-path generations, spouses in one unit, barycentre sweeps against crossings, least-squares coordinates with minimum gaps, right-angle connectors through the gaps between rows (edges that skip a row get a virtual node so that they run between names), label beside the longest vertical run. Names `cap_pct` (strong names 1.1 times larger, second line 0.72)."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 8.0,
+    "clip": "previews/TREE-01.mp4",
+    "thumb": "previews/TREE-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (TREE-01)",
+    "docs/design/research/R10_explainer_components.md parts 4 and 5 (C17)",
+    "docs/design/mock/2026-11-18-explainer/components.html (tree)"
+   ]
+  },
+  {
+   "id": "STATE-01",
+   "key": "two_states",
+   "name": "The same picture in two states",
+   "label_vi": "Cùng một tranh ở hai trạng thái",
+   "category": "compare",
+   "kind": "base",
+   "intents": [
+    "compare",
+    "reveal"
+   ],
+   "description": "The same picture in two states (colour and infrared, before and after a restoration): two image slots of the same crop framed by one camera that does not move during a change, a dissolve from one to the other and back, holds given as text, and the name of the state in small capitals at the bottom left with a soft shadow.",
+   "usage_rule": "Use it when the narration shows one picture in two states: before and after a restoration, colour and infrared, the underdrawing, a reconstruction of the original colours. It needs two images of the SAME crop (slot `a` and slot `b`; the owner chose them): if the project has no second image of the picture, do not use it. `label_a` and `label_b` name the two states in a word or two (\"Colour\", \"Infrared\", \"Before\", \"After\"); `first` says which is seen first; `holds` is how long each state is held, in seconds, written \"1.5; 2.5; 1.5\" (the first state, then the other, then the first again; two to six numbers); `dissolve_s` is the length of each change. The shot's `camera` frames both pictures and does not move during a change. Let the shot last the holds plus one dissolve between each pair (7.5 s for the default). The change is the point: start the shot so that the dissolve falls on the word that names the new state.",
+   "channel_usage": "rare",
+   "slots": [
+    {
+     "name": "a",
+     "type": "image",
+     "required": true,
+     "region": true
+    },
+    {
+     "name": "b",
+     "type": "image",
+     "required": true,
+     "region": false
+    }
+   ],
+   "params": [
+    {
+     "name": "label_a",
+     "type": "string",
+     "default": "Colour",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,32}",
+     "pattern_hint": "Gõ một dòng, tối đa 32 ký tự: tên của trạng thái ở hình a, ví dụ Colour; để trống thì không có chữ."
+    },
+    {
+     "name": "label_b",
+     "type": "string",
+     "default": "Infrared",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,32}",
+     "pattern_hint": "Gõ một dòng, tối đa 32 ký tự: tên của trạng thái ở hình b, ví dụ Infrared; để trống thì không có chữ."
+    },
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "dissolve_s",
+     "type": "number",
+     "default": 1.0,
+     "min": 0.5,
+     "max": 1.5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "holds",
+     "type": "string",
+     "default": "1.5; 2.5; 1.5",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "\\s*\\d+(?:\\.\\d+)?(?:\\s*;\\s*\\d+(?:\\.\\d+)?){1,5}\\s*;?\\s*",
+     "pattern_hint": "Gõ số giây giữ từng trạng thái, cách nhau bằng dấu chấm phẩy, từ hai đến sáu số. Ví dụ: 1.5; 2.5; 1.5"
+    },
+    {
+     "name": "first",
+     "type": "enum",
+     "default": "a",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "a",
+      "b"
+     ],
+     "measured": null
+    },
+    {
+     "name": "label_cap_pct",
+     "type": "number",
+     "default": 1.8,
+     "min": 1.2,
+     "max": 3.2,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 7.5,
+    "min_s": 3.0,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.explain_base.TwoStates",
+    "reason": null,
+    "notes": "Both pictures are drawn as CAM-01 draws one (the camera of the shot, in source pixels of slot `a`; image b is scaled to the width of a and centred on it, so images of one crop line up at any resolution). Timeline in seconds from the start of the shot: hold, linear dissolve, hold ... as `holds` and `dissolve_s` say; the last state is held to the end of the shot. The camera clock stops during a dissolve. A hold is exactly the picture of its state. Caption: small capitals (EB Garamond Regular, tracking 0.14 em, cap height `label_cap_pct`) at 4.5 percent from the left, fades in at 0.3 s, flips through a fade at the middle of each dissolve, fades out ending 0.1 s before the end."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 7.5,
+    "clip": "previews/STATE-01.mp4",
+    "thumb": "previews/STATE-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (STATE-01)",
+    "docs/design/research/R10_explainer_components.md parts 4 and 5 (C10, C11)",
+    "docs/design/mock/2026-11-18-explainer/components.html (states)"
+   ]
+  },
+  {
    "id": "MAP-01",
    "key": "map_atlas",
    "name": "Atlas map",

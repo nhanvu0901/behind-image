@@ -69,6 +69,8 @@ export const TARGETS = {
   'CMP-05': { camera: MATTE('state_a') },
   'X-CMP-01': { camera_anchor: PANEL('anchor') },
   'X-CMP-02': { camera: MATTE('state_a') },
+  // compbase: explain_base.py TwoStates (STATE-01): one camera over the whole frame, in the pixels of slot a
+  'STATE-01': { camera: MATTE('a') },
 };
 
 /** The first slot of the list "a|b" that holds a picture, else the first name. */
