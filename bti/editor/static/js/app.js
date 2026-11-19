@@ -9,9 +9,11 @@ import { parseHash, projectHash, legacyTarget } from './router.js';
 import { renderStepper, landing } from './stepper.js';
 import { setNavigator } from './nav.js';
 import { openModelSettings } from './settings.js';
+import { mountAutoButton } from './autoswitch.js';      // c5cli: the switch "Cho agent tự chạy dự án này"
 import { stageLabel, waitText, OPEN_STEP } from './labels.js';
 
 const $ = (s) => document.querySelector(s);
+let autoButton = null;                                                                          // c5cli: { sync(pid) } of the switch in the top bar
 const S = { hash: null, route: null, pid: null, pipeline: null, projects: [], view: null, scope: null, seq: 0, skipGuard: false, guarding: false };
 
 const VIEWS = {
@@ -174,6 +176,7 @@ function renderPicker() {
 function renderFrame() {
   const r = S.route, p = S.pipeline;
   renderPicker();
+  autoButton?.sync(S.pid && r?.name === 'project' ? S.pid : null);          // c5cli
   // title and painting of the current project
   const info = $('#frame-project');
   if (S.pid && p) {
@@ -275,6 +278,7 @@ async function boot() {
   setNavigator(go);
   $('#btn-new').onclick = () => go('#/library');
   $('#btn-settings').onclick = () => openModelSettings();
+  autoButton = mountAutoButton($('#btn-auto'), () => (S.route?.name === 'project' ? S.pid : null));          // c5cli
   $('#project-pick').onchange = (e) => { const v = e.target.value; if (!v) go('#/'); else go(projectHash(v)); setTimeout(() => { $('#project-pick').value = S.pid || ''; }, 0); };
   document.addEventListener('click', (e) => {            // every in-app link goes through go(), so unsaved work is asked about
     const a = e.target.closest?.('a[href^="#/"]');

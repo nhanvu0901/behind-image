@@ -475,3 +475,22 @@ Object.assign(ITEM_FIELD, {
 });
 // `side` and `label` are also fields of TIME-01 ("Phía", "Chữ ghi"): here they mean the side of the detail where the text goes, and the small caption over a figure
 Object.assign(ITEM_FIELD_OF, { labels: { side: 'Phía đặt chữ' }, rows: { label: 'Nhãn nhỏ' } });
+
+// ---- worker c5cli: the switch "Cho agent tự chạy dự án này" (autologic.js, autoswitch.js). The owner decides which gates an agent may approve in one project;
+// spending money is never an agent's, so there is no box for it, only the line that says so.
+export const AUTO_LABELS = {
+  title: 'Cho agent tự chạy dự án này',
+  button: { off: 'Agent tự chạy: tắt', on: 'Agent tự chạy: bật' },
+  buttonTitle: { off: 'Cho phép agent trong terminal tự duyệt một số cổng của dự án này', on: 'Agent trong terminal đang được tự duyệt một số cổng của dự án này' },
+  switchLabel: 'Cho agent tự chạy dự án này',
+  gatesTitle: 'Agent được tự duyệt',
+  gate: { outline: 'Duyệt dàn ý', narration: 'Duyệt lời dẫn', picks: 'Duyệt chọn hình', storyboard: 'Duyệt storyboard' },
+  gateShort: { outline: 'dàn ý', narration: 'lời dẫn', picks: 'chọn hình', storyboard: 'storyboard' },
+  summary: { off: 'Tắt: mọi cổng do bạn duyệt trên trang.', on: (names) => `Bật: agent được tự duyệt ${names.join(', ')}.`, onNone: 'Bật nhưng chưa cho cổng nào: mọi cổng vẫn do bạn duyệt.' },
+  hint: 'Các ô chỉ có tác dụng khi công tắc đang bật.',
+  money: 'Việc tốn tiền luôn cần bạn.',
+  loading: 'Đang tải...',
+  saved: 'Đã lưu.',
+  saveFail: 'Không lưu được: ',
+  loadFail: 'Không đọc được cài đặt tự chạy: ',
+};

@@ -239,6 +239,8 @@ def _approval(a: Any) -> dict:
     out = {"approved": bool(a.get("approved")), "sha1": a.get("sha1"), "approved_at": a.get("approved_at")}
     if a.get("outline_sha1"):
         out["outline_sha1"] = a["outline_sha1"]
+    if isinstance(a.get("by"), str) and a["by"]:         # c5cli: who approved (`human`, `agent:...`, `cli:...`); absent in an approval made before this existed
+        out["by"] = a["by"]
     return out
 
 
@@ -649,9 +651,10 @@ def disk_rev(path: Path, kind: str = "narration") -> str | None:
     return cls.from_dict(_load(path)).rev() if path.is_file() else None
 
 
-def approve(pdir: Path, kind: str, rev: str) -> dict:
+def approve(pdir: Path, kind: str, rev: str, by: str | None = None) -> dict:
     """Stamp the approval of the saved file `kind` ("outline" | "narration"); `rev` must be its current revision.
-    A narration approval also records the revision of the outline file it is approved against (`outline_sha1`)."""
+    A narration approval also records the revision of the outline file it is approved against (`outline_sha1`).
+    `by` (c5cli) is who approved: `human`, `agent:<model id>` or `cli:<name>`."""
     path = script_dir(pdir) / f"{kind}.json"
     d = _load(path)
     if d is None:
@@ -660,6 +663,8 @@ def approve(pdir: Path, kind: str, rev: str) -> dict:
     if cur != rev:
         raise StaleRevision(cur)
     ap = {"approved": True, "sha1": cur, "approved_at": now_iso()}
+    if by:
+        ap["by"] = by
     if kind == "narration":
         o = load_outline(pdir)
         ap["outline_sha1"] = o.rev() if o is not None else None

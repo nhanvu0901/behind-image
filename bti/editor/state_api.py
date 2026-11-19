@@ -24,6 +24,7 @@ from typing import Any, Callable
 from fastapi import APIRouter, Request
 
 from bti import agents as AG
+from bti import auto as auto_mod                      # c5cli: which gates and which kinds of spending an agent may use
 from bti.script import store as sstore
 
 from . import hints as hints_mod
@@ -224,6 +225,8 @@ class Ctx:
         self.has_history = False
         self.has_audio = self.has_timing = True
         self.picks_ops_rev: str | None = None
+        self.auto: dict = auto_mod.default_doc()          # c5cli: what the owner allowed (auto.json)
+        self.sb_record: Any = None                        # c5cli: the storyboard's approval record
         self.change_count = 0
         self.change_doc: str | None = None
         self.undo_target: dict | None = None
@@ -356,11 +359,51 @@ def _load_storyboard(c: Ctx) -> None:
                   vi="Storyboard không đọc được.")
         return
     c.sb_rev, c.sb_approval = compute_rev(sb), storyboard_approval(sb)
+    c.sb_record = (sb.get("approvals") or {}).get("storyboard") if isinstance(sb.get("approvals"), dict) else None      # c5cli
     c.has_audio = _file_named(c.d, sb, "audio", "audio/mix.m4a")
     c.has_timing = _file_named(c.d, sb, "timing", "timing.json")
     if not c.has_timing:
         c.problem("timing_unusable", "voice", "the timing file the storyboard names is missing",
                   vi="Thiếu tệp thời gian (timing.json): cần làm lại giọng đọc.")
+
+
+# ---- c5cli: automatic running and who approved
+def _load_auto(c: Ctx) -> None:
+    c.auto, _ = auto_mod.read_project(c.d)
+
+
+def _auto_ok(spec: Spec, c: Ctx) -> bool:
+    """May an AGENT make this call now: a gate needs automatic running on and the gate allowed; a call that costs needs its kind of spending
+    allowed (`paid` never); every other call is free for an agent. A spec that says `auto_ok` false never is."""
+    if not spec.auto_ok:
+        return False
+    if spec.gate:
+        return auto_mod.gate_allowed(c.auto, spec.id.split(".")[0])
+    if spec.cost:
+        return auto_mod.spend_allowed(c.auto, spec.cost[0])
+    return True
+
+
+def _stamp(record: Any, stands: bool) -> dict | None:
+    """{by, at, stands} of one approval record (None when nothing was approved); `by` is null for an approval made before it was recorded."""
+    if not isinstance(record, dict) or not (record.get("approved") is True or record.get("approved_at")):
+        return None
+    by = record.get("by")
+    return {"by": by if isinstance(by, str) and by else None, "at": record.get("approved_at"), "stands": bool(stands)}
+
+
+def approvals_of(c: Ctx) -> dict:
+    """The four gates: who approved, when, and whether the approval still stands (None for a gate never approved or not there)."""
+    out: dict = {g: None for g in auto_mod.GATES}
+    if c.outline is not None:
+        out["outline"] = _stamp(c.outline.approval, c.outline_fresh)
+    if c.narration is not None:
+        out["narration"] = _stamp(c.narration.approval, c.narration_ok)
+    if c.picks is not None:
+        out["picks"] = _stamp(c.picks.get("approval"), c.picks_ok)
+    if isinstance(c.sb_record, dict):
+        out["storyboard"] = _stamp({"approved": True, **c.sb_record}, c.sb_approval == "fresh")
+    return out
 
 
 def _load_changes(c: Ctx) -> None:
@@ -718,7 +761,7 @@ def _action(spec: Spec, e: dict, c: Ctx, job: dict | None = None) -> dict:
         path = path.replace("{job_id}", str(job["id"]))
     needs = e["needs"]
     out = {"id": spec.id, "step": e.get("step") or spec.step, "label": _label(spec, c), "method": spec.method, "path": path, "body": e["body"],
-           "ready": not needs, "needs": needs, "gate": spec.gate, "auto_ok": spec.auto_ok, "long_job": spec.long_job,
+           "ready": not needs, "needs": needs, "gate": spec.gate, "auto_ok": _auto_ok(spec, c), "long_job": spec.long_job,
            "uses_model": spec.role is not None, "agent": c.agent(spec.role) if spec.role else None,
            "cost": {"kind": spec.cost[0], "about": spec.cost[1]} if spec.cost else None,
            "advances": bool(e["advances"]) and not needs}
@@ -771,7 +814,8 @@ def damaged_answer(pid: str, why: str, code: str, fix: str | None = None) -> dic
               "blocked_by": None, "problem": code} for sid, label in pipeline_api.STEPS]
     h = hints_mod.hint(code, 409, pid)
     return {"project": pid, "stage": None, "current": None, "steps": steps, "next_actions": [], "jobs": [],
-            "problems": [{"code": code, "step": None, "detail": why, "fix": fix or h["fix"]}]}
+            "problems": [{"code": code, "step": None, "detail": why, "fix": fix or h["fix"]}],
+            "auto": auto_mod.public(auto_mod.default_doc()), "approvals": {g: None for g in auto_mod.GATES}}      # c5cli
 
 
 def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, longjobs=None, picks_provider: Any = None) -> dict:
@@ -791,6 +835,7 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
     _try(lambda: _load_storyboard(c))
     _try(lambda: _load_changes(c))
     _try(lambda: _load_draft(c))
+    _try(lambda: _load_auto(c))                                      # c5cli
     steps = _steps_out(pipe)
     for p in c.problems:                                            # a step that carries a problem says so on its line
         s = next((x for x in steps if x["step"] == p.get("step")), None)
@@ -800,7 +845,8 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
                 s["detail"] = (s["detail"] + " " + p["vi"]).strip()
     problems = [{k: v for k, v in p.items() if k != "vi"} for p in c.problems]
     return {"project": pid, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
-            "next_actions": build_actions(c), "jobs": jobs, "problems": problems}
+            "next_actions": build_actions(c), "jobs": jobs, "problems": problems,
+            "auto": auto_mod.public(c.auto), "approvals": _try(lambda: approvals_of(c), {g: None for g in auto_mod.GATES})}      # c5cli
 
 
 def make_router(projects_root: Path, *, pdir: Callable[[str], Path], script_jobs=None, preview_jobs=None, longjobs=None) -> APIRouter:

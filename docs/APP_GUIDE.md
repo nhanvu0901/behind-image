@@ -15,7 +15,7 @@ Mở http://127.0.0.1:8560/ . Chỉ nghe trên 127.0.0.1, cổng 8560 (không d�
 - `?mock=1` chạy ứng dụng với dữ liệu giả, không cần server; chỉ bước Dựng hình dùng được trong chế độ này.
 - `?all=1` hiện thêm các dự án `lab_*` và `demo_*` (mặc định bị ẩn).
 - Đổi thư mục dự án (để thử mà không đụng dữ liệu thật): đặt biến `BTI_PROJECTS_ROOT` trước khi chạy `tools/run_editor.sh`.
-- Agent chạy trong terminal (agy, Codex, Claude) làm việc với dự án qua API của ứng dụng: bắt đầu từ `docs/AGENT_API.md` (dự án đang ở đâu, việc gọi được ngay, lỗi và cách sửa).
+- Agent chạy trong terminal (agy, Codex, Claude) làm việc với dự án qua lệnh `bti` (mục 12) và API của ứng dụng: bắt đầu từ `AGENTS.md` ở gốc kho mã, rồi `docs/AGENT_API.md` (dự án đang ở đâu, việc gọi được ngay, lỗi và cách sửa).
 - Các thao tác nhỏ cho bước Chọn hình và Dựng hình (gửi theo lô, có nhật ký và hoàn tác) nằm ở `docs/OPS.md`; cả hai tệp được sinh từ mã và một bài test trượt nếu chúng cũ.
 
 ## 2. Khung ứng dụng
@@ -565,3 +565,13 @@ Trong `projects/<dự-án>/script/`:
 | `outline.prev.json`, `narration.prev.json` | Bản trước của lần ghi gần nhất (một bản). |
 | `last_paste.txt`, `last_paste_outline.txt` | Bản dán lỗi gần nhất, hoặc câu trả lời lỗi của mô hình. Tự xóa khi lưu thành công. |
 | `brief_options.json` | Mục tiêu số từ, tốc độ đọc, sách dịch máy được phép dùng, ghi chú chung. |
+
+## 12. Cho agent tự chạy dự án và lệnh `bti`
+
+Mặc định mọi cổng duyệt (dàn ý, lời dẫn, chọn hình, storyboard) do bạn duyệt trên trang. Một agent trong terminal (Claude Code, Codex, Antigravity) muốn duyệt thay bạn sẽ bị máy chủ từ chối.
+
+- **Công tắc.** Khi đang mở một dự án, thanh trên cùng có nút **Agent tự chạy: tắt** (hoặc **bật**). Bấm vào là mở hộp **Cho agent tự chạy dự án này**: bật công tắc, rồi tick những cổng agent được tự duyệt (mặc định tick cả bốn: duyệt dàn ý, lời dẫn, chọn hình, storyboard). Mỗi lần đổi được lưu ngay, chỉ cho dự án đang mở (tệp `projects/<mã dự án>/auto.json`), và không đổi việc bạn tự duyệt trên trang.
+- **Việc tốn tiền luôn cần bạn.** Agent không bao giờ tự chạy việc tốn tiền (ví dụ nút "Gợi ý hình"). Việc tốn giờ máy (giọng đọc, xuất video) hoặc một lần gọi mô hình chỉ chạy khi agent xác nhận rõ ràng bằng `--yes-cost`.
+- **Ai đã duyệt.** Mỗi lần duyệt ghi lại ai duyệt: `human` là bạn trên trang, `cli:...` hoặc `agent:...` là một agent. Lệnh `bti status <dự án>` hiện dòng này cho cả bốn cổng.
+- **Lệnh `bti`** là lệnh mỏng gọi đúng API của trang đang chạy (`tools/bti`, trên máy chủ `tools\bti.bat`; xem `docs/WINDOWS.md`). Agent bắt đầu bằng `bti status <dự án>` và chạy lệnh ở dòng cuối `next:`. Tài liệu cho agent là `AGENTS.md` và `skills/<bước>/SKILL.md`; danh sách trong đó được sinh từ mã và có bài test, nên không lệch với ứng dụng.
+- **Giới hạn cần biết.** Máy chủ nhận agent qua lời tự khai (`actor`) trong yêu cầu, không phải qua đăng nhập: luật này giữ cho một agent trung thực không duyệt hoặc tiêu thứ bạn chưa cho phép, chứ không phải hàng rào bảo mật. Chỉ bạn mới đổi được công tắc (agent đổi sẽ bị từ chối).

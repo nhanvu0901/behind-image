@@ -36,7 +36,12 @@ never disagree. It reads files only: it never calls a model, never starts a job,
      "cost": null, "advances": false, "fill": ["source", "source_id"], "body_template": {"source": null, "source_id": null, "as_main": false}}
   ],
   "jobs": [],
-  "problems": []
+  "problems": [],
+  "auto": {"enabled": false, "gates": {"outline": true, "narration": true, "picks": true, "storyboard": true},
+           "spend": {"model": true, "machine_time": true, "paid": false}},
+  "approvals": {"outline": {"by": "human", "at": "2026-11-18T10:00:00+0700", "stands": true},
+                "narration": {"by": "cli:bti", "at": "2026-11-18T10:20:00+0700", "stands": true}, "picks": {"by": "human", "at": "2026-11-18T11:00:00+0700", "stands": true},
+                "storyboard": null}
 }
 ```
 
@@ -72,7 +77,7 @@ ahead of it is (for example `picks.approve` with `needs: ["main_asset"]`).
 | `ready`, `needs` | `ready` is true when the call can be made now. Otherwise `needs` lists what is missing, as words from the table in section 3 |
 | `advances` | true when the call is ready and moves the project to its next state; a caller that walks the list takes the first ready action with `advances: true` |
 | `gate` | the call approves a gate (`outline.approve`, `narration.approve`, `picks.approve`, `storyboard.approve`) |
-| `auto_ok` | an agent may make this call when the owner has turned automatic running on. Every gate is `true` (owner's decision of 2026-11-18). `false` only for a paid call (`picks.suggest`): the owner must agree |
+| `auto_ok` | an agent (an actor that is not `human`) may make this call now, by the owner's `auto` document (section "Automatic running" below): for a gate, automatic running is on and the gate is allowed (so `false` by default); for a call with a `cost`, that kind of spending is allowed (`model` and `machine_time` by default, `paid` never: `picks.suggest` is always `false`); `true` for every other call |
 | `long_job`, `follow` | the call answers with a `job_id`; `follow` is the GET that follows it. Cancel it with the `*.cancel` action that appears in this list while the job runs |
 | `uses_model`, `agent` | the call runs a model; `agent` is `{id, label, usable, reason}`: which agent would run it (`bti.agents`: the step's choice, the project's agent, the machine's default) and whether it can run on this machine. `usable: false` adds `agent_usable` to `needs`; `reason` is the Vietnamese sentence |
 | `cost` | `null`, or `{kind, about}` with `kind` one of `machine_time` (the server is busy: voice about 1 hour, export about 25 minutes), `model` (an agent works: a draft about 20 minutes) or `paid` (it costs money). A caller that must not spend time or money stops and asks when `cost` is not null |
@@ -101,6 +106,34 @@ whose data is damaged still answers: the step carries the code in `problem`, and
 (`storyboard.restore` for a corrupt `storyboard.json`; `voice.generate` when the timing file is missing). A project whose own file
 `project.json` cannot be read answers with every step locked, no action, and `problems[0].code == "project_file_damaged"`.
 
+### Automatic running and who approved
+
+By default every gate is approved by the owner on the page. The owner may turn automatic running on for one project and say which gates an
+agent may approve; the rule is the server's, not the command's. The state answer carries the owner's settings and the record of every approval:
+
+* `auto`: `{enabled, gates: {outline, narration, picks, storyboard}, spend: {model, machine_time, paid}}`, the project's `auto.json` (a project that has
+  none has the defaults: nothing enabled, every gate allowed once enabled, `model` and `machine_time` spending allowed, `paid` never).
+* `approvals`: for each gate `null` (never approved, or the approval was dropped by an edit) or `{by, at, stands}`: who approved (`human`,
+  `agent:<model id>` or `cli:<name>`; `null` for an approval made before it was recorded), when, and whether it still stands (false: the document
+  changed after it, or an earlier gate was undone).
+
+```
+GET /api/projects/{pid}/auto   -> {"schema": "bti.auto/1", "rev": "...", "enabled": false, "gates": {...}, "spend": {...}, "warnings": []}
+PUT /api/projects/{pid}/auto   {"base_rev": "<rev>", "enabled": true, "gates": {"storyboard": false}, "spend": {"machine_time": false}}   -> the same answer
+```
+
+`PUT` changes only the keys it names (`gates` and `spend` only the names they list); `409 stale` for an old `base_rev` (with `current_rev`),
+`422 invalid_field` (with `fields`) for an unknown name or a value that is not true or false, and for `spend.paid: true` (an agent never spends money:
+the value stays false, whatever a file says). Only the owner changes it: a `PUT` with an `actor` that is not `human` is `403 auto_needs_human`.
+
+The four approval routes (`POST .../outline/approve`, `.../narration/approve`, `.../picks/approve` and `POST .../approve` for the storyboard) take an optional
+`actor` in the body: `human` (the default: the page sends none), `agent:<model id>` or `cli:<name>`; anything else is `422 invalid_field`. An actor that is not
+`human` may approve only when the project's `auto` is `enabled` and allows that gate; otherwise `403 gate_needs_human` (with `gate`, `actor`, `reason`: `auto_off` or
+`gate_not_allowed`, and `auto`), before anything is read or written, and `fix` says the owner approves on the page or turns automatic running on. The actor is
+stored with the approval (`approval.by` in `script/outline.json`, `script/narration.json` and `picks.json`; `approvals.storyboard.by` in `storyboard.json`). The one paid call
+(`POST .../picks/suggest`) is refused to any actor that is not `human` (`403 spend_needs_human`). The `actor` is what the caller says it is: the rule keeps an honest
+agent from approving or spending what the owner did not allow, it is not an authentication. The `bti` command always sends `cli:<name>` (see `AGENTS.md`).
+
 ### Walking a project
 
 ```
@@ -108,7 +141,7 @@ loop:
   s = GET /api/projects/{pid}/state
   a = first of s.next_actions with ready and advances
   none -> stop: read s.steps and s.problems (a step that is current with nothing to advance waits for content: see `fill`)
-  a.gate and not owner allows automatic running, or a.cost not null and the owner has not agreed -> stop and ask
+  not a.auto_ok (a gate the owner did not allow an agent to approve, or a spend the owner did not allow), or a.cost not null and the owner has not agreed -> stop and ask
   call a.method a.path with a.body; if it answers a job_id, poll a.follow until the job is done, then loop
 ```
 
@@ -242,6 +275,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `asset_not_found` | no | Use an asset key that exists in the storyboard (GET /api/projects/{pid}/assets lists them). |
 | `at_least_one_source` | after_fix | Keep at least one book source included in the brief options. |
 | `audio_decode_failed` | after_fix | The audio file cannot be decoded: make the voice again (POST /api/projects/{pid}/voice/generate); if it repeats the file is damaged. |
+| `auto_needs_human` | no | Ask the owner to change automatic running on the page: an agent may only read it (GET /api/projects/{pid}/auto). |
 | `bad_action` | after_fix | Send action as "overwrite" or "discard". |
 | `bad_chapters` | after_fix | Send `chapters` as a list of chapter ids (at most 100). |
 | `bad_model` | after_fix | Send `model` as a plain model id, or leave it out to use the project's agent. |
@@ -295,6 +329,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `file_too_large` | after_fix | Send a file of a supported kind (jpg, jpeg, png, webp, mp4, webm, mov or m4v) of at most 80 MB. |
 | `forbidden` | no | This call is not allowed on this project; read `detail` for the rule. |
 | `frames_mismatch` | after_fix | The video has the wrong number of frames: call POST /api/projects/{pid}/export/start again; if it repeats, validate the storyboard. |
+| `gate_needs_human` | after_fix | Ask the owner to approve this gate on the page, or to turn automatic running on for this project and allow the gate (the switch on the page, PUT /api/projects/{pid}/auto), then call again. |
 | `history_file_not_found` | after_fix | Name a file that exists in the project's history/ folder, or leave `file` out to use the newest good one. |
 | `history_file_unreadable` | after_fix | The named history file is not a storyboard: name another file, or leave `file` out. |
 | `identity_style_required` | after_fix | Send `style` as an identity style id (GET /api/projects/{pid}/identity lists them). |
@@ -412,6 +447,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `source_unreachable` | later | Send the call again in a minute; nothing was written. |
 | `span_mismatch` | after_fix | Make the first new shot start where the replaced run starts and keep every other start inside the run. |
 | `spec_invalid` | later | The model answered in the wrong shape even after one repair: call again, or use mode deep. |
+| `spend_needs_human` | no | Ask the owner to start this paid call on the page: an agent never spends money, whatever the settings of automatic running. |
 | `split_refused` | after_fix | Read `detail`: choose a work that can be split off. |
 | `stale` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |
 | `stale_revision` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |

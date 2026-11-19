@@ -377,6 +377,10 @@ export const STAGE_CODES = {
     method_not_allowed: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
     invalid_request: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
     accept_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    /* worker c5cli: the refusals of the rule "who may approve a gate" (bti/auto.py). The page itself sends no actor, so only a program in a terminal meets these. */
+    gate_needs_human: 'Cổng này chỉ chủ dự án duyệt được. Hãy duyệt trên trang, hoặc bật "Cho agent tự chạy dự án này" và cho phép cổng này.',
+    auto_needs_human: 'Chỉ chủ dự án đổi được việc cho agent tự chạy. Hãy đổi trên trang.',
+    spend_needs_human: 'Việc tốn tiền luôn cần bạn: agent không được tự chạy.',
   },
 };
 const AMBIGUOUS = new Set(['busy', 'stale', 'not_found']);

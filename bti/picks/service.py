@@ -475,7 +475,7 @@ def set_regions(pdir: Path, key: str, regions, base_rev=None) -> str:
 
 
 # ---------------------------------------------------------------- approval
-def approve(pdir: Path, rev) -> dict:
+def approve(pdir: Path, rev, by: str | None = None) -> dict:
     if not isinstance(rev, str) or not rev:
         raise PicksError(422, "rev (string) is required", "invalid")
     with doc.Held(pdir):
@@ -489,6 +489,6 @@ def approve(pdir: Path, rev) -> dict:
         if errs:
             raise PicksError(422, "the picks have errors: " + "; ".join(e["message"] for e in errs), "picks_have_errors", issues=errs)
         try:
-            return doc.stamp_approval(pdir, rev, nv["rev"])
+            return doc.stamp_approval(pdir, rev, nv["rev"], by)       # c5cli: `by` is who approved
         except doc.StaleRevision as e:
             raise PicksError(409, "the file changed since you loaded it; reload before approving", "stale", rev=str(e))

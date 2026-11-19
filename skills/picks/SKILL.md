@@ -1,0 +1,127 @@
+---
+name: bti-picks
+description: Step 4 of Behind the Image, the pictures (the main painting, its regions and the pictures of each narration line). Use when `bti status <project>` shows the step `picks` as current.
+---
+
+# Step 4: the pictures (picks)
+
+Read `AGENTS.md` first (the rules, the exit codes). This document is for the step `picks`.
+
+## Goal
+
+Decide, for every line of the approved narration, which picture is on the screen while it is spoken: the whole main painting, a named detail of it, or a picture from elsewhere. At the end the owner (or you,
+if the owner allowed it) approves the picks, and the storyboard draft starts from them.
+
+## What it needs and what it gives
+
+- Needs: the narration approved. It can be worked while the voice (step 3) runs.
+- Gives: `picks.json`: the **main painting** (`main_asset`), the pictures imported into the project (`assets`, each with its source, author and licence), the **regions** of each picture (a named spot with a centre and a radius, in pixels of the stored file) and, per narration line, the list of pictures
+  with a `role` (`main`, `detail`, `context`, `compare`, `document`, `map`, `video`). A line with no picture shows the main painting again.
+- Unlocks: the storyboard draft (step 5), together with the voice.
+
+## The actions and operations it uses
+
+<!-- BEGIN GENERATED: actions -->
+| id | step | page button | gate | cost | long job |
+|---|---|---|---|---|---|
+| `picks.search` | picks | Tìm hình |  |  |  |
+| `picks.import` | picks | Nhập hình |  |  |  |
+| `picks.import_book_image` | picks | Nhập hình từ sách |  |  |  |
+| `picks.import_clip` | picks | Cắt clip video |  | machine_time: about 1 minute | yes |
+| `picks.suggest` | picks | Gợi ý hình (tốn tiền) |  | paid: You.com calls, charged per beat | yes |
+| `picks.put` | picks | Lưu chọn hình |  |  |  |
+| `picks.approve` | picks | Duyệt chọn hình | yes |  |  |
+| `picks.ops` | picks | Sửa chọn hình |  |  |  |
+| `picks.cancel` | picks | Dừng |  |  |  |
+<!-- END GENERATED: actions -->
+
+Send operations with `bti ops <project> picks --file ops.json [--dry-run]`: the file is a JSON list of operations (or an object with `ops`, `scope`, `note`); the command reads the current
+revision itself, a refused batch writes nothing, and every batch can be undone (`bti undo`). `bti schema ops picks` prints each operation with its fields and an example; the operations are:
+
+<!-- BEGIN GENERATED: ops -->
+| operation | what it does |
+|---|---|
+| `set_main` | Choose the main picture (the whole painting) of the video. |
+| `set_region` | Set (add or replace) a named region of an asset: a point, with an optional radius, in pixels of the stored picture. |
+| `remove_region` | Remove a named region of an asset (the pictures of a line that use it must be changed in the same batch, before this operation). |
+| `set_picks` | Replace all the pictures of one narration line (use skip_beat to show the main picture instead). |
+| `add_pick` | Add one picture to a narration line, at the end or at a position. |
+| `remove_pick` | Remove one picture of a narration line, by its position among the pictures of the line (counting from 0, as the earlier operations of the batch left them). |
+| `skip_beat` | Make a narration line show the main picture again (it keeps no pictures of its own). |
+| `import` | Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here. |
+<!-- END GENERATED: ops -->
+
+Pictures come from `picks.search` (the answer lists the `source` and `source_id` of each candidate) and are brought in with `picks.import`
+(`--set source=commons --set source_id=... --set as_main=true` for the main painting), `picks.import_book_image` (a picture of the project's books) or the `import` operation inside a batch (it gets a
+`ref`, and the later operations of the batch name the new picture as `$ref`). A clip is cut from a link by the long job `picks.import_clip` (`--set url=... --set start=12 --set end=19`). The paid suggestion
+(`picks.suggest`) is never yours: the owner starts it on the page.
+
+## A worked session
+
+Fixture project `ops1` (a project with a narration of six lines and four pictures; the examples of `docs/OPS.md` are written for it). `bti ops ... --dry-run` checks a batch and writes nothing.
+
+```text
+# fixture: ops
+$ bti schema ops picks
+operations of the picks (send them with: bti ops <project> picks --file ops.json):
+  set_main: Choose the main picture (the whole painting) of the video.
+    required: asset
+    example: {"op":"set_main","asset":"B"}
+...
+(bti schema ops picks --json gives every JSON Schema)
+$ cat > ops.json <<'EOF'
+[{"op": "skip_beat", "beat": "b0004"},
+ {"op": "set_picks", "beat": "b0005", "items": [{"asset": "B", "role": "context"}], "reason": "the room"}]
+EOF
+$ bti ops ops1 picks --file ops.json --dry-run
+dry run: nothing was written; 2 operation(s) applied; revision <rev>
+changes:
+  0:42   Đoạn 4: dùng lại tranh chính
+  0:59   Đoạn 5: thay 1 hình
+$ bti ops ops1 picks --file ops.json
+batch batch_0001 written; 2 operation(s) applied; revision <rev>
+changes:
+  0:42   Đoạn 4: dùng lại tranh chính
+  0:59   Đoạn 5: thay 1 hình
+undo: bti undo <project> batch_0001
+$ bti changes ops1 picks
+batch        doc         actor                 time                 note
+batch_0001   picks       cli:bti               <time>
+    0:42   Đoạn 4: dùng lại tranh chính
+    0:59   Đoạn 5: thay 1 hình
+$ bti undo ops1 batch_0001
+undone batch_0001; the undo is batch batch_0002; revision <rev>
+  0:42   Đoạn 4: trở lại như trước khi sửa
+  0:59   Đoạn 5: trở lại như trước khi sửa
+$ bti approve ops1 picks
+a person is needed: gate_needs_human (HTTP 403)
+  detail: The picks gate can only be approved by the owner: automatic running is off for this project.
+  fix: Ask the owner to approve this gate on the page, or to turn automatic running on for this project and allow the gate (the switch on the page, PUT /api/projects/ops1/auto), then call again.
+(exit 3)
+```
+
+## What a good result is
+
+- **The main painting first.** Choose it before anything else (a picture of the whole work, as large as the source gives: the app keeps Wikimedia pictures at up to 3840 pixels wide). A licence flag ("restricted", "unknown", "small") never refuses a picture; the source and licence are kept for the video description.
+- **Regions where the narration names a detail.** A line that points at the mirror, the hands or a signature shows the main painting with that region (`set_region`, then `role: detail` and `region` in the item). Place a region on what its name says: look at the picture.
+- **Context lines need other pictures.** A line about a person, a place, a document, another work or a technique outside the painting needs a picture other than the main painting (`context`, `document`, `map`, `compare`), with its `role` set. A picture of the right kind of thing is better than the painting held for the whole line.
+- **No pictures is a choice.** A line with no pictures shows the main painting again and the draft moves the camera over it; that suits lines that talk about the work in general. A line you do not want counted as missing is `skip_beat`.
+- **Clips are rare.** At most one clip per chapter, 4 to 10 seconds, only for a context line, cut from a link with `picks.import_clip`; a video can never be the main painting.
+- **Never invent.** A picture, a place or a name you cannot source is left out; the line stays on the main painting.
+- **Check before the gate.** The approval needs the main painting, no missing file, no unknown picture or region, and the narration still approved. Run `bti status <project>`: `picks.approve` is ready when these hold.
+
+## The refusals you will meet
+
+| code | what to do |
+|---|---|
+| `picks_no_main`, `main_asset` | There is no main painting: import one (`picks.import` with `as_main` true) or `set_main` in a batch. |
+| `picks_have_errors`, `picks_errors` | Read `issues` of `GET /api/projects/{pid}/picks` (a missing file, an unknown asset or region) and fix them. |
+| `unknown_asset`, `unknown_region`, `unknown_beat`, `invalid_field` | The batch names something that does not exist: the refusal lists `allowed` and the path of the field (`ops[1].items[0].asset`). Fix that field, or import the picture / add the region first (in the same batch, with a `ref`). |
+| `source_rate_limited` (exit 5) | A picture source asks for fewer calls: wait `retry_after` seconds (about a minute) and send again; do not loop. |
+| `source_unreachable`, `source_unavailable`, `source_timeout` (exit 5) | The service did not answer: try again in a minute, or take another source. |
+| `import_failed`, `source_error`, `image_too_small` | Choose another picture or another source; nothing was written. |
+| `video_not_main` | A clip cannot be the main painting: choose an image. |
+| `stale_revision` (exit 5) | The picks changed under you: send the command again (it reads the new revision). |
+| `narration_not_approved` | The narration is not approved (or changed): step 2 first. |
+| `confirm_required`, `spend_needs_human`, `spend_not_allowed` (exit 3) | A paid call is the owner's: stop and ask. |
+| `gate_needs_human` (exit 3) | The owner has not allowed you to approve this gate: stop and ask. |

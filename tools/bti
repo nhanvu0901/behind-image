@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# `bti`: the command for agents that run a project of the app (see AGENTS.md). Uses the project's virtual environment, the way tools/run_editor.sh does,
+# and never installs anything: a missing environment is a usage error (exit 2), nothing was asked of the app.
+# Usage: tools/bti status [project] | do | approve | ops | job | undo | changes | schema | doc      env: BTI_URL (default http://127.0.0.1:8560), BTI_ACTOR
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -x "$ROOT/.venv/bin/python" ]; then PY="$ROOT/.venv/bin/python"
+elif [ -x "$ROOT/.venv/Scripts/python.exe" ]; then PY="$ROOT/.venv/Scripts/python.exe"
+else echo "bti: no virtual environment at $ROOT/.venv (run tools/run_editor.sh once to make it)" >&2; exit 2; fi
+export PYTHONUTF8=1 PYTHONIOENCODING=utf-8 PYTHONDONTWRITEBYTECODE=1
+cd "$ROOT"
+exec "$PY" -m bti.cli "$@"
