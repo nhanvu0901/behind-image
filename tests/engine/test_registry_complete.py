@@ -9,7 +9,7 @@ from conftest import REPO
 
 def test_all_techniques_available_and_have_previews_on_disk():
     b = R.load_bundle("gae")
-    assert len(b.techniques) == 78 and all(b.available(t["id"]) for t in b.techniques)
+    assert len(b.techniques) == 79 and all(b.available(t["id"]) for t in b.techniques)
     for t in b.techniques:
         pv = t.get("preview")
         assert pv, t["id"]
@@ -38,7 +38,7 @@ def test_technique_lab_covers_every_technique_and_renders():
     assert [i for i in p.validate() if i["level"] == "error"] == []
     rs = p.resolve()
     ids = [s["note"].split()[0] for s in rs["shots"]]
-    assert ids == [t["id"] for t in R.load_bundle("gae").techniques if not t["id"].startswith("ID-")]     # the lab predates the ID family (tests/engine/test_identity.py)
+    assert ids == [t["id"] for t in R.load_bundle("gae").techniques if not t["id"].startswith(("ID-", "MAP-"))]     # the lab predates the ID and MAP families (tests/engine/test_identity.py, test_map.py)
     for s in rs["shots"][::7]:                                  # a sample keeps the suite fast; the build script checks all 71
         g = cv2.cvtColor(p.frame_at(s["_t0"] + 1.0, 320), cv2.COLOR_BGR2GRAY)
         assert g.std() > 0 or s["technique"].startswith("X-CARD"), s["id"]

@@ -10,6 +10,7 @@ must match; `check_registry()` verifies this and is part of the test suite.
 """
 from __future__ import annotations
 
+import copy
 import json
 import os
 import re
@@ -204,6 +205,151 @@ def _bad_pattern(p: dict, prefix: str = "", index=None):
     return _P("param_bad_form", prefix + hint, pattern=p.get("pattern"), hint=p.get("pattern_hint"), index=index)
 
 
+# ----------------------------------------------------------------------------- the `items` type (a list of records)
+FIELD_TYPES = ("string", "number", "enum", "bool", "lonlat", "ref", "at")
+LON_MAX, LAT_MAX_ITEM = 180.0, 85.0
+
+
+def item_label(it) -> str:
+    """A short name for an item in a message: its `name`, `id`, `text`, `label` or `date` when it has one."""
+    if isinstance(it, dict):
+        for k in ("name", "id", "text", "label", "date"):
+            if isinstance(it.get(k), (str, int, float)) and not isinstance(it.get(k), bool) and str(it[k]).strip():
+                return str(it[k])[:40]
+    return ""
+
+
+def _check_anchor_form(a):
+    """None when `a` is a word anchor / time anchor of a storyboard ({t}, {w, off?, text?} or {rel}); else a short reason."""
+    if not isinstance(a, dict):
+        return "an anchor is an object"
+    if "t" in a:
+        return None if _is_num(a["t"]) else "t must be a number"
+    if "w" in a:
+        if not (isinstance(a["w"], int) and not isinstance(a["w"], bool) and a["w"] >= 0):
+            return "w must be a whole number >= 0"
+        if "off" in a and not _is_num(a["off"]):
+            return "off must be a number"
+        return None
+    if "rel" in a:
+        return None if _is_num(a["rel"]) and 0 <= a["rel"] <= 1 else "rel must be a number from 0 to 1"
+    return "an anchor needs one of t, w, rel"
+
+
+def check_field(d: dict, v):
+    """None when `v` fits the field definition `d` of an `items` param, else `(code, args, message)`."""
+    t = d["type"]
+    if t == "string":
+        if not isinstance(v, str):
+            return _P("item_field_bad_type", "must be text", want="string")
+        if d.get("pattern") is not None and not _pattern(d["pattern"]).fullmatch(one_line(v)):
+            return _P("item_field_bad_form", d.get("pattern_hint") or "does not have the required form", pattern=d.get("pattern"), hint=d.get("pattern_hint"))
+    elif t == "number":
+        if not _is_num(v):
+            return _P("item_field_bad_type", "must be a number", want="number")
+        if d.get("min") is not None and v < d["min"]:
+            return _P("item_field_below_min", "must be >= %s" % d["min"], min=d["min"])
+        if d.get("max") is not None and v > d["max"]:
+            return _P("item_field_above_max", "must be <= %s" % d["max"], max=d["max"])
+    elif t == "enum":
+        if v not in (d.get("values") or []):
+            return _P("item_field_not_in_values", "must be one of %s" % ", ".join(d.get("values") or []), values=list(d.get("values") or []))
+    elif t == "bool":
+        if not isinstance(v, bool):
+            return _P("item_field_bad_type", "must be true or false", want="bool")
+    elif t == "lonlat":
+        if not (isinstance(v, (list, tuple)) and len(v) == 2 and all(_is_num(x) for x in v)):
+            return _P("item_field_bad_lonlat", "must be [longitude, latitude]", reason="form")
+        if abs(v[0]) > LON_MAX:
+            return _P("item_field_bad_lonlat", "longitude must be between -180 and 180", reason="lon")
+        if abs(v[1]) > LAT_MAX_ITEM:
+            return _P("item_field_bad_lonlat", "latitude must be between -85 and 85", reason="lat")
+    elif t == "ref":
+        m = _check_point(v)
+        if m:
+            return _P("item_field_bad_type", "must be a region name or [x, y]", want="ref")
+    elif t == "at":
+        if isinstance(v, dict):
+            why = _check_anchor_form(v)
+            if why:
+                return _P("item_field_bad_at", "the time is not a number of seconds or a word anchor (%s)" % why)
+        elif not _is_num(v):
+            return _P("item_field_bad_at", "the time must be a number of seconds or a word anchor")
+        else:
+            if d.get("min") is not None and v < d["min"]:
+                return _P("item_field_below_min", "must be >= %s" % d["min"], min=d["min"])
+            if d.get("max") is not None and v > d["max"]:
+                return _P("item_field_above_max", "must be <= %s" % d["max"], max=d["max"])
+    return None
+
+
+def check_items(p: dict, v):
+    """None when `v` is a list of objects that fit the `fields` of the `items` param `p`, else `(code, args, message)` for the first
+    problem. The message and the args name the item (1-based in the message, 0-based `index` in the args) and the field."""
+    if not isinstance(v, (list, tuple)):
+        return _P("param_not_items", "must be a list of items")
+    m = _check_count(p, len(v))
+    if m:
+        return m
+    defs = {f["name"]: f for f in p.get("fields") or []}
+    for i, it in enumerate(v):
+        lab = item_label(it)
+        where = "item %d%s" % (i + 1, " (%s)" % lab if lab else "")
+        if not isinstance(it, dict):
+            return _P("item_not_object", "%s: must be an object" % where, index=i, item=lab)
+        for k in it:
+            if k.startswith("_"):
+                continue
+            if k not in defs:
+                return _P("item_unknown_field", "%s: unknown field %r (allowed: %s)" % (where, k, ", ".join(sorted(defs))), index=i, field=k, item=lab, allowed=sorted(defs))
+        for k, d in defs.items():
+            if d.get("required") and it.get(k) is None:
+                return _P("item_field_missing", "%s: field %r is required" % (where, k), index=i, field=k, item=lab)
+            if it.get(k) is None:
+                continue
+            bad = check_field(d, it[k])
+            if bad:
+                return bad[0], dict(bad[1], index=i, field=k, item=lab), "%s, field %r: %s" % (where, k, bad[2])
+    return None
+
+
+def items_at_fields(spec: dict) -> list:
+    """[(param name, [names of its `at` fields])] of a technique: where word anchors can sit inside items."""
+    out = []
+    for pd in spec.get("params") or []:
+        if pd.get("type") == "items":
+            f = [x["name"] for x in pd.get("fields") or [] if x.get("type") == "at"]
+            if f:
+                out.append((pd["name"], f))
+    return out
+
+
+def at_seconds(at, t0: float = 0.0, default: float = 0.0) -> float:
+    """Seconds from the start of the element for an `at` field: a number is already that; a resolved anchor (`_t`, absolute seconds)
+    is turned into seconds from `t0`; an anchor that is not resolved gives `default`."""
+    if isinstance(at, dict):
+        return float(at["_t"]) - float(t0) if _is_num(at.get("_t")) else default
+    return float(at) if _is_num(at) else default
+
+
+def fill_items(p: dict, items) -> list:
+    """Copy of `items` with every missing (or null) field filled from the default of its definition, and the line breaks of text fields collapsed."""
+    defs = p.get("fields") or []
+    out = []
+    for it in items or []:
+        if not isinstance(it, dict):
+            continue
+        o = dict(it)
+        for d in defs:
+            if o.get(d["name"]) is None and d.get("default") is not None:
+                o[d["name"]] = copy.deepcopy(d["default"])
+            if d["type"] == "string" and isinstance(o.get(d["name"]), str):
+                o[d["name"]] = one_line(o[d["name"]])          # one-line text: a line break never reaches the text renderer
+        out.append(o)
+    return out
+
+
+
 def check_problem(p: dict, v):
     """None when `v` fits the registry parameter definition `p`, else `(code, args, message)`."""
     if v is None:
@@ -261,6 +407,8 @@ def check_problem(p: dict, v):
                       w=CANVAS_W, h=CANVAS_H, min_px=BOX_MIN_PX)
     elif t == "camera":
         return _check_camera(v)
+    elif t == "items":
+        return check_items(p, v)
     elif t == "asset":
         if not (isinstance(v, str) and v):
             return _P("param_not_asset", "must be an asset key")
@@ -297,6 +445,15 @@ def validate_params(spec: dict, params: dict, path: str) -> list[dict]:
             issues.append({"level": "warn", "code": "incomplete", "path": "%s.%s" % (path, k),
                            "args": {"what": "param", "name": k, "technique": spec["id"]},
                            "message": "incomplete: required parameter %r is not set" % k})
+    if not any(i["level"] == "error" for i in issues):
+        # rules between several params (a route end names a place, an ISO code exists ...): the renderer class may define
+        # `check_params(params)` -> [(param name, code, args, message)] over the merged params (defaults included)
+        cls = RENDERERS.get(spec["id"], (None, None))[0]
+        hook = getattr(cls, "check_params", None)
+        if hook is not None:
+            for name, code, args, message in hook(merged_params(spec, params)):
+                issues.append({"level": "error", "path": "%s.%s" % (path, name), "code": code,
+                               "args": dict(args, param=name, technique=spec["id"]), "message": "%s: %s" % (name, message)})
     return issues
 
 
@@ -316,6 +473,8 @@ def merged_params(spec: dict, params: dict | None) -> dict:
             out[p["name"]] = one_line(v)
         elif p["type"] == "lines" and isinstance(v, (list, tuple)):
             out[p["name"]] = [one_line(x) for x in v]
+        elif p["type"] == "items" and isinstance(v, (list, tuple)):
+            out[p["name"]] = fill_items(p, v)          # every item has every field: the renderer never meets a missing one
     return out
 
 

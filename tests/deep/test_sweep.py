@@ -1,7 +1,7 @@
-"""Technique sweep: every one of the 78 registry techniques through the API, as the editing page uses it.
+"""Technique sweep: every one of the 79 registry techniques through the API, as the editing page uses it.
 Defaults -> draft -> validate -> three stills across the span; plus a 3 s preview for 22 of them (all transitions and
 cards included). Uses a copy of technique_lab as the reference configuration of each technique; the seven techniques of the channel
-identity (`ID-*`) have no reference in technique_lab, so the fixture adds one for each to the COPY (never to the tracked project)."""
+identity (`ID-*`) and `MAP-01` have no reference in technique_lab, so the fixture adds one for each to the COPY (never to the tracked project)."""
 from __future__ import annotations
 
 import pytest
@@ -36,7 +36,10 @@ def _identity_references(sb: dict) -> dict:
                         "intent": "explore", "transition_in": None, "locked": False, "source": "import", "note": "host of the identity overlays",
                         "overlays": [{"id": "o%d" % (n + 1), "technique": tid, "intent": "structure", "start": {"t": round(t + a, 3)}, "dur": d, "params": {},
                                       "slots": {}, "locked": False, "source": "import", "note": ""} for n, (tid, a, d) in enumerate(ov)]})
-    sb["end"] = {"t": round(t + 12.0, 3), "fade_s": 0}
+    t += 12.0
+    sb["shots"].append({"id": "s9200", "start": {"t": round(t, 3)}, "technique": "MAP-01", "slots": {}, "params": {}, "intent": "context", "transition_in": None,
+                        "overlays": [], "locked": False, "source": "import", "note": "MAP-01 reference (the default example)"})
+    sb["end"] = {"t": round(t + 8.0, 3), "fade_s": 0}
     return sb
 
 
@@ -54,9 +57,9 @@ def lab_state(client, projects_root, data_root):
     shutil.rmtree(projects_root / "sweep_lab", ignore_errors=True)
 
 
-def test_registry_has_78_techniques(lab_state):
+def test_registry_has_79_techniques(lab_state):
     reg = lab_state[2]
-    assert len(reg) == len(_ids()) == 78                 # 71 of the channel's look and the seven `ID-*` of the identity
+    assert len(reg) == len(_ids()) == 79                 # 71 of the channel's look, the seven `ID-*` of the identity and `MAP-01`
     assert {t["kind"] for t in reg} == {"base", "overlay", "transition", "card"}
     assert len([t for t in reg if t["id"].startswith("ID-")]) == 7
 

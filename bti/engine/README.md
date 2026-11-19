@@ -25,10 +25,10 @@ the traceback only with `--debug`. A failed `render` leaves no partial output fi
 `Project.validate` reports every issue with `level`, `path`, `message`, `code` and `args` (`bti.engine.storyboard.ISSUE_CODES` lists the
 codes). The rule behind the registry is: whatever `validate` accepts without an error can be drawn. Param definitions therefore carry
 `min`/`max` (every number has both), `pattern` + `pattern_hint` (string/text/lines; the Vietnamese hint says what to type),
-`min_items`/`max_items` (points/lines) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
+`min_items`/`max_items` (points/lines/items), `fields` (items, below) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
 frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
 `RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
-four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 78 techniques and all twelve param types.
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 79 techniques and all thirteen param types.
 
 ## Layout
 
@@ -37,11 +37,12 @@ four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for al
 | `api.py` | the facade (design 8.1): `open_project`, `Project`, `load_style` |
 | `storyboard.py` | canonical JSON + revision, `resolve`, `validate`, atomic `save` with `history/` backup |
 | `timing.py` | word lookup (`find`, `anchor_for`) and anchor resolution (`t`, `w`+`off`+`text`, `rel`) |
-| `registry.py` | `@technique(id, kind)`, parameter validation against `techniques.json`, `check_registry` |
+| `registry.py` | `@technique(id, kind)`, parameter validation against `techniques.json` (including the `items` type and a per-technique `check_params` hook), `check_registry` |
+| `geo.py` | Web Mercator views (`View`, `fit`, `ease_view`) and the bundled Natural Earth data (`land`, `countries`, `seas`), read once and cached |
 | `scene.py` | compile a resolved storyboard into a `Scene`: `frame_at`, `render_range`, transitions, end fade |
 | `base.py` | the renderer interfaces, `Ctx`, and the process-wide LRU caches |
 | `vfx.py` | pixel primitives lifted from the benchmark (`Img`, `Cam`, `compose_matte`, `text_layer`, `spotlight`, `ring` ...) |
-| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions`, `identity` (the ID family, below) |
+| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions`, `identity` (the ID family, below), `maps` (MAP-01, below) |
 
 Frame pipeline: shot lookup (bisect on shot starts) -> base renderer -> overlays in list order -> optional `transition_in`
 (both shots are rendered during the overlap) -> end fade (`end.fade_s`, default 1.6 s, `inout_sine`) -> uint8 -> resize.
@@ -142,7 +143,7 @@ registry and `default_params` must fill it when it can.
    ],
    "engine": {"status": "done", "available": true, "impl": "bti.engine.techniques.labels.SourceLabel", "reason": null, "notes": "..."}
    ```
-   Param types: `number, enum, bool, string, text, color (#rrggbb), point, box, camera, asset, points, lines`. Unknown params are errors for everyone, so list every knob. File format: `style/gae/techniques.schema.json`.
+   Param types: `number, enum, bool, string, text, color (#rrggbb), point, box, camera, asset, points, lines, items`. Unknown params are errors for everyone, so list every knob. File format: `style/gae/techniques.schema.json`.
 3. **Write the renderer** in the family module (`techniques/labels.py`) and decorate it with the id and kind:
 
    ```python
@@ -249,6 +250,54 @@ text only behind the band, the dim levels, end state = plain picture, time scali
 family are 640x360, 30 fps, as long as the nominal timeline; since the server gets its code by `git pull`, `style/gae/previews/*.mp4` is tracked
 (`.gitignore` no longer ignores it).
 
+## Lists of records: the parameter type `items`
+
+A param of type `items` holds a list of objects whose fields the registry entry declares (contract `docs/design/2026-11-18-explainer-components.md` section 3).
+The entry carries `fields` (each: `name`, `type`, `required`, `default`, `min`, `max`, `values`, and for text `pattern` + `pattern_hint`) and the usual
+`min_items` / `max_items`. Field types: `string`, `number`, `enum`, `bool`, `lonlat` (`[longitude, latitude]`, -180..180 and -85..85), `ref` (a region
+name of the shot's picture or a pixel point, checked against `regions` like a `point`) and `at` (seconds from the start of the element as a number, or a
+word anchor `{"w": index, "off": s, "text": word}`, `{"t": s}` or `{"rel": 0..1}`).
+
+* **Validation** (`registry.check_items`): the first problem of the first bad item, as `(code, args, message)`; the message and the args name the item
+  (`item 2 (Lucca)`, `index` 1) and the field. Codes: `param_not_items`, `item_not_object`, `item_unknown_field`, `item_field_missing`, `item_field_bad_type`,
+  `item_field_below_min`, `item_field_above_max`, `item_field_not_in_values`, `item_field_bad_form`, `item_field_bad_lonlat`, `item_field_bad_at` (all listed in
+  `storyboard.ISSUE_CODES`, each with a Vietnamese sentence in `sbissues.js`). Rules between params (a route end names a place, an ISO code exists) go in a
+  classmethod `check_params(params) -> [(param, code, args, message)]` of the renderer; `validate_params` calls it over the merged params when the per-param
+  checks found nothing, so the rule "what validate accepts can be drawn" holds across params too.
+* **Defaults**: `registry.merged_params` fills every missing field of every item from the field default and collapses line breaks of text fields, so a renderer
+  never meets a missing field (`R.fill_items`). The registry default of the param is a list of complete items.
+* **Anchors**: `storyboard.resolve` resolves a word anchor in an `at` field the way a camera key's `at` is resolved (`_t` = absolute seconds; `rel` counts from the
+  element's own start to its end); `validate` reports `item_anchor_invalid` / `item_anchor_stale`. The renderer turns an `at` into seconds from its own start with
+  `R.at_seconds(at, self.t0)`. `R.items_at_fields(spec)` lists where anchors can sit.
+* **Page**: `formgen.js` (pure: `newItem`, `addItem`, `removeItem`, `moveItem`, `setItemField`, `itemsProblem`) and `formui.js` (rows: one input per field, add,
+  remove, up, down; a time field offers seconds or "= playhead word"). Every other param type's form is unchanged. Tests: `tests/editor_frontend/items.test.mjs`.
+* **Catalogue** (`bti/draft/techniques_md.py`): prints the fields, e.g. `places:items(1..12)[{id:string*, name:string*, lonlat:lonlat*, at:at[0..600]=1.0, ...}]`.
+* An element of the families `ID-`, `MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-` shorter than its technique's `timing.min_s` is the error `element_too_short`.
+
+## The atlas map `MAP-01` (`techniques/maps.py`, `geo.py`, `style/gae/geo/`)
+
+The approved moving mock-up is `docs/design/mock/2026-11-18-explainer/components.html` (function `plate`); the renderer reproduces its look and timeline. Data it
+takes: `places` (id, name, lonlat, `at`, `label_side`), `route` (from, to, `via` as `lon, lat; lon, lat`, shape, `at`, `draw_s`, head), `region_iso` + `region_label` +
+`region_at` + `region_fill_s`, the views (`view_start_width_km`, `view_start_center`, `view_end_mode` fit | manual with `view_end_margin_pct`, `view_end_center`,
+`view_end_width_km`, `push_s`), `sea` (`blue_grey`, `sepia`), `sea_names`, `sea_names_max`, `graticule_deg`, `grain`, `vignette`, `label_cap_pct`, `fade_s`, `seed`.
+
+* **Projection**: Web Mercator. A view is a centre and a ground width in km at the centre's latitude: pixels per radian `s = 1920 R cos(lat0) / width_km`
+  (`geo.View`). `geo.fit(points, margin_pct)` keeps the points in the middle (100 - 2 x margin) percent of the longer side (Bruges and Lucca at 19 percent: centre
+  6.86 E 47.66 N, 2,348 km wide, Bruges at 38.4 / 19.0 percent). The push eases the zoom and the centre linearly in an in-out-quad progress (`push_s`), as the mock-up's `scale()`.
+* **A frame** (a pure function of t, about 45 to 60 ms at 1920 px on the server): the land rings of the 1:10m file (views narrower than 1,500 km) or 1:50m file are
+  filled on a canvas 96 px larger than the frame; one distance transform of the sea gives each sea pixel its distance to the coast, and one lookup table (distance to
+  colour) paints the sea, the shade toward the coast (the profile of the mock-up's blurred stroke), the flat strip beside the coast and the two water lines; then the graticule,
+  the ink coastline, the region tint, the dotted route and its head, grain and vignette (pinned to the screen, seeded), sea names, place marks and labels.
+  Widths that live in map space in the mock-up (shade, water lines, route dots) scale with the push (`k`, held to 0.6..1.65); marks, labels and the hairlines keep their pixel size.
+  Outlines whose segments are longer than 8 px (a narrow view of 1:10m data) are clipped to the canvas and have their corners cut (`maps.chaikin`).
+* **Labels**: eight candidate sides per place, tried in the order se, ne, e, sw, nw, w, s, n at the start view, the middle of the push and the end view: the first side
+  whose label touches no route, mark, other label or frame edge wins; `label_side` forces one. Labels get a 2 px paper-coloured halo (not in the mock-up). Sea names
+  (at most `sea_names_max`, most important first) are printed only when their position is inside the view, the sea is big enough for the view, the text is mostly on water
+  and clear of routes, marks and labels.
+* **Geography bundle** (`style/gae/geo/`, 2 MB, public domain, README there with sources, versions and sha256): land at 1:50m and 1:10m, countries at 1:50m with ISO
+  codes, sea names with positions. Rebuild: `python tools/geo/build_bundle.py --downloads DIR --fetch` (numpy and OpenCV only; byte-identical output). Loaded once per process, no network.
+* **Stills, timings and the preview clip**: `python tools/geo/render_map_examples.py stills|timing|preview`.
+
 ## Known behaviour worth knowing
 
 - Fonts keep the benchmark's behaviour for the old kinds: Windows faces first, then the macOS fallback (Futura for `reg`/`bold`, Arial Bold, Georgia Italic); the three EB Garamond kinds of the ID family are bundled and never fall back (see above). `style.json` `fonts.stand_in_label_mac` can override the Futura path and an optional
@@ -283,7 +332,7 @@ Four engineers port the remaining 47 techniques at the same time. The rules that
   "preview": {"reel_start": 0, "reel_end": 6, "clip": "previews/CMP-01.mp4", "thumb": "previews/CMP-01.jpg"}}}
 ```
 Required: `engine.available: true` with `impl` starting `bti.engine.` and `reason: null`. A param whose value cannot be empty and has no sensible default: `"default": null, "required": true`.
-Param types: number, enum, bool, string, text, color, point, box, camera, asset, points (list of points: region names or `[x, y]`), lines (list of strings).
+Param types: number, enum, bool, string, text, color, point, box, camera, asset, points (list of points: region names or `[x, y]`), lines (list of strings), items (list of records, below).
 
 ### Declaring extra slots
 

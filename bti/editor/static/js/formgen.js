@@ -4,7 +4,7 @@ import { boxToRect, normBox } from './coords.js';
 
 export const WIDGETS = {
   number: 'number', enum: 'select', bool: 'checkbox', string: 'text', color: 'color', text: 'textarea',
-  point: 'point', points: 'points', lines: 'lines', box: 'box', camera: 'camera', asset: 'asset',
+  point: 'point', points: 'points', lines: 'lines', box: 'box', camera: 'camera', asset: 'asset', items: 'items',
 };
 
 /** One descriptor per param definition, in registry order. Unknown types fall back to a JSON field. */
@@ -68,6 +68,7 @@ export function validateValue(d, v) {
     if (d.max != null && v > d.max) return `lớn hơn ${d.max}`;
   }
   if (d.type === 'enum' && d.values && !d.values.includes(v)) return 'giá trị không có trong danh sách';
+  if (d.type === 'items') return itemsProblem(d, v);
   if (d.type === 'box' && !boxToRect(v)) return 'khung phải là [x0, y0, x1, y1]';
   if (d.type === 'box' && Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === 'number')) {
     const [x0, y0, x1, y1] = v;
@@ -101,6 +102,7 @@ export function coerce(d, raw) {
       return m ? [Number(m[1]), Number(m[2])] : s || null;
     }
     case 'points': return Array.isArray(raw) ? raw : [];
+    case 'items': return Array.isArray(raw) ? raw : [];
     case 'lines': { if (Array.isArray(raw)) return raw; const a = String(raw ?? '').split('\n').map((x) => x.replace(/\s+$/, '')); while (a.length && a[a.length - 1] === '') a.pop(); return a; }
     case 'box': return normBox(typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw);   // always [x0, y0, x1, y1]
     case 'camera':
@@ -126,3 +128,123 @@ export const pointToText = (v, space = 'source') => {
   const f = (n) => (space === 'frame' ? String(Math.round(n * 1e3) / 1e3) : String(Math.round(n)));
   return `${f(v[0])}, ${f(v[1])}`;
 };
+
+// ---------------------------------------------------------------- the `items` type: a list of records edited as rows
+// The same rules as bti/engine/registry.py `check_items`: the page says in Vietnamese what the engine would refuse. The row editor of
+// formui.js only calls these pure functions, so they are tested without a browser (tests/editor_frontend/items.test.mjs).
+
+const isNum = (n) => typeof n === 'number' && Number.isFinite(n);
+export const SIDE_FIELDS = ['string', 'number', 'enum', 'bool', 'lonlat', 'ref', 'at'];
+
+/** "lon, lat" as the text of a longitude and latitude pair (a pair that is not a pair gives ''). */
+export const lonlatToText = (v) => (Array.isArray(v) && v.length === 2 && v.every(isNum) ? `${Math.round(v[0] * 1e5) / 1e5}, ${Math.round(v[1] * 1e5) / 1e5}` : '');
+/** The pair [lon, lat] typed as "lon, lat" (a comma or a space between them); null when it is not two numbers. */
+export function parseLonlat(text) {
+  const m = String(text ?? '').trim().match(/^\[?\s*(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)\s*\]?$/);
+  return m ? [Number(m[1]), Number(m[2])] : null;
+}
+/** The value of one field of a new row: the declared default, else something that is valid for its kind (empty text stays empty). */
+export function fieldStart(fd) {
+  if (fd.default !== null && fd.default !== undefined) return clone(fd.default);
+  switch (fd.type) {
+    case 'number': return fd.min ?? 0;
+    case 'enum': return (fd.values || [])[0] ?? '';
+    case 'bool': return false;
+    case 'lonlat': return [0, 0];
+    case 'at': return fd.min ?? 0;
+    default: return '';
+  }
+}
+/** A new row: every declared field at its start value. */
+export const newItem = (d) => Object.fromEntries((d.fields || []).map((fd) => [fd.name, fieldStart(fd)]));
+const lo = (d) => d.min_items ?? 0, hi = (d) => d.max_items ?? Infinity;
+export const canAddItem = (d, items) => (items || []).length < hi(d);
+export const canRemoveItem = (d, items) => (items || []).length > lo(d);
+/** The list with a new row at the end (the list itself when the registry's maximum is reached). */
+export function addItem(d, items) {
+  const cur = Array.isArray(items) ? items : [];
+  return canAddItem(d, cur) ? [...clone(cur), newItem(d)] : cur;
+}
+/** The list without row `i` (the list itself when the registry's minimum would be broken or `i` is not a row). */
+export function removeItem(d, items, i) {
+  const cur = Array.isArray(items) ? items : [];
+  return canRemoveItem(d, cur) && i >= 0 && i < cur.length ? clone(cur).filter((_, k) => k !== i) : cur;
+}
+/** The list with row `i` moved one place (`dir` -1 up, +1 down); the list itself at the ends. */
+export function moveItem(items, i, dir) {
+  const cur = Array.isArray(items) ? items : [], j = i + dir;
+  if (i < 0 || i >= cur.length || j < 0 || j >= cur.length) return cur;
+  const n = clone(cur);
+  [n[i], n[j]] = [n[j], n[i]];
+  return n;
+}
+/** What a field of a row holds after the person typed `raw` (a string from an input, a boolean, or an anchor object). */
+export function coerceField(fd, raw) {
+  switch (fd.type) {
+    case 'number': {
+      const n = typeof raw === 'number' ? raw : Number(String(raw).trim());
+      if (raw === '' || raw === null || !Number.isFinite(n)) return fieldStart(fd);
+      return clampNumber(fd, n);
+    }
+    case 'bool': return !!raw;
+    case 'lonlat': return Array.isArray(raw) ? raw : (parseLonlat(raw) ?? raw);        // text that is not a pair stays text: the form shows the problem
+    case 'at': {
+      if (raw && typeof raw === 'object') return raw;
+      const n = Number(String(raw).trim());
+      return raw === '' || !Number.isFinite(n) ? fieldStart(fd) : clampNumber(fd, n);
+    }
+    case 'ref': {
+      if (Array.isArray(raw)) return raw;
+      const t = String(raw ?? '').trim(), m = t.match(/^\[?\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*\]?$/);
+      return m ? [Number(m[1]), Number(m[2])] : t;
+    }
+    default: return raw;                                                              // string, enum
+  }
+}
+/** The list with field `name` of row `i` set from `raw`. */
+export function setItemField(d, items, i, name, raw) {
+  const fd = (d.fields || []).find((f) => f.name === name), cur = Array.isArray(items) ? items : [];
+  if (!fd || i < 0 || i >= cur.length) return cur;
+  const n = clone(cur);
+  n[i] = { ...n[i], [name]: coerceField(fd, raw) };
+  return n;
+}
+const sideOf = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? 'anchor' : 'number');
+/** The problem of one field of a row in Vietnamese, or null. */
+export function fieldProblem(fd, v) {
+  if (v === null || v === undefined || v === '') return fd.required ? 'bắt buộc nhập' : null;
+  switch (fd.type) {
+    case 'string': {
+      if (typeof v !== 'string') return 'phải là chữ';
+      const re = fd.pattern ? patternRegex(fd.pattern) : null;
+      return re && !re.test(oneLine(v)) ? (fd.pattern_hint || BAD_FORM) : null;
+    }
+    case 'number': return !isNum(v) ? 'không phải số' : fd.min != null && v < fd.min ? `nhỏ hơn ${fd.min}` : fd.max != null && v > fd.max ? `lớn hơn ${fd.max}` : null;
+    case 'enum': return (fd.values || []).includes(v) ? null : 'giá trị không có trong danh sách';
+    case 'bool': return typeof v === 'boolean' ? null : 'phải là bật hoặc tắt';
+    case 'lonlat':
+      if (!(Array.isArray(v) && v.length === 2 && v.every(isNum))) return 'gõ kinh độ, vĩ độ, ví dụ 3.22, 51.21';
+      return Math.abs(v[0]) > 180 ? 'kinh độ phải từ -180 đến 180' : Math.abs(v[1]) > 85 ? 'vĩ độ phải từ -85 đến 85' : null;
+    case 'ref': return (typeof v === 'string' && v) || isPoint(v) ? null : 'phải là tên một vùng của hình hoặc hai số x, y';
+    case 'at':
+      if (sideOf(v) === 'anchor') return typeof v.t === 'number' || typeof v.w === 'number' || (typeof v.rel === 'number' && v.rel >= 0 && v.rel <= 1) ? null : 'mốc thời gian chưa đúng';
+      return !isNum(v) ? 'không phải số' : fd.min != null && v < fd.min ? `nhỏ hơn ${fd.min}` : fd.max != null && v > fd.max ? `lớn hơn ${fd.max}` : null;
+    default: return null;
+  }
+}
+/** The first problem of a whole list, as one Vietnamese sentence that names the row and the field; null when the list is fine. */
+export function itemsProblem(d, v) {
+  if (v === null || v === undefined) return null;
+  if (!Array.isArray(v)) return 'phải là một danh sách các mục';
+  const c = countProblem(d, v.length); if (c) return c;
+  for (let i = 0; i < v.length; i++) {
+    const it = v[i];
+    if (!it || typeof it !== 'object' || Array.isArray(it)) return `mục thứ ${i + 1}: bị hỏng`;
+    const lab = ['name', 'id', 'text', 'label', 'date'].map((k) => it[k]).find((x) => (typeof x === 'string' || typeof x === 'number') && String(x).trim());
+    for (const fd of d.fields || []) {
+      const p = fieldProblem(fd, it[fd.name]);
+      if (p) return `mục thứ ${i + 1}${lab !== undefined ? ` (${String(lab).slice(0, 40)})` : ''}, ô "${fd.name}": ${p}`;
+    }
+  }
+  return null;
+}

@@ -28,8 +28,15 @@ def test_every_code_in_the_source_is_documented():
     assert not missing, missing
 
 
+def _map_codes():
+    """The `map_*` codes MAP-01 returns from its `check_params` (a hook of the registry check, so they are not in the two files scanned above)."""
+    import re
+    tree = ast.parse((ENGINE / "techniques" / "maps.py").read_text())
+    return {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r"map_[a-z_]+", n.value)}
+
+
 def test_documented_codes_are_all_used():
-    used = _codes_in_source() | {"undrawable", "incomplete", "not_an_object", "unreadable_structure", "style_unusable", "timing_unusable",
+    used = _codes_in_source() | _map_codes() | {"undrawable", "incomplete", "not_an_object", "unreadable_structure", "style_unusable", "timing_unusable",
                                  "params_not_object", "unknown_param"}
     assert set(SB.ISSUE_CODES) - used == set()
 

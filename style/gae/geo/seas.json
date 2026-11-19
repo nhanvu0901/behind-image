@@ -1,0 +1,796 @@
+{
+"note":"Sea and ocean names, English, from Natural Earth marine polygons; position lon, lat in degrees; extent_km: the longer side of the sea's bounding box; rank: Natural Earth scalerank (0 = ocean).",
+"seas":[
+{
+"name":"Indian Ocean",
+"lon":78.0,
+"lat":-20.0,
+"rank":0,
+"extent_km":15650
+},
+{
+"name":"Southern Ocean",
+"lon":60.0,
+"lat":-62.0,
+"rank":0,
+"extent_km":15230
+},
+{
+"name":"South Pacific Ocean",
+"lon":-130.0,
+"lat":-25.0,
+"rank":0,
+"extent_km":15180
+},
+{
+"name":"North Pacific Ocean",
+"lon":-160.0,
+"lat":30.0,
+"rank":0,
+"extent_km":14720
+},
+{
+"name":"South Atlantic Ocean",
+"lon":-15.0,
+"lat":-20.0,
+"rank":0,
+"extent_km":8570
+},
+{
+"name":"North Atlantic Ocean",
+"lon":-38.0,
+"lat":33.0,
+"rank":0,
+"extent_km":7890
+},
+{
+"name":"Arctic Ocean",
+"lon":-5.0,
+"lat":84.0,
+"rank":0,
+"extent_km":6110
+},
+{
+"name":"Philippine Sea",
+"lon":133.7,
+"lat":17.25,
+"rank":1,
+"extent_km":3590
+},
+{
+"name":"Mediterranean Sea",
+"lon":5.0,
+"lat":40.6,
+"rank":1,
+"extent_km":3440
+},
+{
+"name":"Caribbean Sea",
+"lon":-75.0,
+"lat":15.0,
+"rank":1,
+"extent_km":3130
+},
+{
+"name":"South China Sea",
+"lon":114.72,
+"lat":14.66,
+"rank":1,
+"extent_km":2980
+},
+{
+"name":"Arabian Sea",
+"lon":65.0,
+"lat":15.0,
+"rank":1,
+"extent_km":2910
+},
+{
+"name":"Coral Sea",
+"lon":157.4,
+"lat":-18.5,
+"rank":1,
+"extent_km":2870
+},
+{
+"name":"Tasman Sea",
+"lon":160.99,
+"lat":-39.92,
+"rank":1,
+"extent_km":2450
+},
+{
+"name":"Ross Sea",
+"lon":-173.62,
+"lat":-78.07,
+"rank":1,
+"extent_km":2130
+},
+{
+"name":"Bay of Bengal",
+"lon":86.57,
+"lat":12.65,
+"rank":1,
+"extent_km":2000
+},
+{
+"name":"Sea of Japan",
+"lon":134.19,
+"lat":39.4,
+"rank":1,
+"extent_km":1950
+},
+{
+"name":"Sea of Okhotsk",
+"lon":149.6,
+"lat":53.15,
+"rank":1,
+"extent_km":1820
+},
+{
+"name":"Gulf of Mexico",
+"lon":-90.5,
+"lat":25.0,
+"rank":1,
+"extent_km":1770
+},
+{
+"name":"Red Sea",
+"lon":38.4,
+"lat":20.5,
+"rank":1,
+"extent_km":1730
+},
+{
+"name":"Weddell Sea",
+"lon":-56.4,
+"lat":-75.83,
+"rank":1,
+"extent_km":1690
+},
+{
+"name":"Gulf of Alaska",
+"lon":-149.0,
+"lat":58.17,
+"rank":1,
+"extent_km":1590
+},
+{
+"name":"Labrador Sea",
+"lon":-52.14,
+"lat":56.08,
+"rank":1,
+"extent_km":1420
+},
+{
+"name":"Beaufort Sea",
+"lon":-129.44,
+"lat":72.83,
+"rank":1,
+"extent_km":1250
+},
+{
+"name":"Hudson Bay",
+"lon":-86.83,
+"lat":60.08,
+"rank":1,
+"extent_km":1250
+},
+{
+"name":"Caspian Sea",
+"lon":50.5,
+"lat":42.0,
+"rank":1,
+"extent_km":1160
+},
+{
+"name":"Black Sea",
+"lon":34.0,
+"lat":43.3,
+"rank":1,
+"extent_km":1140
+},
+{
+"name":"Baffin Bay",
+"lon":-72.69,
+"lat":74.79,
+"rank":1,
+"extent_km":970
+},
+{
+"name":"Persian Gulf",
+"lon":51.5,
+"lat":27.0,
+"rank":1,
+"extent_km":940
+},
+{
+"name":"Bering Sea",
+"lon":175.62,
+"lat":57.36,
+"rank":2,
+"extent_km":2090
+},
+{
+"name":"Greenland Sea",
+"lon":-11.66,
+"lat":75.89,
+"rank":2,
+"extent_km":1990
+},
+{
+"name":"Sargasso Sea",
+"lon":-60.0,
+"lat":28.0,
+"rank":2,
+"extent_km":1980
+},
+{
+"name":"Gulf of Guinea",
+"lon":5.6,
+"lat":2.67,
+"rank":2,
+"extent_km":1950
+},
+{
+"name":"Norwegian Sea",
+"lon":3.0,
+"lat":66.0,
+"rank":2,
+"extent_km":1800
+},
+{
+"name":"Mozambique Channel",
+"lon":39.47,
+"lat":-21.45,
+"rank":2,
+"extent_km":1770
+},
+{
+"name":"Laccadive Sea",
+"lon":75.5,
+"lat":5.69,
+"rank":2,
+"extent_km":1680
+},
+{
+"name":"Barents Sea",
+"lon":40.0,
+"lat":74.0,
+"rank":2,
+"extent_km":1670
+},
+{
+"name":"Java Sea",
+"lon":110.73,
+"lat":-4.65,
+"rank":2,
+"extent_km":1650
+},
+{
+"name":"Banda Sea",
+"lon":128.38,
+"lat":-5.88,
+"rank":2,
+"extent_km":1430
+},
+{
+"name":"Kara Sea",
+"lon":72.67,
+"lat":77.44,
+"rank":2,
+"extent_km":1430
+},
+{
+"name":"Arafura Sea",
+"lon":135.4,
+"lat":-9.56,
+"rank":2,
+"extent_km":1260
+},
+{
+"name":"Drake Passage",
+"lon":-67.92,
+"lat":-66.57,
+"rank":2,
+"extent_km":1220
+},
+{
+"name":"Andaman Sea",
+"lon":95.58,
+"lat":10.19,
+"rank":2,
+"extent_km":1210
+},
+{
+"name":"Laptev Sea",
+"lon":131.31,
+"lat":74.62,
+"rank":2,
+"extent_km":1160
+},
+{
+"name":"Chukchi Sea",
+"lon":-169.12,
+"lat":68.79,
+"rank":2,
+"extent_km":1150
+},
+{
+"name":"East China Sea",
+"lon":125.51,
+"lat":29.28,
+"rank":2,
+"extent_km":1140
+},
+{
+"name":"Davis Strait",
+"lon":-57.72,
+"lat":65.04,
+"rank":2,
+"extent_km":1130
+},
+{
+"name":"North Sea",
+"lon":3.0,
+"lat":55.6,
+"rank":2,
+"extent_km":1080
+},
+{
+"name":"Timor Sea",
+"lon":127.78,
+"lat":-10.93,
+"rank":2,
+"extent_km":1070
+},
+{
+"name":"Celebes Sea",
+"lon":122.93,
+"lat":3.71,
+"rank":2,
+"extent_km":950
+},
+{
+"name":"Bellingshausen Sea",
+"lon":-81.98,
+"lat":-71.98,
+"rank":2,
+"extent_km":910
+},
+{
+"name":"Yellow Sea",
+"lon":122.79,
+"lat":34.83,
+"rank":2,
+"extent_km":890
+},
+{
+"name":"Sulu Sea",
+"lon":120.13,
+"lat":8.19,
+"rank":2,
+"extent_km":860
+},
+{
+"name":"Gulf of Thailand",
+"lon":101.54,
+"lat":10.53,
+"rank":2,
+"extent_km":820
+},
+{
+"name":"Bay of Campeche",
+"lon":-93.82,
+"lat":19.79,
+"rank":2,
+"extent_km":720
+},
+{
+"name":"Baltic Sea",
+"lon":19.5,
+"lat":58.3,
+"rank":2,
+"extent_km":700
+},
+{
+"name":"Bay of Biscay",
+"lon":-4.6,
+"lat":45.3,
+"rank":2,
+"extent_km":580
+},
+{
+"name":"Amundsen Sea",
+"lon":-107.0,
+"lat":-74.05,
+"rank":2,
+"extent_km":490
+},
+{
+"name":"Irish Sea",
+"lon":-4.9,
+"lat":53.8,
+"rank":2,
+"extent_km":360
+},
+{
+"name":"Scotia Sea",
+"lon":-55.27,
+"lat":-61.14,
+"rank":2,
+"extent_km":70
+},
+{
+"name":"Luzon Strait",
+"lon":120.99,
+"lat":22.16,
+"rank":2,
+"extent_km":10
+},
+{
+"name":"Great Australian Bight",
+"lon":131.66,
+"lat":-35.29,
+"rank":3,
+"extent_km":2520
+},
+{
+"name":"Gulf of Aden",
+"lon":49.65,
+"lat":13.06,
+"rank":3,
+"extent_km":950
+},
+{
+"name":"Gulf of California",
+"lon":-109.06,
+"lat":24.64,
+"rank":3,
+"extent_km":950
+},
+{
+"name":"Hudson Strait",
+"lon":-72.35,
+"lat":62.91,
+"rank":3,
+"extent_km":830
+},
+{
+"name":"Gulf of Carpentaria",
+"lon":139.28,
+"lat":-14.08,
+"rank":3,
+"extent_km":700
+},
+{
+"name":"Tyrrhenian Sea",
+"lon":12.0,
+"lat":39.6,
+"rank":3,
+"extent_km":700
+},
+{
+"name":"Gulf of Bothnia",
+"lon":20.0,
+"lat":62.5,
+"rank":3,
+"extent_km":690
+},
+{
+"name":"Adriatic Sea",
+"lon":15.0,
+"lat":43.2,
+"rank":3,
+"extent_km":670
+},
+{
+"name":"English Channel",
+"lon":-1.6,
+"lat":50.2,
+"rank":3,
+"extent_km":590
+},
+{
+"name":"White Sea",
+"lon":38.0,
+"lat":66.0,
+"rank":3,
+"extent_km":570
+},
+{
+"name":"Gulf of Oman",
+"lon":59.67,
+"lat":24.34,
+"rank":3,
+"extent_km":520
+},
+{
+"name":"James Bay",
+"lon":-79.8,
+"lat":53.89,
+"rank":3,
+"extent_km":450
+},
+{
+"name":"Gulf of Honduras",
+"lon":-88.04,
+"lat":16.33,
+"rank":3,
+"extent_km":210
+},
+{
+"name":"Solomon Sea",
+"lon":155.32,
+"lat":-9.39,
+"rank":4,
+"extent_km":1670
+},
+{
+"name":"Northwest Passage",
+"lon":-107.54,
+"lat":77.74,
+"rank":4,
+"extent_km":1500
+},
+{
+"name":"Bismarck Sea",
+"lon":148.85,
+"lat":-3.86,
+"rank":4,
+"extent_km":1190
+},
+{
+"name":"Strait of Malacca",
+"lon":98.83,
+"lat":6.06,
+"rank":4,
+"extent_km":900
+},
+{
+"name":"Ceram Sea",
+"lon":131.52,
+"lat":-2.46,
+"rank":4,
+"extent_km":890
+},
+{
+"name":"Gulf of St. Lawrence",
+"lon":-60.08,
+"lat":49.0,
+"rank":4,
+"extent_km":890
+},
+{
+"name":"Makassar Strait",
+"lon":117.78,
+"lat":-2.95,
+"rank":4,
+"extent_km":730
+},
+{
+"name":"Ionian Sea",
+"lon":18.8,
+"lat":37.6,
+"rank":4,
+"extent_km":710
+},
+{
+"name":"Molucca Sea",
+"lon":125.75,
+"lat":-0.22,
+"rank":4,
+"extent_km":680
+},
+{
+"name":"Shelikhov Gulf",
+"lon":157.77,
+"lat":59.89,
+"rank":4,
+"extent_km":610
+},
+{
+"name":"Aegean Sea",
+"lon":25.0,
+"lat":38.6,
+"rank":4,
+"extent_km":500
+},
+{
+"name":"Florida Strait",
+"lon":-78.91,
+"lat":25.37,
+"rank":4,
+"extent_km":490
+},
+{
+"name":"Gulf of Tonkin",
+"lon":107.5,
+"lat":19.53,
+"rank":4,
+"extent_km":470
+},
+{
+"name":"Sea of the Hebrides",
+"lon":-7.12,
+"lat":56.21,
+"rank":4,
+"extent_km":440
+},
+{
+"name":"Bohai Sea",
+"lon":119.93,
+"lat":38.5,
+"rank":4,
+"extent_km":430
+},
+{
+"name":"Río de la Plata",
+"lon":-56.42,
+"lat":-35.23,
+"rank":4,
+"extent_km":430
+},
+{
+"name":"Korea Strait",
+"lon":127.74,
+"lat":33.82,
+"rank":4,
+"extent_km":420
+},
+{
+"name":"Seto Inland Sea",
+"lon":132.23,
+"lat":33.52,
+"rank":4,
+"extent_km":420
+},
+{
+"name":"Gulf of Maine",
+"lon":-69.45,
+"lat":43.06,
+"rank":4,
+"extent_km":410
+},
+{
+"name":"Amundsen Gulf",
+"lon":-119.1,
+"lat":70.62,
+"rank":4,
+"extent_km":400
+},
+{
+"name":"Gulf of Finland",
+"lon":26.0,
+"lat":59.9,
+"rank":4,
+"extent_km":400
+},
+{
+"name":"Balearic Sea",
+"lon":2.5,
+"lat":40.0,
+"rank":4,
+"extent_km":390
+},
+{
+"name":"Bristol Bay",
+"lon":-160.01,
+"lat":57.63,
+"rank":4,
+"extent_km":370
+},
+{
+"name":"Taiwan Strait",
+"lon":119.56,
+"lat":24.43,
+"rank":4,
+"extent_km":370
+},
+{
+"name":"Ungava Bay",
+"lon":-67.28,
+"lat":59.53,
+"rank":4,
+"extent_km":330
+},
+{
+"name":"Viscount Melville Sound",
+"lon":-109.06,
+"lat":73.91,
+"rank":4,
+"extent_km":330
+},
+{
+"name":"Bay of Fundy",
+"lon":-66.06,
+"lat":45.02,
+"rank":4,
+"extent_km":300
+},
+{
+"name":"Chesapeake Bay",
+"lon":-76.19,
+"lat":38.26,
+"rank":4,
+"extent_km":300
+},
+{
+"name":"Gulf of Panama",
+"lon":-79.09,
+"lat":8.37,
+"rank":4,
+"extent_km":300
+},
+{
+"name":"Melville Bay",
+"lon":-58.95,
+"lat":75.26,
+"rank":4,
+"extent_km":300
+},
+{
+"name":"Gulf of Mannar",
+"lon":79.18,
+"lat":8.44,
+"rank":4,
+"extent_km":290
+},
+{
+"name":"Tikahtnu Inlet",
+"lon":-152.55,
+"lat":59.76,
+"rank":4,
+"extent_km":290
+},
+{
+"name":"Bristol Channel",
+"lon":-5.28,
+"lat":51.24,
+"rank":4,
+"extent_km":280
+},
+{
+"name":"San Jorge Gulf",
+"lon":-66.48,
+"lat":-46.04,
+"rank":4,
+"extent_km":240
+},
+{
+"name":"Bay of Plenty",
+"lon":176.9,
+"lat":-37.37,
+"rank":4,
+"extent_km":220
+},
+{
+"name":"Gulf of Lion",
+"lon":4.17,
+"lat":43.09,
+"rank":4,
+"extent_km":190
+},
+{
+"name":"Gulf of Kutch",
+"lon":69.43,
+"lat":22.66,
+"rank":4,
+"extent_km":180
+},
+{
+"name":"Singapore Strait",
+"lon":103.5,
+"lat":1.17,
+"rank":4,
+"extent_km":120
+},
+{
+"name":"Strait of Gibraltar",
+"lon":-5.91,
+"lat":35.9,
+"rank":4,
+"extent_km":70
+}
+]
+}

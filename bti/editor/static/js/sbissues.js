@@ -154,6 +154,8 @@ const num = (x) => (typeof x === 'number' ? String(Math.round(x * 1000) / 1000) 
 /** "Mốc camera thứ 3: " when the issue is about one key of a camera (args.index), else nothing. */
 const key = (a) => (a.index != null ? `Mốc camera thứ ${Number(a.index) + 1}: ` : '');
 const item = (a) => (a.index != null ? ` (mục thứ ${Number(a.index) + 1})` : '');
+/** "mục thứ 2 (Lucca)": the row of a list of records that an issue is about. */
+const rowOf = (a) => `mục thứ ${Number(a.index ?? 0) + 1}${a.item ? ` (${a.item})` : ''}`;
 const P = (a) => (a.param ? `Tham số ${q(a.param)}` : 'Một tham số');
 const list = (v) => (Array.isArray(v) ? v : String(v ?? '').split(/\s*,\s*/)).filter(Boolean);
 const FIELD_NAME = { w: 'chiều rộng', h: 'chiều cao', width: 'chiều rộng', height: 'chiều cao', at: 'thời điểm', cx: 'tâm ngang', cy: 'tâm dọc', zoom: 'độ phóng', rx: 'bán kính ngang', ry: 'bán kính dọc' };
@@ -264,11 +266,30 @@ const BY_ARGS = {
   camera_key_numbers: (i, a) => `${P(a)}: mốc camera thứ ${Number(a.index ?? 0) + 1}: tâm và độ phóng phải là số, độ phóng lớn hơn 0.`,
   camera_key_range: (i, a) => `${P(a)}: mốc camera thứ ${Number(a.index ?? 0) + 1} nằm quá xa (tâm trong khoảng ±${num(a.limit)}, độ phóng tối đa ${num(a.zoom_max)}).`,
   camera_key_anchor: (i, a) => `${P(a)}: thời điểm của mốc camera thứ ${Number(a.index ?? 0) + 1} không xác định được.`,
+  // --- mapbuild: lists of records (parameter type `items`) and the checks of MAP-01
+  param_not_items: (i, a) => `${P(a)}: phải là một danh sách các mục.`,
+  item_not_object: (i, a) => `${P(a)}: ${rowOf(a)} bị hỏng.`,
+  item_unknown_field: (i, a) => `${P(a)}: ${rowOf(a)} có ô ${q(a.field ?? '')} mà kỹ thuật ${a.technique ?? ''} không có.`,
+  item_field_missing: (i, a) => `${P(a)}: ${rowOf(a)}: chưa điền ô ${q(a.field ?? '')}.`,
+  item_field_bad_type: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: ${{ string: 'phải là chữ', number: 'phải là một số', bool: 'phải là bật hoặc tắt', ref: 'phải là tên một vùng của hình hoặc hai số x, y' }[a.want] || 'chưa đúng kiểu'}.`,
+  item_field_below_min: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: không được nhỏ hơn ${num(a.min)}.`,
+  item_field_above_max: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: không được lớn hơn ${num(a.max)}.`,
+  item_field_not_in_values: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: phải là một trong: ${list(a.values).map((v) => valueLabel(v, a.field)).join(', ')}.`,
+  item_field_bad_form: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: ${isVi(a.hint) ? String(a.hint).replace(/[.\s]+$/, '') : 'chưa đúng dạng cần nhập'}.`,
+  item_field_bad_lonlat: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: ${{ lon: 'kinh độ phải từ -180 đến 180', lat: 'vĩ độ phải từ -85 đến 85' }[a.reason] || 'phải gồm hai số: kinh độ, vĩ độ'}.`,
+  item_field_bad_at: (i, a) => `${P(a)}: ${rowOf(a)}, ô ${q(a.field ?? '')}: thời điểm phải là số giây hoặc gắn vào một từ của lời đọc.`,
+  item_anchor_invalid: (i, a) => `${P(a)}: ${rowOf(a)}: mốc thời gian gắn vào một từ không có trong lời đọc (số thứ tự từ vượt quá lời đọc). Hãy gắn lại mốc.`,
+  item_anchor_stale: (i, a) => `${P(a)}: ${rowOf(a)}: mốc gắn vào một từ của lời đọc, nhưng từ ở vị trí đó đã khác (lời đọc đã đổi). Hãy gắn lại mốc.`,
+  map_duplicate_place: (i, a) => `Hai địa điểm của bản đồ dùng chung mã ${q(a.id ?? '')}. Mỗi địa điểm cần một mã riêng.`,
+  map_route_unknown_place: (i, a) => `Đường đi thứ ${Number(a.index ?? 0) + 1}: ${a.field === 'to' ? 'điểm cuối' : 'điểm đầu'} ${q(a.place ?? '')} không trùng mã của địa điểm nào. Thêm địa điểm có mã đó, sửa mã, hoặc xóa đường đi này.`,
+  map_bad_via: (i, a) => `Đường đi thứ ${Number(a.index ?? 0) + 1}: các điểm uốn phải là cặp kinh độ, vĩ độ nằm trong thế giới, cách nhau bằng dấu chấm phẩy.`,
+  map_bad_center: (i, a) => `${P(a)}: gõ kinh độ, vĩ độ (kinh độ từ -180 đến 180, vĩ độ từ -85 đến 85), hoặc để trống.`,
+  map_unknown_iso: (i, a) => `Mã nước ${q(a.code ?? '')} (dòng thứ ${Number(a.index ?? 0) + 1}) không có trong dữ liệu bản đồ. Dùng mã hai chữ cái theo chuẩn ISO, ví dụ BE, FR, IT.`,
   // --- idapply: the channel identity of the storyboard (the selector "Kiểu mở đầu và mốc chương" of step 5)
   identity_style_unknown: () => 'kiểu mở đầu và mốc chương của video không hợp lệ. Hãy chọn lại ở ô "Kiểu mở đầu và mốc chương" của bước Dựng hình.',
   element_too_short: (i, a) => {
     const t = String(a.technique || ''), vn = (x) => num(x).replace('.', ',');
-    const what = /^ID-OPEN-/.test(t) ? 'phần mở đầu' : /^ID-LABEL-/.test(t) ? 'nhãn tên tác phẩm' : /^ID-BRAND-/.test(t) ? 'đoạn hiện tên kênh' : /^ID-MARK-/.test(t) ? 'mốc chương' : 'phần này của kiểu mở đầu';
+    const what = /^ID-OPEN-/.test(t) ? 'phần mở đầu' : /^ID-LABEL-/.test(t) ? 'nhãn tên tác phẩm' : /^ID-BRAND-/.test(t) ? 'đoạn hiện tên kênh' : /^ID-MARK-/.test(t) ? 'mốc chương' : /^MAP-/.test(t) ? 'bản đồ' : /^KEY-/.test(t) ? 'nhãn chỉ các phần của tranh' : /^TIME-/.test(t) ? 'trục thời gian' : /^NUM-/.test(t) ? 'phần con số' : /^TREE-/.test(t) ? 'sơ đồ quan hệ' : /^STATE-/.test(t) ? 'phần so sánh hai trạng thái' : /^DOC-/.test(t) ? 'dòng chữ được làm sáng' : 'phần này của kiểu mở đầu';
     const need = a.min != null ? `${vn(a.min)} giây` : 'đủ lâu', has = a.got != null ? ` (hiện chỉ ${vn(a.got)} giây)` : '';
     return `${what} cần dài ít nhất ${need}${has}. Kéo dài nó, hoặc bỏ nó đi.`;
   },

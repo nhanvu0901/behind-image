@@ -49,7 +49,7 @@
    "properties": {
     "id": {
      "type": "string",
-     "pattern": "^([A-Z]+-\\d{2}|X-[A-Z]+-\\d{2}|ID-[A-Z]+-\\d{2})$"
+     "pattern": "^([A-Z]+-\\d{2}|X-[A-Z]+-\\d{2}|ID-[A-Z]+-\\d{2}|(MAP|KEY|TIME|NUM|TREE|STATE|DOC)-\\d{2})$"
     },
     "key": {
      "type": "string",
@@ -190,8 +190,10 @@
          "camera",
          "asset",
          "points",
-         "lines"
-        ]
+         "lines",
+         "items"
+        ],
+        "description": "items: a list of records whose fields the entry declares in `fields` (contract docs/design/2026-11-18-explainer-components.md section 3)"
        },
        "default": {},
        "min": {
@@ -258,16 +260,89 @@
        "min_items": {
         "type": "integer",
         "minimum": 0,
-        "description": "points/lines params: fewest items"
+        "description": "points/lines/items params: fewest items"
        },
        "max_items": {
         "type": "integer",
         "minimum": 0,
-        "description": "points/lines params: most items"
+        "description": "points/lines/items params: most items"
        },
        "numeric_only": {
         "type": "boolean",
         "description": "point/points params: only [x, y] numbers are accepted, a region name is not (the coordinates are canvas pixels or the renderer does not look regions up)"
+       },
+       "fields": {
+        "type": "array",
+        "description": "items params: the fields of one record",
+        "items": {
+         "type": "object",
+         "additionalProperties": false,
+         "required": [
+          "name",
+          "type",
+          "required",
+          "default",
+          "min",
+          "max",
+          "values"
+         ],
+         "properties": {
+          "name": {
+           "type": "string",
+           "pattern": "^[a-z][a-z0-9_]*$"
+          },
+          "type": {
+           "enum": [
+            "string",
+            "number",
+            "enum",
+            "bool",
+            "lonlat",
+            "ref",
+            "at"
+           ]
+          },
+          "required": {
+           "type": "boolean"
+          },
+          "default": {},
+          "min": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "max": {
+           "type": [
+            "number",
+            "null"
+           ]
+          },
+          "unit": {
+           "type": [
+            "string",
+            "null"
+           ]
+          },
+          "values": {
+           "type": [
+            "array",
+            "null"
+           ],
+           "items": {
+            "type": "string"
+           }
+          },
+          "pattern": {
+           "type": "string",
+           "description": "string fields: a regular expression the whole value must match"
+          },
+          "pattern_hint": {
+           "type": "string",
+           "description": "one Vietnamese sentence that says what to type"
+          }
+         }
+        }
        }
       },
       "allOf": [

@@ -129,7 +129,7 @@ def _check_item(s, where: str, is_shot: bool) -> None:
         for k, v in (s.get("params") or {}).items():
             if isinstance(v, list):
                 for n, key in enumerate(v):
-                    if isinstance(key, dict):
+                    if isinstance(key, dict) and not R._is_num(key.get("at")):     # a number is a time in seconds inside an `items` record
                         _dict_or_none(key.get("at"), "%s.params.%s[%d].at" % (where, k, n))
 
 
@@ -260,6 +260,8 @@ def resolve(sb: dict, tm: Timing, bundle: R.StyleBundle) -> dict:
                 for k in keys if isinstance(keys, list) else []:
                     if isinstance(k, dict) and isinstance(k.get("at"), dict):
                         _resolve_anchor(k["at"], tm, t0, t1)
+        if spec and t0 is not None and t1 is not None:
+            _resolve_item_anchors(spec, s.get("params"), tm, t0, t1)
         tr = s.get("transition_in")
         if isinstance(tr, dict) and t0 is not None:
             tr["_t0"] = t0
@@ -274,7 +276,23 @@ def resolve(sb: dict, tm: Timing, bundle: R.StyleBundle) -> dict:
             elif t1 is not None:
                 ot1 = t1
             o["_t0"], o["_t1"] = ot0, ot1
+            ospec = bundle.spec(o.get("technique"))
+            if ospec and ot0 is not None and ot1 is not None:
+                _resolve_item_anchors(ospec, o.get("params"), tm, ot0, ot1)
     return sb
+
+
+def _resolve_item_anchors(spec: dict, params, tm: Timing, t0: float, t1: float) -> None:
+    """Word anchors in the `at` fields of `items` params (a place that appears on its word): resolved the way a camera key's `at`
+    is, to absolute seconds in `_t`; `rel` anchors count from the element's own start to its end."""
+    if not isinstance(params, dict):
+        return
+    for name, fields in R.items_at_fields(spec):
+        items = params.get(name)
+        for it in items if isinstance(items, list) else []:
+            for f in fields:
+                if isinstance(it, dict) and isinstance(it.get(f), dict):
+                    _resolve_anchor(it[f], tm, t0, t1)
 
 
 # ----------------------------------------------------------------------------- paths and references
@@ -513,7 +531,25 @@ ISSUE_CODES = {
     "camera_key_range": "A camera key cx/cy/zoom is out of range. args: param, technique, index, limit, zoom_max.",
     "camera_key_anchor": "A camera key `at` is not an anchor. args: param, technique, index.",
     "identity_style_unknown": "`identity` is not an object with a `style` the style's identity block lists (error). args: style, allowed.",
-    "element_too_short": "A shot or overlay of the channel identity (technique id starting `ID-`) is shorter than the technique's `timing.min_s` (error). args: technique, min, got.",
+    "param_not_items": "An items parameter (a list of records) is not a list. args: param, technique.",
+    "item_not_object": "An item of an items parameter is not an object. args: param, technique, index (0-based), item (its name).",
+    "item_unknown_field": "An item has a field its parameter does not declare. args: param, technique, index, field, item, allowed.",
+    "item_field_missing": "A required field of an item is missing or null. args: param, technique, index, field, item.",
+    "item_field_bad_type": "A field of an item has the wrong kind of value (not text, number, true/false, region or point). args: param, technique, index, field, item, want.",
+    "item_field_below_min": "A number field of an item is below its minimum. args: param, technique, index, field, item, min.",
+    "item_field_above_max": "A number field of an item is above its maximum. args: param, technique, index, field, item, max.",
+    "item_field_not_in_values": "An enum field of an item holds a value that is not allowed. args: param, technique, index, field, item, values.",
+    "item_field_bad_form": "A text field of an item does not have the required form. args: param, technique, index, field, item, pattern, hint (Vietnamese sentence).",
+    "item_field_bad_lonlat": "A longitude/latitude field is not [lon, lat] or is out of range (lon -180..180, lat -85..85). args: param, technique, index, field, item, reason (form|lon|lat).",
+    "item_field_bad_at": "A time field of an item is neither a number of seconds nor a word anchor. args: param, technique, index, field, item.",
+    "item_anchor_invalid": "A word anchor inside an item cannot be resolved (word index out of range). args: param, index, field, item.",
+    "item_anchor_stale": "A word anchor inside an item names a word that is no longer at that index (the script changed). args: param, index, field, item.",
+    "map_duplicate_place": "Two places of a MAP-01 share an id. args: param, technique, id, index.",
+    "map_route_unknown_place": "A route end of a MAP-01 names no place. args: param, technique, index (the route), field (from|to), place.",
+    "map_bad_via": "A route's `via` of a MAP-01 is not a list of `lon,lat` pairs inside the world. args: param, technique, index (the route).",
+    "map_bad_center": "A view centre of a MAP-01 is not `lon, lat` inside the world (lon -180..180, lat -85..85). args: param, technique.",
+    "map_unknown_iso": "A region code of a MAP-01 is not an ISO 3166-1 alpha-2 code of the bundled countries. args: param, technique, index, code.",
+    "element_too_short": "A shot or overlay of the channel identity (`ID-`) or of an explanatory component (`MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-`) is shorter than the technique's `timing.min_s` (error). args: technique, min, got.",
     "identity_technique_mismatch": "A structure shot (title slot or chapter card) uses a technique that is not the one of the chosen identity style (warning). args: shot, technique, style, wanted."
 }
 
@@ -698,6 +734,9 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                 names = [(pd["name"], v)] if isinstance(v, str) else []
             elif pd["type"] == "points" and isinstance(v, (list, tuple)):
                 names = [("%s[%d]" % (pd["name"], k), x) for k, x in enumerate(v) if isinstance(x, str)]
+            elif pd["type"] == "items" and isinstance(v, (list, tuple)):
+                refs = [f["name"] for f in pd.get("fields") or [] if f.get("type") == "ref"]
+                names = [("%s[%d].%s" % (pd["name"], k, f), it[f]) for k, it in enumerate(v) if isinstance(it, dict) for f in refs if isinstance(it.get(f), str)]
             else:
                 continue
             for label, nm in names:
@@ -707,6 +746,27 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                     continue              # no image yet: the item is incomplete (placeholder / skipped), nothing is drawn from the region
                 if nm not in regions:
                     err("%s.%s" % (path, label), "region %r is not defined on asset %r" % (nm, akey), "region_undefined", region=nm, asset=akey, param=pd["name"])
+
+    def check_item_anchors(path, params, spec, t0, t1):
+        """Word anchors inside the `at` fields of `items` params: they must resolve and still name the word they were set on."""
+        if not isinstance(params, dict):
+            return
+        for name, fields in R.items_at_fields(spec):
+            items = params.get(name)
+            for i, it in enumerate(items if isinstance(items, list) else []):
+                for f in fields:
+                    a = it.get(f) if isinstance(it, dict) else None
+                    if not isinstance(a, dict):
+                        continue
+                    ip = "%s.params.%s[%d].%s" % (path, name, i, f)
+                    lab = R.item_label(it)
+                    m = tm.stale(a)
+                    if m:
+                        err(ip, m, "item_anchor_stale", param=name, index=i, field=f, item=lab)
+                    try:
+                        tm.resolve(a, t0, t1)
+                    except AnchorError as e:
+                        err(ip, str(e), "item_anchor_invalid", param=name, index=i, field=f, item=lab)
 
     # -- end and shots ---------------------------------------------------------------------------------------
     end = sb.get("end")
@@ -814,6 +874,7 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                     ease = k.get("ease", "linear")
                     if not isinstance(ease, str) or ease not in EASE:
                         err(kp + ".ease", "unknown ease %r" % (ease,), "unknown_ease", ease=ease if isinstance(ease, str) else str(ease), param=name, index=ki)
+        check_item_anchors(p, s.get("params"), spec, t0, t1)
         # transition
         tr = s.get("transition_in")
         if tr is not None:
@@ -906,6 +967,7 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                     ot1 = ot0 + o["dur"]
             elif t1 is not None:
                 ot1 = t1
+            check_item_anchors(op, oparams, ospec, ot0, ot1)
             ofloor = _element_floor(ospec)
             if ofloor is not None and ot0 is not None and ot1 is not None and ot1 - ot0 < ofloor - EPS:
                 err(op, "%s lasts %.2f s but needs at least %s s" % (o["technique"], ot1 - ot0, ofloor), "element_too_short", technique=o["technique"], min=ofloor, got=ot1 - ot0)
@@ -924,11 +986,17 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
     return issues
 
 
+# Families whose elements must last at least their technique's `timing.min_s`: the channel identity (`ID-`, contract
+# 2026-11-18-identity-raking-light, "an element is never shorter than 1.5 s") and the explanatory components of
+# docs/design/2026-11-18-explainer-components.md (section 2: an element shorter than its `timing.min_s` is `element_too_short`).
+ELEMENT_FLOOR_FAMILIES = ("ID-", "MAP-", "KEY-", "TIME-", "NUM-", "TREE-", "STATE-", "DOC-")
+
+
 def _element_floor(spec: dict) -> float | None:
-    """The shortest an element of the channel identity (a technique whose id starts `ID-`) may be: the registry's `timing.min_s` of
-    that technique (contract 2026-11-18, section 3: "an element is never shorter than 1.5 s"); None for any other technique."""
+    """The shortest an element of those families (a technique whose id starts with one of `ELEMENT_FLOOR_FAMILIES`) may be: the
+    registry's `timing.min_s` of that technique; None for any other technique."""
     tid = spec.get("id")
-    if not (isinstance(tid, str) and tid.startswith("ID-")):
+    if not (isinstance(tid, str) and tid.startswith(ELEMENT_FLOOR_FAMILIES)):
         return None
     m = (spec.get("timing") or {}).get("min_s")
     return float(m) if R._is_num(m) and m > 0 else None

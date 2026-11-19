@@ -425,3 +425,19 @@ export const AGENT_LABELS = {
     rolesTitle: 'Mô hình cho từng việc',
   },
 };
+
+// ---- mapbuild: rows of the list editor (parameter type `items`, formui.js) and the words of MAP-01's choices
+Object.assign(VALUE, {
+  blue_grey: 'Xanh xám', fit: 'Vừa các địa điểm', manual: 'Tự đặt', curve: 'Đường cong', straight: 'Thẳng', dot: 'Chấm chạy',
+  n: 'Bắc', ne: 'Đông bắc', e: 'Đông', se: 'Đông nam', s: 'Nam', sw: 'Tây nam', w: 'Tây', nw: 'Tây bắc',
+});
+export const ITEMS_UI = {
+  add: '+ Thêm mục', remove: 'Xóa', up: 'Lên', down: 'Xuống', empty: 'Chưa có mục nào.', row: (n, name) => `Mục ${n}${name ? ': ' + name : ''}`,
+  atSeconds: 'giây', atWord: 'từ', atHere: '= đầu phát', atHereTitle: 'Gắn vào từ tại đầu phát', atUnit: 'giây kể từ đầu phần này',
+  minTitle: (n) => `Cần ít nhất ${n} mục`, maxTitle: (n) => `Tối đa ${n} mục`, yes: 'có', lonlatHint: 'kinh độ, vĩ độ',
+};
+export const ITEM_FIELD = {
+  id: 'Mã', name: 'Tên', lonlat: 'Kinh độ, vĩ độ', at: 'Thời điểm', label_side: 'Phía đặt nhãn', from: 'Từ', to: 'Đến', via: 'Điểm uốn',
+  shape: 'Dạng đường', draw_s: 'Thời gian vẽ', head: 'Đầu chạy',
+};
+export const itemFieldLabel = (name) => ITEM_FIELD[name] || name;

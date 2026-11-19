@@ -426,6 +426,21 @@ PUT  /api/projects/{pid}/identity
 
 The style is applied to the saved storyboard under the same lock, revision rule and `history/` copy as `PUT /api/projects/{pid}/storyboard`: `409` (with the current `rev`) when `base_rev` is stale, nothing written; `422` for a style that is not in `options` (`code: identity_style_unknown`, `allowed`) or a missing `style` or `base_rev`; `404` for an unknown project or a project without a storyboard. `skipped` lists what was left as it is (`reason`: `locked`, `no_title_slot`, `extra_title`, `no_title`, `too_short`, `no_room`, `no_time`; `what`: `open`, `label`, `brand`, `mark`; `shot` is null when no shot is concerned). The same style twice changes nothing; `raking`, `dim`, `raking` gives what `raking` alone gives. To undo, `PUT /api/projects/{pid}/storyboard` the previous document with the new `rev`, or restore the copy in `history/`. A `PUT .../identity` does not touch the instruction box's undo (edit by instruction never re-applies the identity). The techniques of a style are in the `identity` block of `style/gae/style.json`. A shot or overlay of any `ID-*` technique shorter than its registry `timing.min_s` (1.5 s for all seven) is a validation error `element_too_short` (args `technique`, `min`, `got`): the save is refused (`422`), so lengthen it or remove it; the applier never makes one (a card under the floor stays an old card and is reported as `too_short`). The technique catalogue given to the draft and edit models lists the `ID-*` techniques marked `PROGRAM ONLY` and leaves them out of the choice by intent: a model never writes them.
 
+### Bản đồ (kỹ thuật MAP-01)
+
+Mọi câu lời dẫn nhắc một nơi, một chuyến đi hay một vùng đất đều dùng **Bản đồ atlas** (`MAP-01`). Nó thay ba kỹ thuật bản đồ cũ (`STATIC-06`, `AN-04`, `X-ANN-05`) cho video mới; storyboard cũ vẫn dùng được ba kỹ thuật kia. Bản đồ vẽ trên bờ biển thật của Natural Earth (dữ liệu công cộng, đi kèm sẵn trong dự án, không cần mạng khi dựng), nhãn chữ EB Garamond, không có khung chữ.
+
+**Dữ liệu nó nhận** (chọn kỹ thuật ở thư viện, rồi điền ở khung tham số; mỗi danh sách sửa theo từng hàng, có nút *+ Thêm mục*, *Xóa*, *Lên*, *Xuống*):
+
+- **places** (địa điểm): mã ngắn, tên hiện trên bản đồ, kinh độ và vĩ độ (gõ "3.2247, 51.2093"), thời điểm hiện (số giây kể từ đầu phần này, hoặc bấm *= đầu phát* để gắn vào từ lời dẫn đang phát, để chấm hiện đúng lúc từ đó được đọc) và phía đặt nhãn (để *Tự chọn* thì máy tự tìm chỗ không đè lên đường đi hay nhãn khác).
+- **route** (đường đi, có thể không có): từ địa điểm nào đến địa điểm nào (theo mã), các điểm uốn (kinh độ, vĩ độ, cách nhau bằng dấu chấm phẩy), dạng cong hay thẳng, lúc bắt đầu vẽ và số giây vẽ. Đường là hàng chấm đỏ nâu có chấm đầu chạy theo.
+- **region_iso** (vùng được tô): mã nước hai chữ cái theo ISO, ví dụ BE là Bỉ; **region_label** là chữ nhỏ ghi tên vùng.
+- Khung nhìn: bắt đầu từ một khung rộng (`view_start_width_km`, tính bằng km) rồi máy quay đẩy chậm vào khung vừa với các địa điểm (`view_end_mode` = *Vừa các địa điểm*, chừa lề `view_end_margin_pct` phần trăm) hoặc vào một tâm và chiều rộng do bạn đặt (*Tự đặt*). Các điểm uốn của đường đi cũng được giữ trong khung.
+
+**Hai màu biển** (`sea`): *Xanh xám* (mặc định) và *Nâu cũ*. Cả hai đều cho biển một màu riêng, đậm dần về phía bờ, có hai nét nước chạy theo bờ như atlas cổ, và đất liền sáng hơn, nên nhìn là phân biệt được đất với biển.
+
+Máy quay đẩy vào nhưng chữ và chấm địa điểm giữ nguyên cỡ, chỉ vị trí đi theo bản đồ. Hạt giấy và vầng tối ở góc đứng yên so với màn hình. Phần mô hình không đoán toạ độ: địa điểm nào chưa chắc thì bỏ ra khỏi danh sách. Một phần bản đồ ngắn hơn 3 giây thì không lưu được (trang nói rõ); dữ liệu địa lý và cách làm lại nằm ở `style/gae/geo/README.md`.
+
 ### Bản nháp storyboard
 
 Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard, bước Dựng hình không mở một bảng trống: nó hiện khung **Bản nháp storyboard**. Khi đã có storyboard, nút **Bản nháp** trên thanh công cụ mở cùng khung đó.
@@ -477,7 +492,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 
 - Khung camera chỉ có núm ở bốn góc của khóa đang chọn (không có núm ở cạnh); khung to hơn phần ảnh hiển thị bị cắt ở mép khung xem trước, và ảnh gốc tự thu nhỏ khi mở camera đó để chứa hết các khung.
 - Chỉ Wikimedia Commons và The Met (chưa có AIC, Rijksmuseum, Europeana).
-- Cả 78 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 67 `done`, 11 `partial` ở chip "Engine"; 7 trong số đó, họ `ID-*`, là kỹ thuật của kiểu mở đầu và mốc chương: mỗi cái ngắn hơn 1,5 giây thì không lưu được và trang nói rõ phần nào cần dài thêm). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
+- Cả 79 kỹ thuật đều chọn được trong thư viện (không mục nào xám; 68 `done`, 11 `partial` ở chip "Engine"; 7 trong số đó, họ `ID-*`, là kỹ thuật của kiểu mở đầu và mốc chương: mỗi cái ngắn hơn 1,5 giây thì không lưu được và trang nói rõ phần nào cần dài thêm; `MAP-01` cũng không lưu được khi ngắn hơn 3 giây). Chọn, điền slot, lưu rồi tải lại đã được kiểm tra tự động cho từng kỹ thuật (`tests/e2e/storyboard/techniques71.mjs`).
 - Chưa có chỉnh âm thanh trong trình biên tập (giọng đọc và tốc độ nằm ở bước 3; bản cuối ở bước 6).
 - Lịch sử hoàn tác chỉ nằm trong trình duyệt, mất khi tải lại trang. Bản lưu cũ nằm trong `history/`.
 

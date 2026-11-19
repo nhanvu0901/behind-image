@@ -13478,6 +13478,471 @@
     "docs/design/research/R9_titles_in_real_videos.md section 3",
     "docs/design/2026-11-18-d13-identity-mock.html"
    ]
+  },
+  {
+   "id": "MAP-01",
+   "key": "map_atlas",
+   "name": "Atlas map",
+   "label_vi": "Bản đồ atlas",
+   "category": "static",
+   "kind": "base",
+   "intents": [
+    "context",
+    "establish"
+   ],
+   "description": "A map of real geography (Natural Earth, bundled, no network) drawn like an atlas plate: paper land, a blue-grey or sepia sea that is darker toward the coast with two water lines, an ink coastline, small place marks with italic labels that appear on the word that names them, a dotted route drawn with a travelling head, an optional tinted country, sea names, and a slow push from a wide view to a view fitted to the places.",
+   "usage_rule": "Use it for ANY place, journey or territory a sentence names (where a painter lived or travelled, where a work was made, shipped or kept, a country's extent). It replaces STATIC-06, AN-04 and X-ANN-05 for new work (they stay valid for old storyboards). Give: `places` (id, name, lonlat [longitude, latitude], `at` = seconds from the start of the shot or a word anchor so the mark lands on the word that names the place), `route` (from/to place ids, `via` points that bend it; pass [] for no route), `region_iso` (ISO codes of today's countries to tint; [] for none) and `region_label`. The default data is an example (Bruges to Lucca with Belgium): ALWAYS set places, route and region_iso together, or the example's route and region remain. Coordinates are yours to supply; leave a place out rather than guess it. The view runs from `view_start_width_km` to the end view (`fit` of all places with `view_end_margin_pct`, or `manual` with a centre and width). Let the shot last 6 to 10 s.",
+   "channel_usage": "core",
+   "slots": [],
+   "params": [
+    {
+     "name": "places",
+     "type": "items",
+     "default": [
+      {
+       "id": "bruges",
+       "name": "Bruges",
+       "lonlat": [
+        3.2247,
+        51.2093
+       ],
+       "at": 1.0,
+       "label_side": "auto"
+      },
+      {
+       "id": "lucca",
+       "name": "Lucca",
+       "lonlat": [
+        10.5027,
+        43.8429
+       ],
+       "at": 2.3,
+       "label_side": "auto"
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "places",
+     "values": null,
+     "measured": null,
+     "min_items": 1,
+     "max_items": 12,
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "[A-Za-z0-9_-]{1,24}",
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ bruges."
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{1,40}",
+       "pattern_hint": "Gõ một dòng, 1 đến 40 ký tự: tên địa điểm hiện trên bản đồ."
+      },
+      {
+       "name": "lonlat",
+       "type": "lonlat",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": "lon, lat",
+       "values": null
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "label_side",
+       "type": "enum",
+       "required": false,
+       "default": "auto",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "auto",
+        "n",
+        "ne",
+        "e",
+        "se",
+        "s",
+        "sw",
+        "w",
+        "nw"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "route",
+     "type": "items",
+     "default": [
+      {
+       "from": "bruges",
+       "to": "lucca",
+       "via": "5.5, 48.8; 7.6, 46.0",
+       "shape": "curve",
+       "at": 2.6,
+       "draw_s": 3.0,
+       "head": "dot"
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "routes",
+     "values": null,
+     "measured": null,
+     "min_items": 0,
+     "max_items": 4,
+     "fields": [
+      {
+       "name": "from",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "[A-Za-z0-9_-]{1,24}",
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ bruges."
+      },
+      {
+       "name": "to",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "[A-Za-z0-9_-]{1,24}",
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ bruges."
+      },
+      {
+       "name": "via",
+       "type": "string",
+       "required": false,
+       "default": "",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "\\s*(?:-?\\d{1,3}(?:\\.\\d+)?\\s*,\\s*-?\\d{1,3}(?:\\.\\d+)?(?:\\s*;\\s*-?\\d{1,3}(?:\\.\\d+)?\\s*,\\s*-?\\d{1,3}(?:\\.\\d+)?)*)?\\s*;?\\s*",
+       "pattern_hint": "Gõ các điểm uốn của đường đi, mỗi điểm dạng kinh độ, vĩ độ, cách nhau bằng dấu chấm phẩy. Ví dụ: 5.5, 48.8; 7.6, 46.0"
+      },
+      {
+       "name": "shape",
+       "type": "enum",
+       "required": false,
+       "default": "curve",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "curve",
+        "straight"
+       ]
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 2.6,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "draw_s",
+       "type": "number",
+       "required": false,
+       "default": 3.0,
+       "min": 0.2,
+       "max": 60,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "head",
+       "type": "enum",
+       "required": false,
+       "default": "dot",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "dot",
+        "none"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "region_iso",
+     "type": "lines",
+     "default": [
+      "BE"
+     ],
+     "min": null,
+     "max": null,
+     "unit": "ISO 3166-1 alpha-2",
+     "values": null,
+     "measured": null,
+     "min_items": 0,
+     "max_items": 8,
+     "pattern": "[A-Za-z]{2}",
+     "pattern_hint": "Gõ mã nước hai chữ cái theo chuẩn ISO, mỗi dòng một nước. Ví dụ: BE"
+    },
+    {
+     "name": "region_label",
+     "type": "string",
+     "default": "Belgium",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,40}",
+     "pattern_hint": "Gõ một dòng, tối đa 40 ký tự; để trống thì không có chữ."
+    },
+    {
+     "name": "region_at",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 600,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "region_fill_s",
+     "type": "number",
+     "default": 1.0,
+     "min": 0.1,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "view_start_width_km",
+     "type": "number",
+     "default": 3800,
+     "min": 50,
+     "max": 20000,
+     "unit": "km",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "view_start_center",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "\\s*(?:-?\\d{1,3}(?:\\.\\d+)?\\s*,\\s*-?\\d{1,3}(?:\\.\\d+)?)?\\s*",
+     "pattern_hint": "Gõ kinh độ, vĩ độ, ví dụ 6.86, 47.66. Để trống thì lấy tâm của các địa điểm."
+    },
+    {
+     "name": "view_end_mode",
+     "type": "enum",
+     "default": "fit",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "fit",
+      "manual"
+     ],
+     "measured": null
+    },
+    {
+     "name": "view_end_margin_pct",
+     "type": "number",
+     "default": 19,
+     "min": 0,
+     "max": 45,
+     "unit": "% frame",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "view_end_center",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "\\s*(?:-?\\d{1,3}(?:\\.\\d+)?\\s*,\\s*-?\\d{1,3}(?:\\.\\d+)?)?\\s*",
+     "pattern_hint": "Gõ kinh độ, vĩ độ, ví dụ 6.86, 47.66. Để trống thì lấy tâm của các địa điểm."
+    },
+    {
+     "name": "view_end_width_km",
+     "type": "number",
+     "default": 2400,
+     "min": 50,
+     "max": 20000,
+     "unit": "km",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "push_s",
+     "type": "number",
+     "default": 6.0,
+     "min": 0,
+     "max": 60,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sea",
+     "type": "enum",
+     "default": "blue_grey",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "blue_grey",
+      "sepia"
+     ],
+     "measured": null
+    },
+    {
+     "name": "sea_names",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sea_names_max",
+     "type": "number",
+     "default": 3,
+     "min": 0,
+     "max": 8,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "graticule_deg",
+     "type": "number",
+     "default": 5,
+     "min": 0,
+     "max": 45,
+     "unit": "deg",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "grain",
+     "type": "number",
+     "default": 1.0,
+     "min": 0,
+     "max": 2,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "vignette",
+     "type": "number",
+     "default": 1.0,
+     "min": 0,
+     "max": 2,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "label_cap_pct",
+     "type": "number",
+     "default": 2.4,
+     "min": 1.2,
+     "max": 5,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "fade_s",
+     "type": "number",
+     "default": 0.3,
+     "min": 0.05,
+     "max": 2,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "seed",
+     "type": "number",
+     "default": 4,
+     "min": 0,
+     "max": 9999,
+     "unit": null,
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 8.0,
+    "min_s": 3.0,
+    "max_s": 30.0,
+    "anchor": "word"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.maps.AtlasMap",
+    "reason": null,
+    "notes": "Web Mercator at 1920x1080 every frame; 1:10m outlines for views narrower than 1,500 km, else 1:50m. Times are seconds from the start of the shot (or word anchors). Marks and labels keep their pixel size; shade, water lines and route dots scale with the push. Geography: style/gae/geo/ (README there)."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 8,
+    "clip": "previews/MAP-01.mp4",
+    "thumb": "previews/MAP-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (MAP-01)",
+    "docs/design/research/R10_explainer_components.md parts 1 to 3",
+    "docs/design/mock/2026-11-18-explainer/components.html (the plate)"
+   ]
   }
  ]
 }

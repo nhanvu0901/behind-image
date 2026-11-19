@@ -1,7 +1,7 @@
 // Generic DOM form built from registry param definitions (see formgen.js). No per-technique code.
 import { h, fillSelect } from './util.js';
-import { valueLabel, CAMERA_LABELS } from './labels.js';
-import { buildFields, coerce, pointToText } from './formgen.js';
+import { valueLabel, CAMERA_LABELS, ITEMS_UI, itemFieldLabel } from './labels.js';
+import { buildFields, coerce, pointToText, lonlatToText, addItem, removeItem, moveItem, setItemField, canAddItem, canRemoveItem, fieldProblem } from './formgen.js';
 import { splitSpace, normBox } from './coords.js';
 import { ctx, bus } from './ctx.js';
 import { setCamSel, isCamSel } from './camsel.js';
@@ -200,6 +200,51 @@ function makeWidget(f, opts) {
       ctlNodes = [sel]; update = (v) => { if (sel.value !== String(cur(v))) fill(v); };
       break;
     }
+    case 'items': {
+      // a list of records as rows: one input per declared field, add, remove, move up and down (pure logic: formgen.js)
+      const wrap = h('div', { class: 'items', style: { width: '100%' } });
+      let cur = Array.isArray(f.value) ? clone(f.value) : [];
+      const commit = (n, rebuild) => { cur = n; emit(clone(n)); if (rebuild) build(); };
+      const input = (fd, v, i) => {
+        const set = (raw, rebuild) => commit(setItemField(d, cur, i, fd.name, raw), rebuild);
+        const note = h('div', { class: 'hint field-note warn', hidden: true });
+        const show = (val) => { const p = fieldProblem(fd, val); note.textContent = p || ''; note.hidden = !p; return p; };
+        let node;
+        if (fd.type === 'enum') node = fillSelect(h('select', { onchange: (e) => set(e.target.value) }), fd.values || [], v, (x) => valueLabel(x, fd.name));
+        else if (fd.type === 'bool') node = h('input', { type: 'checkbox', checked: !!v, onchange: (e) => set(e.target.checked) });
+        else if (fd.type === 'number') node = h('input', { type: 'number', step: 'any', min: fd.min ?? undefined, max: fd.max ?? undefined, value: v ?? '', onchange: (e) => { set(e.target.value); e.target.value = cur[i][fd.name] ?? ''; show(cur[i][fd.name]); } });
+        else if (fd.type === 'lonlat') node = h('input', { type: 'text', value: lonlatToText(v) || (typeof v === 'string' ? v : ''), placeholder: ITEMS_UI.lonlatHint, onchange: (e) => { set(e.target.value); show(cur[i][fd.name]); } });
+        else if (fd.type === 'at') {
+          const isWord = v && typeof v === 'object' && typeof v.w === 'number';
+          const kindSel = h('select', { onchange: (e) => set(e.target.value === 'w' ? anchorFromTime(ctx.t, ctx.words(), false, Infinity) : round(ctx.t, 2), true) },
+            ...[['t', ITEMS_UI.atSeconds], ['w', ITEMS_UI.atWord]].map(([k, l]) => h('option', { value: k, text: l, selected: (k === 'w') === !!isWord })));
+          const val = isWord ? h('span', { class: 'hint', text: describeAnchor(v, ctx.words()) })
+            : h('input', { type: 'number', step: 0.1, min: fd.min ?? undefined, max: fd.max ?? undefined, value: typeof v === 'number' ? v : '', title: ITEMS_UI.atUnit, onchange: (e) => { set(e.target.value); e.target.value = cur[i][fd.name]; show(cur[i][fd.name]); } });
+          const here = h('button', { class: 'small', type: 'button', style: { whiteSpace: 'nowrap' }, title: ITEMS_UI.atHereTitle, text: ITEMS_UI.atHere, onclick: () => set(anchorFromTime(ctx.t, ctx.words(), false, Infinity), true) });
+          node = h('div', { class: 'pt-ctl' }, kindSel, val, here);
+        } else node = h('input', { type: 'text', value: typeof v === 'string' ? v : (v == null ? '' : JSON.stringify(v)), onchange: (e) => { set(e.target.value); show(cur[i][fd.name]); } });
+        show(v);
+        return h('div', { class: 'item-field' + (fd.type === 'bool' ? ' item-bool' : '') }, h('label', { text: itemFieldLabel(fd.name), title: fd.name + (fd.unit ? ` (${fd.unit})` : '') }), node, note);
+      };
+      const build = () => {
+        wrap.replaceChildren();
+        if (!cur.length) wrap.append(h('div', { class: 'hint', text: ITEMS_UI.empty }));
+        cur.forEach((it, i) => {
+          const name = ['name', 'id', 'text', 'label', 'date'].map((k) => it?.[k]).find((x) => (typeof x === 'string' || typeof x === 'number') && String(x).trim());
+          wrap.append(h('div', { class: 'item-row kf' },
+            h('div', { class: 'row' }, h('b', { style: { flex: 1 }, text: ITEMS_UI.row(i + 1, name !== undefined ? String(name).slice(0, 40) : '') }),
+              h('button', { class: 'small', type: 'button', text: ITEMS_UI.up, disabled: i === 0, onclick: () => commit(moveItem(cur, i, -1), true) }),
+              h('button', { class: 'small', type: 'button', text: ITEMS_UI.down, disabled: i === cur.length - 1, onclick: () => commit(moveItem(cur, i, 1), true) }),
+              h('button', { class: 'small danger', type: 'button', text: ITEMS_UI.remove, disabled: !canRemoveItem(d, cur), title: canRemoveItem(d, cur) ? '' : ITEMS_UI.minTitle(d.min_items), onclick: () => commit(removeItem(d, cur, i), true) })),
+            h('div', { class: 'item-fields' }, ...(d.fields || []).map((fd) => input(fd, it?.[fd.name], i)))));
+        });
+        wrap.append(h('button', { class: 'small', type: 'button', text: ITEMS_UI.add, disabled: !canAddItem(d, cur), title: canAddItem(d, cur) ? '' : ITEMS_UI.maxTitle(d.max_items), onclick: () => commit(addItem(d, cur), true) }));
+      };
+      build();
+      ctlNodes = [wrap];
+      update = (v) => { const nv = Array.isArray(v) ? v : []; if (JSON.stringify(nv) !== JSON.stringify(cur)) { cur = clone(nv); build(); } };
+      break;
+    }
     case 'camera': {
       const wrap = h('div', { style: { width: '100%' } });
       let cur = clone(f.value) || [];
@@ -257,7 +302,7 @@ function makeWidget(f, opts) {
     }
   }
   r = row(f, ctlNodes.filter(Boolean));
-  if (f.widget === 'camera') r.classList.add('stack');
+  if (f.widget === 'camera' || f.widget === 'items') r.classList.add('stack');
   if (f.problem) r.title = f.problem;
   return { row: r, update, mark };
 }

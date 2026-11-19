@@ -1,8 +1,8 @@
 """R2B-012, permanent form: whatever `validate` accepts without an error, the engine can draw.
 
-For every one of the 78 techniques (taken from its reference configuration in `projects/technique_lab`; the seven ID-* ones from `identity_lab.py`) and for every
-parameter of every one of the twelve registry types (number, enum, bool, string, text, color, point, points, lines, box, camera,
-asset), the parameter is replaced one at a time by a set of odd values: wrong but well typed, extreme, empty, degenerate.
+For every one of the 79 techniques (taken from its reference configuration in `projects/technique_lab`; the ID-* ones and MAP-01 from `identity_lab.py`) and for every
+parameter of every one of the thirteen registry types (number, enum, bool, string, text, color, point, points, lines, box, camera,
+asset, items), the parameter is replaced one at a time by a set of odd values: wrong but well typed, extreme, empty, degenerate.
 The draft is validated; when validate reports no error the frame in the middle of the item MUST be drawn (no exception, and
 a failure of the engine would also have to be a `RenderError`, never a bare exception).  Every value validate refuses is
 simply skipped.  A value the engine cannot draw is a hole in the registry (a missing `pattern`, `min_items`, range...).
@@ -79,7 +79,7 @@ def memory_watchdog():
 pytestmark = pytest.mark.slow
 
 LAB = REPO / "projects" / "technique_lab"
-TYPES = {"number", "enum", "bool", "string", "text", "color", "point", "points", "lines", "box", "camera", "asset"}
+TYPES = {"number", "enum", "bool", "string", "text", "color", "point", "points", "lines", "box", "camera", "asset", "items"}
 
 
 def _bundle():
@@ -134,6 +134,13 @@ def odd_values(p: dict, ref, asset_keys: list, region: str | None):
                  [{"at": {"t": 1e9}, "cx": 100, "cy": 100, "zoom": 1}], "x", [5]]
     elif t == "asset":
         vals += ["", "nope"] + list(asset_keys)
+    elif t == "items":
+        fields = p.get("fields") or [{"name": "id", "type": "string"}]
+        one = {f["name"]: ("x" if f["type"] in ("string", "ref") else 1 if f["type"] in ("number", "at") else [0, 0] if f["type"] == "lonlat" else True if f["type"] == "bool" else (f.get("values") or ["x"])[0]) for f in fields}
+        vals += [[], [{}], ["x"], "x", [one], [one] * 3, [one] * 13, [dict(one, zz=1)], [{"id": "a", "name": "a", "lonlat": [180, 85]}, {"id": "b", "name": "b", "lonlat": [-180, -85]}],
+                 [{"id": "a", "name": "a", "lonlat": [0, 0], "at": {"w": 0, "off": 0, "text": "alpha"}}], [{"id": "a", "name": "a", "lonlat": [0, 0], "at": {"rel": 0.5}}],
+                 [{"id": "a", "name": "a", "lonlat": [0, 0], "at": 1e9}], [{"id": "a", "name": "a\nb", "lonlat": [0.5, 0.5]}], [{"id": "a" * 25, "name": "a", "lonlat": [0, 0]}],
+                 [{"id": "a", "name": "a", "lonlat": [0, 0], "label_side": "nw"}] * 2, [{"id": "a", "from": "a", "to": "a", "via": "1,2;3,4"}]]
     return vals
 
 

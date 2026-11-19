@@ -19,10 +19,28 @@ KIND_WHERE = {"base": "a shot (the `technique` of a shot)", "card": "a shot (the
               "overlay": "an overlay (inside the `overlays` of a shot)", "transition": "a shot's `transition_in` (rarely needed)"}
 
 
+def _field(f: dict) -> str:
+    """One field of an `items` param: `name:type`, its bounds or values, `*` when required, `=default` for a plain default."""
+    s = "%s:%s" % (f["name"], f["type"])
+    if f["type"] in ("number", "at") and f.get("min") is not None:
+        s += "[%s..%s]" % (f["min"], f.get("max"))
+    if f["type"] == "enum" and f.get("values"):
+        s += "{%s}" % "|".join(str(v) for v in f["values"])
+    if f.get("required"):
+        s += "*"
+    d = f.get("default")
+    if d is not None and not isinstance(d, (list, dict)) and not f.get("required"):
+        s += "=%s" % str(d)[:24]
+    return s
+
+
 def _p(p: dict) -> str:
     t = p["type"]
     if t == "camera":
         return "camera"
+    if t == "items":                       # a list of records: say how many and what each one holds
+        n = "" if p.get("min_items") is None and p.get("max_items") is None else "(%s..%s)" % (p.get("min_items", 0), p.get("max_items", "n"))
+        return "%s:items%s[{%s}]" % (p["name"], n, ", ".join(_field(f) for f in p.get("fields") or []))
     s = "%s:%s" % (p["name"], t)
     if t == "number" and p.get("min") is not None:
         s += "[%s..%s]" % (p["min"], p.get("max"))
