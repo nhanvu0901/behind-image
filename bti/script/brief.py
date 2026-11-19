@@ -19,6 +19,14 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 SRC_CODES = {"payne_gae": "PAY", "hodge_aid": "HOD", "hagen_wgps": "HAG", "brookehitching_mad": "MAD",
              "dasal_artcurious": "DAS", "grovier_nws": "GRO"}
 LOW_NOTE = "low trust (machine translation): not a basis for facts"
+LEVELS = ("normal", "restored", "low")           # the trust levels of a source (bti.library.restored.LEVELS)
+RESTORED_NOTE = ("restored and reviewed rendering of a machine-translated book: its unmarked prose says what the book says, names "
+                 "corrected. Its ideas and readings of the picture may be used as {who}'s own: say \"{who} argues\" or the like once, "
+                 "never as established fact. NO number, date or quotation may be taken from it unless another source of this dossier "
+                 "confirms it. […] marks a passage that could not be restored: never guess what it said.")
+CARE_NOTE = ("NO FULLY TRUSTED SOURCE: none of the sources given below is a normal source (they are restored or low trust), so every "
+             "fact of this painting needs care. Call a fact \"established\" only when it is a plain description of what the picture "
+             "shows; any other fact is \"likely\" at most, and the narration says whose claim it is.")
 DEFAULT_TARGET = 2000
 DEFAULT_WPS = 2.41
 PARA_ID_RE = re.compile(r"\b([A-Z]{3})-(\d{2,3})\b")
@@ -71,6 +79,30 @@ def _book_info(book_id: str, lib: Path) -> dict:
 
 def _trust_table(lib: Path) -> dict:
     return _read_json(lib / "overrides" / "books.json", "library")
+
+
+def _level(own, entry) -> str:
+    """The trust level of a source: normal, restored or low. `own` is what the project's own dossier says about the source (the text
+    it holds is the text that level was decided for); `entry` is the book's entry in overrides/books.json, used only when the dossier
+    says nothing (an older project). Nothing at all counts as normal (a project made before trust existed). A value that is not one
+    of the three levels counts as low. `restored` is believed only from the dossier: the book-level table cannot say that the text
+    of a project was restored, so there it counts as low."""
+    if own not in (None, ""):
+        return own if own in LEVELS else "low"
+    t = (entry or {}).get("trust")
+    if t in (None, ""):
+        return "normal"
+    return t if t in ("normal", "low") else "low"
+
+
+def _remaining_words(text: str) -> int:
+    """Words of a restored paragraph that remain: the […] marks are not words, nor is punctuation left beside one."""
+    return sum(1 for t in text.replace("[…]", " ").split() if any(c.isalnum() for c in t))
+
+
+def restored_note(author: str) -> str:
+    """What the model is told about a restored source (English, as the brief is)."""
+    return RESTORED_NOTE.format(who=author.strip() or "the author")
 
 
 def _resolve_dossier(pdir: Path, proj: dict) -> tuple[dict | None, Path | None]:
@@ -174,8 +206,7 @@ def save_options(pdir: Path, opts: dict, *, library_root: Path | None = None) ->
         for e in entries:
             code = src_code(e["book_id"], taken)
             taken.add(code)
-            trust = e["trust"] or (trust_tbl.get(e["book_id"]) or {}).get("trust") or "normal"
-            low = trust == "low"
+            low = _level(e["trust"], trust_tbl.get(e["book_id"])) == "low"      # only `low` must be ticked; normal and restored are in
             is_excluded = e["book_id"] in excluded or e["work_id"] in excluded or code in excluded
             is_low_included = e["book_id"] in ticked or e["work_id"] in ticked or code in ticked
             inc = (not is_excluded) and ((not low) or is_low_included)
@@ -250,9 +281,9 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
         taken.add(code)
         code_map[code] = e["work_id"]
         parsed = parse_source_text(read_text_strict(pdir / "source" / e["file"]))
-        trust = e["trust"] or (trust_tbl.get(e["book_id"]) or {}).get("trust") or "normal"
+        trust = _level(e["trust"], trust_tbl.get(e["book_id"]))
         note = e["trust_note"] or (trust_tbl.get(e["book_id"]) or {}).get("trust_note") or ""
-        low = trust == "low"
+        low = trust == "low"                      # only `low` is withheld until ticked; normal and restored are included
         is_excluded = e["book_id"] in excluded or e["work_id"] in excluded or code in excluded
         is_low_included = e["book_id"] in ticked or e["work_id"] in ticked or code in ticked
         included = (not is_excluded) and ((not low) or is_low_included)
@@ -263,9 +294,10 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
         bi = _book_info(e["book_id"], lib)
         sources.append({"code": code, "work_id": e["work_id"], "book_id": e["book_id"], "book_title": bi["title"],
                         "author": bi["author"], "trust": trust, "trust_note": note or (LOW_NOTE if low else ""),
-                        "low_trust": low, "included": included, "excluded": is_excluded, "file": e["file"],
+                        "low_trust": low, "restored": trust == "restored", "included": included, "excluded": is_excluded, "file": e["file"],
                         "title": parsed["title"], "sections": parsed["sections"], "detail_headings": e["details"],
-                        "words": sum(len(p["text"].split()) for p in paras), "paragraphs": paras})
+                        "words": sum((_remaining_words if trust == "restored" else lambda t: len(t.split()))(p["text"]) for p in paras),
+                        "paragraphs": paras})
 
     # named details: Hodge detail headings and the section headings of the other sources
     details: dict[str, dict] = {}
@@ -292,6 +324,8 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
             "shape": "dossier" if dossier else ("project" if proj.get("sources") else "files"),
             "painting": painting, "sources": sources, "code_map": code_map, "details": det_list,
             "conflicts": conflicts, "options": {**opts, "include_low": sorted(ticked), "exclude": sorted(excluded)},
+            # the sources the model is given are all restored or low trust: every fact of the painting needs care
+            "no_normal_source": any(s["included"] for s in sources) and not any(s["included"] and s["trust"] == "normal" for s in sources),
             "paragraph_ids": sorted(p["id"] for s in sources for p in s["paragraphs"]),
             "totals": {"sources": len(sources), "included": sum(1 for s in sources if s["included"]),
                        "paragraphs": sum(len(s["paragraphs"]) for s in sources),
@@ -308,7 +342,11 @@ def render_brief(brief: dict) -> str:
     for s in brief["sources"]:
         flag = "" if s["included"] else "  [NOT INCLUDED, text withheld]"
         low = f"  [LOW TRUST: {s['trust_note']}]" if s["low_trust"] else ""
+        if s.get("trust") == "restored":
+            low = f"  [RESTORED: {restored_note(s['author'])}]"
         L.append(f"{s['code']} = {s['work_id']}: {s['book_title']}" + (f", {s['author']}" if s["author"] else "") + low + flag)
+    if brief.get("no_normal_source"):
+        L += ["", CARE_NOTE]
     if brief["details"]:
         L += ["", "NAMED DETAILS (candidates for what the camera points at)"]
         for d in brief["details"]:
@@ -321,7 +359,7 @@ def render_brief(brief: dict) -> str:
     for s in brief["sources"]:
         if not s["included"]:
             continue
-        L += ["", f"=== SOURCE {s['code']}: {s['book_title']} ({s['work_id']})" + (" [LOW TRUST]" if s["low_trust"] else "") + " ==="]
+        L += ["", f"=== SOURCE {s['code']}: {s['book_title']} ({s['work_id']})" + (" [LOW TRUST]" if s["low_trust"] else " [RESTORED]" if s.get("trust") == "restored" else "") + " ==="]
         cur = None
         for para in s["paragraphs"]:
             if para["section"] != cur:

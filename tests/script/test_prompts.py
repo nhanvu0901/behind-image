@@ -24,6 +24,34 @@ def test_low_trust_is_marked_in_the_prompt_when_ticked(tproj):
     assert "unreliable edition" in t and "LOW TRUST" in t
 
 
+def test_every_prompt_that_speaks_of_low_trust_also_gives_the_restored_rule(tproj):
+    """The prompts of the script step are outline.md and script.md; both speak of LOW TRUST sources, so both carry the RESTORED case.
+    It says what the note of the brief says for a restored source: ideas as the author's own and never established fact, no number,
+    date or quotation without another source, a […] mark is never guessed."""
+    from bti.script.brief import restored_note
+    texts = {"outline": build_prompt("outline", tproj)["text"],
+             "script": build_prompt("script", tproj, outline=make_outline(approved=True))["text"]}
+    note = restored_note("").lower()
+    for name, t in texts.items():
+        assert "{{" not in t and "<!--" not in t, name
+        assert "Sources marked LOW TRUST" in t, name                                  # the rule for low sources is still there
+        assert t.count("Sources marked RESTORED") == 1, name
+        rule = t[t.index("Sources marked RESTORED"):].split("\n")[0].lower()           # the sentence(s) on that line
+        assert "number, date or quotation" in rule and "never guess what a […] mark hides" in rule, name
+        for word in ("author's", "established fact", "number", "date", "quotation", "another source", "[…]", "guess"):
+            assert word in rule and word in note, (name, word)                       # the prompt and the brief's note say the same things
+
+
+def test_a_restored_source_reaches_the_prompt_with_its_note_and_its_text(tmp_path):
+    from test_brief_trust import RESTORED_TEXT, project
+    d, lib = project(tmp_path, [("grovier_nws", "restored", RESTORED_TEXT), ("hodge_aid", "low", "# Low\n\nThe lamp was lit, says this unreliable edition.\n")])
+    from bti.script.brief import build_brief
+    t = build_prompt("outline", d, brief=build_brief(d, library_root=lib))["text"]
+    assert "[RESTORED: restored and reviewed rendering" in t and "=== SOURCE GRO: A New Way of Seeing (grovier_nws/001) [RESTORED] ===" in t
+    assert "Bosch's triptych" in t and "[…]" in t and "NO FULLY TRUSTED SOURCE" in t
+    assert "unreliable edition" not in t and "[LOW TRUST:" in t                       # the low text is withheld and its mark stays
+
+
 def test_script_prompt_layout_rules_and_context(tproj):
     o = make_outline(approved=True)
     n = make_narration()

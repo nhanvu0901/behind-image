@@ -35,6 +35,21 @@ export const SHORT_BOOK = { payne_gae: 'Payne', hodge_aid: 'Hodge', hagen_wgps: 
 export const shortBook = (id) => SHORT_BOOK[id] || id;
 export const LOW_TRUST = 'bản dịch máy, không dùng làm nguồn sự kiện';
 
+// ---- grovint: the three trust levels of a source (normal, restored, low)
+/** The words for the level of a source. Normal shows no tag in the lists (as before); the words are for tooltips. */
+export const TRUST_LEVEL = { normal: 'Tin cậy', restored: 'Bản khôi phục', low: 'Tin cậy thấp' };
+/** The level of a source from the `trust` field of the server: nothing means normal (an old file), a word that is none of the three counts as low. */
+export const trustOf = (v) => (v === undefined || v === null || v === '' ? 'normal' : Object.prototype.hasOwnProperty.call(TRUST_LEVEL, v) ? v : 'low');
+export const trustLabel = (v) => TRUST_LEVEL[trustOf(v)];
+/** What a restored source is and what it does not promise (the server sends the same words as `trust_note`). */
+export const RESTORED_NOTE = 'Bản khôi phục từ bản dịch máy, đã rà soát: dùng được cho ý và mô tả; số liệu, năm và trích dẫn phải có nguồn khác xác nhận.';
+export const trustNote = (level, fromServer) => fromServer || (level === 'restored' ? RESTORED_NOTE : level === 'low' ? LOW_TRUST : '');
+export const RESTORED_TEXT = 'Dấu […] là chỗ bản khôi phục chưa đọc ra được. Chú thích hình không được đưa vào.';
+/** Said wherever no source of the painting is a normal one (every source is restored and/or low). */
+export const NO_NORMAL_SOURCE = 'Chưa có nguồn tin cậy đầy đủ cho tác phẩm này.';
+/** True when there is at least one source and none is a normal one; `levels` are `trust` values. */
+export const noNormalSource = (levels) => levels.length > 0 && levels.every((v) => trustOf(v) !== 'normal');
+
 /** Messages for the validation codes of the script step. */
 export const CODE = {
   chapter_missing: 'Thiếu chương', empty_chapter: 'Chương chưa có chữ', chapter_order: 'Chương xếp sai thứ tự', empty_beat: 'Dòng trống', markup_in_text: 'Có ký hiệu trong lời đọc', words_under: 'Quá ngắn (dưới 70% mục tiêu)',
@@ -62,7 +77,7 @@ export const SOURCE = { import: 'nhập từ bản cũ', agent: 'đề xuất t�
 export const sourceLabel = (v) => SOURCE[v || 'import'] || String(v);
 
 /** Trust of the text taken from a book page (`text_source`): the library shows these. */
-export const TEXT_SOURCE = { clean: 'đã làm sạch', layer: 'lớp chữ gốc của PDF', mixed: 'lẫn hai loại' };
+export const TEXT_SOURCE = { clean: 'đã làm sạch', layer: 'lớp chữ gốc của PDF', mixed: 'lẫn hai loại', restored: 'bản khôi phục' };
 export const textSourceLabel = (v) => TEXT_SOURCE[v] || String(v || '');
 
 /** Words of the enum params of the technique registry. A few words mean different things in different params: PARAM_VALUE says so. */

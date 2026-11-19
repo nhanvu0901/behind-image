@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pymupdf
 
-from . import config, extract, parse
+from . import config, extract, parse, restored
 from .. import textfold
 from bti.fsio import atomic_replace
 
@@ -465,25 +465,74 @@ def books_overrides_path() -> Path:
 
 DEFAULT_TRUST = {b["id"]: {"trust": "normal", "trust_note": ""} for b in config.BOOKS}
 DEFAULT_TRUST["grovier_nws"] = {"trust": "low", "trust_note": config.TRUST_NOTE_LOW}
+TRUST_LEVELS = restored.LEVELS            # normal, restored, low
+# Where a value of the catalogue (title, artist, year of an artwork) comes from a book that is machine-translated at its root,
+# whether or not its text was restored: restored text does not make the names of the catalogue more trusted.
+MACHINE_TEXT = ("low", "restored")
+
+
+def _books_entry(book_id: str) -> dict:
+    """What library/overrides/books.json says about one book ({} when nothing, or when the file is damaged)."""
+    f = books_overrides_path()
+    if not f.is_file():
+        return {}
+    try:
+        tbl = read_json(f)
+        o = (tbl.get(book_id) if isinstance(tbl, dict) else None) or {}
+    except ValueError:
+        o = {}
+    return o if isinstance(o, dict) else {}
 
 
 def book_trust(book_id: str) -> dict:
-    """{trust: normal|low, trust_note} from library/overrides/books.json (human-editable), else the default."""
+    """{trust: normal|restored|low, trust_note} of a BOOK, from library/overrides/books.json (human-editable), else the default.
+    This is the level of the book as a whole. The level of one work is work_trust()."""
     out = dict(DEFAULT_TRUST.get(book_id, {"trust": "normal", "trust_note": ""}))
-    f = books_overrides_path()
-    if f.is_file():
-        try:
-            tbl = read_json(f)
-            o = (tbl.get(book_id) if isinstance(tbl, dict) else None) or {}
-        except ValueError:
-            o = {}
-        if not isinstance(o, dict):
-            o = {}
-        if o.get("trust") in ("normal", "low"):
-            out["trust"] = o["trust"]
-        if isinstance(o.get("trust_note"), str):
-            out["trust_note"] = o["trust_note"]
+    o = _books_entry(book_id)
+    if o.get("trust") in TRUST_LEVELS:
+        out["trust"] = o["trust"]
+        if o["trust"] == "restored":
+            out["trust_note"] = config.TRUST_NOTE_RESTORED
+    if isinstance(o.get("trust_note"), str):
+        out["trust_note"] = o["trust_note"]
     return out
+
+
+def book_forced(book_id: str) -> bool:
+    """Does books.json FORCE the level of the book, so that every one of its works gets that level and no review is asked?
+    Yes when the entry has `"force": true`, or when it names a level other than the built-in one of the book (`low` for
+    grovier_nws, `normal` for the others). An entry that only repeats the built-in level is not a decision: build() writes
+    one for every book, so it must not switch the restoration off."""
+    o = _books_entry(book_id)
+    level = o.get("trust")
+    if level not in TRUST_LEVELS:
+        return False
+    return o.get("force") is True or level != DEFAULT_TRUST.get(book_id, {"trust": "normal"})["trust"]
+
+
+def work_trust_why(work: dict) -> tuple[dict, str]:
+    """({trust: normal|restored|low, trust_note}, why) of ONE work (`work` has `id` and `pdf_pages`).
+    - books.json forces a level for the book (book_forced): every work gets it. `restored` forced needs the restored page files
+      of the work, without them the work is `low`; it does not ask for the review, the owner vouches for it.
+    - the book is `low` (as built in, or repeated in books.json): the work is `restored` when restored.check() says yes, else `low`.
+    - otherwise (`normal`, not forced) the work keeps the level of its book."""
+    bid = work["id"].split("/")[0]
+    book = book_trust(bid)
+    if book_forced(bid):
+        if book["trust"] == "restored" and not restored.has_pages(work):
+            return {"trust": "low", "trust_note": config.TRUST_NOTE_LOW}, "forced restored, but the work has no restored pages"
+        return book, "forced by books.json"
+    if book["trust"] == "low":
+        ok, why = restored.check(work)
+        if ok:
+            return {"trust": "restored", "trust_note": config.TRUST_NOTE_RESTORED}, why
+        return book, why
+    return book, "the level of the book"
+
+
+def work_trust(work: dict) -> dict:
+    """{trust: normal|restored|low, trust_note} of one work; see work_trust_why."""
+    return work_trust_why(work)[0]
 
 
 def book_json(book_id: str) -> dict:
@@ -694,8 +743,7 @@ def source_rank(bid: str, src: str | None, trust: dict[str, str] | None = None) 
     """How far a value is trusted (lower = more): see SRC_RANK. `src` is a field_src value: override, clean or outline."""
     if src == "override":
         return SRC_RANK["override"]
-    low = (trust or {}).get(bid, book_trust(bid)["trust"]) == "low"
-    if low:
+    if (trust or {}).get(bid, book_trust(bid)["trust"]) in MACHINE_TEXT:
         return SRC_RANK["low_trust"]
     if src == "clean":
         return SRC_RANK["clean_scan"] if config.BOOK_BY_ID[bid]["pdf_type"] == "scan" else SRC_RANK["clean_digital"]

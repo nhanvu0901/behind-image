@@ -193,7 +193,8 @@ def test_overrides_books_file_exists_and_dossier_trust():
     f = config.LIB_DIR / "overrides" / "books.json"
     assert json.loads(f.read_text())["grovier_nws"]["trust"] == "low"
     d = dossiers.load("bosch-the-garden-of-earthly-delights")
-    assert {s["book_id"]: s["trust"] for s in d["sources"]}["grovier_nws"] == "low"
+    # Grovier's work is `low`, or `restored` once library/restored/grovier_nws is there and the dossiers were rebuilt
+    assert {s["book_id"]: s["trust"] for s in d["sources"]}["grovier_nws"] in ("low", "restored")
     t = d["totals"]
-    assert t["words"] == t["words_normal"] + t["words_low"] and t["words_low"] > 0
+    assert t["words"] == t["words_normal"] + t.get("words_restored", 0) + t["words_low"] and t["words_low"] + t.get("words_restored", 0) > 0
     assert d["only_low_trust"] is False

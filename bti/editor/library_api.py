@@ -170,6 +170,8 @@ def make_router(projects_root: Path) -> APIRouter:
             d, bad = {}, str(e)[:200]
         ids = a["works"]
         books_ = []
+        levels = []                         # the trust level of each work of the artwork (normal, restored, low), as the library says now
+        srcs = {x.get("work_id"): x for x in d.get("sources") or [] if isinstance(x, dict) and "pdf_pages" in x}
         yn = None
         status = "unknown"
         projs = []
@@ -177,6 +179,8 @@ def make_router(projects_root: Path) -> APIRouter:
             bid, n = wid.split("/")
             books_.append(bid)
             w = catalogue.load_work(bid, int(n))
+            levels.append(dossiers.live_trust(srcs[wid])["trust"] if wid in srcs
+                          else catalogue.work_trust(w)["trust"] if w else catalogue.book_trust(bid)["trust"])
             if w and yn is None and w.get("year_num") is not None:
                 yn = w["year_num"]
             for p in arts_pidx.get(wid, []):
@@ -189,9 +193,12 @@ def make_router(projects_root: Path) -> APIRouter:
                 "century": None if yn is None else ((yn - 1) // 100 + 1 if yn > 0 else 0),
                 "books": books_, "n_sources": len(ids), "words": (d.get("totals") or {}).get("words", 0),
                 "words_normal": (d.get("totals") or {}).get("words_normal", 0),
+                "words_restored": (d.get("totals") or {}).get("words_restored", 0),
                 "words_low": (d.get("totals") or {}).get("words_low", 0),
-                "only_low_trust": bool(d.get("only_low_trust")),
-                "low_trust_books": [b for b in books_ if catalogue.book_trust(b)["trust"] == "low"],
+                "only_low_trust": bool(d.get("only_low_trust")),                      # every source is `low`
+                "no_normal_source": bool(levels) and "normal" not in levels,          # none is `normal` (restored and/or low)
+                "low_trust_books": [b for b, lv in zip(books_, levels) if lv == "low"],
+                "restored_books": [b for b, lv in zip(books_, levels) if lv == "restored"],
                 "text_source": d.get("text_source"), "n_conflicts": len(d.get("conflicts") or []),
                 "rights": rt, "projects": projs,
                 "thumb_url": _thumb_for(ids[0]), **({"data_error": bad} if bad else {})}
@@ -249,7 +256,7 @@ def make_router(projects_root: Path) -> APIRouter:
         d = dossiers.load(artwork_key)
         if d is not None:
             for s in d["sources"]:
-                s.update(catalogue.book_trust(s["book_id"]))  # live, so a change in overrides/books.json shows at once
+                s.update(dossiers.live_trust(s))  # live, so a change in overrides/books.json shows at once (never `restored` for a text that is not)
                 s["text_url"] = f"/api/library/artworks/{artwork_key}/source/{Path(s['file']).stem}"
                 s["pages"] = [{"page": p, "url": f"/api/library/works/{s['book_id']}/{s['n']}/page/{p}.jpg?w=900"}
                               for p in range(s["pdf_pages"][0], s["pdf_pages"][1] + 1)]

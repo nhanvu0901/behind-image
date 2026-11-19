@@ -6,7 +6,8 @@ import { describeError } from '../errmsg.js';
 import { fold } from '../text.js';
 import { go } from '../nav.js';
 import { projectHash } from '../router.js';
-import { KIND, RIGHTS, STAGE, shortBook, textSourceLabel, LOW_TRUST as LOWTXT } from '../labels.js';
+import { KIND, RIGHTS, STAGE, shortBook, textSourceLabel, LOW_TRUST as LOWTXT, RESTORED_NOTE, RESTORED_TEXT, NO_NORMAL_SOURCE, trustOf, trustNote, noNormalSource } from '../labels.js';
+import { restoredTag, restoredStyle } from '../trust.js';
 
 let root = null, scope = null;                  // the view root and its lifecycle scope (set by mount)
 const J = (url) => api.get(url);
@@ -193,7 +194,10 @@ function createDialog(w, also) {
 }
 
 // ------------------------------------------------------------------ artworks (default view)
-const bookBadges = (books, low = []) => h('div', { class: 'badges' }, books.map((b) => h('span', { class: 'tag also' + (low.includes(b) ? ' lowtrust' : ''), title: low.includes(b) ? LOWTXT : '', text: shortBook(b) + (low.includes(b) ? ' (dịch máy)' : '') })));
+const bookBadges = (books, low = [], restored = []) => h('div', { class: 'badges' }, books.map((b) => {
+  const isLow = low.includes(b), isRest = !isLow && restored.includes(b);
+  return h('span', { class: 'tag also' + (isLow ? ' lowtrust' : ''), style: isRest ? restoredStyle : null, title: isLow ? LOWTXT : isRest ? RESTORED_NOTE : '', text: shortBook(b) + (isLow ? ' (dịch máy)' : isRest ? ' (bản khôi phục)' : '') });
+}));
 const lowTag = (title) => h('span', { class: 'tag lowtrust', title: title || LOWTXT, text: LOWTXT });
 const textTag = (t) => (t ? h('span', { class: 'tag ' + (t === 'clean' ? 'digital' : t === 'layer' ? 'scan' : ''), title: 'Nguồn văn bản: đã làm sạch hoặc lớp chữ gốc của PDF', text: textSourceLabel(t) }) : null);
 const FILTER = { q: '', sort: 'sources', century: '', project: '', multi: false, themes: false };
@@ -204,7 +208,7 @@ async function artworksView() {
   const body = h('div'), count = h('span', { class: 'muted' });
   const q = h('input', { type: 'search', value: f.q, placeholder: 'Tìm tranh, họa sĩ, năm (có dấu hay không)', oninput: (e) => { f.q = e.target.value; refresh(); } });
   const sort = h('select', { onchange: (e) => { f.sort = e.target.value; refresh(); } },
-    ...[['sources', 'Nhiều sách nhất trước'], ['words', 'Nhiều chữ nhất (cả dịch máy)'], ['title', 'Tên A-Z'], ['year', 'Theo thế kỷ']].map(([v, t]) => h('option', { value: v, text: t, selected: f.sort === v })));
+    ...[['sources', 'Nhiều sách nhất trước'], ['words', 'Nhiều chữ nhất (cả bản khôi phục và dịch máy)'], ['title', 'Tên A-Z'], ['year', 'Theo thế kỷ']].map(([v, t]) => h('option', { value: v, text: t, selected: f.sort === v })));
   const cen = h('select', { onchange: (e) => { f.century = e.target.value; refresh(); } }, h('option', { value: '', text: 'Mọi thế kỷ' }),
     h('option', { value: '0', text: 'Trước Công nguyên', selected: f.century === '0' }), ...Array.from({ length: 21 }, (_, i) => h('option', { value: String(i + 1), text: `Thế kỷ ${i + 1}`, selected: f.century === String(i + 1) })));
   const pr = h('select', { onchange: (e) => { f.project = e.target.value; refresh(); } },
@@ -239,8 +243,8 @@ function artworksTable(rows) {
       h('td', { class: 'thumb' }, h('img', { src: a.thumb_url, loading: 'lazy', alt: '' })),
       h('td', null, h('div', { class: 'ttl', text: a.title }), a.n_conflicts ? h('div', { class: 'sub conflict', text: `${a.n_conflicts} chỗ các sách ghi khác nhau` }) : null),
       h('td', { text: a.artist || '' }), h('td', { text: a.year || a.year_raw || '' }),
-      h('td', null, bookBadges(a.books, a.low_trust_books), a.only_low_trust ? h('div', { class: 'sub conflict', text: 'Chỉ có trong bản dịch máy, không dùng làm nguồn sự kiện' }) : null),
-      h('td', { class: 'num', title: 'Số chữ của các nguồn thường; dòng nhỏ bên dưới là số chữ bản dịch máy. Sắp xếp "Nhiều chữ nhất" tính cả hai.' }, a.words_normal, a.words_low ? h('div', { class: 'sub', text: `+ ${a.words_low} (dịch máy)` }) : null, textTag(a.text_source)),
+      h('td', null, bookBadges(a.books, a.low_trust_books, a.restored_books), a.only_low_trust ? h('div', { class: 'sub conflict', text: 'Chỉ có trong bản dịch máy, không dùng làm nguồn sự kiện' }) : a.no_normal_source ? h('div', { class: 'sub conflict', text: NO_NORMAL_SOURCE }) : null),
+      h('td', { class: 'num', title: 'Số chữ của các nguồn thường; dòng nhỏ bên dưới là số chữ bản khôi phục và số chữ bản dịch máy. Sắp xếp "Nhiều chữ nhất" tính cả ba.' }, a.words_normal, a.words_restored ? h('div', { class: 'sub', text: `+ ${a.words_restored} (bản khôi phục)` }) : null, a.words_low ? h('div', { class: 'sub', text: `+ ${a.words_low} (dịch máy)` }) : null, textTag(a.text_source)),
       h('td', null, rightsTag(a.rights)),
       h('td', null, a.projects.length ? a.projects.map((p) => stageTag(p.stage)) : h('span', { class: 'muted', text: '-' }))))));
 }
@@ -262,10 +266,11 @@ async function artworkDetail(key) {
     const s = d.sources[i];
     pane.replaceChildren(h('div', { class: 'muted', text: 'Đang tải...' }));
     const t = await J(s.text_url);
-    const o = s.outline;
+    const o = s.outline, lv = trustOf(s.trust);
     pane.replaceChildren(...[
-      s.trust === 'low' ? h('div', { class: 'note lowbox', text: s.trust_note || LOWTXT }) : null,
-      h('div', { class: 'tags', style: { margin: '6px 0' } }, h('span', { class: 'tag', text: `${s.words} chữ` }), s.trust === 'low' ? lowTag(s.trust_note) : null, textTag(s.text_source), s.ocr ? h('span', { class: 'tag scan', text: 'OCR' }) : null,
+      lv === 'low' ? h('div', { class: 'note lowbox', text: s.trust_note || LOWTXT }) : null,
+      lv === 'restored' ? h('div', { class: 'note', style: { ...restoredStyle, border: '1px solid #25507f', padding: '6px 10px', borderRadius: '6px', margin: '6px 0' }, text: trustNote('restored', s.trust_note) }) : null,
+      h('div', { class: 'tags', style: { margin: '6px 0' } }, h('span', { class: 'tag', text: `${s.words} chữ` }), lv === 'low' ? lowTag(s.trust_note) : lv === 'restored' ? restoredTag(s.trust_note) : null, textTag(s.text_source), s.ocr ? h('span', { class: 'tag scan', text: 'OCR' }) : null,
         s.headline ? h('span', { class: 'tag', text: s.headline }) : null, h('span', { class: 'tag', text: `trang PDF ${s.pdf_pages[0]}-${s.pdf_pages[1]}` }), h('span', { class: 'grow', style: { flex: 1 } }),
         h('button', { class: 'small', text: 'Mở mục này', onclick: () => { go(`#/library/work/${s.book_id}/${s.n}`); } }),
         d.sources.length > 1 ? h('button', { class: 'small danger', text: 'Tách', title: 'Tách mục này thành tác phẩm riêng', onclick: () => splitDialog(s) }) : null),
@@ -277,9 +282,9 @@ async function artworkDetail(key) {
             o.meta?.length ? h('div', { class: 'sub', text: 'Thông tin in dưới tiêu đề: ' + o.meta.join(' · ') }) : null),
           o.captions.length ? h('div', { class: 'panel' }, h('h4', { text: `Chú thích hình (${o.captions.length})` }), h('ul', { class: 'caps' }, o.captions.map((c) => h('li', { text: c.text })))) : null,
           h('div', { class: 'panel' }, h('h4', { text: 'Các trang' }), h('div', { class: 'pages' }, s.pages.map((p) => h('div', null, h('img', { src: p.url, loading: 'lazy', onclick: () => lightbox(p.url.replace('w=900', 'w=1600')) }), h('div', { class: 'pagecap', text: `trang PDF ${p.page}` })))))),
-        h('div', { class: 'panel' }, h('h4', { text: 'Văn bản (chỉ phần thân bài)' }), s.ocr ? h('div', { class: 'note', text: 'Bản scan: văn bản do OCR, có thể sai chữ.' }) : null, h('pre', { class: 'text', text: t.text })))].filter(Boolean));
+        h('div', { class: 'panel' }, h('h4', { text: 'Văn bản (chỉ phần thân bài)' }), s.ocr ? h('div', { class: 'note', text: 'Bản scan: văn bản do OCR, có thể sai chữ.' }) : null, lv === 'restored' ? h('div', { class: 'note', text: RESTORED_TEXT }) : null, h('pre', { class: 'text', text: t.text })))].filter(Boolean));
   };
-  d.sources.forEach((s, i) => tabs.append(h('button', { text: `${BOOKNAME[s.book_id] || s.book_id} (${s.words})${s.trust === 'low' ? ' ⚠' : ''}`, onclick: () => showTab(i) })));
+  d.sources.forEach((s, i) => tabs.append(h('button', { text: `${BOOKNAME[s.book_id] || s.book_id} (${s.words})${trustOf(s.trust) === 'low' ? ' ⚠' : trustOf(s.trust) === 'restored' ? ' (khôi phục)' : ''}`, onclick: () => showTab(i) })));
   const mine = a.projects || [];
   setMain(crumb(h('a', { href: '#/library', text: 'Tác phẩm' }), idn.title),
     h('div', { style: { display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' } }, h('h1', { class: 'lib-h', text: idn.title }), h('span', { class: 'grow' }),
@@ -289,7 +294,7 @@ async function artworkDetail(key) {
     d.conflicts.length ? h('div', { class: 'panel conflictbox' }, h('h4', { text: 'Các sách ghi khác nhau' }),
       d.conflicts.map((c) => h('div', null, h('b', { text: { title: 'Tên', artist: 'Hoạ sĩ', year: 'Năm' }[c.field] + ': ' }),
         c.values.map((v) => h('span', { class: 'tag', title: v.work_id, text: `${shortBook(v.work_id.split('/')[0])}: ${v.value}` }))))) : null,
-    h('div', { class: 'tags', style: { margin: '8px 0' } }, rightsTag(d.rights), h('span', { class: 'tag', text: `${d.totals.books} sách · ${d.totals.words_normal} chữ nguồn thường` }), d.totals.words_low ? h('span', { class: 'tag', text: `${d.totals.words_low} chữ dịch máy` }) : null, d.only_low_trust ? lowTag('Tác phẩm này chỉ có trong bản dịch máy') : null, textTag(d.text_source),
+    h('div', { class: 'tags', style: { margin: '8px 0' } }, rightsTag(d.rights), h('span', { class: 'tag', text: `${d.totals.books} sách · ${d.totals.words_normal} chữ nguồn thường` }), d.totals.words_restored ? h('span', { class: 'tag', text: `${d.totals.words_restored} chữ bản khôi phục` }) : null, d.totals.words_low ? h('span', { class: 'tag', text: `${d.totals.words_low} chữ dịch máy` }) : null, d.only_low_trust ? lowTag('Tác phẩm này chỉ có trong bản dịch máy') : noNormalSource(d.sources.map((s) => s.trust)) ? h('span', { class: 'tag lowtrust', text: NO_NORMAL_SOURCE }) : null, textTag(d.text_source),
       ...mine.map((p) => stageTag(p.stage)), ...(d.kind === 'theme' ? [h('span', { class: 'tag', text: 'chương chủ đề' })] : [])),
     d.details?.length ? h('div', { class: 'panel' }, h('h4', { text: `Các chi tiết có tên (Hodge) (${d.details.length})` }), h('div', { class: 'sub', text: d.details.join(' · ') })) : null,
     h('div', { class: 'panel' }, h('h4', { text: `Nguồn (${d.sources.length})` }), tabs, pane),
@@ -301,8 +306,9 @@ async function artworkDetail(key) {
 
 function createArtworkDialog(a) {
   const d = a.dossier;
-  const allLow = d.sources.every((s) => s.trust === 'low');
-  const checks = d.sources.map((s) => ({ s, el: h('input', { type: 'checkbox', checked: allLow || s.trust !== 'low' }) }));
+  const isLow = (s) => trustOf(s.trust) === 'low';        // only a low source is left out by default; restored sources are in
+  const allLow = d.sources.every(isLow);
+  const checks = d.sources.map((s) => ({ s, el: h('input', { type: 'checkbox', checked: allLow || !isLow(s) }) }));
   const slug = h('input', { type: 'text', placeholder: 'tự đặt từ tên tác phẩm', spellcheck: false });
   const err = h('div', { class: 'note' });
   const go = h('button', { class: 'primary', text: 'Tạo dự án', onclick: async () => {
@@ -314,7 +320,7 @@ function createArtworkDialog(a) {
   } });
   const m = modal({ title: 'Tạo dự án video từ tác phẩm', cls: 'dlg', body: h('div', { class: 'body', style: { width: '560px' } },
     h('div', { class: 'muted', text: 'Mặc định lấy mọi nguồn. Bỏ tick để loại một nguồn. Dự án nhận một bản sao hồ sơ và văn bản; chưa tạo storyboard.' }),
-    h('div', { style: { marginTop: '10px' } }, checks.map(({ s, el }) => h('label', { class: 'ck' }, el, h('span', null, h('b', { text: BOOKNAME[s.book_id] || s.book_id }), h('span', { class: 'sub', text: `  ${s.words} chữ · ${s.text_source}` }), s.trust === 'low' ? lowTag(s.trust_note) : null)))),
+    h('div', { style: { marginTop: '10px' } }, checks.map(({ s, el }) => h('label', { class: 'ck' }, el, h('span', null, h('b', { text: BOOKNAME[s.book_id] || s.book_id }), h('span', { class: 'sub', text: `  ${s.words} chữ · ${s.text_source}` }), isLow(s) ? lowTag(s.trust_note) : trustOf(s.trust) === 'restored' ? restoredTag(s.trust_note) : null)))),
     h('div', { class: 'dlg-field' }, h('label', { text: 'Tên thư mục dự án (slug: a-z, 0-9, - và _)' }), slug), err),
     footer: h('footer', null, h('button', { text: 'Hủy', onclick: () => m.close() }), go) });
 }

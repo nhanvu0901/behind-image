@@ -14,7 +14,7 @@ THE JOB
    - likely: one source states it, or sources lean the same way but call it probable;
    - disputed: sources disagree or the point is argued among historians.
 4. FLAG EVERY CONFLICT between sources (names, dates, numbers, who painted what, how to read a detail). Put it in the conflict part of the fact line and say what each source says. Never settle a disagreement silently, and never merge two versions into one smooth statement.
-5. Sources marked LOW TRUST (if any) are not used for facts. Use them only to notice questions, and say so in a conflict note if they contradict a normal source.
+5. Sources marked LOW TRUST (if any) are not used for facts. Use them only to notice questions, and say so in a conflict note if they contradict a normal source. Sources marked RESTORED (if any) are a reviewed rendering of a machine-translated book: use their ideas and readings of the picture as the author's own, named once and never stated as established fact; take no number, date or quotation from them unless another source confirms it; never guess what a […] mark hides.
 6. Plan the chapters: a cold open, the chapters that carry the argument, a closing. For each give the purpose, a word budget, the facts it uses and what the camera can show (use the D-ids of the named details where they fit). Include at least one chapter that sets two readings of the picture side by side, and make each chapter's history come back to an object on the panel. Every fact should be used by at least one chapter.
 7. The budgets add up to about {{TARGET_WORDS}} words in total (the narration is read at about {{WORDS_PER_SECOND}} words per second).
 

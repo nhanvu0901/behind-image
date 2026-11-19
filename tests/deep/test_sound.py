@@ -9,6 +9,7 @@ import threading
 import pytest
 from fastapi.testclient import TestClient
 
+from bti.library import catalogue
 from conftest import put_sb, script_to_narration, state, strip, wait_job
 
 
@@ -115,10 +116,36 @@ def test_slugs_and_sources(client, projects_root):
     try:
         assert client.post("/api/library/projects", json={"artwork_key": multi, "slug": "t-multi"}).status_code == 409
         assert client.post("/api/library/projects", json={"work_ids": ["payne_gae/002", "payne_gae/003"]}).status_code == 422
-        assert not any(s["book_id"] == "grovier_nws" for s in r.json()["sources"])      # low trust left out by default
+        # A low source is left out by default, a normal or restored one stays. Grovier's work is low before library/restored is
+        # installed and the dossiers rebuilt, restored after: the project's own copy of the dossier says which, so judge by that.
+        doc = json.loads((projects_root / "t-multi" / "source" / "dossier.json").read_text(encoding="utf-8"))
+        trust = {s["work_id"]: s["trust"] for s in doc["sources"]}
+        assert set(trust) == {s["work_id"] for s in r.json()["sources"]} and set(trust.values()) <= {"normal", "restored", "low"}
+        assert "low" not in trust.values()
+        assert all(v == "restored" for k, v in trust.items() if k.startswith("grovier_nws/"))
     finally:
         import shutil
         shutil.rmtree(projects_root / "t-multi", ignore_errors=True)
+
+
+def test_a_low_source_is_left_out_by_default_when_grovier_is_forced_low(client, projects_root, monkeypatch, tmp_path):
+    """The exclusion rule itself, whatever the state of the restoration: the owner's file forces Grovier to `low`."""
+    forced = tmp_path / "books.json"
+    forced.write_text(json.dumps({"grovier_nws": {"trust": "low", "force": True}}), encoding="utf-8")
+    monkeypatch.setattr(catalogue, "books_overrides_path", lambda: forced)
+    multi = next(a for a in client.get("/api/library/artworks").json() if a["n_sources"] >= 3 and "grovier_nws" in a["books"])["artwork_key"]
+    try:
+        r = client.post("/api/library/projects", json={"artwork_key": multi, "slug": "t-low1"})
+        assert r.status_code == 200 and not any(s["book_id"] == "grovier_nws" for s in r.json()["sources"])      # low trust left out by default
+        doc = json.loads((projects_root / "t-low1" / "source" / "dossier.json").read_text(encoding="utf-8"))
+        assert {s["trust"] for s in doc["sources"]} == {"normal"}
+        r = client.post("/api/library/projects", json={"artwork_key": multi, "slug": "t-low2", "exclude": []})
+        doc = json.loads((projects_root / "t-low2" / "source" / "dossier.json").read_text(encoding="utf-8"))
+        assert {s["trust"] for s in doc["sources"] if s["book_id"] == "grovier_nws"} == {"low"}                 # kept when asked, and still low
+    finally:
+        import shutil
+        for slug in ("t-low1", "t-low2"):
+            shutil.rmtree(projects_root / slug, ignore_errors=True)
 
 
 def test_every_book_and_artwork_loads(client):
