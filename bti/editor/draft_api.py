@@ -21,6 +21,7 @@ from bti import agents as agents_mod
 from bti.draft import run as draft_run
 from bti.draft.inputs import DraftError
 
+from . import boxroutes
 from .common import ApiError, valid_pid
 
 router = APIRouter(prefix="/api/projects/{pid}/draft")
@@ -173,29 +174,29 @@ def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...
         update_turn(d, turn_id, status="cancelled")
         return {"ok": True, "action": "discard", "status": "cancelled"}
 
-    # action == "overwrite": the agent's result goes onto the storyboard as it is NOW (the owner's other changes stay)
-    from bti.draft.merge import resolve_overwrite
+    # action == "overwrite": the agent's result goes onto the storyboard as it is NOW (the owner's other changes stay), as ONE batch of operations
+    from bti.draft import boxops
     from bti.draft.inputs import DraftError, load_inputs
     from bti.draft.thread import get_turn_storyboard
+    from bti.ops.errors import OpError
     if not get_turn_storyboard(d, turn_id, "after") or not get_turn_storyboard(d, turn_id, "before"):
         raise ApiError(410, "turn storyboard data lost", code="turn_data_lost")
     try:
         timing = load_inputs(d, for_edit=True).timing
     except DraftError:
-        timing = None
+        raise ApiError(409, "the timing of the project cannot be read", code="timing_unusable")
     scope_ids = set((turn.get("scope") or {}).get("shots") or []) or None
     try:
-        with _storyboard_lock(request, pid, d):
-            res = resolve_overwrite(d, turn_id, timing=timing, scope_shot_ids=scope_ids,
-                                    model_changes=[{"shot": c.get("shot_id"), "what": c.get("what")} for c in turn.get("changes") or []
-                                                   if c.get("what_source") == "model"])
-    except LookupError:
-        raise ApiError(410, "turn storyboard data lost", code="turn_data_lost")
-    except Exception as e:      # noqa: BLE001 - the engine's ValidationError carries the issues; nothing was written
-        if hasattr(e, "issues"):
-            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [], code="save_refused")
-        raise
-    update_turn(d, turn_id, status=res["status"], after_rev=res["after_rev"], changes=res["changes"], conflicts=[])
+        res = boxops.apply_deep(boxops.Backend(d), base_sb=get_turn_storyboard(d, turn_id, "before"), result_sb=get_turn_storyboard(d, turn_id, "after"),
+                                scope_ids=scope_ids, timing=timing, instruction=turn.get("instruction") or "", actor="agent:" + (turn.get("model") or "agent"),
+                                model_changes=[{"shot": c.get("shot_id"), "what": c.get("what")} for c in turn.get("changes") or [] if c.get("what_source") == "model"],
+                                overwrite=True)
+    except OpError as e:
+        raise boxroutes.to_api(e)
+    if res["status"] == "failed":
+        raise ApiError(422, res.get("detail") or "the result cannot be applied", code="compile_error")
+    update_turn(d, turn_id, status=res["status"], after_rev=res["after_rev"], changes=res["changes"], conflicts=[], batch=res.get("batch"),
+                batch_changes=res.get("batch_changes") or [])
     return {"ok": True, "action": "overwrite", "status": res["status"], "rev": res["after_rev"], "after_rev": res["after_rev"]}
 
 
@@ -212,6 +213,8 @@ def undo_edit(pid: str, turn_id: str, request: Request, body: dict = Body(None))
     turn = next((t for t in turns if t.get("id") == turn_id), None)
     if turn is None:
         raise ApiError(404, "turn not found", code="turn_not_found")
+    if turn.get("batch"):                      # a turn made through typed operations: its undo is the undo of its batch (the change log)
+        return boxroutes.undo_batch_turn(d, turn)
     if turn.get("status") == "undone":
         raise ApiError(409, "turn already undone", code="already_undone")
     if turn.get("status") != "applied":
@@ -242,8 +245,12 @@ def get_turn_frame(pid: str, turn_id: str, shot_id: str, when: str, request: Req
     if when not in ("before", "after"):
         raise ApiError(404, "when must be 'before' or 'after'", code="turn_frame_not_found", field="when")
 
-    from bti.draft.thread import get_turn_storyboard
-    sb = get_turn_storyboard(d, turn_id, when)
+    from bti.draft.thread import get_turn_storyboard, load_thread
+    turn = next((t for t in load_thread(d) if t.get("id") == turn_id), None)
+    if turn is not None and turn.get("batch"):     # a batch turn: the change log's copy of the storyboard before or after the batch
+        sb, shot_id = boxroutes.frame_source(d, turn, shot_id, when)
+    else:
+        sb = get_turn_storyboard(d, turn_id, when)
     if not sb:
         raise ApiError(404, "turn storyboard not found", code="turn_frame_not_found")
 
@@ -286,12 +293,12 @@ def get_thread(pid: str, request: Request):
     from bti.draft.thread import reconcile_thread
     from bti.longjob import manager as global_mgr
     mgr = getattr(request.app.state, "longjob_manager", None) or global_mgr
-    turns = reconcile_thread(d, manager=mgr)
+    turns = boxroutes.enrich(d, boxroutes.turns_of(d, reconcile_thread(d, manager=mgr), "storyboard"))
     active_job_id = None
     try:
         if mgr:
             act = mgr.active(pid, "draft")
-            if act and (act.get("meta") or {}).get("mode") == "edit":
+            if act and (act.get("meta") or {}).get("mode") == "edit" and (act.get("meta") or {}).get("doc") != "picks":
                 active_job_id = act.get("id")
     except Exception:
         pass
@@ -312,5 +319,5 @@ def delete_thread(pid: str, request: Request):
         raise
     except Exception:
         pass
-    draft_run.clear_thread(d)
+    draft_run.clear_thread(d, "storyboard")          # the turns of the pictures' box (step 4) are kept
     return {"ok": True}

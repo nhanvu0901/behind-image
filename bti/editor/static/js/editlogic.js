@@ -2,10 +2,10 @@
 // No DOM, no network. Tested in tests/editor_frontend/editlogic.test.mjs.
 //   scope words, the default scope, the turn card data for every status, the progress line, the clock, the preview range.
 import { STAGE_CODES, isVietnamese } from './errmsg.js';
-import { EDIT_LABELS as L } from './labels.js';
+import { EDIT_LABELS as L, BOX_LABELS as BL } from './labels.js';
 
 export const ACTIVE = new Set(['queued', 'waiting', 'running']);
-export const TURN_STATUS = ['running', 'applied', 'no_change', 'needs_choice', 'failed', 'cancelled', 'undone'];
+export const TURN_STATUS = ['running', 'applied', 'no_change', 'needs_choice', 'failed', 'cancelled', 'undone', 'escalate'];
 /** Every code the edit, resolve, undo, frames and thread routes (and the job behind them) can answer. Each has a sentence (tested). */
 export const EDIT_CODES = [
   'edit_empty_instruction', 'edit_bad_scope', 'bad_model', 'scope_needs_storyboard', 'stale_revision', 'busy', 'agy_missing',
@@ -15,6 +15,10 @@ export const EDIT_CODES = [
   'real_models_off', 'edit_failed', 'agy_busy', 'agy_config', 'agy_auth', 'agy_error', 'agy_model', 'agy_no_result', 'agy_rate_limit', 'agy_timeout',
   'timing_shape', 'picks_shape', 'picks_no_main', 'main_asset_unreadable', 'storyboard_corrupt', 'project_missing', 'template_missing', 'workspace_invalid',
   'claude_missing', 'claude_auth', 'claude_rate_limit', 'claude_model', 'claude_config', 'claude_outdated', 'claude_error', 'claude_no_result', 'claude_timeout',      // worker claudeprov (claude_outdated: worker followups)
+  // c2box: what a turn of the typed operations can end with (the operations' own codes are in STAGE_CODES.ops) and what its routes can answer
+  'unknown_op', 'out_of_scope', 'locked', 'validation_failed', 'unknown_shot', 'unknown_overlay', 'unknown_beat', 'unknown_asset', 'unknown_region', 'unknown_param',
+  'unknown_slot', 'wrong_technique_kind', 'technique_unavailable', 'slot_kind_mismatch', 'shot_too_short', 'not_consecutive', 'span_mismatch',
+  'invalid_field', 'invalid_request', 'edit_running', 'batch_not_found', 'turn_not_found', 'timing_unusable',
 ];
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -105,6 +109,42 @@ export function retryScope(turn, shots) {
   return ids.length ? { shots: ids } : null;
 }
 
+// ---------------------------------------------------------------- c2box: the same box on the pictures page (step 4): the scope is narration lines
+/** The numbers the owner sees for narration lines: their place in the narration, from 1 (the server counts the same way). */
+export const beatNumbers = (chapters) => new Map((chapters || []).flatMap((c) => (c.beats || []).map((b) => b.id)).map((id, i) => [id, i + 1]));
+const listWords = (nums) => (nums.length > 6 ? `${nums.slice(0, 6).join(', ')} và ${nums.length - 6} dòng nữa` : nums.join(', '));
+/** The scope of a send on the pictures page. choice: 'auto' | 'beats' | 'chapter' | 'all'. Default: the selected line(s), else the chapter of the line
+ *  being looked at, else the whole video. `chapters`: [{id, title, beats: [{id}]}] as the page has them. -> { kind, payload, words, ok, why } */
+export function pickBeatScope({ choice = 'auto', selected = [], chapters = [], beat = null } = {}) {
+  const nums = beatNumbers(chapters);
+  const sel = selected.filter((id) => nums.has(id));
+  const chap = (chapters || []).find((c) => (c.beats || []).some((b) => b.id === beat)) || null;
+  let kind = choice;
+  if (kind === 'auto') kind = sel.length ? 'beats' : (chap ? 'chapter' : 'all');
+  const P = BL.pictures;
+  if (!nums.size) return { kind, payload: null, words: P.noNarration, ok: false, why: P.noNarration };
+  if (kind === 'beats') {
+    if (!sel.length) return { kind, payload: null, words: P.noLineChosen, ok: false, why: P.noLineChosen };
+    const list = sel.map((id) => nums.get(id)).sort((a, b) => a - b);
+    return { kind, payload: { beats: sel }, words: P.linesWords(sel.length, listWords(list)), ok: true, why: '' };
+  }
+  if (kind === 'chapter') {
+    if (!chap) return { kind, payload: null, words: P.chapterHere, ok: false, why: P.chapterHere };
+    const name = typeof chap.title === 'string' && chap.title.trim() && !/^c\d+$/i.test(chap.title.trim()) ? `Chương: ${chap.title.trim()}` : `Chương ${(chapters.indexOf(chap) + 1)}`;
+    return { kind, payload: { chapter: chap.id }, words: name, ok: true, why: '' };
+  }
+  return { kind: 'all', payload: { all: true }, words: P.scopeAll, ok: true, why: '' };
+}
+/** The scope of an old turn of the pictures box, for "Thử lại": lines that are gone are dropped; null when nothing is left to edit. */
+export function retryBeatScope(turn, beatIds) {
+  const s = turn?.scope || {};
+  if (s.kind === 'all') return { all: true };
+  if (s.kind === 'chapter' && s.chapter) return { chapter: s.chapter };
+  const valid = new Set(beatIds || []);
+  const ids = (s.beats || []).filter((id) => valid.has(id));
+  return ids.length ? { beats: ids } : null;
+}
+
 // ---------------------------------------------------------------- selecting several shots
 /** Clicking shots while "Chọn nhiều cảnh" is on adds them. `playing`: the playhead moves the selection by itself, so nothing is added. */
 export function addToSelection(selected, id, { multi, playing = false } = {}) {
@@ -116,7 +156,7 @@ export function addToSelection(selected, id, { multi, playing = false } = {}) {
 /** One Vietnamese sentence for an error code of the edit routes; never the code itself. */
 export function codeText(code) {
   if (typeof code !== 'string') return L.failedGeneric;
-  return STAGE_CODES.draft?.[code] || STAGE_CODES.longjob?.[code] || L.failedGeneric;
+  return STAGE_CODES.draft?.[code] || STAGE_CODES.ops?.[code] || STAGE_CODES.longjob?.[code] || L.failedGeneric;
 }
 const vi = (s) => (typeof s === 'string' && s.trim() && isVietnamese(s) && !ID_LOOKING.test(s) ? s.trim() : '');
 
@@ -156,7 +196,7 @@ export function normStatus(s) {
   if (s === 'done') return 'old';
   return 'failed';                                  // 'error', 'refused' and anything unknown of an older thread
 }
-const TONE = { running: 'run', applied: 'ok', no_change: 'muted', needs_choice: 'warn', failed: 'bad', cancelled: 'muted', undone: 'muted', old: 'muted' };
+const TONE = { running: 'run', applied: 'ok', no_change: 'muted', needs_choice: 'warn', failed: 'bad', cancelled: 'muted', undone: 'muted', old: 'muted', escalate: 'warn' };
 
 /** The way the edit was made, in words: "sửa nhanh · mất 2,5 giây". */
 export function wayLine(turn) {
@@ -181,9 +221,10 @@ export function turnView(turn, env = {}) {
     const what = vi(c.what);
     if (c.what && !what) detail.push(String(c.what));
     const num = c.number ?? shotNumber(shots, c.shot_id);
+    const lines = (Array.isArray(c.facts) ? c.facts : []).filter((x) => vi(x));      // c2box: the sentences of the batch about this shot (server-written)
     return {
       shotId: c.shot_id || '', number: num, op: c.op || 'changed', opText: L.change[c.op] || L.change.changed,
-      title: num != null ? L.shotAt(num, minSec(c.start)) : minSec(c.start), what,
+      title: num != null ? L.shotAt(num, minSec(c.start)) : minSec(c.start), what, lines: c.what_source === 'batch' && lines.length ? lines : (what ? [what] : []),
       hasBefore: c.op !== 'added', hasAfter: c.op !== 'removed',
     };
   });
@@ -191,7 +232,7 @@ export function turnView(turn, env = {}) {
   let headline = '';
   let extra = '';
   let quota = false;
-  if (status === 'applied') headline = summaryVi || L.applied;
+  if (status === 'applied') headline = summaryVi || (turn?.doc === 'picks' ? BL.pictures.applied : L.applied);
   else if (status === 'no_change') { headline = summaryVi || L.noChange; extra = L.noChangeHelp; }
   else if (status === 'cancelled') headline = L.cancelled;
   else if (status === 'undone') headline = L.undone;
@@ -204,6 +245,9 @@ export function turnView(turn, env = {}) {
       if (summaryVi && summaryVi !== headline) extra = summaryVi;
     }
     if (turn?.error) detail.push(`mã: ${turn.error}`);
+  } else if (status === 'escalate') {
+    headline = vi(turn?.reason) || summaryVi || BL.escalate;
+    extra = turn?.doc === 'picks' ? BL.pictures.escalate : BL.slow.hint;
   } else if (status === 'needs_choice') {
     const given = Array.isArray(turn?.conflicts) ? turn.conflicts : [];
     const listChanged = given.some((c) => c && typeof c === 'object' && c.kind === 'list');
@@ -215,12 +259,17 @@ export function turnView(turn, env = {}) {
     extra = nums.length ? L.choiceLead(`cảnh ${numbersText(nums)}`) : (listChanged ? L.choiceLeadList : L.choiceLeadAny);
   }
 
-  const canPreview = status === 'applied' && changes.some((c) => c.hasAfter);
+  const canPreview = status === 'applied' && changes.some((c) => c.hasAfter) && turn?.doc !== 'picks';
+  // c2box: a turn of the typed operations also carries the batch's own sentences (what the card shows for the pictures, which have no shot)
+  const sentences = (Array.isArray(turn?.batch_changes) ? turn.batch_changes : []).map((b) => ({ text: String(b?.what || ''), time: b?.time || null })).filter((b) => b.text);
+  const slowLimits = status === 'running' && turn?.path === 'deep' && turn?.limits && Number.isFinite(Number(turn.limits.minutes))
+    ? BL.slow.limits(Number(turn.limits.minutes), Number(turn.limits.repairs ?? 0)) : '';
   return {
-    id: turn?.id || '', status, tone: TONE[status], badge: L.status[status],
+    id: turn?.id || '', status, tone: TONE[status], badge: BL.status[status] || L.status[status], doc: turn?.doc === 'picks' ? 'picks' : 'storyboard', sentences, limits: slowLimits,
     time: clockTime(turn?.at), scope: scopeWords(turn?.scope, { shots, chapters }), instruction: String(turn?.instruction || ''),
     way: status === 'running' ? '' : wayLine(turn), headline, extra, changes, detail: detail.join('\n'),
-    showChanges: status === 'applied' && changes.length > 0, noChanges: status === 'applied' && changes.length === 0,
+    showChanges: status === 'applied' && changes.length > 0, showSentences: status === 'applied' && changes.length === 0 && sentences.length > 0,
+    noChanges: status === 'applied' && changes.length === 0 && sentences.length === 0,
     actions: {
       cancel: status === 'running',
       preview: canPreview,
@@ -228,6 +277,7 @@ export function turnView(turn, env = {}) {
       choices: status === 'needs_choice',
       retry: status === 'failed' && !!turn?.instruction,
       settings: quota,                                 // "Chọn mô hình khác": opens the settings dialog
+      escalate: status === 'escalate' ? (turn?.doc === 'picks' ? 'manual' : 'slow') : '',          // c2box: "Làm kỹ hơn" (step 5) or "Tìm hình bằng tay" (step 4)
     },
   };
 }

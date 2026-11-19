@@ -30,6 +30,7 @@ from bti.longjob import Part, PartError
 KIND = "draft"
 MODEL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:@-]{0,79}")      # `@` is the effort part of a `claude:<model>@<effort>` id
 AGENT_TIMEOUT_S = 30 * 60
+DEEP_MAX_REPAIRS = 2             # the slow path's check-and-repair turns after its first answer (agy.run / claudecode.run `max_repairs`)
 KEEP_RUNS = 5
 
 VI = {
@@ -67,8 +68,8 @@ VI = {
     "edit_no_change": "Agent không thay đổi gì trong storyboard.",
     "compile_error": "Không thể ghép các cảnh do có lỗi thông số hoặc cú pháp.",
     "edit_degraded": "Lần sửa bị từ chối vì có cảnh bị hạ cấp hoặc không đầy đủ.",
-    "spec_invalid": "Mô hình trả lời sai dạng cần thiết, kể cả sau một lần chỉnh lại. Hãy thử lại hoặc chọn chế độ sâu.",
-    "escalate": "Yêu cầu này cần nhìn kỹ vào tranh hoặc sửa nhiều hơn phần đã chọn. Hãy chọn chế độ sâu.",
+    "spec_invalid": "Agent trả lời sai dạng cần thiết, kể cả sau một lần chỉnh lại, nên chưa đổi gì. Hãy gửi lại yêu cầu.",
+    "escalate": "Yêu cầu này cần nhìn kỹ vào tranh hoặc sửa nhiều hơn phần đã chọn. Bấm \"Làm kỹ hơn\" để agent làm trong vài phút.",
     "real_models_off": "Máy này đang tắt việc gọi mô hình thật (chế độ thử), nên chưa sửa được.",
     "bad_model": "Mô hình đã chọn không dùng được. Chọn mô hình khác trong phần cài đặt.",
     "edit_failed": "Lần sửa gặp lỗi bất ngờ nên chưa có gì thay đổi. Hãy thử lại.",
@@ -619,6 +620,69 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
             Part(key="compile", title="Ghép và kiểm tra", run=compile_, est_seconds=60)]
 
 
+def deep_limits(agent_timeout: float = AGENT_TIMEOUT_S) -> dict:
+    """What bounds a slow-path run, told to the card when the run starts: the agent is stopped after `minutes` of working (the watchdog of
+    `bti.draft.providers.agy` / `claudecode`), it is sent back at most `repairs` times after its first answer, and the job part may not last
+    longer than `part_minutes` (`bti.longjob.manager.PART_LIMIT_SECONDS`). The owner can stop it at any time."""
+    from bti.longjob.manager import PART_LIMIT_SECONDS
+    return {"minutes": int(agent_timeout // 60), "repairs": DEEP_MAX_REPAIRS, "part_minutes": int(PART_LIMIT_SECONDS // 60)}
+
+
+def provider_failed(project_dir: Path, turn_id: str | None, ctx, e, model_id: str | None, start_time: float, path: str):
+    """A single-call model that could not answer (no login, quota, time out, cancelled): the turn fails with the owner's sentence."""
+    if e.kind == "cancelled":
+        if turn_id:
+            update_turn(project_dir, turn_id, status="cancelled", error="cancelled")
+        return None
+    code = provider_code(e, model_id)
+    wait = getattr(e, "retry_after_seconds", None) if code in RATE_LIMIT_CODES else None
+    words = rate_limit_sentence(code, wait, e.message)
+    ctx.meta.update(rate_limit_fields(wait))            # the job's own record carries it too (never retried in this job)
+    _fail_turn(project_dir, turn_id, code, words, start=start_time, path=path, notes=e.message, retry_after_seconds=wait)
+    raise PartError(code, words)
+
+
+def finish_box_turn(project_dir: Path, turn_id: str | None, ctx, kind: str, res, backend, timing: dict | None, start_time: float, path: str):
+    """Record the end of a box turn in the thread and give the job its small result. `res` is a `boxops.TurnResult`. An applied turn carries
+    its batch (the card's undo is the undo of that batch), the batch's own sentences and the summary; `cannot` changes nothing and says why;
+    `escalate` offers the slower path; a failure carries the code and one Vietnamese sentence."""
+    from . import boxops
+    elapsed = round(time.time() - start_time, 2)
+    base = {"seconds": elapsed, "path": path, "doc": kind, "repairs": res.repairs}
+    last = (lambda **kw: _write_last_edit(project_dir, turn_id, **kw)) if kind == "storyboard" else (lambda **kw: None)
+    if res.status == "applied":
+        if turn_id:
+            update_turn(project_dir, turn_id, **{**base, **boxops.applied_fields(kind, backend, res, timing)}, escalated=False, error=None, conflicts=None)
+        last(status="done", changes=len(res.changes))
+        ctx.progress(1.0, "Đã áp dụng thay đổi.")
+        return {"status": "applied", "no_change": False, "after_rev": res.rev_after, "summary": res.summary, "n_changes": len(res.changes),
+                "batch": res.batch}
+    if res.status in ("cannot", "escalate"):
+        said = (res.reason or "").strip()
+        words = said or vi(res.status)              # a reason that is not in the owner's language was sent back once; if it still is not, a fixed sentence
+        unfit = said or str((res.refusal or {}).get("reason_unfit") or "")
+        status = "no_change" if res.status == "cannot" else "escalate"
+        if turn_id:
+            update_turn(project_dir, turn_id, **base, status=status, summary=words, summary_source="model" if said else "code", reason=words,
+                        notes=unfit[:2000], error=None)
+        last(status="done", no_change=True, summary=words)
+        ctx.progress(1.0, words)
+        return {"status": status, "no_change": status == "no_change", "summary": words}
+    if res.status == "no_change":
+        words = vi("edit_no_change")
+        if turn_id:
+            update_turn(project_dir, turn_id, **base, status="no_change", summary=words, summary_source="code", error=None)
+        last(status="done", no_change=True)
+        ctx.progress(1.0, words)
+        return {"status": "no_change", "no_change": True, "summary": words}
+    code = res.code or "edit_failed"
+    words = res.words or vi(code)
+    if turn_id:
+        update_turn(project_dir, turn_id, doc=kind, repairs=res.repairs)
+    _fail_turn(project_dir, turn_id, code, words, start=start_time, path=path, notes=json.dumps(res.refusal, ensure_ascii=False)[:2000] if res.refusal else "")
+    raise PartError(code, words)
+
+
 def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction: str,
                     edit_scope: dict | None = None, followup: bool = False,
                     turn_id: str | None = None, base_rev: str | None = None,
@@ -637,6 +701,8 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
             self.scope_words = ""
             self.chosen_path = mode
             self.escalated = False
+            self.done = False                     # the fast path wrote its batch in the edit part: nothing is left for the apply part
+            self.deep_model = None
             self.compiled_sb = None
             self.summary = ""
             self.model_changes = []
@@ -693,79 +759,35 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
             st.chosen_path = mode
 
         if turn_id:
-            update_turn(project_dir, turn_id, path=st.chosen_path)
+            update_turn(project_dir, turn_id, path=st.chosen_path, **({"limits": deep_limits(agent_timeout)} if st.chosen_path == "deep" else {}))
         ctx.progress(1.0, f"Đã chuẩn bị ({len(edit_shots)} cảnh, chế độ {st.chosen_path}).")
 
     def edit(ctx):
-        # 1. Try fast path if chosen
+        # 1. The fast path: one model call, typed operations, one batch (bti/draft/boxops.py)
         if st.chosen_path == "fast":
             ctx.progress(0.1, "Đang nghĩ…")
-            from bti.draft.fastedit import fast_edit
+            from bti.draft import boxops, fastedit
             from bti.script.providers import ProviderError
             m_fast = _resolve(project_dir, "edit.fast", model).model
-            # the fast path reads its scope from the inputs (inp.edit_shots, inp.scope): the same clone the deep path makes
             fast_inp = clone_inputs(st.inputs, scope=st.scope_chapters, edit_shots=st.edit_shots)
             prior = [t for t in load_thread(project_dir) if t.get("id") != turn_id]
+            backend = boxops.Backend(project_dir)
             try:
-                outcome = fast_edit(fast_inp, instruction, model=m_fast, thread_turns=prior, project_dir=project_dir,
-                                    cancel=ctx.cancelled)
+                res, _scope = fastedit.fast_edit(backend, fast_inp, edit_scope or {}, instruction, model=m_fast, thread_turns=prior,
+                                                 progress=ctx.progress, cancel=ctx.cancelled)
             except ProviderError as e:
-                if e.kind == "cancelled":
-                    if turn_id:
-                        update_turn(project_dir, turn_id, status="cancelled", error="cancelled")
-                    return
-                code = provider_code(e, m_fast)
-                wait = getattr(e, "retry_after_seconds", None) if code in RATE_LIMIT_CODES else None
-                words = rate_limit_sentence(code, wait, e.message)
-                ctx.meta.update(rate_limit_fields(wait))            # the job's own record carries it too (never retried in this job)
-                _fail_turn(project_dir, turn_id, code, words, start=st.start_time, path="fast", notes=e.message, retry_after_seconds=wait)
-                raise PartError(code, words)
-            ctx.progress(0.8, "Đang kiểm tra…")
+                return provider_failed(project_dir, turn_id, ctx, e, m_fast, st.start_time, "fast")
+            except DraftError as e:
+                _fail_turn(project_dir, turn_id, e.code, vi(e.code, e.message), start=st.start_time, path="fast")
+                raise PartError(e.code, vi(e.code, e.message))
+            st.done = True
+            return finish_box_turn(project_dir, turn_id, ctx, "storyboard", res, backend, st.inputs.timing, st.start_time, "fast")
 
-            if outcome.status == "cannot":
-                elapsed = round(time.time() - st.start_time, 2)
-                from bti.draft.describe import sentence_ok
-                said = (outcome.reason or outcome.summary or "").strip()
-                words, src = (said, "model") if sentence_ok(said) else (vi("cannot"), "code")      # the owner reads Vietnamese, without codes
-                if turn_id:
-                    update_turn(project_dir, turn_id, status="no_change", summary=words, summary_source=src,
-                                notes=said, seconds=elapsed, path="fast")
-                _write_last_edit(project_dir, turn_id, status="done", no_change=True, summary=words)
-                ctx.progress(1.0, words)
-                return {"status": "no_change", "no_change": True, "summary": words}
-
-            if outcome.status == "escalate":
-                from bti.draft.describe import sentence_ok
-                said = (outcome.reason or outcome.summary or "").strip()
-                words = said if sentence_ok(said) else vi("escalate")
-                if mode == "auto":
-                    ctx.progress(0.2, "Chuyển sang phân tích sâu…")
-                    st.chosen_path = "deep"
-                    st.escalated = True
-                    if turn_id:
-                        update_turn(project_dir, turn_id, path="deep", escalated=True)
-                else:
-                    _fail_turn(project_dir, turn_id, "escalate", words or vi("escalate"), start=st.start_time, path="fast")
-                    raise PartError("escalate", words or vi("escalate"))
-
-            elif outcome.status == "failed":
-                err = outcome.code or "compile_error"
-                _fail_turn(project_dir, turn_id, err, vi(err), start=st.start_time, path="fast", notes=outcome.reason or "")
-                raise PartError(err, vi(err))
-
-            elif outcome.status == "applied":
-                st.compiled_sb = outcome.storyboard
-                st.summary = outcome.summary
-                st.model_changes = outcome.changes
-                return
-
-            else:       # a status this code does not know is a bug in fastedit, never a silent pass
-                raise RuntimeError("fast_edit returned an unknown status %r" % (outcome.status,))
-
-        # 2. Run deep path if chosen or escalated
+        # 2. The slow path: an agent in a work folder; its result is put on the storyboard by apply_ as operations
         if st.chosen_path == "deep":
             res_deep = _resolve(project_dir, "edit.deep", model)
             m_deep = res_deep.model
+            st.deep_model = m_deep
             if turn_id:                                         # an edit that escalated from the fast path says which agent did the deep part
                 update_turn(project_dir, turn_id, model=m_deep, agent=res_deep.public())
             deep_mod = _agent_module(m_deep)                    # agy for `agy:<slug>`, Claude Code for `claude:<model>@<effort>`
@@ -827,7 +849,7 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
 
             cache_dir = _cache(project_dir) / time.strftime("%Y%m%d-%H%M%S")
             cache_dir.mkdir(parents=True, exist_ok=True)
-            run_res = deep_mod.run(ws.root, model=m_deep, timeout=agent_timeout, max_repairs=2, check=check, cancel=ctx.cancelled,
+            run_res = deep_mod.run(ws.root, model=m_deep, timeout=agent_timeout, max_repairs=DEEP_MAX_REPAIRS, check=check, cancel=ctx.cancelled,
                               runner=ctx.run_process, on_progress=on_progress, transcript_path=cache_dir / "events.jsonl",
                               guard=guard, python=python, conversation_id=conv_id)
 
@@ -929,55 +951,138 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                 st.summary = first_line[:200] if first_line else f"Sửa theo yêu cầu: {instruction[:60]}"
 
     def apply_(ctx):
-        if not st.compiled_sb:
+        """The slow path's result goes onto the storyboard as ONE batch of `replace_range` operations (change log, actor, note, undo), after the
+        three-way merge that keeps what the owner saved meanwhile (bti.draft.boxops.apply_deep)."""
+        if st.done or not st.compiled_sb:
             return
         ctx.progress(0.9, "Đang áp dụng thay đổi…")
-        from bti.draft.merge import apply_direct_edit
-        res = apply_direct_edit(
-            project_dir,
-            turn_id or "turn_tmp",
-            base_sb=st.inputs.current,
-            result_sb=st.compiled_sb,
-            model_changes=st.model_changes,
-            timing=st.inputs.timing,
-            scope_shot_ids=st.edit_shots,
-        )
+        from bti.draft import boxops
+        from bti.draft.thread import save_turn_storyboards
+        from bti.ops.errors import OpError
+        backend = boxops.Backend(project_dir)
+        try:
+            res = boxops.apply_deep(backend, base_sb=st.inputs.current, result_sb=st.compiled_sb, scope_ids=st.edit_shots, timing=st.inputs.timing,
+                                    instruction=instruction, actor="agent:" + (st.deep_model or "agent"), model_changes=st.model_changes)
+        except OpError as e:
+            words = boxops.refusal_words("storyboard", e.code, e.extra, st.inputs.current)
+            _fail_turn(project_dir, turn_id, e.code, words, start=st.start_time, path=st.chosen_path)
+            raise PartError(e.code, words)
         elapsed = round(time.time() - st.start_time, 2)
         status = res["status"]
+        if status == "failed":
+            words = vi(res.get("code") or "compile_error", res.get("detail") or "")
+            _fail_turn(project_dir, turn_id, res.get("code") or "compile_error", words, start=st.start_time, path=st.chosen_path, notes=res.get("detail") or "")
+            raise PartError(res.get("code") or "compile_error", words)
         from bti.draft.describe import summary_for
         if status == "no_change":
             summary, summary_source = vi("edit_no_change"), "code"
         else:       # the model's sentence when it is plain Vietnamese without codes, else one built from the changes
             summary, summary_source = summary_for(st.summary, res.get("changes", []))
+        if status == "needs_choice":
+            save_turn_storyboards(project_dir, turn_id or "turn_tmp", st.inputs.current, st.compiled_sb)         # `resolve` (overwrite) reads them
         if turn_id:
-            update_turn(
-                project_dir,
-                turn_id,
-                status=status,
-                before_rev=base_rev,
-                after_rev=res.get("after_rev"),
-                path=st.chosen_path,
-                escalated=st.escalated,
-                seconds=elapsed,
-                summary=summary,
-                summary_source=summary_source,
-                changes=res.get("changes", []),
-                conflicts=res.get("conflicts"),
-                notes=st.notes,
-            )
+            update_turn(project_dir, turn_id, status=status, doc="storyboard", before_rev=base_rev, after_rev=res.get("after_rev"), path=st.chosen_path,
+                        escalated=st.escalated, seconds=elapsed, summary=summary, summary_source=summary_source, changes=res.get("changes", []),
+                        conflicts=res.get("conflicts"), notes=st.notes, batch=res.get("batch"), batch_changes=res.get("batch_changes") or [])
         _write_last_edit(project_dir, turn_id, status="done" if status in ("applied", "no_change") else "needs_choice",
                          changes=len(res.get("changes", [])))
         msg = "Đã áp dụng thay đổi." if status == "applied" else ("Không có thay đổi." if status == "no_change" else "Cần lựa chọn ghi đè do xung đột.")
         ctx.progress(1.0, msg)
-        # the job's result is small: the stored storyboards live under cache/draft/turns/<turn_id>/
+        # the job's result is small: the batch and its sentences live in the change log
         return {"status": status, "no_change": status == "no_change", "after_rev": res.get("after_rev"), "summary": summary,
-                "n_changes": len(res.get("changes", []))}
+                "n_changes": len(res.get("changes", [])), "batch": res.get("batch")}
 
     return [
         Part(key="prepare", title="Chuẩn bị dữ liệu", run=guarded(prepare), est_seconds=5),
         Part(key="edit", title="Chỉnh sửa storyboard", run=guarded(edit), est_seconds=15),
         Part(key="apply", title="Áp dụng thay đổi", run=guarded(apply_), est_seconds=5),
     ]
+
+
+def make_picks_edit_parts(project_dir: Path, *, model: str | None, instruction: str, edit_scope: dict, turn_id: str | None, base_rev: str | None):
+    """The parts of a prompt-box turn on the pictures (step 4): one model call, typed picks operations, one batch."""
+    from bti.longjob import Part, PartError
+    from . import boxops, picksedit
+    box = {"start": 0.0}
+
+    def guarded(fn):
+        def run_part(ctx):
+            try:
+                return fn(ctx)
+            except PartError:
+                raise
+            except DraftError as e:
+                _fail_turn(project_dir, turn_id, e.code, vi(e.code, e.message), start=box["start"] or None)
+                raise PartError(e.code, vi(e.code, e.message))
+            except Exception as e:      # noqa: BLE001
+                from bti.longjob import Cancelled
+                if isinstance(e, Cancelled):
+                    raise
+                _fail_turn(project_dir, turn_id, "edit_failed", vi("edit_failed"), start=box["start"] or None, notes="%s: %s" % (type(e).__name__, str(e)[:300]))
+                raise
+        run_part.__name__ = fn.__name__
+        return run_part
+
+    def prepare(ctx):
+        box["start"] = time.time()
+        _doc, rev = boxops.Backend(project_dir).read("picks")
+        if base_rev is not None and base_rev != rev:
+            raise DraftError("stale_revision", "the picks changed before the edit was prepared")
+        ctx.progress(1.0, "Đã chuẩn bị.")
+
+    def edit(ctx):
+        ctx.progress(0.1, "Đang nghĩ…")
+        from bti.script.providers import ProviderError
+        m = _resolve(project_dir, "picks", model).model
+        prior = [t for t in load_thread(project_dir) if t.get("id") != turn_id]
+        backend = boxops.Backend(project_dir)
+        try:
+            res, _scope = picksedit.picks_edit(backend, edit_scope, instruction, model=m, thread_turns=prior, progress=ctx.progress, cancel=ctx.cancelled)
+        except ProviderError as e:
+            return provider_failed(project_dir, turn_id, ctx, e, m, box["start"], "fast")
+        return finish_box_turn(project_dir, turn_id, ctx, "picks", res, backend, None, box["start"], "fast")
+
+    return [Part(key="prepare", title="Chuẩn bị dữ liệu", run=guarded(prepare), est_seconds=3),
+            Part(key="edit", title="Sửa chọn hình", run=guarded(edit), est_seconds=25)]
+
+
+def start_picks(pid: str, project_dir: Path, *, instruction: str, edit_scope: dict, model: str | None = None, base_rev: str | None = None,
+                manager=None) -> dict:
+    """Start a prompt-box turn on the pictures (step 4). Raises DraftError (empty instruction, a scope that cannot be used, a stale revision)
+    or bti.longjob.Busy. The turn is recorded in the same thread as the storyboard's, with `doc: "picks"`."""
+    from . import boxops, picksedit
+    from bti.picks import context
+    if not isinstance(instruction, str) or not instruction.strip():
+        raise DraftError("edit_empty_instruction", "instruction cannot be empty")
+    if len(instruction) > 2000:
+        raise DraftError("edit_bad_scope", "instruction must be 1 to 2000 characters")
+    if _bad_model_name(model):
+        raise DraftError("bad_model", "the model name is not valid")
+    backend = boxops.Backend(project_dir)
+    doc, rev = backend.read("picks")
+    if base_rev is not None and base_rev != rev:
+        raise DraftError("stale_revision", "the picks have changed since the edit was requested")
+    sc = picksedit.picks_scope(backend.adapter("picks").facts(doc), doc, edit_scope or {}, context.narration_view(project_dir))
+    res_edit = _resolve(project_dir, "picks", model)
+    turn_id = f"t_{time.strftime('%Y%m%d_%H%M%S')}_{int(time.time()*1000)%1000:03d}"
+    turn = {"id": turn_id, "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "instruction": instruction.strip(), "doc": "picks",
+            "scope": {"kind": sc.kind, "shots": None, "beats": list(sc.ids) if sc.kind == "beats" else None, "chapter": sc.chapter},
+            "scope_words": sc.words, "model": res_edit.model, "agent": res_edit.public(), "base_rev": rev, "before_rev": rev, "after_rev": None,
+            "path": "fast", "escalated": False, "seconds": 0.0, "summary": "", "changes": [], "status": "running", "job_id": None,
+            "proposal_id": None, "notes": "", "conversation_id": None, "error": None}
+    append_turn(project_dir, turn)
+    m = manager or _manager()
+    parts = make_picks_edit_parts(project_dir, model=model, instruction=instruction, edit_scope=edit_scope, turn_id=turn_id, base_rev=rev)
+    try:
+        rec = m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=parts,
+                      meta={"provider": "agy", "model": res_edit.model, "agent": res_edit.public(), "mode": "edit", "doc": "picks", "turn_id": turn_id,
+                            "instruction": instruction})
+        update_turn(project_dir, turn_id, job_id=rec["id"])
+    except Exception:
+        with thread_lock(project_dir):
+            save_thread(project_dir, [t for t in load_thread(project_dir) if t.get("id") != turn_id])
+        raise
+    return {**rec, "turn_id": turn_id}
 
 
 def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | None = None, chapters: list | None = None,
@@ -1021,6 +1126,7 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
             "id": turn_id,
             "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
             "instruction": instruction.strip(),
+            "doc": "storyboard",
             "scope": {
                 "kind": scope_kind,
                 "shots": sorted(edit_shots) if scope_kind == "shots" else None,
