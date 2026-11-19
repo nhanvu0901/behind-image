@@ -7,7 +7,7 @@ import pytest
 
 from bti.auto_run import checks, loop, reasons, runlog
 from bti.cli.transport import Reply, Unreachable
-from auto_helpers import Scripted, act, made_state
+from run_helpers import Scripted, act, made_state
 
 PID = "arn"
 ALL = {"enabled": True, "gates": {g: True for g in reasons.GATES}, "spend": {"model": True, "machine_time": True, "paid": False}}

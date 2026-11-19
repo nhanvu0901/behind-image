@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 
-from auto_helpers import P, PID, Scripted, act, actions_of, finish_run, made_state, run_to_end, set_auto, start_run, state
+from run_helpers import P, PID, Scripted, act, actions_of, finish_run, made_state, run_to_end, set_auto, start_run, state
 from picks_agent import PNG, FakeAgent, fake_book_thumb, fake_thumb, install_agent, install_sources
 from test_loop import exported, posts, run_loop
 

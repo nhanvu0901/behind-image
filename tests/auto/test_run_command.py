@@ -5,7 +5,7 @@ import pytest
 
 from bti.cli import exitcodes as X, main as cli_main
 from cli_helpers import AppTransport, run_bti
-from auto_helpers import PID, set_auto, state, wait_longjob
+from run_helpers import PID, set_auto, state, wait_longjob
 
 
 def bti(client, *argv, **kw):
@@ -64,8 +64,8 @@ def test_a_run_that_waits_for_the_owner_is_exit_3_and_says_what_for(client, worl
     set_auto(client, enabled=True)
     r = bti(client, "run", PID, "--yes-cost", "--wait", "--interval", "0")
     assert r.code == X.PERSON, r
-    assert "nothing_to_do" in r.err and "waiting for: picks" in r.err and "where: step picks" in r.err and "#/project/arn/picks" in r.err
-    assert "action: picks.approve" in r.err and "5 step(s)" in r.err
+    assert "nothing_to_do" in r.err and "waiting for: main_asset" in r.err and "where: step picks" in r.err and "#/project/arn/picks" in r.err      # the picks step waits first for what the pictures agent needs: a main painting
+    assert "action: picks.auto" in r.err and "5 step(s)" in r.err
 
 
 def test_a_gate_the_owner_did_not_allow_is_exit_3_with_the_gate(client, world):

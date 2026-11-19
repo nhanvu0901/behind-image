@@ -1,5 +1,5 @@
 """Fixtures of the automatic-run tests (worker c6auto): the app in the test process on a private projects folder, a mock agent, the fake pipeline of
-`auto_helpers.World` (real long jobs with quick parts, nothing heavy or paid), and the run's own transport pointed at the app without a network. The patterns are
+`run_helpers.World` (real long jobs with quick parts, nothing heavy or paid), and the run's own transport pointed at the app without a network. The patterns are
 those of tests/cli and tests/state. No model, no voice, no render, no paid service and no download is ever started."""
 import json
 import os
@@ -24,7 +24,7 @@ from bti import settings as S  # noqa: E402
 from bti.editor.app import create_app  # noqa: E402
 from bti.script import env as env_mod, models as models_mod  # noqa: E402
 from bti.script.providers import mock as mock_mod, set_transport  # noqa: E402
-from auto_helpers import AppTransport, World  # noqa: E402
+from run_helpers import AppTransport, World  # noqa: E402
 
 MOCK_AGENTS = {"default": "gem", "agents": [{"id": "gem", "label": "Gemini giả", "model": "mock"}],
                "steps": {"script": ["script.outline", "script.narration"], "picks": ["picks"], "storyboard": ["draft", "edit.fast", "edit.deep"]}}

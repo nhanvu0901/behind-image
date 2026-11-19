@@ -153,4 +153,19 @@ Documents: `AGENTS.md`, `docs/AGENT_API.md`, `docs/APP_GUIDE.md`, `skills/picks/
 changed `tests/auto/test_run_api.py` (the picks step now waits first for a main painting, the pictures agent's own need), `tests/picks/test_auto_api.py` (the example body has an `actor`), `tests/evals/test_bench.py` (the skip sentence),
 `tests/editor_frontend/fixtures/autorun_results.json`. `.scratch/agy_tasks/join2/STATUS.md`.
 
-__ROUND_TWO_RUNS__
+## R6. Checks of round two: what ran and what is owed
+
+**Ran (Mac):** `python -m bti.editor.hints`, `python -m bti.cli.docgen`, `python -m bti.ops.doc --check`, both `--check` modes (up to date); `python -m bti.auto_run.reasons --write tests/editor_frontend/fixtures/autorun_results.json`;
+the Node command: `ℹ tests 393`, `ℹ pass 392`, `ℹ fail 0`, `ℹ skipped 1`; every changed Python file parses; the pure functions of the quality bar were looked at on the threshold (12 lines with 3 pass, with 4 stop; 4 with 1 pass, with 2 stop; 8 with 2 pass, with 3 stop; 100 with 25 pass, with 26 stop; no number of lines stops).
+**Not run: every Python folder and both browser probes.** The server (`ssh winbox-cmd`, 100.74.19.84) has not answered since about 07:22 on 2026-11-19; round two is edited and committed without a single Python test run on its final tree.
+Owed, in this order, one folder per run on snapshot `join2`: `tests/state`, `tests/cli`, `tests/auto`, `tests/evals`, `tests/ops`, `tests/picks`, `tests/draft`, `tests/editor`, `tests/script`, `tests/media`, `tests/longjob`, `tests/settings`;
+then `BTI_SSH_HOST=winbox-cmd node tests/e2e/box/box.mjs` (port 8571, suffix `c2box`) and `BTI_SSH_HOST=winbox-cmd node tests/e2e/picks_auto/picks_auto.mjs` (port 8577, suffix `c3p`), each stopped afterwards (check that nothing of the round-one probes still listens on those ports first).
+The new tests (`tests/auto/test_run_joined.py`, `tests/evals/test_joined_routes.py`) and the changed ones were written without being run: expect first-run corrections in them (see the list in the final message of round two).
+
+
+## R7. Round two on the server (after the coordinator's run of the commit 2bf0b20)
+
+The coordinator ran every folder on a fresh snapshot: eleven were green and `tests/auto` did not start. **Cause:** `tests/picks/auto_helpers.py` (the pictures agent's fake runner, brought in by the merge of c3) and `tests/auto/auto_helpers.py` (the fake pipeline of the automatic run, c6) had one module name; the
+conftest of `tests/auto` puts `tests/picks` in front of the import path, so `from auto_helpers import AppTransport, World` found the other file (and in one session a module cached under that name would be wrong for the other folder). **Fix:** the helper of `tests/auto` is renamed
+`tests/auto/run_helpers.py` (a unique name; imports changed in `conftest.py`, `test_live.py`, `test_loop.py`, `test_run_api.py`, `test_run_command.py`, `test_run_joined.py`); nothing in `tests/picks` was renamed; `tests/auto/picks_agent.py` loads the picks helper by its path under its own module name.
+One test of `tests/auto/test_run_command.py` also followed the join (the run's `nothing_to_do` at the picks step now waits for `main_asset` of `picks.auto`, not for `picks`) and was changed. No app code was changed in this step.

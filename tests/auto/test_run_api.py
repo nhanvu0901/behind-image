@@ -7,7 +7,7 @@ import time
 import pytest
 
 from bti.auto_run import checks, loop, reasons, runlog
-from auto_helpers import (P, PID, STAGES, World, act, actions_of, finish_run, run_to_end, set_auto, start_run, state, wait_longjob)
+from run_helpers import (P, PID, STAGES, World, act, actions_of, finish_run, run_to_end, set_auto, start_run, state, wait_longjob)
 
 EXPECTED = {
     "new": (["outline.generate", "outline.approve", "narration.generate", "narration.approve", "voice.generate"], "nothing_to_do"),

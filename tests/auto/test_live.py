@@ -2,7 +2,7 @@
 reached the server at (the socket's own address), like `bti` does, and drives it through a fake pipeline to the export."""
 import pytest
 
-from auto_helpers import P, PID, World, actions_of, finish_run, set_auto, start_run
+from run_helpers import P, PID, World, actions_of, finish_run, set_auto, start_run
 
 
 def test_the_run_calls_the_app_over_http_on_the_port_it_was_reached_at(live, monkeypatch):

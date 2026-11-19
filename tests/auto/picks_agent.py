@@ -1,5 +1,6 @@
-"""The fake pictures agent of tests/picks (`auto_helpers.py` there), loaded under another name: this folder has an `auto_helpers.py` of its own (the fake pipeline of the
-automatic run), and two modules of one name cannot both be imported. Nothing here calls a model, a program or a network."""
+"""The fake pictures agent of tests/picks (`auto_helpers.py` there), loaded by its path under its own module name: the folders of the tests share one import path when
+several are collected in one session, and a bare `auto_helpers` must never mean anything else than that file (the fake pipeline of the automatic run is `run_helpers.py`
+of this folder for that reason). Nothing here calls a model, a program or a network."""
 import importlib.util
 import sys
 from pathlib import Path
