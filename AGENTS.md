@@ -38,7 +38,7 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
    automatic running on for a project and allowed a gate, `bti approve <project> <gate>` works for that gate; otherwise it exits 3. Never send the actor `human` and never look for another way to approve: stop and tell the owner which gate waits. `bti status` shows `automatic running` and who approved each gate.
 3. **Costs are marked, and you confirm only what the owner allowed.** An action with a cost (machine time, a model call or money) runs only with `--yes-cost`, and only if the owner allowed
    that kind of spending. Money (`paid`) is never yours: the owner starts it on the page. Add `--yes-cost` only when the owner asked for this work.
-4. **Never start a second long job on a project.** A voice, a draft, an export or a picture search is one job; wait for it (`bti job <id> --wait`, or `--wait` on the action) before anything of the same kind.
+4. **Never start a second long job on a project.** A voice, a draft, an export, a picture search or the agent's choice of pictures is one job; wait for it (`bti job <id> --wait`, or `--wait` on the action) before anything of the same kind. The agent's choice of pictures (`picks.auto`), a request-box turn (`picks.edit`, `draft.edit`) and a draft (`draft.start`) hold the one agent run of the project and also run one at a time.
    An action that waits only for a running job is not an error: exit 5.
 5. **Read the refusal.** Every error says `code`, `detail`, `fix` and `retry`; do what `fix` says. A refused batch of operations wrote nothing. A stale revision means someone changed the
    document: run the command again (the command reads the current revision itself).

@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {
   EDIT_CODES, TURN_STATUS, clockTime, minSec, durationWords, chapterLabel, chapterAt, scopeWords, pickScope, retryScope, addToSelection,
-  codeText, normStatus, turnView, quotaView, parseMoment, whenWords, modelName, modelOptionText, modelListState, progressView, previewRange, takeInPlan, newlyChanged, modelRows, modelChanges, applyAllModels,
+  codeText, normStatus, wayLine, turnView, quotaView, parseMoment, whenWords, modelName, modelOptionText, modelListState, progressView, previewRange, takeInPlan, newlyChanged, modelRows, modelChanges, applyAllModels,
 } from '../../bti/editor/static/js/editlogic.js';
 import { stageErrorText, isVietnamese } from '../../bti/editor/static/js/errmsg.js';
 import { EDIT_LABELS, SETTINGS_LABELS } from '../../bti/editor/static/js/labels.js';
@@ -395,9 +395,11 @@ test('c2box: escalate offers the slower way on step 5 and the search by hand on 
   assert.equal(sb.actions.escalate, 'slow');
   assert.deepEqual([sb.actions.undo, sb.actions.retry, sb.actions.preview], ['', false, false]);
   const pk = turnView({ id: 't5', instruction: 'thêm bản đồ', scope: { kind: 'beats', beats: ['b0001'] }, status: 'escalate', doc: 'picks', reason, summary: reason }, {});
-  assert.equal(pk.actions.escalate, 'manual');
+  assert.equal(pk.actions.escalate, 'agent');                                              // join2: the pictures agent is the first choice, the search by hand the second
+  assert.equal(pk.actions.manual, true);
+  assert.equal(sb.actions.manual, false);
   assert.equal(pk.extra, BOX_LABELS.pictures.escalate);
-  assert.match(pk.extra, /Agent chọn hình chưa có/);
+  assert.match(pk.extra, /agent chọn hình/);
   assert.match(pk.extra, /tìm hình bằng tay/);
   for (const v of [sb, pk]) for (const t of [v.badge, v.headline, v.extra]) assert.ok(isVietnamese(t), t);
 });
@@ -476,4 +478,74 @@ test('c2box: "Thử lại" on the pictures box drops lines that are gone', () =>
   assert.equal(retryBeatScope({ scope: { kind: 'beats', beats: ['b9999'] } }, ['b0001']), null);
   assert.deepEqual(retryBeatScope({ scope: { kind: 'chapter', chapter: 'c02' } }, []), { chapter: 'c02' });
   assert.deepEqual(retryBeatScope({ scope: { kind: 'all' } }, []), { all: true });
+});
+
+// ---------------------------------------------------------------- join2: a request the box cannot do is handed to the pictures agent, and the card follows it
+const AGENT_RUNNING = { id: 't10', at: '2026-11-19T11:00:00', instruction: 'thêm bản đồ Bruges', scope: { kind: 'beats', beats: ['b0004'], shots: null, chapter: null }, status: 'running', doc: 'picks', path: 'agent', escalated: true, job_id: 'j1', reason: 'Dự án chưa có hình bản đồ.' };
+const AGENT_DONE = { ...AGENT_RUNNING, status: 'applied', summary: 'Agent đã chọn hình cho 1/1 đoạn.', batch: null, has_undo: false, seconds: 61,
+  batch_changes: [{ target: { beat: 'b0004' }, time: '0:59', what: 'Đoạn 4: thay 2 hình' }], result: { lines_total: 1, lines_done: 1, lines_without: [], stopped: null } };
+
+test('join2: the card of an escalated request offers the pictures agent first and the search by hand second, both said in Vietnamese', () => {
+  const v = turnView({ ...AGENT_RUNNING, status: 'escalate', path: 'fast', escalated: false, job_id: null, summary: 'Dự án chưa có hình bản đồ.' }, {});
+  assert.deepEqual([v.actions.escalate, v.actions.manual, v.actions.undo, v.actions.retry], ['agent', true, '', false]);
+  assert.match(BOX_LABELS.pictures.agentButton, /^Để agent chọn hình$/);
+  assert.match(BOX_LABELS.pictures.agentHint, /vài phút/);                                  // the button says it takes minutes
+  assert.match(BOX_LABELS.pictures.agentTakes, /vài phút/);
+  for (const t of [BOX_LABELS.pictures.agentButton, BOX_LABELS.pictures.agentHint, BOX_LABELS.pictures.agentTakes, BOX_LABELS.pictures.agentDone, BOX_LABELS.pictures.agentUndoHint,
+    BOX_LABELS.pictures.agentUnusable, BOX_LABELS.pictures.agentWithout([4]), BOX_LABELS.pictures.agentWithout([4, 9])]) assert.ok(isVietnamese(t), t);
+});
+
+test('join2: while the pictures agent works the card is a running one that says it takes minutes and has Dừng', () => {
+  const v = turnView(AGENT_RUNNING, {});
+  assert.equal(v.status, 'running');
+  assert.equal(v.actions.cancel, true);
+  assert.equal(v.limits, BOX_LABELS.pictures.agentTakes);
+  assert.equal(v.way, '');
+  assert.equal(wayLine({ ...AGENT_RUNNING, seconds: 61, status: 'applied' }), 'agent chọn hình · mất 1 phút 1 giây');          // never "chuyển sang sửa sâu"
+  assert.equal(turnView({ ...AGENT_RUNNING, path: 'deep' }, {}).limits, '');
+});
+
+test('join2: the card of a finished agent run says the result, lists the sentences of its batches and sends the owner to the list of changes for the undo', () => {
+  const v = turnView(AGENT_DONE, {});
+  assert.equal(v.status, 'applied');
+  assert.equal(v.headline, 'Agent đã chọn hình cho 1/1 đoạn.');
+  assert.equal(v.showSentences, true);
+  assert.deepEqual(v.sentences, [{ text: 'Đoạn 4: thay 2 hình', time: '0:59' }]);
+  assert.equal(v.actions.undo, '');                                                           // several batches: each is undone from the list of changes
+  assert.equal(v.extra, BOX_LABELS.pictures.agentUndoHint);
+  assert.match(v.extra, /Lịch sử thay đổi/);
+  assert.equal(v.way, 'agent chọn hình · mất 1 phút 1 giây');
+  const part = turnView({ ...AGENT_DONE, summary: 'Agent đã chọn hình cho 1/2 đoạn. 1 đoạn chưa có hình phù hợp.', result: { lines_total: 2, lines_done: 1, lines_without: [{ beat: 'b0005', no: 5, why: 'x' }] } }, {});
+  assert.match(part.extra, /dòng 5/);
+  assert.match(part.extra, /tìm hình bằng tay/);
+  assert.equal(turnView({ ...AGENT_DONE, summary: '' }, {}).headline, BOX_LABELS.pictures.agentDone);                        // never an empty card
+});
+
+test('join2: a failed or stopped agent run says why in Vietnamese and can be handed over again', () => {
+  for (const code of ['picks_auto_no_output', 'picks_auto_limit', 'picks_auto_tampered', 'picks_auto_stale', 'agent_job_running', 'turn_not_escalated', 'picks_approved', 'picks_no_main', 'narration_not_approved']) {
+    const t = codeText(code);
+    assert.ok(isVietnamese(t), code);
+    assert.notEqual(t, EDIT_LABELS.failedGeneric, code);
+  }
+  const failed = turnView({ ...AGENT_RUNNING, status: 'failed', error: 'picks_auto_limit' }, {});
+  assert.equal(failed.headline, codeText('picks_auto_limit'));
+  assert.equal(failed.actions.retry, true);
+  assert.equal(turnView({ ...AGENT_RUNNING, status: 'cancelled', error: 'cancelled' }, {}).headline, EDIT_LABELS.cancelled);
+  const quota = turnView({ ...AGENT_RUNNING, status: 'failed', error: 'agy_rate_limit', retry_after_seconds: 3600 }, { now: new Date('2026-11-19T11:00:00') });
+  assert.equal(quota.actions.settings, true);
+});
+
+test('join2: the progress line of the pictures agent names its part (1/4 to 4/4) and what it does', () => {
+  const job = { progress: 0.1, meta: { action: 'auto' }, parts: [{ key: 'plan', title: 'Lập danh sách hình cần tìm (1/4)', state: 'running', note: 'Agent đang lập danh sách hình: bước 12/80, 3/20 phút.' }, { key: 'search', title: 'Tìm hình (2/4)', state: 'waiting', note: '' }] };
+  assert.equal(progressView(job).line, 'Lập danh sách hình cần tìm (1/4) - Agent đang lập danh sách hình: bước 12/80, 3/20 phút.');
+  assert.equal(progressView({ ...job, parts: [{ ...job.parts[0], state: 'done' }, { ...job.parts[1], state: 'running', note: '' }] }).line, 'Tìm hình (2/4)');
+  assert.equal(progressView({ progress: 0.2, parts: [{ key: 'edit', state: 'running', note: 'Đang nghĩ…' }] }).line, EDIT_LABELS.progress.think);          // the box's own job is unchanged
+});
+
+test('join2: no card of the agent path is empty or says an English word', () => {
+  for (const status of ['running', 'applied', 'failed', 'cancelled']) {
+    const v = turnView({ ...AGENT_RUNNING, status, summary: '', error: status === 'failed' ? 'edit_failed' : null }, {});
+    for (const x of [v.badge, v.headline, v.extra, v.limits].filter(Boolean)) assert.ok(isVietnamese(x), `${status}: ${x}`);
+    assert.ok(v.badge && (v.headline || v.extra || v.limits || v.status === 'running'), status);
+  }
 });

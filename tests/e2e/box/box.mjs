@@ -208,12 +208,14 @@ try {
     await snap('08-step4-undone');
   });
 
-  await step('step 4: a request that needs a picture the project does not have says so and offers the search by hand', async () => {
+  await step('step 4: a request that needs a picture the project does not have says so, offers the pictures agent first and the search by hand second', async () => {
     const raw = J((await api.get(U(S4, '/picks'))).json.picks);
     const t = await send(S4, true, 'thêm một tấm bản đồ Bruges cho dòng này');
     const card = await cardText(t.id);
-    check('the card says the picture is missing and that the agent of the pictures does not exist yet', t.status === 'escalate' && /Cần làm kỹ hơn/.test(card) && /bản đồ/.test(card) && /Agent chọn hình chưa có/.test(card), card);
-    check('the button "Tìm hình bằng tay" is there and opens the search', await ev(`!!document.querySelector('.prompt-turn-card[data-turn="${t.id}"] .prompt-btn-manual')`));
+    check('the card says the picture is missing and that the agent that chooses pictures can look for it (join2: it exists now)', t.status === 'escalate' && /Cần làm kỹ hơn/.test(card) && /bản đồ/.test(card) && /agent chọn hình/i.test(card) && !/Agent chọn hình chưa có/.test(card), card);
+    const agentBtn = await ev(`(() => { const b = document.querySelector('.prompt-turn-card[data-turn="${t.id}"] .prompt-btn-agent'); return b ? { text: b.textContent.trim(), title: b.title, disabled: b.disabled } : null; })()`);
+    check('the first button is "Để agent chọn hình" and its hint says it takes minutes', !!agentBtn && agentBtn.text === 'Để agent chọn hình' && /vài phút/.test(agentBtn.title), J(agentBtn));
+    check('the button "Tìm hình bằng tay" is there as the second choice and opens the search', await ev(`!!document.querySelector('.prompt-turn-card[data-turn="${t.id}"] .prompt-btn-manual')`) && await ev(`(() => { const a = document.querySelector('.prompt-turn-card[data-turn="${t.id}"] .prompt-btn-agent'), m = document.querySelector('.prompt-turn-card[data-turn="${t.id}"] .prompt-btn-manual'); return !!a && !!m && (a.compareDocumentPosition(m) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0; })()`));
     await p.click(`.prompt-turn-card[data-turn="${t.id}"] .prompt-btn-manual`); await sleep(600);
     check('the search of the page is shown', await ev(`!!document.querySelector('#pk-right .pk-searchform')`));
     check('nothing was written', J((await api.get(U(S4, '/picks'))).json.picks) === raw);

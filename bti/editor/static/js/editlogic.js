@@ -19,6 +19,7 @@ export const EDIT_CODES = [
   'unknown_op', 'out_of_scope', 'locked', 'validation_failed', 'unknown_shot', 'unknown_overlay', 'unknown_beat', 'unknown_asset', 'unknown_region', 'unknown_param',
   'unknown_slot', 'wrong_technique_kind', 'technique_unavailable', 'slot_kind_mismatch', 'shot_too_short', 'not_consecutive', 'span_mismatch',
   'invalid_field', 'invalid_request', 'edit_running', 'batch_not_found', 'turn_not_found', 'timing_unusable',
+  'agent_job_running', 'turn_not_escalated',                         // join2: one agent run at a time; a turn handed to the pictures agent
 ];
 
 const pad2 = (n) => String(n).padStart(2, '0');
@@ -156,7 +157,7 @@ export function addToSelection(selected, id, { multi, playing = false } = {}) {
 /** One Vietnamese sentence for an error code of the edit routes; never the code itself. */
 export function codeText(code) {
   if (typeof code !== 'string') return L.failedGeneric;
-  return STAGE_CODES.draft?.[code] || STAGE_CODES.ops?.[code] || STAGE_CODES.longjob?.[code] || L.failedGeneric;
+  return STAGE_CODES.draft?.[code] || STAGE_CODES.ops?.[code] || STAGE_CODES.longjob?.[code] || STAGE_CODES.picks?.[code] || L.failedGeneric;       // join2: a turn handed to the pictures agent can fail with its codes
 }
 const vi = (s) => (typeof s === 'string' && s.trim() && isVietnamese(s) && !ID_LOOKING.test(s) ? s.trim() : '');
 
@@ -202,7 +203,7 @@ const TONE = { running: 'run', applied: 'ok', no_change: 'muted', needs_choice: 
 export function wayLine(turn) {
   const bits = [];
   const path = L.path[turn?.path];
-  if (path) bits.push(turn.escalated ? `${path}, ${L.pathEscalated}` : path);
+  if (path) bits.push(turn.escalated && turn.path !== 'agent' ? `${path}, ${L.pathEscalated}` : path);
   const d = durationWords(turn?.seconds);
   if (d) bits.push(L.took(d));
   return bits.join(' · ');
@@ -232,7 +233,13 @@ export function turnView(turn, env = {}) {
   let headline = '';
   let extra = '';
   let quota = false;
-  if (status === 'applied') headline = summaryVi || (turn?.doc === 'picks' ? BL.pictures.applied : L.applied);
+  if (status === 'applied') {
+    headline = summaryVi || (turn?.doc === 'picks' ? (turn?.path === 'agent' ? BL.pictures.agentDone : BL.pictures.applied) : L.applied);
+    if (turn?.path === 'agent') {                                   // join2: handed to the pictures agent: what it could not fill, and where the undo is
+      const lost = (Array.isArray(turn?.result?.lines_without) ? turn.result.lines_without : []).map((w) => Number(w?.no)).filter((n) => Number.isFinite(n) && n > 0);
+      extra = [lost.length ? BL.pictures.agentWithout(lost) : '', BL.pictures.agentUndoHint].filter(Boolean).join(' ');
+    }
+  }
   else if (status === 'no_change') { headline = summaryVi || L.noChange; extra = L.noChangeHelp; }
   else if (status === 'cancelled') headline = L.cancelled;
   else if (status === 'undone') headline = L.undone;
@@ -263,7 +270,7 @@ export function turnView(turn, env = {}) {
   // c2box: a turn of the typed operations also carries the batch's own sentences (what the card shows for the pictures, which have no shot)
   const sentences = (Array.isArray(turn?.batch_changes) ? turn.batch_changes : []).map((b) => ({ text: String(b?.what || ''), time: b?.time || null })).filter((b) => b.text);
   const slowLimits = status === 'running' && turn?.path === 'deep' && turn?.limits && Number.isFinite(Number(turn.limits.minutes))
-    ? BL.slow.limits(Number(turn.limits.minutes), Number(turn.limits.repairs ?? 0)) : '';
+    ? BL.slow.limits(Number(turn.limits.minutes), Number(turn.limits.repairs ?? 0)) : (status === 'running' && turn?.path === 'agent' ? BL.pictures.agentTakes : '');       // join2
   return {
     id: turn?.id || '', status, tone: TONE[status], badge: BL.status[status] || L.status[status], doc: turn?.doc === 'picks' ? 'picks' : 'storyboard', sentences, limits: slowLimits,
     time: clockTime(turn?.at), scope: scopeWords(turn?.scope, { shots, chapters }), instruction: String(turn?.instruction || ''),
@@ -273,11 +280,13 @@ export function turnView(turn, env = {}) {
     actions: {
       cancel: status === 'running',
       preview: canPreview,
-      undo: status === 'applied' ? (turn?.has_undo === false ? 'gone' : 'yes') : '',
+      undo: status === 'applied' && turn?.path !== 'agent' ? (turn?.has_undo === false ? 'gone' : 'yes') : '',       // join2: the pictures agent writes several batches: each is undone from the list of changes
+
       choices: status === 'needs_choice',
       retry: status === 'failed' && !!turn?.instruction,
       settings: quota,                                 // "Chọn mô hình khác": opens the settings dialog
-      escalate: status === 'escalate' ? (turn?.doc === 'picks' ? 'manual' : 'slow') : '',          // c2box: "Làm kỹ hơn" (step 5) or "Tìm hình bằng tay" (step 4)
+      escalate: status === 'escalate' ? (turn?.doc === 'picks' ? 'agent' : 'slow') : '',          // c2box: "Làm kỹ hơn" (step 5); join2: "Để agent chọn hình" (step 4)
+      manual: status === 'escalate' && turn?.doc === 'picks',                                      // c2box: "Tìm hình bằng tay" stays the second choice of step 4
     },
   };
 }
@@ -292,7 +301,8 @@ export function progressView(job) {
   if (part) {
     const note = String(part.note || '');
     let m;
-    if (/^Đang nghĩ/.test(note)) line = P.think;
+    if (job?.meta?.action === 'auto') line = [part.title, note].filter(Boolean).join(' - ') || P.agent;                              // join2: the pictures agent's own parts (plan, search, choose, write) say what they do
+    else if (/^Đang nghĩ/.test(note)) line = P.think;
     else if (/^Đang kiểm tra|^Đang ghép/.test(note)) line = P.check;
     else if (/^Chuyển sang/.test(note)) line = P.deep;
     else if ((m = /^Bước (\d+)/.exec(note))) line = P.agentStep(Number(m[1]));

@@ -1,5 +1,5 @@
 /* "Chọn hình" view. Scoped under .v-pk (the view root and the dialogs it opens). Not yet linked from index.html: CORE adds the <link>. */
-.pk-root { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-width: 1280px; }
+.pk-root { display: grid; grid-template-rows: auto auto minmax(0, 1fr); height: 100%; min-width: 1280px; }          /* c3picks: the agent's bar (#pk-auto) is the middle row; c2box: four columns need 1280 px */
 .v-pk .pk-top { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); }
 .v-pk .pk-main { display: flex; gap: 12px; align-items: center; flex: 1 1 320px; min-width: 0; }
 .v-pk .pk-maintitle { font-size: 15px; font-weight: 600; }
@@ -37,7 +37,8 @@
 .v-pk .pk-thumb { flex: none; border-radius: 4px; border: 1px solid var(--border); background-color: #000; background-repeat: no-repeat; }
 .v-pk .pk-thumb.fit { background-size: contain; background-position: center; }
 .v-pk .pk-quick { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.v-pk .pk-beatfoot { display: flex; gap: 10px; align-items: center; margin-top: 14px; }
+.v-pk .pk-beatfoot { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; margin-top: 14px; }          /* join2: wraps, so that the column of the line has no horizontal scroll bar at 1280 px */
+.v-pk .pk-beatfoot input.grow { flex: 1 1 220px; min-width: 0; }
 .v-pk .cb { display: inline-flex; gap: 4px; align-items: center; color: var(--muted); font-size: 12px; white-space: nowrap; }
 .v-pk .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
 .v-pk .tabs button { padding: 3px 9px; font-size: 12px; }
@@ -88,6 +89,21 @@
 .v-pk .pk-vtrim-btnwrap { display: inline-flex; gap: 6px; align-items: center; }
 .v-pk .pk-btn-reason { font-size: 11px; color: var(--muted); }
 .v-pk .pk-tray-video { flex-shrink: 0; }
+
+/* c3picks: the agent's bar of the pictures page ("Để agent chọn hình", views/picks_auto.js) and the reason it gives under a line's pictures */
+.v-pk .pk-auto { padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--border); }
+.v-pk .pk-auto-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.v-pk .pk-auto-title { font-size: 13px; }
+.v-pk .pk-auto-prog { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12px; }
+.v-pk .pk-auto-prog progress { width: 220px; }
+.v-pk .pk-auto-result { margin-top: 6px; }
+.v-pk .pk-auto-result .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.v-pk .pk-auto-sentence { font-weight: 600; }
+.v-pk .pk-auto-without { margin-top: 4px; font-size: 12px; }
+.v-pk .pk-auto-without ul { margin: 4px 0 0 18px; padding: 0; }
+.v-pk .pk-auto .pk-banner { margin: 6px 0 0; }
+.v-pk .pk-auto .hint.warn { color: var(--warn); }
+.v-pk .pk-agentwhy { margin: 6px 0; padding: 6px 10px; font-size: 12px; border-left: 3px solid var(--accent); background: var(--elev); border-radius: var(--radius); }
 
 /* c2box: the prompt box and the list of changes of this step (promptedit.js, changeslist.js); the same classes as on the storyboard page */
 .v-pk .pk-box { padding: 0; display: flex; flex-direction: column; overflow: hidden; }

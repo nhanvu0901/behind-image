@@ -53,7 +53,8 @@ NEEDS: dict[str, tuple[str, str]] = {
     "history_copy": ("There is no good copy of the storyboard in history/.", "Make a new draft: draft.start."),
     "audio_mix": ("The audio mix the storyboard names is missing.", "Call voice.generate."),
     "timing": ("timing.json is missing.", "Call voice.generate."),
-    "no_running_job": ("A job of the same kind is already running for this project.", "Wait for it (see `jobs`), or cancel it with the matching *.cancel action."),
+    "no_running_job": ("A job of the same kind is already running for this project; for the agent's work (picks.auto, picks.edit, draft.start, draft.edit) any other agent job of the project counts: the agent's choice of pictures, a prompt-box turn or a draft run one at a time.",
+                       "Wait for it (see `jobs`), or cancel it with the matching *.cancel action."),
     "agent_usable": ("The agent that would run cannot run on this machine (see `agent.reason`).", "Choose another agent: PUT /api/projects/{pid}/agent, GET /api/agents lists them."),
     "suggest_enabled": ("Picture suggestions are switched off on this machine.", "Use picks.search instead."),
     "locked_beats": ("Some beats of the narration are locked and would be replaced.", "Unlock them, or send {\"force\": true} (the body shown does)."),
@@ -123,18 +124,21 @@ SPECS: list[Spec] = [
          when="Once the picks step is open. Paid: `auto_ok` is false, the owner must agree. Needs the approved narration and suggestions switched on."),
     Spec("picks.put", "picks", "Lưu chọn hình", "PUT", P + "/picks",
          when="Once the picks step is open. The caller supplies the picks document (`fill`)."),
-    Spec("picks.approve", "picks", "Duyệt chọn hình", "POST", P + "/picks/approve", gate=True,
-         when="While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances."),
+    Spec("picks.auto", "picks", "Để agent chọn hình", "POST", P + "/picks/auto", long_job=True, follow=LONGJOBS, role="picks",       # c3picks
+         cost=("model", "about 20 minutes"),
+         when="Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true, and while another long job of the project runs (the agent's choice, a prompt-box turn or a draft: one at a time). It never approves and never calls the paid suggestion service. Advances while no line has pictures yet."),
+    Spec("picks.edit", "picks", "Nhờ agent sửa chọn hình", "POST", P + "/picks/edit", long_job=True, follow=LONGJOBS, role="picks",       # c2box
+         cost=("model", "about 30 seconds"),
+         when="Once the picks step is open. Ready unless the agent cannot run or another long job of the project runs (a prompt-box turn, a draft or the agent's choice of pictures: one at a time). The caller supplies the instruction and the scope (`fill`): {\"beats\": [ids]}, {\"chapter\": id} or {\"all\": true}. One call, typed picks operations (never an import), one batch in the change log; a request that needs a new picture ends as `escalate`, and then POST .../picks/auto with those lines does the work."),
     Spec("picks.ops", "picks", "Sửa chọn hình", "POST", P + "/picks/ops",
          when="Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md."),
-    Spec("picks.edit", "picks", "Nhờ agent sửa chọn hình", "POST", P + "/picks/edit", long_job=True, follow=LONGJOBS, role="picks",
-         cost=("model", "about 30 seconds"),
-         when="Once the picks step is open. Ready unless a draft or edit job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`): {\"beats\": [ids]}, {\"chapter\": id} or {\"all\": true}. One call, typed picks operations (never an import), one batch in the change log."),
-    Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions or a clip) of the project runs."),
+    Spec("picks.approve", "picks", "Duyệt chọn hình", "POST", P + "/picks/approve", gate=True,
+         when="While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances."),
+    Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions, a clip or the agent's choice of pictures) of the project runs."),
     # ---- storyboard (step 5, page step id `edit`)
     Spec("draft.start", "edit", "Dựng bản nháp", "POST", P + "/draft/start", long_job=True, follow=LONGJOBS, role="draft",
          cost=("model", "about 20 minutes"),
-         when="Once step 5 is open. Needs the voice and the approved picks, no draft job running and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard."),
+         when="Once step 5 is open. Needs the voice and the approved picks, no draft job running, the pictures agent not working (one agent run at a time) and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard."),
     Spec("proposal.apply", "edit", "Áp dụng", "POST", P + "/proposals/{prop_id}/apply",
          when="While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date."),
     Spec("storyboard.restore", "edit", "Khôi phục bản gần nhất", "POST", P + "/storyboard/restore",
@@ -155,7 +159,7 @@ SPECS: list[Spec] = [
          when="The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document."),
     Spec("draft.edit", "edit", "Nhờ agent sửa", "POST", P + "/draft/edit", long_job=True, follow=LONGJOBS, role="edit.fast",
          cost=("model", "from about 30 seconds to about 20 minutes"),
-         when="While the storyboard is readable. Ready unless a draft job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`)."),
+         when="While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time) or the agent cannot run. The caller supplies the instruction and the scope (`fill`)."),
     Spec("identity.set", "edit", "Chọn kiểu mở đầu", "PUT", P + "/identity",
          when="While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them."),
     Spec("draft.cancel", "edit", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a draft job of the project runs."),
@@ -217,6 +221,7 @@ class Ctx:
         self.picks_error: str | None = None
         self.picks_rev: str | None = None
         self.picks_main = self.picks_ok = False
+        self.picks_lines = (0, 0)             # c3picks: (lines of the narration, lines that are settled: pictures or skipped)
         self.picks_issues: list[dict] = []
         self.narration_present = False
         self.draft_ready = {"voice": False, "picks": False}
@@ -233,6 +238,7 @@ class Ctx:
         self.change_count = 0
         self.change_doc: str | None = None
         self.undo_target: dict | None = None
+        self.picks_agent_running = False                  # join2: the job of picks.auto runs (kind `picks`, meta.action `auto`): it holds the agent like a `draft` job does
 
     # -- steps
     def page_state(self, sid: str) -> str:
@@ -255,6 +261,11 @@ class Ctx:
 
     def busy(self, family: str) -> bool:
         return any(FAMILY.get(j["kind"]) == family for j in self.jobs)
+
+    def agent_busy(self, family: str) -> bool:
+        """join2: may the agent's work of `family` (`draft` or `picks`) not start now? A job of the same family runs, or an agent job of the other
+        family does: a prompt-box turn or a draft (kind `draft`) and the agent's choice of pictures (kind `picks`) run one at a time per project."""
+        return self.busy(family) or self.busy("draft") or self.picks_agent_running
 
     # -- agent
     def agent(self, role: str) -> dict:
@@ -316,6 +327,8 @@ def _load_picks(c: Ctx) -> None:
     c.picks_ops_rev = doc.revision(pd if pd is not None else doc.empty())         # what the operations call the revision of a project with no picks yet
     c.picks_main = bool(pd and pd.get("main_asset") and pd["main_asset"] in pd["assets"])
     c.picks_ok = bool(doc.approval_state(pd, nv["rev"], nv["approved"])["approved"])
+    beats = (pd or {}).get("beats") or {}
+    c.picks_lines = (len(nv["beat_ids"]), sum(1 for b in nv["beat_ids"] if (beats.get(b) or {}).get("items") or (beats.get(b) or {}).get("status") == "skip"))     # c3picks
     c.narration_ok = c.narration_ok or bool(nv["approved"])
     if pd is not None:
         c.picks_issues = [i for i in doc.blocking(doc.issues(pd, c.d, nv["beat_ids"] if nv["present"] else None)) if i.get("code") != "no_main"]
@@ -436,6 +449,16 @@ def _load_changes(c: Ctx) -> None:
         later = [x for x in log.records(kind) if number(x["batch"]) > number(r["batch"])]
         if not U.find_conflicts(kind, cur, both[0], both[1], later)[1]:
             c.undo_target = {"batch": r["batch"], "doc": kind, "rev": rev}
+            return
+
+
+def _load_agent_jobs(c: Ctx, longjobs: Any) -> None:
+    """join2: whether the agent's choice of pictures (a `picks` job with `meta.action` `auto`) runs: the one `picks` job that holds the agent."""
+    if longjobs is None:
+        return
+    for j in longjobs.for_project(c.pid, c.d, kind="picks"):
+        if j.get("state") in ACTIVE_JOB and (j.get("meta") or {}).get("action") == "auto":
+            c.picks_agent_running = True
             return
 
 
@@ -586,6 +609,22 @@ def b_picks_suggest(c: Ctx):
     return E(needs, fill=["beats", "confirm_paid"], template={"beats": None, "confirm_paid": None})
 
 
+def b_picks_auto(c: Ctx):                                                   # c3picks
+    if not _picks_open(c):
+        return None
+    needs = [] if c.narration_ok else ["narration_approved"]
+    if c.picks_error:
+        needs.append("documents_readable")
+    elif not c.picks_main:
+        needs.append("main_asset")
+    if c.agent_busy("picks"):                                               # join2: not while a prompt-box turn or a draft runs either
+        needs.append("no_running_job")
+    needs += _model_needs(c, "picks")
+    total, settled = c.picks_lines
+    body = {"beats": None, "redo": bool(c.picks_ok or (total and settled == total)), "base_rev": c.picks_ops_rev}       # every line settled or approved: only `redo` runs
+    return E(list(dict.fromkeys(needs)), body, advances=bool(not c.picks_ok and total and not settled))
+
+
 def b_picks_put(c: Ctx):
     if not _picks_open(c):
         return None
@@ -634,7 +673,7 @@ def b_picks_edit(c: Ctx):
     """c2box: the prompt box of step 4. The edit job is of the draft family (one agent call at a time), its model is the role `picks`."""
     if not _picks_open(c):
         return None
-    needs = (["documents_readable"] if c.picks_error else []) + (["no_running_job"] if c.busy("draft") else []) + _model_needs(c, "picks")
+    needs = (["documents_readable"] if c.picks_error else []) + (["no_running_job"] if c.agent_busy("draft") else []) + _model_needs(c, "picks")      # join2: not while the agent's choice of pictures runs
     return E(needs, fill=["instruction", "scope"], template={"instruction": None, "scope": None, "base_rev": c.picks_ops_rev})
 
 
@@ -650,7 +689,7 @@ def b_draft_start(c: Ctx):
         needs.append("voice_done")
     if not c.draft_ready["picks"]:
         needs.append("picks_approved")
-    if c.busy("draft"):
+    if c.agent_busy("draft"):                                               # join2: nor while the agent's choice of pictures runs
         needs.append("no_running_job")
     needs += _model_needs(c, "draft")
     st = c.draft_state.get("state")
@@ -716,7 +755,7 @@ def b_changes_undo(c: Ctx):
 def b_draft_edit(c: Ctx):
     if not _sb_ok(c):
         return None
-    needs = (["no_running_job"] if c.busy("draft") else []) + _model_needs(c, "edit.fast")
+    needs = (["no_running_job"] if c.agent_busy("draft") else []) + _model_needs(c, "edit.fast")
     return E(needs, fill=["instruction", "scope"], template={"instruction": None, "scope": None, "base_rev": c.sb_rev, "mode": "auto"})
 
 
@@ -745,7 +784,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "narration.approve": b_narration_approve, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
-    "picks.approve": b_picks_approve, "picks.ops": b_picks_ops, "picks.edit": b_picks_edit,
+    "picks.auto": b_picks_auto, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
@@ -847,6 +886,7 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
     _try(lambda: _load_changes(c))
     _try(lambda: _load_draft(c))
     _try(lambda: _load_auto(c))                                      # c5cli
+    _try(lambda: _load_agent_jobs(c, longjobs))                      # join2
     steps = _steps_out(pipe)
     for p in c.problems:                                            # a step that carries a problem says so on its line
         s = next((x for x in steps if x["step"] == p.get("step")), None)

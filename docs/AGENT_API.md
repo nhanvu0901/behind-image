@@ -167,10 +167,12 @@ loop:
 | `picks.import_clip` | picks | `POST /api/projects/{pid}/picks/import-clip` |  | yes |  | machine_time: about 1 minute | Once the picks step is open. Ready unless a picks job runs. The caller supplies the link and the range (`fill`). |
 | `picks.suggest` | picks | `POST /api/projects/{pid}/picks/suggest` |  | yes |  | paid: You.com calls, charged per beat (auto_ok false) | Once the picks step is open. Paid: `auto_ok` is false, the owner must agree. Needs the approved narration and suggestions switched on. |
 | `picks.put` | picks | `PUT /api/projects/{pid}/picks` |  |  |  |  | Once the picks step is open. The caller supplies the picks document (`fill`). |
-| `picks.approve` | picks | `POST /api/projects/{pid}/picks/approve` | yes |  |  |  | While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances. |
+| `picks.auto` | picks | `POST /api/projects/{pid}/picks/auto` |  | yes | picks | model: about 20 minutes | Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true, and while another long job of the project runs (the agent's choice, a prompt-box turn or a draft: one at a time). It never approves and never calls the paid suggestion service. Advances while no line has pictures yet. |
+| `picks.edit` | picks | `POST /api/projects/{pid}/picks/edit` |  | yes | picks | model: about 30 seconds | Once the picks step is open. Ready unless the agent cannot run or another long job of the project runs (a prompt-box turn, a draft or the agent's choice of pictures: one at a time). The caller supplies the instruction and the scope (`fill`): {"beats": [ids]}, {"chapter": id} or {"all": true}. One call, typed picks operations (never an import), one batch in the change log; a request that needs a new picture ends as `escalate`, and then POST .../picks/auto with those lines does the work. |
 | `picks.ops` | picks | `POST /api/projects/{pid}/picks/ops` |  |  |  |  | Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
-| `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions or a clip) of the project runs. |
-| `draft.start` | edit | `POST /api/projects/{pid}/draft/start` |  | yes | draft | model: about 20 minutes | Once step 5 is open. Needs the voice and the approved picks, no draft job running and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. |
+| `picks.approve` | picks | `POST /api/projects/{pid}/picks/approve` | yes |  |  |  | While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances. |
+| `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions, a clip or the agent's choice of pictures) of the project runs. |
+| `draft.start` | edit | `POST /api/projects/{pid}/draft/start` |  | yes | draft | model: about 20 minutes | Once step 5 is open. Needs the voice and the approved picks, no draft job running, the pictures agent not working (one agent run at a time) and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. |
 | `proposal.apply` | edit | `POST /api/projects/{pid}/proposals/{prop_id}/apply` |  |  |  |  | While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date. |
 | `storyboard.restore` | edit | `POST /api/projects/{pid}/storyboard/restore` |  |  |  |  | Only when storyboard.json is unreadable. Ready when history/ has a good copy. It is the repair: listed first. |
 | `storyboard.validate` | edit | `GET /api/projects/{pid}` |  |  |  |  | While the storyboard is readable. Always ready; the answer's `issues` are the validation of the saved storyboard. |
@@ -180,7 +182,7 @@ loop:
 | `storyboard.ops` | edit | `POST /api/projects/{pid}/storyboard/ops` |  |  |  |  | While the storyboard is readable. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
 | `changes.list` | edit | `GET /api/projects/{pid}/changes` |  |  |  |  | Once the change log holds a batch (of the picks or the storyboard). Always ready. `step` is the step of the newest batch's document. |
 | `changes.undo` | edit | `POST /api/projects/{pid}/changes/{batch}/undo` |  |  |  |  | The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document. |
-| `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
+| `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time) or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
 | `identity.set` | edit | `PUT /api/projects/{pid}/identity` |  |  |  |  | While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. |
 | `draft.cancel` | edit | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a draft job of the project runs. |
 | `export.start` | export | `POST /api/projects/{pid}/export/start` |  | yes |  | machine_time: about 25 minutes | Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. |
@@ -209,7 +211,7 @@ loop:
 | `history_copy` | There is no good copy of the storyboard in history/. | Make a new draft: draft.start. |
 | `audio_mix` | The audio mix the storyboard names is missing. | Call voice.generate. |
 | `timing` | timing.json is missing. | Call voice.generate. |
-| `no_running_job` | A job of the same kind is already running for this project. | Wait for it (see `jobs`), or cancel it with the matching *.cancel action. |
+| `no_running_job` | A job of the same kind is already running for this project; for the agent's work (picks.auto, picks.edit, draft.start, draft.edit) any other agent job of the project counts: the agent's choice of pictures, a prompt-box turn or a draft run one at a time. | Wait for it (see `jobs`), or cancel it with the matching *.cancel action. |
 | `agent_usable` | The agent that would run cannot run on this machine (see `agent.reason`). | Choose another agent: PUT /api/projects/{pid}/agent, GET /api/agents lists them. |
 | `suggest_enabled` | Picture suggestions are switched off on this machine. | Use picks.search instead. |
 | `locked_beats` | Some beats of the narration are locked and would be replaced. | Unlock them, or send {"force": true} (the body shown does). |
@@ -258,6 +260,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 |---|---|---|
 | `accept_all_required` | after_fix | This project has no storyboard yet: call apply again with {"accept": "all"}. |
 | `accept_invalid` | after_fix | Send accept as "all" or as a list of change ids. |
+| `agent_job_running` | later | Another agent job of this project is running (the agent's choice of pictures, a prompt-box turn or a draft): wait for it (GET /api/projects/{pid}/longjobs) or cancel it, then call again. |
 | `agent_unavailable` | after_fix | The agent cannot run on this machine: choose another agent (PUT /api/projects/{pid}/agent, GET /api/agents lists them). |
 | `agentic_role_needs_agy` | after_fix | Choose an agy or Claude Code model for this role (it works with files and tools). |
 | `agy_auth` | after_fix | Ask the owner to sign agy in once on the server, then call again. |
@@ -315,7 +318,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `draft_not_ready` | after_fix | Make the voice (timing.json) and approve the picks first: GET /api/projects/{pid}/state shows which is missing. |
 | `draft_tampered` | after_fix | The agent changed files outside its workspace and its result was dropped: check the project, then run the draft again. |
 | `duplicate_ref` | after_fix | Give every ref in a batch a different name. |
-| `edit_bad_scope` | after_fix | Send scope as exactly one of {"shots": [ids]}, {"chapter": id} or {"all": true}, an instruction of 1 to 2000 characters and mode auto, fast or deep. |
+| `edit_bad_scope` | after_fix | Send scope as exactly one of {"shots": [ids]} (step 5), {"beats": [ids]} (step 4), {"chapter": id} or {"all": true}, an instruction of 1 to 2000 characters and, for step 5, mode auto, fast or deep. |
 | `edit_degraded` | after_fix | The edit was refused because a shot would be degraded or incomplete: narrow the instruction. |
 | `edit_empty_instruction` | after_fix | Send `instruction` as a non-empty text. |
 | `edit_failed` | later | The edit failed unexpectedly and nothing changed: call again. |
@@ -324,7 +327,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `edit_no_storyboard` | after_fix | Editing needs an existing storyboard: apply the first draft proposal first. |
 | `edit_outside_scope` | after_fix | The agent changed something outside the scope or a locked shot: narrow the instruction to the scope and call again. |
 | `edit_running` | later | An edit is running: cancel it (POST /api/longjobs/{job_id}/cancel) or wait, then delete the thread. |
-| `escalate` | after_fix | This request needs a closer look at the picture or more than the chosen scope: call again with mode deep. |
+| `escalate` | after_fix | This request needs a closer look at the picture, more than the chosen scope or a picture the project does not have: on step 5 call again with mode deep, on step 4 search for the picture by hand. |
 | `export_file_not_found` | no | Use a file name listed by GET /api/projects/{pid}/export (`files`). |
 | `file_too_large` | after_fix | Send a file of a supported kind (jpg, jpeg, png, webp, mp4, webm, mov or m4v) of at most 80 MB. |
 | `forbidden` | no | This call is not allowed on this project; read `detail` for the rule. |
@@ -400,11 +403,17 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `page_not_found` | no | Ask for a page that exists in the book. |
 | `page_not_in_work` | no | Ask for a page inside the page range of this work. |
 | `part_missing` | later | A rendered part is missing: call POST /api/projects/{pid}/export/start again; finished parts are kept. |
+| `picks_approved` | after_fix | The picks are approved: send redo true to let the agent choose again (the approval is dropped and the picks must be approved again). |
+| `picks_auto_limit` | later | The agent used up the limits of one session (time and steps): call POST /api/projects/{pid}/picks/auto again; the parts that finished are kept. |
+| `picks_auto_no_output` | later | The agent wrote no usable file even after one repair message: call POST /api/projects/{pid}/picks/auto again, or choose the other agent. |
+| `picks_auto_stale` | after_fix | The narration or the main painting changed while the agent worked: call POST /api/projects/{pid}/picks/auto again. |
+| `picks_auto_tampered` | after_fix | The agent changed files outside its work folder and its result was dropped: check the project, then call POST /api/projects/{pid}/picks/auto again. |
 | `picks_corrupt` | after_fix | Save the picks again (PUT /api/projects/{pid}/picks) or repair picks.json: it cannot be read. |
 | `picks_error` | after_fix | Read `detail`, correct the request or the picks, then call again. |
 | `picks_have_errors` | after_fix | Fix the errors listed in `issues` (the main painting, missing files, unknown assets or regions), then approve again. |
 | `picks_missing` | after_fix | Choose the pictures first (see GET /api/projects/{pid}/picks): picks.json is missing. |
 | `picks_no_main` | after_fix | Choose the main painting (POST /api/projects/{pid}/picks/import with as_main), then approve the picks. |
+| `picks_nothing_to_do` | no | Every line already has pictures: send redo true to choose them again, or name the lines in `beats`. |
 | `picks_shape` | after_fix | Save the picks again (PUT /api/projects/{pid}/picks): picks.json has the wrong shape (see `detail`). |
 | `plan_failed` | after_fix | The export could not be planned: GET /api/projects/{pid} shows the storyboard's issues; fix them first. |
 | `preview_running` | later | Wait until the preview is finished (GET /api/jobs/{job_id}), then call again. |
@@ -446,7 +455,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `source_unavailable` | later | The service this call needs is not answering; call again in a minute. |
 | `source_unreachable` | later | Send the call again in a minute; nothing was written. |
 | `span_mismatch` | after_fix | Make the first new shot start where the replaced run starts and keep every other start inside the run. |
-| `spec_invalid` | later | The model answered in the wrong shape even after one repair: call again, or use mode deep. |
+| `spec_invalid` | later | The model answered in the wrong shape, or with operations the server refused, even after one repair: call again with the request said more plainly. |
 | `spend_needs_human` | no | Ask the owner to start this paid call on the page: an agent never spends money, whatever the settings of automatic running. |
 | `split_refused` | after_fix | Read `detail`: choose a work that can be split off. |
 | `stale` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |
@@ -481,6 +490,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `turn_data_lost` | after_fix | The stored storyboards of this turn are gone: send the instruction again as a new edit. |
 | `turn_frame_not_found` | no | Use `when` before or after, and a turn and shot that exist (GET /api/projects/{pid}/draft/thread). |
 | `turn_not_applied` | no | Only an applied turn can be undone: GET /api/projects/{pid}/draft/thread shows its status. |
+| `turn_not_escalated` | after_fix | That turn did not end as `escalate` (or an agent run of it that failed): only such a turn can be handed to the pictures agent; send POST /api/projects/{pid}/picks/auto with the lines instead. |
 | `turn_not_found` | no | Use a turn id listed by GET /api/projects/{pid}/draft/thread. |
 | `undo_conflict` | after_fix | Undo the later batches first (newest first), or leave the things named in conflicts as they are. |
 | `undo_unavailable` | no | Make the change again with new operations: the copies of this batch were removed when the log was pruned. |
@@ -532,3 +542,39 @@ example, the change log, undo and the table of their error codes. The state answ
 `changes.undo` (section 2). Their refusals have the same error body as every other (section 4): `code`, `detail`, `fix`, `retry`, and `fields` with the
 `path` of every wrong field (`ops[1].params.region`), `op_index`, `current_rev`, `issues` or `conflicts` where they apply. A request refused by the size
 or depth limit before it reaches a route (`too_large`, `too_deep`) has them too.
+
+## 7. The agent that chooses the pictures (`picks.auto`)
+
+`POST /api/projects/{pid}/picks/auto` starts one long job (kind `picks`, follow it at `GET /api/longjobs/{job_id}`, cancel it with `POST /api/longjobs/{job_id}/cancel`) that
+fills step 4 by itself. Body, all optional: `{"beats": [ids] | null, "redo": false, "base_rev": "<rev of GET .../picks>", "model": "<model id, tests only>"}`. It works on the
+lines that have no pictures (a line that already has pictures, or that is skipped, is left alone) unless `redo` is true; named `beats` limit it to those lines. Answer:
+`{"job_id", "model", "agent", "lines"}`.
+
+Four parts, each a part of the job (`parts[].key`): `plan` (the agent plans what each line needs and proposes boxes on the main painting), `search` (code: the free picture
+sources, never the paid suggestion service), `choose` (the agent looks at the candidates and at each box) and `write` (code: the typed operations, in batches whose actor is
+`agent:<model id>` and whose note says what the batch is, so that `GET .../changes` lists them and `POST .../changes/{batch}/undo` takes them back). The job never approves.
+Starting it again resumes a run that did not finish. Refusals (all with `code`, `fix`, `retry`): `narration_not_approved`, `picks_no_main`, `main_asset_unreadable`, `picks_approved`
+(approved picks need `redo`: the approval is dropped when the agent changes anything), `picks_nothing_to_do` (every line already has pictures), `not_found` (a line that is not in
+the narration), `stale` (`base_rev`), `busy` (a picks job runs), `agy_missing`, `claude_missing`, `claude_auth`. A failed job carries `error_code`: `picks_auto_no_output`,
+`picks_auto_limit`, `picks_auto_tampered`, `picks_auto_stale`, or the runner's own (`agy_rate_limit` and `claude_rate_limit` say when the quota opens again in `meta.retry_at`).
+
+`GET /api/projects/{pid}/picks/auto` answers `{"running": job | null, "last": {"finished", "job_id", "result", "model", "agent"} | null, "reasons": {beat: reason}, "agent", "limits"}`.
+The job's `result` (also `last.result`): `lines_total`, `lines_done`, `lines_with_pictures`, `lines_kept` (lines that need nothing new), `lines_without` (`[{beat, no, code, why}]`: lines
+nothing was found for, left as they were), `missing` (every wanted picture that was not found, with `why`), `pictures_imported`, `regions_made`, `regions_dropped`, `clips`, `batches`,
+`lines_by_others` (lines the owner filled meanwhile), `stopped` (`"time"` when the write part ran out of time), `sentence` (`Agent đã chọn hình cho 25/28 đoạn. 3 đoạn chưa có hình phù hợp.`),
+`limits`. Each line the agent wrote carries its reason as the line's note (`beats.<id>.note`); `reasons` lists them. The same function is `bti.picks.auto.escalate(pid, pdir, beat_ids, note=...)`.
+
+## 8. The prompt box of step 4 and the hand-over to the pictures agent (`picks.edit`, `picks.auto`)
+
+Step 4 has two ways to let a model work, and they join here. **The prompt box** (`picks.edit`, `POST /api/projects/{pid}/picks/edit`: `{"instruction", "scope": {"beats": [ids]} | {"chapter": id} | {"all": true}, "base_rev"?, "model"?}`)
+is one model call that answers typed picks operations: it rearranges, adds and removes pictures and regions the project already has, in one batch of the change log, and cannot import or look. A request that needs a
+picture the project does not have ends as an `escalate` turn: nothing was written, `GET .../picks/edit/thread` has the turn with `status` `escalate` and the `reason`. **The pictures agent** (`picks.auto`, section 7) is what does that work: for
+those lines, call `POST /api/projects/{pid}/picks/auto` with `{"beats": [those lines]}` (the command: `bti do <project> picks.auto --yes-cost --wait --set beats=[...]`), or hand the turn over as the page does,
+`POST /api/projects/{pid}/picks/edit/{turn_id}/escalate` (body optional, `{"model"?}`): it calls `bti.picks.auto.escalate` for exactly the lines of the turn's scope, choosing them again (`redo`), with the owner's request in front of the agent;
+the answer is the one of `picks/auto` plus `turn_id`; the turn becomes `running` on that job (`path` `agent`, `job_id`), and when the job ends the thread gives it `status` `applied` with `summary` (the sentence of the result), `batch_changes` (the sentences of the batches the
+agent wrote), `result` (`lines_total`, `lines_done`, `lines_without`) or `failed`/`cancelled` with the code (a turn that failed or was stopped can be handed over again). Only a turn that ended as `escalate`, or an agent run of a turn that failed or was stopped, can be handed over
+(`turn_not_escalated`). The turn has no batch of its own: every batch the agent wrote is undone one at a time from `GET .../changes` and `POST .../changes/{batch}/undo`.
+
+**One agent run at a time per project.** The agent in a folder (`picks.auto`, a job of kind `picks`), a prompt-box turn of either step and the storyboard draft (jobs of kind `draft`) hold the one agent run: none of them starts while another runs. The state answer says so with
+`no_running_job` in `needs` (for `picks.auto`, `picks.edit`, `draft.start`, `draft.edit`), and a route that is called anyway answers 409 `agent_job_running` (`retry` `later`, `job_id` of the job that runs) with a Vietnamese sentence on the page; a second job of the
+same kind is the long-job runner's `busy`. Both actions are model calls: they carry `cost` (`model`), `long_job` and `uses_model`, their `auto_ok` is the owner's `spend.model` (section 1, "Automatic running and who approved"), and `bti do` runs them only with `--yes-cost`.

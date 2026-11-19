@@ -30,8 +30,10 @@ if the owner allowed it) approves the picks, and the storyboard draft starts fro
 | `picks.import_clip` | picks | Cắt clip video |  | machine_time: about 1 minute | yes |
 | `picks.suggest` | picks | Gợi ý hình (tốn tiền) |  | paid: You.com calls, charged per beat | yes |
 | `picks.put` | picks | Lưu chọn hình |  |  |  |
-| `picks.approve` | picks | Duyệt chọn hình | yes |  |  |
+| `picks.auto` | picks | Để agent chọn hình |  | model: about 20 minutes | yes |
+| `picks.edit` | picks | Nhờ agent sửa chọn hình |  | model: about 30 seconds | yes |
 | `picks.ops` | picks | Sửa chọn hình |  |  |  |
+| `picks.approve` | picks | Duyệt chọn hình | yes |  |  |
 | `picks.cancel` | picks | Dừng |  |  |  |
 <!-- END GENERATED: actions -->
 
@@ -55,6 +57,18 @@ Pictures come from `picks.search` (the answer lists the `source` and `source_id`
 (`--set source=commons --set source_id=... --set as_main=true` for the main painting), `picks.import_book_image` (a picture of the project's books) or the `import` operation inside a batch (it gets a
 `ref`, and the later operations of the batch name the new picture as `$ref`). A clip is cut from a link by the long job `picks.import_clip` (`--set url=... --set start=12 --set end=19`). The paid suggestion
 (`picks.suggest`) is never yours: the owner starts it on the page.
+
+## Let the agent choose first, then correct with the request box
+
+For a whole video the quickest way is to let the pictures agent choose first and to correct what it chose afterwards. `bti do <project> picks.auto --yes-cost --wait` plans what each line needs, searches the free picture
+sources (never the paid suggestion), looks at the candidates and writes the choices as batches whose actor is the agent (it takes about twenty minutes; the answer says `Agent đã chọn hình cho 25/28 đoạn.` and lists the lines nothing
+fitting was found for, which it left as they were). Name lines with `--set beats='["b0003","b0004"]'` to work on those only. It works on the lines that have no pictures; once every line has pictures, or the picks are approved, it needs `--set redo=true`
+(refused as `picks_nothing_to_do` or `picks_approved` otherwise: the approval is dropped when it changes anything, so approve again after). It never approves.
+
+Then correct with `picks.edit` (the request box): one model call, about half a minute, `bti do <project> picks.edit --yes-cost --wait --set instruction="the first line shows only the face" --set scope='{"beats":["b0001"]}'`. It rearranges, adds and removes
+pictures and regions the project already has, in one batch you can undo. It cannot import or look: when the job's result says `escalate` the request needs a picture the project does not have, so choose it with `picks.auto` for those lines, or search by hand (`picks.search`, `picks.import`).
+The page's card does this in one click (the button "Để agent chọn hình" on the turn). A voice, a draft, a prompt-box turn and the agent's choice of pictures run one at a time on a project: while one runs the other is refused (exit 5, `agent_job_running` or `no_running_job` in `bti status`): wait for it
+(`bti job <id> --wait`), then send yours. Both cost a model call: `--yes-cost` only when the owner asked for this work, and exit 3 (`spend_not_allowed`) when the owner did not allow model spending for the project.
 
 ## A worked session
 
@@ -122,6 +136,8 @@ a person is needed: gate_needs_human (HTTP 403)
 | `import_failed`, `source_error`, `image_too_small` | Choose another picture or another source; nothing was written. |
 | `video_not_main` | A clip cannot be the main painting: choose an image. |
 | `stale_revision` (exit 5) | The picks changed under you: send the command again (it reads the new revision). |
+| `agent_job_running` (exit 5) | Another agent job of the project runs (the agent's choice of pictures, a prompt-box turn or a draft): `bti job <id> --wait`, then send yours. |
+| `picks_approved`, `picks_nothing_to_do` | `picks.auto` works on lines without pictures: name `beats` and send `redo` true to choose lines that already have pictures (an approved picks needs `redo`, and approving again after). |
 | `narration_not_approved` | The narration is not approved (or changed): step 2 first. |
 | `confirm_required`, `spend_needs_human`, `spend_not_allowed` (exit 3) | A paid call is the owner's: stop and ask. |
 | `gate_needs_human` (exit 3) | The owner has not allowed you to approve this gate: stop and ask. |

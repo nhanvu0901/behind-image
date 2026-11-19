@@ -180,6 +180,17 @@ HINTS: dict[str, dict] = {
     "too_many": _t("after_fix", "Send fewer beat ids in `beats` (the limit is in `detail`)."),
     "real_models_off": _t("no", "Real model and paid calls are switched off on this machine (BTI_NO_REAL_MODELS): the owner must turn them on."),
 
+    # --- picks step: the agent that chooses the pictures (POST /api/projects/{pid}/picks/auto, bti/picks/auto), c3picks
+    "picks_approved": _t("after_fix", "The picks are approved: send redo true to let the agent choose again (the approval is dropped and the picks must be approved again)."),
+    "picks_nothing_to_do": _t("no", "Every line already has pictures: send redo true to choose them again, or name the lines in `beats`."),
+    "picks_auto_no_output": _t("later", "The agent wrote no usable file even after one repair message: call POST /api/projects/{pid}/picks/auto again, or choose the other agent."),
+    "picks_auto_limit": _t("later", "The agent used up the limits of one session (time and steps): call POST /api/projects/{pid}/picks/auto again; the parts that finished are kept."),
+    "picks_auto_tampered": _t("after_fix", "The agent changed files outside its work folder and its result was dropped: check the project, then call POST /api/projects/{pid}/picks/auto again."),
+    "picks_auto_stale": _t("after_fix", "The narration or the main painting changed while the agent worked: call POST /api/projects/{pid}/picks/auto again."),
+    # --- join2: the one agent run of a project (the pictures agent, a prompt-box turn and a draft run one at a time)
+    "agent_job_running": _t("later", "Another agent job of this project is running (the agent's choice of pictures, a prompt-box turn or a draft): wait for it (GET /api/projects/{pid}/longjobs) or cancel it, then call again."),
+    "turn_not_escalated": _t("after_fix", "That turn did not end as `escalate` (or an agent run of it that failed): only such a turn can be handed to the pictures agent; send POST /api/projects/{pid}/picks/auto with the lines instead."),
+
     # --- draft (storyboard) step
     "draft_not_ready": _t("after_fix", "Make the voice (timing.json) and approve the picks first: GET /api/projects/{pid}/state shows which is missing."),
     "timing_missing": _t("after_fix", "Make the voice first (POST /api/projects/{pid}/voice/generate): timing.json is missing."),

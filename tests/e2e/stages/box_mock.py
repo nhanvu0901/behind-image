@@ -69,7 +69,7 @@ def pictures_answer(user: str) -> str:
     if "[mock:broken]" in ask:
         return "Xin lỗi, tôi không làm được việc này {{{"
     if "bản đồ" in ask:
-        return _json("escalate", reason="Dự án chưa có hình bản đồ, bạn cần tìm thêm hình ở cột Tìm hình.")
+        return _json("escalate", reason="Dự án chưa có hình bản đồ, cần tìm thêm hình cho dòng này.")
     if "[mock:refuse]" in ask:
         return _json("applied", "Dòng này giờ cho xem cả bức tranh.", ops=[{"op": "set_picks", "beat": "b9999", "items": [{"asset": "A"}]}])
     lines = _section(user, "### The lines in scope", "### The line before")

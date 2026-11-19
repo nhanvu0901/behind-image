@@ -3,12 +3,13 @@
 // A turn is one call of the agent that answers with typed operations; the server checks them inside the owner's selection, applies them as ONE
 // batch of the change log and the card shows the batch's own sentences, a before and after picture of every changed shot (step 5), "Xem thử" and
 // "Hoàn tác" (the undo of that batch). A request the fast way cannot do says why: step 5 offers "Làm kỹ hơn" (the agent working in a folder, minutes),
-// step 4 offers the search by hand.
+// step 4 offers "Để agent chọn hình" (the pictures agent, minutes: POST .../picks/edit/{turn}/escalate hands the same lines to it and the card follows
+// its job to the result) and, as the second choice, the search by hand.
 //   const unmount = mountPromptEdit(container, { pid, scope, takeIn, onPreview, onJobEnd });                          // step 5
 //   const unmount = mountPromptEdit(container, { pid, scope, kind: 'picks', takeIn, onJobEnd, picks });               // step 4
 //   takeIn(turn): the page takes the new saved document in (reload, or the merge with unsaved edits)
 //   onPreview({t0, t1}): the existing preview clip of a range (step 5)
-//   picks: { chapters(), currentBeat(), onSelect(cb) -> off, rev(), isDirty(), save(), openSearch() }               (step 4: what the pictures page knows)
+//   picks: { chapters(), currentBeat(), onSelect(cb) -> off, rev(), isDirty(), save(), openSearch(), agentStarted() }   (step 4: what the pictures page knows)
 // The agent that does the work is chosen with the agent select beside the send button (agentpick.js, step "storyboard" or "picks"); the box sends no
 // model of its own. When that agent's quota is used up the card names it and the time and offers ONE button: switch to the other agent and send the
 // same request again (quotaNode).
@@ -22,7 +23,7 @@ import { wordIndexAt } from './logic.js';
 import { watchIdle, jobWatcher } from './idlewatch.js';
 import { mountAgentPick, quotaNode, loadAgents } from './agentpick.js';
 import { mountChangesList } from './changeslist.js';
-import { STEP_STORYBOARD, STEP_PICKS, labelForModel } from './agentlogic.js';
+import { STEP_STORYBOARD, STEP_PICKS, labelForModel, findAgent } from './agentlogic.js';
 import { ACTIVE, pickScope, pickBeatScope, retryScope, retryBeatScope, addToSelection, turnView, progressView, previewRange, newlyChanged, shotNumber, beatNumbers } from './editlogic.js';
 
 export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboard', takeIn = null, onPreview = null, onJobEnd = null, picks = null } = {}) {
@@ -57,7 +58,7 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
   const pillRow = h('div', { class: 'prompt-pills', role: 'group', 'aria-label': W.scopeLead },
     ...PILLS.map(([k, text]) => (pills[k] = h('button', { type: 'button', class: 'pill', text, onclick: () => { choice = k; paintScope(true); } }))));
   const agentHost = h('div', { class: 'prompt-agent' });
-  const pick = mountAgentPick(agentHost, { pid, step: STEP, scope });
+  const pick = mountAgentPick(agentHost, { pid, step: STEP, scope, onChange: () => { if (!dead) renderThread(); } });       // join2: a card's "Để agent chọn hình" follows the agent chosen
   const multiBox = h('input', { type: 'checkbox', class: 'prompt-multi', onchange: (e) => setMulti(e.target.checked) });
   const multiLabel = h('label', { class: 'chk prompt-multi-label', title: W.multiHint }, multiBox, h('span', { text: W.multi }));
   const wordsLine = h('div', { class: 'prompt-scope-words' });
@@ -235,6 +236,22 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
   }
   /** "Làm kỹ hơn": the same request, the same scope, to the agent that works in a folder (it takes minutes: the card said so). */
   function slower(turn) { submit(turn, { deep: true }); }
+  /** join2, step 4: "Để agent chọn hình": the lines of an `escalate` turn go to the pictures agent (it takes minutes: the card said so). The turn becomes
+   *  a running one on that job, the card follows it, and the thread says the result when it ends. Also "Thử lại" of such a turn that failed. */
+  async function toAgent(turn) {
+    if (busy || dead) return;
+    setBusy(true);
+    try {
+      if (picks?.isDirty?.()) await picks.save?.();                      // the agent writes the same file: what the owner just did is saved first
+      const res = await api.post(`${PATH.turn(turn.id)}/escalate`, {});
+      jobId = res.job_id; seenJobs.know(jobId); job = null;
+      await loadThread();
+      tick();
+      picks?.agentStarted?.();                                           // the bar of the page shows the same job at once
+    } catch (e) { toast(L.sendFail + boxErrorText(e).text, 'err', 8000); setBusy(false); }
+  }
+  /** Can the agent chosen for this step run? undefined until the list of agents is known. */
+  const agentUsable = () => { const e = pick.effective(); const a = e ? findAgent(pick.agents(), e.id) : null; return a ? a.available !== false : undefined; };
 
   async function clearHistory() {
     if (!(await confirmDialog(L.clearAsk, { title: L.clear, ok: L.clearOk, danger: true }))) return;
@@ -267,10 +284,12 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
       h('button', { class: 'small primary prompt-btn-overwrite', text: L.choiceOverwrite, title: L.choiceOverwriteHelp, onclick: () => resolve(turn, 'overwrite') }),
       h('button', { class: 'small prompt-btn-discard', text: L.choiceDiscard, title: L.choiceDiscardHelp, onclick: () => resolve(turn, 'discard') }));
     if (a.escalate === 'slow') btns.push(h('button', { class: 'small primary prompt-btn-slower', text: BL.slow.button, title: BL.slow.hint, disabled: busy, onclick: () => slower(turn) }));
-    if (a.escalate === 'manual') btns.push(h('button', { class: 'small primary prompt-btn-manual', text: LP.escalateButton, onclick: () => picks?.openSearch?.() }));
+    if (a.escalate === 'agent') btns.push(h('button', { class: 'small primary prompt-btn-agent', text: LP.agentButton, title: agentUsable() === false ? LP.agentUnusable : LP.agentHint,
+      disabled: busy || agentUsable() === false, onclick: () => toAgent(turn) }));
+    if (a.manual) btns.push(h('button', { class: 'small prompt-btn-manual', text: LP.escalateButton, onclick: () => picks?.openSearch?.() }));
     if (a.preview) btns.push(h('button', { class: 'small prompt-btn-preview', text: L.preview, title: L.previewHint, onclick: () => preview(turn) }));
     if (a.undo) btns.push(h('button', { class: 'small prompt-btn-undo', text: L.undo, title: a.undo === 'gone' ? L.undoNone : W.undoHint, disabled: a.undo === 'gone', onclick: () => undo(turn) }));
-    if (a.retry) btns.push(h('button', { class: 'small prompt-btn-retry', text: L.retry, disabled: busy, onclick: () => submit(turn) }));
+    if (a.retry) btns.push(h('button', { class: 'small prompt-btn-retry', text: L.retry, disabled: busy, onclick: () => (turn.path === 'agent' ? toAgent(turn) : submit(turn)) }));
     return btns.length ? h('div', { class: 'prompt-turn-actions' }, ...btns) : null;
   }
   /** The failed turn as the quota message reads it: the agent and the time it opens again, as the server counted it when the turn failed. (A turn only
@@ -292,9 +311,10 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
         h('span', { class: 'prompt-run-line', text: L.running }),
         h('progress', { class: 'prompt-progress', max: 1, value: 0 })));
       if (turn.path === 'deep') kidsOf.push(h('div', { class: 'prompt-run-limits hint', text: [BL.slow.takes, v.limits].filter(Boolean).join(' ') }));      // the slow way says so, and its limits, when it starts
+      else if (turn.path === 'agent') kidsOf.push(h('div', { class: 'prompt-run-limits hint', text: v.limits }));                                          // join2: so does the pictures agent
     } else if (v.actions.settings) {
       // the agent's quota is used up: the sentence names the agent and the time; ONE button switches to the other agent and sends the same request again
-      kidsOf.push(h('div', { class: 'prompt-turn-quota ' + v.tone }, quotaNode({ pid, step: STEP, rec: quotaRec(turn), rerun: () => submit(turn),
+      kidsOf.push(h('div', { class: 'prompt-turn-quota ' + v.tone }, quotaNode({ pid, step: STEP, rec: quotaRec(turn), rerun: () => (turn.path === 'agent' ? toAgent(turn) : submit(turn)),
         getAgents: async () => pick.agents() || loadAgents() })));
     } else {
       if (v.headline) kidsOf.push(h('div', { class: 'prompt-turn-summary ' + v.tone, text: v.headline }));

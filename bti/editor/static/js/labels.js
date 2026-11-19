@@ -258,7 +258,7 @@ export const EDIT_LABELS = {
     running: 'Đang làm', applied: 'Đã áp dụng', no_change: 'Không đổi', needs_choice: 'Cần bạn chọn',
     failed: 'Không làm được', cancelled: 'Đã hủy', undone: 'Đã hoàn tác', old: 'Đề xuất cũ',
   },
-  path: { fast: 'sửa nhanh', deep: 'sửa sâu' },
+  path: { fast: 'sửa nhanh', deep: 'sửa sâu', agent: 'agent chọn hình' },
   pathEscalated: 'chuyển sang sửa sâu',
   took: (s) => `mất ${s}`,
   secs: (n) => `${String(n).replace('.', ',')} giây`,
@@ -443,6 +443,33 @@ export const AGENT_LABELS = {
   author: { you: 'Bạn', auto: 'Dựng tự động', agent: (what) => `Agent ${what}` },
 };
 
+/* worker c3picks: "Để agent chọn hình" on the pictures page (views/picks_auto.js, views/picks_logic.js). The failures of the job are in errmsg.js. */
+export const PICKS_AUTO_LABELS = {
+  title: 'Agent chọn hình',
+  intro: 'Agent đọc lời dẫn, nhìn bức tranh chính rồi đề xuất hình cho từng dòng. Bạn chỉ cần sửa và duyệt: agent không bao giờ tự duyệt và không dùng dịch vụ trả tiền.',
+  button: 'Để agent chọn hình',
+  again: 'Chọn lại phần còn thiếu',
+  cancel: 'Dừng',
+  starting: 'Đang bắt đầu...',
+  working: 'Agent đang chọn hình.',
+  waiting: 'Đang chờ máy rảnh...',
+  disabled: { running: 'Agent đang làm việc.', narration: 'Cần duyệt lời dẫn trước.', main: 'Chọn tranh chính trước.', agent: 'Agent đang chọn chưa dùng được.' },
+  confirmRedo: { title: 'Chọn lại tất cả?', message: 'Mọi dòng đã có hình hoặc chọn hình đã được duyệt. Agent sẽ chọn lại tất cả và thay hình hiện có (hoàn tác được). Chọn hình phải duyệt lại sau đó.', ok: 'Chọn lại tất cả' },
+  confirmApproved: { title: 'Chọn hình đã được duyệt', message: 'Agent sẽ ghi vào các dòng còn thiếu và chọn hình phải duyệt lại sau đó.', ok: 'Tiếp tục' },
+  lineWhy: (text) => `Agent: ${text}`,
+  lineWhyTitle: 'Lý do agent đưa ra cho dòng này. Bạn sửa hình hoặc ghi chú thì dòng này không còn là của agent.',
+  detail: { pictures: (n) => `${n} hình mới`, regions: (n) => `${n} vùng chi tiết`, clips: (n) => `${n} clip`, kept: (n) => `${n} đoạn dùng lại hình trước`, others: (n) => `${n} đoạn bạn đã chọn trong lúc đó, agent không đụng tới` },
+  withoutTitle: (n) => `${n} đoạn chưa có hình phù hợp`,
+  withoutLine: (no, why) => `Đoạn ${no}: ${why}`,
+  missingTitle: 'Hình agent chưa tìm được',
+  stopped: { time: 'Hết thời gian của lần chạy này; bấm "Chọn lại phần còn thiếu" để làm tiếp.', cancelled: 'Đã dừng.' },
+  cancelled: 'Đã dừng. Phần đã làm xong được giữ lại; bấm "Để agent chọn hình" để làm tiếp.',
+  failed: (text) => `Agent chưa chọn xong: ${text}`,
+  startFail: 'Không bắt đầu được: ',
+  cancelFail: 'Không dừng được: ',
+  limits: (l) => `Mỗi lượt của agent tối đa ${l.minutes} phút và ${l.steps} bước.`,
+};
+
 // ---- compbase: the words of the choices of TIME-01, TREE-01 and STATE-01 (the words of their row fields are added after ITEM_FIELD, below)
 Object.assign(VALUE, { up: 'Phía trên', down: 'Phía dưới', descent: 'Con cháu (từ cha mẹ xuống con)', marriage: 'Hôn nhân', link: 'Quan hệ khác', a: 'Hình a (thứ nhất)', b: 'Hình b (thứ hai)' });
 
@@ -530,8 +557,16 @@ export const BOX_LABELS = {
     threadEmpty: 'Chưa có lần sửa nào. Gõ điều bạn muốn đổi ở ô trên.',
     applied: 'Đã sửa xong và đưa vào chọn hình.',
     undoHint: 'Đưa các dòng này về như trước lần sửa.',
-    escalate: 'Agent chọn hình chưa có, nên việc này chưa làm được. Bạn có thể tìm hình bằng tay.',
+    escalate: 'Việc này cần một hình mà dự án chưa có. Bạn có thể để agent chọn hình tìm và chọn cho các dòng này, hoặc tự tìm hình bằng tay.',
     escalateButton: 'Tìm hình bằng tay',
+    // worker join2: the card of a request that needs a new picture hands the same lines to the pictures agent ("Để agent chọn hình")
+    agentButton: 'Để agent chọn hình',
+    agentHint: 'Agent tìm hình ở các nguồn miễn phí, nhìn kỹ rồi chọn cho các dòng này. Việc này mất vài phút.',
+    agentTakes: 'Agent đang chọn hình cho các dòng này. Việc này mất vài phút; bạn bấm Dừng lúc nào cũng được.',
+    agentDone: 'Agent đã chọn hình cho các dòng này.',
+    agentUndoHint: 'Muốn đưa về như trước, dùng "Lịch sử thay đổi" bên dưới: mỗi lần agent ghi là một mục.',
+    agentWithout: (nums) => `Chưa có hình phù hợp cho ${nums.length === 1 ? 'dòng' : 'các dòng'} ${nums.join(', ')}. Bạn có thể tìm hình bằng tay cho ${nums.length === 1 ? 'dòng' : 'các dòng'} này.`,
+    agentUnusable: 'Agent đang chọn chưa dùng được. Chọn agent khác ở trên, hoặc tìm hình bằng tay.',
     tookIn: 'Đã cập nhật chọn hình theo lần sửa vừa xong.',
     tookInFail: 'Không tải được chọn hình mới: ',
     stale: 'Chọn hình đã đổi ở nơi khác. Tải lại trang rồi gửi lại.',

@@ -93,8 +93,8 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
     try:
         job = draft_run.start(pid, d, provider=provider, model=model or None, chapters=chapters or None)
     except DraftError as e:
-        status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "picks_missing", "timing_missing", "picks_no_main") else 422
-        raise ApiError(status, e.message, code=e.code)
+        status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "picks_missing", "timing_missing", "picks_no_main", "agent_job_running") else 422
+        raise ApiError(status, e.message, code=e.code, **(e.extra if e.code == "agent_job_running" else {}))
     except Exception as e:      # noqa: BLE001
         if type(e).__name__ == "Busy":
             raise ApiError(409, "a draft is already running for this project", code="busy", job_id=getattr(e, "job_id", None))
@@ -144,8 +144,8 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
         res = draft_run.start(pid, d, instruction=instruction, edit_scope=scope, model=model or None,
                               followup=followup, base_rev=base_rev, mode=mode)
     except DraftError as e:
-        status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "edit_no_storyboard", "edit_needs_agy", "picks_missing", "timing_missing", "picks_no_main", "stale_revision") else 422
-        raise ApiError(status, e.message, code=e.code, **(_current_rev(d) if e.code == "stale_revision" else {}))
+        status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "edit_no_storyboard", "edit_needs_agy", "picks_missing", "timing_missing", "picks_no_main", "stale_revision", "agent_job_running") else 422
+        raise ApiError(status, e.message, code=e.code, **(_current_rev(d) if e.code == "stale_revision" else e.extra if e.code == "agent_job_running" else {}))
     except Exception as e:      # noqa: BLE001
         if type(e).__name__ == "Busy":
             raise ApiError(409, "a draft is already running for this project", code="busy", job_id=getattr(e, "job_id", None))

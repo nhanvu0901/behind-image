@@ -8,7 +8,8 @@ import pytest
 from state_helpers import DEMO_SRC, PID, STAGES, action, build, ids, make_book_project, route_ok, wait_job
 
 SCRIPT_REDO = ["outline.generate", "outline.import", "narration.generate", "narration.import", "narration.ops"]
-PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.ops", "picks.edit"]
+PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.edit", "picks.ops"]
+PICKS_OPEN_MAIN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.auto", "picks.edit", "picks.ops"]    # c3picks: with a main painting the agent's choice of pictures is ready too, before the request box
 EDIT_OPEN = ["draft.start", "storyboard.validate", "storyboard.preview", "storyboard.put", "storyboard.ops", "draft.edit", "identity.set"]
 
 # The exact list of action ids at each stage, in the order the answer gives them: the repair of a damaged project, then what
@@ -18,13 +19,13 @@ EXPECTED = {
             "narration.approve"],
     "outline_waiting": ["outline.approve", "outline.generate", "outline.import", "narration.import", "narration.generate",
                         "narration.ops", "narration.approve"],
-    "narration_approved": ["voice.generate", *SCRIPT_REDO, *PICKS_OPEN, "picks.suggest", "picks.approve"],
-    "voiced": [*SCRIPT_REDO, "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.approve"],
-    "picks_approved": ["draft.start", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN, "picks.suggest"],
-    "proposal_waiting": ["proposal.apply", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN, "draft.start", "picks.suggest"],
-    "drafted": ["storyboard.approve", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN, *EDIT_OPEN, "picks.suggest"],
-    "storyboard_approved": ["export.start", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN, *EDIT_OPEN, "picks.suggest"],
-    "exported": [*SCRIPT_REDO, "voice.generate", *PICKS_OPEN, *EDIT_OPEN, "export.start", "picks.suggest"],
+    "narration_approved": ["voice.generate", *SCRIPT_REDO, *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],       # no main painting yet: picks.auto is gated (needs main_asset)
+    "voiced": [*SCRIPT_REDO, "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],
+    "picks_approved": ["draft.start", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest"],
+    "proposal_waiting": ["proposal.apply", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, "draft.start", "picks.suggest"],
+    "drafted": ["storyboard.approve", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN, "picks.suggest"],
+    "storyboard_approved": ["export.start", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN, "picks.suggest"],
+    "exported": [*SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN, "export.start", "picks.suggest"],
 }
 STAGE_OF = {"new": "selected", "outline_waiting": "selected", "narration_approved": "script", "voiced": "voiced",
             "picks_approved": "picked", "proposal_waiting": "picked", "drafted": "storyboard", "storyboard_approved": "approved",
@@ -46,6 +47,8 @@ def fakes(monkeypatch):
     from bti.picks import service
     monkeypatch.setattr(voice_run, "start", lambda *a, **k: {"id": "fakevoicejob"})
     monkeypatch.setattr(draft_run, "start", lambda *a, **k: {"id": "fakedraftjob", "meta": {}})
+    from bti.picks import auto as picks_auto                                          # c3picks: the agent's choice of pictures starts no model either
+    monkeypatch.setattr(picks_auto, "start", lambda *a, **k: {"id": "fakepicksjob", "meta": {}})
     monkeypatch.setattr(export_run, "start", lambda *a, **k: {"id": "fakeexportjob"})
     monkeypatch.setattr(jobs_mod, "render_preview", lambda *a, **k: "/api/projects/x/files/cache/previews/p.mp4")
     monkeypatch.setattr(service, "search", lambda *a, **k: {"items": [], "errors": []})

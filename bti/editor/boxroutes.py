@@ -106,8 +106,8 @@ def start_picks_edit(d: Path, pid: str, body: dict) -> dict:
     try:
         res = draft_run.start_picks(pid, d, instruction=instruction, edit_scope=scope, model=model or None, base_rev=base_rev)
     except DraftError as e:
-        status = 409 if e.code in ("stale_revision", "agy_missing", "claude_missing", "claude_auth") else 422
-        extra = {}
+        status = 409 if e.code in ("stale_revision", "agy_missing", "claude_missing", "claude_auth", "agent_job_running") else 422
+        extra = dict(e.extra) if e.code == "agent_job_running" else {}
         if e.code == "stale_revision":
             try:
                 extra = {"current_rev": boxops.Backend(d).read("picks")[1]}
@@ -126,7 +126,7 @@ def picks_thread(d: Path, request_app) -> dict:
     from bti.draft.thread import reconcile_thread
     from bti.longjob import manager as global_mgr
     mgr = getattr(request_app.state, "longjob_manager", None) or global_mgr
-    turns = turns_of(d, reconcile_thread(d, manager=mgr), "picks")
+    turns = finish_agent_turns(d, turns_of(d, reconcile_thread(d, manager=mgr), "picks"), mgr)
     active = None
     try:
         act = mgr.active(d.name, "draft") if mgr else None
@@ -134,4 +134,96 @@ def picks_thread(d: Path, request_app) -> dict:
             active = act.get("id")
     except Exception:       # noqa: BLE001
         active = None
+    if active is None:                                      # join2: a turn handed to the pictures agent runs in a job of kind `picks`
+        run = next((t for t in turns if t.get("status") == "running" and t.get("path") == AGENT_PATH and t.get("job_id")), None)
+        active = run["job_id"] if run else None
     return {"turns": enrich(d, turns), "active_job_id": active}
+
+
+# ------------------------------------------------------------------------------------------------ step 4: a turn handed to the pictures agent (join2)
+AGENT_PATH = "agent"           # `path` of a turn that the owner handed to the pictures agent ("Để agent chọn hình") after the box answered `escalate`
+
+
+def _scope_payload(turn: dict) -> dict:
+    """The scope the owner chose for a turn, in the form the box's route takes it."""
+    sc = turn.get("scope") or {}
+    if sc.get("kind") == "all":
+        return {"all": True}
+    if sc.get("kind") == "chapter" and sc.get("chapter"):
+        return {"chapter": sc["chapter"]}
+    return {"beats": list(sc.get("beats") or [])}
+
+
+def escalate_picks_turn(d: Path, pid: str, turn_id: str, body: dict | None = None) -> dict:
+    """`POST /api/projects/{pid}/picks/edit/{turn_id}/escalate`: the box answered `escalate` (the request needs a picture the project does not have);
+    the owner now hands the same lines to the pictures agent. The agent works on exactly the lines of the turn's scope, choosing them again, with the
+    owner's request in front of it (`bti.picks.auto.escalate`); the turn becomes `running` on that job (path `agent`) and the thread follows it to its
+    result. A turn whose agent run failed or was stopped can be handed over again. Body (optional): {model}."""
+    from bti.draft import picksedit
+    from bti.draft.thread import load_thread, update_turn
+    from bti.picks import auto, context
+    body = {} if body is None else body
+    if not isinstance(body, dict):
+        raise ApiError(422, "body must be an object", code="invalid_request")
+    model = body.get("model")
+    if model is not None and not isinstance(model, str):
+        raise ApiError(422, "model must be text", code="bad_model")
+    turn = next((t for t in turns_of(d, load_thread(d), "picks") if t.get("id") == turn_id), None)
+    if turn is None:
+        raise ApiError(404, "turn not found", code="turn_not_found")
+    again = turn.get("path") == AGENT_PATH and turn.get("status") in ("failed", "cancelled")
+    if turn.get("status") != "escalate" and not again:
+        raise ApiError(409, "the turn did not end as escalate", code="turn_not_escalated")
+    backend = boxops.Backend(d)
+    doc, _rev = backend.read("picks")
+    try:
+        sc = picksedit.picks_scope(backend.adapter("picks").facts(doc), doc, _scope_payload(turn), context.narration_view(d))
+    except DraftError as e:
+        raise ApiError(422, e.message, code=e.code)
+    try:
+        rec = auto.escalate(pid, d, list(sc.ids), note=turn.get("instruction") or "", model=model or None)
+    except auto.AutoError as e:
+        raise ApiError(e.status, e.message, code=e.code, **e.extra)
+    meta = rec.get("meta") or {}
+    update_turn(d, turn_id, status="running", path=AGENT_PATH, escalated=True, job_id=rec["id"], error=None, retry_at=None, retry_after_seconds=None,
+                agent=meta.get("agent") or turn.get("agent"), model=meta.get("model") or turn.get("model"), summary="", summary_source=None,
+                batch=None, batch_changes=[], result=None, seconds=0.0)
+    return {"job_id": rec["id"], "turn_id": turn_id, "model": meta.get("model"), "agent": meta.get("agent"), "lines": len(meta.get("beats") or [])}
+
+
+def _batch_sentences(d: Path, batches: list) -> list[dict]:
+    """The sentences (`target`, `time`, `what`) the change log holds for these batches, in order."""
+    log = ChangeLog(d)
+    out: list[dict] = []
+    for b in batches or []:
+        rec = log.get(b) if isinstance(b, str) else None
+        out += [c for c in (rec or {}).get("changes") or [] if isinstance(c, dict)]
+    return out
+
+
+def finish_agent_turns(d: Path, turns: list[dict], mgr) -> list[dict]:
+    """The turns handed to the pictures agent end with the job's result: the sentence of the result, the sentences of the batches it wrote, the lines it
+    could not fill (`result`); a failed turn keeps when its quota opens again. The thread reconcile has already given the status; this adds the words,
+    once (a turn with a summary is done)."""
+    from bti.draft.thread import update_turn
+    out = []
+    for t in turns:
+        if t.get("path") == AGENT_PATH and t.get("job_id") and mgr is not None:
+            rec = None
+            try:
+                rec = mgr.get(t["job_id"])
+            except Exception:       # noqa: BLE001
+                rec = None
+            if rec is not None and t.get("status") == "applied" and not t.get("summary") and rec.get("state") == "done":
+                res = rec.get("result") or {}
+                fields = {"summary": str(res.get("sentence") or ""), "summary_source": "code",
+                          "batch_changes": _batch_sentences(d, res.get("batches")), "doc": "picks",
+                          "seconds": round(max(0.0, float(rec.get("finished") or 0) - float(rec.get("created") or 0)), 1),
+                          "result": {k: res.get(k) for k in ("lines_total", "lines_done", "lines_without", "stopped") if k in res}}
+                t = update_turn(d, t["id"], **fields) or t
+            elif rec is not None and t.get("status") == "failed" and t.get("retry_at") in (None, "") and t.get("retry_after_seconds") in (None, ""):
+                m = rec.get("meta") or {}
+                if m.get("retry_at") or m.get("retry_after_seconds"):
+                    t = update_turn(d, t["id"], retry_at=m.get("retry_at"), retry_after_seconds=m.get("retry_after_seconds")) or t
+        out.append(t)
+    return out

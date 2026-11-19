@@ -14,6 +14,8 @@ Thread turns record:
 - batch: the id of the batch the turn wrote in the change log (`projects/<pid>/changes/`); the card's undo is the undo of that batch
 - batch_changes: the batch's own `changes` (Vietnamese sentences with their target), what the card shows
 - reason: cannot / escalate: what is missing and what the owner can do (Vietnamese)
+- path: "fast" | "deep" | "agent" (step 4 only: an `escalate` turn the owner handed to the pictures agent; `job_id` is that agent's job)
+- result: for path "agent" once the job ended: {lines_total, lines_done, lines_without, stopped}
 - limits: the slow path's bounds, told to the card when it starts: {minutes, repairs, part_minutes}
 - job_id: longjob id
 - proposal_id: proposal id if created
@@ -128,6 +130,7 @@ def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
         "batch": batch,
         "batch_changes": [c for c in raw.get("batch_changes") if isinstance(c, dict)] if isinstance(raw.get("batch_changes"), list) else [],
         "reason": str(raw.get("reason") or ""),
+        "result": raw.get("result") if isinstance(raw.get("result"), dict) else None,        # join2: the pictures agent's result of a turn handed to it (path `agent`)
         "repairs": int(raw.get("repairs") or 0),
         "limits": raw.get("limits") if isinstance(raw.get("limits"), dict) else None,
         "scope_words": str(raw.get("scope_words") or ""),

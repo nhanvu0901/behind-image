@@ -136,6 +136,8 @@ export function rawDetail(status, body) {
 // Answers carry `{detail, code}`; the sentence comes from the code, never from `detail`. One table per stage because a few codes
 // (busy, stale, not_found) mean different things in different stages; the views ask `stageErrorText(stage, e)`. Codes that are
 // unique to one stage are also found by describeHttp, so any other view that meets them still speaks Vietnamese.
+const AGENT_JOB_RUNNING = 'Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời hoặc dựng bản nháp). Chờ xong hoặc bấm Dừng rồi thử lại.';       // worker join2: one agent run at a time per project (the pictures agent, a prompt-box turn, a draft)
+const TURN_NOT_ESCALATED = 'Lần sửa này không cần agent chọn hình (hoặc đã giao rồi). Gõ yêu cầu mới ở ô trên.';
 const CLAUDE_OUTDATED_HEAD = 'Claude Code trên máy chủ quá cũ cho mô hình này';        // worker followups: "Claude Code is too old for this model", code claude_outdated (not a quota)
 const LONGJOB_CODES = {
   longjob_missing: 'Máy chủ thiếu bộ chạy việc dài.',
@@ -197,6 +199,18 @@ export const STAGE_CODES = {
     tool_missing: 'Máy chủ thiếu công cụ yt-dlp hoặc ffmpeg để xử lý video.',
     // --- dsources
     source_no_key: 'Nguồn này chưa có khóa API trên máy chủ.',
+    /* worker c3picks: the agent that chooses the pictures ("Để agent chọn hình", bti/picks/auto): its own failures; the failures of its two runners are the draft's */
+    picks_approved: 'Chọn hình đã được duyệt. Chọn lại sẽ phải duyệt lại: hãy xác nhận chọn lại cả những dòng đã có hình.',
+    picks_nothing_to_do: 'Mọi dòng lời dẫn đều đã có hình.',
+    picks_no_main: 'Chưa chọn tranh chính ở bước Chọn hình.',
+    main_asset_unreadable: 'Tranh chính chưa có tệp ảnh đọc được. Chọn lại tranh chính.',
+    picks_auto_no_output: 'Agent không viết được tệp kết quả dùng được, kể cả sau một lần nhắc sửa. Chạy lại, hoặc chọn agent khác.',
+    picks_auto_limit: 'Agent đã dùng hết giới hạn của một lần chạy mà chưa có kết quả dùng được. Chạy lại để làm tiếp.',
+    picks_auto_tampered: 'Agent đã thay đổi tệp ngoài thư mục làm việc của nó. Kết quả bị bỏ; hãy kiểm tra dự án rồi chạy lại.',
+    picks_auto_stale: 'Lời dẫn hoặc tranh chính đã đổi trong lúc agent làm việc, nên kết quả không còn khớp. Chạy lại.',
+    /* worker join2: one agent run at a time per project (the pictures agent, a prompt-box turn and a draft) */
+    agent_job_running: AGENT_JOB_RUNNING,
+    turn_not_escalated: TURN_NOT_ESCALATED,
   },
   export: {
     no_storyboard: 'Chưa có storyboard. Hãy dựng hình ở bước "Dựng hình" trước.',
@@ -639,6 +653,8 @@ Object.assign(STAGE_CODES.draft, {
   validation_failed: 'Cách sửa này làm dữ liệu có lỗi nên chưa đổi gì. Thử nói lại yêu cầu theo cách khác.',
   edit_running: 'Đang có một yêu cầu sửa chạy nên chưa xóa được lịch sử. Hãy dừng nó trước.',
   timing_unusable: 'Không đọc được tệp thời điểm từng từ của dự án. Làm lại bước "Giọng đọc".',
+  agent_job_running: AGENT_JOB_RUNNING,                                                            // worker join2
+  turn_not_escalated: TURN_NOT_ESCALATED,
 });
 /** One Vietnamese sentence for an error of a prompt box route or of a turn it made: the draft table, then the operations' table, then the rest. */
 export function boxErrorText(e) {
