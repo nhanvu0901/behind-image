@@ -43,7 +43,8 @@ export async function launchChrome({ width = 1700, height = 1000, zoom = 1 } = {
   const proc = spawn(CHROME, ['--headless=new', '--disable-gpu', `--remote-debugging-port=${port}`, `--user-data-dir=${dir}`, `--window-size=${width},${height}`, 'about:blank'], { stdio: 'ignore' });
   let targets;
   for (let i = 0; i < 60; i++) { try { targets = await (await fetch(`http://127.0.0.1:${port}/json`)).json(); if (targets.find((t) => t.type === 'page')) break; } catch {} await sleep(200); }
-  const br = { port, proc, dir, pages: [], close() { try { proc.kill(); } catch {} try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch {} } };
+  proc.on('exit', (code, sig) => { if (!br.closing) console.error(`Chrome exited by itself (code ${code}, signal ${sig})`); });
+  const br = { port, proc, dir, pages: [], closing: false, close() { br.closing = true; try { proc.kill(); } catch {} try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch {} } };
   br.newPage = async (opts = {}) => {
     let t;
     if (!br.pages.length) t = targets.find((x) => x.type === 'page');
@@ -60,6 +61,8 @@ async function makePage(wsUrl, { width, height }) {
   let id = 0; const pend = new Map();
   const logs = [], net = [], dialogs = []; let dialogAnswer = true; const reqs = new Map();
   const send = (method, params = {}) => new Promise((r) => { const i = ++id; pend.set(i, r); ws.send(JSON.stringify({ id: i, method, params })); });
+  // a closed page must fail what is waiting for it (a promise that never settles ends the whole probe silently: "unsettled top-level await")
+  ws.onclose = () => { for (const [i, r] of pend) { r({ id: i, error: { message: 'the page was closed' }, result: { exceptionDetails: { exception: { description: 'the page was closed' } } } }); pend.delete(i); } };
   ws.onmessage = (m) => {
     const d = JSON.parse(m.data);
     if (d.id && pend.has(d.id)) { pend.get(d.id)(d); pend.delete(d.id); return; }

@@ -297,8 +297,8 @@ const BY_ARGS = {
   },
   identity_technique_mismatch: () => 'chưa theo kiểu mở đầu và mốc chương đã chọn cho video (còn là thẻ tiêu đề hoặc thẻ chương kiểu khác). Chọn lại kiểu để đổi một lượt; nếu shot đang khóa thì mở khóa trước.',
   // --- sizefollow: a picture recorded with a size that is not the size of its stored file (the warning has no shot: the sentence stands alone).
-  // No advice to re-draft: a re-draft keeps the saved storyboard's own asset size today (tests/draft/test_size_follow.py says so).
-  asset_size_mismatch: (i, a) => `Hình ${q(a.asset ?? assetKey(i))} được ghi là ${num(a.width)} x ${num(a.height)} nhưng tệp đã lưu là ${num(a.stored_width)} x ${num(a.stored_height)}, nên khung hình sẽ lệch.`,
+  // The advice (worker followups): a re-draft now takes the size of the stored file from the picks, so it clears the warning (tests/draft/test_size_follow.py).
+  asset_size_mismatch: (i, a) => `Hình ${q(a.asset ?? assetKey(i))} được ghi là ${num(a.width)} x ${num(a.height)} nhưng tệp đã lưu là ${num(a.stored_width)} x ${num(a.stored_height)}, nên khung hình sẽ lệch. Dựng nháp lại để cập nhật kích thước hình.`,
 };
 /** Codes of the table: the unit test compares them with ISSUE_CODES. */
 export const TEMPLATE_CODES = Object.keys(BY_ARGS);

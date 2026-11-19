@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   QUOTA_CODES, agentsOf, findAgent, agentLabel, labelForModel, effectiveOf, sourceView, selectView, unavailableNote, canChange, stepBody, projectBody,
-  otherAgent, usedAgent, sourceWords, spanWords, quotaSentence, quotaView, isQuota, defaultView,
+  otherAgent, usedAgent, sourceWords, spanWords, quotaSentence, quotaView, isQuota, defaultView, authorLabel, proposalLine,
 } from '../../bti/editor/static/js/agentlogic.js';
 import { describeHttp, stageErrorText } from '../../bti/editor/static/js/errmsg.js';
 
@@ -200,4 +200,40 @@ test('the error sentences of the agent routes are Vietnamese; an agent that cann
   assert.equal(describeHttp(409, { detail: 'not available', code: 'agent_unavailable' }).text, 'Agent đang chọn chưa dùng được trên máy này.');
   assert.match(stageErrorText('settings', { status: 422, body: { code: 'unknown_agent', detail: 'unknown agent' } }).text, /Agent này không có trong danh sách/);
   assert.match(describeHttp(422, { code: 'unknown_step', detail: 'x' }).text, /Bước này không có/);
+});
+
+// ---- followups item 1: the list of proposals shows the agent by its label, never the stored id
+test('the author of a proposal is the agent label; "human" is Bạn; other text stays as stored', () => {
+  assert.equal(authorLabel(INFO, 'agent:claude:claude-opus-5-5@high'), 'Opus 5.5 High');
+  assert.equal(authorLabel(INFO, 'agent:agy:gemini-3.8-flash-high'), 'Gemini 3.8 Flash');
+  assert.equal(authorLabel(INFO, 'agent:opus'), 'Opus 5.5 High');                      // the stored form may also be the agent's id
+  assert.equal(authorLabel(INFO, 'agent:auto'), 'Dựng tự động');
+  assert.equal(authorLabel(INFO, 'human'), 'Bạn');
+  assert.equal(authorLabel(INFO, 'Human'), 'Bạn');
+  assert.equal(authorLabel(INFO, 'Nguyễn Văn A'), 'Nguyễn Văn A');                       // an old free-text name
+  assert.equal(authorLabel(INFO, ''), '');
+  assert.equal(authorLabel(INFO, null), '');
+  assert.equal(authorLabel(INFO, undefined), '');
+  assert.equal(authorLabel(INFO, { x: 1 }), '');
+});
+
+test('an agent the list does not offer (or a list that did not load) never shows the raw "agent:" id', () => {
+  assert.equal(authorLabel(INFO, 'agent:agy:other-y'), 'Agent other-y');
+  assert.equal(authorLabel(null, 'agent:claude:claude-opus-5-5@high'), 'Agent claude-opus-5-5@high');
+  assert.equal(authorLabel({}, 'agent:test'), 'Agent test');
+  for (const a of ['agent:claude:claude-opus-5-5@high', 'agent:agy:zzz', 'agent:auto', 'agent:test']) assert.ok(!/agent:/.test(authorLabel(null, a)), a);
+});
+
+test('the grey line of a proposal: author label, time, id; empty parts are left out', () => {
+  const p = { id: 'draft_20261118', author: 'agent:claude:claude-opus-5-5@high', created_at: '2026-11-18T10:00:00' };
+  assert.equal(proposalLine(INFO, p), 'Opus 5.5 High | 2026-11-18T10:00:00 | draft_20261118');
+  assert.equal(proposalLine(INFO, p, false), 'Opus 5.5 High | 2026-11-18T10:00:00');
+  assert.equal(proposalLine(INFO, { id: 'x', author: null, created_at: null }), 'x');   // no "null | null | x"
+});
+
+test('proposals.js builds both author lines through proposalLine, and prints p.author nowhere', async () => {
+  const fs = await import('node:fs');
+  const src = fs.readFileSync(new URL('../../bti/editor/static/js/proposals.js', import.meta.url), 'utf8');
+  assert.equal((src.match(/proposalLine\(/g) || []).length, 2, 'the list and the opened proposal both use proposalLine');
+  assert.ok(!/\.author\b/.test(src), 'no raw .author is read in proposals.js');
 });

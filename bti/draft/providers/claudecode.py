@@ -140,6 +140,8 @@ def reset_seconds(text: str) -> int | None:
 def classify(text: str, events: list | None = None, api_status=None) -> tuple[str, str]:
     """A failure text of the program -> (code, English message). The owner's sentence of each code lives in bti/draft/run.py."""
     err = cc.classify(text, events, api_status)
+    if getattr(err, "code", None) == "claude_outdated":          # the message is the owner's sentence, with the versions the answer stated
+        return "claude_outdated", err.message
     code = CODES.get(err.kind, "claude_error")
     if code == "claude_error":
         return code, (text or "Claude Code reported an error").strip()[:300]

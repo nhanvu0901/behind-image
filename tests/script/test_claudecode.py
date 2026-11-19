@@ -193,6 +193,48 @@ def test_failure_texts_map_to_the_known_kinds(fake, text, status, kind, code):
     assert len(fake.calls("call")) == 1                                              # a failure is never retried inside the call
 
 
+# ---- followups item 2: Claude Code too old for the model (the text of a real call on the server: fixtures/claude/too_old.txt)
+TOO_OLD = (FIX / "too_old.txt").read_text(encoding="utf-8").strip()
+TOO_OLD_SENTENCE = ("Claude Code trên máy chủ quá cũ cho mô hình này (cần bản 2.1.280 trở lên, đang là 2.1.233). "
+                    "Chạy `claude update` trên máy chủ rồi thử lại.")
+
+
+@pytest.mark.parametrize("how,status", [("error", None), ("error", 404), ("error", 400), ("stderr_only", None)])
+def test_claude_code_too_old_for_the_model_has_its_own_code_and_sentence(fake, how, status):
+    """Whatever the program frames it as (a result, with any status, or a plain line), it is `claude_outdated`, kind config, never the
+    unknown-model code (status 404) and never a quota."""
+    fake.mode(how, text=TOO_OLD, status=status)
+    with pytest.raises(ProviderError) as e:
+        call()
+    assert e.value.kind == "config" and e.value.code == "claude_outdated", (e.value.code, e.value.message)
+    assert e.value.message == TOO_OLD_SENTENCE
+    assert "hết hạn mức" not in e.value.message and "mô hình khác" not in e.value.message and "Hạn mức" not in e.value.message
+    assert len(fake.calls("call")) == 1                                              # never retried inside the call
+
+
+@pytest.mark.parametrize("text,sentence", [
+    ("Claude Code does not support this model; version 2.1.280 or newer is required. Run 'claude update'",
+     "Claude Code trên máy chủ quá cũ cho mô hình này (cần bản 2.1.280 trở lên). Chạy `claude update` trên máy chủ rồi thử lại."),
+    ("Claude Code 2.1.233 does not support this model. Run 'claude update'",
+     "Claude Code trên máy chủ quá cũ cho mô hình này (đang là 2.1.233). Chạy `claude update` trên máy chủ rồi thử lại."),
+    ("This model requires Claude Code 2.1.280 or newer",
+     "Claude Code trên máy chủ quá cũ cho mô hình này (cần bản 2.1.280 trở lên). Chạy `claude update` trên máy chủ rồi thử lại."),
+])
+def test_a_version_the_answer_does_not_state_is_left_out(text, sentence):
+    e = cc.classify(text, None, None)
+    assert e.code == "claude_outdated" and e.kind == "config" and e.message == sentence
+
+
+@pytest.mark.parametrize("text,code", [
+    ("This account does not support this model", "claude_error"),                  # no mention of Claude Code, a version or `claude update`: not ours to call "too old"
+    ("There's an issue with the selected model (zzz). It may not exist or you may not have access to it.", "claude_model"),
+    ("You've hit your session limit · resets 7pm (Asia/Saigon)", "claude_rate_limit"),
+    ("Not logged in · Please run /login", "claude_auth"),
+])
+def test_only_the_too_old_answer_gets_the_new_code(text, code):
+    assert cc.classify(text, None, None).code == code
+
+
 def test_the_usage_limit_names_the_time_it_opens_again(fake):
     fake.mode("error", text="You've hit your session limit · resets in 4 hr 30 min", status=429)
     with pytest.raises(ProviderError) as e:

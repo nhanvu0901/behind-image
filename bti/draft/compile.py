@@ -31,6 +31,7 @@ from bti import identity as ID
 from bti.engine import registry as R
 from bti.engine import storyboard as SB
 from bti.engine.timing import AnchorError, Timing, norm
+from bti.media.assets import scale_regions
 
 from . import spec as S
 from . import decompile as D
@@ -130,7 +131,7 @@ class _Compiler:
         assets = copy.deepcopy(self.inp.picks["assets"])
         for k, a in ((self.inp.current or {}).get("assets") or {}).items():
             if isinstance(a, dict):
-                assets[k] = copy.deepcopy(a)
+                assets[k] = self._saved_asset(a, assets.get(k))
         for key, regs in (regions or {}).items():
             a = assets.get(key)
             if not isinstance(a, dict):
@@ -142,6 +143,27 @@ class _Compiler:
                 else:
                     have[name] = dict(r)
         return assets
+
+    # What describes the STORED FILE of a picture: its path, kind, pixel size, the source's own size kept beside it, a video's length. These are
+    # facts of the file and always come from the picks (their sizes were corrected to the file by `reconcile_sizes`); a storyboard saved before
+    # a correction must not keep the old ones (the warning `asset_size_mismatch` would never clear). Everything else on the saved copy (regions,
+    # title, artist, year, credit, anything a person or an agent added there) is kept, as before.
+    FILE_FACTS = ("file", "kind", "width", "height", "original_width", "original_height", "duration")
+
+    def _saved_asset(self, saved: dict, pick) -> dict:
+        out = copy.deepcopy(saved)
+        if not isinstance(pick, dict):
+            return out                                   # a picture only the storyboard has: its own record
+        old_w, old_h = out.get("width"), out.get("height")
+        for k in self.FILE_FACTS:
+            if k in pick:
+                out[k] = copy.deepcopy(pick[k])
+            else:
+                out.pop(k, None)                         # a fact the picks do not state is not kept from another file
+        new_w, new_h = out.get("width"), out.get("height")
+        if all(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in (old_w, old_h, new_w, new_h)) and (old_w, old_h) != (new_w, new_h):
+            scale_regions(out.get("regions"), new_w / old_w, new_h / old_h)     # the regions were drawn in the old size: the same scaling as `reconcile_sizes`
+        return out
 
     def info(self, key):
         a = self.assets.get(key)

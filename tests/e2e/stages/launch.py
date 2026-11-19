@@ -40,13 +40,15 @@ def say(*a):
     print(*a, flush=True)
 
 
+# arnolfini-live: a real storyboard with timing and picks, for the edit by instruction; arnolfini_edit and technique_lab: the storyboards of the editor probes (round 2 and 3)
+BASE_PROJECTS = ("arnolfini", "arnolfini-from-books", "demo_stub", "arnolfini-live", "arnolfini_edit", "technique_lab")
 reuse = A.tmp is not None
 tmp = Path(A.tmp) if reuse else Path(tempfile.mkdtemp(prefix="bti-stages-"))
 projects, lib = tmp / "projects", tmp / "library"
 IGN = shutil.ignore_patterns("cache", "history", "export")
 if not reuse:
     projects.mkdir()
-    for n in ("arnolfini", "arnolfini-from-books", "demo_stub", "arnolfini-live"):   # arnolfini-live: a real storyboard with timing and picks, for the edit by instruction
+    for n in BASE_PROJECTS:
         if (DATA / "projects" / n).is_dir():
             shutil.copytree(DATA / "projects" / n, projects / n, ignore=IGN)
     shutil.copytree(DATA / "library", lib, ignore=IGN)
@@ -96,35 +98,39 @@ script_models.agy_models = lambda refresh=False: ([{"slug": "gemini-3.8-flash-hi
                                                    {"slug": "gemini-3.8-flash-medium", "label": "Gemini 3.8 Flash (Medium)"},
                                                    {"slug": "gemini-3.8-flash-low", "label": "Gemini 3.8 Flash (Low)"}], None)
 
-# the mock model answers an edit by instruction with a canned edit built from the shots in the prompt (no network, no real model):
+# the mock model answers an edit by instruction with a canned edit built from the shots in the prompt (no network, no real model). The prompt
+# is the CURRENT fast-edit briefing (skills/storyboard_edit/FAST.template.md: the heading "Briefing: change a few shots of a video's storyboard",
+# the section "## The instruction", the scope shots between "do not send them back." and "### The words"); the answer follows its contract
+# (`result`, `summary`, whole `shots` without the helper fields, `remove`, `changes`):
 #   "tranh mới" in the instruction -> {"result": "cannot"};  "[mock:broken]" -> not JSON (the turn fails);  "[mock:slow]" -> the mock waits ~10 s first (cancel can be tried);
 #   anything else -> every shot of the scope kept, with its note changed (so the server sees a change in each of them)
 import re  # noqa: E402
 from bti.script.providers import mock as _mock  # noqa: E402
 _mock_complete = _mock.complete
-_KEEP = ("id", "beat", "start_word", "off", "technique", "intent", "slots", "params", "overlays", "note", "transition_in", "locked")
+_HELPER_FIELDS = ("in_scope", "locked", "start_s", "end_s", "beat_text", "duration_s")     # read-only fields of the briefing: never sent back
+FAST_HEADING = "change a few shots of a video's storyboard"
 
 
 def _edit_answer(user):
-    ins = re.search(r"## Instruction\n(.*?)\n\n## Previous", user, re.S)
+    ins = re.search(r"## The instruction\n(.*?)\n\n## The last turns", user, re.S)
     instruction = ins.group(1) if ins else ""
     if "tranh mới" in instruction:
         return json.dumps({"result": "cannot", "summary": "", "reason": "Yêu cầu này cần một bức tranh mới mà dự án chưa có. Hãy thêm tranh ở bước Chọn hình."}, ensure_ascii=False)
     if "[mock:broken]" in instruction:                       # an answer that is not JSON, twice: the turn fails
         return "Xin lỗi, tôi không làm được việc này {{{"
-    m = re.search(r"length\.\n(\[.*?\])\n\n## Neighbour Shots", user, re.S)
+    m = re.search(r"do not send them back\.\n(\[.*?\n\])\n\n### The words", user, re.S)
     shots = json.loads(m.group(1)) if m else []
     out, changes = [], []
     for sh in shots:
-        keep = {k: sh[k] for k in _KEEP if k in sh}
-        keep["note"] = "Làm chậm chuyển động (bản thử)"
-        out.append(keep)
+        sh = {k: v for k, v in sh.items() if k not in _HELPER_FIELDS}
+        sh["note"] = "Làm chậm chuyển động (bản thử)"
+        out.append(sh)
         changes.append({"shot": sh.get("id"), "what": "Làm chậm chuyển động của cảnh này"})
-    return json.dumps({"result": "edit", "summary": "Đã làm chậm chuyển động ở %d cảnh." % len(out), "shots": out, "regions": [], "changes": changes}, ensure_ascii=False)
+    return json.dumps({"result": "edit", "summary": "Đã làm chậm chuyển động ở %d cảnh." % len(out), "shots": out, "remove": [], "changes": changes}, ensure_ascii=False)
 
 
 def _complete(spec, system, user, **kw):
-    if "# Edit Storyboard by Instruction" in user:
+    if FAST_HEADING in user:
         if "[mock:slow]" in user:
             _mock.set_canned([_edit_answer(user)])
             return _mock_complete(spec, system, user, **kw)
@@ -223,6 +229,49 @@ SUG = [{"what": "A mirror in another painting", "kind": "artwork", "why": "the s
 
 app = create_app(projects_root=projects)
 app.state.picks_provider = suggest.FakeProvider(default=SUG)
+
+# ---- routes of THIS launcher only (test code, never the product): the old browser probes (tests/e2e/shell_library_script, round2, round3) used to start a
+# fresh local server per check and write into its folders; now they share this instance and ask it to start over (`reset`: the projects folder holds the
+# base projects again, as copied at the start), to write a file into a project folder (`file`) and to say whether a path exists (`exists`).
+from fastapi import Body, HTTPException  # noqa: E402
+
+
+def _inside(rel):
+    root = projects.resolve()
+    p = (root / str(rel)).resolve()
+    if p != root and root not in p.parents:
+        raise HTTPException(status_code=400, detail="outside the projects folder")
+    return p
+
+
+def _e2e_reset():
+    for child in list(projects.iterdir()):
+        for attempt in range(5):                           # Windows: a file the app or a render still holds is released a moment later
+            try:
+                shutil.rmtree(child) if child.is_dir() else child.unlink()
+                break
+            except OSError:
+                time.sleep(0.5)
+    for n in BASE_PROJECTS:
+        if (DATA / "projects" / n).is_dir():
+            shutil.copytree(DATA / "projects" / n, projects / n, ignore=IGN, dirs_exist_ok=True)     # over what could not be removed: the files are replaced
+    return {"projects": sorted(c.name for c in projects.iterdir())}
+
+
+def _e2e_file(body: dict = Body(...)):
+    p = _inside(body.get("path", ""))
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(str(body.get("text", "")), encoding="utf-8")
+    return {"ok": True}
+
+
+def _e2e_exists(body: dict = Body(...)):             # a POST: the app answers every unknown GET under /api with "not found" before a route added here
+    return {"exists": _inside(body.get("path", "")).exists()}
+
+
+app.add_api_route("/api/_e2e/reset", _e2e_reset, methods=["POST"])
+app.add_api_route("/api/_e2e/file", _e2e_file, methods=["PUT"])
+app.add_api_route("/api/_e2e/exists", _e2e_exists, methods=["POST"])
 
 import uvicorn  # noqa: E402
 server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=A.port, log_level="warning", timeout_graceful_shutdown=3))

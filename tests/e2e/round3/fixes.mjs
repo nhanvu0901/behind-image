@@ -1,10 +1,11 @@
-// Round 3 UI fix checks (own file; run.mjs belongs to the tester). Run alone:  node tests/e2e/round3/fixes.mjs [F-001 ...]
+// Round 3 UI fix checks (own file; run.mjs belongs to the tester). Run alone:  BTI_SSH_HOST=winbox-cmd node tests/e2e/round3/fixes.mjs [F-001 ...]
+// The app is a second instance ON THE SERVER (shell_library_script/remote_server.mjs: the two mock agents, temp COPIES of the data); `own()` is the same instance with the projects started over.
 import { setup, sleep, fs, path } from './common.mjs';
 const SH = new URL('../../../.scratch/round3_ui_fix/shots/', import.meta.url).pathname;
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 const SIZE = process.env.SIZE ? process.env.SIZE.split('x').map(Number) : undefined;   // SIZE=1280x720 for the small-screen screenshots
 const SUF = SIZE ? '_' + SIZE.join('x') : '';
-const T = await setup(SIZE); const { br, J, job, openEdit, open, own } = T;
+const T = await setup(SIZE, { remote: true }); const { br, J, job, openEdit, open, own } = T;
 let failed = 0;
 const check = async (id, title, fn) => {
   if (only.length && !only.includes(id)) return;
@@ -58,7 +59,7 @@ try {
     const { s, A } = await approvedProject('r3_x');
     const last = await reapproveOutline(A, 'r3_x', (o) => o.chapters.pop().id);
     const p = await br.newPage(); await open(p, '#/project/r3_x/script', '#nar-badge', s.base); await sleep(1500);
-    await p.click('#btn-approve'); await sleep(1500);                    // refused: shows the dialog with one action per difference
+    await p.click('#btn-approve'); await p.waitFor(`!!document.querySelector('#modal-root [data-diff]')`, 20000);                    // refused: shows the dialog with one action per difference
     const dlg = await p.eval(`[...document.querySelectorAll('#modal-root [data-diff]')].map(r=>r.dataset.diff+':'+r.dataset.chapter+':'+[...r.querySelectorAll('button')].map(b=>b.textContent).join('/'))`);
     await p.shot(SH + 'f002_refused' + SUF + '.png');
     await p.click('#modal-root [data-act="drop"]'); await sleep(500);
@@ -85,7 +86,7 @@ try {
 
   const corrupt = async () => {
     const s = await own(); const p = await br.newPage(); await openEdit(p, 'arnolfini_edit', s.base);
-    fs.writeFileSync(path.join(s.projects, 'arnolfini_edit', 'media/durer.jpg'), 'this is not an image');
+    await s.writeFile('arnolfini_edit/media/durer.jpg', 'this is not an image');
     return { s, p };
   };
   await check('F-003', 'an issue with no place stays put and only shows its detail; an unused asset opens the pictures tab', async () => {
@@ -115,27 +116,29 @@ try {
   await check('F-005', 'two tabs: after the merge the first Ctrl+Z does nothing, and the notice says so', async () => {
     const s = await own(); const a = await br.newPage(), b = await br.newPage();
     await openEdit(a, 'arnolfini_edit', s.base); await openEdit(b, 'arnolfini_edit', s.base);
-    await a.eval(`__bti.store.commit('e', d=>{ d.shots[3].note='a1'; }); 1`); await a.click('#btn-save'); await sleep(2200);
-    await b.eval(`__bti.store.commit('e', d=>{ d.shots[9].note='b1'; }); 1`); await b.click('#btn-save'); await sleep(3000);
+    await a.eval(`__bti.store.commit('e', d=>{ d.shots[3].note='a1'; }); 1`); await a.click('#btn-save'); await a.waitFor('!__bti.store.dirty', 20000);       // (the server is behind an ssh tunnel: wait for the save, not a fixed time)
+    await b.eval(`__bti.store.commit('e', d=>{ d.shots[9].note='b1'; }); 1`); await b.click('#btn-save');
+    await b.waitFor(`/Hoàn tác không quay lại/.test(document.querySelector('#toast-root')?.innerText || '')`, 20000); await sleep(500);
     const toastTxt = await b.eval(`[...document.querySelectorAll('#toast-root .toast')].map(t=>t.textContent).join('|')`);
     await b.shot(SH + 'f005_merged' + SUF + '.png');
     const r = await b.eval(`[__bti.store.canUndo, __bti.store.draft.shots[3].note, __bti.store.draft.shots[9].note]`);
     a.close(); b.close(); closeExtra();
     return (r[0] === false && r[1] === 'a1' && r[2] === 'b1' && /Hoàn tác không quay lại/.test(toastTxt)) || JSON.stringify({ r, toastTxt }); });
 
-  await check('F-006', 'script: the outline and the beats show while /api/models is still slow; the buttons wait for a model only', async () => {
+  await check('F-006', 'script: the outline and the beats show while /api/agents is still slow; the agent select says it is loading, then fills', async () => {
+    // (the old premise, "the buttons wait for the model list", is gone with the model list: the buttons only wait for a running job, the agent select loads by itself)
     const { s } = await approvedProject('r3_z');
     const p = await br.newPage();
-    await p.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => { const f = window.fetch; window.fetch = (u, ...a) => /\\/api\\/models/.test(String(u)) ? new Promise((r) => setTimeout(r, 6000)).then(() => f(u, ...a)) : f(u, ...a); })()` });
+    await p.send('Page.addScriptToEvaluateOnNewDocument', { source: `(() => { const f = window.fetch; window.fetch = (u, ...a) => /\\/api\\/agents/.test(String(u)) ? new Promise((r) => setTimeout(r, 9000)).then(() => f(u, ...a)) : f(u, ...a); })()` });
     const t0 = Date.now();
     await p.send('Page.navigate', { url: s.base + '/#/project/r3_z/script' });
-    const shown = await p.waitFor(`document.querySelectorAll('#nar-body .beat').length > 0 && document.querySelectorAll('#out-body .card').length > 0`, 4500);
+    const shown = await p.waitFor(`document.querySelectorAll('#nar-body .beat').length > 0 && document.querySelectorAll('#out-body .card').length > 0`, 7000);
     const ms = Date.now() - t0;
-    const early = await p.eval(`[document.querySelector('#model-pick')?.textContent || '', document.querySelector('#btn-write')?.disabled, document.querySelector('#btn-outline')?.disabled]`);
+    const early = await p.eval(`(() => { const h = document.querySelector('#agent-pick-host'); const s = h?.querySelector('select'); return [h?.querySelector('.agent-source')?.textContent || '', s?.selectedOptions[0]?.textContent || '', !!s?.disabled, document.querySelector('#btn-write')?.disabled, document.querySelector('#btn-outline')?.disabled]; })()`);
     await p.shot(SH + 'f006_loading' + SUF + '.png');
-    const later = await p.waitFor(`document.querySelector('#btn-write') && !document.querySelector('#btn-write').disabled`, 12000);
+    const later = await p.waitFor(`(() => { const s = document.querySelector('#agent-pick-host select'); return !!s && s.options.length >= 2 && !s.disabled; })()`, 25000);
     p.close(); closeExtra();
-    return (shown && ms < 3500 && /Đang tải danh sách mô hình/.test(early[0]) && early[1] === true && early[2] === true && later) || JSON.stringify({ shown, ms, early, later }); });
+    return (shown && ms < 7500 && /Đang tải/.test(early[0] + early[1]) && early[2] === true && early[3] === false && early[4] === false && later) || JSON.stringify({ shown, ms, early, later }); });
 
   await check('F-007', 'script: chapters in another order than the outline show one line with "Sắp xếp theo dàn ý", which fixes it', async () => {
     const { s, A } = await approvedProject('r3_o');
@@ -148,6 +151,6 @@ try {
     const ids = await p.eval(`[...document.querySelectorAll('#nar-body .chap')].map(c=>c.id)`);
     p.close(); closeExtra();
     return (row.length === 1 && row[0] === 'Sắp xếp theo dàn ý' && ids[0] === 'chap-c01') || JSON.stringify({ put: put.detail || 'ok', row, ids }); });
-} finally { /* cleanup on exit */ }
+} finally { await T.closeServer(); }
 console.log(failed ? `\n${failed} check(s) FAIL` : '\nall checks PASS');
 process.exit(failed);

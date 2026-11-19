@@ -242,6 +242,16 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 .identity-pick .identity-label { color: var(--muted); white-space: nowrap; }
 .identity-pick .identity-select { max-width: 200px; padding: 2px 6px; }
 .identity-pick .identity-note { max-width: 330px; }
+/* followups: at 1280 px the tools row of step 5 wrapped to two lines (60 px instead of 37) and took the height from the preview (283 px, the check wants 300).
+   It stays ONE line: its items keep their size, only the picker's note shrinks (ellipsis), and what still does not fit scrolls sideways without a scroll bar
+   (a bar would take height; Tab scrolls a focused control into view). */
+#preview-tools { flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+#preview-tools::-webkit-scrollbar { display: none; }
+#preview-tools > :not(.grow) { flex: 0 0 auto; white-space: nowrap; }
+#preview-tools > #identity-container { flex: 0 1 auto; min-width: 0; }
+.identity-pick { flex-wrap: nowrap; }
+.identity-pick .identity-note { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.identity-pick .identity-skipped { white-space: normal; max-width: 360px; }
 .identity-skipped { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: 12px; color: var(--warn); border-top: 1px solid var(--border); padding-top: 4px; }
 .identity-skipped ul { margin: 0; padding-left: 14px; }
 .identity-skipped[hidden] { display: none; }

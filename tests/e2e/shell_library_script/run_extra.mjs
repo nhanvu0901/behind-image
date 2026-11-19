@@ -1,18 +1,23 @@
 // More UI checks (U1-010 and on): what the first tester could not reach, found and fixed by the front-end fixer.
-//   node tests/e2e/shell_library_script/run_extra.mjs
-// Same rules as run.mjs: its own server (free port, temp COPY of projects/ and library/), Mock model only, no network.
-import { startServer, launchChrome, sleep } from './lib.mjs';
+//   BTI_SSH_HOST=winbox-cmd node tests/e2e/shell_library_script/run_extra.mjs [U1-010 ...]
+// Same rules as run.mjs: a second instance of the app on the server (remote_server.mjs: temp COPY of projects/ and library/, the two mock agents, no network).
+// U1-015 (the old "other model" dialog after a rate limit) is not here any more: the quota message with its ONE button is checked by tests/e2e/agent/agent_select.mjs.
+import { launchChrome, sleep } from './lib.mjs';
+import { startServer, closeServer } from './remote_server.mjs';
 const srv = await startServer(); const B = srv.base;
 const br = await launchChrome({ width: 1700, height: 1000 });
 const J = async (m, u, b) => { const r = await fetch(B + u, { method: m, headers: { 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }); const t = await r.text(); try { return JSON.parse(t); } catch { return t; } };
 const results = [];
-const check = async (id, title, fn) => { let ok = false, note = ''; try { const r = await fn(); ok = r === true; note = ok ? '' : String(r); } catch (e) { note = 'ERROR ' + e.message; } results.push({ id, ok, note }); console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${title} ${note}`); };
+const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
+const check = async (id, title, fn) => { if (only.length && !only.includes(id)) return; let ok = false, note = ''; try { const r = await fn(); ok = r === true; note = ok ? '' : String(r); } catch (e) { note = 'ERROR ' + e.message; } results.push({ id, ok, note }); console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${title} ${note}`); };
 const job = async (id) => { for (let i = 0; i < 100; i++) { const j = await J('GET', '/api/jobs/' + id); if (['done', 'error', 'cancelled'].includes(j.state)) return j; await sleep(300); } };
 const mk = async (slug, key = 'munch-the-scream', { outline = true, narration = true } = {}) => { await J('POST', '/api/library/projects', { artwork_key: key, slug });
   if (outline) { const r = await J('POST', `/api/projects/${slug}/outline/generate`, { model: 'mock' }); await job(r.job_id); const o = await J('GET', `/api/projects/${slug}/outline`); await J('POST', `/api/projects/${slug}/outline/approve`, { rev: o.rev }); }
   if (narration) { const r = await J('POST', `/api/projects/${slug}/narration/generate`, { model: 'mock' }); await job(r.job_id); } };
 const open = async (p, hash, sel = '#view') => { await p.goto('about:blank', 200); await p.goto(B + '/' + hash, 800); await p.eval(`document.querySelector('#toast-root')?.replaceChildren()`); await p.waitFor(`!!document.querySelector(${JSON.stringify(sel)})`, 10000); await sleep(300); };
-const useMock = (p) => p.eval(`(()=>{const s=document.querySelector('#model-pick'); s.value='mock'; s.dispatchEvent(new Event('change'))})()`);
+// the model select is gone: the agent select decides, and "Gemini 3.8 Flash" is the agent that runs the mock model on this instance (it is also the default)
+const useMock = async (p) => { await p.waitFor(`(() => { const s = document.querySelector('#agent-pick-host select'); return !!s && s.options.length >= 2 && !s.disabled; })()`, 20000);
+  await p.eval(`(()=>{const s=document.querySelector('#agent-pick-host select'); if (s.value !== 'gemini') { s.value='gemini'; s.dispatchEvent(new Event('change', { bubbles: true })); }})()`); };
 const SHOTS = new URL('../../../.scratch/fix_shell/shots/', import.meta.url).pathname;
 const caretAt = (p, sel, n) => p.eval(`(()=>{const t=document.querySelector(${JSON.stringify(sel)}); t.scrollIntoView({block:'center'}); t.focus(); t.setSelectionRange(${n < 0 ? 't.value.length' : n},${n < 0 ? 't.value.length' : n})})()`);
 const rectOf = (p, expr) => p.eval(`(()=>{const e=${expr}; e.scrollIntoView({block:'center'}); const b=e.getBoundingClientRect(); return {x:b.x+b.width/2,y:b.y+b.height/2}})()`);
@@ -53,7 +58,12 @@ try {
     return (m.shell <= m.win && m.health <= m.win + 1 && m.approve <= m.win && m.viewOver <= 0) || JSON.stringify(m); });
 
   await check('U1-013', 'library search finds the same with and without accents (Dürer = durer, Đức = duc)', async () => {
-    await open(p, '#/library', '.works'); const count = async (q) => { await p.eval(`(()=>{const i=document.querySelector('.toolbar input[type=search]'); i.focus(); i.select()})()`); await p.key('Backspace', 'Backspace'); if (q) await p.insert(q); await sleep(900); return p.eval(`document.querySelectorAll('table.works tbody tr').length`); };
+    await open(p, '#/library', '.works');
+    // the server is behind an ssh tunnel: wait for the answer to what was typed (the request with that `q`), then let the table draw
+    const count = async (q) => { p.clearLogs(); await p.eval(`(()=>{const i=document.querySelector('.toolbar input[type=search]'); i.focus(); i.select()})()`); await p.key('Backspace', 'Backspace'); if (q) await p.insert(q);
+      const want = (r) => /\/api\/library\/artworks\?/.test(r.url) && r.status === 200 && (q ? decodeURIComponent(r.url).includes('q=' + q) : !/[?&]q=[^&]/.test(r.url));
+      for (let t0 = Date.now(); Date.now() - t0 < 8000 && !p.net.some(want);) await sleep(200);
+      await sleep(900); return p.eval(`document.querySelectorAll('table.works tbody tr').length`); };
     const a = await count('Dürer'), b = await count('durer'), c = await count('DÜRER'), all = await count('');
     const d = await count('đức'), e = await count('duc');
     return (a > 0 && a === b && b === c && a < all && d === e) || `Dürer ${a}, durer ${b}, DÜRER ${c}, all ${all}, đức ${d}, duc ${e}`; });
@@ -65,16 +75,6 @@ try {
     const r = await rectOf(p, `document.querySelectorAll('#modal-root .issue-row')[${fact.i}].querySelector('a.goto')`); await p.clickXY(r.x, r.y); await sleep(700);
     const ok = await p.eval(`!document.querySelector('#modal-root .modal') && !!document.querySelector('[data-fact].flash')`);
     return ok || 'no jump to the fact card'; });
-
-  await check('U1-015', 'the other-model dialog is one choice and one button, and starts nothing by itself', async () => {
-    await open(p, '#/project/e-low/script', '#btn-outline'); await useMock(p);
-    await p.eval(`window.__scr.S.brief.totals.included = 1`);                  // this project is low-trust only; the guard of U1-016 would stop us here
-    await p.click('#btn-outline'); await p.waitFor(`!!document.querySelector('#modal-root textarea')`, 4000); await p.click('#modal-root textarea'); await p.insert('[mock:ratelimit]');
-    await p.click('#modal-root footer button.primary'); const seen = await p.waitFor(`/giới hạn/.test(document.querySelector('#modal-root')?.innerText||'')`, 30000);
-    if (!seen) return 'no dialog';
-    const d = await p.eval(`({selects: document.querySelectorAll('#modal-root select').length, runDisabled: document.querySelector('#modal-root .body button.primary')?.disabled, buttonsInBody: document.querySelectorAll('#modal-root .body button').length})`);
-    const jobs = (await J('GET', '/api/projects/e-low/script/jobs')).length;
-    return (d.selects === 1 && d.runDisabled === true && d.buttonsInBody === 1 && jobs === 1) || JSON.stringify({ ...d, jobs }); });
 
   await check('U1-016', 'a project with only machine-translated sources says so and does not run a model on nothing', async () => {
     await open(p, '#/project/e-low/script', '#btn-outline'); await useMock(p);
@@ -98,7 +98,8 @@ try {
 
   await check('U1-019', 'Enter in a dialog text field presses its main button', async () => {
     await open(p, '#/library/artwork/munch-the-scream', 'h1.lib-h'); await p.click('button', 'Tạo dự án'); await sleep(300);
-    await p.focus('#modal-root input[type=text]'); await p.insert('Bad Slug'); await p.key('Enter', 'Enter'); await sleep(1200);
+    await p.focus('#modal-root input[type=text]'); await p.insert('Bad Slug'); await p.key('Enter', 'Enter');
+    await p.waitFor(`/slug/i.test(document.querySelector('#modal-root .note')?.textContent || '')`, 10000);          // the answer comes through the ssh tunnel
     const t = await p.text('#modal-root .note'); return /slug/i.test(t || '') || `Enter did nothing: "${t}"`; });
 
   await check('U1-020', 'Tách splits where the cursor is, also after a lone dash', async () => {
@@ -110,7 +111,7 @@ try {
     return (beats[0] === 'alpha —' && beats[1] === 'beta gamma delta') || JSON.stringify(beats); });
 
   await check('U1-021', 'Lưu with nothing to save does not claim it saved', async () => {
-    await open(p, '#/project/e-main/script', '.beat textarea'); await p.click('#btn-save'); await sleep(500);
+    await open(p, '#/project/e-main/script', '.beat textarea'); await p.waitFor(`!!document.querySelector('#btn-save')`, 10000); await p.click('#btn-save'); await sleep(500);
     const t = await p.eval(`document.querySelector('#toast-root').innerText`); return (!/Đã lưu/.test(t) && /Không có gì/.test(t)) || t; });
 
   await check('U1-022', 'text pasted into the paste box survives a stray click on the backdrop and closing', async () => {
@@ -163,5 +164,5 @@ try {
     return (puts === 0 && put.ok && srv.startsWith('OTHER TAB') && ui.t.startsWith('HELD') && ui.paste > 0 && /Dán/.test(dlg)) || JSON.stringify({ puts, put: put.status, srv: srv.slice(0, 15), ui, dlg: dlg.slice(0, 80) }); });
 
   console.log('console errors seen:', p.logs.length, p.logs.slice(0, 3));
-} finally { br.close(); srv.stop(); }
+} finally { br.close(); await closeServer(); }
 const failed = results.filter((r) => !r.ok).length; console.log(`${results.length - failed} pass, ${failed} fail`); process.exit(failed);

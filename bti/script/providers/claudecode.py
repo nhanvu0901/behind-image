@@ -270,11 +270,45 @@ _LIMIT_RE = re.compile(r"hit your[^.\n]{0,30}limit|usage limit|limit reached|rat
 _MODEL_RE = re.compile(r"selected model|not a recognized model|model[^.\n]{0,120}(?:not found|does not exist|doesn't exist|may not exist|invalid|unknown|unsupported|not available)|"
                        r"not_found_error|invalid model|model_not_found", re.I)
 _TIME_RE = re.compile(r"timed out|timeout|deadline", re.I)
+# The installed Claude Code is too old for the model asked: `Claude Code 2.1.233 does not support this model; version 2.1.280 or newer is
+# required. Run 'claude update'` (answer of a real call on the server, 2026-11-18). Not a quota, not an unknown model: the advice is to update.
+_OUTDATED_NEEDED_RE = re.compile(r"\b(?:version|v)\s*(\d+(?:\.\d+)+)\s+or\s+(?:newer|later|higher|above)\b|"
+                                r"\brequires?\s+(?:claude code\s+)?(?:version\s+|v)?(\d+(?:\.\d+)+)\s+or\s+(?:newer|later|higher|above)\b", re.I)
+_OUTDATED_NOW_RE = re.compile(r"\bclaude code\s+v?(\d+(?:\.\d+)+)", re.I)
+_OUTDATED_NOSUPPORT_RE = re.compile(r"does not support (?:this|the selected|the requested) model", re.I)
+OUTDATED_HEAD = "Claude Code trên máy chủ quá cũ cho mô hình này"
+
+
+def outdated_versions(text: str) -> tuple[str | None, str | None] | None:
+    """(needed, current) version texts of a "Claude Code is too old for this model" answer, each None when the answer does not state it;
+    None when the text is not such an answer. The answer must name Claude and either say which version it needs or say the model is not
+    supported together with a version of Claude Code or the `claude update` command (a bare "does not support this model" is not enough)."""
+    text = text or ""
+    if "claude" not in text.lower():
+        return None
+    m = _OUTDATED_NEEDED_RE.search(text)
+    needed = (m.group(1) or m.group(2)) if m else None
+    current = next((m.group(1) for m in _OUTDATED_NOW_RE.finditer(text)       # "Claude Code 2.1.233 does not ...", not "requires Claude Code 2.1.280 or newer"
+                    if not re.search(r"requires?\s+$", text[:m.start()], re.I) and not re.match(r"\s+or\s+(?:newer|later|higher|above)\b", text[m.end():], re.I)), None)
+    if needed or (_OUTDATED_NOSUPPORT_RE.search(text) and (current or re.search(r"claude\s+update", text, re.I))):
+        return needed, current
+    return None
+
+
+def outdated_message(needed: str | None = None, current: str | None = None) -> str:
+    """The owner's sentence for the code `claude_outdated`; a version the answer did not state is left out."""
+    facts = [x for x in ((f"cần bản {needed} trở lên" if needed else ""), (f"đang là {current}" if current else "")) if x]
+    return OUTDATED_HEAD + (f" ({', '.join(facts)})" if facts else "") + ". Chạy `claude update` trên máy chủ rồi thử lại."
 
 
 def classify(text: str, events: list[dict] | None = None, api_status=None) -> ProviderError:
     """One failure text of the program -> the ProviderError kind the rest of the app already knows."""
     text = (text or "").strip()
+    old = outdated_versions(text)
+    if old is not None:               # first: it must not be taken for an unknown model (status 404) or a limit, the advice is `claude update`
+        err = _err("config", outdated_message(*old), "claude_outdated")
+        err.versions = old
+        return err
     limited = bool(_LIMIT_RE.search(text)) or api_status == 429
     if not limited and (api_status in (401, 403) or _AUTH_RE.search(text)):
         return _err("auth", LOGIN_HINT, "claude_auth")

@@ -1,12 +1,14 @@
-// Re-runnable UI checks: node tests/e2e/shell_library_script/run.mjs
-// Starts its own server (free port, temp COPY of projects/ and library/, Mock model only, no network) and headless Chrome.
-// Each check named U1-xxx FAILS today (it asserts the correct behaviour). Exit code = number of failing checks.
-import { startServer, launchChrome, sleep } from './lib.mjs';
+// Re-runnable UI checks:  BTI_SSH_HOST=winbox-cmd node tests/e2e/shell_library_script/run.mjs
+// Starts a second instance of the app ON THE SERVER (remote_server.mjs: its own port, temp COPY of projects/ and library/, the two MOCK agents, no network)
+// through an ssh tunnel, and headless Chrome on this machine. Each check named U1-xxx asserts the correct behaviour. Exit code = number of failing checks.
+import { launchChrome, sleep } from './lib.mjs';
+import { startServer, closeServer } from './remote_server.mjs';
 const srv = await startServer(); const B = srv.base;
 const br = await launchChrome({ width: 1700, height: 1000 });
 const J = async (m, u, b) => { const r = await fetch(B + u, { method: m, headers: { 'content-type': 'application/json' }, body: b ? JSON.stringify(b) : undefined }); return r.json().catch(() => ({})); };
 const results = [];
-const check = async (id, title, fn) => { let ok = false, note = ''; try { const r = await fn(); ok = r === true; note = ok ? '' : String(r); } catch (e) { note = 'ERROR ' + e.message; } results.push({ id, ok, note }); console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${title} ${note}`); };
+const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));                  // node run.mjs U1-008 ...  runs only those
+const check = async (id, title, fn) => { if (only.length && !only.includes(id)) return; let ok = false, note = ''; try { const r = await fn(); ok = r === true; note = ok ? '' : String(r); } catch (e) { note = 'ERROR ' + e.message; } results.push({ id, ok, note }); console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${title} ${note}`); };
 const job = async (id) => { for (let i = 0; i < 100; i++) { const j = await J('GET', '/api/jobs/' + id); if (['done', 'error', 'cancelled'].includes(j.state)) return j; await sleep(300); } };
 // A project with an approved outline and a Mock narration
 const mk = async (slug) => { await J('POST', '/api/library/projects', { artwork_key: 'munch-the-scream', slug });
@@ -14,7 +16,9 @@ const mk = async (slug) => { await J('POST', '/api/library/projects', { artwork_
   const o = await J('GET', `/api/projects/${slug}/outline`); await J('POST', `/api/projects/${slug}/outline/approve`, { rev: o.rev });
   r = await J('POST', `/api/projects/${slug}/narration/generate`, { model: 'mock' }); await job(r.job_id); };
 const open = async (p, hash, sel = '#view') => { await p.goto('about:blank', 200); await p.goto(B + '/' + hash, 800); await p.eval(`document.querySelector('#toast-root')?.replaceChildren()`); await p.waitFor(`!!document.querySelector(${JSON.stringify(sel)})`, 10000); await sleep(300); };
-const useMock = (p) => p.eval(`(()=>{const s=document.querySelector('#model-pick'); s.value='mock'; s.dispatchEvent(new Event('change'))})()`);
+// the model select is gone: the agent select decides, and "Gemini 3.8 Flash" is the agent that runs the mock model on this instance (it is also the default)
+const useMock = async (p) => { await p.waitFor(`(() => { const s = document.querySelector('#agent-pick-host select'); return !!s && s.options.length >= 2 && !s.disabled; })()`, 20000);
+  await p.eval(`(()=>{const s=document.querySelector('#agent-pick-host select'); if (s.value !== 'gemini') { s.value='gemini'; s.dispatchEvent(new Event('change', { bubbles: true })); }})()`); };
 const SHOTS = new URL('../../../.scratch/uitest1/shots/', import.meta.url).pathname;
 try {
   await mk('t-main'); await mk('t-del');
@@ -57,5 +61,5 @@ try {
     await open(p, '#/project/t-main/script', '#out-body input[type=number]'); await p.eval(`(()=>{const i=document.querySelectorAll('#out-body input[type=number]')[1]; i.focus(); i.select()})()`); await p.insert('-5'); await p.key('Tab', 'Tab'); await sleep(300);
     const v = await p.eval(`window.__scr.D.outline.chapters[0].word_budget`); return v >= 0 && Number.isInteger(v) || `budget accepted: ${v}`; });
   console.log('console errors seen:', p.logs.length);
-} finally { br.close(); srv.stop(); }
+} finally { br.close(); await closeServer(); }
 const failed = results.filter((r) => !r.ok).length; console.log(`${results.length - failed} pass, ${failed} fail`); process.exit(failed);

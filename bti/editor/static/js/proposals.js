@@ -3,6 +3,8 @@ import { h, modal, toast, errorToast, errorInto, confirmDialog } from './util.js
 import { describeHttp } from './errmsg.js';
 import { ctx, bus } from './ctx.js';
 import { api } from './api.js';
+import { proposalLine } from './agentlogic.js';
+import { loadAgents } from './agentpick.js';
 
 const OP_VI = { add: 'thêm', remove: 'xóa', change: 'đổi' };
 const normOp = (op) => ({ added: 'add', removed: 'remove', changed: 'change' }[op] || op);
@@ -13,21 +15,22 @@ export async function openProposals(onApplied, openId = null) {
   const dlg = modal({ title: 'Đề xuất từ agent', body });
   async function list() {
     body.replaceChildren(h('div', { class: 'hint', text: 'Đang tải...' }));
-    let items = [], skipped = [];
+    let items = [], skipped = [], info = null;
     try {
+      info = await loadAgents().catch(() => null);          // the labels of the agents; without them the author is shown as stored
       const res = await api.proposals(ctx.pid);
       if (Array.isArray(res)) items = res; else { items = res?.items || []; skipped = Array.isArray(res?.skipped) ? res.skipped : []; }   // files the server could not read: [{file, reason}]
     } catch (e) { const box = h('div', { class: 'empty' }); errorInto(box, e, 'Không tải được danh sách đề xuất: '); body.replaceChildren(box); return; }
     ctx.proposalsCount = items.length; bus.emit('proposals');
     const skipNote = skipped.length ? h('div', { class: 'banner warn skipped-note', style: { flexDirection: 'column', alignItems: 'flex-start' } }, h('div', { text: `${skipped.length} tệp đề xuất không đọc được nên không có trong danh sách:` }), ...skipped.map((k) => h('div', { class: 'hint', title: k.reason || '', text: `${k.file}: ${describeHttp(422, { detail: k.reason || '' }).text}` }))) : null;
     body.replaceChildren(...[skipNote, items.length ? h('div', { class: 'list' }, ...items.map((p) => h('div', { class: 'list-item', onclick: () => open(p.id) },
-      h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontWeight: 600 }, text: p.summary || p.id }), h('div', { class: 'hint', text: `${p.author} | ${p.created_at} | ${p.id}` })),
+      h('div', { style: { flex: 1, minWidth: 0 } }, h('div', { style: { fontWeight: 600 }, text: p.summary || p.id }), h('div', { class: 'hint', text: proposalLine(info, p) })),
       h('span', { class: 'chip', text: `${p.n_changes} thay đổi` }), h('button', { class: 'small primary', text: 'Mở' })))) : h('div', { class: 'empty', text: 'Chưa có đề xuất nào.' })].filter(Boolean));
   }
   async function open(id) {
     body.replaceChildren(h('div', { class: 'hint', text: 'Đang tải đề xuất...' }));
-    let data;
-    try { data = await api.proposal(ctx.pid, id); } catch (e) { errorToast(e, 'Không mở được đề xuất: '); return list(); }
+    let data, info = null;
+    try { info = await loadAgents().catch(() => null); data = await api.proposal(ctx.pid, id); } catch (e) { errorToast(e, 'Không mở được đề xuất: '); return list(); }
     const decision = {};
     for (const c of data.changes) c.op = normOp(c.op);
     for (const c of data.changes) decision[c.id] = c.blocked_by_lock ? null : 'accept';
@@ -57,7 +60,7 @@ export async function openProposals(onApplied, openId = null) {
     body.replaceChildren(...[
       data.proposal.stale ? h('div', { class: 'banner warn stale-note', text: `Đề xuất dựa trên bản cũ (base ${String(data.proposal.base_rev || '?').slice(0, 8)}): storyboard đã lưu đã đổi kể từ khi agent soạn. Xem kỹ trước khi áp dụng.` }) : null,
       h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '10px' } }, h('button', { class: 'small', text: '< Danh sách', onclick: list }),
-        h('div', { style: { flex: 1 } }, h('b', { text: data.proposal.summary || data.proposal.id }), h('div', { class: 'hint', text: `${data.proposal.author} | ${data.proposal.created_at}` })), applyBtn),
+        h('div', { style: { flex: 1 } }, h('b', { text: data.proposal.summary || data.proposal.id }), h('div', { class: 'hint', text: proposalLine(info, data.proposal, false) })), applyBtn),
       ...rows].filter(Boolean));
     refreshBtn();
   }

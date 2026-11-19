@@ -136,6 +136,7 @@ export function rawDetail(status, body) {
 // Answers carry `{detail, code}`; the sentence comes from the code, never from `detail`. One table per stage because a few codes
 // (busy, stale, not_found) mean different things in different stages; the views ask `stageErrorText(stage, e)`. Codes that are
 // unique to one stage are also found by describeHttp, so any other view that meets them still speaks Vietnamese.
+const CLAUDE_OUTDATED_HEAD = 'Claude Code trên máy chủ quá cũ cho mô hình này';        // worker followups: "Claude Code is too old for this model", code claude_outdated (not a quota)
 const LONGJOB_CODES = {
   longjob_missing: 'Máy chủ thiếu bộ chạy việc dài.',
   longjob_not_found: 'Không tìm thấy việc này (có thể máy chủ đã khởi động lại).',
@@ -240,6 +241,7 @@ export const STAGE_CODES = {
     claude_rate_limit: 'Hạn mức của gói Claude Code đã dùng hết hoặc bị giới hạn. Đợi hết chu kỳ hoặc chọn agent khác.',
     claude_model: 'Claude Code không nhận ra tên mô hình này. Chọn mô hình khác.',
     claude_config: 'Claude Code trên máy chủ không dùng được cho việc này (quá cũ hoặc không chạy được). Chạy `claude update` trên máy chủ rồi thử lại.',
+    claude_outdated: `${CLAUDE_OUTDATED_HEAD}. Chạy \`claude update\` trên máy chủ rồi thử lại.`,        // worker followups: the server's own sentence adds the versions (stageJobErrorText)
     claude_error: 'Claude Code báo lỗi khi chạy. Thử lại, hoặc dùng "Dựng tự động".',
     claude_no_result: 'Claude Code dừng mà không trả kết quả. Xem bản ghi của lần chạy rồi thử lại.',
     claude_timeout: 'Agent chạy quá thời gian cho phép nên bị dừng. Thử dựng từng chương.',
@@ -366,6 +368,7 @@ export function stageErrorText(stage, e) {
 }
 /** The same for a failed long job (`job.error_code`); falls back to jobErrorText. */
 export function stageJobErrorText(stage, job) {
+  if (job?.error_code === 'claude_outdated' && typeof job.error === 'string' && job.error.startsWith(CLAUDE_OUTDATED_HEAD)) return { text: job.error, detail: '' };       // the server's sentence names the versions the answer stated
   const t = job?.error_code && (STAGE_CODES[stage]?.[job.error_code] || LONGJOB_CODES[job.error_code]);
   return t ? { text: t, detail: '' } : jobErrorText(job);
 }

@@ -14,7 +14,7 @@ export const EDIT_CODES = [
   'bad_action', 'not_needs_choice', 'turn_data_lost', 'already_undone', 'turn_not_applied', 'undo_unavailable', 'undo_conflict', 'undo_failed',
   'real_models_off', 'edit_failed', 'agy_busy', 'agy_config', 'agy_auth', 'agy_error', 'agy_model', 'agy_no_result', 'agy_rate_limit', 'agy_timeout',
   'timing_shape', 'picks_shape', 'picks_no_main', 'main_asset_unreadable', 'storyboard_corrupt', 'project_missing', 'template_missing', 'workspace_invalid',
-  'claude_missing', 'claude_auth', 'claude_rate_limit', 'claude_model', 'claude_config', 'claude_error', 'claude_no_result', 'claude_timeout',      // worker claudeprov
+  'claude_missing', 'claude_auth', 'claude_rate_limit', 'claude_model', 'claude_config', 'claude_outdated', 'claude_error', 'claude_no_result', 'claude_timeout',      // worker claudeprov (claude_outdated: worker followups)
 ];
 
 const pad2 = (n) => String(n).padStart(2, '0');

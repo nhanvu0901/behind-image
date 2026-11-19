@@ -21,11 +21,12 @@ const STATE = path.join(SCRATCH, 'state.json');
 // So this run does not use it: the working tree is packed with `deploy_windows.sh --pack-only` (no server action, no lock) and
 // unpacked into a folder of its own in the server's temp directory (removed by `down`). The server's .venv, books, projects and
 // library are used read-only (the data is COPIED into another temp folder by launch.py).
-const W_REPO = 'C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo';
+const SUFFIX = process.env.BTI_STAGES_SUFFIX ? '-' + process.env.BTI_STAGES_SUFFIX.replace(/[^a-z0-9]/gi, '') : '';   // two workers on the server at once: each takes a folder and a port of its own (BTI_STAGES_SUFFIX, BTI_STAGES_PORT)
+const W_REPO = `C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo${SUFFIX}`;
 const LAUNCH = process.env.BTI_STAGES_LAUNCH || 'tests\\e2e\\stages\\launch.py';          // another launcher (for example tests/e2e/agent/launch_agent.py) may wrap launch.py
 const REMOTE_PY = `D:\\code\\behind-the-image\\.venv\\Scripts\\python.exe ${W_REPO}\\${LAUNCH}`;
 const SSH = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=30'];
-const PORT = 8562;
+const PORT = Number(process.env.BTI_STAGES_PORT || 8562);
 const HOST = process.env.BTI_SSH_HOST || 'winbox-lan';        // away from the home network: BTI_SSH_HOST=winbox-cmd (the Tailscale route)
 
 export function deploy() {
@@ -41,14 +42,14 @@ export function ship() {
   const tgz = path.join(REPO, '.scratch/deploy/out', `code-${m[1]}.tgz`);
   const sh = (c) => spawnSync('ssh', [...O, HOST, c], { encoding: 'utf8' });
   sh(`rmdir /s /q ${W_REPO}`);
-  const cp = spawnSync('scp', ['-q', ...O, tgz, `${HOST}:C:/Users/ADMIN/AppData/Local/Temp/bti-stages-repo.tgz`]);
+  const cp = spawnSync('scp', ['-q', ...O, tgz, `${HOST}:C:/Users/ADMIN/AppData/Local/Temp/bti-stages-repo${SUFFIX}.tgz`]);
   if (cp.status !== 0) throw new Error('scp failed');
-  const x = sh(`mkdir ${W_REPO} && tar -xzf C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo.tgz -C ${W_REPO}`);
+  const x = sh(`mkdir ${W_REPO} && tar -xzf C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo${SUFFIX}.tgz -C ${W_REPO}`);
   if (x.status !== 0) throw new Error('unpack failed: ' + x.stdout + x.stderr);
   fs.rmSync(tgz, { force: true });
 }
 export function unship() {
-  spawnSync('ssh', ['-o', 'BatchMode=yes', HOST, `rmdir /s /q ${W_REPO} & del /q C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo.tgz`]);
+  spawnSync('ssh', ['-o', 'BatchMode=yes', HOST, `rmdir /s /q ${W_REPO} & del /q C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo${SUFFIX}.tgz`]);
 }
 
 function startRemote(tmp) {
@@ -89,10 +90,11 @@ async function daemon() {
   let ctlPort = 0;
   let closing = false;
   const stopRemote = (keep) => new Promise((res) => {
-    if (remote.exited) return res();
-    remote.proc.on('exit', () => res());
-    try { remote.proc.stdin.write(keep ? 'stop-keep\n' : ''); if (!keep) remote.proc.stdin.end(); } catch {}
-    setTimeout(() => { if (!remote.exited) { try { remote.proc.kill(); } catch {} } }, 20000);
+    const r = remote;                      // the one being stopped: a restart (`/start`) replaces `remote` before the 20 s timer below fires, and that timer must not kill the NEW one
+    if (r.exited) return res();
+    r.proc.on('exit', () => res());
+    try { r.proc.stdin.write(keep ? 'stop-keep\n' : ''); if (!keep) r.proc.stdin.end(); } catch {}
+    setTimeout(() => { if (!r.exited) { try { r.proc.kill(); } catch {} } }, 20000);
   });
   const down = async () => {
     if (closing) return; closing = true;
