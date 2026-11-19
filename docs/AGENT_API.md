@@ -106,6 +106,10 @@ whose data is damaged still answers: the step carries the code in `problem`, and
 (`storyboard.restore` for a corrupt `storyboard.json`; `voice.generate` when the timing file is missing). A project whose own file
 `project.json` cannot be read answers with every step locked, no action, and `problems[0].code == "project_file_damaged"`.
 
+When the app has an output folder (section 10) and writing it failed, the answer carries one more key, `warnings`: `[{code, detail, sentence}]` (`code` is `output_failed`,
+`output_part_failed` or `output_sheets_failed`; `sentence` is Vietnamese). The key is absent when there is nothing to say. The action `output.build` is listed when the app has an output
+folder and the project is not a reference project.
+
 ### Automatic running and who approved
 
 By default every gate is approved by the owner on the page. The owner may turn automatic running on for one project and say which gates an
@@ -189,6 +193,7 @@ loop:
 | `export.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an export job of the project runs. |
 | `auto.run` | export | `POST /api/projects/{pid}/auto/run` |  | yes |  | machine_time: the sum of what it may start from where the project stands | Listed while automatic running is on for the project and no video is exported yet. Ready unless a job of the project runs (an automatic run included). Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops with a reason (see docs/AGENT_API.md, "Chạy tự động"). `cost` is the sum of what it may start: only the kinds the owner allowed. |
 | `auto.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an automatic run of the project goes on. |
+| `output.build` | export | `POST /api/projects/{pid}/output/build` |  |  |  |  | Listed when the app has an output folder (`output/<artwork key>/`) and the project is not a reference project. Always ready: fills (or refills) the folder from the project as it stands (the video, the readable documents, the log, the index); the body `{"clean": true}` also removes the working folder's caches when the export stands. A project of the same painting as the folder's last project takes it over. |
 <!-- END GENERATED: actions -->
 
 ## 3. The words of `needs`
@@ -405,6 +410,9 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `outline_not_approved` | after_fix | Approve the outline: POST /api/projects/{pid}/outline/approve with {"rev": <outline rev>}. |
 | `outline_stale` | after_fix | The outline changed after it was approved: approve it again (POST /api/projects/{pid}/outline/approve). |
 | `outline_unreadable` | after_fix | The pasted outline could not be read (see `issues`): correct the text and import it again; nothing was overwritten. |
+| `output_disabled` | no | This app was started without an output folder: ask the owner to set BTI_OUTPUT_ROOT or to start the app the usual way, then call again. |
+| `output_failed` | later | The output folder could not be written (see `detail`): check that the disk has room and the folder is not open elsewhere, then call POST /api/projects/{pid}/output/build again. |
+| `output_not_applicable` | no | A reference or imported project has no output folder: use a project made from the library. |
 | `page_not_found` | no | Ask for a page that exists in the book. |
 | `page_not_in_work` | no | Ask for a page inside the page range of this work. |
 | `part_missing` | later | A rendered part is missing: call POST /api/projects/{pid}/export/start again; finished parts are kept. |
@@ -669,3 +677,22 @@ The run log is `projects/<pid>/auto_runs/<run id>.json` (`bti.autorun/1`), rewri
 action, method, path, body, status, ok, code, job_id, job_state, note, seconds}], outcome, reason, sentence, result}`. The newest 30 are kept. A run whose process died is reported
 from the state of its job (never as `running` for ever). The long-job runner limits one part of a job to 35 minutes, so the job is a row of equal parts of 25 minutes (12 hours in
 all) that take the loop over from each other: the `progress` of the job is not the run's; read `meta` (`step`, `step_label`, `n`, `of`, `action`, `child_job`, `steps_taken`).
+
+## 10. The output folder (`output/<artwork key>/`)
+
+One clean folder per painting, made by `bti/output/` and filled as the project moves: `final.mp4` at its root, `README.md`, `state.json` (`bti.output/1`), `INDEX.md` and `index.json` one level up, and the
+parts `1_sources/` to `6_export/` and `log/`. The working folder `projects/<pid>/` stays what the app works in; nothing in the app reads a document back from the output folder. The root is `output/` beside
+`projects/` (`BTI_OUTPUT_ROOT` moves it); an app made with an explicit projects folder and no `output_root` has none (then the routes below answer `409 output_disabled`).
+
+```
+POST /api/projects/{pid}/output/build   {"clean": true|false}  -> {key, folder, written, parts: {part: {rev, out_of_date, reason}}, warnings, clean, takeover}
+GET  /api/projects/{pid}/output         -> {enabled, key, folder, state, warnings}      (state = state.json, or null before the folder exists)
+```
+
+`output.build` fills (or refills) the folder from the project as it stands; `clean: true` also removes the working folder's caches when the export stands (otherwise only the export itself does). Errors:
+`output_disabled`, `output_not_applicable` (a reference or imported project), `output_failed` (the disk). The folder is written, with one line each, by: the last part (`output`) of the voice job and of the export job,
+and after every successful change of a project through the API (an approval, a save, an edit: `bti/output/hooks.py`, one background write that never delays the answer). A part whose document changed after it was
+published, or whose approval was withdrawn, keeps its old files and is marked `out_of_date` in `state.json` and in the README until it is published again. A second project of the same artwork takes the folder
+over (its runs are added to `runs`); an older project never does by itself, only through `output.build`.
+
+The switch `PUT /api/settings/output {"clean_after_export": false}` (`GET` the same path) turns the cleaning after an export off. The cleaning removes exactly the paths listed in `bti/output/clean.py` and nothing else.

@@ -317,6 +317,10 @@ HINTS: dict[str, dict] = {
     "auto_not_enabled": _t("after_fix", "Ask the owner to turn automatic running on for this project (the switch on the page, PUT /api/projects/{pid}/auto), then call again."),
     "auto_running": _t("later", "An automatic run of this project is going: follow it (GET /api/longjobs/{job_id}) or stop it (POST /api/longjobs/{job_id}/cancel), then call again."),
     "auto_run_not_found": _t("no", "Take a run id from GET /api/projects/{pid}/auto/runs."),
+    # outfolder: the output folder (bti/output/)
+    "output_disabled": _t("no", "This app was started without an output folder: ask the owner to set BTI_OUTPUT_ROOT or to start the app the usual way, then call again."),
+    "output_not_applicable": _t("no", "A reference or imported project has no output folder: use a project made from the library."),
+    "output_failed": _t("later", "The output folder could not be written (see `detail`): check that the disk has room and the folder is not open elsewhere, then call POST /api/projects/{pid}/output/build again."),
 }
 
 

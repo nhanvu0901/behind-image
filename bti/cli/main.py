@@ -44,6 +44,8 @@ COMMANDS: list[tuple[str, str, str]] = [
     ("run", "bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]",
      "Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or "
      "a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); every step is in the run log."),
+    ("output", "bti output <project> [--clean]",
+     "Fill (or refill) the project's folder output/<artwork key>/ (the video, the readable documents, the log) from the project as it stands; --clean also removes the working folder's caches when the export stands."),
     ("job", "bti job <id> [--wait] [--cancel]", "Look at a long job, follow it to its end, or stop it."),
     ("undo", "bti undo <project> <batch>", "Undo one batch of operations."),
     ("changes", "bti changes <project> [picks|storyboard]", "The change log of the project, newest batch first."),
@@ -541,6 +543,18 @@ def cmd_ops(ctx: Ctx, a) -> int:
     return send_action(ctx, pid, act, lambda: body, wait=False, yes_cost=False, interval=0, max_wait=0, render=lambda d: R.ops_text(d, dry))
 
 
+def cmd_output(ctx: Ctx, a) -> int:
+    """outfolder: call the action `output.build` of the state answer (fills output/<artwork key>/ from the project as it stands)."""
+    pid = ctx.project(a.project)
+    st = ctx.state(pid)
+    act = find_action(st, "output.build")
+    if act is None:
+        return ctx.fail(X.REFUSED, "output_not_available", "The state of %s does not list output.build: this app has no output folder, or the project is a reference project." % pid,
+                        fix="Run `bti status %s`; ask the owner whether the app was started with an output folder." % pid, retry="no")
+    body = {"clean": True} if a.clean else {}
+    return send_action(ctx, pid, act, lambda: body, wait=False, yes_cost=False, interval=0, max_wait=0, render=R.output_lines)
+
+
 def cmd_job(ctx: Ctx, a) -> int:
     jid = a.id
     if not ID_RE.fullmatch(jid):
@@ -610,7 +624,7 @@ def cmd_doc(ctx: Ctx, a) -> int:
     return ctx.success({"step": DOC_ALIAS.get(a.step, a.step) or "agents", "path": path.relative_to(REPO).as_posix(), "text": text}, text.rstrip("\n").split("\n"))
 
 
-HANDLERS: dict[str, Callable[[Ctx, Any], int]] = {"status": cmd_status, "do": cmd_do, "approve": cmd_approve, "ops": cmd_ops, "run": cmd_run, "job": cmd_job,
+HANDLERS: dict[str, Callable[[Ctx, Any], int]] = {"status": cmd_status, "do": cmd_do, "approve": cmd_approve, "ops": cmd_ops, "run": cmd_run, "output": cmd_output, "job": cmd_job,
                                                    "undo": cmd_undo, "changes": cmd_changes, "schema": cmd_schema, "doc": cmd_doc}
 
 
@@ -670,6 +684,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--wait", action="store_true", help="follow the run to its end, one line per change (it can take hours)")
     sp.add_argument("--yes-cost", dest="yes_cost", action="store_true", help="confirm the cost of the run (the sum of what it may start: machine time and model calls the owner allowed)")
     _wait_options(sp)
+    sp = add("output")
+    sp.add_argument("project")
+    sp.add_argument("--clean", action="store_true", help="also remove the working folder's caches (render parts, preview frames, the agents' scratch, job logs) when the export stands")
     sp = add("job")
     sp.add_argument("id")
     sp.add_argument("--wait", action="store_true", help="follow the job to its end, one line per change")

@@ -355,4 +355,8 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
     parts += [Part(key="join", title="Ghép các đoạn", run=guard(join), heavy=False, est_seconds=30),
               Part(key="mux", title="Ghép tiếng và mục lục", run=guard(do_mux), heavy=False, est_seconds=60),
               Part(key="finish", title="Kiểm tra và lưu tệp", run=guard(finish), heavy=False, est_seconds=60)]
+    from bti.output import hooks as output_hooks          # outfolder: the last part publishes the video into output/<artwork key>/ and cleans the caches (none when the app has no output folder)
+    out_part = output_hooks.job_part(Part, "export", project_dir)
+    if out_part is not None:
+        parts.append(out_part)
     return parts

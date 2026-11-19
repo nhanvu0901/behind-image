@@ -587,6 +587,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 6. Bản xuất mới không tạo phụ đề lời đọc; nhãn và chú thích nghệ thuật trong storyboard vẫn được giữ. Bản xuất cũ không bị thay đổi.
 7. Nếu bạn sửa storyboard hoặc giọng đọc sau khi xuất, trang báo "Cần xuất lại". Bản cũ vẫn xem được cho đến khi xuất bản mới.
 8. Hình nào chưa rõ giấy phép sẽ có ghi chú trong mô tả để bạn kiểm tra trước khi đăng; việc xuất không bị chặn.
+9. Xuất xong, ứng dụng cũng chép video vào thư mục `output/<mã tác phẩm>/` và dọn các tệp tạm của dự án để nhẹ máy (mục 15). Nghĩa là xuất **lại cùng một storyboard** sẽ dựng lại từ đầu; sửa storyboard rồi xuất thì vốn đã dựng lại từ đầu.
 
 ## 9. Dự án nhập từ bản dựng trước
 
@@ -610,6 +611,7 @@ Nút Quay lại của trình duyệt đã đổi địa chỉ trước khi ứng
 | `projects/<dự-án>/cache/picks_auto/` | Việc "Để agent chọn hình": danh sách agent lập, ứng viên đã tìm, lựa chọn, kết quả lần chạy gần nhất và lý do từng dòng; xóa được. |
 | `projects/<dự-án>/proposals/` | Đề xuất (kể cả bản nháp do agent dựng). |
 | `projects/<dự-án>/export/` | Video, mô tả, mục lục và `export.json`. |
+| `output/<mã tác phẩm>/` | Thư mục để bạn đọc, mỗi tác phẩm một thư mục: video `final.mp4`, `README.md` và sáu phần đánh số (mục 15). Ứng dụng viết, không đọc ngược. |
 | `projects/<dự-án>/cache/longjobs/` | Bản ghi và nhật ký các việc dài (giọng đọc, bản nháp, xuất video); xóa được, mất thì chỉ mất lịch sử. |
 | `library/overrides/artworks.json` | Gộp và tách tác phẩm. |
 
@@ -648,3 +650,30 @@ Khi công tắc **Agent tự chạy** đang bật, bên cạnh nó có nút **Ch
 ## 14. Bộ bài kiểm cho agent (cho người làm kỹ thuật)
 
 Các nghiên cứu cho thấy agent làm cùng một việc nhiều lần cho kết quả không ổn định, nên một lần chạy tốt chứng minh rất ít. Bộ bài kiểm chạy các yêu cầu mẫu nhiều lần và đếm xem tiêu chí nào đạt: `python -m bti.evals run --step outline --agent gemini --repeat 3 --yes-cost`. Có sáu bước (outline, narration, draft, edit_storyboard, edit_picks, picks_agent), mỗi bước vài chục ca trong `evals/cases/`, mỗi ca là một tệp JSON với tiêu chí một chương trình kiểm được (số chương, số từ, mỗi dòng không quá 90 từ, một cảnh khoảng bảy giây, chỉ sửa đúng phạm vi...). Nó làm việc trên **bản sao** của dự án mẫu, không bao giờ trên dự án của bạn, nói trước sẽ gọi agent bao nhiêu lần và chỉ chạy khi có `--yes-cost`. Kết quả là một tệp JSON, một bảng tóm tắt (mỗi ca đạt mấy lần trên mấy lần, tiêu chí nào trượt nhiều nhất) và lệnh `python -m bti.evals compare A B` cho thấy gì đổi giữa hai lần chạy (khi đổi lời nhắc hoặc đổi mô hình). Chạy lại mỗi khi đổi lời nhắc hoặc đổi mô hình. Ba bước về hình và sửa bằng lời (edit_storyboard, edit_picks, picks_agent) gọi đúng các route của ứng dụng: ô sửa bằng lời bước 5 (`draft.edit`, trả lời bằng thao tác có kiểu: một yêu cầu không làm được kết thúc là `no_change` hoặc `escalate`), ô sửa bằng lời bước 4 (`picks.edit`) và agent chọn hình (`picks.auto`); ba ca của bước chọn hình và ba ca sửa chọn hình cần một dự án mẫu có lời dẫn đã duyệt và tranh chính (dự án mẫu `arnolfini-from-books` chưa có `script/narration.json`, nên trên dự án mẫu thật các ca ấy bị bỏ qua kèm một câu nói rõ lý do). Chi tiết: `docs/qa/FIX_c6_auto.md`.
+
+## 15. Thư mục output: mỗi tác phẩm một thư mục
+
+Thư mục làm việc `projects/<mã dự án>/` là nơi ứng dụng làm việc: nhiều tệp tạm, bản sao cũ, ảnh không dùng. Bạn không cần mở nó. Thay vào đó, mỗi tác phẩm có **một thư mục sạch** tên theo mã tác phẩm của thư viện (ví dụ `eyck-the-arnolfini-portrait`; dự án không làm từ thư viện thì lấy mã dự án), trong thư mục `output/` nằm cạnh `projects/` (trên máy chủ: `D:\code\behind-the-image\output\`). Mở `output/INDEX.md` để thấy mọi tác phẩm và video nào đã xong.
+
+```
+output/<mã tác phẩm>/
+  final.mp4          video đã xuất (có khi xuất xong)
+  README.md          một trang để đọc: tác phẩm, đang ở bước nào, các bước và ngày giờ, ai duyệt, agent nào, video dài bao lâu, nên xem gì tiếp
+  state.json         bản máy đọc của README
+  1_sources/         văn bản các nguồn sách đã dùng, hồ sơ tác phẩm, danh sách nguồn
+  2_script/          outline.md và narration.md (dàn ý, lời dẫn đọc được: chương, dòng kèm mã, số từ) cùng hai tệp JSON
+  3_voice/           giọng đọc (một tệp), bản trộn âm, thời điểm từng từ
+  4_pictures/        tranh chính, các hình đang hiện trên màn hình (không có hình không dùng), picks.json, regions.jpg (các vùng vẽ trên tranh chính), credits.txt
+  5_storyboard/      storyboard.json, shots.md (mỗi cảnh một dòng bằng lời thường), các tờ ảnh tổng hợp video (mỗi cảnh một khung hình có số và giờ)
+  6_export/          mô tả đăng video, mục lục, báo cáo kiểm tra
+  log/               changes.md (từng lần sửa: lúc nào, ai, yêu cầu gì, đổi gì), jobs.md (từng việc dài: loại, agent, bao lâu, kết quả), auto_runs.md nếu có chạy tự động
+```
+
+- **Nó đầy dần theo dự án.** Nguồn sách ghi khi tạo dự án; dàn ý và lời dẫn ghi khi bạn duyệt; giọng đọc ghi khi làm xong; hình ghi khi duyệt chọn hình; storyboard ghi khi duyệt; video, các tờ ảnh tổng hợp và `6_export` ghi khi xuất xong. `README.md`, `state.json`, `log/` và `INDEX.md` được cập nhật mỗi lần.
+- **Phần cũ.** Nếu sau khi ghi bạn sửa tài liệu (sửa lời dẫn, rút lại một lần duyệt, sửa storyboard), phần ấy trong thư mục được **đánh dấu "bản cũ"** trong `README.md` và `state.json`, cho tới khi bạn duyệt lại hoặc xuất lại. Nó không bao giờ nằm đó trông như còn mới.
+- **Làm lại cùng một tác phẩm.** Dự án mới của cùng tác phẩm ghi đè thư mục này; mọi lần làm được giữ lại trong `state.json` (mục `runs`). Dự án cũ hơn không tự ghi đè lại.
+- **Không có trong thư mục:** tệp tạm, bản sao lịch sử, hình không dùng, đề xuất cũ, mọi cấu hình của máy.
+- **Dọn thư mục làm việc.** Sau khi xuất video **thành công**, ứng dụng xóa các tệp tạm của dự án: bản dựng từng đoạn (thường là phần nặng nhất, hơn một gigabyte), ảnh và đoạn xem thử, bản ghi từng lượt chạy của agent chọn hình, nhật ký dài của các việc. Tài liệu, lịch sử sửa, bản lưu cũ, hình, giọng đọc và video **không** bị xóa; dự án vẫn mở, xem thử, sửa và xuất lại được. Cái giá duy nhất: xuất lại **cùng một** storyboard sẽ dựng lại từ đầu. `README.md` ghi đã giải phóng bao nhiêu. Không dọn nếu lần xuất lỗi hay phiếu kiểm tra báo lỗi. Muốn tắt: **Cài đặt**, ô "Dọn thư mục làm việc sau khi xuất video".
+- **Ghi lại từ một dự án có sẵn** (hoặc khi README báo không ghi được): `bti output <mã dự án>`; thêm `--clean` để dọn luôn các tệp tạm của dự án đã xuất xong.
+- **Chép video về máy Mac:** trên Mac chạy `tools/deploy/fetch_video.sh <mã tác phẩm>`; nó chỉ chép đúng `final.mp4` về `~/Desktop/Claude Render/<mã tác phẩm>.mp4`, không chép gì khác.
+- Đừng sửa tay trong thư mục `output/`: lần ghi sau sẽ ghi đè. Ứng dụng không bao giờ đọc ngược từ đó.

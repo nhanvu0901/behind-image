@@ -54,6 +54,9 @@ demo_runs/codex/
 # Machine-local settings and run state (owner model choices, voice timing stats, snapshots)
 run/
 
+# The output folder (bti/output/): one folder per painting with the finished video; data, never in git. Anchored: bti/output/ and tests/output/ are code.
+/output/
+
 # Runtime folders of a deployed copy (the server is a git checkout; these never belong to the repository)
 /logs/
 /cache/

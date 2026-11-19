@@ -239,6 +239,10 @@ def make_parts(pdir: Path, pid: str, plan: Plan, *, provider, aligner, force_ids
     est_align = int(planner.estimate_audio_seconds(ac, cfg) * 0.4 + 60) if aligner.name == "whisper" else 10
     parts.append(Part(key="align", title="Đo thời điểm từng từ", run=_guard(align_run), heavy=(aligner.name == "whisper"),
                       est_seconds=est_align, is_done=lambda ctx: _safe(timing_current)))
+    from bti.output import hooks as output_hooks          # outfolder: the last part publishes the voice into output/<artwork key>/ (none when the app has no output folder)
+    out_part = output_hooks.job_part(Part, "voice", pdir)
+    if out_part is not None:
+        parts.append(out_part)
     return parts
 
 

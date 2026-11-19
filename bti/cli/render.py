@@ -158,6 +158,11 @@ def status_text(st: dict) -> list[str]:
         out.append("problems:")
         for p in problems:
             out.append("  %s (step %s): %s -> %s" % (p.get("code"), p.get("step"), p.get("detail"), p.get("fix")))
+    warns = st.get("warnings") or []                    # outfolder: a problem with the output folder
+    if warns:
+        out.append("warnings:")
+        for w in warns:
+            out.append("  %s: %s" % (w.get("code"), w.get("sentence") or w.get("detail")))
     acts = st.get("next_actions") or []
     here = {x["step"] for x in st.get("steps") or [] if x.get("state") == "current"}
     main = [a for a in acts if a.get("step") in here or a.get("advances") or a.get("gate")]       # the work of the open steps, and every gate
@@ -263,4 +268,20 @@ def job_end_lines(job: dict) -> list[str]:
     code = job.get("error_code") or job.get("error_kind")
     if err or code:
         out.append("  error%s: %s" % (" (%s)" % code if code else "", detail_text(err)))
+    return out
+
+
+# ---- outfolder: `bti output`
+def output_lines(data: dict) -> list[str]:
+    parts = data.get("parts") or {}
+    out = ["output folder: %s   (%d file(s) written%s)" % (data.get("folder"), data.get("written") or 0, "; took the folder over from another project" if data.get("takeover") else "")]
+    out.append("parts: " + (", ".join("%s%s" % (k, " (OUT OF DATE: %s)" % v.get("reason") if v.get("out_of_date") else "") for k, v in parts.items() if v.get("rev")) or "none yet"))
+    cl = data.get("clean")
+    if isinstance(cl, dict):
+        if cl.get("done"):
+            out.append("cleaned the working folder: freed %.1f MB in %d file(s)" % ((cl.get("freed_bytes") or 0) / 1048576.0, cl.get("files") or 0))
+        else:
+            out.append("did not clean the working folder: %s" % cl.get("reason"))
+    for w in data.get("warnings") or []:
+        out.append("warning %s: %s" % (w.get("code"), w.get("sentence") or w.get("detail")))
     return out
