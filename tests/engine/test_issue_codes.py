@@ -26,6 +26,7 @@ def _codes_in_source():
 def test_every_code_in_the_source_is_documented():
     missing = _codes_in_source() - set(SB.ISSUE_CODES)
     assert not missing, missing
+    assert _viewer_codes() <= set(SB.ISSUE_CODES)
 
 
 def _map_codes():
@@ -49,10 +50,17 @@ def _explain_codes():
     return {n.value for n in ast.walk(tree) if isinstance(n, ast.Constant) and isinstance(n.value, str) and re.fullmatch(r"(doc_[a-z_]+|overlay_needs_camera)", n.value)}
 
 
+def _viewer_codes():
+    """The codes of the viewer checks (bti/engine/viewchecks.py, worker fixdraft): the literal first argument of every `_issue(...)` call."""
+    tree = ast.parse((ENGINE / "viewchecks.py").read_text())
+    return {n.args[0].value for n in ast.walk(tree) if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "_issue"
+            and n.args and isinstance(n.args[0], ast.Constant)}
+
+
 def test_documented_codes_are_all_used():
     used = _codes_in_source() | _map_codes() | _explain_codes() | {"undrawable", "incomplete", "not_an_object", "unreadable_structure", "style_unusable", "timing_unusable",
                                  "params_not_object", "unknown_param"}
-    used |= _compbase_codes()
+    used |= _compbase_codes() | _viewer_codes()
     assert set(SB.ISSUE_CODES) - used == set()
 
 

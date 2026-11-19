@@ -206,6 +206,8 @@ HINTS: dict[str, dict] = {
     "bad_provider": _t("after_fix", 'Send provider as "agy" or "auto".'),
     "bad_model": _t("after_fix", "Send `model` as a plain model id, or leave it out to use the project's agent."),
     "bad_chapters": _t("after_fix", "Send `chapters` as a list of chapter ids (at most 100)."),
+    "draft_note_too_long": _t("after_fix", "Send `note` of at most 600 characters (the owner's wish for this draft), or leave it out."),      # fixdraft
+    "draft_note_invalid": _t("after_fix", "Send `note` as text (the owner's wish for this draft), or leave it out."),                       # fixdraft
     "bad_action": _t("after_fix", 'Send action as "overwrite" or "discard".'),
     "agy_missing": _t("no", "The agy command is not installed on this machine: choose the other agent (PUT /api/projects/{pid}/agent) or use provider auto."),
     "agy_config": _t("no", "The agy on this machine cannot be used (too old or not running): choose the other agent or use provider auto."),

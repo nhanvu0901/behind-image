@@ -16,6 +16,7 @@ from pathlib import Path
 
 from . import registry as R
 from . import limits as L
+from . import viewchecks as VC
 from .errors import DataError
 from .timing import AnchorError, Timing
 from .vfx import EASE
@@ -574,6 +575,7 @@ ISSUE_CODES = {
     "element_too_short": "A shot or overlay of the channel identity (`ID-`) or of an explanatory component (`MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-`) is shorter than the technique's `timing.min_s` (error). args: technique, min, got.",
     "identity_technique_mismatch": "A structure shot (title slot or chapter card) uses a technique that is not the one of the chosen identity style (warning). args: shot, technique, style, wanted."
 }
+ISSUE_CODES.update(VC.CODES)           # fixdraft: the checks of bti/engine/viewchecks.py (what a viewer would see), all warnings
 
 
 # ----------------------------------------------------------------------------- validate
@@ -1019,6 +1021,7 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
     if end_t is not None and tm.duration and end_t > tm.duration + 1.0:
         warn("end", "end %.2f s is after the audio/timing duration %.2f s" % (end_t, tm.duration), "end_after_audio", end=end_t, duration=tm.duration)
     _check_identity(sb, shots, bundle, err, warn)
+    issues.extend(VC.check(sb, tm, bundle, project_dir, starts, end_t, safe_rel))     # fixdraft: what a viewer would see (warnings only)
     return issues
 
 

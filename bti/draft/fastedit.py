@@ -26,7 +26,7 @@ from bti.script.brief import REPO_ROOT
 from . import boxops as B
 from . import decompile as D
 from . import techniques_md as T
-from .inputs import DraftInputs, resolve_edit_scope
+from .inputs import DraftInputs, line_assets, resolve_edit_scope
 
 TEMPLATE_PATH = REPO_ROOT / "skills" / "storyboard_edit" / "FAST.template.md"
 MAX_WORDS = 500          # the narration words shown at most
@@ -136,11 +136,15 @@ def _region_text(r: dict) -> dict:
     return out
 
 
-def assets_block(doc: dict, used: set[str], main: str | None) -> str:
+def assets_block(doc: dict, used: set[str], main: str | None, offered: set[str] | None = None) -> str:
+    """The pictures of the scope's shots with their regions, then the other pictures of the project; with `offered` (the pictures some line of the
+    narration has, `inputs.line_assets`) the others are only those: a picture the owner took out of every line stays in the project but is not offered."""
     assets = doc.get("assets") or {}
     shown, others = {}, {}
     for key, a in assets.items():
         if not isinstance(a, dict):
+            continue
+        if key not in used and key != main and offered is not None and key not in offered:
             continue
         if key in used or key == main:
             shown[key] = {"title": a.get("title") or key, "kind": a.get("kind", "image"), "size": "%sx%s" % (a.get("width"), a.get("height")),
@@ -277,7 +281,7 @@ def build_briefing(inp: DraftInputs, doc: dict, facts: Any, scope: B.Scope, inst
     for key, value in {"LANG": lang, "INSTRUCTION": instruction.strip(), "THREAD_HISTORY": history_block(thread_turns),
                        "OPS": B.render_ops("storyboard", names), "SCOPE_WORDS": scope.words, "SHOTS": "\n".join(shot_lines) or "(none)",
                        "NEIGHBOURS": "\n".join(neighbours), "WORDS": words_block(words, t_lo, t_hi),
-                       "ASSETS": assets_block(doc, used, inp.picks.get("main_asset")),
+                       "ASSETS": assets_block(doc, used, inp.picks.get("main_asset"), line_assets(inp)),
                        "CATALOGUE": catalogue(bundle, techs, instruction), "MAXOPS": str(B.MAX_OPS)}.items():
         out = out.replace("{{%s}}" % key, value)
     return out

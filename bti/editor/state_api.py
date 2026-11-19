@@ -138,7 +138,7 @@ SPECS: list[Spec] = [
     # ---- storyboard (step 5, page step id `edit`)
     Spec("draft.start", "edit", "Dựng bản nháp", "POST", P + "/draft/start", long_job=True, follow=LONGJOBS, role="draft",
          cost=("model", "about 20 minutes"),
-         when="Once step 5 is open. Needs the voice and the approved picks, no draft job running, the pictures agent not working (one agent run at a time) and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard."),
+         when="Once step 5 is open. Needs the voice and the approved picks, no draft job running, the pictures agent not working (one agent run at a time) and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. Optional body field `note` (text, at most 600 characters, `--set note=...`): the owner's wish for this draft (for example \"fewer close-ups\"), put into the agent's task file; leave it out when the owner gave none."),
     Spec("proposal.apply", "edit", "Áp dụng", "POST", P + "/proposals/{prop_id}/apply",
          when="While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date."),
     Spec("storyboard.restore", "edit", "Khôi phục bản gần nhất", "POST", P + "/storyboard/restore",
@@ -710,7 +710,7 @@ def b_draft_start(c: Ctx):
         needs.append("no_running_job")
     needs += _model_needs(c, "draft")
     st = c.draft_state.get("state")
-    return E(list(dict.fromkeys(needs)), {"provider": "agy"}, advances=not c.sb_exists and st in ("none", "stale"))
+    return E(list(dict.fromkeys(needs)), {"provider": "agy", "note": None}, advances=not c.sb_exists and st in ("none", "stale"))      # note: optional, null = none
 
 
 def b_proposal_apply(c: Ctx):

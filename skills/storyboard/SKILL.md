@@ -38,16 +38,16 @@ The engine draws exactly what the storyboard says; it never decides.
 | `draft.cancel` | edit | Dừng |  |  |  |
 <!-- END GENERATED: actions -->
 
-The first storyboard: `draft.start` (a model works in a scratch folder for about 20 minutes and writes a **proposal**; the app compares the project before and after and drops the result if anything else changed),
+The first storyboard: `draft.start` (a model works in a scratch folder for about 20 minutes and writes a **proposal**; the app compares the project before and after and drops the result if anything else changed; `--set note="..."` gives the model the owner's wish for this draft, up to 600 characters, for example "fewer close-ups": add it only when the owner said something, and never put a rule of this document in it),
 then `proposal.apply` (`{"accept": "all"}` for the first draft; the proposal id is in the path the status shows). Later changes in words, for the owner's kind of request ("zoom more slowly into the mirror"), are
 `draft.edit` (`--set instruction="..." --set 'scope={"shots":["s0012"]}'` or `{"chapter": "c02"}` or `{"all": true}`); for exact changes use the operations:
 
 <!-- BEGIN GENERATED: ops -->
 | operation | what it does |
 |---|---|
-| `set_technique` | Change the technique of a shot. Parameters not given take the defaults of the new technique (the same as POST .../defaults); slots that still fit are kept. |
+| `set_technique` | Change the technique of a shot. Parameters not given take the defaults of the new technique (the same as POST .../defaults); slots that still fit are kept; the shot's note (the reason written for the old treatment) is cleared. |
 | `set_params` | Change some parameters of a shot or of one of its overlays. A value of null returns that parameter to its default. |
-| `set_slot` | Put an asset into a slot of a shot or overlay (or empty the slot with asset null). When the main picture of a shot changes, its camera keys are fitted to the new picture the way the page does. |
+| `set_slot` | Put an asset into a slot of a shot or overlay (or empty the slot with asset null). When the main picture of a shot changes, its camera keys are fitted to the new picture the way the page does and its note (the reason written for the old picture) is cleared. |
 | `add_overlay` | Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not given take the defaults of the technique; it starts at the start of the shot and lasts 3 s unless said otherwise. |
 | `set_overlay` | Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end, intent or note. Use set_params for its parameters. |
 | `remove_overlay` | Remove an overlay from a shot. |
@@ -90,7 +90,7 @@ Fixture project `ops1` (ten shots `s0001` to `s0010`, `s0006` locked). The ids a
 ```text
 # fixture: ops
 $ bti do ops1 storyboard.validate
-ok: storyboard.validate: 0 error(s), 0 warning(s)
+ok: storyboard.validate: 0 error(s), 3 warning(s)
 $ cat > ops.json <<'EOF'
 [{"op": "set_params", "shot": "s0002", "overlay": "o1", "params": {"rx": 260, "ry": 260}},
  {"op": "lock", "shot": "s0003"}]
@@ -126,6 +126,10 @@ Any later change drops the approval: approve again and export again.
 Take these from `skills/storyboard_draft/TASK.template.md` and `skills/storyboard_edit/FAST.template.md` (what the draft and edit models are told), and from `docs/APP_GUIDE.md` (section 7).
 
 - **Pacing.** The reference channel's median shot is about 7 seconds, one in ten is under 4 seconds, none is under 1.5 seconds, and a shot over 30 seconds is split with a move or a detail. A beat is usually one to three shots. A camera move under 3 seconds is a cut in disguise; over 20 seconds it needs a second event to stay alive.
+- **The frame is full.** An upright painting shown whole is a small picture between two black bars (the main painting of 3840 px width fills the screen at `zoom` 0.5; under 0.3 it is that small picture). Show it whole for at most 5% of the video (30 seconds in ten minutes): the pull back that ends the cold open, one chapter opening and the last shot. Every other shot fills the screen: the painting at full width with a slow travel up or down, a wide band of it, or a detail. The first real draft had 41 of its 109 shots on the small picture and needed a request for each. Neighbouring shots never end and start on the same frame; the chapter marks and the channel-name beat take the pose of the shots beside them.
+- **Highlights are rare and stay lit.** `HI-01` and `X-HI-01`: at most one in two minutes, none in the first minute, only on a wide frame to point at an object, never when the camera already frames it closely. The region stays inside the frame (5% in from every edge) from the start to the end of the layer, so look at the camera after any change of it, and the rest of the picture keeps at least 0.6 of its light (`floor`, `surround_floor`): the default 0.2 left the first export with three stretches of five seconds at a mean luma under 26 (the video's median is 55; 16 is black, 235 white).
+- **Text on the screen is true and tidy.** A date, figure, place, name or map label comes from the narration (a spelled number counts); a caption is the narration's word, the picture's own title or nothing, never a placeholder ("UNKNOWN AUTHOR UNKNOWN AUTHOR, 1950"), a note to the reader ("Source: an estimate cited in the narration") or the same words twice. A `MAP-01` carries no `region_label`, `region_iso` or `sea_names` that the narration does not name. No map, time axis, tree or two-state picture in the first 30 seconds: the painting is on screen as the viewer arrives.
+- **Only pictures that a line has.** A picture the owner took out of every line stays in the project but must not be used again (the draft is not offered it); a small one (long side under 1000 px) is shown no larger than its pixels allow.
 - **The owner's picks first.** The pictures the owner chose for a line are what its shots show. A line with none stays on the main painting and moves (zoom in, go to a detail, pull back); never hold a still for more than one shot in a row.
 - **A line about something outside the painting needs a picture outside the painting.** A person, a place, a document or another work is shown with the picture the picks give it (`context`, `document`, `compare`, `map`), not with the painting held; if the picks give none, go back to step 4 and ask for one rather than filling the time.
 - **Explanatory devices only where the narration makes that point.** `MAP-01` (a place, a journey, a territory: use it instead of the three older map techniques), `TIME-01` (dated events), `TREE-01` (who is related to whom), `KEY-01` (names for parts of the picture), `NUM-01` (a figure or two figures compared), `STATE-01` (the same picture in two states), `DOC-01` (one line of a document, lit). Tie every item to the word that names it (`at: {"w": 154}`); take dates, places, figures and relations only from the narration and the project's sources, and leave an item out when unsure. About 6 to 12 in a ten-minute video, never two in a row, none through general talk: most lines are served better by a camera move.
@@ -134,6 +138,21 @@ Take these from `skills/storyboard_draft/TASK.template.md` and `skills/storyboar
 - **Never put the narration on screen.** Labels are one to five words of your own ("Latin inscription"); no parameter holds a sentence of the narration. The video has no burned-in subtitles.
 - **The channel identity is the program's.** The `ID-*` techniques (the opening, the channel-name beat, the chapter marks) are written by the compiler: never add one, never write a title card or a chapter card. Change their style with `identity.set`.
 - **Respect locks and scope.** Never touch a locked shot; a batch with a `scope` that an operation leaves is refused whole (`out_of_scope`).
+
+## The warnings of `storyboard.validate` that are the owner's rejections
+
+None of these blocks a save or the approval, but an automatic run stops at them (`quality_warning`, `docs/AGENT_API.md` section 9) and the owner rejects the look. Each issue says what is wrong and what to do; the numbers are estimates from the shot's camera, the picture's size and the parameters (nothing is rendered).
+
+| code | what it means | what to do |
+|---|---|---|
+| `upright_whole_share` | The main painting covers under 60% of the screen for more than 6% of the running time (a clip under a minute is never judged). `args`: `share`, `seconds`, `count`, `worst` (the shots). | Give those shots a framing that fills the screen (`set_params` with a `camera` at `zoom >= 0.6 x 1920 / width`, the painting at full width travelling up or down); keep the whole painting for the cold open's pull back, one chapter opening and the last shot. |
+| `highlight_off_frame` | The lit spot of an `HI-01` or `X-HI-01` is at the edge of the frame (nearer than 5%) or outside it at some moment of its window. | Move the camera so that the region stays inside (`set_params` `camera`), or `remove_overlay`. |
+| `highlight_too_dark` | The frame under a highlight has a mean luma under 32 (16 to 235) and the highlight takes away a quarter of it. The issue's `args` give the `floor` that would do (empty: none would). | `remove_overlay` when the camera already frames the object closely; else `set_params` `floor` (`surround_floor` for `X-HI-01`) to that value or about 0.6. |
+| `caption_placeholder`, `caption_repeats` | On-screen text that is a placeholder, says `narration`, is only the picture file's artist and year under a caption of its own, or repeats words. `args.param` names it. | `set_params` the text to words from the narration, to the picture's own title, or to `""`. |
+| `text_not_in_narration` | A figure, date, place, name or map label (`MAP-01` `region_label`, places, `sea_names`; `NUM-01` `value`; `TIME-01` dates; `STATIC-09` `year`; `DOC-01` `reading`; `TREE-01` names) that the narration never says; a year, title or artist of the shot's own picture is allowed. `args.missing` lists the words. | Use what the narration says, or `""` (for `sea_names` and `region_label`: off and empty). It does not see text inside a picture, the names a map draws from its own data, or free labels such as `X-ANN-01`. |
+| `asset_not_in_lines` | A shot shows a picture that no line of the narration has (`picks.json`) and that is not the main painting. | `set_slot` the picture of a line of that part, or the main painting; do not add it to the lines again unless the owner asks (step 4). |
+| `explainer_early` | A base explanatory shot (`MAP-01`, `TIME-01`, `TREE-01`, `STATE-01`) starts in the first 30 seconds. | Show the dates as large figures on the painting (`STATIC-09` overlay) and move the diagram to a later chapter. |
+| `shot_short` | A shot lasts under 1.5 seconds (tolerated by an automatic run: it is a flash, not a defect). | `merge_shots` it into the one before, or `move_boundary` its cut. |
 
 ## The refusals you will meet
 

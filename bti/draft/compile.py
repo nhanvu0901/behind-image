@@ -752,6 +752,8 @@ class _Compiler:
         o = origin[idx] if idx is not None and idx < len(origin) else None
         out = {"level": iss.get("level", "error"), "code": iss.get("code") or "engine", "chapter": None, "shot": None, "overlay": None,
                "field": None, "engine_path": path, "engine_code": iss.get("code"), "rec": idx, "args": iss.get("args") or {}}
+        if iss.get("hint"):
+            out["hint"] = iss["hint"]                   # fixdraft: the engine's viewer checks say what to do
         if o is None:
             out["message"] = "the storyboard: %s" % iss.get("message")
             return out

@@ -5,9 +5,10 @@
                                             select (GET /api/agents, agent_api.py) replaced the model list of the draft panel. It stays for
                                             tools that name a model themselves; `default` is the model the next draft of THIS project uses
                                             (its agent), and `agent` says whose it is.
-    POST /api/projects/{pid}/draft/start    {provider: "agy" | "auto", model?, chapters?}  -> {job_id, model, agent}   (a long job: /api/longjobs/{id})
+    POST /api/projects/{pid}/draft/start    {provider: "agy" | "auto", model?, chapters?, note?}  -> {job_id, model, agent}   (a long job: /api/longjobs/{id})
                                             Without `model` the project's agent is used (bti.agents.model_for_project); a request that names a
-                                            model keeps it.
+                                            model keeps it. `note` is the owner's wish for this draft (text, at most 600 characters: 422
+                                            `draft_note_too_long` / `draft_note_invalid`); it goes into the agent's task file and is kept in the job's meta.
 
 The proposal the job writes is read and applied through the existing proposal routes. The projects folder is read from
 `app.state.projects_root`."""
@@ -91,7 +92,7 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
     if chapters is not None and not (isinstance(chapters, list) and all(isinstance(c, str) for c in chapters) and len(chapters) <= 100):
         raise ApiError(422, "chapters must be a list of chapter ids", code="bad_chapters")
     try:
-        job = draft_run.start(pid, d, provider=provider, model=model or None, chapters=chapters or None)
+        job = draft_run.start(pid, d, provider=provider, model=model or None, chapters=chapters or None, note=body.get("note"))
     except DraftError as e:
         status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "picks_missing", "timing_missing", "picks_no_main", "agent_job_running") else 422
         raise ApiError(status, e.message, code=e.code, **(e.extra if e.code == "agent_job_running" else {}))

@@ -16,6 +16,7 @@ from pathlib import Path
 from bti.media import assets as media_assets
 
 SPEC_SCHEMA = "bti.draft/1"
+NOTE_MAX = 600            # characters of the owner's note of `draft.start` (about five sentences): it goes into the agent's task file
 PICKS_SCHEMA = "bti.picks/1"
 CHAPTER_ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,31}")
 
@@ -168,6 +169,31 @@ def beat_picks(picks: dict, beat_id: str) -> list[dict]:
         if isinstance(it, dict) and isinstance(it.get("asset"), str) and it["asset"] in picks["assets"]:
             out.append({"asset": it["asset"], "region": it.get("region") if isinstance(it.get("region"), str) else None,
                         "role": it.get("role") or "detail", "note": str(it.get("note") or "")})
+    return out
+
+
+def line_assets(inp) -> set | None:
+    """The pictures that some line of the narration has (a beat that is still in the timing, not skipped) and the main painting; None when
+    the picks say nothing about lines (they were made from the saved storyboard's assets), then nothing is hidden."""
+    beats = inp.picks.get("beats") if isinstance(inp.picks.get("beats"), dict) else {}
+    if not any(isinstance(e, dict) and e.get("items") for e in beats.values()):
+        return None
+    used = {inp.picks["main_asset"]}
+    for b in inp.timing["beats"]:
+        used.update(it["asset"] for it in beat_picks(inp.picks, b["id"]))
+    return used
+
+
+def shot_assets(doc) -> set:
+    """Every asset key the slots of the shots (and of their overlays) of a storyboard hold."""
+    out: set = set()
+    for s in (doc or {}).get("shots") or []:
+        if not isinstance(s, dict):
+            continue
+        for holder in [s] + [o for o in s.get("overlays") or [] if isinstance(o, dict)]:
+            for v in (holder.get("slots") or {}).values() if isinstance(holder.get("slots"), dict) else []:
+                if isinstance(v, dict) and isinstance(v.get("asset"), str):
+                    out.add(v["asset"])
     return out
 
 

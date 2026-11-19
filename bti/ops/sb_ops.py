@@ -139,6 +139,13 @@ def _mark(ctx, item: dict) -> None:
     item["source"] = ctx.source
 
 
+def _stale_note(shot: dict) -> None:
+    """A shot that now shows something else (another technique, another main picture) no longer has the reason it was written for: its `note`
+    ("over the squirrel photo") is cleared, so the owner never reads a reason that is not true. Camera, parameter and overlay changes keep it."""
+    if shot.get("note"):
+        shot["note"] = ""
+
+
 # ---------------------------------------------------------------- slots and parameters
 def _asset_kind(a: Any) -> str:
     return "video" if isinstance(a, dict) and a.get("kind") == "video" else "mask" if isinstance(a, dict) and a.get("kind") == "mask" else "image"
@@ -347,7 +354,7 @@ def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str
 # ---------------------------------------------------------------- operations: technique, parameters, slots
 @op("storyboard", "set_technique",
     summary="Change the technique of a shot. Parameters not given take the defaults of the new technique (the same as POST .../defaults); "
-            "slots that still fit are kept.",
+            "slots that still fit are kept; the shot's note (the reason written for the old treatment) is cleared.",
     schema=S.obj("set_technique", ["shot", "technique"], {
         "shot": SHOT, "technique": TECH,
         "params": S.free_object("Parameters of the new technique that differ from its defaults."),
@@ -373,6 +380,7 @@ def set_technique(ctx, o):
     params.update({k: v for k, v in given.items() if v is not None})
     ctx.touch("shot:" + shot["id"])
     shot["technique"], shot["params"], shot["slots"] = o["technique"], params, slots
+    _stale_note(shot)
     intents = spec.get("intents") or []
     if o.get("intent"):
         shot["intent"] = o["intent"]
@@ -438,7 +446,7 @@ def set_params(ctx, o):
 
 @op("storyboard", "set_slot",
     summary="Put an asset into a slot of a shot or overlay (or empty the slot with asset null). When the main picture of a shot changes, "
-            "its camera keys are fitted to the new picture the way the page does.",
+            "its camera keys are fitted to the new picture the way the page does and its note (the reason written for the old picture) is cleared.",
     schema=S.obj("set_slot", ["shot", "slot", "asset"], {
         "shot": SHOT, "overlay": OVERLAY,
         "slot": S.string("A slot name of the technique, such as image.", pattern=r"^[A-Za-z0-9_]{1,40}$", hint="a slot name like image"),
@@ -472,6 +480,7 @@ def set_slot(ctx, o):
     else:
         slots[o["slot"]] = new
     if ov is None and new is not None and new.get("asset") != old_asset and (was_primary in (None, o["slot"])):
+        _stale_note(shot)
         cams = [p["name"] for p in spec["params"] if p["type"] == "camera"]
         if cams:                                                      # the page's `cameraRefit`: the keys were in the old picture's pixels
             fresh = _defaults(ctx, shot["technique"], "shot", shot, shot["slots"], t1 - t0)

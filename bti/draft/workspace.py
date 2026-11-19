@@ -33,7 +33,7 @@ from bti.engine import registry as R
 from . import decompile as D
 from . import spec as S
 from . import techniques_md
-from .inputs import DraftError, DraftInputs, narration_notes, beat_picks
+from .inputs import NOTE_MAX, DraftError, DraftInputs, beat_picks, line_assets, narration_notes, shot_assets
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = REPO_ROOT / "skills" / "storyboard_draft" / "TASK.template.md"
@@ -196,18 +196,29 @@ def _beats_doc(inp: DraftInputs) -> dict:
 
 
 def render_template(text: str, mode: str, values: dict) -> str:
-    """`{{#DRAFT}}..{{/DRAFT}}` and `{{#EDIT}}..{{/EDIT}}` blocks are kept for their mode only; `{{KEY}}` is replaced."""
-    for m in ("DRAFT", "EDIT"):
-        keep = (m == mode.upper())
+    """`{{#DRAFT}}..{{/DRAFT}}` and `{{#EDIT}}..{{/EDIT}}` blocks are kept for their mode only, a `{{#NOTE}}..{{/NOTE}}` block only when the owner
+    left a note (`values["OWNER_NOTE"]`); `{{KEY}}` is replaced (the owner's note last, so that nothing it says is read as a key)."""
+    note = str(values.get("OWNER_NOTE") or "")
+    for m, keep in (("DRAFT", mode.upper() == "DRAFT"), ("EDIT", mode.upper() == "EDIT"), ("NOTE", bool(note))):
         text = re.sub(r"\{\{#%s\}\}\n?(.*?)\{\{/%s\}\}\n?" % (m, m), (lambda g: g.group(1)) if keep else (lambda g: ""), text, flags=re.S)
     for k, v in values.items():
-        text = text.replace("{{%s}}" % k, str(v))
-    return text
+        if k != "OWNER_NOTE":
+            text = text.replace("{{%s}}" % k, str(v))
+    return text.replace("{{OWNER_NOTE}}", note)
+
+
+def clean_note(note) -> str:
+    """The owner's note as one line of the task file: spaces folded, braces that could be read as a template key made harmless. '' for none."""
+    if not isinstance(note, str):
+        return ""
+    return " ".join(note.split()).replace("{{", "{ {").replace("}}", "} }")
 
 
 def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = None, instruction: str | None = None,
-          scope_words: str = "", history: str | None = None, repo_root: Path | None = None, template: Path | None = None) -> Workspace:
-    """Make the workspace. `instruction` switches to edit mode (design 7.4); `inp.edit_shots` is then the set of shot ids in scope."""
+          scope_words: str = "", history: str | None = None, repo_root: Path | None = None, template: Path | None = None,
+          note: str | None = None) -> Workspace:
+    """Make the workspace. `instruction` switches to edit mode (design 7.4); `inp.edit_shots` is then the set of shot ids in scope.
+    `note` is the owner's wish for this draft (`draft.start`), written into TASK.md; only the pictures that a line uses are offered."""
     import sys
     repo = Path(repo_root or REPO_ROOT)
     python = python or sys.executable
@@ -220,11 +231,18 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
         (root / sub).mkdir(parents=True, exist_ok=True)
     bundle = R.load_bundle(inp.style)
 
-    # pictures and video clips
+    # pictures and video clips: only those that a line of the narration uses (and the main painting). A picture the owner took out of every line stays
+    # in the project but is not offered, or the draft uses it again; one that the saved storyboard still shows is offered, marked "do not use".
     all_assets = dict(inp.picks["assets"])
     for k, a in ((inp.current or {}).get("assets") or {}).items():
         if isinstance(a, dict):
             all_assets[k] = a
+    offered = line_assets(inp)
+    kept_only: set = set()
+    if offered is not None:
+        shown = shot_assets(inp.current)
+        kept_only = {k for k in shown if k not in offered and k in all_assets}
+        all_assets = {k: a for k, a in all_assets.items() if k in offered or k in kept_only}
     copies: dict = {}
     video_copies: dict = {}
     for k, a in all_assets.items():
@@ -254,6 +272,8 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
                        note="video clip: images/%s.jpg is a contact sheet of frames from the clip; use technique FOOT-01 (slot 'footage') or LAY-04 (slot 'inset')" % k)
         else:
             rec.update(file=None, note="no picture file is available for this asset: do not use it")
+        if k in kept_only:
+            rec["note"] = "the saved storyboard still shows this picture but no line of the narration has it any more: keep the shots that show it as they are, never use it in a new shot"
         assets_doc[k] = rec
     _json(root / "inputs" / "assets.json", {"main_asset": inp.picks["main_asset"],
                                             "note": "All coordinates and region numbers are in SOURCE pixels. Multiply a position you measure on the copy by `scale`.",
@@ -294,7 +314,7 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
         "CHAPTER_LIST": "\n".join("- `%s` %s (words %d to %d, %.0f s to %.0f s)" % (c, names[c]["name"], names[c]["w0"], names[c]["w1"] - 1, names[c]["start"], names[c]["end"]) for c in chapters),
         "N_CHAPTERS": len(chapters), "REDRAFT": "yes" if inp.current else "no",
         "SCOPE_WORDS": scope_words or "the whole video",
-        "INSTRUCTION": instruction or "",
+        "INSTRUCTION": instruction or "", "OWNER_NOTE": clean_note(note)[:NOTE_MAX],
     }
     tpl = Path(template or TEMPLATE)
     if not tpl.is_file():

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { issueText } from '../../bti/editor/static/js/errmsg.js';
+import { issueText, FIXDRAFT_CODES } from '../../bti/editor/static/js/errmsg.js';
 import { storyboardIssueText, whereOf, KNOWN_CODES, paramReason } from '../../bti/editor/static/js/sbissues.js';
 
 const VI = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
@@ -135,7 +135,7 @@ const engineCodes = () => JSON.parse(execFileSync(PY, ['-c', 'import json; from 
 test('every code in bti.engine.storyboard.ISSUE_CODES has a Vietnamese template (and no template is for a code that does not exist)', { skip: !fs.existsSync(PY) && 'no .venv/bin/python' }, () => {
   const codes = engineCodes();
   assert.ok(codes.length >= 90, 'ISSUE_CODES looks empty');
-  const missing = codes.filter((c) => !TEMPLATE_CODES.includes(c));
+  const missing = codes.filter((c) => !TEMPLATE_CODES.includes(c) && !FIXDRAFT_CODES.includes(c));         // fixdraft: its sentences live in errmsg.js
   assert.deepEqual(missing, [], 'codes without a Vietnamese template: ' + missing.join(', '));
   const extra = TEMPLATE_CODES.filter((c) => !codes.includes(c));
   assert.deepEqual(extra, [], 'templates for codes the engine does not have: ' + extra.join(', '));

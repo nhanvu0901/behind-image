@@ -18,7 +18,7 @@ import time
 from pathlib import Path
 
 from . import spec as S
-from .inputs import (DraftError, DraftInputs, canon_hash, clone_inputs, load_inputs,
+from .inputs import (NOTE_MAX, DraftError, DraftInputs, canon_hash, clone_inputs, load_inputs,
                      normalize_timing, read_json_file, resolve_edit_scope)
 from bti import agents as AG
 from bti.settings import model_for
@@ -65,6 +65,8 @@ VI = {
     "edit_no_storyboard": "Chỉ sửa bằng prompt khi dự án đã có storyboard.",
     "edit_bad_scope": "Phạm vi sửa không hợp lệ (cần chọn cảnh, chương hoặc cả video).",
     "edit_empty_instruction": "Chưa nhập yêu cầu sửa (hãy gõ hướng dẫn cho agent).",
+    "draft_note_too_long": "Ghi chú cho bản nháp quá dài (tối đa 600 ký tự). Hãy rút gọn rồi dựng lại.",       # fixdraft
+    "draft_note_invalid": "Ghi chú cho bản nháp phải là chữ. Hãy gõ lại rồi dựng lại.",                          # fixdraft
     "edit_needs_agy": "Sửa bằng prompt cần dùng agent agy, không dùng được chế độ tự động.",
     "edit_no_change": "Agent không thay đổi gì trong storyboard.",
     "compile_error": "Không thể ghép các cảnh do có lỗi thông số hoặc cú pháp.",
@@ -332,8 +334,9 @@ class _Run:
 
     def __init__(self, project_dir: Path, provider: str, model: str | None, chapters: list | None,
                  instruction: str | None = None, edit_scope: dict | None = None, followup: bool = False,
-                 turn_id: str | None = None, base_rev: str | None = None):
+                 turn_id: str | None = None, base_rev: str | None = None, note: str | None = None):
         self.project_dir, self.provider, self.model, self.chapters = Path(project_dir), provider, model, chapters
+        self.note = note                                    # the owner's wish for this draft (`draft.start`); None for an edit
         self.instruction = instruction
         self.edit_scope = edit_scope
         self.followup = followup
@@ -394,6 +397,16 @@ def _write_last_edit(project_dir: Path, turn_id: str | None, **kw) -> None:
         pass
 
 
+def _chapters_written(r: "_Run", n_json: int, n_ch: int) -> int:
+    """How many of the chapters in scope have their file in out/: out/ also holds regions.json (and, in edit mode, notes.json), so the count of
+    *.json files can be one more than there are chapters ("9/8 chapters"). Never more than `n_ch`."""
+    try:
+        out = Path(r.ws.root) / "out"
+        return min(n_ch, sum(1 for c in r.inputs.in_scope() if (out / ("%s.json" % c)).is_file()))
+    except (AttributeError, OSError):
+        return min(n_ch, n_json)
+
+
 def _prune(project_dir: Path) -> None:
     base = _cache(project_dir)
     try:
@@ -407,11 +420,11 @@ def _prune(project_dir: Path) -> None:
 def make_parts(project_dir: Path, provider: str, model: str | None, chapters: list | None, *, agent_timeout: float = AGENT_TIMEOUT_S,
                guard_factory=None, python: str | None = None, instruction: str | None = None,
                edit_scope: dict | None = None, followup: bool = False, turn_id: str | None = None,
-               base_rev: str | None = None):
+               base_rev: str | None = None, note: str | None = None):
     """The parts of the job (see the module docstring). `guard_factory(project_dir)` and `python` are for tests."""
     from bti.longjob import Part, PartError
     r = _Run(project_dir, provider, model, chapters, instruction=instruction, edit_scope=edit_scope,
-             followup=followup, turn_id=turn_id, base_rev=base_rev)
+             followup=followup, turn_id=turn_id, base_rev=base_rev, note=note)
 
     def fail(e: DraftError, **kw):
         _write_last(r, status="error", error=e.code, **kw)
@@ -446,7 +459,7 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 r.ws = workspace.build(r.inputs, instruction=r.instruction, scope_words=r.scope_words, history=history, python=python)
             elif provider == "agy":
                 workspace.clean_old()
-                r.ws = workspace.build(r.inputs, python=python)
+                r.ws = workspace.build(r.inputs, python=python, note=r.note)
         except DraftError as e:
             raise fail(e)
         ctx.progress(1.0, "Đã chuẩn bị dữ liệu.")
@@ -467,14 +480,22 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
             n_ch = max(1, len(r.inputs.in_scope()))
 
             def on_progress(p):
-                frac = 0.05 + 0.9 * min(1.0, p["out_files"] / n_ch)
-                ctx.progress(frac, "Bước %d, %s; đã viết %d/%d chương." % (p["steps"], p["last_action"] or "đang bắt đầu", p["out_files"], n_ch))
+                done = _chapters_written(r, p["out_files"], n_ch)
+                frac = 0.05 + 0.9 * min(1.0, done / n_ch)
+                ctx.progress(frac, "Bước %d, %s; đã viết %d/%d chương." % (p["steps"], p["last_action"] or "đang bắt đầu", done, n_ch))
 
             def check(turn):
                 res, _ = workspace_compile(r.ws.root, draw=True)
-                ctx.log("check after turn %d: %d errors, %d warnings" % (turn, len(res.errors), len(res.warnings)))
+                from bti.engine.viewchecks import CODES as VIEWER_CODES      # fixdraft: the looks the owner rejects are sent back too, not only the errors
+                viewer = sorted({w["code"] for w in res.warnings if w.get("code") in VIEWER_CODES})
+                ctx.log("check after turn %d: %d errors, %d warnings (%d of them looks the owner rejects)" % (turn, len(res.errors), len(res.warnings), len(viewer)))
+                if not res.errors and not viewer:
+                    return None
                 from .compile import summary_text
-                return summary_text(res) if res.errors else None
+                text = summary_text(res)
+                if viewer:
+                    text += "\nThe warnings %s are looks the owner rejects (see section 1, rules 13 to 17): fix them too." % ", ".join(viewer)
+                return text
 
             r.cache.mkdir(parents=True, exist_ok=True)
             r.agy = agent_mod.run(r.ws.root, model=m_agent, timeout=agent_timeout, check=check, cancel=ctx.cancelled,
@@ -1120,11 +1141,25 @@ def start_picks(pid: str, project_dir: Path, *, instruction: str, edit_scope: di
     return {**rec, "turn_id": turn_id}
 
 
+def check_note(note) -> str | None:
+    """The owner's note of `draft.start`, trimmed (None when there is none). DraftError `draft_note_invalid` for something that is not text,
+    `draft_note_too_long` for more than `inputs.NOTE_MAX` characters."""
+    if note is None:
+        return None
+    if not isinstance(note, str):
+        raise DraftError("draft_note_invalid", "note must be text")
+    text = note.strip()
+    if len(text) > NOTE_MAX:
+        raise DraftError("draft_note_too_long", "note must be at most %d characters (it has %d)" % (NOTE_MAX, len(text)))
+    return text or None
+
+
 def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | None = None, chapters: list | None = None,
           instruction: str | None = None, edit_scope: dict | None = None, followup: bool = False,
-          base_rev: int | str | None = None, mode: str = "auto", manager=None,
+          base_rev: int | str | None = None, mode: str = "auto", manager=None, note: str | None = None,
           **kw) -> dict:
-    """Start the draft or edit job. Raises DraftError (not ready, agy missing, ...) or bti.longjob.Busy."""
+    """Start the draft or edit job. Raises DraftError (not ready, agy missing, ...) or bti.longjob.Busy. `note` (draft only) is the owner's wish for
+    this draft, put into the agent's task file."""
     if instruction is not None:
         if provider != "agy":
             raise DraftError("edit_needs_agy", "editing by prompt requires the agy agent provider")
@@ -1210,6 +1245,7 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         raise DraftError("bad_provider", "provider must be agy or auto")
     if _bad_model_name(model):
         raise DraftError("bad_model", "the model name is not valid")
+    note = check_note(note)
     if not readiness(project_dir)["ok"]:
         raise DraftError("draft_not_ready", "voice (timing.json) and approved picks (picks.json) are needed first")
     refuse_while_agent_busy(pid, manager, run_ok=True)     # join2: not while the pictures agent works (an automatic run takes the draft itself)
@@ -1219,5 +1255,6 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
     if chapters:
         load_inputs(project_dir, chapters)            # unknown chapter, no storyboard: refused here, not inside the job
     m = manager or _manager()
-    return m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=make_parts(project_dir, provider, model, chapters, **kw),
-                   meta={"provider": provider, "model": res.model if res else model, "agent": res.public() if res else None, "chapters": chapters})
+    return m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=make_parts(project_dir, provider, model, chapters, note=note, **kw),
+                   meta={"provider": provider, "model": res.model if res else model, "agent": res.public() if res else None, "chapters": chapters,
+                         **({"note": note} if note else {})})

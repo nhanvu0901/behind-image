@@ -866,7 +866,8 @@ def test_a_view_narrower_than_300_km_is_a_warning_not_an_error(tmp_path):
         d = copy.deepcopy(sb)
         d["shots"][0]["params"].update(params)
         assert errors(p, d) == []
-        return [(i["code"], i["path"].split(".")[-1]) for i in p.validate(d) if i["level"] == "warn"]
+        # fixdraft: this fixture's map is its first shot (second 0), which the viewer check `explainer_early` flags; it is not what this test is about
+        return [(i["code"], i["path"].split(".")[-1]) for i in p.validate(d) if i["level"] == "warn" and i["code"] != "explainer_early"]
     assert warns() == []
     assert warns(view_start_width_km=299) == [("map_view_coarse", "view_start_width_km")]
     assert warns(view_start_width_km=300) == []
