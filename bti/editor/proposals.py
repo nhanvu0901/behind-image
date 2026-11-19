@@ -133,10 +133,10 @@ def apply(saved: dict, proposed: dict, accept: Any) -> tuple[dict, list[str], li
     elif isinstance(accept, list) and all(isinstance(x, str) for x in accept):
         unknown = [x for x in accept if x not in by_id]
         if unknown:
-            raise ApiError(422, f"unknown change ids: {unknown}")
+            raise ApiError(422, f"unknown change ids: {unknown}", code="unknown_change_ids", field="accept")
         chosen = list(dict.fromkeys(accept))
     else:
-        raise ApiError(422, 'accept must be "all" or a list of change ids')
+        raise ApiError(422, 'accept must be "all" or a list of change ids', code="accept_invalid", field="accept")
     skipped = [i for i in chosen if by_id[i]["blocked_by_lock"]]
     todo = [by_id[i] for i in chosen if not by_id[i]["blocked_by_lock"]]
 

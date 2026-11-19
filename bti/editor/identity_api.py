@@ -69,7 +69,7 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
         if not isinstance(want, str) or not want:
             raise ApiError(422, "style (string) is required", code="identity_style_required")
         if not isinstance(base, str) or not base:
-            raise ApiError(422, "base_rev (string) is required")
+            raise ApiError(422, "base_rev (string) is required", code="base_rev_required", field="base_rev")
         p = project(pid)
         d = pdir(pid)
         with slock(pid):
@@ -82,7 +82,7 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
                                code="identity_style_unknown", allowed=allowed)
             cur = compute_rev(saved)
             if base != cur:
-                raise ApiError(409, "base_rev does not match the saved revision", rev=cur)
+                raise ApiError(409, "base_rev does not match the saved revision", rev=cur, code="stale_revision")
             with ENGINE_LOCK:
                 timing = p.timing()
             meta = {}

@@ -29,13 +29,13 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
 
     def pdir(pid: str) -> Path:
         if not valid_pid(pid):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         d = root / pid
         has_data = (d / "source").is_dir() or ((d / "project.json").is_file() and project_meta(d, strict=True).get("imported") is not True)
         if not d.is_dir() or not has_data:
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         if d.is_symlink() and not d.resolve().is_relative_to(root.resolve()):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         return d
 
     @contextmanager
@@ -44,7 +44,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         lock while the project was being deleted answers 404 and writes nothing (lock order: see bti/script/store.py)."""
         with store.script_lock(d):
             if not d.is_dir():
-                raise ApiError(404, "project not found")
+                raise ApiError(404, "project not found", code="project_not_found")
             yield
 
     def brief_for(d: Path) -> dict:
@@ -99,22 +99,22 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         if v is None:
             return ""
         if not isinstance(v, str):
-            raise ApiError(422, "rev must be a string")
+            raise ApiError(422, "rev must be a string", code="field_invalid", field="rev")
         return v
 
     def stale_409(cur: str):
-        return ApiError(409, "the file changed since you loaded it; reload before saving", rev=cur)
+        return ApiError(409, "the file changed since you loaded it; reload before saving", rev=cur, code="stale_revision")
 
     def model_for(model_id) -> dict:
         """The spec of a model that is NAMED (by the request, or by the agent the project uses): unknown 404, not usable 409."""
         if not isinstance(model_id, str) or not model_id.strip():
-            raise ApiError(400, "model is required: name the model to run (see GET /api/models)")
+            raise ApiError(400, "model is required: name the model to run (see GET /api/models)", code="model_required", field="model")
         spec = models_mod.resolve(model_id, models_path)         # never runs `agy models` for a model that is not Antigravity
         if spec is None:
-            raise ApiError(404, "unknown model")
+            raise ApiError(404, "unknown model", code="unknown_model", field="model")
         pub = models_mod.public(spec)
         if not pub["enabled"]:
-            raise ApiError(409, pub["message"] or "this model is not available", missing_env=pub["missing_env"])
+            raise ApiError(409, pub["message"] or "this model is not available", missing_env=pub["missing_env"], code="model_unavailable", field="model")
         return spec
 
     def job_model(d: Path, role: str, body) -> tuple[dict, agents_mod.Resolved]:
@@ -123,7 +123,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         request names that is not a non-empty string is refused (400), as before; an agent whose model cannot run is 409 `agent_unavailable`."""
         named = body.get("model") if isinstance(body, dict) else None
         if named is not None and (not isinstance(named, str) or not named.strip()):
-            raise ApiError(400, "model must be a model id: name the model to run, or leave it out to use the project's agent (see GET /api/agents)")
+            raise ApiError(400, "model must be a model id: name the model to run, or leave it out to use the project's agent (see GET /api/agents)", code="model_invalid", field="model")
         res = agents_mod.model_for_project(d, role, named)
         if res.source == "request":
             return model_for(res.model), res
@@ -143,7 +143,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         try:
             job = jobs.start(kind, pid, spec["id"], body, alternatives=alternatives, exclusive=True, agent=res.public())
         except BusyError as e:
-            raise ApiError(409, "another model job is running for this project", job_id=e.job.id)
+            raise ApiError(409, "another model job is running for this project", job_id=e.job.id, code="model_job_busy")
         return {"job_id": job.id, "model": spec["id"], "agent": res.public()}
 
     # ------------------------------------------------------------ models and jobs
@@ -163,13 +163,13 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         if pj is None:
             pj = jobs.persisted(job_id)          # a job of an earlier run of the server
         if pj is None:
-            raise ApiError(404, "job not found")
+            raise ApiError(404, "job not found", code="job_not_found")
         return pj
 
     @r.post("/jobs/{job_id}/cancel")
     def cancel_job(job_id: str):
         if not jobs.cancel(job_id):
-            raise ApiError(404, "job not found")
+            raise ApiError(404, "job not found", code="job_not_found")
         return jobs.get(job_id).public()
 
     @r.get("/projects/{pid}/script/jobs")
@@ -196,18 +196,18 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     def get_prompt(pid: str, phase: str = Query(...), chapters: str = Query(""), notes: str = Query("")):
         d = pdir(pid)
         if phase not in ("outline", "script"):
-            raise ApiError(422, "phase must be outline or script")
+            raise ApiError(422, "phase must be outline or script", code="field_invalid", field="phase")
         o = store.load_outline(d)
         want = [c for c in re.split(r"[,\s]+", chapters) if c] or None
         if phase == "script":
             gate = validate.outline_gate(o)
             if gate:
-                raise ApiError(409, gate["message"])
+                raise ApiError(409, gate["message"], code=gate["code"])
         try:
             p = build_prompt(phase, d, notes=notes, chapters=want, outline=o, narration=store.load_narration(d),
                              brief=brief_for(d), wps=wps_for(d))
         except PromptError as e:
-            raise ApiError(422, str(e))
+            raise ApiError(422, str(e), code="prompt_error")
         return PlainTextResponse(p["text"])
 
     # ------------------------------------------------------------ outline
@@ -230,7 +230,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             if not res.ok:
                 store.keep_paste(d, "outline", text)
                 raise ApiError(422, res.error or "the outline could not be read", paragraphs=res.paragraphs, issues=res.issues,
-                               kept=True)
+                               kept=True, code="outline_unreadable")
             res.outline.source = {"kind": "paste", "model": "", "created_at": store.now_iso()}
             store.save_outline(d, res.outline)
             store.clear_paste(d, "outline")
@@ -248,7 +248,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             raw = body.get("outline")
             problem = store.doc_problem("outline", raw)
             if problem:
-                raise ApiError(422, problem)
+                raise ApiError(422, problem, code="document_invalid", field="outline")
             o = store.Outline.from_dict(raw)
             cur = store.disk_rev(store.script_dir(d) / "outline.json", "outline")
             if cur is not None and body.get("base_rev") != cur:
@@ -267,10 +267,10 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         with hold(d):
             o = store.load_outline(d)
             if o is None:
-                raise ApiError(404, "no outline to approve")
+                raise ApiError(404, "no outline to approve", code="no_outline")
             errs = validate.blocking(validate.validate_outline(o, brief_for(d)))
             if errs:
-                raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs)
+                raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs, code="outline_has_errors")
             try:
                 store.approve(d, "outline", rev_field(body))
             except store.StaleRevision as e:
@@ -285,19 +285,19 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         o = store.load_outline(d)
         gate = validate.outline_gate(o)
         if gate:
-            raise ApiError(409, gate["message"])
+            raise ApiError(409, gate["message"], code=gate["code"])
         raw_ch = string_list(body.get("chapters"), "chapters", max_items=200, max_len=40)
         chapters = list(raw_ch or []) or None
         if chapters:
             bad = [c for c in chapters if o.chapter(c) is None]
             if bad:
-                raise ApiError(422, f"unknown chapter(s): {', '.join(bad)}")
+                raise ApiError(422, f"unknown chapter(s): {', '.join(bad)}", code="unknown_chapter", field="chapters")
         n = store.load_narration(d)
         if n and not body.get("force"):
             targets = chapters or [c.id for c in o.chapters]
             locked = [f"{c.id}:{b.id}" for c in n.chapters if c.id in targets for b in c.beats if b.locked]
             if locked:
-                raise ApiError(409, "locked beats would be replaced (" + ", ".join(locked[:6]) + "); unlock them or send force", locked=locked)
+                raise ApiError(409, "locked beats would be replaced (" + ", ".join(locked[:6]) + "); unlock them or send force", locked=locked, code="locked_beats")
         notes = str_field(body, "notes")
         wps = wps_for(d)
         base_locked = sorted(b.id for c in n.chapters for b in c.beats if b.locked) if n else []     # fixed here, not in the thread
@@ -311,14 +311,14 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             text = str_field(body, "text", True)
             o = store.load_outline(d)
             if o is None:
-                raise ApiError(409, "there is no outline yet: make or paste the outline first")
+                raise ApiError(409, "there is no outline yet: make or paste the outline first", code="no_outline")
             old = store.load_narration(d)
             res = parse_script(text, o, project=pid, title=brief_for(d)["painting"]["title"],
                                counter_start=(old.counters["beat"] if old else 0))
             if not res.ok:
                 store.keep_paste(d, "narration", text)
                 raise ApiError(422, res.error or "the script could not be placed", paragraphs=res.paragraphs, issues=res.issues,
-                               kept=True)
+                               kept=True, code="narration_unreadable")
             n = res.narration
             if old and not body.get("force"):
                 # the same protection as `generate`: a paste never silently replaces a beat the owner locked
@@ -327,7 +327,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                 if locked:
                     store.keep_paste(d, "narration", text)
                     raise ApiError(409, "locked beats would be replaced (" + ", ".join(locked[:6]) + "); unlock them or send force",
-                                   locked=locked, kept=True)
+                                   locked=locked, kept=True, code="locked_beats")
             if body.get("merge") and old:
                 got = {c.id for c in n.chapters}
                 n.chapters = [c for c in old.chapters if c.id not in got] + n.chapters
@@ -350,7 +350,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             raw = body.get("narration")
             problem = store.doc_problem("narration", raw)
             if problem:
-                raise ApiError(422, problem)
+                raise ApiError(422, problem, code="document_invalid", field="narration")
             n = store.Narration.from_dict(raw)
             path = store.script_dir(d) / "narration.json"
             cur = store.disk_rev(path)
@@ -373,20 +373,20 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         with hold(d):
             n = store.load_narration(d)
             if n is None:
-                raise ApiError(404, "no narration yet")
+                raise ApiError(404, "no narration yet", code="no_narration")
             cur = n.rev()
             if body.get("base_rev") != cur:
                 raise stale_409(cur)
             ops = body.get("ops")
             if not isinstance(ops, list) or not ops:
-                raise ApiError(422, "ops must be a non-empty list of operations")
+                raise ApiError(422, "ops must be a non-empty list of operations", code="field_invalid", field="ops")
             results = []
             outline = store.load_outline(d)
             try:
                 for op in ops:
                     results.append(ops_mod.apply_op(n, op, outline))
             except ops_mod.OpError as e:
-                raise ApiError(422, str(e))
+                raise ApiError(422, str(e), code="op_invalid", field="ops")
             store.save_narration(d, n, cur)
             return {"results": results, **narr_payload(d, store.load_narration(d), brief_for(d))}
 
@@ -396,14 +396,14 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         with hold(d):
             n = store.load_narration(d)
             if n is None:
-                raise ApiError(404, "no narration to approve")
+                raise ApiError(404, "no narration to approve", code="no_narration")
             o = store.load_outline(d)
             issues = validate.validate_narration(n, o, wps=wps_for(d))
             errs = validate.blocking(issues)
             if errs:
                 diff = store.chapter_diff(n, o)
                 raise ApiError(422, "the narration has errors: " + "; ".join(e["message"] for e in errs[:5]), issues=issues,
-                               chapter_diff=diff)
+                               chapter_diff=diff, code="narration_has_errors")
             try:
                 store.approve(d, "narration", rev_field(body))
             except store.StaleRevision as e:

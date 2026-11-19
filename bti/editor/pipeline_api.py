@@ -272,10 +272,10 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, lon
 
     def pdir(pid: str) -> Path:
         if not valid_pid(pid):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         d = root / pid
         if not d.is_dir() or d.is_symlink() and not d.resolve().is_relative_to(root.resolve()):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         return d
 
     @r.get("/pipeline")
@@ -293,7 +293,7 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, lon
         each for at most 2 seconds: when a save holds one the answer is 409 and nothing is removed. Under both locks the folder is
         renamed away in one step (so no writer can find it, and the slug is free at once), then deleted."""
         if not valid_pid(pid):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         d = root / pid
         if d.is_dir() and not d.is_symlink():
             try:
@@ -304,16 +304,16 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, lon
                                     "project is protected; repair or remove the folder by hand", data_error="project",
                                code="project_file_damaged")
         if d.is_dir() and not d.is_symlink() and is_protected(d):
-            raise ApiError(403, f"project {pid!r} is protected and cannot be deleted", protected=True)
+            raise ApiError(403, f"project {pid!r} is protected and cannot be deleted", protected=True, code="project_protected")
         if d.is_symlink():
-            raise ApiError(409, "project folder is a symbolic link; refusing to delete it")
+            raise ApiError(409, "project folder is a symbolic link; refusing to delete it", code="project_is_symlink")
         if not d.is_dir():
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         rr = root.resolve()
         if d.resolve().parent != rr:  # never anything but a direct child of the projects root
-            raise ApiError(400, "invalid project path")
+            raise ApiError(400, "invalid project path", code="invalid_project_path")
         if confirm != pid:
-            raise ApiError(422, "type the project id in `confirm` to delete it")
+            raise ApiError(422, "type the project id in `confirm` to delete it", code="delete_not_confirmed", field="confirm")
         sweep_trash(root)
         busy_msg = ("a save of this project is in progress; try again in a moment", "project_busy")
         sl, bl = script_lock(d), save_lock(d)
@@ -325,17 +325,17 @@ def make_router(projects_root: Path, *, script_jobs=None, preview_jobs=None, lon
                 raise ApiError(409, busy_msg[0], code=busy_msg[1])
             try:
                 if not d.is_dir():
-                    raise ApiError(404, "project not found")
+                    raise ApiError(404, "project not found", code="project_not_found")
                 busy = script_jobs.running(pid) if script_jobs is not None else None
                 if busy is not None:
                     raise ApiError(409, "a model job is running for this project; cancel it first (POST /api/jobs/{id}/cancel)",
-                                   job_id=busy.id)
+                                   job_id=busy.id, code="script_job_running")
                 lj = longjobs.active(pid) if longjobs is not None else None
                 if lj is not None:
                     raise ApiError(409, "a long job (voice, draft, export...) is running for this project; cancel it first "
                                         "(POST /api/longjobs/{id}/cancel)", code="longjob_running", job_id=lj["id"], kind=lj["kind"])
                 if preview_jobs is not None and preview_jobs.running(pid):
-                    raise ApiError(409, "a preview is being rendered for this project; wait for it to finish")
+                    raise ApiError(409, "a preview is being rendered for this project; wait for it to finish", code="preview_running")
                 trash = root / f".deleting-{pid}-{uuid.uuid4().hex[:8]}"
                 try:
                     atomic_replace(d, trash)           # one atomic step: the project is gone for every other request

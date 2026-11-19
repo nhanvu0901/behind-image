@@ -20,10 +20,10 @@ CENTURY_MAX = 21
 
 def _book(book_id: str) -> dict:
     if not libcfg.BOOK_ID_RE.fullmatch(book_id) or book_id not in libcfg.BOOK_BY_ID:
-        raise ApiError(404, "book not found")
+        raise ApiError(404, "book not found", code="book_not_found")
     f = libcfg.book_dir(book_id) / "book.json"
     if not f.is_file():
-        raise ApiError(404, "book not catalogued; run python -m bti.library build")
+        raise ApiError(404, "book not catalogued; run python -m bti.library build", code="book_not_catalogued")
     return catalogue.read_json(f)
 
 
@@ -31,7 +31,7 @@ def _work(book_id: str, n: int) -> dict:
     _book(book_id)
     w = catalogue.load_work(book_id, n)
     if w is None:
-        raise ApiError(404, "work not found")
+        raise ApiError(404, "work not found", code="work_not_found")
     return w
 
 
@@ -145,7 +145,7 @@ def make_router(projects_root: Path) -> APIRouter:
         wk = _work(book_id, n)
         a, b = wk["pdf_pages"]
         if not a <= pdf_page <= b:
-            raise ApiError(404, "page is not part of this entry")
+            raise ApiError(404, "page is not part of this entry", code="page_not_in_work")
         return _jpeg(book_id, pdf_page, w)
 
     @r.get("/works/{book_id}/{n}/image/{xref}.jpg")
@@ -153,14 +153,14 @@ def make_router(projects_root: Path) -> APIRouter:
         wk = _work(book_id, n)
         a, b = wk["pdf_pages"]
         if xref not in {im["xref"] for im in extract.images(book_id, a, b)}:
-            raise ApiError(404, "image is not part of this entry")
+            raise ApiError(404, "image is not part of this entry", code="image_not_in_work")
         if not 64 <= w <= 2400:
-            raise ApiError(422, "w must be between 64 and 2400")
+            raise ApiError(422, "w must be between 64 and 2400", code="field_invalid", field="w")
         try:
             return FileResponse(extract.render_image(book_id, xref, w), media_type="image/jpeg",
                                 headers={"Cache-Control": "private, max-age=86400"})
         except Exception:
-            raise ApiError(415, "cannot extract this image")
+            raise ApiError(415, "cannot extract this image", code="image_extract_failed")
 
     def art_row(key: str, a: dict, arts_pidx: dict) -> dict:
         bad = None
@@ -228,7 +228,7 @@ def make_router(projects_root: Path) -> APIRouter:
                 "title": lambda x: (catalogue.norm(x["title"]),),
                 "year": lambda x: (x["century"] is None, x["century"] or 0, catalogue.norm(x["title"]))}.get(sort)
         if keyf is None:
-            raise ApiError(422, "sort must be sources, words, title or year")
+            raise ApiError(422, "sort must be sources, words, title or year", code="field_invalid", field="sort")
         out.sort(key=keyf)
         return out
 
@@ -238,7 +238,7 @@ def make_router(projects_root: Path) -> APIRouter:
         cur = arts.resolve(artwork_key) if segment_ok(artwork_key) else None   # an old key (alias) opens the current artwork
         a = arts.get(cur) if cur else None
         if a is None:
-            raise ApiError(404, "artwork not found")
+            raise ApiError(404, "artwork not found", code="artwork_not_found")
         artwork_key, pidx = cur, project_index()
         ws = []
         for wid in a["works"]:
@@ -262,49 +262,49 @@ def make_router(projects_root: Path) -> APIRouter:
     @r.get("/artworks/{artwork_key}/source/{name}")
     def artwork_source(artwork_key: str, name: str):
         if not (segment_ok(artwork_key) and segment_ok(name)):
-            raise ApiError(404, "dossier not found")
+            raise ApiError(404, "dossier not found", code="dossier_not_found")
         artwork_key = catalogue.resolve_key(artwork_key) or artwork_key
         d = dossiers.load(artwork_key)
         if d is None:
-            raise ApiError(404, "dossier not found")
+            raise ApiError(404, "dossier not found", code="dossier_not_found")
         s = next((x for x in d["sources"] if Path(x["file"]).stem == name), None)
         if s is None:
-            raise ApiError(404, "source not found")
+            raise ApiError(404, "source not found", code="source_not_found")
         f = dossiers.dossier_path(artwork_key).parent / s["file"]
         try:
             if not f.is_file():
-                raise ApiError(404, "source text missing")
+                raise ApiError(404, "source text missing", code="source_text_missing")
             return {"work_id": s["work_id"], "text": f.read_text(encoding="utf-8")}
         except UnicodeDecodeError:
-            raise ApiError(409, f"{f.name} is not UTF-8 text", data_error="library")
+            raise ApiError(409, f"{f.name} is not UTF-8 text", data_error="library", code="library_file_unreadable")
         except PermissionError:
-            raise ApiError(409, f"{f.name} cannot be read (permission denied)", data_error="library")
+            raise ApiError(409, f"{f.name} cannot be read (permission denied)", data_error="library", code="library_file_unreadable")
         except OSError:
-            raise ApiError(404, "source text missing")
+            raise ApiError(404, "source text missing", code="source_text_missing")
 
     @r.post("/artworks/merge")
     def merge(body: dict = Body(...)):
         a, b = body.get("key"), body.get("with")
         if not isinstance(a, str) or not isinstance(b, str):
-            raise ApiError(422, "key and with (artwork keys) are required")
+            raise ApiError(422, "key and with (artwork keys) are required", code="field_required", field="key" if not isinstance(a, str) else "with")
         try:
             return {"artwork_key": dossiers.merge_artworks(a, b)}
         except KeyError:
-            raise ApiError(404, "artwork not found")
+            raise ApiError(404, "artwork not found", code="artwork_not_found")
         except ValueError as e:
-            raise ApiError(422, str(e))
+            raise ApiError(422, str(e), code="merge_refused")
 
     @r.post("/artworks/split")
     def split(body: dict = Body(...)):
         wid = body.get("work_id")
         if not isinstance(wid, str) or not libcfg.WORK_ID_RE.fullmatch(wid):
-            raise ApiError(422, "work_id is required")
+            raise ApiError(422, "work_id is required", code="field_required", field="work_id")
         try:
             return {"artwork_key": dossiers.split_work(wid)}
         except KeyError:
-            raise ApiError(404, "work not found")
+            raise ApiError(404, "work not found", code="work_not_found")
         except ValueError as e:
-            raise ApiError(422, str(e))
+            raise ApiError(422, str(e), code="split_refused")
 
     @r.post("/projects")
     def create(body: dict = Body(...)):
@@ -313,28 +313,28 @@ def make_router(projects_root: Path) -> APIRouter:
         key = body.get("artwork_key")
         excl = string_list(body.get("exclude"), "exclude", max_items=50, max_len=100)
         if slug is not None and not isinstance(slug, str):
-            raise ApiError(422, "slug must be a string")
+            raise ApiError(422, "slug must be a string", code="field_invalid", field="slug")
         if key is not None and not isinstance(key, str):
-            raise ApiError(422, "artwork_key must be a string")
+            raise ApiError(422, "artwork_key must be a string", code="field_invalid", field="artwork_key")
         try:
             return libprojects.create_project(wids, slug, projects_root, artwork_key=key, exclude=excl)
         except libprojects.ProjectError as e:
-            raise ApiError(e.status, str(e))
+            raise ApiError(e.status, str(e), code="project_create_refused")
         except FileNotFoundError as e:
-            raise ApiError(404, str(e))
+            raise ApiError(404, str(e), code="project_source_missing")
 
     return r
 
 
 def _jpeg(book_id: str, pdf_page: int, w: int):
     if not 64 <= w <= 2400:
-        raise ApiError(422, "w must be between 64 and 2400")
+        raise ApiError(422, "w must be between 64 and 2400", code="field_invalid", field="w")
     try:
         f = extract.render_page(book_id, pdf_page, w)
     except IndexError:
-        raise ApiError(404, "page not found")
+        raise ApiError(404, "page not found", code="page_not_found")
     except FileNotFoundError:
-        raise ApiError(404, "book PDF is missing")
+        raise ApiError(404, "book PDF is missing", code="book_pdf_missing")
     return FileResponse(f, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=86400"})
 
 

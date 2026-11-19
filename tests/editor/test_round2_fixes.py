@@ -277,10 +277,10 @@ def test_depth_limit_is_one_shared_check_before_the_routes(client):
         r = client.post(url, content='{"x": ' + nest(41) + "}", headers={"content-type": "application/json"})
         assert r.status_code == 422 and r.json()["code"] == "too_deep", url
     ok = client.post("/api/library/projects", content='{"work_ids": ' + nest(5) + "}", headers={"content-type": "application/json"})
-    assert ok.status_code == 422 and "code" not in ok.json()                       # a normal 422 of the route, not the depth check
+    assert ok.status_code == 422 and ok.json()["code"] != "too_deep"                # a normal 422 of the route, not the depth check
     # brackets inside strings do not count
     r = client.post("/api/library/projects", content=json.dumps({"slug": "[" * 100}), headers={"content-type": "application/json"})
-    assert r.status_code != 422 or "code" not in r.json()
+    assert r.status_code != 422 or r.json()["code"] != "too_deep"
 
 
 def test_finite_number_helper():

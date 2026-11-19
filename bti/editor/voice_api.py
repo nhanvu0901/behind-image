@@ -36,10 +36,10 @@ def make_router(projects_root: Path | None = None, *, cfg: dict | None = None, s
 
     def pdir(request: Request, pid: str) -> Path:
         if not valid_pid(pid):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         d = root_of(request) / pid
         if not d.is_dir() or (d.is_symlink() and not d.resolve().is_relative_to(root_of(request).resolve())):
-            raise ApiError(404, "project not found")
+            raise ApiError(404, "project not found", code="project_not_found")
         return d
 
     def vcfg() -> dict:
@@ -83,7 +83,7 @@ def make_router(projects_root: Path | None = None, *, cfg: dict | None = None, s
     def put_settings(pid: str, request: Request, body: dict = Body(default={})):
         d = pdir(request, pid)
         if not isinstance(body, dict):
-            raise ApiError(422, "the body must be an object")
+            raise ApiError(422, "the body must be an object", code="body_invalid")
         c = vcfg()
         with files.project_lock(d):
             cur = files.read_settings(d)

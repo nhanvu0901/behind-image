@@ -31,10 +31,10 @@ TYPES = {".mp4": "video/mp4", ".txt": "text/plain; charset=utf-8", ".json": "app
 def project_dir(request: Request, pid: str) -> Path:
     root = Path(request.app.state.projects_root)
     if not valid_pid(pid):
-        raise ApiError(404, "project not found")
+        raise ApiError(404, "project not found", code="project_not_found")
     d = root / pid
     if not d.is_dir() or (d.is_symlink() and not d.resolve().is_relative_to(root.resolve())):
-        raise ApiError(404, "project not found")
+        raise ApiError(404, "project not found", code="project_not_found")
     return d
 
 
@@ -85,21 +85,21 @@ def export_file(d: Path, name: str, range_header: str | None, head: bool = False
     """A regular file directly inside `<project>/export`; never a link, never a path."""
     edir = d / "export"
     if not NAME_RE.fullmatch(name or "") or ".." in name:
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="export_file_not_found")
     if Path(name).suffix.lower() in (".srt", ".ass", ".ssa"):
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="export_file_not_found")
     p = edir / name
     try:
         if p.is_symlink() or not p.is_file() or p.resolve().parent != edir.resolve():
-            raise ApiError(404, "not found")
+            raise ApiError(404, "not found", code="export_file_not_found")
         size = p.stat().st_size
     except OSError:
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="export_file_not_found")
     if name == "description.txt":
         try:
             original = p.read_text(encoding="utf-8")
         except (OSError, UnicodeError):
-            raise ApiError(404, "not found")
+            raise ApiError(404, "not found", code="export_file_not_found")
         cleaned = clean_description(original)
         if cleaned != original:
             data = cleaned.encode("utf-8")
