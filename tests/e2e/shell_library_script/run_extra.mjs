@@ -78,6 +78,7 @@ try {
 
   await check('U1-016', 'a project with only machine-translated sources says so and does not run a model on nothing', async () => {
     await open(p, '#/project/e-low/script', '#btn-outline'); await useMock(p);
+    await p.waitFor(`!!document.querySelector('#src-body .conf[role=alert]')`, 15000);          // the sources panel is drawn after the toolbar (the server is behind an ssh tunnel)
     const alert = await p.eval(`!!document.querySelector('#src-body .conf[role=alert]')`);
     await p.click('#btn-outline'); await sleep(500);
     const dlg = await p.count('#modal-root .modal'); const toast = await p.eval(`document.querySelector('#toast-root').innerText`);

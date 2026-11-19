@@ -71,6 +71,7 @@ export function mountAgentPick(container, { pid, step, scope = null, onChange = 
     root.dataset.model = eff?.model || '';
     root.dataset.source = eff?.source || '';
   }
+  paint();                                                // "Đang tải...", disabled, from the moment it is mounted until the agents arrive (selectView(null, null))
 
   async function refresh(refreshAgents = false) {
     try {
