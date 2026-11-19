@@ -348,7 +348,7 @@ The document is `storyboard.json` (schema `bti.storyboard/1`). A shot lasts from
 
 ### `set_technique`
 
-Change the technique of a shot. Parameters not given take the defaults of the new technique (the same as POST .../defaults); slots that still fit are kept.
+Change the technique of a shot. Parameters not given take the defaults of the new technique (the same as POST .../defaults); slots that still fit are kept; the shot's note (the reason written for the old treatment) is cleared.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
@@ -399,7 +399,7 @@ Sentences in `changes`: `default` = `Cảnh {n}: đổi thiết lập {names}`; 
 
 ### `set_slot`
 
-Put an asset into a slot of a shot or overlay (or empty the slot with asset null). When the main picture of a shot changes, its camera keys are fitted to the new picture the way the page does.
+Put an asset into a slot of a shot or overlay (or empty the slot with asset null). When the main picture of a shot changes, its camera keys are fitted to the new picture the way the page does and its note (the reason written for the old picture) is cleared.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|

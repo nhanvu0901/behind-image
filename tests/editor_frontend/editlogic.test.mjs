@@ -190,7 +190,8 @@ test('every error code the server raises for an edit, an undo, a resolve or a se
   for (const f of ['bti/editor/draft_api.py', 'bti/draft/run.py', 'bti/draft/thread.py', 'bti/draft/fastedit.py', 'bti/draft/merge.py',
     'bti/draft/boxops.py', 'bti/draft/picksedit.py', 'bti/editor/boxroutes.py']) scan(f);          // c2box: the typed-operations box
   // not an edit code: the picks/draft whole-video start, the settings (own table), or never shown
-  const OTHER = new Set(['bad_provider', 'bad_chapters', 'draft_not_ready', 'picks_missing', 'timing_missing', 'busy', 'longjob_running']);
+  const OTHER = new Set(['bad_provider', 'bad_chapters', 'draft_not_ready', 'picks_missing', 'timing_missing', 'busy', 'longjob_running',
+    'draft_note_too_long', 'draft_note_invalid']);          // fixdraft: the owner's note of the whole-video draft
   const missing = [...found].filter((c) => !EDIT_CODES.includes(c) && !OTHER.has(c) && !stageErrorText('draft', { body: { code: c } }).text.startsWith('Có lỗi'));
   assert.deepEqual(missing, []);
   const unsaid = [...found].filter((c) => !isVietnamese(stageErrorText('draft', { status: 422, body: { code: c } }).text));

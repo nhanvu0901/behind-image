@@ -64,10 +64,17 @@ def test_a_locked_shot_is_shown_as_locked_and_stays_in_the_selection_for_the_ser
 
 
 def test_the_pictures_with_their_regions_and_the_other_pictures_are_listed(box):
+    # fixdraft: the others are only the pictures that a line of the narration has; in this fixture C (a detail) is put on a line, D (another work) is on none
+    import json
+    f = box.pdir / "picks.json"
+    pk = json.loads(f.read_text(encoding="utf-8"))
+    pk["beats"]["b0003"]["items"].append({"asset": "C", "region": None, "role": "detail", "note": ""})
+    f.write_text(json.dumps(pk), encoding="utf-8")
     text, _ = briefing(box, {"shots": ["s0004"]})
     pics = text.split("### The pictures and their named regions")[1].split("## The techniques")[0]
     assert '"B":{"title":"Test landscape"' in pics and '"CENTRE":{"label":"Centre","x":800' in pics            # used by the scope: regions with their numbers
     assert "Other pictures of the project" in pics and "Test portrait" in pics                                 # the others, by title
+    assert "Test detail" in pics.split("Other pictures of the project")[1] and "Test other work" not in pics     # D belongs to no line: not offered
     assert "the main picture A" in pics
 
 

@@ -668,3 +668,31 @@ export function boxErrorText(e) {
   const t = typeof code === 'string' ? STAGE_CODES.draft[code] || STAGE_CODES.ops[code] || LONGJOB_CODES[code] : null;
   return t ? { text: t, detail: '' } : describeError(e);
 }
+
+// ---- fixdraft (2026-11-19): the sentences of the checks of bti/engine/viewchecks.py (what a viewer would see) and of the owner's note of the draft.
+// An issue of these codes carries its numbers in `args`; the sentence says what is wrong and what to do, in plain words, with the shot's id (the page
+// links the sentence to the shot). `FIXDRAFT_CODES` lists the codes: a unit test compares it with ISSUE_CODES.
+const fdVn = (x, d = 1) => (x == null || Number.isNaN(Number(x)) ? '' : String(Math.round(Number(x) * 10 ** d) / 10 ** d).replace('.', ','));
+const fdShot = (a) => (a && a.shot ? `Cảnh ${a.shot}` : 'Một cảnh');
+const fdWorst = (list) => (Array.isArray(list) ? list.slice(0, 3).map((x) => `${x.shot} (${fdVn(x.seconds)} giây)`).join(', ') : '');
+export const FIXDRAFT_SENTENCES = {
+  shot_short: (i) => { const a = i.args || {}; return `${fdShot(a)} chỉ dài ${fdVn(a.got, 2)} giây, ngắn hơn ${fdVn(a.min)} giây nên sẽ nhấp nháy. Gộp nó vào cảnh trước hoặc dời điểm cắt ra sau.`; },
+  upright_whole_share: (i) => { const a = i.args || {}; return `Bức tranh chính hiện nhỏ giữa hai dải đen trong ${fdVn(Number(a.share) * 100, 0)}% video (${fdVn(a.seconds, 0)} giây, ${a.count ?? '?'} cảnh; mức cho phép là ${fdVn(Number(a.limit) * 100, 0)}%). Chỉ giữ cả bức ở cuối cảnh mở đầu, ở một đầu chương và ở cảnh cuối; các cảnh còn lại cho tranh lấp đầy màn hình.${a.worst ? ` Nặng nhất: ${fdWorst(a.worst)}.` : ''}`; },
+  highlight_off_frame: (i) => { const a = i.args || {}; return `${fdShot(a)}: vùng sáng "${a.region ?? ''}" nằm sát mép hoặc ngoài khung hình lúc giây ${fdVn(a.at)}, nên cả hình tối đi mà không sáng chỗ nào. Chỉnh máy quay cho chỗ đó nằm trong khung hình suốt lúc rọi sáng, hoặc bỏ lớp rọi sáng.`; },
+  highlight_too_dark: (i) => { const a = i.args || {}; return `${fdShot(a)}: lớp rọi sáng vùng "${a.region ?? ''}" làm cả khung hình gần như đen (độ sáng trung bình ${fdVn(a.luma, 0)}, thấp hơn mức ${fdVn(a.min, 0)}). Bỏ lớp rọi sáng nếu máy quay đã gần sát chủ thể; nếu không thì nâng độ sáng của phần còn lại lên khoảng ${a.floor_needed != null ? fdVn(a.floor_needed, 2) : '0,6'}.`; },
+  caption_placeholder: (i) => { const a = i.args || {}; return a.kind === 'metadata'
+    ? `${fdShot(a)}: dòng chữ nhỏ "${a.text ?? ''}" chỉ là tên tác giả và năm lấy từ tệp hình, không liên quan đến dòng chữ chính. Xóa nó, hoặc thay bằng chữ lấy từ lời dẫn.`
+    : `${fdShot(a)}: dòng chữ "${a.text ?? ''}" là chữ giữ chỗ hoặc lời nhắn cho người đọc, không nên hiện lên hình. Xóa nó, hoặc thay bằng chữ lấy từ lời dẫn hay tên của chính bức hình.`; },
+  caption_repeats: (i) => { const a = i.args || {}; return `${fdShot(a)}: dòng chữ "${a.text ?? ''}" nói "${a.repeated ?? ''}" hai lần liền. Chỉ để một lần.`; },
+  text_not_in_narration: (i) => { const a = i.args || {}; return a.param === 'sea_names'
+    ? `${fdShot(a)}: bản đồ đang vẽ tên các vùng biển nhưng lời dẫn không nhắc biển nào. Tắt tên biển.`
+    : `${fdShot(a)}: trên hình có "${a.text ?? ''}" nhưng lời dẫn không nói ${(a.missing || []).slice(0, 3).map((m) => `"${m}"`).join(', ')}. Chỉ hiện điều lời dẫn nói; để trống còn hơn đoán.`; },
+  asset_not_in_lines: (i) => { const a = i.args || {}; return `Hình "${a.title ?? a.asset ?? ''}" đang được dùng ở ${a.count ?? '?'} cảnh (${(a.shots || []).slice(0, 4).join(', ')}) nhưng không dòng lời dẫn nào chọn nó. Thay bằng hình đã chọn cho dòng đó hoặc bằng bức tranh chính.`; },
+  explainer_early: (i) => { const a = i.args || {}; return `${fdShot(a)} là sơ đồ nền riêng từ giây ${fdVn(a.start, 0)} đến giây ${fdVn(a.end, 0)}: bức tranh biến mất ngay lúc người xem vừa vào. Nói các mốc thời gian bằng chữ số lớn đặt ngay trên tranh, và dời sơ đồ sang chương sau.`; },
+};
+export const FIXDRAFT_CODES = Object.keys(FIXDRAFT_SENTENCES);
+Object.assign(BUILD, FIXDRAFT_SENTENCES);
+Object.assign(STAGE_CODES.draft, {
+  draft_note_too_long: 'Ghi chú cho bản nháp quá dài (tối đa 600 ký tự). Hãy rút gọn rồi dựng lại.',
+  draft_note_invalid: 'Ghi chú cho bản nháp phải là chữ. Hãy gõ lại rồi dựng lại.',
+});

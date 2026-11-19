@@ -664,3 +664,55 @@ def test_a_scope_that_names_nothing_real_is_an_invalid_request(client):
 def test_the_actor_decides_the_source_of_what_a_batch_writes(client, actor, source):
     r = sb(client, [{"op": "set_params", "shot": "s0004", "params": {"shadow": False}}], actor=actor)
     assert r.status_code == 200 and shot(client, "s0004")["source"] == source
+
+
+# ---------------------------------------------------------------- worker fixdraft: the note of a shot that now shows something else
+def put_note(client, sid, text):
+    d = read_json(client.pdir / "storyboard.json")
+    next(s for s in d["shots"] if s["id"] == sid)["note"] = text
+    (client.pdir / "storyboard.json").write_text(json.dumps(d, indent=1), encoding="utf-8")
+
+
+def test_a_new_technique_clears_the_note_written_for_the_old_one(client):
+    put_note(client, "s0004", "over the squirrel photo")
+    assert shot(client, "s0004")["note"] == "over the squirrel photo"
+    assert sb(client, [{"op": "set_technique", "shot": "s0004", "technique": "CAM-03"}]).status_code == 200
+    assert shot(client, "s0004")["note"] == ""
+
+
+def test_a_new_main_picture_clears_the_note_and_a_camera_or_overlay_change_keeps_it(client):
+    put_note(client, "s0002", "push to the centre, then light it")
+    # camera, parameters and overlays: the reason still holds
+    r = sb(client, [{"op": "set_params", "shot": "s0002", "params": {"shadow": False}},
+                    {"op": "set_params", "shot": "s0002", "overlay": "o1", "params": {"rx": 260, "ry": 260}},
+                    {"op": "remove_overlay", "shot": "s0002", "overlay": "o2"}])
+    assert r.status_code == 200, r.text
+    assert shot(client, "s0002")["note"] == "push to the centre, then light it"
+    # another picture in the main slot: it does not
+    r = sb(client, [{"op": "remove_overlay", "shot": "s0002", "overlay": "o1"},                  # its region CENTRE is not on C
+                    {"op": "set_slot", "shot": "s0002", "slot": "image", "asset": "C"}])
+    assert r.status_code == 200, r.text
+    assert shot(client, "s0002")["slots"]["image"]["asset"] == "C" and shot(client, "s0002")["note"] == ""
+
+
+def test_the_same_picture_again_and_the_picture_of_an_overlay_keep_the_note(client):
+    put_note(client, "s0004", "the room around them")
+    assert sb(client, [{"op": "set_slot", "shot": "s0004", "slot": "image", "asset": "B"}]).status_code == 200          # already B
+    assert shot(client, "s0004")["note"] == "the room around them"
+
+
+def test_a_shot_without_a_note_stays_without_one_and_the_other_shots_keep_theirs(client):
+    put_note(client, "s0005", "two pictures side by side")
+    assert sb(client, [{"op": "set_technique", "shot": "s0004", "technique": "CAM-03"}]).status_code == 200
+    assert shot(client, "s0004")["note"] == "" and shot(client, "s0005")["note"] == "two pictures side by side"
+
+
+def test_the_clear_note_is_one_of_the_changes_of_the_batch_and_an_undo_brings_it_back(client):
+    put_note(client, "s0004", "over the squirrel photo")
+    r = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": "CAM-03"}])
+    assert r.status_code == 200 and shot(client, "s0004")["note"] == ""
+    from ops_helpers import sb_rev
+    batch = r.json()["batch"]
+    u = client.post("/api/projects/%s/changes/%s/undo" % (client.pid, batch), json={"base_rev": sb_rev(client), "actor": "human"})
+    assert u.status_code == 200, u.text
+    assert shot(client, "s0004")["note"] == "over the squirrel photo"

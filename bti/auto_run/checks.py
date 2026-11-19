@@ -55,6 +55,22 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "map_view_coarse": ("a map is zoomed in too close: it has no detail there", "có bản đồ phóng quá gần, không có chi tiết"),
         "identity_technique_mismatch": ("a title or chapter shot does not follow the chosen identity style", "cảnh mở đầu hoặc thẻ chương không theo kiểu đã chọn"),
         "incomplete": ("an item is not filled in yet", "còn mục chưa điền đủ"),
+        # --- fixdraft: what a viewer would see (bti/engine/viewchecks.py). Each of these is a look the owner rejected in the first video made end to end with a
+        # real model, and the export that follows takes 15 to 25 minutes of machine time, so the run stops and the owner asks for the fix with one request.
+        "upright_whole_share": ("the main painting is shown small between two black bars for more than 6% of the video (41 of 109 shots in the first real draft): "
+                                "the video looks dark and the same", "bức tranh chính hiện nhỏ giữa hai dải đen quá lâu: video sẽ tối và đơn điệu"),
+        "highlight_off_frame": ("a spotlight points outside the frame or at its edge: everything else is dimmed and nothing is lit",
+                                "có vùng sáng nằm ngoài khung hình: tranh tối đi mà không sáng chỗ nào"),
+        "highlight_too_dark": ("a spotlight leaves the frame almost black (mean luma under 32 on the 16 to 235 scale): the first export had three such stretches of five seconds",
+                               "có vùng sáng làm cả khung hình gần như đen"),
+        "caption_placeholder": ("a caption on the screen is a placeholder, a note to the reader or only the picture file's artist and year (\"UNKNOWN AUTHOR UNKNOWN AUTHOR, 1950\")",
+                                "có dòng chữ trên hình là chữ giữ chỗ hoặc không ai viết"),
+        "caption_repeats": ("a caption on the screen says the same words twice", "có dòng chữ trên hình bị lặp hai lần"),
+        "text_not_in_narration": ("a place, label, figure or name on the screen is not in the narration: it may be a guess, and the owner's rule is that facts come only from the narration",
+                                  "có tên, nhãn hoặc con số trên hình mà lời dẫn không nói"),
+        "asset_not_in_lines": ("a shot shows a picture that no line of the narration has: the owner took it out of every line", "có cảnh dùng hình mà không dòng lời dẫn nào chọn"),
+        "explainer_early": ("a diagram on its own background (map, time axis, tree, two-state picture) fills part of the first half minute: the painting leaves the screen as the viewer arrives",
+                            "có sơ đồ nền riêng che mất bức tranh trong nửa phút đầu"),
     },
 }
 # gate -> codes that never stop the run (they stay in the log)
@@ -64,7 +80,8 @@ TOLERATED: dict[str, frozenset[str]] = {
     # a flagged picture (size, licence or the like) is not a reason to stop: the owner said copyright is not a blocker, and a picture from the owner's own books always carries
     # the flag "unknown". The run goes on and writes the count into its log.
     "picks": frozenset({"asset_flag"}),
-    "storyboard": frozenset({"project_name_differs", "unknown_source", "unknown_intent", "first_shot_transition"}),
+    # fixdraft: `shot_short` (under 1.5 s) is a flash, not a defect of substance: the video is still watchable and the owner sees it in the list
+    "storyboard": frozenset({"project_name_differs", "unknown_source", "unknown_intent", "first_shot_transition", "shot_short"}),
 }
 # gate -> {code: share}: the warning stops the run only when MORE than this share of the lines of the document has it (the code is also in STOPS, for the sentence)
 NO_PICK_LIMIT = 0.25
