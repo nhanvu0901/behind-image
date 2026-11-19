@@ -26,9 +26,10 @@ KEEP = 100
 class JobError(Exception):
     """Raised by a job body. `kind` is one of: timeout, rate_limit, auth, config, validation, parse, http, empty, blocked, conflict."""
 
-    def __init__(self, kind: str, message: str):
+    def __init__(self, kind: str, message: str, retry_after_seconds: int | None = None):
         super().__init__(message)
         self.kind, self.message = kind, message
+        self.retry_after_seconds = retry_after_seconds      # a quota answer that says when it opens again (the agent select shows it)
 
 
 class BusyError(Exception):
@@ -92,6 +93,9 @@ class Job:
     def __init__(self, kind: str, pid: str, model: str):
         self.id = uuid.uuid4().hex[:16]
         self.kind, self.pid, self.model = kind, pid, model
+        self.agent: dict | None = None                   # {id, label, model, source} of the agent the model was resolved from (bti.agents), if any
+        self.retry_after_seconds: int | None = None      # set with `retry_at` when a quota answer said when it opens again
+        self.retry_at: str | None = None
         self.state = "queued"       # queued | running | done | error | cancelled
         self.chapters: list[dict] = []
         self.message = ""
@@ -142,7 +146,8 @@ class Job:
             self.on_change(self)
 
     def public(self) -> dict:
-        return {"id": self.id, "kind": self.kind, "pid": self.pid, "model": self.model, "state": self.state,
+        return {"id": self.id, "kind": self.kind, "pid": self.pid, "model": self.model, "agent": self.agent,
+                "retry_after_seconds": self.retry_after_seconds, "retry_at": self.retry_at, "state": self.state,
                 "progress": self.progress, "chapters": [dict(c) for c in self.chapters], "message": self.message,
                 "error": self.error, "error_kind": self.error_kind, "alternatives": self.alternatives,
                 "result": self.result, "created": self.created, "finished": self.finished}
@@ -186,10 +191,11 @@ class ScriptJobs:
 
     def start(self, kind: str, pid: str, model: str, body: Callable[[Job], None], *,
               timeout: float | None = None, alternatives: Callable[[], list[str]] | None = None,
-              exclusive: bool = False) -> Job:
+              exclusive: bool = False, agent: dict | None = None) -> Job:
         """`exclusive`: refuse (BusyError) when a job of the project is queued or running; the check and the registration
         happen under one lock, so two simultaneous requests cannot both start."""
         job = Job(kind, pid, model)
+        job.agent = dict(agent) if agent else None
         job.on_change = self._persist
         with self._lock:
             if exclusive:
@@ -236,6 +242,9 @@ class ScriptJobs:
                 else:
                     if e.kind in ("timeout", "rate_limit"):
                         offer()
+                    if e.kind == "rate_limit" and e.retry_after_seconds:
+                        from .providers.antigravity import retry_at
+                        job.retry_after_seconds, job.retry_at = int(e.retry_after_seconds), retry_at(int(e.retry_after_seconds))
                     job.finish("error", redact(e.message), e.kind)
             except BaseException as e:      # noqa: BLE001
                 job.finish("error", redact(f"{type(e).__name__}: {e}")[:400], "internal")

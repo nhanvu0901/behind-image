@@ -1,8 +1,13 @@
 """Routes of the storyboard draft (design section 7). Mounted by CORE: `app.include_router(draft_api.router)`.
 
-    GET  /api/projects/{pid}/draft          readiness (voice, picks), state, last run, default model
-    GET  /api/projects/{pid}/draft/models   the models `agy models` lists (cached ten minutes)
-    POST /api/projects/{pid}/draft/start    {provider: "agy" | "auto", model?, chapters?}  -> {job_id}   (a long job: /api/longjobs/{id})
+    GET  /api/projects/{pid}/draft          readiness (voice, picks), state, last run, the model and the agent the next draft will use
+    GET  /api/projects/{pid}/draft/models   the models `agy models` lists (cached ten minutes). The page no longer reads it: the agent
+                                            select (GET /api/agents, agent_api.py) replaced the model list of the draft panel. It stays for
+                                            tools that name a model themselves; `default` is the model the next draft of THIS project uses
+                                            (its agent), and `agent` says whose it is.
+    POST /api/projects/{pid}/draft/start    {provider: "agy" | "auto", model?, chapters?}  -> {job_id, model, agent}   (a long job: /api/longjobs/{id})
+                                            Without `model` the project's agent is used (bti.agents.model_for_project); a request that names a
+                                            model keeps it.
 
 The proposal the job writes is read and applied through the existing proposal routes. The projects folder is read from
 `app.state.projects_root`."""
@@ -12,9 +17,9 @@ from pathlib import Path
 
 from fastapi import APIRouter, Body, Request, Response
 
+from bti import agents as agents_mod
 from bti.draft import run as draft_run
 from bti.draft.inputs import DraftError
-from bti.settings import model_for
 
 from .common import ApiError, valid_pid
 
@@ -31,6 +36,12 @@ def _pdir(request: Request, pid: str) -> Path:
     return d
 
 
+def _who(rec: dict) -> dict:
+    """The model and the agent a start route answers with, next to the job: what the job itself recorded in its `meta`."""
+    meta = rec.get("meta") if isinstance(rec, dict) and isinstance(rec.get("meta"), dict) else {}
+    return {"model": meta.get("model"), "agent": meta.get("agent")}
+
+
 def _storyboard_lock(request: Request, pid: str, d: Path):
     """The project's storyboard lock (re-entrant, the one every editor save holds)."""
     from .common import save_lock
@@ -40,7 +51,7 @@ def _storyboard_lock(request: Request, pid: str, d: Path):
 @router.get("")
 def get_draft(pid: str, request: Request):
     d = _pdir(request, pid)
-    return draft_run.overview(pid, d, model_for("draft"))
+    return draft_run.overview(pid, d)
 
 
 @router.get("/models")
@@ -51,7 +62,8 @@ def get_models(pid: str, request: Request, refresh: int = 0):
         rows, err = models_mod.agy_models(refresh=bool(refresh))
     except Exception:       # noqa: BLE001 - the list can never break the page
         rows, err = None, "`agy models` không đọc được."
-    return {"default": model_for("draft"), "models": rows or [], "error": err}
+    res = agents_mod.model_for_project(_pdir(request, pid), "draft")
+    return {"default": res.model, "agent": res.public(), "models": rows or [], "error": err}
 
 
 @router.post("/start")
@@ -71,13 +83,13 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
     try:
         job = draft_run.start(pid, d, provider=provider, model=model or None, chapters=chapters or None)
     except DraftError as e:
-        status = 409 if e.code in ("draft_not_ready", "agy_missing", "scope_needs_storyboard", "picks_missing", "timing_missing", "picks_no_main") else 422
+        status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "picks_missing", "timing_missing", "picks_no_main") else 422
         raise ApiError(status, e.message, code=e.code)
     except Exception as e:      # noqa: BLE001
         if type(e).__name__ == "Busy":
             raise ApiError(409, "a draft is already running for this project", code="busy", job_id=getattr(e, "job_id", None))
         raise
-    return {"job_id": job["id"]}
+    return {"job_id": job["id"], **_who(job)}
 
 
 @router.post("/edit")
@@ -122,13 +134,13 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
         res = draft_run.start(pid, d, instruction=instruction, edit_scope=scope, model=model or None,
                               followup=followup, base_rev=base_rev, mode=mode)
     except DraftError as e:
-        status = 409 if e.code in ("draft_not_ready", "agy_missing", "scope_needs_storyboard", "edit_no_storyboard", "edit_needs_agy", "picks_missing", "timing_missing", "picks_no_main", "stale_revision") else 422
+        status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "edit_no_storyboard", "edit_needs_agy", "picks_missing", "timing_missing", "picks_no_main", "stale_revision") else 422
         raise ApiError(status, e.message, code=e.code)
     except Exception as e:      # noqa: BLE001
         if type(e).__name__ == "Busy":
             raise ApiError(409, "a draft is already running for this project", code="busy", job_id=getattr(e, "job_id", None))
         raise
-    return {"job_id": res["id"], "turn_id": res["turn_id"]}
+    return {"job_id": res["id"], "turn_id": res["turn_id"], **_who(res)}
 
 
 @router.post("/edit/{turn_id}/resolve")

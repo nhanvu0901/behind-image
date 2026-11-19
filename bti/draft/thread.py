@@ -117,6 +117,7 @@ def _normalize_turn(raw: dict, project_dir: Path | None = None) -> dict:
         },
         "scope_words": str(raw.get("scope_words") or ""),
         "model": str(raw.get("model") or ""),
+        "agent": raw.get("agent") if isinstance(raw.get("agent"), dict) else None,         # {id, label, model, source} of the agent that ran the turn (bti.agents)
         "base_rev": raw.get("base_rev"),
         "before_rev": raw.get("before_rev", raw.get("base_rev")),
         "after_rev": raw.get("after_rev"),

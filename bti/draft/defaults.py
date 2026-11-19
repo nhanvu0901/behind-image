@@ -16,6 +16,10 @@ def main(argv=None) -> int:
     ap.add_argument("--region")
     ap.add_argument("--workspace", default=".")
     a = ap.parse_args(argv)
+    from .check import refuse_outside
+    bad = refuse_outside(a.workspace, "--workspace")
+    if bad:
+        return bad
     from bti.engine import registry as R
     from .techniques_md import _p, _slot
     bundle = R.load_bundle("gae")

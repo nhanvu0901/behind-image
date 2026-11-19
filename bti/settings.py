@@ -108,19 +108,43 @@ def validate_model_updates(updates: dict[str, Any]) -> None:
             raise SettingsError("unknown_model", f"Unknown model id: {model_id!r}", 422)
 
 
-def save_model_settings(updates: dict[str, Any]) -> dict:
-    validate_model_updates(updates)
+def _write_user_settings(current: dict) -> None:
+    """The owner's settings file, written atomically (every key of `current` is kept as given)."""
     p = settings_file_path()
     p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(f"{p.name}.tmp.{os.getpid()}_{time.time_ns()}")
+    tmp.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
+    atomic_replace(tmp, p)
+
+
+def save_model_settings(updates: dict[str, Any]) -> dict:
+    validate_model_updates(updates)
     current = load_user_settings()
     models = dict(current.get("models") or {}) if isinstance(current.get("models"), dict) else {}
     for r, m in updates.items():
         models[r] = m.strip()
     current["models"] = models
-    tmp = p.with_name(f"{p.name}.tmp.{os.getpid()}_{time.time_ns()}")
-    tmp.write_text(json.dumps(current, ensure_ascii=False, indent=2), encoding="utf-8")
-    atomic_replace(tmp, p)
+    _write_user_settings(current)
     return get_model_settings()
+
+
+def get_machine_agent() -> str | None:
+    """The agent id the owner set as the default for projects without a choice (`run/settings.json`, key `agent`), or None.
+    Whether the id is still listed in `config/agent_choices.json` is `bti.agents`' business."""
+    val = load_user_settings().get("agent")
+    return val.strip() if isinstance(val, str) and val.strip() else None
+
+
+def set_machine_agent(agent_id: str | None) -> None:
+    """Store (or, with None, remove) the machine's default agent id. The other settings are kept."""
+    current = load_user_settings()
+    if agent_id is None:
+        if "agent" not in current:
+            return
+        current.pop("agent", None)
+    else:
+        current["agent"] = str(agent_id).strip()
+    _write_user_settings(current)
 
 
 def get_model_settings(refresh: bool = False) -> dict:

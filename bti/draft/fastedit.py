@@ -22,7 +22,6 @@ from bti.draft.inputs import SPEC_SCHEMA, DraftInputs
 from bti.engine import registry as R
 from bti.engine.timing import Timing
 from bti.script.brief import REPO_ROOT
-from bti.settings import model_for
 
 TEMPLATE_PATH = REPO_ROOT / "skills" / "storyboard_edit" / "FAST.template.md"
 
@@ -402,7 +401,11 @@ def fast_edit(
         raise ValueError("fast_edit needs inp.edit_shots (the scope); use inputs.clone_inputs(inp, scope=..., edit_shots=...)")
     if callable(cancel):
         cancel = _CancelFlag(cancel)
-    model_id = model or model_for("edit.fast")
+    if model:
+        model_id = model
+    else:                       # no model named: the project's agent (run.py always names the one it resolved; this is for direct callers)
+        from bti import agents as agents_mod
+        model_id = agents_mod.model_for_project(project_dir, "edit.fast").model
     bundle = bundle or R.load_bundle(inp.style)
     prompt = prepare_prompt(inp, instruction, thread_turns=thread_turns, bundle=bundle)
     system_prompt = "You are an expert storyboard editor. Respond with a single JSON object."

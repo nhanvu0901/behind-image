@@ -283,6 +283,10 @@ export const STAGE_CODES = {
     invalid_model: 'Có việc chưa chọn mô hình.',
     agentic_role_needs_agy: 'Việc dựng và sửa sâu cần mô hình chạy qua agy hoặc qua Claude Code.',      // worker claudeprov: Claude Code now counts
     unknown_model: 'Có mô hình không có trong danh sách.',
+    /* worker agentpick: the agent select and the default agent */
+    unknown_agent: 'Agent này không có trong danh sách agent.',
+    unknown_step: 'Bước này không có trong danh sách bước.',
+    agent_unavailable: 'Agent đang chọn chưa dùng được trên máy này.',
   },
 };
 const AMBIGUOUS = new Set(['busy', 'stale', 'not_found']);
@@ -316,6 +320,8 @@ const BY_CODE_HTTP = {
   at_least_one_source: () => 'Phải giữ lại ít nhất một nguồn sách.',
   /* worker mediafix */
   source_rate_limited: (b) => sourceLimitText(b),
+  /* worker agentpick: the server's own sentence says which agent cannot run and why (Vietnamese, from the agent's check) */
+  agent_unavailable: (b) => (typeof b?.detail === 'string' && isVietnamese(b.detail) ? b.detail : STAGE_CODES.settings.agent_unavailable),
 };
 /* worker mediafix: a picture source answered "too many requests". `b` is the error body or a search error entry
    ({code: 'source_rate_limited', retry_after: seconds | null}); the time is rounded UP to whole minutes, and left out when the source gave none. */

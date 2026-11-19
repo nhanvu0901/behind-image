@@ -47,7 +47,7 @@ def call_model(spec: dict, system: str, user: str, job: Job, *, timeout: float |
     if "err" in box:
         e = box["err"]
         if isinstance(e, ProviderError):
-            raise JobError("cancelled" if e.kind == "cancelled" else e.kind, e.message)
+            raise JobError("cancelled" if e.kind == "cancelled" else e.kind, e.message, getattr(e, "retry_after_seconds", None))
         raise e
     return box["text"]
 

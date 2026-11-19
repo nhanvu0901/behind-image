@@ -5,6 +5,7 @@ your own work. `--at` is where in the shot, 0 = first frame, 1 = last (default 0
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -17,6 +18,12 @@ def main(argv=None) -> int:
     ap.add_argument("--at", type=float, default=0.5)
     ap.add_argument("--width", type=int, default=640)
     a = ap.parse_args(argv)
+    from .check import refuse_outside
+    bad = refuse_outside(a.workspace, "the workspace path")
+    if not bad and a.out:                                   # `-o` is taken from the workspace argument, like the write below
+        bad = refuse_outside(os.path.join(a.workspace, a.out), "the output path (-o)")
+    if bad:
+        return bad
     import cv2
     from .compile import compile_specs
     from .engine import DraftProject, scaled_images
@@ -58,6 +65,8 @@ def main(argv=None) -> int:
     dest = Path(a.out or ("look/%s_%d.jpg" % (cid, n)))
     if not dest.is_absolute():
         dest = Path(a.workspace) / dest
+    if refuse_outside(dest, "the output path"):             # `-o` is relative to the workspace argument: a workspace below this folder must not reach out of it
+        return 2
     dest.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(dest), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
     print("wrote %s (shot %s at %.2f s, technique %s)" % (dest, a.shot, t, o["technique"]))

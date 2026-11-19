@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import APIRouter, Body, Query, Request
 from fastapi.responses import PlainTextResponse
 
+from bti import agents as agents_mod
 from bti.script import brief as brief_mod
 from bti.script import generate, models as models_mod, ops as ops_mod, store, validate
 from bti.script.parse import parse_outline, parse_script
@@ -105,8 +106,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         return ApiError(409, "the file changed since you loaded it; reload before saving", rev=cur)
 
     def model_for(model_id) -> dict:
-        """The model of a job must be NAMED: a request that omits it never falls back to the default model (a real model
-        uses the owner's subscription quota)."""
+        """The spec of a model that is NAMED (by the request, or by the agent the project uses): unknown 404, not usable 409."""
         if not isinstance(model_id, str) or not model_id.strip():
             raise ApiError(400, "model is required: name the model to run (see GET /api/models)")
         spec = models_mod.resolve(model_id, models_path)         # never runs `agy models` for a model that is not Antigravity
@@ -117,15 +117,34 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             raise ApiError(409, pub["message"] or "this model is not available", missing_env=pub["missing_env"])
         return spec
 
+    def job_model(d: Path, role: str, body) -> tuple[dict, agents_mod.Resolved]:
+        """The model of a job: the one the request names (kept for tests and outside tools), else the one the project's agent gives
+        (`bti.agents.model_for_project`: the step's choice, the project's agent, the machine's default, the role's setting). A model a
+        request names that is not a non-empty string is refused (400), as before; an agent whose model cannot run is 409 `agent_unavailable`."""
+        named = body.get("model") if isinstance(body, dict) else None
+        if named is not None and (not isinstance(named, str) or not named.strip()):
+            raise ApiError(400, "model must be a model id: name the model to run, or leave it out to use the project's agent (see GET /api/agents)")
+        res = agents_mod.model_for_project(d, role, named)
+        if res.source == "request":
+            return model_for(res.model), res
+        try:
+            return model_for(res.model), res
+        except ApiError as e:
+            if e.status not in (404, 409):
+                raise
+            why = e.detail if e.status == 409 and isinstance(e.detail, str) and e.detail != "this model is not available" else \
+                "Agent %s chưa dùng được trên máy này." % res.label
+            raise ApiError(409, why, code="agent_unavailable", agent=res.public())
+
     def alternatives() -> list[str]:
         return [m["id"] for m in models_mod.public_models(models_path) if m["enabled"]]
 
-    def start_job(kind: str, pid: str, spec: dict, body) -> dict:
+    def start_job(kind: str, pid: str, spec: dict, body, res: agents_mod.Resolved) -> dict:
         try:
-            job = jobs.start(kind, pid, spec["id"], body, alternatives=alternatives, exclusive=True)
+            job = jobs.start(kind, pid, spec["id"], body, alternatives=alternatives, exclusive=True, agent=res.public())
         except BusyError as e:
             raise ApiError(409, "another model job is running for this project", job_id=e.job.id)
-        return {"job_id": job.id}
+        return {"job_id": job.id, "model": spec["id"], "agent": res.public()}
 
     # ------------------------------------------------------------ models and jobs
     @r.get("/models")
@@ -195,11 +214,11 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/outline/generate")
     def outline_generate(pid: str, body: dict = Body(default={})):
         d = pdir(pid)
-        spec = model_for(body.get("model"))
+        spec, res = job_model(d, "script.outline", body)
         notes = str_field(body, "notes")
         wps = wps_for(d)
         base_rev = store.disk_rev(store.script_dir(d) / "outline.json", "outline")       # fixed here, before the job id is returned
-        return start_job("outline", pid, spec, lambda job: generate.run_outline(job, d, spec, notes, wps=wps, base_rev=base_rev))
+        return start_job("outline", pid, spec, lambda job: generate.run_outline(job, d, spec, notes, wps=wps, base_rev=base_rev), res)
 
     @r.post("/projects/{pid}/outline/import")
     def outline_import(pid: str, body: dict = Body(...)):
@@ -262,7 +281,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/narration/generate")
     def narration_generate(pid: str, body: dict = Body(default={})):
         d = pdir(pid)
-        spec = model_for(body.get("model"))
+        spec, res = job_model(d, "script.narration", body)
         o = store.load_outline(d)
         gate = validate.outline_gate(o)
         if gate:
@@ -283,7 +302,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         wps = wps_for(d)
         base_locked = sorted(b.id for c in n.chapters for b in c.beats if b.locked) if n else []     # fixed here, not in the thread
         return start_job("narration", pid, spec, lambda job: generate.run_narration(job, d, spec, chapters, notes, wps=wps,
-                                                                                     base_locked=base_locked))
+                                                                                     base_locked=base_locked), res)
 
     @r.post("/projects/{pid}/narration/import")
     def narration_import(pid: str, body: dict = Body(...)):

@@ -1,6 +1,6 @@
 /* Script view ("Kịch bản"). Scoped under .v-scr (the view root, and the dialogs it opens). */
 .scr-root { display: grid; grid-template-rows: auto minmax(0, 1fr) auto; height: 100%; min-width: 920px; }
-.v-scr #model-pick { min-width: 170px; max-width: 300px; flex: 0 1 260px; text-overflow: ellipsis; }
+.v-scr .agent-host { flex: 0 1 300px; min-width: 190px; }
 .v-scr .vbar { flex-wrap: wrap; row-gap: 5px; padding-top: 5px; padding-bottom: 5px; overflow: visible; }
 .v-scr #smain { display: grid; grid-template-columns: minmax(250px, .85fr) minmax(300px, 1fr) minmax(360px, 1.45fr); min-height: 0; }
 .v-scr .col { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }

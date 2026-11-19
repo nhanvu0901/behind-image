@@ -22,7 +22,8 @@ const STATE = path.join(SCRATCH, 'state.json');
 // unpacked into a folder of its own in the server's temp directory (removed by `down`). The server's .venv, books, projects and
 // library are used read-only (the data is COPIED into another temp folder by launch.py).
 const W_REPO = 'C:\\Users\\ADMIN\\AppData\\Local\\Temp\\bti-stages-repo';
-const REMOTE_PY = `D:\\code\\behind-the-image\\.venv\\Scripts\\python.exe ${W_REPO}\\tests\\e2e\\stages\\launch.py`;
+const LAUNCH = process.env.BTI_STAGES_LAUNCH || 'tests\\e2e\\stages\\launch.py';          // another launcher (for example tests/e2e/agent/launch_agent.py) may wrap launch.py
+const REMOTE_PY = `D:\\code\\behind-the-image\\.venv\\Scripts\\python.exe ${W_REPO}\\${LAUNCH}`;
 const SSH = ['-o', 'BatchMode=yes', '-o', 'ConnectTimeout=20', '-o', 'ServerAliveInterval=30'];
 const PORT = 8562;
 const HOST = process.env.BTI_SSH_HOST || 'winbox-lan';        // away from the home network: BTI_SSH_HOST=winbox-cmd (the Tailscale route)

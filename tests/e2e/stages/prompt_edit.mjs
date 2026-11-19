@@ -66,7 +66,7 @@ try {
     const t = await bodyText(p);
     check('the idle page has no leftovers and no raw words', !(await leftovers(p)).length && !rawLooking(t).length, JSON.stringify(await leftovers(p)));
     check('the thread starts empty with its own sentence', /Chưa có lần sửa nào/.test(await bodyText(p)) || (await turns()).length > 0);
-    check('no model dropdown in the box (the setting decides)', await ev(`!document.querySelector('.prompt-edit select') && !!document.querySelector('.prompt-model-link')`));
+    check('the box has the agent select and no model link (the agent select replaced it)', await ev(`!!document.querySelector('.prompt-edit .agent-select') && !document.querySelector('.prompt-model-link')`));
     await both('01-idle');
     await p.resize(1280, 720); await sleep(600);
     const m = await ev(`(() => { const s = document.querySelector('#stage'), b = document.querySelector('#stage-box'), l = document.querySelector('.prompt-thread-list'), c = document.querySelector('#prompt-edit-container'); const cr = c.getBoundingClientRect(); return { stage: s.clientHeight, pic: b.getBoundingClientRect().height, picW: b.getBoundingClientRect().width, list: l.clientHeight, listOverflow: getComputedStyle(l).overflowY, boxBottom: cr.bottom, boxW: cr.width, win: innerHeight, pageScroll: document.documentElement.scrollHeight - innerHeight }; })()`);
@@ -265,9 +265,11 @@ try {
     check('and when it ends the editor takes the new storyboard in', ok && (await ev(`__bti.store.rev`)) === sb2.rev, '');
   });
 
-  await step('the settings dialog "Mô hình cho từng việc"', async () => {
+  await step('the settings dialog: the table of models per role is under "Nâng cao"', async () => {
     await p.click('#btn-settings');
-    const open = await p.waitFor(`/Mô hình cho từng việc/.test(document.querySelector('.modal')?.innerText || '') && document.querySelectorAll('.modal select.settings-model').length >= 6`, 20000);
+    await p.waitFor(`!!document.querySelector('.modal details.settings-advanced')`, 20000);
+    await p.click('.modal .settings-advanced summary');                                       // the table is collapsed by default
+    const open = await p.waitFor(`/Dàn ý kịch bản/.test(document.querySelector('.modal')?.innerText || '') && document.querySelectorAll('.modal select.settings-model').length >= 6`, 20000);
     check('the top-bar entry opens the dialog with one dropdown per role', open, await ev(`document.querySelector('.modal')?.innerText || ''`));
     const txt = await ev(`document.querySelector('.modal').innerText`);
     check('the roles are named in Vietnamese and "Dùng một mô hình cho tất cả" is there', /Dàn ý kịch bản/.test(txt) && /Sửa nhanh bằng lời/.test(txt) && /Dùng một mô hình cho tất cả/.test(txt) && !/script\.outline|edit\.fast/.test(txt), txt.slice(0, 400));
@@ -280,6 +282,8 @@ try {
     const role = (g.json?.roles || []).find((r) => r.role === 'script.outline');
     check('saving one dropdown writes that role through PUT and the dialog closes', saved && role?.model === 'mock' && role?.source === 'setting' && !(await p.count('.modal')), JSON.stringify(role));
     await p.click('#btn-settings');
+    await p.waitFor(`!!document.querySelector('.modal details.settings-advanced')`, 15000);
+    await p.click('.modal .settings-advanced summary');
     await p.waitFor(`document.querySelectorAll('.modal select.settings-model').length >= 6`, 15000);
     const shown = await ev(`document.querySelector('select[data-role="script.outline"]').value`);
     check('opened again, the dropdown shows the saved model', shown === 'mock', shown);
@@ -291,7 +295,7 @@ try {
     await p.waitFor(`!document.querySelector('.modal')`, 15000);
     const g2 = await api.get('/api/settings/models');
     check('after "all", the non-agent roles are saved as the mock model', (g2.json?.roles || []).filter((r) => !r.agentic).every((r) => r.model === 'mock'), JSON.stringify((g2.json?.roles || []).map((r) => [r.role, r.model])));
-    check('the link in the edit box opens the same dialog', await (async () => { await p.click('.prompt-model-link'); const ok = await p.waitFor(`/Mô hình cho từng việc/.test(document.querySelector('.modal')?.innerText || '')`, 10000); await ev(`document.querySelector('.modal header button')?.click()`); return ok; })());
+    check('the edit box has no link to the settings any more (its agent select decides)', !(await p.count('.prompt-model-link')));
   });
 
   await step('clearing the history asks once', async () => {

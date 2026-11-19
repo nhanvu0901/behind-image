@@ -1,21 +1,56 @@
-// The settings dialog "Mô hình cho từng việc": one dropdown per role from GET /api/settings/models, one dropdown to use a single
-// model for all, save with PUT. Opened from the top bar ("Cài đặt") and from the link in the edit box.
+// The settings dialog ("Cài đặt"): on top the agent a NEW project starts on (GET /api/agents, PUT /api/settings/agent, saved at once); under a
+// collapsed "Nâng cao" the table of models per role from GET /api/settings/models (one dropdown per role, one to use a single model for all,
+// save with PUT), which only matters when neither the project nor the default chose an agent. Opened from the top bar ("Cài đặt").
 import { api } from './api.js';
 import { h, modal, toast, fillSelect } from './util.js';
 import { stageErrorText } from './errmsg.js';
-import { SETTINGS_LABELS as T } from './labels.js';
+import { SETTINGS_LABELS as T, AGENT_LABELS as AL } from './labels.js';
 import { modelRows, modelChanges, applyAllModels, modelListState, modelOptionText } from './editlogic.js';
+import { defaultView, findAgent } from './agentlogic.js';
+import { loadAgents } from './agentpick.js';
 
 export function openModelSettings() {
-  const body = h('div', { class: 'body settings-body', style: { width: 'min(760px, 94vw)' } }, h('div', { class: 'hint', text: T.loading }));
-  const dlg = modal({ title: T.title, body });
+  const agentBox = h('div', { class: 'settings-agent', 'data-settings-agent': '' }, h('div', { class: 'hint', text: T.loading }));
+  const advBody = h('div', { class: 'settings-adv-body' }, h('div', { class: 'hint', text: T.loading }));
+  const adv = h('details', { class: 'settings-advanced' }, h('summary', { text: AL.settings.advanced }),
+    h('div', { class: 'hint settings-adv-hint', text: AL.settings.advancedHint }), advBody);
+  const body = h('div', { class: 'body settings-body', style: { width: 'min(760px, 94vw)' } }, agentBox, adv);
+  const dlg = modal({ title: AL.settings.title, body });
+  loadAgentBox();
   load();
   return dlg;
+
+  async function loadAgentBox() {
+    let info;
+    try { info = await loadAgents(); }
+    catch (e) { agentBox.replaceChildren(h('div', { class: 'banner warn', text: AL.settings.saveFail + stageErrorText('settings', e).text })); return; }
+    paintAgentBox(info);
+  }
+
+  function paintAgentBox(info) {
+    const v = defaultView(info);
+    const note = h('div', { class: 'hint warn settings-agent-why', hidden: true });
+    const sel = h('select', { id: 'settings-agent-default', class: 'settings-agent-default', 'aria-label': AL.settings.defaultTitle, disabled: v.disabled || null,
+      onchange: () => save(sel.value) });
+    sel.replaceChildren(...v.options.map((o) => h('option', { value: o.value, text: o.text })));
+    sel.value = v.value;
+    const why = () => { const a = findAgent(info, sel.value); note.hidden = !(a && a.available === false); note.textContent = a ? AL.unavailable(a.label, a.reason) : ''; };
+    why();
+    agentBox.replaceChildren(h('h4', { text: AL.settings.defaultTitle }), h('div', { class: 'row settings-agent-row' }, h('label', { for: sel.id, text: AL.label + ':' }), sel),
+      h('div', { class: 'hint', text: AL.settings.defaultHint }), note);
+    let last = v.value;
+    async function save(id) {
+      sel.disabled = true;
+      try { info = await api.put('/api/settings/agent', { agent: id }); last = id; toast(AL.settings.saved, 'ok', 2500); }
+      catch (e) { sel.value = last; toast(AL.settings.saveFail + stageErrorText('settings', e).text, 'err', 8000); }
+      finally { sel.disabled = false; why(); }
+    }
+  }
 
   async function load() {
     let resp;
     try { resp = await api.get('/api/settings/models'); }
-    catch (e) { body.replaceChildren(h('div', { class: 'banner warn', text: T.loadFail + stageErrorText('settings', e).text })); return; }
+    catch (e) { advBody.replaceChildren(h('div', { class: 'banner warn', text: T.loadFail + stageErrorText('settings', e).text })); return; }
     paint(resp);
   }
 
@@ -48,7 +83,7 @@ export function openModelSettings() {
       for (const r of rows) { values[r.role] = next[r.role]; selects[r.role].value = next[r.role]; }
     } });
 
-    body.replaceChildren(
+    advBody.replaceChildren(
       h('div', { class: 'hint', text: T.intro }),
       ...(down ? [h('div', { class: 'banner warn settings-down', text: T.agyDown })] : []),
       h('div', { class: 'settings-row settings-all-row' }, h('label', { text: T.all }), allSel, allBtn),

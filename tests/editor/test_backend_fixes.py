@@ -372,11 +372,12 @@ def make_narration(client):
 
 
 @pytest.mark.parametrize("path", ["outline", "narration"])
-def test_every_job_endpoint_demands_a_model(client, path):
-    r = client.post(f"{B}/{path}/generate", json={})
-    assert r.status_code == 400 and "model" in r.json()["detail"]
-    assert client.post(f"{B}/{path}/generate", json={"model": ""}).status_code == 400
-    assert client.post(f"{B}/{path}/generate", json={"model": 5}).status_code == 400
+def test_every_job_endpoint_refuses_a_model_that_is_not_a_model_id(client, path):
+    """A model that is named must be a non-empty text. A request that leaves it out is no longer refused: the project's agent decides
+    (tests/editor/test_agent_routes.py); what a request that names nothing runs is `bti.agents.model_for_project`, never a silent default."""
+    for bad in ("", "  ", 5, ["mock"]):
+        r = client.post(f"{B}/{path}/generate", json={"model": bad})
+        assert r.status_code == 400 and "model" in r.json()["detail"], bad
     assert client.get(f"{B}/script/jobs").json() == []
 
 

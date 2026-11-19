@@ -20,6 +20,7 @@ from pathlib import Path
 from . import spec as S
 from .inputs import (DraftError, DraftInputs, canon_hash, clone_inputs, load_inputs,
                      normalize_timing, read_json_file, resolve_edit_scope)
+from bti import agents as AG
 from bti.settings import model_for
 from .thread import (append_turn, clear_thread, format_previous_exchanges,
                      load_thread, record_acceptance, save_thread, thread_lock,
@@ -135,6 +136,11 @@ def _norm_model(model: str | None) -> str | None:
         return model
     from bti.script import models as models_mod
     return model if models_mod.resolve(model) is not None else "agy:" + model
+
+
+def _resolve(project_dir: Path, role: str, model: str | None) -> "AG.Resolved":
+    """The model of a call of `role` for this project: the one the request names, else the project's agent (`bti.agents`, contract section 4)."""
+    return AG.model_for_project(project_dir, role, _norm_model(model))
 
 
 def rate_limit_fields(seconds: int | None) -> dict:
@@ -271,10 +277,13 @@ def state(project_dir) -> dict:
     return {"state": "done", "detail": "Đã có bản nháp %s." % prop["id"], "proposal": prop["id"]}
 
 
-def overview(pid: str, project_dir: Path, default_model: str) -> dict:
+def overview(pid: str, project_dir: Path, default_model: str | None = None) -> dict:
+    """What the panel shows. `default_model` and `agent` are the model and the agent the next draft will use (the project's choice for the
+    storyboard step, else the project's agent, the machine's default, the role's setting)."""
     st = state(project_dir)
-    return {"ready": readiness(project_dir), "state": st, "last_run": last_run(project_dir), "default_model": default_model,
-            "providers": ["agy", "auto"], "job_id": st.get("job_id")}
+    res = _resolve(project_dir, "draft", None)
+    return {"ready": readiness(project_dir), "state": st, "last_run": last_run(project_dir), "default_model": default_model or res.model,
+            "agent": res.public(), "providers": ["agy", "auto"], "job_id": st.get("job_id")}
 
 
 # ------------------------------------------------------------------------------------------------ the job
@@ -293,6 +302,8 @@ class _Run:
         self.scope_words = ""
         self.conversation_id_in: str | None = None
         self.run_id = time.strftime("%Y%m%d-%H%M%S")
+        # the model and agent of this run (the request's model, else the project's agent); the "auto" provider has none
+        self.resolved = _resolve(self.project_dir, "draft", model) if provider != "auto" else None
         self.inputs: DraftInputs | None = None
         self.ws = None
         self.agy = None
@@ -309,7 +320,7 @@ class _Run:
 def _author(r: _Run) -> str:
     if r.provider == "auto":
         return "agent:auto"
-    m = r.model or model_for("draft")
+    m = r.resolved.model if r.resolved else (r.model or model_for("draft"))
     if _is_claude(m):
         return f"agent:{m}"
     slug = m[len("agy:"):] if m.startswith("agy:") else m
@@ -323,7 +334,8 @@ def shots_text(n_all: int, n_content: int, n_cards: int) -> str:
 
 def _write_last(r: _Run, **kw) -> None:
     from bti.engine.storyboard import write_atomic
-    d = {"id": r.run_id, "provider": r.provider, "model": r.model, "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "chapters": r.chapters}
+    d = {"id": r.run_id, "provider": r.provider, "model": r.resolved.model if r.resolved else r.model,
+         "agent": r.resolved.public() if r.resolved else None, "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "chapters": r.chapters}
     d.update(kw)
     try:
         write_atomic(_cache(r.project_dir) / "last_run.json", json.dumps(d, ensure_ascii=False, indent=1))
@@ -409,7 +421,7 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 return
             from .guard import Guard
             from .workspace import workspace_compile
-            m_agent = _norm_model(model) or model_for("draft")
+            m_agent = r.resolved.model                          # the request's model, else the project's agent
             agent_mod = _agent_module(m_agent)                  # agy for `agy:<slug>`, Claude Code for `claude:<model>@<effort>`
             guard = guard_factory(r.project_dir) if guard_factory else Guard(r.project_dir)
             n_ch = max(1, len(r.inputs.in_scope()))
@@ -425,7 +437,7 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 return summary_text(res) if res.errors else None
 
             r.cache.mkdir(parents=True, exist_ok=True)
-            r.agy = agent_mod.run(r.ws.root, model=m_agent if _is_claude(m_agent) else model, timeout=agent_timeout, check=check, cancel=ctx.cancelled,
+            r.agy = agent_mod.run(r.ws.root, model=m_agent, timeout=agent_timeout, check=check, cancel=ctx.cancelled,
                                   runner=ctx.run_process, on_progress=on_progress, transcript_path=r.cache / "events.jsonl", guard=guard, python=python,
                                   conversation_id=r.conversation_id_in)
         except DraftError as e:
@@ -685,7 +697,7 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
             ctx.progress(0.1, "Đang nghĩ…")
             from bti.draft.fastedit import fast_edit
             from bti.script.providers import ProviderError
-            m_fast = _norm_model(model) or model_for("edit.fast")
+            m_fast = _resolve(project_dir, "edit.fast", model).model
             # the fast path reads its scope from the inputs (inp.edit_shots, inp.scope): the same clone the deep path makes
             fast_inp = clone_inputs(st.inputs, scope=st.scope_chapters, edit_shots=st.edit_shots)
             prior = [t for t in load_thread(project_dir) if t.get("id") != turn_id]
@@ -747,7 +759,10 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
 
         # 2. Run deep path if chosen or escalated
         if st.chosen_path == "deep":
-            m_deep = _norm_model(model) or model_for("edit.deep")
+            res_deep = _resolve(project_dir, "edit.deep", model)
+            m_deep = res_deep.model
+            if turn_id:                                         # an edit that escalated from the fast path says which agent did the deep part
+                update_turn(project_dir, turn_id, model=m_deep, agent=res_deep.public())
             deep_mod = _agent_module(m_deep)                    # agy for `agy:<slug>`, Claude Code for `claude:<model>@<effort>`
             try:
                 _check_agent_installed(m_deep)
@@ -990,12 +1005,12 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         # E9: For deep path, verify the agent's availability after validation (agy, or Claude Code for a `claude:` model)
         needs_agy_check = (mode == "deep") or (mode == "auto" and len(edit_shots) > 12)
         if needs_agy_check:
-            _check_agent_installed(_norm_model(model) or model_for("edit.deep"))
+            _check_agent_installed(_resolve(project_dir, "edit.deep", model).model)
 
         turn_id = f"t_{time.strftime('%Y%m%d_%H%M%S')}_{int(time.time()*1000)%1000:03d}"
         scope_kind = "shots" if "shots" in (edit_scope or {}) else ("chapter" if "chapter" in (edit_scope or {}) else "all")
         initial_path = "fast" if (mode == "fast" or (mode == "auto" and len(edit_shots) <= 12)) else "deep"
-        default_model = model_for("edit.fast" if initial_path == "fast" else "edit.deep")
+        res_edit = _resolve(project_dir, "edit.fast" if initial_path == "fast" else "edit.deep", model)
 
         turn = {
             "id": turn_id,
@@ -1007,7 +1022,8 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
                 "chapter": (edit_scope or {}).get("chapter") if scope_kind == "chapter" else None,
             },
             "scope_words": scope_words,
-            "model": _norm_model(model) or default_model,
+            "model": res_edit.model,
+            "agent": res_edit.public(),
             "base_rev": effective_base_rev,
             "before_rev": effective_base_rev,
             "after_rev": None,
@@ -1033,7 +1049,8 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
                                 base_rev=effective_base_rev, mode=mode, **kw)
         try:
             rec = m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=parts,
-                          meta={"provider": provider, "model": model, "mode": "edit", "turn_id": turn_id, "instruction": instruction})
+                          meta={"provider": provider, "model": res_edit.model, "agent": res_edit.public(), "mode": "edit", "turn_id": turn_id,
+                                "instruction": instruction})
             update_turn(project_dir, turn_id, job_id=rec["id"])
         except Exception:
             with thread_lock(project_dir):
@@ -1048,10 +1065,11 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         raise DraftError("bad_model", "the model name is not valid")
     if not readiness(project_dir)["ok"]:
         raise DraftError("draft_not_ready", "voice (timing.json) and approved picks (picks.json) are needed first")
-    if provider == "agy":
-        _check_agent_installed(_norm_model(model) or model_for("draft"))
+    res = _resolve(project_dir, "draft", model) if provider == "agy" else None
+    if res is not None:
+        _check_agent_installed(res.model)
     if chapters:
         load_inputs(project_dir, chapters)            # unknown chapter, no storyboard: refused here, not inside the job
     m = manager or _manager()
     return m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=make_parts(project_dir, provider, model, chapters, **kw),
-                   meta={"provider": provider, "model": model, "chapters": chapters})
+                   meta={"provider": provider, "model": res.model if res else model, "agent": res.public() if res else None, "chapters": chapters})

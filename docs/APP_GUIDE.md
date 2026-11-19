@@ -26,7 +26,7 @@ Khung nằm cố định trên cùng, bên dưới là **một màn hình tại 
 | **Ô chọn dự án** | Chuyển sang dự án khác; mở dự án ở bước mà giai đoạn của nó cần làm tiếp. |
 | **Tên dự án, tên tác phẩm, giai đoạn** | Dự án đang mở. |
 | **Dòng trạng thái** | "đang lưu...", "đang mở dự án..." và các thông báo ngắn. Thông báo nổi hiện ở góc dưới phải; hộp thoại hiện giữa màn hình. Chỉ có một hệ thống thông báo cho cả ứng dụng. |
-| **Cài đặt** | Hộp "Mô hình cho từng việc" (xem mục 7, "Cài đặt: mô hình cho từng việc"). |
+| **Cài đặt** | Hộp "Cài đặt": agent mặc định cho dự án mới, và dưới mục "Nâng cao" là bảng mô hình cho từng việc (xem "Chọn agent" dưới đây và mục 7, "Cài đặt"). |
 | **+ Tạo video mới** | Đi tới thư viện để chọn tác phẩm. |
 | **Huy hiệu engine/media** | Tình trạng backend. |
 | **Thanh các bước** | Sáu bước của dự án, xem mục 3. |
@@ -41,6 +41,29 @@ Khung nằm cố định trên cùng, bên dưới là **một màn hình tại 
 | `/#/project/<id>/<bước>` | Một bước: `artwork`, `script`, `voice`, `picks`, `edit`, `export` |
 
 Các địa chỉ cũ vẫn dùng được và tự chuyển vào ứng dụng: `/library.html` (kèm `#/books`, `#/artwork/<mã>`, `#/book/<id>`, `#/work/<sách>/<số>`; `#/projects` nay là trang chủ), `/script.html?project=<id>` (sang bước Kịch bản) và `/?project=<id>` (sang bước Dựng hình). `?mock=1` và `?all=1` được giữ nguyên.
+
+### Chọn agent
+
+Mọi bước gọi mô hình (bước 2 Kịch bản, bước 5 Dựng hình) có **cùng một ô chọn agent**: `Agent: [Gemini 3.8 Flash]`. Có hai agent, mỗi cái chạy bằng chương trình của chính hãng theo gói đăng ký của bạn:
+
+- **Gemini 3.8 Flash** chạy bằng Antigravity CLI (`agy`, mục 5.4).
+- **Opus 5.5 High** chạy bằng Claude Code (`claude`, mục 5.4b).
+
+Ô chọn luôn hiện agent **sẽ được dùng** cho bước này của dự án này. Đổi ô chọn là đổi ngay, không hỏi lại, và chỉ đổi cho **bước này của dự án này**. Dòng nhỏ dưới ô cho biết giá trị đến từ đâu:
+
+| Dòng dưới ô | Nghĩa |
+|---|---|
+| **Riêng cho bước này** (kèm liên kết **Dùng cho cả dự án**) | Bạn đã chọn agent cho riêng bước này. |
+| **Theo dự án** | Dự án có một agent chung, mọi bước dùng nó. |
+| **Theo mặc định** | Dự án chưa chọn gì: dùng agent mặc định trong **Cài đặt** (mặc định ban đầu là Gemini 3.8 Flash). |
+
+**Dùng cho cả dự án** biến agent đang chọn thành agent của cả dự án và bỏ các lựa chọn riêng từng bước, nên các bước sau dùng nó mà bạn không phải chọn lại. Lựa chọn được nhớ theo dự án (tệp `projects/<mã dự án>/agent.json`), tải lại trang vẫn còn, dự án khác không bị ảnh hưởng. Agent mặc định cho dự án mới đặt trong **Cài đặt** (ô "Agent mặc định cho dự án mới", lưu vào `run/settings.json`).
+
+Một agent chưa dùng được (ví dụ "Claude Code trên máy chủ chưa đăng nhập") vẫn hiện trong ô chọn, ghi "(chưa dùng được)"; chọn nó thì dòng dưới ô nói lý do, và bấm chạy sẽ báo lý do đó bằng tiếng Việt. Việc kiểm tra này không gọi mô hình.
+
+**Khi agent hết hạn mức**, thông báo nêu tên agent và giờ mở lại, ví dụ "Opus 5.5 High đã hết hạn mức, mở lại sau khoảng 4 giờ 30 phút.", kèm **đúng một nút**: "Chuyển sang Gemini 3.8 Flash và chạy lại". Nút này lưu agent kia làm lựa chọn của bước này rồi chạy lại đúng yêu cầu vừa rồi. Hệ thống **không bao giờ tự đổi agent**. Thông báo này hiện ở hộp thoại của bước Kịch bản, ở khung Bản nháp và ở thẻ lần sửa bằng lời của bước Dựng hình.
+
+Thứ tự quyết định agent cho một lần chạy: mô hình do yêu cầu nêu rõ (dành cho thử nghiệm và công cụ ngoài; trang không gửi mô hình) → lựa chọn riêng của bước → agent của dự án → agent mặc định trong Cài đặt → bảng mô hình cho từng việc ("Nâng cao"). Kết quả và nhật ký công việc ghi tên agent (nhãn, không phải mã mô hình).
 
 ## 3. Trang chủ và các bước
 
@@ -93,7 +116,7 @@ Bước này biến một tác phẩm đã chọn thành lời dẫn đã duyệ
 
 Có hai đường làm, cùng dùng một prompt và một bộ đọc, nên kết quả giống nhau:
 
-- **Nút bấm**: chọn mô hình ở ô thả xuống, bấm "Lập dàn ý" rồi "Viết lời dẫn".
+- **Nút bấm**: chọn agent ở ô "Agent" (xem "Chọn agent" ở mục 2), bấm "Lập dàn ý" rồi "Viết lời dẫn".
 - **Sao chép và dán**: bấm "Sao chép prompt", dán vào Gemini, rồi dán nguyên câu trả lời vào nút "Dán".
 
 Tác vụ mô hình chạy trên máy chủ nên vẫn chạy khi bạn rời bước này; quay lại sẽ thấy tiến độ và kết quả.
@@ -115,7 +138,7 @@ Bấm vào mã dữ kiện (`f03`) hoặc mã đoạn nguồn (`PAY-07`) ở c�
 
 | Nút | Việc làm |
 |---|---|
-| Ô mô hình | Chọn mô hình dùng cho hai nút "Lập dàn ý" và "Viết lời dẫn". Mô hình chưa dùng được vẫn hiện, ghi "(không dùng được)", chọn vào sẽ có lời giải thích. (Dự án chọn ở thanh trên cùng của ứng dụng.) |
+| Ô **Agent** | Agent dùng cho hai nút "Lập dàn ý" và "Viết lời dẫn" của dự án này, kèm dòng "Riêng cho bước này / Theo dự án / Theo mặc định" và liên kết "Dùng cho cả dự án". Agent chưa dùng được vẫn hiện, ghi "(chưa dùng được)", chọn vào sẽ có lời giải thích. (Dự án chọn ở thanh trên cùng của ứng dụng.) Dòng "Nguồn dàn ý" và "Nguồn lời dẫn" ở cuối mỗi cột ghi tên agent đã viết. |
 | **Lập dàn ý** | Mô hình viết dàn ý. Có ô ghi chú để dặn thêm. Dàn ý cũ được giữ ở `outline.prev.json`. |
 | **Viết lời dẫn** | Mô hình viết lời dẫn từng chương, cần dàn ý đã duyệt. Mỗi chương xong là được lưu ngay. |
 | **Sao chép prompt** | Mở hộp chứa prompt đầy đủ (dàn ý, hoặc lời dẫn cho tất cả hoặc một chương) trong ô văn bản luôn bôi đen được, kèm nút Sao chép. Nếu trình duyệt chặn bộ nhớ tạm, bấm Ctrl+C (Cmd+C) trên phần đã bôi đen. |
@@ -129,7 +152,7 @@ Bấm vào mã dữ kiện (`f03`) hoặc mã đoạn nguồn (`PAY-07`) ở c�
 
 ### 5.2 Đường 1: dùng nút bấm
 
-1. Chọn mô hình (mặc định là Antigravity CLI, Gemini 3.8 Flash High). Muốn thử mà không tốn hạn mức: chọn **Mock** (câu trả lời mẫu, không gọi mạng, nội dung không có giá trị thật).
+1. Chọn agent ở ô "Agent" (mặc định là Gemini 3.8 Flash qua Antigravity CLI, hoặc agent đặt trong Cài đặt). Muốn thử mà không tốn hạn mức, xem mục 5.7.
 2. **Lập dàn ý**. Đọc, sửa, đặc biệt: câu hỏi chính, chọn câu mở, bảng dữ kiện (kiểm tra các mã nguồn), ngân sách từ của chương. Chỗ nào các sách mâu thuẫn, mô hình phải ghi ở cột "Mâu thuẫn"; bạn là người quyết định, hệ thống không tự chọn.
 3. Lưu, **Duyệt dàn ý**.
 4. **Viết lời dẫn**. Thanh dưới hiện từng chương: xanh dương đang chạy, xanh lá xong, đỏ lỗi. Chương nào không qua kiểm tra (có ký hiệu trong lời đọc, dòng trống, thiếu chương) được mô hình viết lại một lần, kèm thông báo lỗi của bộ kiểm tra. Nếu vẫn lỗi, tác vụ dừng, các chương đã xong được giữ, câu trả lời lỗi nằm ở ô "Dán".
@@ -144,7 +167,7 @@ Bấm vào mã dữ kiện (`f03`) hoặc mã đoạn nguồn (`PAY-07`) ở c�
    - **Viết lại chương**: mô hình viết lại một chương với ghi chú của bạn (ví dụ "ngắn hơn, bớt tiểu sử"). Các chương khác không đổi. Chương có dòng khóa sẽ hỏi trước khi thay.
 6. Xem "Kiểm tra". Hết lỗi thì **Duyệt lời dẫn**. Dự án chuyển sang giai đoạn "Có kịch bản".
 
-Nếu mô hình hết thời gian hoặc bị giới hạn lượt gọi, hộp thoại đề nghị mô hình khác. Hệ thống **không tự đổi mô hình**. Chương đã viết xong vẫn còn.
+Nếu agent hết hạn mức, hộp thoại nêu tên agent và giờ mở lại, kèm một nút "Chuyển sang <agent kia> và chạy lại" (xem "Chọn agent" ở mục 2). Hệ thống **không tự đổi agent**. Nếu mô hình chỉ hết thời gian, trang báo bằng một thông báo và bạn bấm chạy lại. Chương đã viết xong vẫn còn.
 
 ### 5.3 Đường 2: sao chép và dán
 
@@ -164,7 +187,7 @@ Nếu mô hình hết thời gian hoặc bị giới hạn lượt gọi, hộp 
 
 Mặc định, máy chủ chạy **Antigravity CLI** (`agy`) ở chế độ không giao diện, theo gói đăng ký của bạn. **Không cần khóa API.**
 
-**Chuẩn bị một lần:** chạy lệnh `agy` trong Terminal và đăng nhập Google. Sau đó tải lại trang. Nếu `agy` chưa cài hoặc chưa đăng nhập, ô mô hình ghi "(không dùng được)" kèm lời nhắc chạy `agy` một lần trong Terminal.
+**Chuẩn bị một lần:** chạy lệnh `agy` trong Terminal và đăng nhập Google. Sau đó tải lại trang. Nếu `agy` chưa cài hoặc chưa đăng nhập, agent Gemini 3.8 Flash ghi "(chưa dùng được)" kèm lời nhắc chạy `agy` một lần trong Terminal.
 
 **Danh sách mô hình** lấy từ lệnh `agy models` (nhớ trong khoảng 10 phút), hiện thành `Antigravity CLI: <tên>`, mô hình mặc định của CLI đứng đầu. Hiện có: Gemini 3.8 Flash (High, Medium, Low), Claude Sonnet 4.6, Claude Opus 4.6, GPT-OSS 120B. Mỗi lần chạy tốn hạn mức của gói đăng ký.
 
@@ -195,7 +218,7 @@ Thêm một mô hình OpenRouter: thêm một dòng vào `config/models.json`, v
 
 Có hai bộ chạy, mỗi bộ chạy bằng chương trình của chính hãng, theo gói đăng ký của bạn: Gemini 3.8 Flash chạy bằng **Antigravity CLI** (`agy`, mục 5.4), Opus 5.5 High chạy bằng **Claude Code** (`claude`). Mô hình của Claude Code có mã dạng `claude:<mô hình>@<mức nỗ lực>`, hiện có một dòng trong danh sách: `claude:claude-opus-5-5@high`, hiện là **Claude Code: Opus 5.5 High**. Dùng được ở mọi chỗ dùng được mã `agy:` (kịch bản, sửa nhanh, dựng storyboard, sửa sâu); mã nào đúng dạng trên cũng được nhận, tên mô hình sai thì Claude Code từ chối khi chạy và trang báo bằng tiếng Việt.
 
-**Đăng nhập một lần trên máy chủ** (làm trong phiên làm việc của chủ máy, như `agy`): mở Terminal trên máy chủ, chạy `claude auth login` rồi làm theo trình duyệt. Kiểm tra bằng `claude auth status` (phải thấy `loggedIn: true`). Chưa cài hoặc chưa đăng nhập thì mô hình hiện "(không dùng được)" kèm lý do: *chưa cài Claude Code* hoặc *Claude Code trên máy chủ chưa đăng nhập*. Việc kiểm tra này không gọi mô hình, nhớ 10 phút (1 phút nếu đang lỗi); sau khi đăng nhập, tải lại trang hoặc đợi một phút. Ứng dụng không bao giờ truyền `ANTHROPIC_API_KEY` cho `claude`, nên luôn chạy theo gói đăng ký, không tính tiền theo token.
+**Đăng nhập một lần trên máy chủ** (làm trong phiên làm việc của chủ máy, như `agy`): mở Terminal trên máy chủ, chạy `claude auth login` rồi làm theo trình duyệt. Kiểm tra bằng `claude auth status` (phải thấy `loggedIn: true`). Chưa cài hoặc chưa đăng nhập thì agent Opus 5.5 High hiện "(chưa dùng được)" kèm lý do: *chưa cài Claude Code* hoặc *Claude Code trên máy chủ chưa đăng nhập*. Việc kiểm tra này không gọi mô hình, nhớ 10 phút (1 phút nếu đang lỗi); sau khi đăng nhập, tải lại trang hoặc đợi một phút. Ứng dụng không bao giờ truyền `ANTHROPIC_API_KEY` cho `claude`, nên luôn chạy theo gói đăng ký, không tính tiền theo token.
 
 **Một lần gọi** (dàn ý, lời dẫn, sửa nhanh): `claude -p --model <mô hình> --effort <mức> --output-format json --tools "" --safe-mode --setting-sources "" --strict-mcp-config --disable-slash-commands --no-session-persistence --permission-mode dontAsk --system-prompt <câu hệ thống>`, prompt đi qua đầu vào chuẩn. Không có công cụ nào, không lưu phiên, thư mục tạm trống, và không lẫn cài đặt riêng của người đang đăng nhập (hướng dẫn dự án, hook, skill, bộ nhớ, MCP, plugin): cùng một câu hỏi cho cùng một câu trả lời trên mọi máy.
 
@@ -240,7 +263,7 @@ Lỗi thường gặp (hiện tiếng Việt): chưa đăng nhập (`claude auth
 
 **Lưu ý khi đọc bản dán** (hiện sau khi dán thành công): "chương khớp theo vị trí", "chương xuất hiện hai lần", "mã dữ kiện lạ", "đoạn trước chương đầu bị bỏ", "dòng `>>` không có đoạn đi trước", "chương không có đoạn nào". Đều chỉ là lưu ý, văn bản đã được lưu.
 
-**Lỗi tác vụ mô hình**: `timeout` (không trả lời kịp, thử mô hình khác), `rate_limit` (hết hạn mức hoặc lượt, thử mô hình khác), `auth` (chưa đăng nhập `agy` hoặc khóa bị từ chối), `config` (chưa cài `agy`, chưa đặt khóa, hoặc tên mô hình lạ), `parse` / `validation` (câu trả lời không đọc được hoặc không qua kiểm tra, ngay cả sau một lần thử lại; câu trả lời được giữ ở ô Dán), `conflict` (dàn ý chưa duyệt).
+**Lỗi tác vụ mô hình**: `timeout` (không trả lời kịp, chạy lại), `rate_limit` (hết hạn mức hoặc lượt: thông báo nêu agent và giờ mở lại, kèm nút chuyển sang agent kia), `auth` (chưa đăng nhập `agy` hoặc khóa bị từ chối), `config` (chưa cài `agy`, chưa đặt khóa, hoặc tên mô hình lạ), `parse` / `validation` (câu trả lời không đọc được hoặc không qua kiểm tra, ngay cả sau một lần thử lại; câu trả lời được giữ ở ô Dán), `conflict` (dàn ý chưa duyệt).
 
 ### 5.6 Tệp được ghi
 
@@ -257,7 +280,7 @@ Giai đoạn hiện ở trang chủ và ở thanh trên cùng: "Đã duyệt dà
 
 ### 5.7 Chạy thử nhanh không cần khóa
 
-Chọn mô hình **Mock**. Trong ô ghi chú có thể gõ các dấu hiệu để thử các tình huống: `[mock:bad c02]` (lần viết đầu của chương c02 có ký hiệu lỗi, lần thử lại đúng), `[mock:alwaysbad c02]` (luôn lỗi, tác vụ dừng), `[mock:badoutline]` (dàn ý lần đầu không đọc được), `[mock:slow]` (chạy chậm khoảng 10 giây, để thử Hủy), `[mock:ratelimit]` (báo hết lượt).
+Ô "Agent" chỉ có hai agent thật. Để thử không tốn hạn mức, cho máy chủ một tệp agent riêng bằng biến môi trường `BTI_AGENT_CHOICES_FILE` (cùng dạng với `config/agent_choices.json`, trong đó một agent chạy mô hình `mock`: câu trả lời mẫu, không gọi mạng, nội dung không có giá trị thật); các thử nghiệm của dự án làm đúng như vậy. Một yêu cầu gửi thẳng tới máy chủ vẫn nêu được `"model": "mock"`. Trong ô ghi chú có thể gõ các dấu hiệu để thử các tình huống: `[mock:bad c02]` (lần viết đầu của chương c02 có ký hiệu lỗi, lần thử lại đúng), `[mock:alwaysbad c02]` (luôn lỗi, tác vụ dừng), `[mock:badoutline]` (dàn ý lần đầu không đọc được), `[mock:slow]` (chạy chậm khoảng 10 giây, để thử Hủy), `[mock:ratelimit]` (báo hết lượt).
 
 ### 5.8 Chữ bạn đang sửa không bao giờ bị ghi đè
 
@@ -407,7 +430,7 @@ The style is applied to the saved storyboard under the same lock, revision rule 
 
 Khi dự án đã xong Giọng đọc và Chọn hình mà chưa có storyboard, bước Dựng hình không mở một bảng trống: nó hiện khung **Bản nháp storyboard**. Khi đã có storyboard, nút **Bản nháp** trên thanh công cụ mở cùng khung đó.
 
-1. Khung cho biết giọng đọc và chọn hình đã xong chưa. Ô *Mô hình* bắt đầu ở mô hình đã đặt trong Cài đặt cho việc dựng storyboard (có thể đổi riêng cho lần này) rồi bấm **Dựng bản nháp**. Nút **Dựng tự động (không dùng agent)** làm mỗi dòng lời dẫn một cảnh từ hình bạn đã chọn, không gọi mô hình nào: dùng khi agy chưa đăng nhập, hoặc để so sánh.
+1. Khung cho biết giọng đọc và chọn hình đã xong chưa. Ô **Agent** (cùng ô chọn của mục 2, bước "Dựng hình") cho biết agent sẽ dựng; đổi ở đây là đổi cho cả bước Dựng hình của dự án, cả ô Agent bên hộp "Sửa video bằng lời" đổi theo. Bấm **Dựng bản nháp**. Khung ghi tên agent đã dựng ("Agent: Gemini 3.8 Flash."). Nếu agent hết hạn mức, thông báo nêu tên agent và giờ mở lại kèm một nút chuyển sang agent kia và dựng lại. Nút **Dựng tự động (không dùng agent)** làm mỗi dòng lời dẫn một cảnh từ hình bạn đã chọn, không gọi mô hình nào: dùng khi agy chưa đăng nhập, hoặc để so sánh.
 2. Bạn có thể rời trang; khung hiện số bước và việc agent đang làm. **Dừng** dừng agent ngay.
 3. Kết quả không bao giờ tự ghi vào dự án. Nó là một **đề xuất**; bấm **Mở đề xuất** để xem. Với dự án chưa có storyboard, bấm **Áp dụng** (chấp nhận cả đề xuất) biến nó thành storyboard đầu tiên; chọn từng thay đổi chưa dùng được ở bước này. Mục nào còn dở được ghi trong đề xuất để bạn sửa tiếp.
 4. Dựng lại sau này: cảnh bạn đã khóa không bao giờ bị đổi. Nếu giọng đọc hoặc danh sách hình đã đổi sau khi dựng, khung báo "dựng từ giọng đọc hoặc danh sách hình đã đổi" và đề xuất cũ vẫn xem được.
@@ -434,11 +457,13 @@ Bên phải khung xem trước ở bước Dựng hình có ô **Sửa video b�
 5. **Xem thử** dựng một đoạn ngắn (tối đa 10 giây) ở chỗ vừa sửa. **Hoàn tác** đưa các cảnh về như trước lần sửa. Nếu sau lần sửa bạn đã đổi chính các cảnh đó, ứng dụng hỏi trước ("Hoàn tác sẽ bỏ sửa đổi của bạn"); chọn **Vẫn hoàn tác** để tiếp tục. Chỉ 20 lần sửa gần nhất còn hoàn tác được.
 6. Lần sửa bắt đầu ở thẻ trình duyệt khác cũng hiện ở đây sau vài giây. **Xóa lịch sử** hỏi một lần; nó chỉ xóa danh sách, không đổi video.
 
-Mô hình không chọn ở đây: nó là một **cài đặt** (xem dưới). Liên kết nhỏ **Mô hình** cạnh nút Gửi mở cài đặt đó.
+Agent làm việc này chọn ngay cạnh nút Gửi, bằng ô **Agent** (cùng ô với khung Bản nháp, bước "Dựng hình"; xem "Chọn agent" ở mục 2). Thẻ lần sửa xong ghi tên agent đã làm. Nếu agent hết hạn mức, thẻ nêu tên agent và giờ mở lại, kèm một nút "Chuyển sang <agent kia> và chạy lại" gửi lại đúng yêu cầu đó.
 
-### Cài đặt: mô hình cho từng việc
+### Cài đặt
 
-Nút **Cài đặt** ở thanh trên cùng mở hộp **Mô hình cho từng việc**: mỗi việc (dàn ý kịch bản, lời dẫn kịch bản, dựng storyboard, sửa nhanh bằng lời, sửa sâu bằng lời, chọn hình) có một ô chọn mô hình. Mặc định tất cả là Gemini 3.8 Flash (High) qua agy. Ô **Dùng một mô hình cho tất cả** chọn một mô hình rồi bấm **Áp dụng cho tất cả**; các việc chạy qua agent (dựng storyboard, sửa sâu) chỉ nhận mô hình của agy nên giữ nguyên nếu mô hình đó không dùng được cho chúng. Bấm **Lưu** để ghi (vào `run/settings.json`, được giữ qua các lần triển khai); lần chạy sau dùng mô hình mới. Khung **Bản nháp storyboard** bắt đầu ở mô hình của việc "dựng storyboard".
+Nút **Cài đặt** ở thanh trên cùng mở hộp **Cài đặt**. Trên cùng là **Agent mặc định cho dự án mới**: dự án chưa chọn agent thì dùng agent này; chọn xong là lưu ngay (vào `run/settings.json`, được giữ qua các lần triển khai). Mỗi dự án vẫn đổi được agent của mình ở từng bước (mục 2, "Chọn agent").
+
+Dưới đó là mục **Nâng cao**, mặc định đang đóng, có dòng "Chỉ dùng khi dự án và mặc định đều chưa chọn agent.". Mở ra là bảng **Mô hình cho từng việc**: mỗi việc (dàn ý kịch bản, lời dẫn kịch bản, dựng storyboard, sửa nhanh bằng lời, sửa sâu bằng lời, chọn hình) có một ô chọn mô hình. Mặc định tất cả là Gemini 3.8 Flash (High) qua agy. Ô **Dùng một mô hình cho tất cả** chọn một mô hình rồi bấm **Áp dụng cho tất cả**; các việc chạy qua agent (dựng storyboard, sửa sâu) chỉ nhận mô hình của agy hoặc của Claude Code nên giữ nguyên nếu mô hình đó không dùng được cho chúng. Bấm **Lưu** để ghi; lần chạy sau dùng mô hình mới, nhưng chỉ khi dự án và agent mặc định đều chưa chọn agent.
 
 ### Xem thử 10 giây
 

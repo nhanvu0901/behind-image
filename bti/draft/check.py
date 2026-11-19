@@ -7,7 +7,30 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
+
+
+def inside_workspace(path, base=None) -> bool:
+    """True when `path` (relative paths are taken from `base`, default the current folder, which is the workspace the command was started in)
+    resolves to `base` itself or to something below it. `..` and symbolic links are resolved first (also for a file that does not exist yet:
+    the folders that do exist are resolved); names are compared the way the file system compares them (case-blind on Windows; another drive
+    is outside). Shared by the three helper commands `check`, `defaults` and `still`."""
+    root = os.path.realpath(base or os.getcwd())
+    real = os.path.realpath(os.path.join(root, os.fspath(path)))          # an absolute `path` replaces `root` in the join
+    a, b = os.path.normcase(root), os.path.normcase(real)
+    try:
+        return os.path.commonpath([a, b]) == a
+    except ValueError:                                                      # another drive on Windows
+        return False
+
+
+def refuse_outside(path, what: str) -> int | None:
+    """None when `path` is inside the workspace the command was started in; else one plain sentence on standard error and the exit status 2."""
+    if inside_workspace(path):
+        return None
+    print("ERROR %s points outside the workspace this command was started in, so nothing was done. Use a path inside the workspace." % what, file=sys.stderr)
+    return 2
 
 
 def main(argv=None) -> int:
@@ -17,6 +40,9 @@ def main(argv=None) -> int:
     ap.add_argument("--no-draw", action="store_true", help="skip the draw check (faster)")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    bad = refuse_outside(a.workspace, "the workspace path")
+    if bad:
+        return bad
     from .compile import summary_text
     from .inputs import DraftError
     from .workspace import workspace_compile

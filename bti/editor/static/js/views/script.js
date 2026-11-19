@@ -9,7 +9,6 @@
 //  - While a model job writes a document, saving that document is held (the job writes it too); the draft stays on the page
 //    and is merged with the job's result when the job ends.
 import { api } from '../api.js';
-import { agyProblem } from '../labels.js';
 import { chapterDiffItems, headerRole } from '../chapdiff.js';
 import { h, kids, toast, errorToast, errorInto, detailFold, fillSelect, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
 import { LEVEL } from '../labels.js';
@@ -19,11 +18,14 @@ import { wordCount, tokenCount, findFolded, fold } from '../text.js';
 import { createQueue } from '../queue.js';
 import { mergeDoc, deepEqual } from '../merge.js';
 import { issueText, jobErrorText, parseFailText } from '../errmsg.js';
+import { mountAgentPick, quotaNode } from '../agentpick.js';
+import { sourceWords, usedAgent, isQuota, STEP_SCRIPT } from '../agentlogic.js';
+import { AGENT_LABELS as AL } from '../labels.js';
 
 let root = null, scope = null, shell = null;     // the view root, its lifecycle scope and the shell (set by mount)
 const $ = (s) => root?.querySelector(s);
 const modal = (o) => uiModal({ ...o, cls: (o.cls || '') + ' v-scr' });   // dialogs opened here carry the scope class of this view
-const S = { pid: null, brief: null, models: [], roleModels: {}, modelsState: 'loading', model: null, tab: null, search: '', hl: [], focus: 'narr' };
+const S = { pid: null, brief: null, pick: null, tab: null, search: '', hl: [], focus: 'narr' };      // `pick`: the agent select of the toolbar (agentpick.js)
 const D = { outline: null, narr: null };                       // drafts (what is on screen)
 const R = { outline: null, narr: null };                       // revisions of the saved files
 const B = { outline: null, narr: null };                       // the last saved documents the page knew (base of the merges)
@@ -33,7 +35,7 @@ const hist = { outline: { past: [], future: [], key: '', at: 0 }, narr: { past: 
 const PASTE = { outline: '', narration: '' };                  // text typed in the paste dialog survives closing the dialog
 let jobPoll = null, currentJob = null, lastRun = null, Q = createQueue();
 function resetState() {
-  Object.assign(S, { pid: null, brief: null, models: [], roleModels: {}, model: null, tab: null, search: '', hl: [], focus: 'narr' });
+  Object.assign(S, { pid: null, brief: null, pick: null, tab: null, search: '', hl: [], focus: 'narr' });
   D.outline = D.narr = null; R.outline = R.narr = null; B.outline = B.narr = null; ST.outline = {}; ST.narr = {};
   dirty.outline = dirty.narr = false;
   for (const k of ['outline', 'narr']) hist[k] = { past: [], future: [], key: '', at: 0 };
@@ -279,8 +281,7 @@ function refreshChrome() {
   b.disabled = !D[next] || !!currentJob; b.dataset.kind = next;
   $('#approve-state').textContent = approvedFlag('narr') ? 'Lời dẫn đã duyệt' : approvedFlag('outline') ? 'Dàn ý đã duyệt' : 'Chưa duyệt gì';
   $('#approve-state').className = 'badge' + (approvedFlag('narr') ? ' ok' : '');
-  const noModel = !S.models.length;      // only while there is no model to choose (loading, or the list failed)
-  $('#btn-write').disabled = !!currentJob || noModel; $('#btn-outline').disabled = !!currentJob || noModel;
+  $('#btn-write').disabled = !!currentJob; $('#btn-outline').disabled = !!currentJob;
   renderStatus();
   const nx = shell?.pipeline && nextOpenable(shell.pipeline.steps, 'script'), bn = $('#btn-next');
   bn.hidden = !(approvedFlag('narr') && nx);
@@ -458,7 +459,7 @@ function outBody() {
       issueHint(is)));
   });
   kids.push(h('button', { class: 'small', text: '+ Thêm dữ kiện', onclick: () => { mutate('outline', () => { const n = Math.max(0, o.counters?.fact || 0, ...o.facts.map((x) => Number(x.id.replace(/\D/g, '')) || 0)) + 1; o.counters = { ...(o.counters || {}), fact: n }; o.facts.push({ id: 'f' + String(n).padStart(2, '0'), claim: '', sources: [], certainty: 'likely', conflict: null }); }); outBody(); } }));
-  if (o.source?.kind) kids.push(h('div', { class: 'hint', style: { marginTop: '14px' }, text: `Nguồn dàn ý: ${{ model: 'mô hình ' + (o.source.model || ''), paste: 'dán vào', manual: 'viết tay' }[o.source.kind] || o.source.kind}, ${(o.source.created_at || '').slice(0, 16).replace('T', ' ')}` }));
+  if (o.source?.kind) kids.push(h('div', { class: 'hint', style: { marginTop: '14px' }, text: `Nguồn dàn ý: ${sourceWords(S.pick?.agents(), o.source)}, ${(o.source.created_at || '').slice(0, 16).replace('T', ' ')}` }));
   body.replaceChildren(...kids);
   fitAll(body);
 }
@@ -487,7 +488,7 @@ function narBody() {
       ...ch.beats.map((b, i) => beatEl(ch, b, i))));
   }
   for (const it of diffItems(ST.narr.chapter_diff).filter((x) => x.kind === 'missing')) kids.push(h('div', { class: 'card warnc' }, diffRow(it)));
-  if (n.source?.kind) kids.push(h('div', { class: 'hint', text: `Nguồn lời dẫn: ${{ model: 'mô hình ' + (n.source.model || ''), paste: 'dán vào', manual: 'viết tay' }[n.source.kind] || n.source.kind}, ${(n.source.created_at || '').slice(0, 16).replace('T', ' ')}` }));
+  if (n.source?.kind) kids.push(h('div', { class: 'hint', text: `Nguồn lời dẫn: ${sourceWords(S.pick?.agents(), n.source)}, ${(n.source.created_at || '').slice(0, 16).replace('T', ' ')}` }));
   body.replaceChildren(...kids);
   fitAll(body);
 }
@@ -583,21 +584,18 @@ function renderStatus() {
   const jb = $('#st-job'); jb.replaceChildren();
   const j = currentJob;
   if (j) {
-    jb.append(h('div', null, h('b', { text: j.kind === 'outline' ? 'Đang lập dàn ý' : 'Đang viết lời dẫn' }), ` (${j.model}) `, j.state === 'running' || j.state === 'queued' ? h('button', { class: 'small danger', text: 'Hủy', onclick: () => send('POST', `/api/jobs/${j.id}/cancel`).catch((e) => errorToast(e)) }) : null),
+    jb.append(h('div', null, h('b', { text: j.kind === 'outline' ? 'Đang lập dàn ý' : 'Đang viết lời dẫn' }), ` (${usedAgent(S.pick?.agents(), j).label || j.model}) `, j.state === 'running' || j.state === 'queued' ? h('button', { class: 'small danger', text: 'Hủy', onclick: () => send('POST', `/api/jobs/${j.id}/cancel`).catch((e) => errorToast(e)) }) : null),
       h('div', null, j.chapters.map((c) => h('span', { class: 'jc ' + c.state, title: `${c.id} ${c.title}: ${c.state}${c.attempts > 1 ? ', thử lần ' + c.attempts : ''} ${c.message || ''}` }))),
       h('div', { class: 'muted', text: j.chapters.filter((c) => ['running', 'retrying'].includes(c.state)).map((c) => `${c.id}${c.state === 'retrying' ? ' (thử lại)' : ''}`).join(', ') || j.state }));
   } else jb.append(h('span', { class: 'muted', text: 'Không có tác vụ đang chạy' }));
 }
 
 // ------------------------------------------------------------------ jobs
-const chosenModel = () => { const m = S.models.find((x) => x.id === S.model); return m && m.enabled ? m : null; };
-/** Start a model job. The request ALWAYS names the model (the server refuses one that does not). */
+/** Start a model job. The request names NO model: the server uses the agent of this project's step (the select of the toolbar). */
 async function startJob(kind, body) {
-  const model = chosenModel();
-  if (!model) return toast(S.model ? 'Mô hình đang chọn chưa dùng được. Chọn một mô hình khác ở ô trên thanh công cụ (có thể chọn "Mock" để thử).' : 'Chưa chọn mô hình. Chọn một mô hình ở ô trên thanh công cụ rồi thử lại.', 'err', 8000);
   const out = await Q.run(async () => {
     if (!(await saveAllNow())) return { stop: true };
-    try { const r = await send('POST', `${P()}/${kind}/generate`, { ...body, model: model.id }); return { jid: r.job_id }; }
+    try { const r = await send('POST', `${P()}/${kind}/generate`, body); return { jid: r.job_id }; }
     catch (e) { return { err: e }; }
   });
   if (out.jid) return watch(out.jid);
@@ -640,16 +638,13 @@ async function jobEnded(j) {
   else if (j.state === 'cancelled') toast('Đã hủy. Phần đã viết xong được giữ lại.' + (kept ? ' Chữ bạn gõ trong lúc chạy cũng được giữ, chưa lưu.' : ''), 'warn', kept ? 7000 : 4200);
   else {
     const je = jobErrorText(j);
-    toast(je.text + (kept ? ' Chữ bạn gõ trong lúc chạy được giữ lại, chưa lưu.' : ''), 'err', 12000, je.detail);
-    const alt = (j.alternatives || []).map((id) => S.models.find((m) => m.id === id)).filter(Boolean);
-    if (alt.length && ['timeout', 'rate_limit'].includes(j.error_kind)) {
-      // one choice and one explicit button (a list of buttons made it too easy to start a real model by a stray click)
-      const pick = h('select', { 'aria-label': 'Mô hình khác' }, h('option', { value: '', text: '- Chọn một mô hình khác -' }), ...alt.map((a) => h('option', { value: a.id, text: a.label + (a.paid ? ' (tính tiền)' : '') })));
-      const again = h('button', { class: 'primary', text: 'Chạy tiếp với mô hình này', disabled: true, onclick: () => { const a = alt.find((x) => x.id === pick.value); if (!a) return; m.close(); S.model = a.id; $('#model-pick').value = a.id; retryLast(); } });
-      pick.addEventListener('change', () => { again.disabled = !pick.value; });
-      const m = modal({ title: j.error_kind === 'timeout' ? 'Mô hình không trả lời kịp' : 'Mô hình bị giới hạn lượt gọi',
-        body: h('div', { class: 'body' }, h('p', { text: je.text }), h('p', { text: 'Phần đã viết xong được giữ lại. Chọn mô hình khác để chạy tiếp; hệ thống không tự đổi mô hình.' }), h('div', { style: { display: 'flex', gap: '8px', alignItems: 'center' } }, pick, again)),
-        footer: h('footer', null, h('button', { text: 'Để sau', onclick: () => m.close() })) });
+    if (!isQuota(j)) toast(je.text + (kept ? ' Chữ bạn gõ trong lúc chạy được giữ lại, chưa lưu.' : ''), 'err', 12000, je.detail);
+    else {
+      // the agent's quota is used up: one sentence (the agent and the time) and ONE button that stores the other agent as this step's choice
+      // and runs the same request again; the system never switches by itself
+      const m = modal({ title: AL.quota.scriptTitle,
+        body: h('div', { class: 'body' }, quotaNode({ pid: S.pid, step: STEP_SCRIPT, rec: j, rerun: async () => { m.close(); await S.pick?.refresh(); retryLast(j.kind); } }),
+          h('p', { class: 'hint', text: AL.quota.scriptKept + (kept ? ' Chữ bạn gõ trong lúc chạy cũng được giữ lại, chưa lưu.' : '') })) });
     }
     if (j.error_kind === 'validation' || j.error_kind === 'parse') { if (D.narr || ST.narr.last_paste || ST.outline.last_paste) toast('Câu trả lời lỗi được giữ trong ô "Dán".', 'warn', 8000); }
   }
@@ -661,25 +656,17 @@ async function jobEnded(j) {
   }
   pipeChanged();
 }
-function retryLast() { if (lastRun) startJob(lastRun.kind, lastRun.body); }
+function retryLast(kind = null) { if (!lastRun && kind) lastRun = { kind, body: {} }; if (lastRun) startJob(lastRun.kind, lastRun.body); }
 
 function runDialog(kind, chapters) {
-  const roleKey = kind === 'outline' ? 'script.outline' : 'script.narration';
-  const roleModel = S.roleModels?.[roleKey];
-  if (roleModel && S.models.some((m) => m.id === roleModel && m.enabled)) {
-    S.model = roleModel;
-    const mp = $('#model-pick');
-    if (mp) mp.value = roleModel;
-  }
-  const model = S.models.find((m) => m.id === S.model);
-  if (!model || !model.enabled) return toast((model?.message || 'Chưa chọn mô hình') + ' (xem docs/APP_GUIDE.md). Có thể chọn "Mock" để thử.', 'err', 9000);
+  const agent = S.pick?.effective();
   if (S.brief && S.brief.totals.included === 0) return toast('Chưa có nguồn nào được dùng, mô hình sẽ không có gì để viết. Ở cột Nguồn, tick "Dùng sách này làm nguồn" cho một sách dịch máy (nếu chấp nhận rủi ro).', 'err', 10000);
   const chs = chapters ? [].concat(chapters) : null;
   const exists = kind === 'outline' ? !!D.outline : !!D.narr && !chs;
   const notes = h('textarea', { rows: 4, placeholder: kind === 'outline' ? 'Ví dụ: tập trung vào chiếc gương, bỏ phần giả kim thuật' : 'Ví dụ: ngắn hơn, bớt tiểu sử, thêm một cách đọc khác' });
   const title = kind === 'outline' ? 'Lập dàn ý' : chs ? `Viết lại ${chs.join(', ')}` : 'Viết lời dẫn';
   const m = modal({ title, cls: 'wide', body: h('div', { class: 'body' },
-    h('p', null, 'Mô hình: ', h('b', { text: model.label })), exists ? h('p', { class: 'hint warn', text: kind === 'outline' ? 'Dàn ý hiện tại sẽ bị thay (bản cũ giữ ở outline.prev.json) và mất trạng thái duyệt.' : 'Lời dẫn hiện tại sẽ bị thay (bản cũ giữ ở narration.prev.json).' }) : null,
+    h('p', null, 'Agent: ', h('b', { text: agent?.label || AL.noneYet })), exists ? h('p', { class: 'hint warn', text: kind === 'outline' ? 'Dàn ý hiện tại sẽ bị thay (bản cũ giữ ở outline.prev.json) và mất trạng thái duyệt.' : 'Lời dẫn hiện tại sẽ bị thay (bản cũ giữ ở narration.prev.json).' }) : null,
     h('label', { class: 'lb', text: 'Ghi chú cho mô hình (tùy chọn)' }), notes),
     footer: h('footer', null, h('button', { onclick: () => m.close(), text: 'Hủy' }), h('button', { class: 'primary', text: 'Chạy', onclick: () => { m.close(); lastRun = { kind, body: { notes: notes.value, ...(chs ? { chapters: chs } : {}) } }; startJob(kind, lastRun.body); } })) });
   scope.timeout(() => notes.focus(), 30);
@@ -865,7 +852,7 @@ function renderAll() {
 // ------------------------------------------------------------------ mount
 const BAR = `
   <div class="vbar" id="sbar">
-    <select id="model-pick" title="Mô hình dùng cho các nút bên dưới" aria-label="Mô hình"></select><span id="model-note" class="hint warn" hidden></span>
+    <span id="agent-pick-host" class="agent-host"></span>
     <span class="sep"></span>
     <button id="btn-outline" title="Mô hình viết dàn ý từ các đoạn sách đã đánh số">Lập dàn ý</button>
     <button id="btn-write" title="Mô hình viết lời dẫn từng chương, theo dàn ý đã duyệt">Viết lời dẫn</button>
@@ -892,63 +879,6 @@ const BAR = `
     <div id="st-job"></div>
   </footer>`;
 
-const store = {
-  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
-  set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* private window: the choice is simply not remembered */ } },
-};
-
-/** The dropdown of models, and a note when the Antigravity command did not answer (the entry then carries `agy: {ok: false, reason}`). */
-function paintModels() {
-  const mp = $('#model-pick'), note = $('#model-note');
-  if (!mp) return;
-  mp.replaceChildren(...(S.models.length ? S.models.map((m) => h('option', { value: m.id, selected: m.id === S.model, text: m.label + (m.enabled ? '' : ' (không dùng được)') })) : [h('option', { value: '', text: S.modelsState === 'loading' ? 'Đang tải danh sách mô hình...' : '(chưa có mô hình)' })]));
-  mp.disabled = !S.models.length;
-  if (S.modelsState === 'failed' && !S.models.length) {
-    note.hidden = false;
-    note.replaceChildren('Không tải được danh sách mô hình. ', h('button', { class: 'small', id: 'btn-models-retry', text: 'Thử lại', onclick: () => loadModels(true) }));
-    if (S.brief) refreshChrome(); return;
-  }
-  const why = agyProblem(S.models);
-  note.hidden = !why;
-  note.replaceChildren(...(why ? [`Lệnh Antigravity ${why}, nên danh sách mô hình có thể chưa đủ. `, h('button', { class: 'small', id: 'btn-models-retry', text: 'Thử lại', onclick: async (e) => {
-    e.target.disabled = true; e.target.textContent = 'Đang thử...';
-    try { S.models = await J('/api/models?refresh=1'); if (!S.models.some((m) => m.id === S.model)) S.model = (S.models.find((m) => m.enabled) || S.models[0])?.id || null; paintModels(); if (!agyProblem(S.models)) toast('Lệnh Antigravity đã trả lời.', 'ok', 2500); }
-    catch (err) { errorToast(err, 'Không tải lại được danh sách mô hình: '); e.target.disabled = false; e.target.textContent = 'Thử lại'; }
-  } })] : []));
-  if (S.brief) refreshChrome();
-}
-/** Fetch the model list without holding the page: the outline and the narration are shown first. */
-async function loadModels(refresh = false) {
-  S.modelsState = 'loading'; S.models = []; paintModels();
-  const pid = S.pid;
-  try {
-    const [list, settings] = await Promise.all([
-      J(refresh ? '/api/models?refresh=1' : '/api/models'),
-      J(refresh ? '/api/settings/models?refresh=1' : '/api/settings/models').catch(() => null),
-    ]);
-    if (!root || S.pid !== pid) return;
-    S.models = list; S.modelsState = 'ok';
-    S.roleModels = {};
-    if (settings && Array.isArray(settings.roles)) {
-      for (const r of settings.roles) {
-        if (r.role && r.model) S.roleModels[r.role] = r.model;
-      }
-    }
-    const saved = store.get('bti.script.model');
-    const roleKey = (D.outline && ST.outline?.approved) ? 'script.narration' : 'script.outline';
-    const roleModel = S.roleModels[roleKey];
-    S.model = (S.models.find((m) => m.id === saved && m.enabled) ||
-               S.models.find((m) => m.id === roleModel && m.enabled) ||
-               S.models.find((m) => m.default && m.enabled) ||
-               S.models.find((m) => m.enabled) ||
-               S.models[0])?.id || null;
-  } catch (e) {
-    if (!root || S.pid !== pid) return;
-    S.modelsState = 'failed'; errorToast(e, 'Không tải được danh sách mô hình: ');
-  }
-  paintModels();
-}
-
 export async function mount(host, ctx) {
   resetState();
   scope = ctx.scope; shell = ctx.shell;
@@ -956,10 +886,10 @@ export async function mount(host, ctx) {
   root = h('div', { class: 'scr-root v-scr' });
   root.innerHTML = BAR;
   host.append(root);
-  const mp = $('#model-pick');
-  paintModels();
-  loadModels();       // not awaited: the page does not wait for the model list
-  mp.onchange = () => { S.model = mp.value || null; if (S.model) store.set('bti.script.model', S.model); const m = S.models.find((x) => x.id === S.model); if (m && !m.enabled) toast(m.message || 'Mô hình này chưa dùng được. Xem docs/APP_GUIDE.md.', 'warn', 9000); if (m?.paid) toast('Mô hình này tính tiền theo token.', 'warn', 5000); };
+  // the agent select (the same on every step that calls a model); the page does not wait for it. A change of the list of agents (the answer of
+  // GET /api/agents arriving) redraws the source lines, which name the agent by its label.
+  S.pick = mountAgentPick($('#agent-pick-host'), { pid: S.pid, step: STEP_SCRIPT, scope, onChange: () => { if (root) { outBody(); narBody(); } } });
+  S.pick.ready.then(() => { if (root) { outBody(); narBody(); } });
   $('#btn-outline').onclick = () => runDialog('outline');
   $('#btn-write').onclick = () => { if (!approvedFlag('outline')) return toast('Cần duyệt dàn ý trước khi viết lời dẫn.', 'warn'); runDialog('narration'); };
   $('#btn-copy').onclick = () => copyDialog(approvedFlag('outline') && D.outline ? 'script' : 'outline');

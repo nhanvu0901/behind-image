@@ -46,8 +46,38 @@ function validate(sb) {
 
 const projectBody = () => ({ storyboard: resolved(S.sb), timing: S.timing, issues: validate(S.sb), rev: S.rev });
 
+// The agent select (agentpick.js) in mock mode: the two agents, and a choice kept in memory. Nothing else is read through the generic verbs here.
+const MOCK_AGENTS = [{ id: 'gemini', label: 'Gemini 3.8 Flash', model: 'agy:gemini-3.8-flash-high', available: true, reason: null },
+  { id: 'opus', label: 'Opus 5.5 High', model: 'claude:claude-opus-5-5@high', available: true, reason: null }];
+const MOCK_STEPS = ['script', 'picks', 'storyboard'];
+let agentChoice = { agent: null, steps: {}, rev: 'mock-agent-1' };
+const agentDoc = () => {
+  const eff = {};
+  for (const st of MOCK_STEPS) {
+    const id = agentChoice.steps[st] || agentChoice.agent || 'gemini';
+    const a = MOCK_AGENTS.find((x) => x.id === id);
+    eff[st] = { id, label: a.label, model: a.model, source: agentChoice.steps[st] ? 'step' : agentChoice.agent ? 'project' : 'default' };
+  }
+  return { rev: agentChoice.rev, agent: agentChoice.agent, steps: { ...agentChoice.steps }, effective: eff, warnings: [] };
+};
+
 export const mockApi = {
   mode: 'mock',
+  async get(path) {
+    await delay(20);
+    if (path.startsWith('/api/agents')) return { agents: MOCK_AGENTS, default: 'gemini', machine_default: null, warnings: [] };
+    if (/^\/api\/projects\/[^/]+\/agent$/.test(path)) return agentDoc();
+    throw new ApiError(404, { detail: 'not found' }, path);
+  },
+  async put(path, body) {
+    await delay(20);
+    if (!/^\/api\/projects\/[^/]+\/agent$/.test(path)) throw new ApiError(404, { detail: 'not found' }, path);
+    if (body?.base_rev !== agentChoice.rev) throw new ApiError(409, { detail: 'stale', code: 'stale', rev: agentChoice.rev }, path);
+    if ('agent' in body) agentChoice.agent = body.agent;
+    if ('steps' in body) agentChoice.steps = body.steps === null ? {} : { ...agentChoice.steps, ...Object.fromEntries(Object.entries(body.steps).filter(([, v]) => v)) };
+    agentChoice.rev = 'mock-agent-' + (Number(agentChoice.rev.split('-').pop()) + 1);
+    return agentDoc();
+  },
   async health() { await init(); return { ok: true, engine: 'stub', media: 'stub', mock: true }; },
   async style() { await init(); return { style: await fx('style.json'), techniques: S.reg.techniques, intents: S.intents }; },
   async projects() { await init(); return [{ id: 'arnolfini-mock', title: S.sb.title, duration: S.timing.duration, updated_at: '2026-11-16T09:00:00Z' }, { id: 'empty-demo', title: 'Dự án trống (mock)', duration: 0, updated_at: '2026-11-10T09:00:00Z' }]; },
