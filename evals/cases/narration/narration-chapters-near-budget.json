@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-chapters-near-budget",
+  "step": "narration",
+  "title": "Every chapter is as long as its budget, within 30%",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md: a chapter more than 30% off its budget is a warning (chapter_off_budget).",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "budgets",
+      "kind": "narration.chapter_budgets",
+      "tolerance": 0.3
+    }
+  ]
+}

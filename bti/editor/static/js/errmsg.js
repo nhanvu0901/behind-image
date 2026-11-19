@@ -382,6 +382,12 @@ export const STAGE_CODES = {
     auto_needs_human: 'Chỉ chủ dự án đổi được việc cho agent tự chạy. Hãy đổi trên trang.',
     spend_needs_human: 'Việc tốn tiền luôn cần bạn: agent không được tự chạy.',
   },
+  /* worker c6auto: the refusals of "Chạy tự động" (bti/auto_run/api.py). A dozen other codes the run meets are already here (longjob_running, script_job_running). */
+  autorun: {
+    auto_not_enabled: 'Chạy tự động đang tắt cho dự án này. Hãy bật "Cho agent tự chạy dự án này" rồi bấm lại.',
+    auto_running: 'Dự án này đang chạy tự động rồi. Chờ nó xong, hoặc bấm "Dừng".',
+    auto_run_not_found: 'Không tìm thấy lần chạy tự động này.',
+  },
 };
 const AMBIGUOUS = new Set(['busy', 'stale', 'not_found']);
 const UNIQUE_CODES = (() => {

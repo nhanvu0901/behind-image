@@ -1,0 +1,27 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "picks-agent-decides-every-line",
+  "step": "picks_agent",
+  "title": "Every line of the narration gets a picture or a skip, and the main painting is chosen",
+  "why": "The design, \"Agent chọn hình làm việc thế nào\": the agent proposes a picture or a skip for each line, and the main painting first.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "narration_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "decided",
+      "kind": "picks.every_beat_decided",
+      "min_share": 0.95
+    },
+    {
+      "id": "main",
+      "kind": "picks.main_painting_chosen"
+    },
+    {
+      "id": "no-errors",
+      "kind": "picks.no_error_issues"
+    }
+  ]
+}

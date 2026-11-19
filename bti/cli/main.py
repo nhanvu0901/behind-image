@@ -41,6 +41,9 @@ COMMANDS: list[tuple[str, str, str]] = [
     ("approve", "bti approve <project> <gate>", "Approve outline, narration, picks or storyboard; refused (exit 3) when the owner did not allow an agent to approve it."),
     ("ops", "bti ops <project> picks|storyboard --file ops.json [--dry-run] [--note TEXT]",
      "Send a batch of typed operations (the command reads the current revision itself) and print the changes."),
+    ("run", "bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]",
+     "Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or "
+     "a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); every step is in the run log."),
     ("job", "bti job <id> [--wait] [--cancel]", "Look at a long job, follow it to its end, or stop it."),
     ("undo", "bti undo <project> <batch>", "Undo one batch of operations."),
     ("changes", "bti changes <project> [picks|storyboard]", "The change log of the project, newest batch first."),
@@ -315,8 +318,9 @@ def fetch_job(ctx: Ctx, jid: str, follow: str | None = None) -> tuple[dict, str]
     raise Stop(ctx.server_failure(last))
 
 
-def follow_job(ctx: Ctx, jid: str, follow: str | None, interval: float, max_wait: float) -> int:
-    """Poll the job and print one line per change until it ends; the exit code says how it ended."""
+def follow_job(ctx: Ctx, jid: str, follow: str | None, interval: float, max_wait: float, finish: Callable[["Ctx", str, dict], int] | None = None) -> int:
+    """Poll the job and print one line per change until it ends; the exit code says how it ended (`finish` says it for a job of a kind that has its own
+    ending, the automatic run)."""
     started, last = ctx.clock(), None
     try:
         while True:
@@ -327,7 +331,7 @@ def follow_job(ctx: Ctx, jid: str, follow: str | None, interval: float, max_wait
                 ctx.progress(line)
                 last = line
             if job.get("state") in FINAL_STATES:
-                return finish_job(ctx, jid, job)
+                return (finish or finish_job)(ctx, jid, job)
             if max_wait and ctx.clock() - started >= max_wait:
                 return ctx.fail(X.BUSY, "still_running", "The job %s is still running after %d seconds." % (jid, max_wait),
                                 fix="Follow it again with: bti job %s --wait" % jid, retry="later", job=job)
@@ -368,7 +372,7 @@ def cmd_status(ctx: Ctx, a) -> int:
 
 
 def send_action(ctx: Ctx, pid: str, act: dict, make_body: Callable[[], Any], *, wait: bool, yes_cost: bool, interval: float, max_wait: float,
-                render: Callable[[Any], list[str]] | None = None) -> int:
+                render: Callable[[Any], list[str]] | None = None, finish: Callable[["Ctx", str, dict], int] | None = None) -> int:
     """The one way an action is called: a spend the owner did not allow is refused first, then it must be ready, then its body is made (a
     mistyped body is exit 2), then a cost must be confirmed, then it is sent exactly as the state answer says (method and path)."""
     refusal = refuse_spend(ctx, act)
@@ -387,7 +391,7 @@ def send_action(ctx: Ctx, pid: str, act: dict, make_body: Callable[[], Any], *, 
     jid = data.get("job_id") if isinstance(data, dict) else None
     if wait and isinstance(jid, str) and jid:
         ctx.progress("started job %s (%s)" % (jid, act["id"]))
-        return follow_job(ctx, jid, act.get("follow"), interval, max_wait)
+        return follow_job(ctx, jid, act.get("follow"), interval, max_wait, finish)
     if render is not None:
         return ctx.success(data, render(data))
     lines = ["ok: %s" % act["id"]]
@@ -439,6 +443,72 @@ def cmd_approve(ctx: Ctx, a) -> int:
                         fix="Run `bti status %s`: the gates that can be approved are listed with their needs." % pid, retry="after_fix")
     return send_action(ctx, pid, act, lambda: build_body(act, None, [], ctx.actor), wait=False, yes_cost=False, interval=0, max_wait=0,
                        render=lambda d: ["approved %s as %s" % (gate, ctx.actor)])
+
+
+# ---- c6auto: `bti run`
+RUN_STEPS = ("artwork", "script", "voice", "picks", "edit", "export")          # the step ids of the state answer (a test compares them with the server's)
+OUTCOME_EXIT = {"done": X.DONE, "needs_owner": X.PERSON, "nothing_to_do": X.PERSON, "cancelled": X.BUSY, "limit": X.BUSY}
+
+
+def run_result(job: dict) -> dict | None:
+    """The result of an automatic run, from the job record: `meta.result` (set for every end), else `result`."""
+    for src in ((job.get("meta") or {}).get("result"), job.get("result")):
+        if isinstance(src, dict) and src.get("outcome"):
+            return src
+    return None
+
+
+def finish_run(ctx: Ctx, jid: str, job: dict) -> int:
+    """How an automatic run ended, in the command's words and an exit code: done 0; needs the owner or nothing to do 3; failed by the code of what failed
+    (4, or 3 or 5 by the table of `exitcodes.py`); cancelled and the limits 5 (run again to continue)."""
+    res = run_result(job)
+    if res is None:
+        return finish_job(ctx, jid, job)
+    outcome = res.get("outcome")
+    err = res.get("error") if isinstance(res.get("error"), dict) else {}
+    code = OUTCOME_EXIT.get(outcome)
+    if code is None:                                             # failed
+        code = X.exit_for_job({"state": "error", "error_code": err.get("code")}) if err.get("code") else X.REFUSED
+        if code == X.DONE:
+            code = X.REFUSED
+    lines = ["run %s ended: %s (%s) after %s step(s)" % (res.get("run_id") or "?", outcome, res.get("reason"), res.get("steps_taken"))]
+    for key in ("detail",):
+        if res.get(key):
+            lines.append("  " + str(res[key]))
+    if res.get("step"):
+        lines.append("  where: step %s (page %s)" % (res["step"], res.get("link") or "-"))
+    if res.get("action"):
+        lines.append("  action: %s" % res["action"])
+    for i in (res.get("issues") or [])[:8]:
+        if isinstance(i, dict):
+            lines.append("  %s %s: %s" % (i.get("level"), i.get("code"), i.get("why") or i.get("message")))
+    if res.get("waiting_for"):
+        lines.append("  waiting for: " + ", ".join(str(x) for x in res["waiting_for"]))
+    if err:
+        lines.append("  error %s%s: %s" % (err.get("code"), " (HTTP %s)" % err["status"] if err.get("status") else "", err.get("detail")))
+    lines.append("  log: GET /api/projects/%s/auto/runs/%s" % (job.get("pid") or "{pid}", res.get("run_id") or "{run_id}"))
+    if code == X.DONE:
+        return ctx.success({"ok": True, "result": res, "job": job}, lines)
+    return ctx.fail(code, str(res.get("reason")), str(res.get("detail") or outcome), fix=res.get("fix"), lines=lines, **({"result": res, "job": job} if ctx.json else {}))
+
+
+def cmd_run(ctx: Ctx, a) -> int:
+    pid = ctx.project(a.project)
+    if a.until is not None and a.until not in RUN_STEPS:
+        raise UsageError("--until takes one of %s, not %r" % (", ".join(RUN_STEPS), a.until))
+    if not 1 <= a.max_steps <= 200:
+        raise UsageError("--max-steps must be from 1 to 200")
+    st = ctx.state(pid)
+    act = find_action(st, "auto.run")
+    if act is None:
+        if (st.get("auto") or {}).get("enabled") is not True:
+            return ctx.fail(X.PERSON, "auto_not_enabled", "Automatic running is off for %s: only the owner turns it on." % pid,
+                            fix="Ask the owner to turn on \"Cho agent tự chạy dự án này\" for the project on the page (or PUT /api/projects/%s/auto), then run again." % pid)
+        return unlisted(ctx, pid, st, "auto.run")
+    body = {"until": a.until, "max_steps": a.max_steps, "actor": ctx.actor}
+    return send_action(ctx, pid, act, lambda: body, wait=a.wait, yes_cost=a.yes_cost, interval=a.interval, max_wait=a.max_wait, finish=finish_run,
+                       render=lambda d: ["started run %s (job %s)" % (d.get("run_id"), d.get("job_id")), "follow it: bti job %s --wait" % d.get("job_id"),
+                                         "stop it: bti job %s --cancel" % d.get("job_id"), "its log: GET /api/projects/%s/auto/runs/%s" % (pid, d.get("run_id"))])
 
 
 def load_ops_file(spec: str) -> dict:
@@ -540,7 +610,7 @@ def cmd_doc(ctx: Ctx, a) -> int:
     return ctx.success({"step": DOC_ALIAS.get(a.step, a.step) or "agents", "path": path.relative_to(REPO).as_posix(), "text": text}, text.rstrip("\n").split("\n"))
 
 
-HANDLERS: dict[str, Callable[[Ctx, Any], int]] = {"status": cmd_status, "do": cmd_do, "approve": cmd_approve, "ops": cmd_ops, "job": cmd_job,
+HANDLERS: dict[str, Callable[[Ctx, Any], int]] = {"status": cmd_status, "do": cmd_do, "approve": cmd_approve, "ops": cmd_ops, "run": cmd_run, "job": cmd_job,
                                                    "undo": cmd_undo, "changes": cmd_changes, "schema": cmd_schema, "doc": cmd_doc}
 
 
@@ -593,6 +663,13 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--file", required=True, metavar="FILE", help="the operations: a JSON list, or an object with `ops` (- is the standard input)")
     sp.add_argument("--dry-run", dest="dry_run", action="store_true", help="check everything and describe the changes, write nothing")
     sp.add_argument("--note", default=None, help="free text kept in the change log")
+    sp = add("run")
+    sp.add_argument("project")
+    sp.add_argument("--until", default=None, metavar="STEP", help="stop when this step is done (%s); default: go on until the video is exported" % ", ".join(RUN_STEPS))
+    sp.add_argument("--max-steps", dest="max_steps", type=int, default=40, metavar="N", help="the most actions one run may take (1 to 200, default 40)")
+    sp.add_argument("--wait", action="store_true", help="follow the run to its end, one line per change (it can take hours)")
+    sp.add_argument("--yes-cost", dest="yes_cost", action="store_true", help="confirm the cost of the run (the sum of what it may start: machine time and model calls the owner allowed)")
+    _wait_options(sp)
     sp = add("job")
     sp.add_argument("id")
     sp.add_argument("--wait", action="store_true", help="follow the job to its end, one line per change")

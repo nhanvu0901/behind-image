@@ -1,0 +1,22 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-no-errors-and-the-outline-chapters",
+  "step": "narration",
+  "title": "No error, and exactly the outline's chapters in its order",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md (5.5): a missing chapter, an empty line or a chapter out of order is an error.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "no-errors",
+      "kind": "narration.no_error_issues"
+    },
+    {
+      "id": "chapters",
+      "kind": "narration.chapters_match_outline"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-whole-video-no-errors",
+  "step": "draft",
+  "title": "The draft is a storyboard the engine accepts and that covers the whole narration",
+  "why": "skills/storyboard_draft/TASK.template.md rules 3 and 4: no error from the check; every beat covered, no gaps.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "no-errors",
+      "kind": "draft.no_error_issues"
+    },
+    {
+      "id": "covers",
+      "kind": "draft.covers_the_narration",
+      "slack": 0.25
+    }
+  ]
+}

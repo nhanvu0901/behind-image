@@ -96,7 +96,7 @@ call. The registry's examples are written for the operations' test project: on a
 ### `jobs`
 
 The jobs of this project that are queued, waiting or running, from the three registries (model jobs of the script step, long jobs, previews):
-`{id, kind, state, progress, started, path, cancel}`. `kind` is `outline`, `narration`, `voice`, `draft`, `export`, `picks` or `preview`;
+`{id, kind, state, progress, started, path, cancel}`. `kind` is `outline`, `narration`, `voice`, `draft`, `export`, `picks`, `auto` (an automatic run, section 7) or `preview`;
 `started` is an ISO 8601 time; `path` is the GET that follows the job; `cancel` is the POST that stops it (null for a preview).
 
 ### `problems`
@@ -185,6 +185,8 @@ loop:
 | `draft.cancel` | edit | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a draft job of the project runs. |
 | `export.start` | export | `POST /api/projects/{pid}/export/start` |  | yes |  | machine_time: about 25 minutes | Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. |
 | `export.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an export job of the project runs. |
+| `auto.run` | export | `POST /api/projects/{pid}/auto/run` |  | yes |  | machine_time: the sum of what it may start from where the project stands | Listed while automatic running is on for the project and no video is exported yet. Ready unless a job of the project runs (an automatic run included). Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops with a reason (see docs/AGENT_API.md, "Chạy tự động"). `cost` is the sum of what it may start: only the kinds the owner allowed. |
+| `auto.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an automatic run of the project goes on. |
 <!-- END GENERATED: actions -->
 
 ## 3. The words of `needs`
@@ -276,6 +278,9 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `at_least_one_source` | after_fix | Keep at least one book source included in the brief options. |
 | `audio_decode_failed` | after_fix | The audio file cannot be decoded: make the voice again (POST /api/projects/{pid}/voice/generate); if it repeats the file is damaged. |
 | `auto_needs_human` | no | Ask the owner to change automatic running on the page: an agent may only read it (GET /api/projects/{pid}/auto). |
+| `auto_not_enabled` | after_fix | Ask the owner to turn automatic running on for this project (the switch on the page, PUT /api/projects/{pid}/auto), then call again. |
+| `auto_run_not_found` | no | Take a run id from GET /api/projects/{pid}/auto/runs. |
+| `auto_running` | later | An automatic run of this project is going: follow it (GET /api/longjobs/{job_id}) or stop it (POST /api/longjobs/{job_id}/cancel), then call again. |
 | `bad_action` | after_fix | Send action as "overwrite" or "discard". |
 | `bad_chapters` | after_fix | Send `chapters` as a list of chapter ids (at most 100). |
 | `bad_model` | after_fix | Send `model` as a plain model id, or leave it out to use the project's agent. |
@@ -532,3 +537,75 @@ example, the change log, undo and the table of their error codes. The state answ
 `changes.undo` (section 2). Their refusals have the same error body as every other (section 4): `code`, `detail`, `fix`, `retry`, and `fields` with the
 `path` of every wrong field (`ops[1].params.region`), `op_index`, `current_rev`, `issues` or `conflicts` where they apply. A request refused by the size
 or depth limit before it reaches a route (`too_large`, `too_deep`) has them too.
+
+## 7. Automatic run ("Chạy tự động")
+
+One long job that walks a project from wherever it stands to a finished video by the loop of section 1 ("Walking a project"), and writes down every step. It is what the
+button "Chạy tự động" of the page starts, and what `bti run` starts. Code: `bti/auto_run/`; design: `docs/design/2026-11-18-agent-first-design.html`, "Cổng duyệt và chạy tự động".
+
+```
+POST /api/projects/{pid}/auto/run   {"until": null | "script" | "voice" | "picks" | "edit" | "export", "max_steps": 40, "actor": "human"}   -> {"job_id": "...", "run_id": "..."}
+GET  /api/projects/{pid}/auto/runs?limit=10      -> {"items": [one line per run, newest first]}
+GET  /api/projects/{pid}/auto/runs/{run_id}      -> the whole record, with one entry per step
+```
+
+`until` is the step to stop after (null: the video is exported); `max_steps` (1 to 200) is the most calls one run may make. The run is refused: `409 auto_not_enabled` while the
+project's `auto` is off (the owner turns it on, section "Automatic running and who approved"); `409 auto_running` while a run of this project goes on; `409 longjob_running` or
+`script_job_running` while another job of the project runs (a preview does not count); `422 invalid_field` for an unknown step or a bad `max_steps`. It is a long job of kind
+`auto` (follow it with `GET /api/longjobs/{job_id}`, stop it with `POST /api/longjobs/{job_id}/cancel` or the `auto.cancel` action: the job the run started is stopped too,
+and starting again continues, the finished parts are kept). The state answer lists `auto.run` while the switch is on and nothing is exported, with `body` `{until: null, max_steps: 40}`
+and a `cost` that is the sum of what it may start from where the project stands, only of the kinds the owner allowed (`kinds` lists them); it is never `advances`, so a caller
+that walks the list never takes it.
+
+### The rule of the loop (five lines)
+
+1. Read `GET .../state`. Stop when the project is exported (or the `until` step is done), when automatic running was turned off, or when a job that is not the run's runs on the project.
+2. Take the FIRST action with `ready` and `advances`; never another, no operation batches of its own, no edits. The state answer decides what advancing means: a new step is picked up with no change here.
+3. Allowed? A gate only when its `auto_ok` is true; a cost only when its kind is allowed in `spend`; a paid action never; `storyboard.restore` never.
+4. Before a gate read its document and apply the quality bar (below); then call the action exactly as the answer describes it, as the actor `agent:auto`.
+5. If the call answers a job, follow it to its end (a failed job ends the run with the job's code and sentence), then read the state again.
+
+### How a run ends
+
+The result is in the job's `meta.result` (always) and `result`, in the run log and in `GET .../auto/runs`: `{outcome, reason, sentence (Vietnamese), detail, fix (English), step, link,
+action, gate, kind, issues, waiting_for, error, steps_taken, ...}`. A run that fails ends its job as `error` with the failed action's `error_code` and the sentence as `error`; every
+other end is `done` (a cancel is the runner's own: `cancelled`). The outcomes are `done`, `needs_owner`, `failed`, `nothing_to_do`, `cancelled` and `limit`.
+
+<!-- BEGIN GENERATED: autorun -->
+| reason | outcome | what it means | what to do |
+|---|---|---|---|
+| `exported` | done | The project is exported. |  |
+| `until_reached` | done | The step {step} is done, as asked. |  |
+| `gate_not_allowed` | needs_owner | The {gate} gate waits for the owner: automatic running may not approve it. | Ask the owner to approve the {gate} gate on the page (step {step}), or to allow it in the project's `auto` (PUT /api/projects/{pid}/auto), then run again. |
+| `auto_turned_off` | needs_owner | Automatic running was turned off for this project while the run was going. | Ask the owner to turn automatic running on again (the switch on the page), then run again. |
+| `spend_not_allowed` | needs_owner | {action} costs {kind} and the owner did not allow an agent to spend that. | Ask the owner to run {action} on the page (step {step}), or to allow {kind} spending in the project's `auto`. |
+| `paid_needs_owner` | needs_owner | {action} costs money: an agent never starts it. | Ask the owner to start {action} on the page (step {step}) if they want it. |
+| `quality_warning` | needs_owner | The {gate} gate has {count} warning(s) that stop an automatic run: {first_en} | Ask the owner to look at the {gate} document (step {step}) and approve it, or fix it and run again. |
+| `quality_error` | needs_owner | The {gate} document has {count} error(s): {first_en} | Ask the owner to fix the errors listed in `issues` (step {step}), then run again. |
+| `gate_refused` | needs_owner | The server refused to approve the {gate} gate: {error_code} ({error_detail}). | Ask the owner to fix what the refusal names (step {step}), then run again. |
+| `repair_needed` | needs_owner | storyboard.json is unreadable: restoring a copy is the owner's decision, an automatic run does not do it. | Ask the owner to restore the storyboard on the page (step {step}), then run again. |
+| `nothing_to_do` | nothing_to_do | No action moves the project forward now: it waits for {waiting_en}. | Meet what `waiting_for` names (step {step}), then run again. |
+| `busy_elsewhere` | nothing_to_do | Another job of the project is running ({jobs_en}); an automatic run never starts a second one. | Wait for the job (GET /api/projects/{pid}/longjobs) or cancel it, then run again. |
+| `needs_content` | nothing_to_do | {action} needs content that only the owner or the caller can supply (its `fill` fields). | Supply the content (step {step}), then run again. |
+| `action_failed` | failed | {action} was refused: {error_code} ({error_detail}). | Read `error`, do what its `fix` says, then run again: finished work is kept. |
+| `job_failed` | failed | The job of {action} ended in error: {error_code} ({error_detail}). | Read `error`, do what it says, then run again: finished parts are kept. |
+| `unreachable` | failed | The app could not be reached from inside the run: {error_detail}. | Check that the app answers, then run again. |
+| `no_progress` | failed | {action} was taken {count} times in a row and the state did not change. | Look at the project (GET /api/projects/{pid}/state) and the run log; do not run again before the cause is known. |
+| `internal_error` | failed | The automatic run failed unexpectedly: {error_detail}. | Report it; the run log of the project names the step. |
+| `cancelled` | cancelled | The run was cancelled; finished work is kept. | Run again to continue from where the project stands. |
+| `job_cancelled_elsewhere` | cancelled | The job of {action} was cancelled or interrupted outside the run. | Run again to continue: finished parts are kept. |
+| `step_limit` | limit | The run took {count} actions, the most it may take (`max_steps`). | Run again to continue, or raise `max_steps`. |
+| `time_limit` | limit | The run used up its {hours} hours. | Run again to continue. |
+
+| gate | warning that stops the run | why | warnings it lets through |
+|---|---|---|---|
+| `outline` | `fact_no_source`, `unknown_source_id`, `source_excluded`, `unknown_fact`, `disputed_no_conflict` | fact_no_source: a fact cites no source paragraph, so nothing in the books backs it; unknown_source_id: a fact cites a paragraph that is not in the brief; source_excluded: a fact leans on a source the owner excluded; unknown_fact: a chapter uses a fact that is not in the fact table; disputed_no_conflict: a disputed fact has no conflict described, so the narration would state it as certain | `budget_sum`, `fact_unused`, `no_hook_choice` |
+| `narration` | `words_off_target`, `unknown_fact` | words_off_target: the length is more than 15% away from the target: the video would not be the length that was planned; unknown_fact: a line cites a fact that is not in the outline | `beat_too_long`, `chapter_off_budget`, `long_sentence`, `no_show`, `spoken_chars` |
+| `picks` | `beat_no_pick`, `asset_flag`, `beat_unknown` | beat_no_pick: a line of the narration has no picture; asset_flag: a picture is flagged (size, licence or the like) and needs a look; beat_unknown: a picture is attached to a line that is not in the narration any more | none |
+| `storyboard` | `audio_missing`, `asset_size_mismatch`, `first_shot_late`, `label_without_position`, `end_after_audio`, `canvas_not_1080p`, `map_view_coarse`, `identity_technique_mismatch`, `incomplete` | audio_missing: the audio file does not exist; asset_size_mismatch: a picture's recorded size differs from its file: regions and camera keys are in the wrong space; first_shot_late: the first shot does not start at 0 s: the beginning is not covered; label_without_position: a label has no position and is not drawn; end_after_audio: the video would end after the voice; canvas_not_1080p: the canvas is not 1920x1080; map_view_coarse: a map is zoomed in too close: it has no detail there; identity_technique_mismatch: a title or chapter shot does not follow the chosen identity style; incomplete: an item is not filled in yet | `first_shot_transition`, `project_name_differs`, `unknown_intent`, `unknown_source` |
+<!-- END GENERATED: autorun -->
+
+The run log is `projects/<pid>/auto_runs/<run id>.json` (`bti.autorun/1`), rewritten after every step: `{id, job_id, started, ended, until, max_steps, actor, steps: [{n, at, step,
+action, method, path, body, status, ok, code, job_id, job_state, note, seconds}], outcome, reason, sentence, result}`. The newest 30 are kept. A run whose process died is reported
+from the state of its job (never as `running` for ever). The long-job runner limits one part of a job to 35 minutes, so the job is a row of equal parts of 25 minutes (12 hours in
+all) that take the loop over from each other: the `progress` of the job is not the run's; read `meta` (`step`, `step_label`, `n`, `of`, `action`, `child_job`, `steps_taken`).

@@ -494,3 +494,33 @@ export const AUTO_LABELS = {
   saveFail: 'Không lưu được: ',
   loadFail: 'Không đọc được cài đặt tự chạy: ',
 };
+
+/* worker c6auto: "Chạy tự động" (bti/auto_run/): the button next to the switch "Agent tự chạy", the progress line, and the one sentence that says where a run
+   stopped and why (the server writes that sentence, bti/auto_run/reasons.py; the words here are the page's own and the fallbacks for a record without one). */
+export const AUTORUN_LABELS = {
+  button: 'Chạy tự động',
+  buttonTitle: {
+    ready: 'Để ứng dụng tự đi tiếp từ chỗ dự án đang đứng đến khi xuất xong video, chỉ trong phạm vi bạn đã cho phép. Gặp việc cần bạn thì dừng lại và nói rõ.',
+    off: 'Hãy bật "Agent tự chạy" trước: chạy tự động chỉ đi qua các cổng bạn cho phép ở đó.',
+    running: 'Đang chạy tự động. Bấm "Dừng" nếu muốn dừng.',
+  },
+  starting: 'Đang bắt đầu chạy tự động...',
+  running: (stepLabel, n, of) => (stepLabel ? `Đang chạy tự động: ${stepLabel}${n && of ? ` (${n}/${of})` : ''}` : 'Đang chạy tự động...'),
+  stop: 'Dừng',
+  stopping: 'Đang dừng...',
+  close: 'Đóng',
+  link: (stepLabel) => `Mở bước "${stepLabel}"`,
+  failed: (action) => `Việc "${action}" không làm được: `,
+  startFail: 'Chưa bắt đầu chạy tự động được: ',
+  stopFail: 'Chưa dừng được: ',
+  heading: { done: 'Xong', needs_owner: 'Cần bạn', nothing_to_do: 'Chưa có việc để chạy', failed: 'Bị lỗi', cancelled: 'Đã dừng', limit: 'Đã dừng vì hết giới hạn', interrupted: 'Đã dừng' },
+  fallback: {
+    done: 'Chạy tự động đã xong.',
+    needs_owner: 'Chạy tự động dừng lại vì cần bạn. Hãy xem dự án rồi bấm "Chạy tự động" lại.',
+    nothing_to_do: 'Chạy tự động chưa có việc nào để làm lúc này.',
+    failed: 'Chạy tự động bị lỗi. Hãy xem dự án rồi bấm "Chạy tự động" lại.',
+    cancelled: 'Đã dừng chạy tự động. Bấm "Chạy tự động" để làm tiếp; phần đã xong được giữ lại.',
+    limit: 'Chạy tự động đã dừng vì hết giới hạn. Bấm "Chạy tự động" để làm tiếp.',
+    interrupted: 'Máy chủ đã dừng khi đang chạy tự động. Bấm "Chạy tự động" để làm tiếp; phần đã xong được giữ lại.',
+  },
+};

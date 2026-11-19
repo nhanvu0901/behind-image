@@ -1,0 +1,23 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-facts-have-real-sources",
+  "step": "outline",
+  "title": "Every fact cites only paragraphs that exist in the included sources",
+  "why": "prompts/outline.md, THE JOB 3: do not write a fact that has no paragraph behind it, and do not use outside knowledge.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "facts-sourced",
+      "kind": "outline.facts_sourced",
+      "min_share": 1.0
+    },
+    {
+      "id": "no-excluded",
+      "kind": "outline.no_excluded_source"
+    }
+  ]
+}

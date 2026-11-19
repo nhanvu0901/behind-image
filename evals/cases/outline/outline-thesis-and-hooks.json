@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-thesis-and-hooks",
+  "step": "outline",
+  "title": "A thesis that is a question, three openings, one chosen",
+  "why": "prompts/outline.md, THE JOB 1 and 2: one question the picture answers, three different hook options, choose one.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "thesis-hooks",
+      "kind": "outline.thesis_and_hooks",
+      "hooks": 3
+    }
+  ]
+}

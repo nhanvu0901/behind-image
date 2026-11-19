@@ -161,6 +161,13 @@ SPECS: list[Spec] = [
          cost=("machine_time", "about 25 minutes"),
          when="Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported."),
     Spec("export.cancel", "export", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While an export job of the project runs."),
+    # ---- c6auto: the automatic run (bti/auto_run/): `step` is the step the project is at (the export is the last one, so this is its default)
+    Spec("auto.run", "export", "Chạy tự động", "POST", P + "/auto/run", long_job=True, follow=LONGJOBS,
+         cost=("machine_time", "the sum of what it may start from where the project stands"),
+         when="Listed while automatic running is on for the project and no video is exported yet. Ready unless a job of the project runs (an automatic run included). "
+              "Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops "
+              "with a reason (see docs/AGENT_API.md, \"Chạy tự động\"). `cost` is the sum of what it may start: only the kinds the owner allowed."),
+    Spec("auto.cancel", "export", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While an automatic run of the project goes on."),
 ]
 SPEC: dict[str, Spec] = {s.id: s for s in SPECS}
 assert len(SPEC) == len(SPECS), "duplicate action id"
@@ -173,9 +180,9 @@ OPEN = ("done", "current", "available", "waiting")        # page states of a ste
 BLOCKER_NEED = {"script": "narration_approved", "voice": "voice_done", "picks": "picks_approved", "edit": "storyboard_approved"}
 ACTIVE_JOB = ("queued", "waiting", "running")
 # what a running job of a kind blocks: the jobs kinds of one family run one at a time
-FAMILY = {"outline": "script", "narration": "script", "voice": "voice", "draft": "draft", "export": "export", "picks": "picks"}
+FAMILY = {"outline": "script", "narration": "script", "voice": "voice", "draft": "draft", "export": "export", "picks": "picks", "auto": "auto"}
 CANCEL_ID = {"outline": "outline.cancel", "narration": "narration.cancel", "voice": "voice.cancel", "draft": "draft.cancel",
-             "export": "export.cancel", "picks": "picks.cancel"}
+             "export": "export.cancel", "picks": "picks.cancel", "auto": "auto.cancel"}
 SCRIPT_JOB_KINDS = ("outline", "narration")
 
 
@@ -379,6 +386,8 @@ def _auto_ok(spec: Spec, c: Ctx) -> bool:
         return False
     if spec.gate:
         return auto_mod.gate_allowed(c.auto, spec.id.split(".")[0])
+    if spec.id == "auto.run":                          # c6auto: the run spends only what the owner allowed, and only while the switch is on
+        return c.auto.get("enabled") is True
     if spec.cost:
         return auto_mod.spend_allowed(c.auto, spec.cost[0])
     return True
@@ -728,6 +737,33 @@ def b_export_start(c: Ctx):
     return E(list(dict.fromkeys(needs)), None, advances=c.work("export") != "done")
 
 
+# c6auto: the actions of a person's own content or choice that are never taken by the automatic run (so they are not part of its cost)
+RUN_MANUAL = frozenset({"picks.import_clip", "draft.edit"})
+
+
+def run_cost(c: Ctx) -> dict | None:
+    """The cost of `auto.run`: the sum of what it may start from where the project stands, and only of the kinds the owner allowed (`spend` of auto.json). Every
+    long action with a cost that is not paid and not a person's own request (RUN_MANUAL) and whose step is not done yet counts: an action somebody adds later
+    (an agent that chooses the pictures) is in the sum without a change here. None when the run may start nothing that costs."""
+    left: dict[str, list[tuple[str, str]]] = {}
+    for s in SPECS:
+        if s.cost and s.cost[0] != "paid" and s.long_job and s.id not in RUN_MANUAL and not s.id.startswith("auto.") and c.page_state(s.step) != "done" and auto_mod.spend_allowed(c.auto, s.cost[0]):
+            left.setdefault(s.cost[0], []).append((s.id.split(".")[0], s.cost[1]))
+    if not left:
+        return None
+    about = "; ".join("%s: %s" % (k, ", ".join("%s (%s)" % x for x in v)) for k, v in left.items())
+    return {"kind": "machine_time" if "machine_time" in left else "model", "about": about, "kinds": sorted(left)}
+
+
+def b_auto_run(c: Ctx):
+    """Listed while the switch is on (or a run goes on) and nothing is exported yet; ready unless a job of the project runs."""
+    running = any(j.get("kind") == "auto" for j in c.jobs)
+    if not (c.auto.get("enabled") is True or running) or c.page_state("export") == "done":
+        return None
+    busy = any(j.get("kind") != "preview" for j in c.jobs)
+    return E(["no_running_job"] if busy else [], {"until": None, "max_steps": 40}, step=c.pipe.get("current") or "export", run_cost=run_cost(c))
+
+
 BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "outline.generate": b_outline_generate, "outline.import": b_outline_import, "outline.approve": b_outline_approve,
     "narration.generate": b_narration_generate, "narration.import": b_narration_import, "narration.ops": b_narration_ops,
@@ -739,7 +775,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
     "draft.edit": b_draft_edit, "identity.set": b_identity_set,
-    "export.start": b_export_start,
+    "export.start": b_export_start, "auto.run": b_auto_run,
 }
 CANCELS = set(CANCEL_ID.values())
 
@@ -763,8 +799,8 @@ def _action(spec: Spec, e: dict, c: Ctx, job: dict | None = None) -> dict:
     out = {"id": spec.id, "step": e.get("step") or spec.step, "label": _label(spec, c), "method": spec.method, "path": path, "body": e["body"],
            "ready": not needs, "needs": needs, "gate": spec.gate, "auto_ok": _auto_ok(spec, c), "long_job": spec.long_job,
            "uses_model": spec.role is not None, "agent": c.agent(spec.role) if spec.role else None,
-           "cost": {"kind": spec.cost[0], "about": spec.cost[1]} if spec.cost else None,
-           "advances": bool(e["advances"]) and not needs}
+           "cost": ({"kind": spec.cost[0], "about": spec.cost[1]} if spec.cost else None) if spec.id != "auto.run" else e.get("run_cost"),      # c6auto: the run's own cost
+           "advances": bool(e["advances"]) and not needs and spec.id != "auto.run"}
     if spec.follow:
         out["follow"] = spec.follow
     if e.get("fill"):

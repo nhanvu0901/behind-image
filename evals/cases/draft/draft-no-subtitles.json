@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-no-subtitles",
+  "step": "draft",
+  "title": "No sentence of the narration is put on screen as text",
+  "why": "skills/storyboard_draft/TASK.template.md rule 11: no parameter may hold five or more words in a row copied from the narration.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "no-subtitles",
+      "kind": "draft.no_narration_on_screen",
+      "run": 5
+    }
+  ]
+}

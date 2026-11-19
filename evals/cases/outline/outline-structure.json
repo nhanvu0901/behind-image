@@ -1,0 +1,25 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-structure",
+  "step": "outline",
+  "title": "A cold open first, a closing last, and every fact used",
+  "why": "prompts/outline.md, THE JOB 6: a cold open, the chapters that carry the argument, a closing; every fact used by at least one chapter.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "roles",
+      "kind": "outline.roles",
+      "first": "cold_open",
+      "last": "closing"
+    },
+    {
+      "id": "facts-used",
+      "kind": "outline.facts_all_used",
+      "min_share": 0.9
+    }
+  ]
+}

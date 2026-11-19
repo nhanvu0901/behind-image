@@ -30,14 +30,14 @@ EXIT_CODES: list[tuple[int, str, str, str]] = [
 NAME_OF = {n: name for n, name, _, _ in EXIT_CODES}
 
 # Codes that always need a person, whatever the status or the retry word says.
-PERSON_CODES = frozenset({"gate_needs_human", "auto_needs_human", "spend_needs_human", "confirm_required", "agy_auth", "claude_auth",
+PERSON_CODES = frozenset({"gate_needs_human", "auto_needs_human", "spend_needs_human", "auto_not_enabled", "confirm_required", "agy_auth", "claude_auth",
                           "claude_outdated", "real_models_off"})
 STALE_CODES = frozenset({"stale", "stale_revision"})
 
 # The mapping from an HTTP answer to an exit code: the first rule that matches wins. (label, exit code); `exit_for_error` is this table in code.
 MAPPING: list[tuple[str, int]] = [
     ("any 2xx answer", DONE),
-    ("status 401 or 403, or a `code` of `gate_needs_human`, `auto_needs_human`, `spend_needs_human`, `confirm_required`, `agy_auth`, "
+    ("status 401 or 403, or a `code` of `gate_needs_human`, `auto_needs_human`, `spend_needs_human`, `auto_not_enabled`, `confirm_required`, `agy_auth`, "
      "`claude_auth`, `claude_outdated`, `real_models_off`", PERSON),
     ("a stale revision (`code` `stale` or `stale_revision`)", BUSY),
     ("`retry` is `later` (a job is busy, a service is not answering, a quota opens later), whatever the status", BUSY),

@@ -1,0 +1,18 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-every-chapter-cites-the-dossier",
+  "step": "outline",
+  "title": "Every chapter rests on facts that cite paragraphs of the dossier",
+  "why": "prompts/outline.md, THE JOB 3: every fact rests on numbered source paragraphs, and every chapter uses facts.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "chapters-cite",
+      "kind": "outline.every_chapter_cites_a_source"
+    }
+  ]
+}
