@@ -5,7 +5,7 @@
                                   "spend": {"model": true, "machine_time": true, "paid": false}}
                                  written atomically, with a revision (sha1 of the canonical JSON, the way `agent.json` has it).
 
-The document says what the OWNER allowed; nothing here runs anything (another worker builds the automatic run on top of it).
+The document says what the OWNER allowed; nothing here runs anything (the automatic run, `bti/auto_run/`, is built on top of it).
 
     * `enabled` is the switch: while it is false no agent approves any gate (the owner approves on the page).
     * `gates` says which gates an agent may approve once `enabled` is true.

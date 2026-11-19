@@ -1,0 +1,30 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "edit-asks-for-a-picture-the-project-lacks",
+  "step": "edit_storyboard",
+  "title": "A request that needs a new painting is answered `cannot` with a reason and nothing changes",
+  "why": "docs/APP_GUIDE.md, \"Không đổi\": when the request cannot be done with what the project has, the agent changes nothing and says what to do.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "as_is"
+  },
+  "request": {
+    "instruction": "Thay hình này bằng bức Mona Lisa.",
+    "scope": {
+      "shots": [
+        "s0004"
+      ]
+    },
+    "mode": "auto"
+  },
+  "criteria": [
+    {
+      "id": "cannot",
+      "kind": "edit.answered_cannot"
+    },
+    {
+      "id": "scope",
+      "kind": "edit.only_scope_changed"
+    }
+  ]
+}

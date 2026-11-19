@@ -313,6 +313,10 @@ HINTS: dict[str, dict] = {
     "gate_needs_human": _t("after_fix", "Ask the owner to approve this gate on the page, or to turn automatic running on for this project and allow the gate (the switch on the page, PUT /api/projects/{pid}/auto), then call again."),
     "auto_needs_human": _t("no", "Ask the owner to change automatic running on the page: an agent may only read it (GET /api/projects/{pid}/auto)."),
     "spend_needs_human": _t("no", "Ask the owner to start this paid call on the page: an agent never spends money, whatever the settings of automatic running."),
+    # c6auto: the automatic run (bti/auto_run/)
+    "auto_not_enabled": _t("after_fix", "Ask the owner to turn automatic running on for this project (the switch on the page, PUT /api/projects/{pid}/auto), then call again."),
+    "auto_running": _t("later", "An automatic run of this project is going: follow it (GET /api/longjobs/{job_id}) or stop it (POST /api/longjobs/{job_id}/cancel), then call again."),
+    "auto_run_not_found": _t("no", "Take a run id from GET /api/projects/{pid}/auto/runs."),
 }
 
 
@@ -472,10 +476,24 @@ def codes_table() -> str:
     return "\n".join(rows)
 
 
+def autorun_tables() -> str:
+    """c6auto: the reasons an automatic run ends with, and the quality bar before each gate (markdown), from bti/auto_run/."""
+    from bti.auto_run import checks, reasons
+    rows = ["| reason | outcome | what it means | what to do |", "|---|---|---|---|"]
+    for code, (outcome, _vi, en, fix) in reasons.REASONS.items():
+        rows.append("| `%s` | %s | %s | %s |" % (code, outcome, en.replace("|", "\\|"), (fix or "").replace("|", "\\|")))
+    rows += ["", "| gate | warning that stops the run | why | warnings it lets through |", "|---|---|---|---|"]
+    for gate in reasons.GATES:
+        stops = checks.STOPS[gate]
+        rows.append("| `%s` | %s | %s | %s |" % (gate, ", ".join("`%s`" % c for c in stops), "; ".join("%s: %s" % (c, w[0]) for c, w in stops.items()).replace("|", "\\|"),
+                                              ", ".join("`%s`" % c for c in sorted(checks.TOLERATED[gate])) or "none"))
+    return "\n".join(rows)
+
+
 def generated_parts() -> dict[str, str]:
     """name -> markdown of every part of docs/AGENT_API.md that is generated from code."""
     from . import state_api
-    return {"actions": state_api.actions_table(), "needs": state_api.needs_table(), "codes": codes_table()}
+    return {"actions": state_api.actions_table(), "needs": state_api.needs_table(), "codes": codes_table(), "autorun": autorun_tables()}
 
 
 def render_doc(text: str, parts: dict[str, str] | None = None) -> str:

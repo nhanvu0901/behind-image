@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-every-shot-has-a-reason",
+  "step": "draft",
+  "title": "Every shot has a note that says why",
+  "why": "skills/storyboard_draft/TASK.template.md section 4: `note` is one short line with the reason, shown to the owner next to the shot.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "notes",
+      "kind": "draft.every_shot_has_a_reason",
+      "min_share": 0.9
+    }
+  ]
+}

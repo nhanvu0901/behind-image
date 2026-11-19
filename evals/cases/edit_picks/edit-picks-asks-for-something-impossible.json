@@ -1,0 +1,30 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "edit-picks-asks-for-something-impossible",
+  "step": "edit_picks",
+  "title": "A request the project cannot do is answered `cannot` with a reason and nothing changes",
+  "why": "The design: when the request cannot be done with what the project has, the agent changes nothing and says so.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "narration_approved"
+  },
+  "request": {
+    "instruction": "Dịch lời dẫn của dòng này sang tiếng Nhật.",
+    "scope": {
+      "beats": [
+        "b0004"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "cannot",
+      "kind": "edit.answered_cannot"
+    },
+    {
+      "id": "scope",
+      "kind": "picks.only_scope_changed",
+      "beats": []
+    }
+  ]
+}

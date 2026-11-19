@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-ten-minutes-at-least",
+  "step": "narration",
+  "title": "Read aloud it lasts at least ten minutes",
+  "why": "The channel makes 10+ minute documentaries (skills/storyboard_draft/TASK.template.md); the voice reads 2.41 words per second.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "minutes",
+      "kind": "narration.minutes_at_least",
+      "minutes": 10
+    }
+  ]
+}

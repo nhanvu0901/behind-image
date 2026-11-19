@@ -1,0 +1,25 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-budget-matches-target",
+  "step": "outline",
+  "title": "The chapter budgets add up to the target of words",
+  "why": "prompts/outline.md, THE JOB 7: the budgets add up to about the target; the app warns at more than 15% away (budget_sum).",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "budget",
+      "kind": "outline.budget_near_target",
+      "tolerance": 0.15
+    },
+    {
+      "id": "each-chapter",
+      "kind": "outline.chapter_budget_between",
+      "min": 80,
+      "max": 450
+    }
+  ]
+}

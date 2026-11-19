@@ -6,6 +6,8 @@
                                      old `base_rev`, 422 `invalid_field` (with `fields`). Only the owner changes it: a PUT whose `actor` is not
                                      `human` is 403 `auto_needs_human` (the page sends no actor).
 
+The automatic run (`POST .../auto/run`, `GET .../auto/runs`) is in `bti/auto_run/` and is mounted at the end of `make_router`.
+
 The rule the four approval routes use is in `gate_actor` below (the routes call it first, before they look at anything else):
 
     * `actor` is an optional field of the body of `outline/approve`, `narration/approve`, `picks/approve` and `approve` (the storyboard): `human`
@@ -88,4 +90,6 @@ def make_router(*, pdir: Callable[[str], Path]) -> APIRouter:
         except A.AutoError as e:
             raise auto_error(e)
 
+    from bti.auto_run.api import make_router as _run_router      # c6auto: "Chạy tự động": POST .../auto/run, GET .../auto/runs
+    router.include_router(_run_router(pdir=pdir))
     return router

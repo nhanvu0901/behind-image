@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-uses-the-owners-picks",
+  "step": "draft",
+  "title": "A line the owner picked a picture for shows it",
+  "why": "skills/storyboard_draft/TASK.template.md rule 6: use the owner's picks of a beat first.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "picks",
+      "kind": "draft.picks_are_used",
+      "min_share": 0.8
+    }
+  ]
+}

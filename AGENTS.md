@@ -53,6 +53,7 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
 | `bti do <project> <action id> [--body FILE \| --set key=value ...] [--wait] [--yes-cost]` | Call one action of the state answer. An action that is not ready is refused with its needs; one that costs runs only with --yes-cost. |
 | `bti approve <project> <gate>` | Approve outline, narration, picks or storyboard; refused (exit 3) when the owner did not allow an agent to approve it. |
 | `bti ops <project> picks\|storyboard --file ops.json [--dry-run] [--note TEXT]` | Send a batch of typed operations (the command reads the current revision itself) and print the changes. |
+| `bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]` | Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); every step is in the run log. |
 | `bti job <id> [--wait] [--cancel]` | Look at a long job, follow it to its end, or stop it. |
 | `bti undo <project> <batch>` | Undo one batch of operations. |
 | `bti changes <project> [picks\|storyboard]` | The change log of the project, newest batch first. |
@@ -88,7 +89,7 @@ How the server's answer becomes an exit code (one table, in `bti/cli/exitcodes.p
 | rule (the first that matches wins) | exit code |
 |---|---|
 | any 2xx answer | 0 (`done`) |
-| status 401 or 403, or a `code` of `gate_needs_human`, `auto_needs_human`, `spend_needs_human`, `confirm_required`, `agy_auth`, `claude_auth`, `claude_outdated`, `real_models_off` | 3 (`person_needed`) |
+| status 401 or 403, or a `code` of `gate_needs_human`, `auto_needs_human`, `spend_needs_human`, `auto_not_enabled`, `confirm_required`, `agy_auth`, `claude_auth`, `claude_outdated`, `real_models_off` | 3 (`person_needed`) |
 | a stale revision (`code` `stale` or `stale_revision`) | 5 (`busy`) |
 | `retry` is `later` (a job is busy, a service is not answering, a quota opens later), whatever the status | 5 (`busy`) |
 | any other answer with a status of 400 or more (`retry` is `after_fix` or `no`) | 4 (`refused`) |
@@ -107,6 +108,10 @@ A job that ends (`bti do ... --wait`, `bti job ... --wait`) maps like this: `don
 | `picks` | `picks.approve` | `POST /api/projects/{pid}/picks/approve` | the storyboard draft (about 20 minutes of a model) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
 | `storyboard` | `storyboard.approve` | `POST /api/projects/{pid}/approve` | the export (about 25 minutes of machine time) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
 <!-- END GENERATED: gates -->
+
+## Running by itself
+
+When the owner asks for the whole run and has turned automatic running on, `bti run <project> --yes-cost --wait` takes the first allowed action that moves the project forward, over and over, until the video is exported, and stops with a reason. It approves a gate only where the owner allowed it (as `agent:auto`), checks the warnings before each gate, never spends money and writes every step to the run log. Exit 0: done. Exit 3: the owner is needed (`gate_not_allowed`, `spend_not_allowed`, `quality_warning`, `nothing_to_do`, `auto_not_enabled`). Exit 4: a step failed (`action_failed`, `job_failed`). Exit 5: cancelled or a limit; run it again to continue. Stop it with `bti job <id> --cancel`. The reasons and the quality bar are in `docs/AGENT_API.md`, section 7.
 
 ## Where to go on
 

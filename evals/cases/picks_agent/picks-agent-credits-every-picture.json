@@ -1,0 +1,22 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "picks-agent-credits-every-picture",
+  "step": "picks_agent",
+  "title": "Every picture it brings says where it came from, and none is flagged",
+  "why": "AGENTS.md rule 6 and docs/APP_GUIDE.md section 6: pictures carry their source and licence; a flagged picture needs the owner.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "narration_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "credited",
+      "kind": "picks.credited"
+    },
+    {
+      "id": "no-flags",
+      "kind": "picks.no_flagged_picture"
+    }
+  ]
+}

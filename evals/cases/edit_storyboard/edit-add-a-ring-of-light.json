@@ -1,0 +1,36 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "edit-add-a-ring-of-light",
+  "step": "edit_storyboard",
+  "title": "\"Add a ring of light\" adds an overlay in scope and leaves the rest alone",
+  "why": "docs/APP_GUIDE.md, \"Sửa video bằng lời\" (the owner's own example: a ring of light round the mirror).",
+  "sample": {
+    "project": "arnolfini",
+    "start": "as_is"
+  },
+  "request": {
+    "instruction": "Thêm một vòng sáng quanh chiếc gương.",
+    "scope": {
+      "shots": [
+        "s0004"
+      ]
+    },
+    "mode": "auto"
+  },
+  "criteria": [
+    {
+      "id": "scope",
+      "kind": "edit.only_scope_changed"
+    },
+    {
+      "id": "overlays",
+      "kind": "edit.metric_moved",
+      "metric": "overlay_count",
+      "direction": "increase"
+    },
+    {
+      "id": "no-errors",
+      "kind": "edit.no_error_issues"
+    }
+  ]
+}

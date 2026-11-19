@@ -1,0 +1,18 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-disputes-are-flagged",
+  "step": "outline",
+  "title": "Every disputed fact says what the sources disagree about",
+  "why": "prompts/outline.md, THE JOB 4: flag every conflict; never settle a disagreement silently.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "conflicts",
+      "kind": "outline.disputed_facts_have_conflict"
+    }
+  ]
+}

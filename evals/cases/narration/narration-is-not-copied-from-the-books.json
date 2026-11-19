@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-is-not-copied-from-the-books",
+  "step": "narration",
+  "title": "Not many words are runs copied from the books",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md (overlap): runs of eight words copied from a source; information in the app, a quality bar in the bench.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "copied",
+      "kind": "narration.copied_runs_at_most",
+      "max_share": 0.25
+    }
+  ]
+}

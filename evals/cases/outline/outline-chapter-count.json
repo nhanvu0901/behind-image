@@ -1,0 +1,20 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-chapter-count",
+  "step": "outline",
+  "title": "The outline has five to nine chapters",
+  "why": "docs/APP_GUIDE.md section 5 (the outline) and prompts/outline.md: a cold open, the chapters that carry the argument, a closing; the finished reference outline has eight.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "chapters",
+      "kind": "outline.chapters_between",
+      "min": 5,
+      "max": 9
+    }
+  ]
+}

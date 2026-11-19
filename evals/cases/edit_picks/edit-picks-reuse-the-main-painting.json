@@ -1,0 +1,39 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "edit-picks-reuse-the-main-painting",
+  "step": "edit_picks",
+  "title": "\"Use the main painting here\" changes only that line",
+  "why": "The design (docs/design/2026-11-18-agent-first-design.html, the prompt box): the same box at step 4 and step 5; the agent changes only the lines in scope.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "narration_approved"
+  },
+  "request": {
+    "instruction": "Dùng lại tranh chính cho dòng này.",
+    "scope": {
+      "beats": [
+        "b0004"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "scope",
+      "kind": "picks.only_scope_changed",
+      "beats": [
+        "b0004"
+      ]
+    },
+    {
+      "id": "changed",
+      "kind": "picks.changed_in_scope",
+      "beats": [
+        "b0004"
+      ]
+    },
+    {
+      "id": "no-errors",
+      "kind": "picks.no_error_issues"
+    }
+  ]
+}

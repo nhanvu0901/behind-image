@@ -1,0 +1,39 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "edit-picks-skip-a-line",
+  "step": "edit_picks",
+  "title": "\"No picture needed here\" marks that line skip and nothing else",
+  "why": "The design: a line can be skipped (the draft then stays on the main painting); the typed operations of the picks include it (docs/OPS.md).",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "narration_approved"
+  },
+  "request": {
+    "instruction": "Dòng này không cần hình riêng, bỏ qua.",
+    "scope": {
+      "beats": [
+        "b0006"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "scope",
+      "kind": "picks.only_scope_changed",
+      "beats": [
+        "b0006"
+      ]
+    },
+    {
+      "id": "changed",
+      "kind": "picks.changed_in_scope",
+      "beats": [
+        "b0006"
+      ]
+    },
+    {
+      "id": "no-errors",
+      "kind": "picks.no_error_issues"
+    }
+  ]
+}
