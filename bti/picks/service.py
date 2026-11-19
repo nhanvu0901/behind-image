@@ -115,38 +115,70 @@ def put(pdir: Path, raw: dict, base_rev) -> str:
 
 
 # ---------------------------------------------------------------- adding pictures
+def register_into(d: dict, key: str, asset: dict, as_main: bool) -> dict:
+    """The in-memory half of `_register`: add an imported asset to the picks document `d` (kept as it is when the key is already
+    there) and, when asked, make it the main one. Returns the asset as it is in `d`. Nothing is read or written."""
+    if key not in d["assets"]:
+        a = dict(asset)
+        a["regions"] = dict(a.get("regions") or {})
+        credit = dict(a.get("credit") or {})
+        if "flag" not in credit:             # an asset imported before the flag existed
+            lf = _lic.flag_for_text(credit.get("licence"))
+            credit["flag"] = lf if a.get("kind") == "video" else _lic.with_size_flag(lf, a.get("width", 0), a.get("height", 0), MIN_SHORT_SIDE)
+        a["credit"] = credit
+        d["assets"][key] = a
+    if as_main:
+        d["main_asset"] = key
+    return d["assets"][key]
+
+
 def _register(pdir: Path, key: str, asset: dict, as_main: bool) -> dict:
     """Add an imported asset to the picks (kept as it is when the key is already there) and, when asked, make it the main one."""
     with doc.Held(pdir):
         d = doc.load_or_new(pdir)
-        if key not in d["assets"]:
-            a = dict(asset)
-            a["regions"] = dict(a.get("regions") or {})
-            credit = dict(a.get("credit") or {})
-            if "flag" not in credit:             # an asset imported before the flag existed
-                lf = _lic.flag_for_text(credit.get("licence"))
-                credit["flag"] = lf if a.get("kind") == "video" else _lic.with_size_flag(lf, a.get("width", 0), a.get("height", 0), MIN_SHORT_SIDE)
-            a["credit"] = credit
-            d["assets"][key] = a
-        if as_main:
-            d["main_asset"] = key
+        register_into(d, key, asset, as_main)
         doc.save(pdir, d)
         return d["assets"][key]
 
 
-def import_asset(pdir: Path, source: str, source_id: str, as_main: bool = False) -> dict:
-    """Download a candidate (Commons, Met, Pexels, Pixabay, OSM) into media/ and add it to the picks. Never refused for its licence or its size:
-    the asset's `credit.flag` says what is doubtful. Returns `{asset_key, asset}`."""
+def _fetch_source(pdir: Path, source: str, source_id: str) -> dict:
+    """The download half of `import_asset`: the checks and the errors of that route."""
     if source not in SOURCES:
         raise PicksError(422, f"unknown source {source[:30]!r}", "unknown_source")
     try:
-        res = media().import_candidate(pdir, source, source_id, require_root=True)
+        return media().import_candidate(pdir, source, source_id, require_root=True)
     except PicksError:
         raise
     except FileNotFoundError:
         raise
     except Exception as e:      # noqa: BLE001
         raise _translate(e)
+
+
+def _fetch_book(pdir: Path, source_id: str) -> dict:
+    """The download half of `import_book`: the checks and the errors of that route."""
+    if not context.book_source_allowed(pdir, source_id):
+        raise PicksError(404, "this picture is not part of the project's books", "not_found")
+    try:
+        return media().import_candidate(pdir, "book", source_id, require_root=True)
+    except FileNotFoundError:
+        raise
+    except Exception as e:      # noqa: BLE001
+        raise _translate(e)
+
+
+def fetch_asset(pdir: Path, source: str, source_id: str) -> dict:
+    """Bring a found picture into media/ and return what the media facade returns (`{asset_key, asset}`); nothing is written to
+    picks.json. `source` is one of SOURCES, or "book" for a picture of the project's books. This is the download half of
+    `import_asset` and `import_book` with the same checks and the same `PicksError`s; a batch of operations
+    (`bti.ops`) calls it before it takes the picks lock."""
+    return _fetch_book(pdir, source_id) if source == "book" else _fetch_source(pdir, source, source_id)
+
+
+def import_asset(pdir: Path, source: str, source_id: str, as_main: bool = False) -> dict:
+    """Download a candidate (Commons, Met, Pexels, Pixabay, OSM) into media/ and add it to the picks. Never refused for its licence or its size:
+    the asset's `credit.flag` says what is doubtful. Returns `{asset_key, asset}`."""
+    res = _fetch_source(pdir, source, source_id)
     if as_main and res.get("asset", {}).get("kind") == "video":
         raise PicksError(422, "a video cannot be set as the main painting", "video_not_main")
     asset = _register(pdir, res["asset_key"], res["asset"], as_main)
@@ -155,14 +187,7 @@ def import_asset(pdir: Path, source: str, source_id: str, as_main: bool = False)
 
 def import_book(pdir: Path, source_id: str, as_main: bool = False) -> dict:
     """Import a picture of one of the project's books (a page, or an image of the PDF)."""
-    if not context.book_source_allowed(pdir, source_id):
-        raise PicksError(404, "this picture is not part of the project's books", "not_found")
-    try:
-        res = media().import_candidate(pdir, "book", source_id, require_root=True)
-    except FileNotFoundError:
-        raise
-    except Exception as e:      # noqa: BLE001
-        raise _translate(e)
+    res = _fetch_book(pdir, source_id)
     asset = _register(pdir, res["asset_key"], res["asset"], as_main)
     return {"asset_key": res["asset_key"], "asset": asset}
 

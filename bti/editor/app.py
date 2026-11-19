@@ -953,6 +953,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                                         load_style=lambda sid: engine.load_style(sid).get("style") or {}))
     from .state_api import make_router as _state_router              # where a project stands and what may be called next (agents)
     app.include_router(_state_router(root, pdir=pdir, script_jobs=script_jobs, preview_jobs=jobs, longjobs=longjob_manager))
+    from .ops_api import make_router as _ops_router                  # typed operations for the picks and the storyboard (bti/ops/)
+    app.include_router(_ops_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, slock=slock, forget=forget_project))
     from .pipeline_api import make_router as _pipeline_router
     app.include_router(_pipeline_router(root, script_jobs=script_jobs, preview_jobs=jobs, longjobs=longjob_manager, on_delete=forget_project))  # steps of a project (stepper, home) and delete-project
 
