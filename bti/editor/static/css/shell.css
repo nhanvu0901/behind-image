@@ -107,3 +107,12 @@
 .settings-agent-row select { min-width: 220px; }
 .settings-advanced > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
 .settings-advanced .settings-adv-hint { margin: 2px 0 8px; }
+
+/* worker c5cli: the switch "Cho agent tự chạy dự án này" (autoswitch.js) */
+#btn-auto { white-space: nowrap; flex: none; }
+#btn-auto.on { border-color: var(--accent); color: var(--accent); }
+#btn-auto[hidden] { display: none; }
+.auto-dialog .auto-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+.auto-dialog .auto-main { font-size: 15px; }
+.auto-dialog .auto-gates { margin: 10px 0 6px 22px; }
+.auto-dialog .auto-money { margin-top: 12px; font-weight: 600; }

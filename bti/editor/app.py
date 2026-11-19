@@ -511,6 +511,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     @app.post("/api/projects/{pid}/approve")
     def approve(pid: str, body: dict = Body(...)):
         rev = body.get("rev")
+        from .auto_api import gate_actor                    # c5cli: an actor that is not `human` needs the owner's `auto` to allow the gate
+        actor = gate_actor(pdir(pid), "storyboard", body)
         p = project(pid)
         with slock(pid):
             saved = saved_storyboard(pid)
@@ -536,7 +538,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                                + (f" (and {len(bad) - 8} more)" if len(bad) > 8 else ""),
                                issues=issues + bad, undrawable=True, code="undrawable")
             doc = strip_derived(saved)
-            doc["approvals"] = {**(doc.get("approvals") or {}), "storyboard": {"rev": cur, "approved_at": now_iso()}}
+            doc["approvals"] = {**(doc.get("approvals") or {}), "storyboard": {"rev": cur, "approved_at": now_iso(), "by": actor}}
             commit(pid, p, doc)
             return {"approvals": doc["approvals"]}
 
@@ -951,6 +953,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     from .identity_api import make_router as _identity_router        # opening, channel-name beat and chapter marks (needs this app's save path)
     app.include_router(_identity_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
                                         load_style=lambda sid: engine.load_style(sid).get("style") or {}))
+    from .auto_api import make_router as _auto_router               # c5cli: automatic running (which gates an agent may approve)
+    app.include_router(_auto_router(pdir=pdir))
     from .state_api import make_router as _state_router              # where a project stands and what may be called next (agents)
     app.include_router(_state_router(root, pdir=pdir, script_jobs=script_jobs, preview_jobs=jobs, longjobs=longjob_manager))
     from .ops_api import make_router as _ops_router                  # typed operations for the picks and the storyboard (bti/ops/)

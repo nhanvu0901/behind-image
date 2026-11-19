@@ -297,6 +297,11 @@ HINTS: dict[str, dict] = {
     "project_source_missing": _t("after_fix", "A source file of the artwork is missing: rebuild the library (python -m bti.library build)."),
     "page_not_found": _t("no", "Ask for a page that exists in the book."),
     "book_pdf_missing": _t("no", "The PDF of this book is missing from the server."),
+
+    # --- c5cli: who may approve a gate and spend (bti/auto.py, bti/editor/auto_api.py)
+    "gate_needs_human": _t("after_fix", "Ask the owner to approve this gate on the page, or to turn automatic running on for this project and allow the gate (the switch on the page, PUT /api/projects/{pid}/auto), then call again."),
+    "auto_needs_human": _t("no", "Ask the owner to change automatic running on the page: an agent may only read it (GET /api/projects/{pid}/auto)."),
+    "spend_needs_human": _t("no", "Ask the owner to start this paid call on the page: an agent never spends money, whatever the settings of automatic running."),
 }
 
 

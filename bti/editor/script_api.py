@@ -17,6 +17,7 @@ from bti.script.prompting import PromptError, build_prompt
 from bti.script.runner import BusyError, JobError, ScriptJobs
 from bti.script.stats import narration_stats
 
+from .auto_api import gate_actor        # c5cli: who may approve a gate
 from .common import ApiError, id_field, string_list, text_field, valid_pid
 from .pipeline_api import project_meta
 
@@ -264,6 +265,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/outline/approve")
     def outline_approve(pid: str, body: dict = Body(...)):
         d = pdir(pid)
+        actor = gate_actor(d, "outline", body)          # c5cli: an actor that is not `human` needs the owner's `auto` to allow the gate
         with hold(d):
             o = store.load_outline(d)
             if o is None:
@@ -272,7 +274,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             if errs:
                 raise ApiError(422, "the outline has errors: " + "; ".join(e["message"] for e in errs), issues=errs, code="outline_has_errors")
             try:
-                store.approve(d, "outline", rev_field(body))
+                store.approve(d, "outline", rev_field(body), actor)
             except store.StaleRevision as e:
                 raise stale_409(str(e))
             return outline_payload(d, store.load_outline(d), brief_for(d))
@@ -393,6 +395,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     @r.post("/projects/{pid}/narration/approve")
     def narration_approve(pid: str, body: dict = Body(...)):
         d = pdir(pid)
+        actor = gate_actor(d, "narration", body)        # c5cli
         with hold(d):
             n = store.load_narration(d)
             if n is None:
@@ -405,7 +408,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                 raise ApiError(422, "the narration has errors: " + "; ".join(e["message"] for e in errs[:5]), issues=issues,
                                chapter_diff=diff, code="narration_has_errors")
             try:
-                store.approve(d, "narration", rev_field(body))
+                store.approve(d, "narration", rev_field(body), actor)
             except store.StaleRevision as e:
                 raise stale_409(str(e))
             return narr_payload(d, store.load_narration(d), brief_for(d))

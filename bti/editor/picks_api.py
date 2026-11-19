@@ -17,6 +17,7 @@ from bti.picks import context, service, suggest
 from bti.picks.errors import PicksError
 from bti.script.store import make_parent
 
+from .auto_api import gate_actor, paid_actor        # c5cli: who may approve a gate, who may start the paid call
 from .common import ApiError, valid_pid
 
 router = APIRouter(prefix="/api")
@@ -95,7 +96,8 @@ def put_picks(pid: str, request: Request, body: dict = Body(...)):
 @guard
 def approve_picks(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
-    service.approve(d, body.get("rev"))
+    actor = gate_actor(d, "picks", body)        # c5cli
+    service.approve(d, body.get("rev"), actor)
     return _full(request, pid, d)
 
 
@@ -253,6 +255,7 @@ def put_regions(pid: str, key: str, request: Request, body: dict = Body(...)):
 @guard
 def suggest_picks(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
+    paid_actor(body)        # c5cli: an agent never starts the paid call
     return suggest.start(d, pid, body.get("beats"), confirm_paid=body.get("confirm_paid"), refresh=_flag(body.get("refresh")),
                          override=_override(request))
 

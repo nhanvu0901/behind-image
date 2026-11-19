@@ -86,6 +86,8 @@ def _approval(a: Any) -> dict:
     out = {"approved": bool(a.get("approved")), "sha1": a.get("sha1"), "approved_at": a.get("approved_at")}
     if a.get("narration_sha1"):
         out["narration_sha1"] = a["narration_sha1"]
+    if isinstance(a.get("by"), str) and a["by"]:         # c5cli: who approved (`human`, `agent:...`, `cli:...`); absent in an approval made before this existed
+        out["by"] = a["by"]
     return out
 
 
@@ -297,15 +299,15 @@ def approval_state(d: dict | None, narration_rev: str | None, narration_ok: bool
     return {"approved": True, "reason": None}
 
 
-def stamp_approval(pdir: Path, rev: str, narration_rev: str) -> dict:
-    """Write the approval of the saved document; `rev` must be its revision. The caller holds the lock."""
+def stamp_approval(pdir: Path, rev: str, narration_rev: str, by: str | None = None) -> dict:
+    """Write the approval of the saved document; `rev` must be its revision. The caller holds the lock. `by` (c5cli) is who approved."""
     d = load(pdir)
     if d is None:
         raise FileNotFoundError("picks")
     cur = revision(d)
     if cur != rev:
         raise StaleRevision(cur)
-    d["approval"] = {"approved": True, "sha1": cur, "approved_at": sstore.now_iso(), "narration_sha1": narration_rev}
+    d["approval"] = {"approved": True, "sha1": cur, "approved_at": sstore.now_iso(), "narration_sha1": narration_rev, **({"by": by} if by else {})}
     sstore.write_json_atomic(path(pdir), d)
     return d["approval"]
 

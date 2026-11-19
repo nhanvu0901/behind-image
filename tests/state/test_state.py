@@ -94,7 +94,7 @@ def test_every_action_is_complete_and_honest(at, stage):
         assert a["ready"] == (not a["needs"]) and set(a["needs"]) <= set(NEEDS), (a["id"], a["needs"])
         assert a["advances"] in (True, False) and (not a["advances"] or a["ready"])
         assert a["gate"] == (a["id"] in GATES)
-        assert a["auto_ok"] is (a["id"] != "picks.suggest")             # the owner decided: every gate may be approved by an agent
+        assert a["auto_ok"] is (not a["gate"] and a["id"] != "picks.suggest")       # c5cli: by default nothing is automatic: no gate, and never the paid call (tests/state/test_auto.py has the rest)
         assert a["uses_model"] == (a["agent"] is not None)
         if a["agent"]:
             assert set(a["agent"]) == {"id", "label", "usable", "reason"} and a["agent"]["usable"] is True
@@ -106,7 +106,7 @@ def test_every_action_is_complete_and_honest(at, stage):
             assert a.get("fill") or not a["ready"] or a["id"] in ("export.start",) or a["id"].endswith(".cancel"), a["id"]
         if a.get("fill"):
             assert (a["body"] is None or a["id"] in OPS_ACTIONS) and set(a["fill"]) <= set(a["body_template"]), a["id"]
-    assert all(a["auto_ok"] for a in st["next_actions"] if a["gate"])
+    assert not any(a["auto_ok"] for a in st["next_actions"] if a["gate"])         # c5cli: the owner turns automatic running on, per project
 
 
 def test_costs_and_models_are_declared(at):

@@ -13,7 +13,7 @@ from state_helpers import DEMO_SRC, make_book_project
 REPO = Path(__file__).resolve().parents[2]
 EDITOR = REPO / "bti" / "editor"
 # the classes whose first positional argument (or, for PicksError, the third) is the code
-POSITIONAL = {"OpError": 0, "VoiceError": 0, "ExportError": 0, "DraftError": 0, "AgentError": 0, "SettingsError": 0, "PicksError": 2}
+POSITIONAL = {"OpError": 0, "VoiceError": 0, "ExportError": 0, "DraftError": 0, "AgentError": 0, "AutoError": 0, "SettingsError": 0, "PicksError": 2}
 ERROR_KEYS = {"detail", "code", "fix", "retry"}
 
 
