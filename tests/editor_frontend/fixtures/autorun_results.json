@@ -86,8 +86,8 @@
  {
   "outcome": "needs_owner",
   "reason": "quality_warning",
-  "sentence": "Dừng trước cổng duyệt chọn hình: có dòng lời dẫn chưa có hình, và còn 1 điều nữa. Xem ở bước \"Chọn hình\", sửa rồi bấm \"Chạy tự động\" lại, hoặc tự duyệt nếu bạn thấy ổn.",
-  "detail": "The picks gate has 2 warning(s) that stop an automatic run: a line of the narration has no picture",
+  "sentence": "Dừng trước cổng duyệt chọn hình: hơn một phần tư số dòng lời dẫn chưa có hình, và còn 1 điều nữa. Xem ở bước \"Chọn hình\", sửa rồi bấm \"Chạy tự động\" lại, hoặc tự duyệt nếu bạn thấy ổn.",
+  "detail": "The picks gate has 2 warning(s) that stop an automatic run: more than a quarter of the lines of the narration have no picture",
   "fix": "Ask the owner to look at the picks document (step picks) and approve it, or fix it and run again.",
   "step": "picks",
   "step_label": "Chọn hình",
@@ -101,15 +101,15 @@
     "code": "beat_no_pick",
     "level": "warning",
     "message": "beat b0003 has no pick",
-    "why": "a line of the narration has no picture",
-    "why_vi": "có dòng lời dẫn chưa có hình"
+    "why": "more than a quarter of the lines of the narration have no picture",
+    "why_vi": "hơn một phần tư số dòng lời dẫn chưa có hình"
    },
    {
-    "code": "asset_flag",
+    "code": "beat_unknown",
     "level": "warning",
-    "message": "asset A is flagged small",
-    "why": "a picture is flagged",
-    "why_vi": "có hình bị gắn cờ, cần xem lại"
+    "message": "picks for beat b0099, which is not in the narration",
+    "why": "a picture is attached to a line that is not in the narration any more",
+    "why_vi": "có hình gắn vào dòng không còn trong lời dẫn"
    }
   ]
  },

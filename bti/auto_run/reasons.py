@@ -32,7 +32,7 @@ GATES = ("outline", "narration", "picks", "storyboard")
 GATE_STEP = {"outline": "script", "narration": "script", "picks": "picks", "storyboard": "edit"}
 GATE_NAME = {"outline": "dàn ý", "narration": "lời dẫn", "picks": "chọn hình", "storyboard": "storyboard"}
 KIND_VI = {"model": "để agent làm việc (gọi mô hình)", "machine_time": "chiếm máy chủ rất lâu", "paid": "tốn tiền"}
-JOB_KIND_VI = {"outline": "dàn ý", "narration": "lời dẫn", "voice": "giọng đọc", "draft": "dựng hình", "export": "xuất video", "picks": "chọn hình",
+JOB_KIND_VI = {"outline": "dàn ý", "narration": "lời dẫn", "voice": "giọng đọc", "draft": "dựng hình hoặc sửa bằng lời", "export": "xuất video", "picks": "chọn hình",
                "preview": "xem thử"}
 
 # what a gate refusal means for the owner (the codes of the four approval routes that report a problem with the document)
@@ -69,7 +69,7 @@ NEED_VI = {
     "history_copy": "một bản storyboard cũ còn đọc được để khôi phục (không còn bản nào)",
     "audio_mix": "giọng đọc được làm lại (thiếu tệp âm thanh)",
     "timing": "giọng đọc được làm lại (thiếu tệp thời gian)",
-    "no_running_job": "một việc khác của dự án chạy xong",
+    "no_running_job": "một việc khác của dự án (chọn hình, sửa bằng lời, dựng bản nháp, chạy tự động) chạy xong",
     "agent_usable": "bạn chọn agent khác hoặc đăng nhập lại agent (agent đang chọn chưa chạy được)",
     "suggest_enabled": "bạn bật gợi ý hình",
     "locked_beats": "bạn mở khóa các dòng lời dẫn đang khóa",
@@ -204,6 +204,30 @@ REASONS: dict[str, tuple[str, str, str, str | None]] = {
 REASON_OF_OUTCOME: dict[str, list[str]] = {o: [r for r, v in REASONS.items() if v[0] == o] for o in OUTCOMES}
 
 
+# what the run says at its end about the warnings it let through (only a line without a picture is said in the sentence: the draft shows the main painting there)
+NO_PICK_VI = "Có {count} dòng lời dẫn không có hình riêng: bản nháp dùng tranh chính ở các dòng đó."
+NO_PICK_EN = "{count} line(s) of the narration have no picture of their own: the draft shows the main painting there."
+FLAG_EN = "{count} picture(s) carry a flag (size or licence): an automatic run lets them through."
+
+
+def add_tolerated(result: dict, tolerated: list[dict]) -> dict:
+    """Put what the run let through at the quality bar into its result: `tolerated` (`{gate, code, count}` of every warning that did not stop it) and, when
+    lines of the narration have no picture, one more sentence that says how many (`lines_without_pick`). A run that let nothing through is as it was."""
+    tolerated = [t for t in tolerated if isinstance(t, dict) and t.get("count")]
+    if not tolerated:
+        return result
+    result["tolerated"] = tolerated
+    n = sum(int(t["count"]) for t in tolerated if t.get("code") == "beat_no_pick")
+    if n:
+        result["lines_without_pick"] = n
+        result["sentence"] = (str(result.get("sentence") or "").rstrip() + " " + NO_PICK_VI.format(count=n)).strip()
+        result["detail"] = (str(result.get("detail") or "").rstrip() + " " + NO_PICK_EN.format(count=n)).strip()
+    flags = sum(int(t["count"]) for t in tolerated if t.get("code") == "asset_flag")
+    if flags:
+        result["detail"] = (str(result.get("detail") or "").rstrip() + " " + FLAG_EN.format(count=flags)).strip()
+    return result
+
+
 def label_of_step(step: str | None) -> str:
     return STEP_LABEL.get(step or "", "") or (step or "")
 
@@ -261,8 +285,8 @@ def _is_vietnamese(text: str) -> bool:
 def samples(pid: str = "arn") -> list[dict]:
     """One result for every reason, made the way the loop makes it from typical facts: for the tests (every sentence is read, the page's own test reads the
     same list from tests/editor_frontend/fixtures/autorun_results.json, which `python -m bti.auto_run.reasons --write` makes)."""
-    iss = [{"code": "beat_no_pick", "level": "warning", "message": "beat b0003 has no pick", "why": "a line of the narration has no picture", "why_vi": "có dòng lời dẫn chưa có hình"},
-           {"code": "asset_flag", "level": "warning", "message": "asset A is flagged small", "why": "a picture is flagged", "why_vi": "có hình bị gắn cờ, cần xem lại"}]
+    iss = [{"code": "beat_no_pick", "level": "warning", "message": "beat b0003 has no pick", "why": "more than a quarter of the lines of the narration have no picture", "why_vi": "hơn một phần tư số dòng lời dẫn chưa có hình"},
+           {"code": "beat_unknown", "level": "warning", "message": "picks for beat b0099, which is not in the narration", "why": "a picture is attached to a line that is not in the narration any more", "why_vi": "có hình gắn vào dòng không còn trong lời dẫn"}]
     err = {"status": 422, "code": "voice_not_configured", "detail": "this machine has no voice worker configured", "fix": "Ask the owner."}
     facts: dict[str, dict] = {
         "exported": {}, "until_reached": {"step": "voice"},

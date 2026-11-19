@@ -36,6 +36,7 @@ DEFAULT_GATES = {g: True for g in GATES}
 DEFAULT_SPEND = {"model": True, "machine_time": True, "paid": False}
 KEYS = ("enabled", "gates", "spend")
 
+RUN_ACTOR = "agent:auto"                  # the actor of every call an automatic run makes (bti/auto_run/loop.py): the one caller that may start the work of its own job
 ACTOR_FORMS = ["human", "agent:<model id>", "cli:<name>"]
 ACTOR_RE = re.compile(r"^(human|agent:[A-Za-z0-9][A-Za-z0-9._:@/+-]{0,79}|cli:[A-Za-z0-9][A-Za-z0-9._-]{0,39})$")   # the form `bti.ops` takes
 

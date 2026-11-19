@@ -38,7 +38,7 @@ VI = {
     "agy_missing": "Chưa cài `agy` (Antigravity CLI) trên máy này. Dùng chế độ tự động, hoặc cài agy rồi thử lại.",
     "agy_config": "agy trên máy này không dùng được cho việc này (quá cũ hoặc không chạy được).",
     "agy_busy": "Một lần chạy agent khác đang diễn ra. Đợi nó xong rồi thử lại.",
-    "agent_job_running": "Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời hoặc dựng bản nháp). Chờ xong hoặc bấm Dừng rồi thử lại.",       # join2
+    "agent_job_running": "Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời, dựng bản nháp hoặc chạy tự động). Chờ xong hoặc bấm Dừng rồi thử lại.",       # join2
     "agy_auth": "agy chưa đăng nhập trong phiên máy đang chạy ứng dụng. Đăng nhập agy một lần rồi thử lại.",
     "agy_rate_limit": "Hạn mức của gói Antigravity đã dùng hết hoặc bị giới hạn. Đợi hết chu kỳ hoặc chọn mô hình khác.",
     "agy_model": "agy không nhận ra tên mô hình này. Chọn mô hình khác trong danh sách.",
@@ -259,31 +259,36 @@ def _manager():
         return None
 
 
-def other_agent_job(pid: str, own_kind: str, manager=None) -> dict | None:
+def other_agent_job(pid: str, own_kind: str, manager=None, *, run_ok: bool = False) -> dict | None:
     """join2: the long job of another kind that holds the one agent run of this project, else None. The jobs that run an agent are the `draft`
-    jobs (the storyboard draft and the prompt-box turns of both steps) and the pictures agent (a `picks` job whose `meta.action` is `auto`):
-    they run one at a time, so a job of one of those kinds does not start while one of the other kind runs (a job of its own kind is the
-    long-job manager's `Busy`)."""
+    jobs (the storyboard draft and the prompt-box turns of both steps), the pictures agent (a `picks` job whose `meta.action` is `auto`) and an
+    automatic run (kind `auto`: it takes the other three over by itself, step by step): they run one at a time, so a job of one of those kinds does
+    not start while one of another kind runs (a job of its own kind is the long-job manager's `Busy`). `run_ok`: the caller IS the automatic run
+    (it starts the work of its own job), so its own job is not a reason to refuse."""
     m = manager or _manager()
     if m is None:
         return None
-    for kind in (KIND, "picks"):
-        if kind == own_kind:
+    for kind in (KIND, "picks", "auto"):
+        if kind == own_kind or (kind == "auto" and run_ok):
             continue
         try:
             rec = m.active(pid, kind)
         except Exception:       # noqa: BLE001 - a registry that cannot answer never blocks a start
             continue
-        if rec and (kind == KIND or (rec.get("meta") or {}).get("action") == "auto"):
+        if rec and (kind != "picks" or (rec.get("meta") or {}).get("action") == "auto"):
             return rec
     return None
 
 
-def refuse_while_agent_busy(pid: str, manager=None) -> None:
-    """Raise `agent_job_running` (a DraftError) when the pictures agent is working on this project; the draft and the prompt boxes call it first."""
-    other = other_agent_job(pid, KIND, manager)
+AGENT_JOB_WHO = {"auto": "an automatic run", "picks": "the pictures agent", "draft": "a prompt-box turn or a draft"}
+
+
+def refuse_while_agent_busy(pid: str, manager=None, *, run_ok: bool = False) -> None:
+    """Raise `agent_job_running` (a DraftError) when another agent job (the pictures agent, an automatic run) is working on this project; the draft and the
+    prompt boxes call it first. `run_ok`: the automatic run's own job does not count (it is the run that calls)."""
+    other = other_agent_job(pid, KIND, manager, run_ok=run_ok)
     if other is not None:
-        raise DraftError("agent_job_running", "the pictures agent is working on this project: wait for it or cancel it, then call again",
+        raise DraftError("agent_job_running", "%s is working on this project: wait for it or cancel it, then call again" % AGENT_JOB_WHO.get(other.get("kind"), "another job"),
                          job_id=other.get("id"))
 
 
@@ -1087,7 +1092,7 @@ def start_picks(pid: str, project_dir: Path, *, instruction: str, edit_scope: di
         raise DraftError("edit_bad_scope", "instruction must be 1 to 2000 characters")
     if _bad_model_name(model):
         raise DraftError("bad_model", "the model name is not valid")
-    refuse_while_agent_busy(pid, manager)                  # join2: not while the pictures agent works
+    refuse_while_agent_busy(pid, manager)                  # join2: not while the pictures agent works, nor an automatic run
     backend = boxops.Backend(project_dir)
     doc, rev = backend.read("picks")
     if base_rev is not None and base_rev != rev:
@@ -1132,7 +1137,7 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         if mode not in ("auto", "fast", "deep"):
             raise DraftError("edit_bad_scope", "mode must be auto, fast, or deep")
 
-        refuse_while_agent_busy(pid, manager)              # join2: not while the pictures agent works
+        refuse_while_agent_busy(pid, manager)              # join2: not while the pictures agent works, nor an automatic run
         inp = load_inputs(project_dir, for_edit=True)
         if not inp.current:
             raise DraftError("scope_needs_storyboard", "editing by prompt requires an existing storyboard")
@@ -1207,7 +1212,7 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         raise DraftError("bad_model", "the model name is not valid")
     if not readiness(project_dir)["ok"]:
         raise DraftError("draft_not_ready", "voice (timing.json) and approved picks (picks.json) are needed first")
-    refuse_while_agent_busy(pid, manager)                  # join2: not while the pictures agent works
+    refuse_while_agent_busy(pid, manager, run_ok=True)     # join2: not while the pictures agent works (an automatic run takes the draft itself)
     res = _resolve(project_dir, "draft", model) if provider == "agy" else None
     if res is not None:
         _check_agent_installed(res.model)

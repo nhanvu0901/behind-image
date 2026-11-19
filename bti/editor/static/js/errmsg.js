@@ -136,7 +136,7 @@ export function rawDetail(status, body) {
 // Answers carry `{detail, code}`; the sentence comes from the code, never from `detail`. One table per stage because a few codes
 // (busy, stale, not_found) mean different things in different stages; the views ask `stageErrorText(stage, e)`. Codes that are
 // unique to one stage are also found by describeHttp, so any other view that meets them still speaks Vietnamese.
-const AGENT_JOB_RUNNING = 'Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời hoặc dựng bản nháp). Chờ xong hoặc bấm Dừng rồi thử lại.';       // worker join2: one agent run at a time per project (the pictures agent, a prompt-box turn, a draft)
+const AGENT_JOB_RUNNING = 'Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời, dựng bản nháp hoặc chạy tự động). Chờ xong hoặc bấm Dừng rồi thử lại.';       // worker join2: one agent run at a time per project (the pictures agent, a prompt-box turn, a draft)
 const TURN_NOT_ESCALATED = 'Lần sửa này không cần agent chọn hình (hoặc đã giao rồi). Gõ yêu cầu mới ở ô trên.';
 const CLAUDE_OUTDATED_HEAD = 'Claude Code trên máy chủ quá cũ cho mô hình này';        // worker followups: "Claude Code is too old for this model", code claude_outdated (not a quota)
 const LONGJOB_CODES = {

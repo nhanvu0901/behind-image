@@ -16,7 +16,14 @@ The `request` of a case, per step:
     picks_agent       action (default picks.auto); body (fields of the action)
 
 `edit_picks` and `picks_agent` call an action of the STATE ANSWER by its id (`GET .../state`: the route, the method and the example body come from the answer, as for any
-agent): when the app does not list the action (the build that adds it is not joined yet) the repeat is SKIPPED, with that sentence, and never counted as a failure.
+agent): `picks.edit` (the step-4 prompt box) and `picks.auto` (the pictures agent). When the app does not list the action, or lists it but not ready (a project without an approved
+narration or a main painting: `needs` says which), the repeat is SKIPPED, with that sentence, and never counted as a failure.
+
+The answers the criteria read, as the joined app gives them. Both prompt boxes answer through typed operations: the model says `applied`, `cannot` or `escalate`, and the turn ends as
+`applied`, `no_change` (the model said `cannot`: nothing was written, its reason is the turn's `summary`), `escalate` (it needs a picture the project does not have) or `failed`.
+Step 5 (`POST .../draft/edit`): the turn is read from `GET .../draft/thread` (`status`, `summary`, `error`); step 4 (`picks.edit`): the job's `result` (`status`, `summary`).
+`answer.code` is that status, `answer.reason` the sentence; `edit.answered_cannot` accepts `cannot`, `no_change` and `escalate`. The pictures agent's job (`picks.auto`) ends `done`
+with the sentence of its result (`Agent đã chọn hình cho 6/6 đoạn.`); the driver reads the picks back.
 """
 from __future__ import annotations
 
@@ -205,7 +212,7 @@ def _listed_action(s: Session, step: str) -> dict:
     st = s.ok("GET", s.P + "/state", None, "the state of the project cannot be read")
     act = next((a for a in st.get("next_actions") or [] if isinstance(a, dict) and a.get("id") == want), None)
     if act is None:
-        raise Skipped("the app does not list the action %s for this project (the build that adds it is not joined yet, or the project is not at that step)" % want)
+        raise Skipped("the app does not list the action %s for this project (the project is not at that step, or this app is older than the action)" % want)
     if not act.get("ready"):
         raise Skipped("the action %s is listed but not ready: it needs %s" % (want, ", ".join(act.get("needs") or ["?"])))
     return act

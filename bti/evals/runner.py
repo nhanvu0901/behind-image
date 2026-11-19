@@ -29,7 +29,8 @@ BRIEFINGS = {"outline": ["prompts/outline.md", "prompts/rules_format.md"],
              "narration": ["prompts/script.md", "prompts/rules_format.md", "prompts/rules_voice.md"],
              "draft": ["skills/storyboard_draft/TASK.template.md"],
              "edit_storyboard": ["skills/storyboard_edit/FAST.template.md", "skills/storyboard_draft/TASK.template.md"],
-             "edit_picks": [], "picks_agent": []}
+             "edit_picks": ["skills/picks_edit/FAST.template.md"],
+             "picks_agent": ["skills/picks_auto/PLAN.template.md", "skills/picks_auto/CHOOSE.template.md"]}
 
 
 class RunError(Exception):

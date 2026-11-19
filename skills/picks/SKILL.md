@@ -69,6 +69,7 @@ Then correct with `picks.edit` (the request box): one model call, about half a m
 pictures and regions the project already has, in one batch you can undo. It cannot import or look: when the job's result says `escalate` the request needs a picture the project does not have, so choose it with `picks.auto` for those lines, or search by hand (`picks.search`, `picks.import`).
 The page's card does this in one click (the button "Để agent chọn hình" on the turn). A voice, a draft, a prompt-box turn and the agent's choice of pictures run one at a time on a project: while one runs the other is refused (exit 5, `agent_job_running` or `no_running_job` in `bti status`): wait for it
 (`bti job <id> --wait`), then send yours. Both cost a model call: `--yes-cost` only when the owner asked for this work, and exit 3 (`spend_not_allowed`) when the owner did not allow model spending for the project.
+An automatic run (`bti run`) takes `picks.auto` by itself as one of its steps, and at the picks gate it lets flagged pictures pass and stops only when more than a quarter of the narration lines have no picture (it says how many have none at its end); while it goes on, a hand-started `picks.auto`, `picks.edit` and `draft.edit` are refused (`agent_job_running`, exit 5): wait for it (`bti job <id> --wait`).
 
 ## A worked session
 

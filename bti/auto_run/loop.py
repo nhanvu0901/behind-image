@@ -24,13 +24,14 @@ import logging
 import time
 from typing import Any, Callable
 
+from bti import auto as _rule
 from bti.cli.transport import Reply, Transport, Unreachable
 
 from . import checks, reasons, runlog
 
 log = logging.getLogger("bti.auto_run")
 
-ACTOR = "agent:auto"                       # the actor of every call the run makes (the form `agent:<name>` of bti/auto.py)
+ACTOR = _rule.RUN_ACTOR                    # the actor of every call the run makes (the form `agent:<name>` of bti/auto.py)
 DEFAULT_MAX_STEPS = 40
 MAX_STEPS_LIMIT = 200
 POLL_SECONDS = 2.0
@@ -40,7 +41,13 @@ ACTIVE = ("queued", "waiting", "running")
 FINAL = ("done", "error", "cancelled", "interrupted")
 NEVER_AUTO = frozenset({"storyboard.restore"})      # advancing actions an automatic run does not take: a restore picks an old copy over a damaged file
 STALE_CODES = ("stale", "stale_revision")
-BUSY_CODES = ("busy", "voice_busy", "model_job_busy", "script_job_running", "longjob_running", "agy_busy", "edit_running", "project_busy")
+BUSY_CODES = ("busy", "voice_busy", "model_job_busy", "script_job_running", "longjob_running", "agy_busy", "edit_running", "project_busy", "agent_job_running")
+
+
+def _lines_of(doc: dict) -> int | None:
+    """How many narration lines a document of the picks gate covers (`narration.beat_ids` of GET .../picks); None for another document or when it is not said."""
+    ids = (doc.get("narration") or {}).get("beat_ids") if isinstance(doc.get("narration"), dict) else None
+    return len(ids) if isinstance(ids, list) else None
 
 
 class _Stop(Exception):
@@ -63,6 +70,7 @@ class Run:
         self.result: dict | None = None
         self.stale = 0
         self.recent: list[str] = []
+        self.tolerated: dict[tuple[str, str], dict] = {}          # (gate, code) -> {gate, code, count, lines?}: the warnings the run let through (the last look at each gate)
         self.done_steps = 0
         self.of = len(reasons.STEPS)
         self.t0 = clock()
@@ -249,7 +257,10 @@ class Run:
             return
         self.steps += 1
         self._note(st, a, text=str(a.get("label") or a["id"]))
-        rec = self.log.begin_step(self.steps, a.get("step"), a, body, note=("tolerated warnings: " + ", ".join(w["code"] for w in warnings)) if warnings else "")
+        counts = checks.tally(warnings)
+        rec = self.log.begin_step(self.steps, a.get("step"), a, body, note=("tolerated warnings: " + ", ".join("%s x%d" % (c, n) for c, n in counts.items())) if counts else "")
+        if counts:
+            self.log.update_step(rec, tolerated=[{"code": c, "count": n} for c, n in counts.items()])
         t0 = self.clock()
         rep = self.call(a["method"], a["path"], body)
         secs = round(self.clock() - t0, 2)
@@ -277,11 +288,14 @@ class Run:
         rep = self.call("GET", checks.document_path(a["path"], gate))
         if not rep.ok or not isinstance(rep.data, dict):
             raise _Stop(reasons.make("action_failed", **{**base, "action": "%s (reading its document)" % a["id"]}, error=self._error(rep)))
-        verdict, stoppers, tolerated = checks.vet(gate, rep.data.get("issues"))
+        lines = _lines_of(rep.data)
+        verdict, stoppers, tolerated = checks.vet(gate, rep.data.get("issues"), lines)
         if verdict == "error":
             raise _Stop(reasons.make("quality_error", gate=gate, count=len(stoppers), issues=stoppers, **base))
         if verdict == "warning":
             raise _Stop(reasons.make("quality_warning", gate=gate, count=len(stoppers), issues=stoppers, **base))
+        for code, n in checks.tally(tolerated).items():
+            self.tolerated[(gate, code)] = {"gate": gate, "code": code, "count": n, **({"lines": lines} if code in checks.SHARE_LIMITS.get(gate, {}) and lines else {})}
         return tolerated
 
     def _refused(self, a: dict, base: dict, rep: Reply, err: dict) -> None:
@@ -351,7 +365,7 @@ class Run:
     def _finish(self, result: dict) -> dict:
         if self.result is not None:
             return self.result
-        result = dict(result)
+        result = reasons.add_tolerated(dict(result), list(self.tolerated.values()))
         result.setdefault("link", ("#/project/%s/%s" % (self.pid, result["step"])) if result.get("step") else None)
         result.update(steps_taken=self.steps, run_id=self.run_id, started=self.started, ended=runlog.now_iso(), seconds=round(self.clock() - self.t0, 1))
         self.result = result

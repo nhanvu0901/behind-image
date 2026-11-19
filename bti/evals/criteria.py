@@ -616,14 +616,25 @@ def edit_no_error_issues(o):
     return _ok(not errs, [i.get("code") for i in errs][:10], "no error", "%d errors after the edit" % len(errs))
 
 
+def _same_document(before: Any, after: Any) -> bool:
+    """Nothing in the document changed: the shots of a storyboard, or (the picks have no shots) the picks document itself without its approval."""
+    if before is None or after is None:
+        return True
+    if isinstance(before, dict) and isinstance(after, dict) and "shots" not in before and "shots" not in after:
+        return {k: v for k, v in before.items() if k != "approval"} == {k: v for k, v in after.items() if k != "approval"}
+    return [_plain(s) for s in shots_of(before)] == [_plain(s) for s in shots_of(after)]
+
+
 @criterion("edit.answered_cannot", needs=("answer",), params={"codes": P("list")})
 def edit_answered_cannot(o, codes=None):
-    """A request the project cannot do is answered as `cannot` (or one of `codes`) with a sentence that says why, and nothing changed."""
+    """A request the project cannot do is answered as `cannot` (or one of `codes`) with a sentence that says why, and nothing changed. The prompt boxes answer
+    through typed operations: a request they cannot do ends the turn as `no_change` (the model said `cannot`, nothing was written) or `escalate` (it needs a picture
+    the project does not have); the default `codes` are those and the older `cannot` / `edit_no_change`."""
     a = o["answer"]
-    codes = codes or ["cannot", "edit_no_change", "escalate"]
+    codes = codes or ["cannot", "no_change", "edit_no_change", "escalate"]
     code = a.get("code") or a.get("status")
     reason = str(a.get("error") or a.get("reason") or a.get("summary") or "").strip()
-    unchanged = o.get("before") is None or o.get("after") is None or [_plain(s) for s in shots_of(o["before"])] == [_plain(s) for s in shots_of(o["after"])]
+    unchanged = _same_document(o.get("before"), o.get("after"))
     return _ok(code in codes and bool(reason) and unchanged, {"code": code, "reason": reason[:120], "unchanged": unchanged}, "answered %s: %s" % (code, reason[:80]),
                "answered %r (wanted one of %s), reason given: %s, nothing changed: %s" % (code, codes, bool(reason), unchanged))
 

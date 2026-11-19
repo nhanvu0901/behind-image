@@ -329,10 +329,11 @@ def _limits(kw: dict) -> dict:
 
 
 def start(pid: str, pdir: Path, *, beats: list | None = None, redo: bool = False, base_rev: str | None = None, model: str | None = None,
-          owner_note: str = "", manager=None, **seams) -> dict:
+          owner_note: str = "", manager=None, by_run: bool = False, **seams) -> dict:
     """Start the job; -> the job's public record (`["id"]`). Raises `AutoError` (the refusals of the route, with their HTTP status).
-    `seams` (tests): search, fetch_thumb, fetch_book_thumb, fetch_asset, clock, python, guard_factory, plan_limits, choose_limits,
-    search_budget_s, write_budget_s."""
+    `by_run`: the caller is the automatic run (it takes this action itself as its step): the run's own job is not a reason to refuse, any other caller
+    is refused while a run goes on. `seams` (tests): search, fetch_thumb, fetch_book_thumb, fetch_asset, clock, python, guard_factory, plan_limits,
+    choose_limits, search_budget_s, write_budget_s."""
     pdir = Path(pdir)
     if not isinstance(redo, bool):
         raise AutoError("invalid", "redo must be true or false", 422)
@@ -351,9 +352,9 @@ def start(pid: str, pdir: Path, *, beats: list | None = None, redo: bool = False
         raise AutoError(e.code, e.message, 409)
     run = _Run(pdir, pid, inp, res, limits=_limits(seams), seams=seams)
     m = manager or _manager()
-    other = draft_run.other_agent_job(pid, KIND, m)           # join2: a prompt-box turn or a draft holds the one agent: they run one at a time
+    other = draft_run.other_agent_job(pid, KIND, m, run_ok=by_run)      # join2: a prompt-box turn, a draft or an automatic run holds the one agent: one at a time
     if other is not None:
-        raise AutoError("agent_job_running", "a prompt-box turn or a draft is running for this project: wait for it or cancel it, then call again",
+        raise AutoError("agent_job_running", "%s is working on this project: wait for it or cancel it, then call again" % draft_run.AGENT_JOB_WHO.get(other.get("kind"), "another job"),
                         409, job_id=other.get("id"))
     meta = {"action": ACTION, "model": res.model, "agent": res.public(), "beats": list(inp.targets), "redo": bool(redo),
             "limits": {"plan": run.limits["plan"].public(), "choose": run.limits["choose"].public()}}

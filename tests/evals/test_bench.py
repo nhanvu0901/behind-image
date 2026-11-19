@@ -216,7 +216,7 @@ def test_a_step_whose_action_the_app_does_not_list_yet_is_skipped_not_failed(tmp
     cr = write_cases(tmp_path, step, {"name": "x-case", "sample": {"project": "arnolfini", "start": "as_is"}, "request": req, "criteria": crit})
     rec, outputs = run_bench(step, app, samples, root, tmp_path, repeat=2, cases_root=cr)
     reps = rec["cases"][0]["repeats"]
-    assert all(r["skipped"] and action in r["skipped"] and "not joined yet" in r["skipped"] and r["criteria"] == [] and r["passed"] is False for r in reps)
+    assert all(r["skipped"] and action in r["skipped"] and "does not list the action" in r["skipped"] and r["criteria"] == [] and r["passed"] is False for r in reps)
     assert report.totals(rec)["ran"] == 0 and report.totals(rec)["skipped"] == 2 and outputs == {}
     assert "| x-case | skipped |" in report.summary_table(rec)
     assert len(app.deleted) == 2                                                          # the copies are removed even when the case was skipped

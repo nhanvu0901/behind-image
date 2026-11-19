@@ -20,7 +20,7 @@ VI = {
     "picks_no_main": "Chưa chọn tranh chính ở bước Chọn hình.",
     "narration_not_approved": "Lời dẫn chưa được duyệt (hoặc đã đổi sau khi duyệt). Duyệt lời dẫn ở bước Kịch bản trước.",
     "main_asset_unreadable": "Tranh chính chưa có tệp ảnh đọc được. Chọn lại tranh chính.",
-    "agent_job_running": "Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời hoặc dựng bản nháp). Chờ xong hoặc bấm Dừng rồi thử lại.",       # join2: the same sentence as the draft's
+    "agent_job_running": "Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời, dựng bản nháp hoặc chạy tự động). Chờ xong hoặc bấm Dừng rồi thử lại.",       # join2: the same sentence as the draft's
 }
 
 

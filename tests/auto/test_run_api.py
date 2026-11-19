@@ -61,7 +61,8 @@ def test_a_whole_project_from_the_first_step_to_the_export_once_the_pictures_are
     world.build("new")
     set_auto(client, enabled=True)
     _, first = run_to_end(client)
-    assert first["reason"] == "nothing_to_do" and first["result"]["waiting_for"] == ["picks"] and first["result"]["step"] == "picks"
+    assert first["reason"] == "nothing_to_do" and first["result"]["waiting_for"] == ["main_asset"] and first["result"]["step"] == "picks"      # the first thing the picks step waits for is the pictures agent's own need: a main painting
+    assert first["result"]["action"] == "picks.auto" and "chọn tranh chính" in first["result"]["sentence"]
     from state_helpers import make_picks
     make_picks(client)
     world.flags["picks_ok"] = True

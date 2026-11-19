@@ -272,13 +272,16 @@ def get_suggestions(pid: str, request: Request):
 @guard
 def auto_picks(pid: str, request: Request, body: dict = Body(None)):
     """A long job (kind `picks`, follow it at GET /api/longjobs/{job_id}): plan, search, choose, write. Body (all optional):
-    `{"beats": [ids] | null, "redo": false, "base_rev": "<rev of GET .../picks>", "model": "<model id, tests only>"}`. Never approves, never
+    `{"beats": [ids] | null, "redo": false, "base_rev": "<rev of GET .../picks>", "model": "<model id, tests only>", "actor": "human" | "agent:<id>" | "cli:<name>"}`. Never approves, never
     calls the paid suggestion service. Starting it again resumes a run that did not finish (bti/picks/auto/job.py)."""
+    from bti import auto as rule
     from bti.picks import auto
+    from .auto_api import actor_of
     d = _pdir(request, pid)
     body = body if body is not None else {}
     if not isinstance(body, dict):
         raise ApiError(422, "the body must be an object", code="invalid_request")
+    by_run = actor_of(body) == rule.RUN_ACTOR           # join2: the automatic run takes this action itself; any other caller is refused while a run goes on
     beats, redo, base_rev, model = body.get("beats"), body.get("redo", False), body.get("base_rev"), body.get("model")
     if beats is not None and not (isinstance(beats, list) and all(isinstance(b, str) for b in beats) and 0 < len(beats) <= 400):
         raise ApiError(422, "beats must be null or a list of narration line ids", code="invalid_field", field="beats")
@@ -289,7 +292,7 @@ def auto_picks(pid: str, request: Request, body: dict = Body(None)):
     if model is not None and not isinstance(model, str):
         raise ApiError(422, "model must be text", code="bad_model")
     try:
-        rec = auto.start(pid, d, beats=beats, redo=redo, base_rev=base_rev, model=model or None)
+        rec = auto.start(pid, d, beats=beats, redo=redo, base_rev=base_rev, model=model or None, by_run=by_run)
     except auto.AutoError as e:
         raise ApiError(e.status, e.message, code=e.code, **e.extra)
     meta = rec.get("meta") or {}

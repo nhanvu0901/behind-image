@@ -166,7 +166,7 @@ def test_the_state_lists_picks_auto_as_a_long_job_that_uses_a_model_and_costs_ti
     assert a["long_job"] is True and a["uses_model"] is True and a["follow"] == "GET /api/longjobs/{job_id}"
     assert a["cost"] == {"kind": "model", "about": "about 20 minutes"} and a["gate"] is False and a["auto_ok"] is True
     assert a["agent"]["id"] == "gem" and a["ready"] is True and a["needs"] == [] and a["advances"] is True
-    assert a["body"] == {"beats": None, "redo": False, "base_rev": doc.revision(doc.load_or_new(api.pdir))}
+    assert a["body"] == {"beats": None, "redo": False, "base_rev": doc.revision(doc.load_or_new(api.pdir)), "actor": "agent:mock"}      # join2: a caller names itself (the run, the command, the bench) as the operations' examples do
     ids = [x["id"] for x in st["next_actions"]]
     assert ids.index("picks.auto") < ids.index("picks.approve")                              # an agent that walks the project takes the agent before the gate
     assert action(st, "picks.approve")["gate"] is True

@@ -96,7 +96,7 @@ call. The registry's examples are written for the operations' test project: on a
 ### `jobs`
 
 The jobs of this project that are queued, waiting or running, from the three registries (model jobs of the script step, long jobs, previews):
-`{id, kind, state, progress, started, path, cancel}`. `kind` is `outline`, `narration`, `voice`, `draft`, `export`, `picks` or `preview`;
+`{id, kind, state, progress, started, path, cancel}`. `kind` is `outline`, `narration`, `voice`, `draft`, `export`, `picks`, `auto` (an automatic run, section 9) or `preview`;
 `started` is an ISO 8601 time; `path` is the GET that follows the job; `cancel` is the POST that stops it (null for a preview).
 
 ### `problems`
@@ -167,8 +167,8 @@ loop:
 | `picks.import_clip` | picks | `POST /api/projects/{pid}/picks/import-clip` |  | yes |  | machine_time: about 1 minute | Once the picks step is open. Ready unless a picks job runs. The caller supplies the link and the range (`fill`). |
 | `picks.suggest` | picks | `POST /api/projects/{pid}/picks/suggest` |  | yes |  | paid: You.com calls, charged per beat (auto_ok false) | Once the picks step is open. Paid: `auto_ok` is false, the owner must agree. Needs the approved narration and suggestions switched on. |
 | `picks.put` | picks | `PUT /api/projects/{pid}/picks` |  |  |  |  | Once the picks step is open. The caller supplies the picks document (`fill`). |
-| `picks.auto` | picks | `POST /api/projects/{pid}/picks/auto` |  | yes | picks | model: about 20 minutes | Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true, and while another long job of the project runs (the agent's choice, a prompt-box turn or a draft: one at a time). It never approves and never calls the paid suggestion service. Advances while no line has pictures yet. |
-| `picks.edit` | picks | `POST /api/projects/{pid}/picks/edit` |  | yes | picks | model: about 30 seconds | Once the picks step is open. Ready unless the agent cannot run or another long job of the project runs (a prompt-box turn, a draft or the agent's choice of pictures: one at a time). The caller supplies the instruction and the scope (`fill`): {"beats": [ids]}, {"chapter": id} or {"all": true}. One call, typed picks operations (never an import), one batch in the change log; a request that needs a new picture ends as `escalate`, and then POST .../picks/auto with those lines does the work. |
+| `picks.auto` | picks | `POST /api/projects/{pid}/picks/auto` |  | yes | picks | model: about 20 minutes | Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true, and while another long job of the project runs (the agent's choice, a prompt-box turn or a draft: one at a time; an automatic run goes on: only the run itself, as the `actor` `agent:auto`, takes it, any other caller is refused with `agent_job_running`). It never approves and never calls the paid suggestion service. Advances while no line has pictures yet. |
+| `picks.edit` | picks | `POST /api/projects/{pid}/picks/edit` |  | yes | picks | model: about 30 seconds | Once the picks step is open. Ready unless the agent cannot run, another long job of the project runs (a prompt-box turn, a draft or the agent's choice of pictures: one at a time) or an automatic run goes on. The caller supplies the instruction and the scope (`fill`): {"beats": [ids]}, {"chapter": id} or {"all": true}. One call, typed picks operations (never an import), one batch in the change log; a request that needs a new picture ends as `escalate`, and then POST .../picks/auto with those lines does the work. |
 | `picks.ops` | picks | `POST /api/projects/{pid}/picks/ops` |  |  |  |  | Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
 | `picks.approve` | picks | `POST /api/projects/{pid}/picks/approve` | yes |  |  |  | While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances. |
 | `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions, a clip or the agent's choice of pictures) of the project runs. |
@@ -182,11 +182,13 @@ loop:
 | `storyboard.ops` | edit | `POST /api/projects/{pid}/storyboard/ops` |  |  |  |  | While the storyboard is readable. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
 | `changes.list` | edit | `GET /api/projects/{pid}/changes` |  |  |  |  | Once the change log holds a batch (of the picks or the storyboard). Always ready. `step` is the step of the newest batch's document. |
 | `changes.undo` | edit | `POST /api/projects/{pid}/changes/{batch}/undo` |  |  |  |  | The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document. |
-| `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time) or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
+| `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
 | `identity.set` | edit | `PUT /api/projects/{pid}/identity` |  |  |  |  | While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. |
 | `draft.cancel` | edit | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a draft job of the project runs. |
 | `export.start` | export | `POST /api/projects/{pid}/export/start` |  | yes |  | machine_time: about 25 minutes | Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. |
 | `export.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an export job of the project runs. |
+| `auto.run` | export | `POST /api/projects/{pid}/auto/run` |  | yes |  | machine_time: the sum of what it may start from where the project stands | Listed while automatic running is on for the project and no video is exported yet. Ready unless a job of the project runs (an automatic run included). Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops with a reason (see docs/AGENT_API.md, "Chạy tự động"). `cost` is the sum of what it may start: only the kinds the owner allowed. |
+| `auto.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an automatic run of the project goes on. |
 <!-- END GENERATED: actions -->
 
 ## 3. The words of `needs`
@@ -211,7 +213,7 @@ loop:
 | `history_copy` | There is no good copy of the storyboard in history/. | Make a new draft: draft.start. |
 | `audio_mix` | The audio mix the storyboard names is missing. | Call voice.generate. |
 | `timing` | timing.json is missing. | Call voice.generate. |
-| `no_running_job` | A job of the same kind is already running for this project; for the agent's work (picks.auto, picks.edit, draft.start, draft.edit) any other agent job of the project counts: the agent's choice of pictures, a prompt-box turn or a draft run one at a time. | Wait for it (see `jobs`), or cancel it with the matching *.cancel action. |
+| `no_running_job` | A job of the same kind is already running for this project; for the agent's work (picks.auto, picks.edit, draft.start, draft.edit) any other agent job of the project counts: the agent's choice of pictures, a prompt-box turn or a draft run one at a time; the two prompt boxes (picks.edit, draft.edit) also wait while an automatic run goes on. | Wait for it (see `jobs`), or cancel it with the matching *.cancel action. |
 | `agent_usable` | The agent that would run cannot run on this machine (see `agent.reason`). | Choose another agent: PUT /api/projects/{pid}/agent, GET /api/agents lists them. |
 | `suggest_enabled` | Picture suggestions are switched off on this machine. | Use picks.search instead. |
 | `locked_beats` | Some beats of the narration are locked and would be replaced. | Unlock them, or send {"force": true} (the body shown does). |
@@ -279,6 +281,9 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `at_least_one_source` | after_fix | Keep at least one book source included in the brief options. |
 | `audio_decode_failed` | after_fix | The audio file cannot be decoded: make the voice again (POST /api/projects/{pid}/voice/generate); if it repeats the file is damaged. |
 | `auto_needs_human` | no | Ask the owner to change automatic running on the page: an agent may only read it (GET /api/projects/{pid}/auto). |
+| `auto_not_enabled` | after_fix | Ask the owner to turn automatic running on for this project (the switch on the page, PUT /api/projects/{pid}/auto), then call again. |
+| `auto_run_not_found` | no | Take a run id from GET /api/projects/{pid}/auto/runs. |
+| `auto_running` | later | An automatic run of this project is going: follow it (GET /api/longjobs/{job_id}) or stop it (POST /api/longjobs/{job_id}/cancel), then call again. |
 | `bad_action` | after_fix | Send action as "overwrite" or "discard". |
 | `bad_chapters` | after_fix | Send `chapters` as a list of chapter ids (at most 100). |
 | `bad_model` | after_fix | Send `model` as a plain model id, or leave it out to use the project's agent. |
@@ -578,3 +583,89 @@ agent wrote), `result` (`lines_total`, `lines_done`, `lines_without`) or `failed
 **One agent run at a time per project.** The agent in a folder (`picks.auto`, a job of kind `picks`), a prompt-box turn of either step and the storyboard draft (jobs of kind `draft`) hold the one agent run: none of them starts while another runs. The state answer says so with
 `no_running_job` in `needs` (for `picks.auto`, `picks.edit`, `draft.start`, `draft.edit`), and a route that is called anyway answers 409 `agent_job_running` (`retry` `later`, `job_id` of the job that runs) with a Vietnamese sentence on the page; a second job of the
 same kind is the long-job runner's `busy`. Both actions are model calls: they carry `cost` (`model`), `long_job` and `uses_model`, their `auto_ok` is the owner's `spend.model` (section 1, "Automatic running and who approved"), and `bti do` runs them only with `--yes-cost`.
+
+## 9. Automatic run ("Chạy tự động")
+
+One long job that walks a project from wherever it stands to a finished video by the loop of section 1 ("Walking a project"), and writes down every step. It is what the
+button "Chạy tự động" of the page starts, and what `bti run` starts. Code: `bti/auto_run/`; design: `docs/design/2026-11-18-agent-first-design.html`, "Cổng duyệt và chạy tự động".
+
+```
+POST /api/projects/{pid}/auto/run   {"until": null | "script" | "voice" | "picks" | "edit" | "export", "max_steps": 40, "actor": "human"}   -> {"job_id": "...", "run_id": "..."}
+GET  /api/projects/{pid}/auto/runs?limit=10      -> {"items": [one line per run, newest first]}
+GET  /api/projects/{pid}/auto/runs/{run_id}      -> the whole record, with one entry per step
+```
+
+`until` is the step to stop after (null: the video is exported); `max_steps` (1 to 200) is the most calls one run may make. The run is refused: `409 auto_not_enabled` while the
+project's `auto` is off (the owner turns it on, section "Automatic running and who approved"); `409 auto_running` while a run of this project goes on; `409 longjob_running` or
+`script_job_running` while another job of the project runs (a preview does not count); `422 invalid_field` for an unknown step or a bad `max_steps`. It is a long job of kind
+`auto` (follow it with `GET /api/longjobs/{job_id}`, stop it with `POST /api/longjobs/{job_id}/cancel` or the `auto.cancel` action: the job the run started is stopped too,
+and starting again continues, the finished parts are kept). The state answer lists `auto.run` while the switch is on and nothing is exported, with `body` `{until: null, max_steps: 40}`
+and a `cost` that is the sum of what it may start from where the project stands, only of the kinds the owner allowed (`kinds` lists them); it is never `advances`, so a caller
+that walks the list never takes it.
+
+**One agent job at a time, both ways.** The run takes the pictures agent (`picks.auto`) and the storyboard draft itself, one step after the other, and follows their jobs; the three of them (and the
+prompt boxes) hold the one agent run of the project (section 8). While a run goes on, the prompt boxes (`picks.edit`, `draft.edit`) and a hand-started pictures agent are refused like any other busy case:
+409 `agent_job_running` (`retry` `later`, `job_id` of the run) and `no_running_job` in `needs` of the two boxes; the one caller that may start `picks.auto` meanwhile is the run itself, which names itself
+with the `actor` `agent:auto` (the example body of `picks.auto` has an `actor`, the way the operations' examples do; an actor is what the caller says it is, not an authentication). The other way round, a job
+that is not the run's (a prompt-box turn, the pictures agent, a voice...) makes the run stop with `busy_elsewhere` before it takes anything, and `POST .../auto/run` is refused with `longjob_running`. The `cost` of
+`auto.run` counts `picks.auto` (a long job with a cost that is not paid) and not `picks.edit` (a person's own request, like `draft.edit`).
+
+### The rule of the loop (five lines)
+
+1. Read `GET .../state`. Stop when the project is exported (or the `until` step is done), when automatic running was turned off, or when a job that is not the run's runs on the project.
+2. Take the FIRST action with `ready` and `advances`; never another, no operation batches of its own, no edits. The state answer decides what advancing means: a new step is picked up with no change here.
+3. Allowed? A gate only when its `auto_ok` is true; a cost only when its kind is allowed in `spend`; a paid action never; `storyboard.restore` never.
+4. Before a gate read its document and apply the quality bar (below); then call the action exactly as the answer describes it, as the actor `agent:auto` (it is put in every body that has an `actor`).
+5. If the call answers a job, follow it to its end (a failed job ends the run with the job's code and sentence), then read the state again.
+
+### How a run ends
+
+The result is in the job's `meta.result` (always) and `result`, in the run log and in `GET .../auto/runs`: `{outcome, reason, sentence (Vietnamese), detail, fix (English), step, link,
+action, gate, kind, issues, waiting_for, error, tolerated, lines_without_pick, steps_taken, ...}`. A run that fails ends its job as `error` with the failed action's `error_code` and the sentence as `error`; every
+other end is `done` (a cancel is the runner's own: `cancelled`). The outcomes are `done`, `needs_owner`, `failed`, `nothing_to_do`, `cancelled` and `limit`.
+
+**The quality bar at the pictures gate.** `asset_flag` (a flagged picture: size or licence) never stops the run: the owner said copyright is not a blocker and a picture from the owner's own books always carries the flag
+"unknown"; it goes into the run log with its count (`tolerated` of the step: `[{code, count}]`). `beat_no_pick` (a line of the narration with no picture) stops the run only when MORE than a quarter of the lines
+of the narration have none (`bti.auto_run.checks.NO_PICK_LIMIT`, 0.25; the number of lines is `narration.beat_ids` of `GET .../picks`; unknown: it stops); at or below a quarter the run goes on (the storyboard draft shows the main
+painting for such lines) and says how many lines have none: in the step's `tolerated`, in the result's `tolerated` (`[{gate, code, count, lines?}]`), in `lines_without_pick` and as one more sentence at the end of `result.sentence`
+("Có 3 dòng lời dẫn không có hình riêng: bản nháp dùng tranh chính ở các dòng đó."). Every warning code the picks document and the storyboard can give is in one of the two lists below (a test scans the sources); a warning in
+neither stops the run.
+
+<!-- BEGIN GENERATED: autorun -->
+| reason | outcome | what it means | what to do |
+|---|---|---|---|
+| `exported` | done | The project is exported. |  |
+| `until_reached` | done | The step {step} is done, as asked. |  |
+| `gate_not_allowed` | needs_owner | The {gate} gate waits for the owner: automatic running may not approve it. | Ask the owner to approve the {gate} gate on the page (step {step}), or to allow it in the project's `auto` (PUT /api/projects/{pid}/auto), then run again. |
+| `auto_turned_off` | needs_owner | Automatic running was turned off for this project while the run was going. | Ask the owner to turn automatic running on again (the switch on the page), then run again. |
+| `spend_not_allowed` | needs_owner | {action} costs {kind} and the owner did not allow an agent to spend that. | Ask the owner to run {action} on the page (step {step}), or to allow {kind} spending in the project's `auto`. |
+| `paid_needs_owner` | needs_owner | {action} costs money: an agent never starts it. | Ask the owner to start {action} on the page (step {step}) if they want it. |
+| `quality_warning` | needs_owner | The {gate} gate has {count} warning(s) that stop an automatic run: {first_en} | Ask the owner to look at the {gate} document (step {step}) and approve it, or fix it and run again. |
+| `quality_error` | needs_owner | The {gate} document has {count} error(s): {first_en} | Ask the owner to fix the errors listed in `issues` (step {step}), then run again. |
+| `gate_refused` | needs_owner | The server refused to approve the {gate} gate: {error_code} ({error_detail}). | Ask the owner to fix what the refusal names (step {step}), then run again. |
+| `repair_needed` | needs_owner | storyboard.json is unreadable: restoring a copy is the owner's decision, an automatic run does not do it. | Ask the owner to restore the storyboard on the page (step {step}), then run again. |
+| `nothing_to_do` | nothing_to_do | No action moves the project forward now: it waits for {waiting_en}. | Meet what `waiting_for` names (step {step}), then run again. |
+| `busy_elsewhere` | nothing_to_do | Another job of the project is running ({jobs_en}); an automatic run never starts a second one. | Wait for the job (GET /api/projects/{pid}/longjobs) or cancel it, then run again. |
+| `needs_content` | nothing_to_do | {action} needs content that only the owner or the caller can supply (its `fill` fields). | Supply the content (step {step}), then run again. |
+| `action_failed` | failed | {action} was refused: {error_code} ({error_detail}). | Read `error`, do what its `fix` says, then run again: finished work is kept. |
+| `job_failed` | failed | The job of {action} ended in error: {error_code} ({error_detail}). | Read `error`, do what it says, then run again: finished parts are kept. |
+| `unreachable` | failed | The app could not be reached from inside the run: {error_detail}. | Check that the app answers, then run again. |
+| `no_progress` | failed | {action} was taken {count} times in a row and the state did not change. | Look at the project (GET /api/projects/{pid}/state) and the run log; do not run again before the cause is known. |
+| `internal_error` | failed | The automatic run failed unexpectedly: {error_detail}. | Report it; the run log of the project names the step. |
+| `cancelled` | cancelled | The run was cancelled; finished work is kept. | Run again to continue from where the project stands. |
+| `job_cancelled_elsewhere` | cancelled | The job of {action} was cancelled or interrupted outside the run. | Run again to continue: finished parts are kept. |
+| `step_limit` | limit | The run took {count} actions, the most it may take (`max_steps`). | Run again to continue, or raise `max_steps`. |
+| `time_limit` | limit | The run used up its {hours} hours. | Run again to continue. |
+
+| gate | warning that stops the run | why | warnings it lets through |
+|---|---|---|---|
+| `outline` | `fact_no_source`, `unknown_source_id`, `source_excluded`, `unknown_fact`, `disputed_no_conflict` | fact_no_source: a fact cites no source paragraph, so nothing in the books backs it; unknown_source_id: a fact cites a paragraph that is not in the brief; source_excluded: a fact leans on a source the owner excluded; unknown_fact: a chapter uses a fact that is not in the fact table; disputed_no_conflict: a disputed fact has no conflict described, so the narration would state it as certain | `budget_sum`, `fact_unused`, `no_hook_choice` |
+| `narration` | `words_off_target`, `unknown_fact` | words_off_target: the length is more than 15% away from the target: the video would not be the length that was planned; unknown_fact: a line cites a fact that is not in the outline | `beat_too_long`, `chapter_off_budget`, `long_sentence`, `no_show`, `spoken_chars` |
+| `picks` | `beat_no_pick` (only when more than 25% of the lines have it), `beat_unknown` | beat_no_pick: more than a quarter of the lines of the narration have no picture (up to a quarter the run goes on: the draft shows the main painting there); beat_unknown: a picture is attached to a line that is not in the narration any more | `asset_flag` |
+| `storyboard` | `audio_missing`, `asset_size_mismatch`, `first_shot_late`, `label_without_position`, `end_after_audio`, `canvas_not_1080p`, `map_view_coarse`, `identity_technique_mismatch`, `incomplete` | audio_missing: the audio file does not exist; asset_size_mismatch: a picture's recorded size differs from its file: regions and camera keys are in the wrong space; first_shot_late: the first shot does not start at 0 s: the beginning is not covered; label_without_position: a label has no position and is not drawn; end_after_audio: the video would end after the voice; canvas_not_1080p: the canvas is not 1920x1080; map_view_coarse: a map is zoomed in too close: it has no detail there; identity_technique_mismatch: a title or chapter shot does not follow the chosen identity style; incomplete: an item is not filled in yet | `first_shot_transition`, `project_name_differs`, `unknown_intent`, `unknown_source` |
+<!-- END GENERATED: autorun -->
+
+The run log is `projects/<pid>/auto_runs/<run id>.json` (`bti.autorun/1`), rewritten after every step: `{id, job_id, started, ended, until, max_steps, actor, steps: [{n, at, step,
+action, method, path, body, status, ok, code, job_id, job_state, note, seconds}], outcome, reason, sentence, result}`. The newest 30 are kept. A run whose process died is reported
+from the state of its job (never as `running` for ever). The long-job runner limits one part of a job to 35 minutes, so the job is a row of equal parts of 25 minutes (12 hours in
+all) that take the loop over from each other: the `progress` of the job is not the run's; read `meta` (`step`, `step_label`, `n`, `of`, `action`, `child_job`, `steps_taken`).

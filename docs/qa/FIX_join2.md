@@ -90,3 +90,67 @@ Mistakes of my own probe steps, fixed (never relaxed): a regular expression writ
 * `tests/library` was not run (the known failure on the server's stored data); the Windows form of `tools/bti.bat` and the Windows `.cmd` helpers of the agent are as in the earlier reports.
 * The hand-over uses the agent chosen for the step; the route takes an optional `model` (as the others) but the page never sends one.
 * The outputs of my runs (`join2_*.txt`) are in the session's scratchpad under `/private/tmp`; I left them there (the rule on deleting).
+
+# Round two: the automatic run and the bench joined with the pictures agent and the prompt boxes
+
+Worker `join2`, same worktree, after the coordinator merged the fourth build (`c6auto`, commit 2d29f93). Brief: the coordinator's message of round two; input: `docs/qa/FIX_c6_auto.md`
+(especially "What the coordinator must add when the other two builds are joined"). Same rules: no git command that writes, no model, no `.env`, the deletion rule. The merge left
+`docs/AGENT_API.md` at this branch's side; it had lost the whole c6 section (and with it the markers of its generated table, so `python -m bti.editor.hints` failed): the section is back as
+**section 9** (sections 7 and 8 are the pictures agent and the prompt box), `AGENTS.md` and `jobs` point to it.
+
+## R1. The run meets the pictures agent and the boxes
+
+* **`picks.auto` is taken by the run with no change of its loop.** It is an advancing action, the run takes the first one that is ready (the catalogue puts it before `picks.approve`), follows its job and then
+  meets the picks gate by the owner's rule. Proof on real routes, the fake agent runner of tests/picks and the fake sources (`tests/auto/test_run_joined.py`, a project with an approved narration, the voice
+  made and a main painting): `picks.auto` then `picks.approve` (`until: picks`), the batches are by `agent:mock`, the approval by `agent:auto`; a gate the owner did not allow stops right after the agent
+  (`gate_not_allowed`, the agent's work kept); model spending not allowed stops before it (`spend_not_allowed`, the agent never asked). Its cost: `auto.run`'s `cost.about` has `picks (about 20 minutes)`.
+  `picks.edit` (a person's own request, like `draft.edit`) is now in `RUN_MANUAL`, so the run's cost does not count it.
+* **One agent job at a time, both ways.** While a run goes on, `picks.edit` and `draft.edit` have `no_running_job` in `needs` and their routes answer 409 `agent_job_running` (`retry` `later`, the run's `job_id`);
+  a hand-started `picks.auto` (any actor but the run's) is refused the same way, and so is the hand-over of a box turn to the agent. The run itself must still start `picks.auto` through its own job: it names itself
+  (`actor` `agent:auto`, `bti.auto.RUN_ACTOR`) in the body, which the example body of `picks.auto` now has a place for (`actor`, as the operations' examples do); the route takes the actor (`actor_of`) and
+  `bti.picks.auto.start(..., by_run=True)` ignores the run's own job. The plain draft start ignores it too (the run takes the draft). The sentence of `agent_job_running` now says "chọn hình, sửa bằng lời, dựng bản nháp hoặc chạy tự động"
+  (`bti/draft/run.py` VI, `bti/picks/auto/texts.py`, `errmsg.js`, one text). The other way round, a job that is not the run's (a box turn, the pictures agent, a voice) ends the run as `busy_elsewhere` (`reasons.JOB_KIND_VI`
+  says `draft` as "dựng hình hoặc sửa bằng lời"), a refusal `agent_job_running` of a call the run made is read as `busy_elsewhere` too (`loop.BUSY_CODES`), and `POST .../auto/run` is refused (`longjob_running`) while such a job runs.
+  Honest limit: the state answer keeps `picks.auto` ready while a run goes on (the run reads the same answer and takes it); only the route tells another caller no.
+* **Needs and warnings.** `reasons.NEED_VI` has a phrase for every word of `NEEDS` (a test already compares them; `no_running_job` now names the four kinds of job). Every warning code the picks document and the storyboard can give
+  (`tests/auto/test_run_joined.py` scans the sources: dict literals with `level` `warn`/`warning`, the engine's `warn(path, message, code)` calls, and the `(warning)` codes of `ISSUE_CODES`) is in `STOPS` or `TOLERATED`
+  of `bti/auto_run/checks.py`: nothing was unsorted (`asset_flag`, `beat_unknown`, `beat_no_pick` and the storyboard's were all there); the test fails the day a new one is not.
+
+## R2. Two changes of the quality bar (the owner's statements)
+
+* `asset_flag` is in `TOLERATED["picks"]`: a flagged picture never stops the run (copyright is not a blocker; a picture from the owner's books always carries "unknown"; a small one is no reason either). Its count is in the run log
+  (the step's `note` `tolerated warnings: asset_flag x3` and `tolerated: [{code, count}]`) and in the result (`tolerated`, with a line in `detail`).
+* `beat_no_pick` stops the run only when MORE than a quarter of the narration's lines have no picture (`checks.NO_PICK_LIMIT` 0.25, `SHARE_LIMITS`; the number of lines is `narration.beat_ids` of `GET .../picks`; unknown or zero: it stops).
+  At or below a quarter the run goes on (the draft shows the main painting there) and says how many lines have none: the step's `tolerated`, the result's `tolerated` and `lines_without_pick`, and one more sentence at the end of
+  `result.sentence` for every end (`Xong: video đã được xuất. Có 3 dòng lời dẫn không có hình riêng: bản nháp dùng tranh chính ở các dòng đó.`, also after a later stop at another gate). Tests on both sides of the threshold
+  (12 lines with 3 / 4 without, 4 with 1 / 2, 8 with 2 / 3, 100 with 25 / 26, 1 with 1, no number of lines), flags alone, flags with a real stop, an error, `beat_unknown`, a warning nobody sorted.
+* Words: `docs/AGENT_API.md` section 9 (the rule, the keys of the result, the generated table says "only when more than 25% of the lines have it"), `docs/APP_GUIDE.md` section 13 and 14 (Vietnamese), `AGENTS.md` ("Running by itself"),
+  `skills/picks/SKILL.md`; the page's own fixture (`tests/editor_frontend/fixtures/autorun_results.json`, from `reasons.samples()`) was written again because its sample warning list used `asset_flag` as a stopping warning.
+
+## R3. The bench meets the real routes
+
+* The three drivers needed no new call: `drive_edit_storyboard` reads the turn of `GET .../draft/thread` (`status`, `summary`, `error`; the thread answers `{turns, active_job_id}`), `drive_edit_picks` the job result of `picks.edit`
+  (`status`, `summary`) and `drive_picks_agent` the job of `picks.auto` (its body has `actor`, so the bench puts `agent:eval` there). One change was needed: a request the typed-operations boxes cannot do ends as `no_change` (the model said
+  `cannot`, nothing written) or `escalate`, so `edit.answered_cannot` accepts `cannot`, `no_change`, `escalate` (it did not accept `no_change`), and for the picks it compares the picks document (it compared shots, which the picks do not have).
+  `runner.BRIEFINGS` now hashes `skills/picks_edit/FAST.template.md` and the two `skills/picks_auto/*.template.md` (it was `[]`), so `compare` sees a changed briefing of the two picks steps.
+* `tests/evals/test_joined_routes.py`: the joined app (real engine), the mock model answering each request of the nine cases the way a careful agent would (from the briefings' own data), the fake runner of the pictures agent, fake sources; a samples folder with the
+  fixture project of tests/ops as `arnolfini` and a project with an approved narration and a main painting as `arnolfini-from-books`. **All nine cases run and are scored, none is skipped**: `edit_storyboard` (cannot, ring of light, zoom slower),
+  `edit_picks` (impossible, reuse the main painting, skip a line), `picks_agent` (decides every line, credits, variety; the last two fail some criteria on the fake agent's four pictures and a main painting with no licence: scored, not skipped).
+  **The cases that need a narration in the sample stay skipped with their sentence when the sample has none: today that is the repository's own sample `arnolfini-from-books` (an outline, no `script/narration.json`)**: the three cases of `edit_picks`
+  and the three of `picks_agent` are skipped with "the sample project arnolfini-from-books has no script/narration.json: the pictures step needs a project with an approved narration" (a test proves it on a copy of the real sample);
+  with a narration but no main painting they are skipped with "the action picks.auto is listed but not ready: it needs main_asset". The three cases of `edit_storyboard` use `projects/arnolfini` (a storyboard, an old import) and are not blocked by this.
+  The ten `draft` cases still skip on that sample ("the timing of the sample has no beat ids"): not part of this round.
+
+## R4. Documents
+
+`python -m bti.editor.hints` (docs/AGENT_API.md: the `picks.auto`, `picks.edit`, `draft.edit` rows, the `no_running_job` text, section 9 with its generated reasons and quality-bar table), `python -m bti.cli.docgen` (the lists of `AGENTS.md` and `skills/*/SKILL.md`: nothing
+stale), `python -m bti.ops.doc --check` and both `--check` modes: up to date. Hand-written: `docs/AGENT_API.md` sections 8 and 9, `docs/APP_GUIDE.md`, `AGENTS.md`, `skills/picks/SKILL.md`.
+
+## R5. Files touched in round two
+
+Code: `bti/auto.py`, `bti/auto_run/{checks,loop,reasons}.py`, `bti/draft/run.py`, `bti/picks/auto/{job,texts}.py`, `bti/editor/{picks_api,state_api,hints}.py`, `bti/editor/static/js/errmsg.js`, `bti/evals/{criteria,driver,runner}.py`.
+Documents: `AGENTS.md`, `docs/AGENT_API.md`, `docs/APP_GUIDE.md`, `skills/picks/SKILL.md`, this report. Tests: new `tests/auto/test_run_joined.py` and `tests/auto/picks_agent.py` (the fake agent of tests/picks under another module name), `tests/evals/test_joined_routes.py`;
+changed `tests/auto/test_run_api.py` (the picks step now waits first for a main painting, the pictures agent's own need), `tests/picks/test_auto_api.py` (the example body has an `actor`), `tests/evals/test_bench.py` (the skip sentence),
+`tests/editor_frontend/fixtures/autorun_results.json`. `.scratch/agy_tasks/join2/STATUS.md`.
+
+__ROUND_TWO_RUNS__

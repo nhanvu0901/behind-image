@@ -8,7 +8,9 @@ the run looks first, so it stops with the sentence of the problem and nothing is
     * an ERROR-level issue always stops the run (`quality_error`).
     * a warning stops it when it is in STOPS of that gate: it is about the substance (a fact without a source, a line with no picture, a length that
       is off the promise) or it would spoil an expensive step that follows (the voice is about an hour, the export 25 minutes).
-    * a warning in TOLERATED is style or housekeeping: the run goes on, and the log keeps the warning.
+    * a warning in TOLERATED is style or housekeeping: the run goes on, and the log keeps the warning with its count.
+    * a warning in SHARE_LIMITS stops the run only when MORE than that share of the lines of the document has it (a line with no picture: more than a
+      quarter of the narration stops; at or below a quarter the run goes on, the storyboard draft shows the main painting there, and the run says how many).
     * a warning that is in neither list STOPS (a new check somebody adds is looked at by the owner until it is sorted into one of the lists).
     * `info` issues are never looked at.
 
@@ -16,6 +18,7 @@ Every code in STOPS has a short reason, in English for an agent and in Vietnames
 """
 from __future__ import annotations
 
+from collections import Counter
 from typing import Any
 
 ERROR_LEVELS = ("error",)
@@ -37,8 +40,8 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "unknown_fact": ("a line cites a fact that is not in the outline", "có dòng nhắc dữ kiện không có trong dàn ý"),
     },
     "picks": {
-        "beat_no_pick": ("a line of the narration has no picture", "có dòng lời dẫn chưa có hình"),
-        "asset_flag": ("a picture is flagged (size, licence or the like) and needs a look", "có hình bị gắn cờ, cần xem lại"),
+        "beat_no_pick": ("more than a quarter of the lines of the narration have no picture (up to a quarter the run goes on: the draft shows the main painting there)",
+                         "hơn một phần tư số dòng lời dẫn chưa có hình"),
         "beat_unknown": ("a picture is attached to a line that is not in the narration any more", "có hình gắn vào dòng không còn trong lời dẫn"),
     },
     "storyboard": {
@@ -58,9 +61,14 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
 TOLERATED: dict[str, frozenset[str]] = {
     "outline": frozenset({"fact_unused", "no_hook_choice", "budget_sum"}),
     "narration": frozenset({"spoken_chars", "beat_too_long", "long_sentence", "no_show", "chapter_off_budget"}),
-    "picks": frozenset(),
+    # a flagged picture (size, licence or the like) is not a reason to stop: the owner said copyright is not a blocker, and a picture from the owner's own books always carries
+    # the flag "unknown". The run goes on and writes the count into its log.
+    "picks": frozenset({"asset_flag"}),
     "storyboard": frozenset({"project_name_differs", "unknown_source", "unknown_intent", "first_shot_transition"}),
 }
+# gate -> {code: share}: the warning stops the run only when MORE than this share of the lines of the document has it (the code is also in STOPS, for the sentence)
+NO_PICK_LIMIT = 0.25
+SHARE_LIMITS: dict[str, dict[str, float]] = {"picks": {"beat_no_pick": NO_PICK_LIMIT}}
 UNKNOWN_WHY = ("a check the run does not know yet", "có cảnh báo mới mà chạy tự động chưa biết")
 
 def document_path(approve_path: str, gate: str) -> str:
@@ -74,19 +82,20 @@ def _level(issue: dict) -> str:
     return str(issue.get("level") or "")
 
 
-def judge(gate: str, issues: Any) -> dict:
+def judge(gate: str, issues: Any, lines: int | None = None) -> dict:
     """{errors: [...], stopping: [...], tolerated: [...]} for the issues of the document of `gate`. Each entry is the issue with `why` (English) and
-    `why_vi` added (a stopping warning) or as it is (an error: its own message)."""
+    `why_vi` added (a stopping warning) or as it is (an error: its own message). `lines`: how many lines the document has (the narration's, for the picks):
+    a warning of SHARE_LIMITS passes while it is on no more than that share of them (unknown number of lines: it stops, the safe side)."""
     errors, stopping, tolerated = [], [], []
-    stops, ok = STOPS.get(gate, {}), TOLERATED.get(gate, frozenset())
-    for i in issues if isinstance(issues, list) else []:
-        if not isinstance(i, dict):
-            continue
+    stops, ok, limits = STOPS.get(gate, {}), TOLERATED.get(gate, frozenset()), SHARE_LIMITS.get(gate, {})
+    rows = [i for i in (issues if isinstance(issues, list) else []) if isinstance(i, dict)]
+    counts = Counter(str(i.get("code") or "") for i in rows if _level(i) in WARN_LEVELS)
+    for i in rows:
         lv, code = _level(i), str(i.get("code") or "")
         if lv in ERROR_LEVELS:
             errors.append({**_brief(i), "why": str(i.get("message") or code), "why_vi": "có lỗi trong tài liệu này"})
         elif lv in WARN_LEVELS:
-            if code in ok:
+            if code in ok or (code in limits and isinstance(lines, int) and lines > 0 and counts[code] <= limits[code] * lines):
                 tolerated.append(_brief(i))
             else:
                 why, why_vi = stops.get(code, UNKNOWN_WHY)
@@ -102,9 +111,14 @@ def _brief(i: dict) -> dict:
     return out
 
 
-def vet(gate: str, issues: Any) -> tuple[str, list[dict], list[dict]]:
+def tally(tolerated: list[dict]) -> dict[str, int]:
+    """{code: how many} of the warnings the run let through (what the run log and the end of the run say)."""
+    return dict(Counter(str(t.get("code") or "") for t in tolerated))
+
+
+def vet(gate: str, issues: Any, lines: int | None = None) -> tuple[str, list[dict], list[dict]]:
     """('error' | 'warning' | 'ok', the entries that stop the run, the warnings it let through)."""
-    v = judge(gate, issues)
+    v = judge(gate, issues, lines)
     if v["errors"]:
         return "error", v["errors"], v["tolerated"] + v["stopping"]
     if v["stopping"]:
