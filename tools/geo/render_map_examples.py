@@ -1,11 +1,11 @@
 """Renders the MAP-01 examples (stills, timings, the preview clip and thumbnail) from a lab project it builds in a temporary folder.
 
-    python tools/geo/render_map_examples.py stills OUTDIR            # 1280 px PNGs of the default example (both sea presets), Oslo and Venice to Constantinople
+    python tools/geo/render_map_examples.py stills OUTDIR            # 1280 px PNGs of the default example (both sea presets), the Oslo fjord, France and Venice to Constantinople
     python tools/geo/render_map_examples.py timing                   # milliseconds per frame at 1920 px, per example and per stage
     python tools/geo/render_map_examples.py preview                  # style/gae/previews/MAP-01.mp4 and .jpg (640 px, 15 fps, 8 s)
 
 The examples are the ones the build contract asks for (docs/design/2026-11-18-explainer-components.md section 4): the default data is
-Bruges to Lucca with Belgium; the others prove that the map is not a one-map trick. Run it from the repository root with the engine's
+Bruges to Lucca with Belgium; the others prove that the map is not a one-map trick: a regional view (the Oslo fjord, 400 km), a large country (France) and a long sea route (Venice to Constantinople, with `via` points in open water). Run it from the repository root with the engine's
 Python (numpy, OpenCV, Pillow, ffmpeg on the PATH for `preview`).
 """
 from __future__ import annotations
@@ -23,14 +23,22 @@ sys.path.insert(0, str(ROOT))
 EXAMPLES = {
     "default": {"start": 0.0, "params": {}, "times": [0.3, 1.4, 2.6, 4.2, 6.4, 7.6]},
     "sepia": {"start": 10.0, "params": {"sea": "sepia"}, "times": [0.3, 1.4, 2.6, 4.2, 6.4, 7.6]},
-    "oslo": {"start": 20.0, "times": [0.2, 1.0, 2.5, 4.0, 5.5, 7.0], "params": {
-        "places": [{"id": "ekeberg", "name": "Ekeberg", "lonlat": [10.78, 59.90], "at": 0.8, "label_side": "auto"}], "route": [], "region_iso": [], "region_label": "",
-        "view_start_width_km": 240, "view_end_mode": "manual", "view_end_center": "10.78, 59.90", "view_end_width_km": 60, "push_s": 5.0, "graticule_deg": 0.25}},
+    "fjord": {"start": 20.0, "times": [0.4, 1.2, 2.5, 4.0, 5.5, 7.0], "params": {
+        "places": [{"id": "oslo", "name": "Oslo", "lonlat": [10.7522, 59.9139], "at": 0.8, "label_side": "auto"},
+                   {"id": "tonsberg", "name": "Tønsberg", "lonlat": [10.4076, 59.2675], "at": 2.0, "label_side": "auto"}],
+        "route": [], "region_iso": [], "region_label": "", "view_start_width_km": 900, "view_end_mode": "manual", "view_end_center": "10.6, 59.6",
+        "view_end_width_km": 400, "push_s": 5.0, "graticule_deg": 0.5}},
     "venice": {"start": 30.0, "times": [0.4, 1.5, 3.0, 4.5, 6.0, 8.0], "params": {
         "places": [{"id": "venice", "name": "Venice", "lonlat": [12.3155, 45.4408], "at": 0.8, "label_side": "auto"},
                    {"id": "istanbul", "name": "Constantinople", "lonlat": [28.9784, 41.0082], "at": 2.0, "label_side": "auto"}],
-        "route": [{"from": "venice", "to": "istanbul", "via": "14.5, 43.0; 18.8, 40.0; 22.5, 36.0; 25.5, 38.0; 26.5, 40.2", "shape": "curve", "at": 2.4, "draw_s": 3.5, "head": "dot"}],
+        "route": [{"from": "venice", "to": "istanbul", "via": "16.43, 42.56; 18.59, 40.40; 18.72, 39.47; 21.68, 36.49; 22.89, 35.96; 26.07, 36.26; 26.27, 36.97; 25.32, 38.42; 25.32, 39.38; 25.94, 39.94; 27.2, 40.4; 28.3, 40.8", "shape": "curve", "at": 2.4, "draw_s": 3.5, "head": "dot"}],
         "region_iso": [], "region_label": "", "view_start_width_km": 4200, "push_s": 6.0}},
+    "france": {"start": 40.0, "times": [0.4, 1.6, 3.0, 4.5, 6.0, 7.5], "params": {
+        "places": [{"id": "paris", "name": "Paris", "lonlat": [2.3522, 48.8566], "at": 0.8, "label_side": "auto"},
+                   {"id": "lyon", "name": "Lyon", "lonlat": [4.8357, 45.764], "at": 2.0, "label_side": "auto"}],
+        "route": [{"from": "paris", "to": "lyon", "via": "", "shape": "straight", "at": 2.6, "draw_s": 2.0, "head": "dot"}],
+        "region_iso": ["FR"], "region_label": "France", "region_at": 0.4, "view_start_width_km": 2600, "view_end_mode": "manual", "view_end_center": "2.5, 46.5",
+        "view_end_width_km": 1800, "push_s": 4.0}},
 }
 
 

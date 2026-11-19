@@ -245,6 +245,24 @@ function makeWidget(f, opts) {
       update = (v) => { const nv = Array.isArray(v) ? v : []; if (JSON.stringify(nv) !== JSON.stringify(cur)) { cur = clone(nv); build(); } };
       break;
     }
+    case 'at': {
+      // one moment: seconds from the start of the element, or the word at the playhead (the control of an `at` field of an items row)
+      const box = h('div', { class: 'pt-ctl' });
+      let cur = f.value;
+      const set = (v, rebuild) => { cur = v; emit(clone(v)); if (rebuild) build(); };
+      const build = () => {
+        const isWord = !!cur && typeof cur === 'object' && typeof cur.w === 'number';
+        const kindSel = h('select', { onchange: (e) => set(e.target.value === 'w' ? anchorFromTime(ctx.t, ctx.words(), false, Infinity) : round(ctx.t, 2), true) },
+          ...[['t', ITEMS_UI.atSeconds], ['w', ITEMS_UI.atWord]].map(([k, l]) => h('option', { value: k, text: l, selected: (k === 'w') === isWord })));
+        const val = isWord ? h('span', { class: 'hint', text: describeAnchor(cur, ctx.words()) })
+          : h('input', { type: 'number', step: 0.1, min: d.min ?? undefined, max: d.max ?? undefined, value: typeof cur === 'number' ? cur : '', title: ITEMS_UI.atUnit, onchange: (e) => { set(coerce(d, e.target.value)); e.target.value = cur; } });
+        box.replaceChildren(kindSel, val, h('button', { class: 'small', type: 'button', style: { whiteSpace: 'nowrap' }, title: ITEMS_UI.atHereTitle, text: ITEMS_UI.atHere, onclick: () => set(anchorFromTime(ctx.t, ctx.words(), false, Infinity), true) }));
+      };
+      build();
+      ctlNodes = [box, f.unit ? h('span', { class: 'unit', text: f.unit }) : null];
+      update = (v) => { if (JSON.stringify(v) !== JSON.stringify(cur)) { cur = clone(v); build(); } };
+      break;
+    }
     case 'camera': {
       const wrap = h('div', { style: { width: '100%' } });
       let cur = clone(f.value) || [];

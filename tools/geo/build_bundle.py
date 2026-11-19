@@ -8,7 +8,7 @@ downloads give byte-identical files, so the sha256 in `style/gae/geo/README.md` 
 
     land_50m.npz, land_10m.npz     land rings, quantised to 1e-4 degree, delta coded, sorted by area (draw order: big first)
     countries_50m.npz              country rings with an index into the ISO 3166-1 alpha-2 / name tables
-    seas.json                      sea and ocean names with a position, a rank and an extent in km
+    seas.json                      sea and ocean names with a position, a rank, an extent in km and a simplified outline
     manifest.json                  url, version and sha256 of each download, sha256 and size of each stored file
 
 The coastline is not stored apart: the engine strokes the rings of the land file (minus the edges that only cut the world at the
@@ -219,6 +219,27 @@ def pole(rings, step=0.25):
     return float(x0 + (i - 1 + 0.5) * step), float(y0 + (j - 1 + 0.5) * step)
 
 
+POLY_EPS = 3                 # simplification of the sea outlines, in tenths of a degree (0.3 degree, about 30 km)
+POLY_MIN_AREA = 30           # outlines smaller than this (in tenths of a degree squared: 0.3 square degree) are dropped
+
+
+def simplify(rings):
+    """The outlines of a sea as lists of flat integers [x0, y0, x1, y1, ...] in tenths of a degree, simplified (a membership test, not a drawing). Every ring of at
+    least POLY_MIN_AREA is kept, and always the biggest one, so that no sea is left without an outline."""
+    cands = []
+    for r in rings:
+        if len(r) < 4:
+            continue
+        pts = np.rint(r * 10).astype(np.int32).reshape(-1, 1, 2)
+        ap = cv2.approxPolyDP(pts, POLY_EPS, True).reshape(-1, 2)
+        if len(ap) < 3:
+            ap = np.ascontiguousarray(pts.reshape(-1, 2)[:: max(1, len(pts) // 12)])
+        if len(ap) >= 3:
+            cands.append((abs(cv2.contourArea(ap)), ap))
+    cands.sort(key=lambda c: -c[0])
+    return [ap.flatten().tolist() for i, (area, ap) in enumerate(cands) if i == 0 or area >= POLY_MIN_AREA]
+
+
 def build_seas(shp: bytes, dbf: bytes):
     rows = read_dbf(dbf)
     out, seen = [], set()
@@ -238,7 +259,7 @@ def build_seas(shp: bytes, dbf: bytes):
         ext = float(max(ext_x, ext_y))
         lon, lat = LABEL_AT[name] if name in LABEL_AT else pole(rings)
         nm = {"Gulf of Saint Lawrence": "Gulf of St. Lawrence"}.get(name.strip(), name.strip())
-        out.append({"name": nm, "lon": round(lon, 2), "lat": round(lat, 2), "rank": rank, "extent_km": int(round(ext, -1))})
+        out.append({"name": nm, "lon": round(lon, 2), "lat": round(lat, 2), "rank": rank, "extent_km": int(round(ext, -1)), "poly": simplify(rings)})
     out.sort(key=lambda s: (s["rank"], -s["extent_km"], s["name"]))
     return out
 
@@ -281,9 +302,11 @@ def main(argv=None) -> int:
     crings, extra = build_countries(*data["ne_50m_admin_0_countries"])
     files["countries_50m.npz"] = (pack(crings, extra), {"rings": len(crings), "vertices": int(sum(len(r["xy"]) for r in crings)), "countries": len(extra["iso"])})
     seas = build_seas(*data["ne_50m_geography_marine_polys"])
-    files["seas.json"] = (json.dumps({"note": "Sea and ocean names, English, from Natural Earth marine polygons; position lon, lat in degrees; "
-                                      "extent_km: the longer side of the sea's bounding box; rank: Natural Earth scalerank (0 = ocean).",
-                                      "seas": seas}, ensure_ascii=False, indent=0, separators=(",", ":")).encode("utf-8") + b"\n", {"names": len(seas)})
+    note = ("Sea and ocean names, English, from Natural Earth marine polygons; position lon, lat in degrees; extent_km: the longer side of the sea's bounding box; "
+            "rank: Natural Earth scalerank (0 = ocean); poly: the outlines of the sea, simplified, as flat lists [x0, y0, x1, y1, ...] in tenths of a degree (a name is only "
+            "placed inside its own sea).")
+    lines = ",\n".join(json.dumps(x, ensure_ascii=False, separators=(",", ":")) for x in seas)
+    files["seas.json"] = (('{"note":%s,"seas":[\n%s\n]}\n' % (json.dumps(note, ensure_ascii=False), lines)).encode("utf-8"), {"names": len(seas)})
     for name, (blob, info) in files.items():
         (a.out / name).write_bytes(blob)
         manifest["files"].append(dict({"name": name, "bytes": len(blob), "sha256": sha256(blob)}, **info))

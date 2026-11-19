@@ -191,9 +191,10 @@
          "asset",
          "points",
          "lines",
-         "items"
+         "items",
+         "at"
         ],
-        "description": "items: a list of records whose fields the entry declares in `fields` (contract docs/design/2026-11-18-explainer-components.md section 3)"
+        "description": "items: a list of records whose fields the entry declares in `fields` (contract docs/design/2026-11-18-explainer-components.md section 3); at: one moment, seconds from the start of the element (min and max in seconds) or a word anchor"
        },
        "default": {},
        "min": {

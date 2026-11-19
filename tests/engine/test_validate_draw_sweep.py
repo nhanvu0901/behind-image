@@ -1,8 +1,8 @@
 """R2B-012, permanent form: whatever `validate` accepts without an error, the engine can draw.
 
 For every one of the 79 techniques (taken from its reference configuration in `projects/technique_lab`; the ID-* ones and MAP-01 from `identity_lab.py`) and for every
-parameter of every one of the thirteen registry types (number, enum, bool, string, text, color, point, points, lines, box, camera,
-asset, items), the parameter is replaced one at a time by a set of odd values: wrong but well typed, extreme, empty, degenerate.
+parameter of every one of the fourteen registry types (number, enum, bool, string, text, color, point, points, lines, box, camera,
+asset, items, at), the parameter is replaced one at a time by a set of odd values: wrong but well typed, extreme, empty, degenerate.
 The draft is validated; when validate reports no error the frame in the middle of the item MUST be drawn (no exception, and
 a failure of the engine would also have to be a `RenderError`, never a bare exception).  Every value validate refuses is
 simply skipped.  A value the engine cannot draw is a hole in the registry (a missing `pattern`, `min_items`, range...).
@@ -79,7 +79,7 @@ def memory_watchdog():
 pytestmark = pytest.mark.slow
 
 LAB = REPO / "projects" / "technique_lab"
-TYPES = {"number", "enum", "bool", "string", "text", "color", "point", "points", "lines", "box", "camera", "asset", "items"}
+TYPES = {"number", "enum", "bool", "string", "text", "color", "point", "points", "lines", "box", "camera", "asset", "items", "at"}
 
 
 def _bundle():
@@ -134,6 +134,13 @@ def odd_values(p: dict, ref, asset_keys: list, region: str | None):
                  [{"at": {"t": 1e9}, "cx": 100, "cy": 100, "zoom": 1}], "x", [5]]
     elif t == "asset":
         vals += ["", "nope"] + list(asset_keys)
+    elif t == "at":
+        vals += ["x", "", True, 0, -1, 1, 0.5, 10 ** 6, -1e9, 1e9, float("nan"), float("inf"), [1], {"t": 1.0}, {"w": 0, "off": 0.0, "text": "alpha"}, {"w": 3}, {"w": 10 ** 6}, {"rel": 0.5},
+                 {"rel": 5}, {"t": "x"}, {"x": 1}, {}]
+        if p.get("min") is not None:
+            vals.append(p["min"] - 1e-3)
+        if p.get("max") is not None:
+            vals.append(p["max"] + 1e-3)
     elif t == "items":
         fields = p.get("fields") or [{"name": "id", "type": "string"}]
         one = {f["name"]: ("x" if f["type"] in ("string", "ref") else 1 if f["type"] in ("number", "at") else [0, 0] if f["type"] == "lonlat" else True if f["type"] == "bool" else (f.get("values") or ["x"])[0]) for f in fields}

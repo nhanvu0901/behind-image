@@ -434,12 +434,12 @@ Mọi câu lời dẫn nhắc một nơi, một chuyến đi hay một vùng đ�
 
 - **places** (địa điểm): mã ngắn, tên hiện trên bản đồ, kinh độ và vĩ độ (gõ "3.2247, 51.2093"), thời điểm hiện (số giây kể từ đầu phần này, hoặc bấm *= đầu phát* để gắn vào từ lời dẫn đang phát, để chấm hiện đúng lúc từ đó được đọc) và phía đặt nhãn (để *Tự chọn* thì máy tự tìm chỗ không đè lên đường đi hay nhãn khác).
 - **route** (đường đi, có thể không có): từ địa điểm nào đến địa điểm nào (theo mã), các điểm uốn (kinh độ, vĩ độ, cách nhau bằng dấu chấm phẩy), dạng cong hay thẳng, lúc bắt đầu vẽ và số giây vẽ. Đường là hàng chấm đỏ nâu có chấm đầu chạy theo.
-- **region_iso** (vùng được tô): mã nước hai chữ cái theo ISO, ví dụ BE là Bỉ; **region_label** là chữ nhỏ ghi tên vùng.
+- **region_iso** (vùng được tô): mã nước hai chữ cái theo ISO, ví dụ BE là Bỉ; **region_label** là chữ nhỏ ghi tên vùng (nằm trong vùng nếu vừa chỗ, không thì nằm ngay bên cạnh, trên chỗ trống), **region_at** là lúc vùng được tô (số giây, hoặc bấm *= đầu phát* để tô đúng lúc một từ được đọc).
 - Khung nhìn: bắt đầu từ một khung rộng (`view_start_width_km`, tính bằng km) rồi máy quay đẩy chậm vào khung vừa với các địa điểm (`view_end_mode` = *Vừa các địa điểm*, chừa lề `view_end_margin_pct` phần trăm) hoặc vào một tâm và chiều rộng do bạn đặt (*Tự đặt*). Các điểm uốn của đường đi cũng được giữ trong khung.
 
 **Hai màu biển** (`sea`): *Xanh xám* (mặc định) và *Nâu cũ*. Cả hai đều cho biển một màu riêng, đậm dần về phía bờ, có hai nét nước chạy theo bờ như atlas cổ, và đất liền sáng hơn, nên nhìn là phân biệt được đất với biển.
 
-Máy quay đẩy vào nhưng chữ và chấm địa điểm giữ nguyên cỡ, chỉ vị trí đi theo bản đồ. Hạt giấy và vầng tối ở góc đứng yên so với màn hình. Phần mô hình không đoán toạ độ: địa điểm nào chưa chắc thì bỏ ra khỏi danh sách. Một phần bản đồ ngắn hơn 3 giây thì không lưu được (trang nói rõ); dữ liệu địa lý và cách làm lại nằm ở `style/gae/geo/README.md`.
+Nhãn địa điểm luôn nằm ở chỗ không đè lên nét bờ biển, hai nét nước, viền của vùng, đường đi hay nhãn khác (với một địa điểm nằm giữa chỗ chật, nhãn có thể cách chấm một đoạn); tên biển chỉ hiện khi nằm trọn trên mặt nước, không thì bỏ. Bản đồ dành cho nước, vùng và hành trình (khung rộng từ 300 km trở lên); khung hẹp hơn chỉ có cảnh báo "Bản đồ này quá gần", vì dữ liệu bờ biển không có chi tiết ở cỡ đó: một chỗ trong thành phố thì dùng ảnh bản đồ đường phố ở bước Chọn hình. Đường đi trên biển cần các điểm uốn nằm giữa biển, nếu không đường chấm sẽ cắt qua đất liền. Máy quay đẩy vào nhưng chữ và chấm địa điểm giữ nguyên cỡ, chỉ vị trí đi theo bản đồ. Hạt giấy và vầng tối ở góc đứng yên so với màn hình. Phần mô hình không đoán toạ độ: địa điểm nào chưa chắc thì bỏ ra khỏi danh sách. Một phần bản đồ ngắn hơn 3 giây thì không lưu được (trang nói rõ); dữ liệu địa lý và cách làm lại nằm ở `style/gae/geo/README.md`.
 
 ### Bản nháp storyboard
 

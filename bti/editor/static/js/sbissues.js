@@ -268,6 +268,7 @@ const BY_ARGS = {
   camera_key_anchor: (i, a) => `${P(a)}: thời điểm của mốc camera thứ ${Number(a.index ?? 0) + 1} không xác định được.`,
   // --- mapbuild: lists of records (parameter type `items`) and the checks of MAP-01
   param_not_items: (i, a) => `${P(a)}: phải là một danh sách các mục.`,
+  param_bad_at: (i, a) => `${P(a)}: thời điểm phải là số giây hoặc gắn vào một từ của lời đọc.`,
   item_not_object: (i, a) => `${P(a)}: ${rowOf(a)} bị hỏng.`,
   item_unknown_field: (i, a) => `${P(a)}: ${rowOf(a)} có ô ${q(a.field ?? '')} mà kỹ thuật ${a.technique ?? ''} không có.`,
   item_field_missing: (i, a) => `${P(a)}: ${rowOf(a)}: chưa điền ô ${q(a.field ?? '')}.`,
@@ -283,6 +284,7 @@ const BY_ARGS = {
   map_duplicate_place: (i, a) => `Hai địa điểm của bản đồ dùng chung mã ${q(a.id ?? '')}. Mỗi địa điểm cần một mã riêng.`,
   map_route_unknown_place: (i, a) => `Đường đi thứ ${Number(a.index ?? 0) + 1}: ${a.field === 'to' ? 'điểm cuối' : 'điểm đầu'} ${q(a.place ?? '')} không trùng mã của địa điểm nào. Thêm địa điểm có mã đó, sửa mã, hoặc xóa đường đi này.`,
   map_bad_via: (i, a) => `Đường đi thứ ${Number(a.index ?? 0) + 1}: các điểm uốn phải là cặp kinh độ, vĩ độ nằm trong thế giới, cách nhau bằng dấu chấm phẩy.`,
+  map_view_coarse: () => 'Bản đồ này quá gần: đường bờ biển chỉ còn nét thô. Với một địa điểm trong thành phố, hãy dùng ảnh bản đồ đường phố ở bước Chọn hình thay cho bản đồ atlas.',
   map_bad_center: (i, a) => `${P(a)}: gõ kinh độ, vĩ độ (kinh độ từ -180 đến 180, vĩ độ từ -85 đến 85), hoặc để trống.`,
   map_unknown_iso: (i, a) => `Mã nước ${q(a.code ?? '')} (dòng thứ ${Number(a.index ?? 0) + 1}) không có trong dữ liệu bản đồ. Dùng mã hai chữ cái theo chuẩn ISO, ví dụ BE, FR, IT.`,
   // --- idapply: the channel identity of the storyboard (the selector "Kiểu mở đầu và mốc chương" of step 5)

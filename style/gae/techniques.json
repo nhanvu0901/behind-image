@@ -13491,7 +13491,7 @@
     "establish"
    ],
    "description": "A map of real geography (Natural Earth, bundled, no network) drawn like an atlas plate: paper land, a blue-grey or sepia sea that is darker toward the coast with two water lines, an ink coastline, small place marks with italic labels that appear on the word that names them, a dotted route drawn with a travelling head, an optional tinted country, sea names, and a slow push from a wide view to a view fitted to the places.",
-   "usage_rule": "Use it for ANY place, journey or territory a sentence names (where a painter lived or travelled, where a work was made, shipped or kept, a country's extent). It replaces STATIC-06, AN-04 and X-ANN-05 for new work (they stay valid for old storyboards). Give: `places` (id, name, lonlat [longitude, latitude], `at` = seconds from the start of the shot or a word anchor so the mark lands on the word that names the place), `route` (from/to place ids, `via` points that bend it; pass [] for no route), `region_iso` (ISO codes of today's countries to tint; [] for none) and `region_label`. The default data is an example (Bruges to Lucca with Belgium): ALWAYS set places, route and region_iso together, or the example's route and region remain. Coordinates are yours to supply; leave a place out rather than guess it. The view runs from `view_start_width_km` to the end view (`fit` of all places with `view_end_margin_pct`, or `manual` with a centre and width). Let the shot last 6 to 10 s.",
+   "usage_rule": "Use it for a country, a region or a journey that a sentence names (where a painter lived or travelled, where a work was made, shipped or kept, a country's extent): views 300 km wide and wider. It replaces STATIC-06, AN-04 and X-ANN-05 for new work (they stay valid for old storyboards). Do NOT use it for a spot inside a city (a street, a house, a quarter): Natural Earth has no coastline detail closer than about 300 km, so show such a spot with a street-map picture from the picks (step Chọn hình); a narrower view only gets the warning `map_view_coarse`. Give: `places` (id, name, lonlat [longitude, latitude], `at` = seconds from the start of the shot or a word anchor so the mark lands on the word that names the place), `route` (from/to place ids, `via` points that bend it; pass [] for no route; a sea route needs `via` points in open water, or the dotted line is drawn across land), `region_iso` (ISO codes of today's countries to tint; [] for none) and `region_label`. The default data is an example (Bruges to Lucca with Belgium): ALWAYS set places, route and region_iso together, or the example's route and region remain. Coordinates are yours to supply; leave a place out rather than guess it. The view runs from `view_start_width_km` to the end view (`fit` of all places with `view_end_margin_pct`, or `manual` with a centre and width). Let the shot last 6 to 10 s.",
    "channel_usage": "core",
    "slots": [],
    "params": [
@@ -13730,7 +13730,7 @@
     },
     {
      "name": "region_at",
-     "type": "number",
+     "type": "at",
      "default": 0.6,
      "min": 0,
      "max": 600,

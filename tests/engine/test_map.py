@@ -314,18 +314,17 @@ def test_labels_keep_their_pixel_size_while_the_map_scales(tmp_path):
 
 
 def test_label_placement_avoids_the_route_and_the_other_labels_in_the_example(tmp_path):
-    """The default example: Bruges to Lucca. Every label, on the side the engine chose, touches neither the route nor another mark or label in the start view,
+    """The default example: Bruges to Lucca. Every label, where the engine put it, touches neither the route nor another mark or label in the start view,
     the middle of the push and the end view."""
     p = make_project(tmp_path)
     r = renderer(p)
-    assert r.sides == {"bruges": "ne", "lucca": "se"}
     for e in (0.0, 0.5, 1.0):
         v = geo.ease_view(r.start, r.end, e)
         pts = r.routes[0]["path"].samples(v, 400)
         boxes = []
         for pl in r.places:
             x, y = maps.px_of(v, pl["lon_rad"], pl["my"])
-            box = r.label_box(pl, r.sides[pl["id"]], x, y)[2]
+            box = r.placed(pl, x, y)[2]
             assert not maps._box_near_points(box, pts, 4), (pl["id"], e)
             assert not any(maps._box_hits(box, o) for o in boxes)
             boxes.append(box)
@@ -333,6 +332,76 @@ def test_label_placement_avoids_the_route_and_the_other_labels_in_the_example(tm
             for ox, oy in (maps.px_of(v, pl["lon_rad"], pl["my"]) for pl in r.places):
                 if (ox, oy) != (x, y):
                     assert not maps._box_hits(box, (ox - 12, oy - 12, ox + 12, oy + 12))
+
+
+def ink_pixels(img, box, margin):
+    """Pixels of a frame without marks and labels that are ink under `box` grown by `margin`: the coastline (dark ink), the outline of a region (accent)."""
+    x0, y0, x1, y1 = max(0, int(box[0] - margin)), max(0, int(box[1] - margin)), int(box[2] + margin), int(box[3] + margin)
+    sub = img[y0:y1, x0:x1].astype(int)
+    dark = np.abs(sub - np.array(hex_to_bgr(maps.INK))).sum(2) < 90
+    accent = np.abs(sub - np.array(hex_to_bgr(maps.ACCENT))).sum(2) < 100
+    return int(dark.sum() + accent.sum())
+
+
+def test_a_place_label_has_no_ink_under_it_in_the_default_example(tmp_path):
+    """Contract of fix round 1, point 1: no coastline stroke and no outline of the tinted country under the box of "Bruges" (and of "Lucca") at 1.4, 4.2 and 7.6 s.
+    Measured on the pixels of the same frame drawn without marks and labels, apart from the engine's own placement."""
+    p = make_project(tmp_path)
+    clean = make_project(tmp_path, {"places": [dict(pl, at=1000) for pl in spec()["params"][0]["default"]]}, name="clean")   # same map, no mark, no label
+    r = renderer(p)
+    for t in (1.4, 4.2, 7.6):
+        v = r.view_at(t)
+        img = frame(clean, t)
+        for pl in r.places:
+            if t < pl["at"] + 0.5:
+                continue
+            x, y = maps.px_of(v, pl["lon_rad"], pl["my"])
+            box = r.placed(pl, x, y)[2]
+            assert ink_pixels(img, box, 2) == 0, (pl["id"], t, box)
+            assert not r.off_frame(box)
+
+
+def test_a_crowded_place_gets_its_label_farther_out_not_on_the_ink(tmp_path):
+    """A mark on a coast with a country's outline beside it: none of the eight sides is clear, so the label is put farther out; it stays near its mark and clear of ink."""
+    p = make_project(tmp_path)
+    r = renderer(p)
+    pl = r.places[0]                                                    # Bruges, on the coast of Belgium
+    dx, dy = r.label_at["bruges"]
+    pt = r.name_patch["bruges"]
+    gap = r._gap_to_mark(pt, (dx, dy))
+    assert gap > maps.LABEL_GAP / 100.0 * maps.H * 3, "the three nearest rings of the eight sides are all on ink"
+    assert gap < 0.12 * maps.H, "and the label is still beside its mark"
+    assert r.sides["bruges"] in ("n", "ne", "e", "se", "s", "sw", "w", "nw")
+    open_sea = make_project(tmp_path, {"places": [{"id": "x", "name": "Open", "lonlat": [-20.0, 45.0], "at": 0.5}], "route": [], "region_iso": [], "region_label": "",
+                                       "view_start_width_km": 1200, "view_end_mode": "manual", "view_end_center": "-20, 45", "view_end_width_km": 1200}, name="openlabel")
+    ro = renderer(open_sea)
+    assert ro.sides["x"] == "se" and ro.label_at["x"] == ro.side_offset(ro.places[0], "se"), "on open water the first side of the order is taken"
+
+
+def test_the_region_name_goes_inside_a_big_country_and_outside_a_small_one(tmp_path):
+    """Fix round 1, point 2. France is large: its name lies inside the outline with clearance. Belgium is small: its name lies beside it, on free ground. Either way it
+    touches no outline, route, mark or label (measured in the start, the middle and the end view of the push)."""
+    france = make_project(tmp_path, {"places": [{"id": "paris", "name": "Paris", "lonlat": [2.35, 48.86], "at": 0.5}, {"id": "lyon", "name": "Lyon", "lonlat": [4.84, 45.76], "at": 0.5}],
+                                     "route": [{"from": "paris", "to": "lyon", "via": "", "shape": "straight", "at": 1.0, "draw_s": 2.0, "head": "dot"}], "region_iso": ["FR"],
+                                     "region_label": "France", "view_start_width_km": 2600, "view_end_mode": "manual", "view_end_center": "2.5, 46.5", "view_end_width_km": 1800},
+                          name="france")
+    belgium = make_project(tmp_path, name="belgium")
+    for p, inside in ((france, True), (belgium, False)):
+        r = renderer(p)
+        assert r.region_offset is not None
+        views, fields = r.build_fields()
+        for v, fd in zip(views, fields):
+            box = r.region_box(v)
+            assert not r.off_frame(box)
+            assert not fd.ink_in(box, 4), "no coastline, water line or outline under the name"
+            sub = fd.cut(fd.region_fill, box, 4)
+            assert (sub.min() > 127) if inside else (sub.max() < 128), "inside the region" if inside else "outside it, on free ground"
+            for rt in r.routes:
+                assert not maps._box_near_points(box, rt["path"].samples(v, 400), 5)
+            for pl in r.places:
+                mx, my = maps.px_of(v, pl["lon_rad"], pl["my"])
+                assert not maps._box_hits(box, (mx - 12, my - 12, mx + 12, my + 12), 3)
+                assert not maps._box_hits(box, r.placed(pl, mx, my)[2], 3)
 
 
 def test_a_label_side_that_is_given_is_kept_even_when_it_is_worse(tmp_path):
@@ -414,6 +483,8 @@ def test_every_param_at_its_bounds_validates_and_draws(tmp_path):
             cases = list(pd["values"])
         elif pd["type"] == "bool":
             cases = [True, False]
+        elif pd["type"] == "at":
+            cases = [pd["min"], pd["max"], pd["default"], {"w": 6, "off": 0.0, "text": "w6"}]
         elif pd["type"] == "items":
             for fd in pd["fields"]:
                 if fd["type"] in ("number", "at"):
@@ -452,7 +523,7 @@ def test_every_param_at_its_bounds_validates_and_draws(tmp_path):
     for key, fd in ((k, f) for pd in sp["params"] if pd["type"] == "items" for f in pd["fields"] for k in [pd["name"]]):
         assert (fd["min"] is None) == (fd["max"] is None), (key, fd["name"])
     for pd in sp["params"]:
-        if pd["type"] == "number":
+        if pd["type"] in ("number", "at"):
             assert pd["min"] is not None and pd["max"] is not None, pd["name"]
 
 
@@ -699,3 +770,159 @@ def test_validate_accepts_only_what_the_map_can_draw(tmp_path):
                 p.use_draft(None)
     assert not holes, holes[:6]
     assert drawn > 60
+
+
+# ----------------------------------------------------------------------------- fix round 1
+def test_a_sea_name_lies_wholly_on_water_with_clearance(tmp_path):
+    """Fix round 1, point 3: whatever sea name is printed, in any frame of the push, no pixel of land lies within 8 px of its text, and it is inside the frame. The names
+    of the default example are looked at in the start, the middle and the end view, and at the times of the stills."""
+    p = make_project(tmp_path)
+    r = renderer(p)
+    names = set()
+    for t in (0.3, 1.4, 2.6, 4.2, 6.4, 7.6):
+        v = r.view_at(t)
+        _img, land = r.base.draw(v, r.scale_k(v))
+        for nm, _x, _y, box in r.visible_sea_names(v):
+            names.add(nm["name"])
+            x0, y0, x1, y1 = int(box[0]) - 8, int(box[1]) - 8, int(box[2]) + 8, int(box[3]) + 8
+            assert land[max(0, y0):y1, max(0, x0):x1].max() == 0, (nm["name"], t)
+    assert {"North Sea", "Bay of Biscay"} <= names, names
+    assert "Mediterranean Sea" not in names, "the Mediterranean has no water wide enough for its name at the start view: it is left out, not laid across Sardinia"
+
+
+def test_a_sea_name_is_left_out_when_the_sea_has_no_room_for_it(tmp_path):
+    """The Adriatic is long and narrow: in a view of 2,000 km its name does not fit on water, so it is not printed (it is not laid across the coast)."""
+    p = make_project(tmp_path, dict(STATIC, sea_names=True, route=[], places=[{"id": "a", "name": "A", "lonlat": [15.0, 43.0], "at": 50}], view_start_width_km=2000,
+                                    view_end_mode="manual", view_end_center="15, 43", view_end_width_km=2000))
+    r = renderer(p)
+    v = r.view_at(1.0)
+    assert "Adriatic Sea" not in [nm["name"] for nm, *_ in r.visible_sea_names(v)]
+    _img, land = r.base.draw(v, r.scale_k(v))
+    for nm, _x, _y, box in r.visible_sea_names(v):
+        assert land[max(0, int(box[1]) - 8):int(box[3]) + 8, max(0, int(box[0]) - 8):int(box[2]) + 8].max() == 0, nm["name"]
+
+
+def test_a_sea_name_is_placed_inside_its_own_sea():
+    from bti.engine.techniques.maps import _in_sea
+    import numpy as np
+    seas = {s["name"]: s for s in geo.seas()}
+
+    def inside(name, lon, lat):
+        return _in_sea([np.array(r, np.float32).reshape(-1, 1, 2) / 10.0 for r in seas[name]["poly"]], lon, lat)
+    assert inside("Mediterranean Sea", 5.0, 40.6) and inside("Bay of Biscay", -5.7, 45.7) and inside("North Sea", 3.0, 55.6) and inside("Adriatic Sea", 15.0, 43.2)
+    assert not inside("Mediterranean Sea", -7.2, 45.1), "the Bay of Biscay is not the Mediterranean"
+    assert not inside("North Sea", 3.0, 45.0) and not inside("Bay of Biscay", 15.0, 43.2)
+    assert all(s["poly"] for s in seas.values() if s["rank"] <= 3), "every sea of rank 3 and up has an outline"
+
+
+# ---- the type `at`
+def test_a_param_of_type_at_takes_seconds_or_a_word_and_is_held_to_its_bounds():
+    p = {"name": "t", "type": "at", "default": 1.0, "min": 0, "max": 60, "unit": "s", "values": None, "measured": None}
+    for ok in (0, 1.5, 60, {"t": 3.0}, {"w": 4, "off": -0.2, "text": "x"}, {"w": 0}, {"rel": 0.5}):
+        assert R.check_problem(p, ok) is None, ok
+    for bad, code in (("soon", "param_bad_at"), (True, "param_bad_at"), ([1], "param_bad_at"), ({"x": 1}, "param_bad_at"), ({"w": -1}, "param_bad_at"), ({"w": 1.5}, "param_bad_at"),
+                      ({"rel": 2}, "param_bad_at"), ({"t": "x"}, "param_bad_at"), (-0.1, "param_below_min"), (61, "param_above_max"), (float("nan"), "param_bad_at")):
+        m = R.check_problem(p, bad)
+        assert m is not None and m[0] == code, (bad, m)
+    assert R.check_problem(p, None)[0] == "param_null", "like every other type: null is refused when the param has a default"
+    assert R.at_params({"params": [p, {"name": "n", "type": "number"}]}) == ["t"]
+
+
+def test_region_at_takes_a_word_and_the_tint_comes_on_that_word(tmp_path):
+    """The region of the default example appears at `region_at`: in seconds, or on a word of the narration (word 6 starts at 3.0 s in the lab timing). It is resolved and checked
+    the way a camera key's `at` is."""
+    word = {"w": 6, "off": 0.0, "text": "w6"}
+    base = dict(STATIC, region_iso=["BE"], region_label="", route=[], places=[{"id": "a", "name": "A", "lonlat": [6.0, 49.5], "at": 50}], view_start_width_km=3800,
+                view_end_mode="manual", view_end_center="6.86, 47.66", view_end_width_km=3800)
+    p = make_project(tmp_path, dict(base, region_at=word, region_fill_s=0.5), end=12.0)
+    assert errors(p) == []
+    assert p.resolve()["shots"][0]["params"]["region_at"]["_t"] == pytest.approx(3.0)
+    v = renderer(p).view_at(0)
+    x, y = (int(round(float(a))) for a in v.to_px(4.6, 50.6))                      # inside Belgium
+    before, during, after = (frame(p, t).astype(int)[y - 3:y + 3, x - 3:x + 3] for t in (2.9, 3.25, 4.0))
+    assert np.abs(before - frame(p, 0.5).astype(int)[y - 3:y + 3, x - 3:x + 3]).max() <= 1, "nothing before the word"
+    assert 0 < np.abs(during - before).mean() < np.abs(after - before).mean()
+    seconds = make_project(tmp_path, dict(base, region_at=3.0, region_fill_s=0.5), end=12.0, name="seconds")
+    assert np.array_equal(frame(seconds, 4.0), frame(p, 4.0)), "a word and its time in seconds draw the same frame"
+    stale = copy.deepcopy(p.storyboard())
+    stale["shots"][0]["params"]["region_at"] = {"w": 6, "off": 0.0, "text": "zzz"}
+    assert [(i["code"], i["path"]) for i in errors(p, stale)] == [("stale_anchor", "shots[0].params.region_at")]
+    gone = copy.deepcopy(p.storyboard())
+    gone["shots"][0]["params"]["region_at"] = {"w": 9999, "off": 0.0, "text": "x"}
+    assert [i["code"] for i in errors(p, gone)] == ["anchor_invalid"]
+    for bad, code in (("soon", "param_bad_at"), (-1, "param_below_min"), (601, "param_above_max")):
+        d = copy.deepcopy(p.storyboard())
+        d["shots"][0]["params"]["region_at"] = bad
+        assert [i["code"] for i in errors(p, d)] == [code], bad
+
+
+# ---- narrow views
+def test_a_view_narrower_than_300_km_is_a_warning_not_an_error(tmp_path):
+    """Fix round 1, point 5(a): Natural Earth has no detail closer than that. The warning `map_view_coarse` names the param; the storyboard still validates and saves."""
+    p = make_project(tmp_path)
+    sb = p.storyboard()
+
+    def warns(**params):
+        d = copy.deepcopy(sb)
+        d["shots"][0]["params"].update(params)
+        assert errors(p, d) == []
+        return [(i["code"], i["path"].split(".")[-1]) for i in p.validate(d) if i["level"] == "warn"]
+    assert warns() == []
+    assert warns(view_start_width_km=299) == [("map_view_coarse", "view_start_width_km")]
+    assert warns(view_start_width_km=300) == []
+    assert warns(view_end_mode="manual", view_end_width_km=120, view_end_center="10, 59") == [("map_view_coarse", "view_end_width_km")]
+    assert warns(view_end_mode="manual", view_end_width_km=400) == []
+    one_street = dict(places=[{"id": "a", "name": "A", "lonlat": [10.78, 59.90], "at": 1.0}, {"id": "b", "name": "B", "lonlat": [10.80, 59.91], "at": 2.0}], route=[], region_iso=[], region_label="")
+    assert warns(**one_street) == [("map_view_coarse", "view_end_mode")], "two places a kilometre apart: the fitted view is far narrower than 300 km"
+    assert warns(places=[one_street["places"][0]], route=[], region_iso=[], region_label="") == [], "one place: the fitted view has a default width of 600 km"
+    both = warns(view_start_width_km=100, view_end_mode="manual", view_end_width_km=100, view_end_center="10, 59")
+    assert [c for c, _ in both] == ["map_view_coarse", "map_view_coarse"]
+    msg = [i for i in p.validate({**sb, "shots": [{**sb["shots"][0], "params": {"view_start_width_km": 100}}]}) if i["code"] == "map_view_coarse"][0]
+    assert msg["level"] == "warn" and msg["args"]["width_km"] == 100 and msg["args"]["param"] == "view_start_width_km"
+    p.save({**sb, "shots": [{**sb["shots"][0], "params": {"view_start_width_km": 100}}]})                      # a warning does not refuse a save
+
+
+def test_the_usage_rule_says_what_the_map_is_for_and_how_to_draw_a_sea_route():
+    rule = spec()["usage_rule"]
+    for phrase in ("country, a region or a journey", "300 km", "street-map picture from the picks", "spot inside a city", "STATIC-06", "AN-04", "X-ANN-05",
+                   "`via` points in open water", "drawn across land"):
+        assert phrase in rule, phrase
+
+
+def test_strokes_and_the_shade_never_get_heavier_than_in_the_default_end_view(tmp_path):
+    """Fix round 1, point 5(c): the widths that live in map space scale with the zoom since the start view, held to the zoom of the default example's end view
+    (3,800 to 2,348 km: 1.617), however far the push goes; the hairlines are the same in px at every zoom."""
+    default = renderer(make_project(tmp_path))
+    k_end = default.scale_k(default.end)
+    assert k_end == pytest.approx(maps.K_MAX, abs=0.001) and k_end <= maps.K_MAX + 1e-12
+    far = make_project(tmp_path, dict(STATIC, places=[{"id": "a", "name": "A", "lonlat": [10.78, 59.9], "at": 50}], route=[], view_start_width_km=20000, view_end_mode="manual",
+                                      view_end_center="10.78, 59.9", view_end_width_km=60, push_s=4.0), name="far")
+    rf = renderer(far)
+    ks = [rf.scale_k(rf.view_at(t)) for t in (0.0, 1.0, 2.0, 3.0, 4.0, 9.0)]
+    assert max(ks) <= k_end + 1e-12 and ks[-1] == maps.K_MAX and ks[0] == pytest.approx(1.0)
+    lut_end, lut_far = maps.profile_lut(default.pr, k_end), maps.profile_lut(default.pr, rf.scale_k(rf.view_at(9.0)))
+    assert np.array_equal(lut_end, lut_far), "the shade and the water lines are the same as in the default end view"
+    assert maps.COAST_PX == 3 and maps.REGION_LINE_PX == 3 and maps.GRAT_PX == 2
+
+
+def test_the_venice_example_route_stays_on_water():
+    """Fix round 1, point 6: the sea route of the Venice to Constantinople example has its `via` points in open water: from the Adriatic to the Aegean the dotted line is
+    on sea at the start view and at the end view (the Dardanelles are narrower than a pixel of the data, so the last stretch is left out)."""
+    import tempfile
+    from tools.geo.render_map_examples import EXAMPLES, build_lab
+    with tempfile.TemporaryDirectory() as tmp:
+        p = open_project(build_lab(Path(tmp) / "maplab"))
+        r = p._scene().shots[[s["id"] for s in p._saved["shots"]].index("s_venice")].base
+        path = r.routes[0]["path"]
+        assert len(EXAMPLES["venice"]["params"]["route"][0]["via"].split(";")) >= 8, "the route is bent through open water"
+        checked = 0
+        for v in r.sample_views():
+            fd = r.base.field(v, r.scale_k(v))
+            pts = path.samples(v, 1200)
+            lon = np.degrees(path.at(np.linspace(0, path.length, 1200))[0])
+            for (x, y), lo in zip(pts, lon):
+                if lo > 25.9 or (lo < 13.0 and y < pts[0][1] + 30) or not (0 <= x < maps.W and 0 <= y < maps.H):
+                    continue
+                checked += 1
+                assert fd.land[int(y), int(x)] < 128, (round(float(lo), 2), round(float(x)), round(float(y)))
+        assert checked > 2000

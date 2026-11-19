@@ -324,6 +324,25 @@ def items_at_fields(spec: dict) -> list:
     return out
 
 
+def at_params(spec: dict) -> list:
+    """Names of the params of type `at` (one moment: seconds from the start of the element, or a word anchor)."""
+    return [pd["name"] for pd in spec.get("params") or [] if pd.get("type") == "at"]
+
+
+def _check_at(p: dict, v):
+    """A param of type `at`: a number of seconds (held to its `min` and `max`) or a word anchor, like the `at` field of an item."""
+    if isinstance(v, dict):
+        why = _check_anchor_form(v)
+        return _P("param_bad_at", "the time is not a number of seconds or a word anchor (%s)" % why) if why else None
+    if not _is_num(v):
+        return _P("param_bad_at", "the time must be a number of seconds or a word anchor")
+    if p.get("min") is not None and v < p["min"]:
+        return _P("param_below_min", "must be >= %s" % p["min"], min=p["min"])
+    if p.get("max") is not None and v > p["max"]:
+        return _P("param_above_max", "must be <= %s" % p["max"], max=p["max"])
+    return None
+
+
 def at_seconds(at, t0: float = 0.0, default: float = 0.0) -> float:
     """Seconds from the start of the element for an `at` field: a number is already that; a resolved anchor (`_t`, absolute seconds)
     is turned into seconds from `t0`; an anchor that is not resolved gives `default`."""
@@ -409,6 +428,8 @@ def check_problem(p: dict, v):
         return _check_camera(v)
     elif t == "items":
         return check_items(p, v)
+    elif t == "at":
+        return _check_at(p, v)
     elif t == "asset":
         if not (isinstance(v, str) and v):
             return _P("param_not_asset", "must be an asset key")
@@ -447,12 +468,12 @@ def validate_params(spec: dict, params: dict, path: str) -> list[dict]:
                            "message": "incomplete: required parameter %r is not set" % k})
     if not any(i["level"] == "error" for i in issues):
         # rules between several params (a route end names a place, an ISO code exists ...): the renderer class may define
-        # `check_params(params)` -> [(param name, code, args, message)] over the merged params (defaults included)
+        # `check_params(params)` -> [(param name, code, args, message[, "warn"])] over the merged params (defaults included)
         cls = RENDERERS.get(spec["id"], (None, None))[0]
         hook = getattr(cls, "check_params", None)
         if hook is not None:
-            for name, code, args, message in hook(merged_params(spec, params)):
-                issues.append({"level": "error", "path": "%s.%s" % (path, name), "code": code,
+            for name, code, args, message, *level in hook(merged_params(spec, params)):          # a fifth item, "warn", makes it a warning
+                issues.append({"level": level[0] if level else "error", "path": "%s.%s" % (path, name), "code": code,
                                "args": dict(args, param=name, technique=spec["id"]), "message": "%s: %s" % (name, message)})
     return issues
 

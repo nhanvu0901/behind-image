@@ -5,6 +5,7 @@ import { boxToRect, normBox } from './coords.js';
 export const WIDGETS = {
   number: 'number', enum: 'select', bool: 'checkbox', string: 'text', color: 'color', text: 'textarea',
   point: 'point', points: 'points', lines: 'lines', box: 'box', camera: 'camera', asset: 'asset', items: 'items',
+  at: 'at',
 };
 
 /** One descriptor per param definition, in registry order. Unknown types fall back to a JSON field. */
@@ -69,6 +70,7 @@ export function validateValue(d, v) {
   }
   if (d.type === 'enum' && d.values && !d.values.includes(v)) return 'giá trị không có trong danh sách';
   if (d.type === 'items') return itemsProblem(d, v);
+  if (d.type === 'at') return fieldProblem(d, v);
   if (d.type === 'box' && !boxToRect(v)) return 'khung phải là [x0, y0, x1, y1]';
   if (d.type === 'box' && Array.isArray(v) && v.length === 4 && v.every((n) => typeof n === 'number')) {
     const [x0, y0, x1, y1] = v;
@@ -103,6 +105,7 @@ export function coerce(d, raw) {
     }
     case 'points': return Array.isArray(raw) ? raw : [];
     case 'items': return Array.isArray(raw) ? raw : [];
+    case 'at': return coerceField(d, raw);
     case 'lines': { if (Array.isArray(raw)) return raw; const a = String(raw ?? '').split('\n').map((x) => x.replace(/\s+$/, '')); while (a.length && a[a.length - 1] === '') a.pop(); return a; }
     case 'box': return normBox(typeof raw === 'string' ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw);   // always [x0, y0, x1, y1]
     case 'camera':

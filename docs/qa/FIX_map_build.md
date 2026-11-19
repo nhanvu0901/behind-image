@@ -142,3 +142,69 @@ What I saw in the final stills:
 * The look against the mock-up in motion beyond the frames compared (0.3, 1.4, 2.6, 4.2, 6.4, 7.6 s in both presets, pixel statistics at 4.2 s): I looked at stills, not at the played clip; the preview clip `style/gae/previews/MAP-01.mp4` exists (640 x 360, 15 fps, 8 s, h264) and was checked with ffprobe, not watched.
 * Timings are from one server session; the server was otherwise idle but I did not control its load.
 * The Vietnamese sentences were written by me and read by nobody else.
+
+
+## Fix round 1 (worker `mapfix`, worktree `.worktrees/mapfix`, branch `wt/mapfix`, 2026-11-19)
+
+Six things the coordinator saw in the stills of the first build. Everything below was done in the worktree; tests ran in snapshot `mapfix`.
+
+### 1. A place label sits on ink: now it does not
+`bti/engine/techniques/maps.py`: a `Field` per sample view holds what a label must keep off (the land, the distance of each sea pixel to the coast, the coast stroke, the region's fill and outline).
+The labels are placed against five views along the push (progress 0, 0.25, 0.5, 0.75, 1: the start, the middle, the end and between). A label box is clear when no ink (coastline stroke, either water line,
+the outline of a region) lies within `INK_MARGIN` = 5 px of it, it touches no route, mark, other label or frame edge. Order: the eight sides at the mark's gap (se, ne, e, sw, nw, w, s, n), the same eight twice and three times
+as far out, then, when none is clear, the nearest clear place on a grid of offsets (6 px apart, up to 240 x 170 px), then the cheapest. `label_side` still forces a side. Sea names are placed after the labels and avoid them, so no label ever lies on a sea name.
+In the default example Bruges sits on the corner where the Belgian coast meets the outline of Belgium: no side, at any of the three gaps, is clear at all five views, and the nearest clear text place is 82 px from the mark
+(measured by scanning every offset); Bruges ends north-east of its mark at (72, -44) px and Lucca north of its mark at (-36, -56) px. Tests: `test_a_place_label_has_no_ink_under_it_in_the_default_example` (the pixels of the same
+frames drawn without marks and labels, at 1.4, 4.2 and 7.6 s: no dark coastline pixel and no accent outline pixel under the box of "Bruges" and "Lucca" grown by 2 px), `test_a_crowded_place_gets_its_label_farther_out_not_on_the_ink`.
+
+### 2. The region name touches its outline: now it is inside with clearance, or outside on free ground
+`place_region_label`: the shift (px) from the region's pole where the name's box, in all five views, has no ink under it (outline, coast, water lines) with `REGION_MARGIN_IN` = 6 px (inside) or `REGION_MARGIN_OUT` = 10 px (outside)
+around it, touches no mark, place label, route or frame edge, and lies wholly inside the region's fill (first choice) or wholly outside it (second); the nearest to the pole first; none: the name is left out. BELGIUM ends below-left of Belgium, on French ground, outside the outline;
+FRANCE ends inside France, clear of the outline. Test: `test_the_region_name_goes_inside_a_big_country_and_outside_a_small_one` (France inside, Belgium outside; no ink, route, mark or label touched at the five views).
+
+### 3. Sea names lie on land: now wholly on water, or left out
+`place_sea_names`: a name is printed only at a position where, in every sample view where it would be printed, every pixel within 4 px of its text is sea more than 8 px beyond the outer water line
+(`Field.water_clear`), and it touches no route, mark, label or other name. The position is searched around the sea's listed position (`SEA_RADIUS`: 45 percent of its extent, at most 2,500 km), nearest first, INSIDE the sea's own outline: `seas.json` now carries
+`poly`, the outlines of each sea simplified to 0.3 degree (`tools/geo/build_bundle.py`, `_in_sea`), so "Mediterranean Sea" is never put in the Atlantic. The 30 percent land allowance (`LAND_UNDER_NAME`) is gone. In the default example NORTH SEA and BAY OF BISCAY are printed
+(Biscay moved west, to -5.4 E 45.3 N, off the French coast); MEDITERRANEAN SEA has no water wide enough for its name in the start view and is left out; the Adriatic has none in a view of 2,000 km. Tests: `test_a_sea_name_lies_wholly_on_water_with_clearance` (the land mask of every still time:
+no land within 8 px of any printed name), `test_a_sea_name_is_left_out_when_the_sea_has_no_room_for_it`, `test_a_sea_name_is_placed_inside_its_own_sea`.
+Bundle: `seas.json` 44,427 bytes, sha256 `718e57af6d0ec2765aa99e8d88ae9f746477d087c5478912c8302bd5252d839b` (the three `.npz` files are unchanged); the bundle is 2,071,791 bytes; `manifest.json` and `style/gae/geo/README.md` are regenerated.
+
+### 4. A parameter type `at` (one moment: seconds or a word)
+`registry.py`: `at_params(spec)`, `_check_at` (number held to `min`/`max`, or a word anchor; codes `param_bad_at`, `param_below_min`, `param_above_max`) and one branch in `check_problem`; the hook of a renderer's `check_params` may return a fifth item, `"warn"`, to make an issue a warning.
+`storyboard.py`: `resolve` resolves a word anchor of such a param like a camera key's (`_resolve_item_anchors`), `validate` reports `stale_anchor` / `anchor_invalid` (with `param`, no `index`); `param_bad_at` and `map_view_coarse` in `ISSUE_CODES`.
+`techniques.schema.json`: `at` in the param types. Page: `formgen.js` (`WIDGETS.at`, `validateValue`, `coerce` reuse `fieldProblem` / `coerceField`), `formui.js` (`case 'at'`: "seconds | word" and the button "= đầu phát", the control of an `at` field of an items row), `edit.css` (one rule), `sbissues.js` (the sentence of `param_bad_at`).
+`MAP-01.region_at` is of this type. `bti/engine/README.md`: the section "One moment: the parameter type `at`". Tests: `test_a_param_of_type_at_takes_seconds_or_a_word_and_is_held_to_its_bounds`, `test_region_at_takes_a_word_and_the_tint_comes_on_that_word`, `tests/editor_frontend/at_param.test.mjs`;
+the sweep gets the type (`test_validate_draw_sweep.py`). Checked in a real browser (headless Chrome, a harness that loads `formui.js` with the real registry): typing seconds, clamping at 0, "= đầu phát" gives the word at the playhead, back to seconds, a change from outside.
+The files merge line by line with the other workers' edits: `registry.py` (one new function pair after `items_at_fields`, one `elif`, the hook loop), `storyboard.py` (two small blocks), `formgen.js` (three single lines), `formui.js` (one new `case` before `case 'camera'`).
+
+### 5. Narrow views
+(a) Warning `map_view_coarse` (never an error; a storyboard with it saves) when `view_start_width_km` or the end view is narrower than 300 km: on `view_start_width_km`, on `view_end_width_km` (manual), or on `view_end_mode` (a fitted view); sentence on the page (`sbissues.js`): "Bản đồ này quá gần: đường bờ biển chỉ còn nét thô. Với một địa điểm trong thành phố, hãy dùng ảnh bản đồ đường phố ở bước Chọn hình thay cho bản đồ atlas."
+(b) The `usage_rule` says the map is for countries, regions and journeys, views of 300 km and wider, and that a spot inside a city is shown with a street-map picture from the picks. (c) `K_MAX` = 1.617, the zoom of the default example's end view (3,800 to 2,348 km): the shade, the water lines and the route dots never get heavier, however far the push goes; the hairlines (coast 3 px, outline 3 px, graticule 2 px) are constants.
+The Oslo example (60 km) is replaced by a regional one: the Oslo fjord, Oslo and Tønsberg, 900 km pushed to 400 km (`fjord_*.png`). Tests: `test_a_view_narrower_than_300_km_is_a_warning_not_an_error`, `test_the_usage_rule_says_what_the_map_is_for_and_how_to_draw_a_sea_route`, `test_strokes_and_the_shade_never_get_heavier_than_in_the_default_end_view`.
+
+### 6. The sea route crosses land
+The `via` points of the Venice example were chosen by a shortest path over the 1:10m water (a Dijkstra over a 0.03 degree raster of the water with a cost near the coast, then simplified to 0.35 degree): `16.43, 42.56; 18.59, 40.40; 18.72, 39.47; 21.68, 36.49; 22.89, 35.96; 26.07, 36.26; 26.27, 36.97; 25.32, 38.42; 25.32, 39.38; 25.94, 39.94; 27.2, 40.4; 28.3, 40.8`
+(the last two are the Dardanelles and the Sea of Marmara, which the data cannot resolve). The usage rule has the sentence: a sea route needs `via` points in open water, or it is drawn across land. Test: `test_the_venice_example_route_stays_on_water` (about 1,200 samples of the curve per sample view, all on sea in the land mask, from the Adriatic to the Aegean entrance).
+
+### Other changes
+`tools/geo/render_map_examples.py`: the examples are now `default`, `sepia`, `fjord`, `venice`, `france` (a large country with its name inside). `bti/engine/README.md`, `docs/APP_GUIDE.md` (one paragraph in Vietnamese) updated. The preview clip and thumbnail are regenerated from the final code.
+
+### Milliseconds per frame, this session (server shared with other workers; `tools/geo/render_map_examples.py timing`)
+default 76.9 ms median (p90 95.2, max 129.5), sepia 83.0, fjord 76.3, venice 76.2, france 119.2 (a big region mask and outline per frame); the map itself 42 to 62 ms. The first round measured 59 ms on an idle server; the frame's code is the same except
+the region masks (now a function) and the sea names (chosen at the start, not per frame), so the difference is the load of the other workers. Compiling a shot (placing labels in five views) costs 50 to 100 ms; 12 places spread over the world 700 ms.
+
+### Tests (snapshot `mapfix`, final tree)
+| Folder (one per run, `tools/deploy/snapshot_test.sh mapfix -- ...`) | Summary line as printed |
+|---|---|
+| `tests/engine -m "not slow"` | `383 passed, 14 skipped, 152 deselected in 309.81s (0:05:09)` |
+| `tests/draft` | `330 passed, 1 warning in 175.32s (0:02:55)` |
+| `tests/editor` | `478 passed, 1 warning in 294.09s (0:04:54)` |
+| `tests/identity` | `77 passed in 1.64s` |
+| `tests/deep -m "not timing"` | `224 passed, 4 skipped, 1 deselected, 1 warning in 338.11s (0:05:38)` |
+
+`node --test tests/editor_frontend/*.test.mjs tests/picks/picks_logic.test.mjs tests/picks/sourcelimit.test.mjs`: `ℹ tests 314`, `ℹ pass 314`, `ℹ fail 0`, `ℹ skipped 0` (310 of the first build and the 4 of `at_param.test.mjs`).
+In a worktree there is no `.venv`, so the one test that asks Python for `ISSUE_CODES` (`every code in bti.engine.storyboard.ISSUE_CODES has a Vietnamese template`) is skipped ("no .venv/bin/python", 313 passed, 1 skipped); I ran it with a temporary `.venv/bin/python` that points to the system Python (removed again) and it passes: every engine code, `param_bad_at` and `map_view_coarse` included, has a Vietnamese sentence.
+
+### Stills (`.scratch/mapfix/stills/` in the worktree, 1280 px, rendered on the server)
+Contact sheets: `sheet_default.png`, `sheet_sepia.png`, `sheet_fjord.png`, `sheet_venice.png`, `sheet_france.png`; the single stills `<name>_<seconds>.png` (default and sepia at 0.3, 1.4, 2.6, 4.2, 6.4, 7.6 s; fjord, venice, france at six moments).

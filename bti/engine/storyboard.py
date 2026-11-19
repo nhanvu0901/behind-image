@@ -293,6 +293,9 @@ def _resolve_item_anchors(spec: dict, params, tm: Timing, t0: float, t1: float) 
             for f in fields:
                 if isinstance(it, dict) and isinstance(it.get(f), dict):
                     _resolve_anchor(it[f], tm, t0, t1)
+    for name in R.at_params(spec):                      # a param that is one moment: its word anchor is resolved the same way
+        if isinstance(params.get(name), dict):
+            _resolve_anchor(params[name], tm, t0, t1)
 
 
 # ----------------------------------------------------------------------------- paths and references
@@ -531,6 +534,7 @@ ISSUE_CODES = {
     "camera_key_range": "A camera key cx/cy/zoom is out of range. args: param, technique, index, limit, zoom_max.",
     "camera_key_anchor": "A camera key `at` is not an anchor. args: param, technique, index.",
     "identity_style_unknown": "`identity` is not an object with a `style` the style's identity block lists (error). args: style, allowed.",
+    "param_bad_at": "A parameter that is one moment (type `at`) is neither a number of seconds nor a word anchor. args: param, technique.",
     "param_not_items": "An items parameter (a list of records) is not a list. args: param, technique.",
     "item_not_object": "An item of an items parameter is not an object. args: param, technique, index (0-based), item (its name).",
     "item_unknown_field": "An item has a field its parameter does not declare. args: param, technique, index, field, item, allowed.",
@@ -548,6 +552,7 @@ ISSUE_CODES = {
     "map_route_unknown_place": "A route end of a MAP-01 names no place. args: param, technique, index (the route), field (from|to), place.",
     "map_bad_via": "A route's `via` of a MAP-01 is not a list of `lon,lat` pairs inside the world. args: param, technique, index (the route).",
     "map_bad_center": "A view centre of a MAP-01 is not `lon, lat` inside the world (lon -180..180, lat -85..85). args: param, technique.",
+    "map_view_coarse": "The start or the end view of a MAP-01 is narrower than 300 km (warning): Natural Earth has no detail at that scale. args: param, technique, width_km.",
     "map_unknown_iso": "A region code of a MAP-01 is not an ISO 3166-1 alpha-2 code of the bundled countries. args: param, technique, index, code.",
     "element_too_short": "A shot or overlay of the channel identity (`ID-`) or of an explanatory component (`MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-`) is shorter than the technique's `timing.min_s` (error). args: technique, min, got.",
     "identity_technique_mismatch": "A structure shot (title slot or chapter card) uses a technique that is not the one of the chosen identity style (warning). args: shot, technique, style, wanted."
@@ -767,6 +772,16 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
                         tm.resolve(a, t0, t1)
                     except AnchorError as e:
                         err(ip, str(e), "item_anchor_invalid", param=name, index=i, field=f, item=lab)
+        for name in R.at_params(spec):                  # a param that is one moment
+            a = params.get(name)
+            if isinstance(a, dict):
+                m = tm.stale(a)
+                if m:
+                    err("%s.params.%s" % (path, name), m, "stale_anchor", param=name)
+                try:
+                    tm.resolve(a, t0, t1)
+                except AnchorError as e:
+                    err("%s.params.%s" % (path, name), str(e), "anchor_invalid", param=name)
 
     # -- end and shots ---------------------------------------------------------------------------------------
     end = sb.get("end")

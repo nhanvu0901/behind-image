@@ -27,14 +27,14 @@ The terms add that anyone who wishes to cite the data may write "Made with Natur
 The zip files are not kept in the repository (public domain, free to fetch again). `tools/geo/build_bundle.py --downloads DIR --fetch` downloads them
 into `DIR` and rebuilds the bundle; the same downloads always give byte-identical files (zip entries carry a fixed date), so the hashes below can be checked.
 
-## Stored files (2,036,798 bytes in all)
+## Stored files (2,071,791 bytes in all)
 
 | File | Bytes | sha256 (as stored) | Content |
 |---|---|---|---|
 | `land_50m.npz` | 254697 | `c933b25e8c1e7287ec6d9df5ac22e957b67c7504d9b8389f3f22b7ef59296236` | rings 1422, vertices 59239 |
 | `land_10m.npz` | 1359537 | `798ee3bdedb8824656259fdb466a4da577e1802b1ffb632b2afb411e5e8da2b0` | rings 6838, vertices 439317 |
 | `countries_50m.npz` | 413130 | `20917462d9b4962db93cc1710e3d25c700ef793af4ca2d239e8c3f5fe6ed0eb2` | rings 1629, vertices 97832, countries 237 |
-| `seas.json` | 9434 | `caaf894813eb2716c00a9effe876a9e982c08b37af0b41b75b3c914b8aa66857` | names 113 |
+| `seas.json` | 44427 | `718e57af6d0ec2765aa99e8d88ae9f746477d087c5478912c8302bd5252d839b` | names 113 |
 
 `manifest.json` holds the same numbers (a test compares them with the files and with this README).
 
@@ -53,7 +53,8 @@ Longitudes are -180 to 180; latitudes are held to the Web Mercator limit (85.051
 * `countries_50m.npz`: the countries at 1:50m with their ISO 3166-1 alpha-2 codes (`ISO_A2_EH`, which gives France and Norway their codes; territories
   without a code are left out) and their names; `region_iso` of the technique reads it.
 * `seas.json`: 113 names of oceans, seas, gulfs, bays, straits and channels (Natural Earth marine polygons, scale rank 0 to 4),
-  each with a position (longitude, latitude), its rank and its extent in km. The position is the pole of inaccessibility of the polygon, except for the
+  each with a position (longitude, latitude), its rank, its extent in km and its outline (`poly`: the outlines of the sea simplified to 0.3 degree, flat lists of integers
+  in tenths of a degree; the engine uses them only to keep a sea's name inside its own sea). The position is the pole of inaccessibility of the polygon, except for the
   seas listed in `LABEL_AT` of the build script, which have hand-placed positions (the four of the approved mock-up, and the other seas a plate names).
 
 ## What is not in it

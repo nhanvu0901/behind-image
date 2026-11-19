@@ -48,7 +48,7 @@ PRESETS = {
 SHADE_HALF, SHADE_SIGMA = 26.0, 11.0                # the stroke of 52 px, blurred by 11 px
 LINE1 = (11.8, 13.5)                                # the outer water line: from 11.8 to 13.5 px out of the coast
 LINE2 = (5.8, 7.5)                                  # the inner one
-K_MIN, K_MAX = 0.6, 1.65
+K_MIN, K_MAX = 0.6, 1.617                           # the widths that live in map space scale with the zoom since the start view, never above the zoom of the default example's end view (3,800 to 2,348 km: 1.617)
 # ---- screen-space sizes (percent of the frame height unless noted)
 COAST_PX, COAST_A = 3, 0.85                         # ink coastline, 85 percent: the mock-up's 1.5 CSS px on a stage 540 px high is 3 px of 1080
 GRAT_PX, GRAT_A = 2, 0.09                           # graticule: 1 CSS px of that stage, 9 percent
@@ -65,9 +65,13 @@ GRAIN_COL = (0.45, 0.38, 0.30)                     # RGB of the paper-grain mult
 GRAIN_MU, GRAIN_SIGMA = 0.0213, 0.0224             # alpha of the grain: max(0, mu + sigma * z), z unit noise
 VIG_COL, VIG_A, VIG_FROM = (59, 47, 38), 0.26, 0.58
 SEA_MIN_SHARE = {0: 0.08, 1: 0.08, 2: 0.08, 3: 0.30}   # a sea of rank r is named when its extent is at least this share of the view width (rank 4 and up: 0.45)
-LAND_UNDER_NAME = {0: 0.30, 1: 0.30}              # ... except that a major sea (rank 0, 1) may have up to 30 percent, else 10 percent
-LAND_UNDER_DEFAULT = 0.10
-#                             # a sea name is not printed when more of its box than this is land
+SAMPLES = (0.0, 0.25, 0.5, 0.75, 1.0)               # the views of the push (progress 0..1) where labels are placed: the start, the middle, the end and between
+INK_MARGIN = 5                                      # a place label keeps this many px off the coastline, the water lines and the outline of a region
+SEA_CLEAR_PX = 8                                    # a sea name keeps this many px beyond the outer water line off the land
+REGION_MARGIN_IN, REGION_MARGIN_OUT = 6, 10         # clearance of the region's name inside its outline, and outside it
+GAP_STEPS = (1.0, 2.0, 3.0)                         # a place label is tried at its gap, then twice and three times as far from its mark
+SEA_RADIUS = (0.45, 2500.0)                         # a sea name may sit this share of its sea's extent (at most this many km) from the sea's listed position, inside the sea's outline
+COARSE_KM = 300.0                                   # a view narrower than this is a warning: the data has no detail there
 MAX_VIA = 12                                       # bend points of one route
 SIDES = ("auto", "n", "ne", "e", "se", "s", "sw", "w", "nw")
 PREFERENCE = ("se", "ne", "e", "sw", "nw", "w", "s", "n")
@@ -277,6 +281,40 @@ def chaikin(x, y, iterations, keep_over=160.0):
 SMOOTH_FROM_PX, SMOOTH_TO_PX = 8.0, 6.0     # outlines whose median segment is longer than the first are smoothed until it is about the second
 
 
+class Field:
+    """What the picture holds in one view that a label must keep off, at the frame's size: the land, the distance of every sea pixel to the
+    coast (quantised like the colour table: `idx` = distance in px x IDX_PER_PX, 0 on land), the coast stroke, and the region's fill and
+    outline (set by the caller). Boxes are (x0, y0, x1, y1) in px."""
+
+    def __init__(self, view, k, idx, coast, land):
+        self.view, self.k, self.idx, self.coast, self.land = view, k, idx, coast, land
+        self.region_fill = self.region_line = None
+        # the two water lines as ranges of `idx` (a pixel next to the land is 0.5 px from its edge), a pixel wider than the line itself
+        self.bands = [(int(max(0.0, (lo * k - 1.0 + 0.5) * IDX_PER_PX)), int((hi * k + 1.0 + 0.5) * IDX_PER_PX)) for lo, hi in (LINE2, LINE1)]
+
+    @staticmethod
+    def cut(a, box, m):
+        """The part of the array `a` that lies within `m` px of the box."""
+        h, w = a.shape[:2]
+        x0, y0 = max(0, int(math.floor(box[0] - m))), max(0, int(math.floor(box[1] - m)))
+        x1, y1 = min(w, int(math.ceil(box[2] + m))), min(h, int(math.ceil(box[3] + m)))
+        return a[y0:y1, x0:x1] if x1 > x0 and y1 > y0 else a[:0, :0]
+
+    def ink_in(self, box, m) -> bool:
+        """Whether ink lies within `m` px of the box: the coast stroke, one of the two water lines, the outline of the region."""
+        if self.cut(self.coast, box, m).max(initial=0) > 60:
+            return True
+        sub = self.cut(self.idx, box, m)
+        if sub.size and any(((sub >= a) & (sub <= b)).any() for a, b in self.bands):
+            return True
+        return self.region_line is not None and self.cut(self.region_line, box, m).max(initial=0) > 60
+
+    def water_clear(self, box, m, beyond) -> bool:
+        """Whether every pixel within `m` px of the box is sea, more than `beyond` px outside the outer water line."""
+        sub = self.cut(self.idx, box, m)
+        return bool(sub.size) and int(sub.min()) > (LINE1[1] * self.k + beyond + 0.5) * IDX_PER_PX
+
+
 class BaseMap:
     """Everything of one frame that is the map itself (no marks, no text)."""
 
@@ -347,17 +385,29 @@ class BaseMap:
             a = b
 
     # -- one frame --------------------------------------------------------------------------------------------
-    def draw(self, view, k: float):
-        """(BGR uint8 frame, land coverage uint8 frame): the sea with its shade and water lines, the land, graticule and coastline."""
-        res = geo.level_for(view.width_km)
-        layer = geo.land(res)
+    def land_and_distance(self, view):
+        """(layer, projected rings, land coverage, distance of the sea pixels to the coast), all on the canvas that is PAD px larger than the frame."""
+        layer = geo.land(geo.level_for(view.width_km))
         Hp, Wp = view.h + 2 * PAD, view.w + 2 * PAD
         rings = self.project(layer, view, PAD)
         m = np.zeros((Hp, Wp), np.uint8)
         if rings:
             self.fill(m, rings, layer.hole)
         sea = cv2.threshold(m, 127, 255, cv2.THRESH_BINARY_INV)[1]
-        dist = cv2.distanceTransform(sea, cv2.DIST_L2, 5)
+        return layer, rings, m, cv2.distanceTransform(sea, cv2.DIST_L2, 5)
+
+    def field(self, view, k: float) -> Field:
+        """What a label must keep off in `view` (without the region, which the caller adds)."""
+        layer, rings, m, dist = self.land_and_distance(view)
+        ink = np.zeros(m.shape, np.uint8)
+        self.draw_coast(ink, rings, layer)
+        crop = (slice(PAD, PAD + view.h), slice(PAD, PAD + view.w))
+        return Field(view, k, np.ascontiguousarray(cv2.convertScaleAbs(dist, alpha=IDX_PER_PX)[crop]), np.ascontiguousarray(ink[crop]), np.ascontiguousarray(m[crop]))
+
+    def draw(self, view, k: float):
+        """(BGR uint8 frame, land coverage uint8 frame): the sea with its shade and water lines, the land, graticule and coastline."""
+        layer, rings, m, dist = self.land_and_distance(view)
+        Hp, Wp = m.shape
         idx = cv2.convertScaleAbs(dist, alpha=IDX_PER_PX)
         lut = profile_lut(self.pr, k)
         base = cv2.merge([cv2.LUT(idx, np.ascontiguousarray(lut[:, c])) for c in range(3)])
@@ -479,6 +529,19 @@ def px_of(view, lon_rad, my):
 
 
 # ----------------------------------------------------------------------------- the technique
+def _in_sea(contours, lon, lat, tol=0.25) -> bool:
+    """Whether the point lies inside the outline of a sea (even-odd over its outlines, the world repeated once on each side) or within `tol` degrees of it."""
+    for shift in (-360.0, 0.0, 360.0):
+        n, near = 0, False
+        for c in contours:
+            d = cv2.pointPolygonTest(c, (lon + shift, lat), True)
+            near = near or abs(d) < tol
+            n += d >= 0
+        if near or n % 2:
+            return True
+    return False
+
+
 def _box_hits(a, b, pad=0.0) -> bool:
     return not (a[2] + pad < b[0] or b[2] + pad < a[0] or a[3] + pad < b[1] or b[3] + pad < a[1])
 
@@ -499,7 +562,7 @@ class AtlasMap(BaseRenderer):
     @classmethod
     def check_params(cls, p: dict):
         """Rules between params: place ids are unique, every route end names a place, `via` and the view centres are inside the world,
-        every region code is a country of the bundled data. Returns [(param, code, args, message)]."""
+        every region code is a country of the bundled data; a view narrower than 300 km is a warning. Returns [(param, code, args, message[, "warn"])]."""
         out = []
         seen = {}
         for i, pl in enumerate(p["places"]):
@@ -525,6 +588,18 @@ class AtlasMap(BaseRenderer):
             for i, c in enumerate(p["region_iso"]):
                 if str(c).strip().upper() not in known:
                     out.append(("region_iso", "map_unknown_iso", {"index": i, "code": c}, "line %d: %r is not the ISO code of a country in the bundled data" % (i + 1, c)))
+        if not out:                                           # a warning, never an error: Natural Earth has no detail in a view narrower than COARSE_KM
+            starts = [("view_start_width_km", float(p["view_start_width_km"]))]
+            if p["view_end_mode"] == "manual":
+                starts.append(("view_end_width_km", float(p["view_end_width_km"])))
+            else:
+                pts = [tuple(pl["lonlat"]) for pl in p["places"]]
+                for rt in p["route"]:
+                    pts += parse_pairs(rt.get("via", "")) or []
+                starts.append(("view_end_mode", geo.fit(pts, float(p["view_end_margin_pct"])).width_km))
+            for name, width in starts:
+                if width < COARSE_KM:
+                    out.append((name, "map_view_coarse", {"width_km": round(width)}, "the view is %d km wide: the coast has no detail that close (use a street-map picture for a spot inside a city)" % round(width), "warn"))
         return out
 
     # -- construction ------------------------------------------------------------------------------------------
@@ -574,8 +649,15 @@ class AtlasMap(BaseRenderer):
         if self.region and str(p["region_label"]).strip():
             self.region_label = self.patch(str(p["region_label"]).strip(), "eb_regular", REGION_CAP / 100.0 * H, SEA_TRACK, True)
         self.region_pole = self.pole_of_region() if self.region_label is not None else None
-        self.sides = self.place_labels()
-        self.region_nudge = self.nudge_region_label() if self.region_label is not None else (0.0, 0.0)
+        self.region_at = R.at_seconds(p["region_at"], self.t0, 0.0)
+        self.label_at, self.sides, self.region_offset, self.sea_names = {}, {}, None, []
+        views, fields = self.build_fields()
+        route_pts = [[r["path"].samples(v, 300) for r in self.routes] for v in views]
+        marks = [[px_of(v, pl["lon_rad"], pl["my"]) for pl in self.places] for v in views]
+        self.label_at, self.sides = self.place_labels(views, fields, route_pts, marks)
+        self.region_offset = self.place_region_label(views, fields, route_pts, marks)
+        if p["sea_names"] and int(p["sea_names_max"]) > 0:
+            self.sea_names = self.place_sea_names(views, fields, route_pts, marks)
 
     def patch(self, text, kind, cap_px, tracking=0.0, upper=False):
         key = ("mappatch", text, kind, round(cap_px, 2), tracking, upper)
@@ -590,54 +672,113 @@ class AtlasMap(BaseRenderer):
         return min(K_MAX, max(K_MIN, view.s / self.s_ref))
 
     # -- labels ------------------------------------------------------------------------------------------------
-    def label_box(self, pl, side, x, y):
-        """(left, baseline, box) of the label of place `pl` on `side` of its mark at (x, y); box = (x0, y0, x1, y1) of the ink."""
+    def side_offset(self, pl, side, mult=1.0):
+        """(dx, dy) from the mark of place `pl` to the left edge and the baseline of its label, for a compass side; `mult` widens the gap."""
         pt = self.name_patch[pl["id"]]
-        w, cap, g = pt.width, pt.cap, LABEL_GAP / 100.0 * H
-        gv = (LABEL_GAP + 0.2) / 100.0 * H
-        left, base = {
-            "ne": (x + g, y - g), "nw": (x - g - w, y - g), "se": (x + g, y + g + cap), "sw": (x - g - w, y + g + cap),
-            "e": (x + g, y + cap / 2), "w": (x - g - w, y + cap / 2), "n": (x - w / 2, y - gv), "s": (x - w / 2, y + gv + cap),
-        }[side]
-        return left, base, (left, base - 1.1 * cap, left + w, base + 0.3 * cap)
+        w, cap, g = pt.width, pt.cap, LABEL_GAP / 100.0 * H * mult
+        gv = (LABEL_GAP + 0.2) / 100.0 * H * mult
+        return {"ne": (g, -g), "nw": (-g - w, -g), "se": (g, g + cap), "sw": (-g - w, g + cap), "e": (g, cap / 2), "w": (-g - w, cap / 2),
+                "n": (-w / 2, -gv), "s": (-w / 2, gv + cap)}[side]
+
+    def box_at(self, pl, dx, dy, x, y):
+        """(left, baseline, box) of the label of place `pl` whose left edge and baseline are (dx, dy) from its mark at (x, y); box = (x0, y0, x1, y1) of the ink."""
+        pt = self.name_patch[pl["id"]]
+        left, base = x + dx, y + dy
+        return left, base, (left, base - 1.1 * pt.cap, left + pt.width, base + 0.3 * pt.cap)
+
+    def label_box(self, pl, side, x, y, mult=1.0):
+        """`box_at` for a compass side of the mark."""
+        return self.box_at(pl, *self.side_offset(pl, side, mult), x, y)
+
+    def placed(self, pl, x, y):
+        """`box_at` for the place where the label of `pl` was put (`place_labels`)."""
+        return self.box_at(pl, *self.label_at[pl["id"]], x, y)
+
+    @staticmethod
+    def compass(dx, dy, w, cap) -> str:
+        """The compass name of where a label lies from its mark (its box centre)."""
+        cx, cy = dx + w / 2, dy - cap * 0.4
+        ang = math.degrees(math.atan2(-cy, cx)) % 360
+        return ("e", "ne", "n", "nw", "w", "sw", "s", "se")[int((ang + 22.5) // 45) % 8]
 
     def sample_views(self):
-        return [geo.ease_view(self.start, self.end, e) for e in (0.0, 0.5, 1.0)]
+        """The views where labels are placed: along the push from the start view to the end view (just the end view when there is no push)."""
+        if self.push_s <= 0:
+            return [self.end]
+        return [geo.ease_view(self.start, self.end, e) for e in SAMPLES]
 
-    def place_labels(self):
-        """The side of every label: `label_side` when it is not `auto`, else the first of the preference order whose label touches neither
-        the route nor another mark nor another label nor the frame edge in the start view, the middle of the push and the end view."""
+    def build_fields(self):
+        """(views, fields): what each sample view holds that a label must keep off (see `Field`), the region's fill and outline included."""
         views = self.sample_views()
-        route_pts = [[r["path"].samples(v) for r in self.routes] for v in views]
-        marks = [[px_of(v, pl["lon_rad"], pl["my"]) for pl in self.places] for v in views]
-        chosen, boxes = {}, [[] for _ in views]
+        fields = []
+        for v in views:
+            fd = self.base.field(v, self.scale_k(v))
+            if self.region:
+                fd.region_fill, fd.region_line = self.region_masks(v, fd.land)
+            fields.append(fd)
+        return views, fields
+
+    @staticmethod
+    def off_frame(box) -> bool:
+        return box[0] < 0.01 * W or box[2] > 0.99 * W or box[1] < 0.01 * H or box[3] > 0.99 * H
+
+    def place_labels(self, views, fields, route_pts, marks):
+        """Where every place label goes, as (dx, dy) from its mark to the left edge and the baseline of the label. `label_side` is kept when it is given.
+        Else the first of the eight sides, in the order of `PREFERENCE`, whose label has no ink under it (coastline, water lines, outline of the region, `INK_MARGIN` px
+        of clearance) and touches neither the route nor a mark nor another label nor the frame edge, in every sample view; when none of the eight does, the same
+        eight twice and three times as far from the mark (`GAP_STEPS`); when none does, the nearest place on a grid of offsets that does; when there is none, the
+        cheapest of the compass places. Returns ({id: (dx, dy)}, {id: compass name})."""
+        label_at, compass, boxes = {}, {}, [[] for _ in views]
         r_mark = (MARK_R + 0.3) / 100.0 * H
-        for n, pl in enumerate(self.places):
-            order = PREFERENCE if pl["side"] == "auto" else (pl["side"],)
-            best, best_cost = order[0], None
-            for rank, side in enumerate(order):
-                cost = rank * 0.01
-                for vi, v in enumerate(views):
-                    x, y = marks[vi][n]
-                    _l, _b, box = self.label_box(pl, side, x, y)
-                    if any(_box_near_points(box, rp, 0.006 * H) for rp in route_pts[vi]):
-                        cost += 10
-                    for m, (mx, my) in enumerate(marks[vi]):
-                        if m != n and _box_hits(box, (mx - r_mark, my - r_mark, mx + r_mark, my + r_mark), 2):
-                            cost += 10
-                    if any(_box_hits(box, o, 0.004 * H) for o in boxes[vi]):
-                        cost += 10
-                    if box[0] < 0.01 * W or box[2] > 0.99 * W or box[1] < 0.01 * H or box[3] > 0.99 * H:
-                        cost += 4
-                if best_cost is None or cost < best_cost - 1e-9:
-                    best, best_cost = side, cost
-                if cost < 0.5 and pl["side"] == "auto":
-                    break                                              # the first side of the preference order that is clear
-            chosen[pl["id"]] = best
+
+        def cost(pl, n, dx, dy, stop=None):
+            c = 0.0
             for vi in range(len(views)):
                 x, y = marks[vi][n]
-                boxes[vi].append(self.label_box(pl, best, x, y)[2])
-        return chosen
+                box = self.box_at(pl, dx, dy, x, y)[2]
+                c += 10 * fields[vi].ink_in(box, INK_MARGIN)
+                c += 10 * any(_box_near_points(box, rp, 0.006 * H) for rp in route_pts[vi])
+                c += 10 * any(m != n and _box_hits(box, (mx - r_mark, my - r_mark, mx + r_mark, my + r_mark), 2) for m, (mx, my) in enumerate(marks[vi]))
+                c += 10 * any(_box_hits(box, o, 0.004 * H) for o in boxes[vi])
+                c += 4 * self.off_frame(box)
+                if stop is not None and c >= stop:
+                    break
+            return c
+
+        for n, pl in enumerate(self.places):
+            pt = self.name_patch[pl["id"]]
+            name = pl["side"]
+            if pl["side"] != "auto":
+                chosen = self.side_offset(pl, pl["side"])
+            else:
+                cands = [(side, self.side_offset(pl, side, g)) for g in GAP_STEPS for side in PREFERENCE]
+                chosen, best_cost = None, None
+                for rank, (side, (dx, dy)) in enumerate(cands):
+                    c = cost(pl, n, dx, dy) + rank * 0.001
+                    if best_cost is None or c < best_cost - 1e-9:
+                        chosen, best_cost, name = (dx, dy), c, side
+                    if c < 0.5:
+                        break
+                if best_cost >= 0.5:                                        # crowded: the nearest free place on a grid of offsets
+                    grid = sorted(((dx, dy) for dy in range(-170, 171, 6) for dx in range(-240, 241, 6)),
+                                  key=lambda o: self._gap_to_mark(pt, o))
+                    for dx, dy in grid:
+                        if self._gap_to_mark(pt, (dx, dy)) >= LABEL_GAP / 100.0 * H and cost(pl, n, dx, dy, 0.5) < 0.5:
+                            chosen, name = (dx, dy), self.compass(dx, dy, pt.width, pt.cap)
+                            break
+            label_at[pl["id"]] = chosen
+            compass[pl["id"]] = name
+            for vi in range(len(views)):
+                x, y = marks[vi][n]
+                boxes[vi].append(self.box_at(pl, chosen[0], chosen[1], x, y)[2])
+        return label_at, compass
+
+    @staticmethod
+    def _gap_to_mark(pt, off) -> float:
+        """Distance from a mark to the box of a label whose left edge and baseline are `off` from it."""
+        dx, dy = off
+        x0, x1, y0, y1 = dx, dx + pt.width, dy - 1.1 * pt.cap, dy + 0.3 * pt.cap
+        return math.hypot(max(x0, 0.0, -x1), max(y0, 0.0, -y1))
 
     def pole_of_region(self):
         """Longitude and latitude (degrees) of the label of the region: the point of the biggest country ring that is furthest from its edge."""
@@ -663,48 +804,97 @@ class AtlasMap(BaseRenderer):
         j, k = np.unravel_index(int(np.argmax(dt)), dt.shape)
         return float(np.degrees((k - 1 + 0.5) / sc + x0)), float(geo.inv_merc((j - 1 + 0.5) / sc + y0))
 
-    def nudge_region_label(self):
-        """A small shift (px) that keeps the region's name off the marks, the labels, the route and the outline of the region: tried at the
-        start view, the middle of the push and the end view (the end view counts most). (0, 0) when the pole of the region already is clear."""
-        if self.region_pole is None:
-            return (0.0, 0.0)
+    def place_region_label(self, views, fields, route_pts, marks):
+        """Where the region's name goes, as a shift (px) from the region's pole: INSIDE the region when the name fits there with `REGION_MARGIN_IN` px of
+        clearance, else OUTSIDE it, beside it on free ground (`REGION_MARGIN_OUT` px off the region); in every sample view the box has no ink under it
+        (coastline, water lines, the outline), touches no mark, no place label, no route and not the frame edge. The nearest such place to the pole;
+        None when there is none (the name is then left out)."""
+        if self.region_label is None or self.region_pole is None:
+            return None
         rl = self.region_label
         w, cap = rl.width, rl.cap
-        views = self.sample_views()
-        lay = geo.countries()
-        wanted = np.isin(np.arange(len(lay.iso)), [lay.iso.index(c) for c in self.region if c in lay.iso])
-        masks = []
-        for v in views:
-            m = np.zeros((H, W), np.uint8)
-            rings = BaseMap.project(lay, v, 0, wanted[lay.aux])
-            if rings:
-                BaseMap.fill(m, rings, lay.hole)
-            masks.append(m)
-        weight = (0.5, 1.5, 3.0)
-        best, best_cost = (0.0, 0.0), None
-        offsets = [(dx * w, dy * H) for dy in (0, 0.02, -0.02, 0.04, -0.04) for dx in (0, 0.3, -0.3, 0.55, -0.55)]
-        for dx, dy in offsets:
-            cost = 0.0
-            for v, m, wt in zip(views, masks, weight):
-                cx, cy = (float(a) for a in v.to_px(*self.region_pole))
-                box = (cx + dx - w / 2, cy + dy - cap / 2 - 2, cx + dx + w / 2, cy + dy + cap / 2 + 2)
-                inside = m[max(0, int(box[1]) - 3):int(box[3]) + 3, max(0, int(box[0]) - 3):int(box[2]) + 3]
-                if inside.size:
-                    cost += 10.0 * wt * float((inside < 128).mean())              # the part of the box that is outside the region (the outline is on the edge)
-                for pl in self.places:
-                    mx, my = px_of(v, pl["lon_rad"], pl["my"])
-                    r = (MARK_R + 0.3) / 100.0 * H
-                    if _box_hits(box, (mx - r, my - r, mx + r, my + r), 2):
-                        cost += 10
-                    if _box_hits(box, self.label_box(pl, self.sides[pl["id"]], mx, my)[2], 4):
-                        cost += 10
-                for r_ in self.routes:
-                    if _box_near_points(box, r_["path"].samples(v), 4):
-                        cost += 5
-            cost += (abs(dx) + abs(dy)) * 1e-3
-            if best_cost is None or cost < best_cost - 1e-9:
-                best, best_cost = (float(dx), float(dy)), cost
-        return best
+        poles = [tuple(float(a) for a in v.to_px(*self.region_pole)) for v in views]
+        label_boxes = [[self.placed(pl, *marks[vi][n])[2] for n, pl in enumerate(self.places)] for vi in range(len(views))]
+        r_mark = (MARK_R + 0.3) / 100.0 * H
+        offsets = sorted(((dx, dy) for dy in range(-330, 331, 22) for dx in range(-560, 561, 22)), key=lambda o: o[0] ** 2 + o[1] ** 2)
+        for inside in (True, False):
+            margin = REGION_MARGIN_IN if inside else REGION_MARGIN_OUT
+            for dx, dy in offsets:
+                ok = True
+                for vi, fd in enumerate(fields):
+                    cx, cy = poles[vi]
+                    box = (cx + dx - w / 2, cy + dy - cap / 2 - 2, cx + dx + w / 2, cy + dy + cap / 2 + 2)
+                    if self.off_frame(box) or fd.ink_in(box, margin):
+                        ok = False
+                        break
+                    sub = fd.cut(fd.region_fill, box, margin)
+                    if inside and not (sub.size and sub.min() > 127) or not inside and sub.max(initial=0) > 127:
+                        ok = False
+                        break
+                    if any(_box_near_points(box, rp, 6) for rp in route_pts[vi]) \
+                            or any(_box_hits(box, (mx - r_mark, my - r_mark, mx + r_mark, my + r_mark), 4) for mx, my in marks[vi]) \
+                            or any(_box_hits(box, o, 6) for o in label_boxes[vi]):
+                        ok = False
+                        break
+                if ok:
+                    return (float(dx), float(dy))
+        return None
+
+    def region_box(self, view):
+        """The box of the region's name in `view` (None when it has no place)."""
+        if self.region_offset is None:
+            return None
+        cx, cy = (float(a) for a in view.to_px(*self.region_pole))
+        rl = self.region_label
+        return (cx + self.region_offset[0] - rl.width / 2, cy + self.region_offset[1] - rl.cap / 2 - 2, cx + self.region_offset[0] + rl.width / 2, cy + self.region_offset[1] + rl.cap / 2 + 2)
+
+    def place_sea_names(self, views, fields, route_pts, marks):
+        """The sea names that can be printed, each with a fixed position (longitude, latitude). A name lies WHOLLY on water: in every sample view where
+        it would be printed (its sea is big enough for that view and its text is inside the frame) every pixel within a few px of its text is sea,
+        `SEA_CLEAR_PX` px beyond the outer water line; and it touches no route, mark, label or other name. The position is looked for around the sea's
+        listed position (`SEA_RADIUS`), nearest first; when there is none the name is left out. Most important sea first."""
+        cap = SEA_CAP / 100.0 * H
+        r_mark = (MARK_R + 0.4) / 100.0 * H
+        taken = [[self.placed(pl, *marks[vi][n])[2] for n, pl in enumerate(self.places)] for vi in range(len(views))]
+        for vi, v in enumerate(views):
+            if self.region_box(v) is not None:
+                taken[vi].append(self.region_box(v))
+        out = []
+        for s in geo.seas():
+            elig = [vi for vi, v in enumerate(views) if s["extent_km"] / v.width_km >= SEA_MIN_SHARE.get(s["rank"], 0.45)]
+            if not elig:
+                continue
+            lon0, my0 = math.radians(s["lon"]), float(geo.merc(s["lat"]))
+            rw = min(SEA_RADIUS[0] * s["extent_km"], SEA_RADIUS[1]) / (geo.EARTH_KM * max(math.cos(math.radians(s["lat"])), 0.05))
+            if all(abs(px_of(views[vi], lon0, my0)[0] - W / 2) > W / 2 + rw * views[vi].s + 300 or abs(px_of(views[vi], lon0, my0)[1] - H / 2) > H / 2 + rw * views[vi].s + 300 for vi in elig):
+                continue                                                # nowhere near any of the views
+            pt = self.patch(s["name"], "eb_regular", cap, SEA_TRACK, True)
+            contours = [np.array(r, np.float32).reshape(-1, 1, 2) / 10.0 for r in s.get("poly") or []]
+            offsets = sorted(((i * rw / 4, j * rw / 4) for i in range(-4, 5) for j in range(-4, 5)), key=lambda o: o[0] ** 2 + o[1] ** 2) if contours else [(0.0, 0.0)]
+            for dx, dy in offsets:
+                lon_rad, my = lon0 + dx, my0 + dy
+                if contours and not _in_sea(contours, math.degrees(lon_rad), float(geo.inv_merc(my))):
+                    continue                                            # that is not in this sea
+                seen, ok, boxes = False, True, {}
+                for vi in elig:
+                    x, y = px_of(views[vi], lon_rad, my)
+                    box = (x - pt.width / 2, y - pt.cap / 2 - 2, x + pt.width / 2, y + pt.cap / 2 + 2)
+                    if self.off_frame(box):
+                        continue
+                    seen = True
+                    if not fields[vi].water_clear(box, 4, SEA_CLEAR_PX) \
+                            or any(_box_near_points(box, rp, 0.006 * H) for rp in route_pts[vi]) \
+                            or any(_box_hits(box, (mx - r_mark, my_ - r_mark, mx + r_mark, my_ + r_mark), 4) for mx, my_ in marks[vi]) \
+                            or any(_box_hits(box, o, 6) for o in taken[vi]):
+                        ok = False
+                        break
+                    boxes[vi] = box
+                if ok and seen:
+                    for vi, box in boxes.items():
+                        taken[vi].append(box)
+                    out.append({"name": s["name"], "lon_rad": lon_rad, "my": my, "rank": s["rank"], "extent": s["extent_km"], "patch": pt})
+                    break
+        return out
 
     # -- one frame ---------------------------------------------------------------------------------------------
     def render(self, t):
@@ -719,28 +909,19 @@ class AtlasMap(BaseRenderer):
         cv2.multiply(f, gain, f)
         cv2.add(f, off, f)
         if self.p["sea_names"]:
-            self.draw_sea_names(f, view, land)
+            self.draw_sea_names(f, view)
         self.draw_places(f, view, tau)
         return f
 
-    def draw_region(self, f, land, view, tau) -> None:
-        ra = float(self.p["region_at"])
-        rg = seg(tau, ra, ra + float(self.p["region_fill_s"]))
-        if rg <= 0 or not self.region:
-            return
+    def region_masks(self, view, land):
+        """(fill, outline) of the region in `view`: uint8 frames. On a narrow view the 1:10m land and the 1:50m countries differ at the coast, so both are kept on land."""
         lay = geo.countries()
         wanted = np.isin(np.arange(len(lay.iso)), [lay.iso.index(c) for c in self.region if c in lay.iso])
-        sel = wanted[lay.aux]
-        rings = BaseMap.project(lay, view, 0, sel)
+        fill, line = np.zeros((H, W), np.uint8), np.zeros((H, W), np.uint8)
+        rings = BaseMap.project(lay, view, 0, wanted[lay.aux])
         if not rings:
-            return
-        fill = np.zeros((H, W), np.uint8)
+            return fill, line
         BaseMap.fill(fill, rings, lay.hole)
-        if view.width_km < geo.NARROW_KM:
-            fill = cv2.multiply(fill, land, scale=1.0 / 255.0)            # the 1:10m land and the 1:50m countries differ at the coast: the tint stays on land
-        box = (0, 0, W, H)
-        blend_mask(f, fill, self.acc_bgr, 0.2 * rg, box)
-        line = np.zeros((H, W), np.uint8)
         open_l = []
         for i, x, y, p16, _s, _r in rings:
             if lay.hole[i]:
@@ -750,8 +931,17 @@ class AtlasMap(BaseRenderer):
         if open_l:
             cv2.polylines(line, open_l, False, 255, REGION_LINE_PX, cv2.LINE_AA, 4)
         if view.width_km < geo.NARROW_KM:
-            line = cv2.multiply(line, land, scale=1.0 / 255.0)
-        blend_mask(f, line, self.acc_bgr, 0.75 * rg, box)
+            fill, line = cv2.multiply(fill, land, scale=1.0 / 255.0), cv2.multiply(line, land, scale=1.0 / 255.0)
+        return fill, line
+
+    def draw_region(self, f, land, view, tau) -> None:
+        ra = self.region_at
+        rg = seg(tau, ra, ra + float(self.p["region_fill_s"]))
+        if rg <= 0 or not self.region:
+            return
+        fill, line = self.region_masks(view, land)
+        blend_mask(f, fill, self.acc_bgr, 0.2 * rg)
+        blend_mask(f, line, self.acc_bgr, 0.75 * rg)
 
     def draw_routes(self, f, view, k, tau) -> None:
         for r in self.routes:
@@ -784,52 +974,36 @@ class AtlasMap(BaseRenderer):
                 blend_disc(f, px, py, HALO_R * k, self.acc_bgr, HALO_A * ho)
                 blend_disc(f, px, py, HEAD_R * k, self.acc_bgr, ho)
 
-    def draw_sea_names(self, f, view, land) -> None:
-        """Up to `sea_names_max` names whose position is inside the view, whose sea is large enough for the view (extent at least 8 percent
-        of its width for the major seas, more for the minor ones: `SEA_MIN_SHARE`) whose text lies mostly on water (land under at most 30 percent of it, as the mock-up's Mediterranean crosses Sardinia)
-        and clear of the routes, the marks and the labels, most important sea first."""
-        width = view.width_km
-        cap = SEA_CAP / 100.0 * H
-        picked, boxes = 0, []
-        marks = [px_of(view, pl["lon_rad"], pl["my"]) for pl in self.places]
-        route_pts = [r["path"].samples(view, 300) for r in self.routes if r["path"].length > 0]
-        edge = 0.04 * H
-        for s in geo.seas():
-            if picked >= int(self.p["sea_names_max"]):
+    def visible_sea_names(self, view):
+        """[(name entry, x, y, box)] of the sea names printed in `view`: up to `sea_names_max` of the names placed at the start (`place_sea_names`) whose
+        position is inside the view and whose sea is big enough for it (`SEA_MIN_SHARE`), most important sea first."""
+        out = []
+        for nm in self.sea_names:
+            if len(out) >= int(self.p["sea_names_max"]):
                 break
-            if s["extent_km"] / width < SEA_MIN_SHARE.get(s["rank"], 0.45):
+            if nm["extent"] / view.width_km < SEA_MIN_SHARE.get(nm["rank"], 0.45):
                 continue
-            x, y = (float(a) for a in view.to_px(s["lon"], s["lat"]))
-            d = min(x, W - x, y, H - y)
-            if d <= 0:
-                continue
-            pt = self.patch(s["name"], "eb_regular", cap, SEA_TRACK, True)
+            x, y = px_of(view, nm["lon_rad"], nm["my"])
+            pt = nm["patch"]
             box = (x - pt.width / 2, y - pt.cap / 2 - 2, x + pt.width / 2, y + pt.cap / 2 + 2)
-            if box[0] < 0.01 * W or box[2] > 0.99 * W or box[1] < 0.01 * H or box[3] > 0.99 * H:
-                continue
-            if any(_box_hits(box, o, 6) for o in boxes):
-                continue
-            under = land[max(0, int(box[1])):int(box[3]), max(0, int(box[0])):int(box[2])]
-            if under.size and (under > 127).mean() > LAND_UNDER_NAME.get(s["rank"], LAND_UNDER_DEFAULT):
-                continue
-            if any(_box_near_points(box, rp, 0.006 * H) for rp in route_pts):
-                continue
-            rr = (MARK_R + 0.4) / 100.0 * H
-            if any(_box_hits(box, (mx - rr, my - rr, mx + rr, my + rr), 4) for mx, my in marks):
-                continue
-            if any(_box_hits(box, self.label_box(pl, self.sides[pl["id"]], mx, my)[2], 6) for pl, (mx, my) in zip(self.places, marks)):
-                continue
-            boxes.append(box)
-            picked += 1
-            apply_patch(f, pt, x - pt.width / 2, y + pt.cap / 2, self.ink_bgr, SEA_NAME_ALPHA * min(1.0, d / edge))
+            if not self.off_frame(box):
+                out.append((nm, x, y, box))
+        return out
+
+    def draw_sea_names(self, f, view) -> None:
+        """The sea names of `visible_sea_names`; a name fades in over the 4 percent of the frame height that borders the frame."""
+        edge = 0.04 * H
+        for nm, x, y, _box in self.visible_sea_names(view):
+            pt = nm["patch"]
+            apply_patch(f, pt, x - pt.width / 2, y + pt.cap / 2, self.ink_bgr, SEA_NAME_ALPHA * min(1.0, min(x, W - x, y, H - y) / edge))
 
     def draw_places(self, f, view, tau) -> None:
-        if self.region_label is not None and self.region_pole is not None:
-            ra = float(self.p["region_at"])
+        if self.region_offset is not None:
+            ra = self.region_at
             al = REGION_ALPHA * seg(tau, ra + 0.4 * float(self.p["region_fill_s"]), ra + float(self.p["region_fill_s"]))
             cx, cy = (float(a) for a in view.to_px(*self.region_pole))
             rl = self.region_label
-            apply_patch(f, rl, cx + self.region_nudge[0] - rl.width / 2, cy + self.region_nudge[1] + rl.cap / 2, self.acc_bgr, al)
+            apply_patch(f, rl, cx + self.region_offset[0] - rl.width / 2, cy + self.region_offset[1] + rl.cap / 2, self.acc_bgr, al)
         for pl in self.places:
             m = seg(tau, pl["at"], pl["at"] + self.fade)
             if m <= 0:
@@ -839,5 +1013,5 @@ class AtlasMap(BaseRenderer):
             blend_disc(f, x, y, MARK_DOT / 100.0 * H, self.acc_bgr, m)
             la = seg(tau, pl["at"] + 0.2, pl["at"] + 0.2 + self.fade)
             if la > 0:
-                left, base, _b = self.label_box(pl, self.sides[pl["id"]], x, y)
+                left, base, _b = self.placed(pl, x, y)
                 apply_patch(f, self.name_patch[pl["id"]], left, base, self.ink_bgr, la, self.land_bgr)

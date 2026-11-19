@@ -255,3 +255,4 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 .item-field .pt-ctl select { width: auto; min-width: 64px; flex: none; }
 .item-field .pt-ctl input[type=number] { width: auto; flex: 1; min-width: 56px; }
 .item-field .pt-ctl .hint { align-self: center; }
+.row .ctl .pt-ctl > select { width: auto; flex: none; min-width: 64px; }                       /* the "seconds | word" control of a param of type `at` */

@@ -28,7 +28,7 @@ codes). The rule behind the registry is: whatever `validate` accepts without an 
 `min_items`/`max_items` (points/lines/items), `fields` (items, below) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
 frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
 `RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
-four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 79 techniques and all thirteen param types.
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 79 techniques and all fourteen param types.
 
 ## Layout
 
@@ -143,7 +143,7 @@ registry and `default_params` must fill it when it can.
    ],
    "engine": {"status": "done", "available": true, "impl": "bti.engine.techniques.labels.SourceLabel", "reason": null, "notes": "..."}
    ```
-   Param types: `number, enum, bool, string, text, color (#rrggbb), point, box, camera, asset, points, lines, items`. Unknown params are errors for everyone, so list every knob. File format: `style/gae/techniques.schema.json`.
+   Param types: `number, enum, bool, string, text, color (#rrggbb), point, box, camera, asset, points, lines, items, at`. Unknown params are errors for everyone, so list every knob. File format: `style/gae/techniques.schema.json`.
 3. **Write the renderer** in the family module (`techniques/labels.py`) and decorate it with the id and kind:
 
    ```python
@@ -274,6 +274,15 @@ word anchor `{"w": index, "off": s, "text": word}`, `{"t": s}` or `{"rel": 0..1}
 * **Catalogue** (`bti/draft/techniques_md.py`): prints the fields, e.g. `places:items(1..12)[{id:string*, name:string*, lonlat:lonlat*, at:at[0..600]=1.0, ...}]`.
 * An element of the families `ID-`, `MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-` shorter than its technique's `timing.min_s` is the error `element_too_short`.
 
+## One moment: the parameter type `at`
+
+A param of type `at` is ONE moment: a number of seconds from the start of the element (held to the param's `min` and `max`), or a word anchor `{"w": index, "off": s, "text": word}`,
+`{"t": s}` or `{"rel": 0..1}` (a word, so that the moment lands on the word that names it). It is validated like the `at` field of an item (`param_bad_at`, `param_below_min`,
+`param_above_max`), resolved by `storyboard.resolve` in `_t` (absolute seconds, `rel` counts over the element) like every other anchor, and checked by `validate` (`stale_anchor`,
+`anchor_invalid`, with `param` in the args and no `index`). A renderer reads it with `registry.at_seconds(self.p["name"], self.t0)` (seconds from the start of the element);
+`registry.at_params(spec)` lists the names. The page (`formgen.js`, `formui.js`) edits it as "seconds | word" with a number field and the button "= đầu phát" (the word at the playhead),
+the same control as an `at` field of an items row. `MAP-01.region_at` is the first user; a technique with a single-moment param declares `"type": "at"` with `min`, `max` in seconds.
+
 ## The atlas map `MAP-01` (`techniques/maps.py`, `geo.py`, `style/gae/geo/`)
 
 The approved moving mock-up is `docs/design/mock/2026-11-18-explainer/components.html` (function `plate`); the renderer reproduces its look and timeline. Data it
@@ -290,12 +299,24 @@ takes: `places` (id, name, lonlat, `at`, `label_side`), `route` (from, to, `via`
   the ink coastline, the region tint, the dotted route and its head, grain and vignette (pinned to the screen, seeded), sea names, place marks and labels.
   Widths that live in map space in the mock-up (shade, water lines, route dots) scale with the push (`k`, held to 0.6..1.65); marks, labels and the hairlines keep their pixel size.
   Outlines whose segments are longer than 8 px (a narrow view of 1:10m data) are clipped to the canvas and have their corners cut (`maps.chaikin`).
-* **Labels**: eight candidate sides per place, tried in the order se, ne, e, sw, nw, w, s, n at the start view, the middle of the push and the end view: the first side
-  whose label touches no route, mark, other label or frame edge wins; `label_side` forces one. Labels get a 2 px paper-coloured halo (not in the mock-up). Sea names
-  (at most `sea_names_max`, most important first) are printed only when their position is inside the view, the sea is big enough for the view, the text is mostly on water
-  and clear of routes, marks and labels.
+* **Place labels** are put where no ink lies under their text box. The ink of a view is the coastline stroke, the two water lines and the outline of the region (a `Field`,
+  made for five views along the push: the start, the middle, the end and between); a box is clear when none of it lies within `INK_MARGIN` (5 px) of the box, and it touches
+  no route, mark, other label or frame edge in any of the five views. The eight sides are tried in the order se, ne, e, sw, nw, w, s, n at the mark's gap, then twice and three
+  times as far out; when none is clear (a mark on a crowded coast, as Bruges beside the outline of Belgium), the nearest clear place on a grid of offsets (6 px apart) is taken,
+  which can be 80 px or more from the mark; `label_side` forces a side. Labels get a 2 px paper-coloured halo (not in the mock-up). `r.label_at[id]` is the (dx, dy) from the mark
+  to the label's left edge and baseline, `r.sides[id]` its compass name, `r.placed(place, x, y)` its box.
+* **The region's name** goes inside the outline when it fits there with 6 px of clearance in all five views, else outside, beside the region on free ground (10 px off the
+  fill), nearest to the region's pole first; never over ink, the route, a mark or a place label. When there is no such place the name is left out.
+* **Sea names** (at most `sea_names_max`, most important first) lie wholly on water: in every view of the push where a name would be printed (its sea is big enough for the view
+  and its text is inside the frame), every pixel within 4 px of the text is sea more than 8 px beyond the outer water line, and the text touches no route, mark, label or other name.
+  The position is searched around the sea's listed position, inside the sea's own outline (`poly` of `seas.json`, `_in_sea`), nearest first; when there is none the name is left out
+  (the Mediterranean has none in the default example, the Adriatic none in a view of 2,000 km).
+* **Warnings and bounds**: a view narrower than 300 km (start or end) is the warning `map_view_coarse` (no error: the storyboard saves): Natural Earth has no detail there, and a spot
+  inside a city belongs on a street-map picture from the picks. The widths that live in map space (shade, water lines, route dots) scale with the zoom since the start view but never
+  above `K_MAX` = 1.617, the zoom of the default example's end view; the hairlines are the same in px at every zoom. A sea route needs `via` points in open water
+  (the Venice example's are found by a shortest path over the 1:10m water, `tests/engine/test_map.py::test_the_venice_example_route_stays_on_water`).
 * **Geography bundle** (`style/gae/geo/`, 2 MB, public domain, README there with sources, versions and sha256): land at 1:50m and 1:10m, countries at 1:50m with ISO
-  codes, sea names with positions. Rebuild: `python tools/geo/build_bundle.py --downloads DIR --fetch` (numpy and OpenCV only; byte-identical output). Loaded once per process, no network.
+  codes, sea names with positions and outlines. Rebuild: `python tools/geo/build_bundle.py --downloads DIR --fetch` (numpy and OpenCV only; byte-identical output). Loaded once per process, no network.
 * **Stills, timings and the preview clip**: `python tools/geo/render_map_examples.py stills|timing|preview`.
 
 ## Known behaviour worth knowing
@@ -332,7 +353,7 @@ Four engineers port the remaining 47 techniques at the same time. The rules that
   "preview": {"reel_start": 0, "reel_end": 6, "clip": "previews/CMP-01.mp4", "thumb": "previews/CMP-01.jpg"}}}
 ```
 Required: `engine.available: true` with `impl` starting `bti.engine.` and `reason: null`. A param whose value cannot be empty and has no sensible default: `"default": null, "required": true`.
-Param types: number, enum, bool, string, text, color, point, box, camera, asset, points (list of points: region names or `[x, y]`), lines (list of strings), items (list of records, below).
+Param types: number, enum, bool, string, text, color, point, box, camera, asset, points (list of points: region names or `[x, y]`), lines (list of strings), items (list of records, below), at (one moment, below).
 
 ### Declaring extra slots
 
