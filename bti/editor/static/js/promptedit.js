@@ -10,6 +10,10 @@
 //   takeIn(turn): the page takes the new saved document in (reload, or the merge with unsaved edits)
 //   onPreview({t0, t1}): the existing preview clip of a range (step 5)
 //   picks: { chapters(), currentBeat(), onSelect(cb) -> off, rev(), isDirty(), save(), openSearch(), agentStarted() }   (step 4: what the pictures page knows)
+//   sel (c4pages, the simple pages of both steps): { get() -> {ids, chapter}, onChange(cb) -> off, active?() -> bool }: while `active()` (the simple page is showing) the page owns the
+//     selection (a click on a row, Ctrl or Shift for several, a chapter header for a whole chapter); the box then has no "Chọn nhiều ..." box of its own and no chips, and a new
+//     selection puts the scope back to "what is selected". Otherwise (the hand tools) the box works exactly as it always did.
+//   words (c4pages, step 4): words of the box that replace BOX_LABELS.pictures ("đoạn" where the hand tools say "dòng").
 // The agent that does the work is chosen with the agent select beside the send button (agentpick.js, step "storyboard" or "picks"); the box sends no
 // model of its own. When that agent's quota is used up the card names it and the time and offers ONE button: switch to the other agent and send the
 // same request again (quotaNode).
@@ -26,15 +30,16 @@ import { mountChangesList } from './changeslist.js';
 import { STEP_STORYBOARD, STEP_PICKS, labelForModel, findAgent } from './agentlogic.js';
 import { ACTIVE, pickScope, pickBeatScope, retryScope, retryBeatScope, addToSelection, turnView, progressView, previewRange, newlyChanged, shotNumber, beatNumbers } from './editlogic.js';
 
-export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboard', takeIn = null, onPreview = null, onJobEnd = null, picks = null } = {}) {
+export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboard', takeIn = null, onPreview = null, onJobEnd = null, picks = null, sel: pageSel = null, words = null } = {}) {
   const isPicks = kind === 'picks';
-  const LP = BL.pictures;
+  const LP = words ? { ...BL.pictures, ...words } : BL.pictures;
   // the words of this box: the pictures' box says "dòng" where the storyboard's says "cảnh"
   const W = isPicks ? { ...L, title: LP.title, placeholder: LP.placeholder, scopeLead: LP.scopeLead, noShotChosen: LP.noLineChosen, multi: LP.multi, multiHint: LP.multiHint,
     multiOn: LP.multiOn, dropShot: LP.dropLine, thread: LP.thread, threadEmpty: LP.threadEmpty, applied: LP.applied, undoHint: LP.undoHint, noStoryboard: LP.noNarration,
     stale: LP.stale, tookIn: LP.tookIn, tookInFail: LP.tookInFail } : L;
   let dead = false, timer = null, jobId = null, job = null, thread = [], first = true, busy = false;
-  let choice = 'auto', multi = false, selected = [], lastSig = '';
+  let choice = 'auto', multi = false, selected = [], pageChapter = null, lastSig = '';
+  const driven = () => !!pageSel && (typeof pageSel.active === 'function' ? !!pageSel.active() : true);          // c4pages: is the page's own selection in charge now?
   const seenTurns = new Map(), shownStatus = new Map();
   let shownFirst = true;
   const seenJobs = jobWatcher();
@@ -60,7 +65,7 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
   const agentHost = h('div', { class: 'prompt-agent' });
   const pick = mountAgentPick(agentHost, { pid, step: STEP, scope, onChange: () => { if (!dead) renderThread(); } });       // join2: a card's "Để agent chọn hình" follows the agent chosen
   const multiBox = h('input', { type: 'checkbox', class: 'prompt-multi', onchange: (e) => setMulti(e.target.checked) });
-  const multiLabel = h('label', { class: 'chk prompt-multi-label', title: W.multiHint }, multiBox, h('span', { text: W.multi }));
+  const multiLabel = h('label', { class: 'chk prompt-multi-label', title: W.multiHint, hidden: pageSel ? true : null }, multiBox, h('span', { text: W.multi }));
   const wordsLine = h('div', { class: 'prompt-scope-words' });
   const chipsBox = h('div', { class: 'prompt-shots-chips' });
   const form = h('div', { class: 'prompt-form' },
@@ -78,9 +83,9 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
   const draftShots = () => ctx.store?.draft?.shots || [];
   const chapters = () => ctx.store?.timing?.chapters || [];
   const scopeNow = () => {
-    if (isPicks) return pickBeatScope({ choice, selected, chapters: picks?.chapters?.() || [], beat: picks?.currentBeat?.() || null });
+    if (isPicks) return pickBeatScope({ choice, selected, chapters: picks?.chapters?.() || [], beat: picks?.currentBeat?.() || null, chapter: driven() ? pageChapter : null, words: words ? LP : null });
     const t = ctx.t || 0;
-    return pickScope({ choice, selected, shots: draftShots(), chapters: chapters(), t, wIdx: chapters().some((c) => c.start == null) ? wordIndexAt(ctx.words(), t) : -1 });
+    return pickScope({ choice, selected, shots: draftShots(), chapters: chapters(), t, wIdx: chapters().some((c) => c.start == null) ? wordIndexAt(ctx.words(), t) : -1, chapter: driven() ? pageChapter : null });
   };
   const validIds = () => (isPicks ? [...beatNumbers(picks?.chapters?.() || []).keys()] : draftShots().map((s) => s.id));
   const numberOf = (id) => (isPicks ? beatNumbers(picks?.chapters?.() || []).get(id) : shotNumber(draftShots(), id));
@@ -96,13 +101,14 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
     const valid = new Set(validIds());
     selected = selected.filter((id) => valid.has(id));
     const sc = scopeNow();
-    const sig = [sc.kind, sc.words, selected.join(','), multi, busy].join('|');
+    const sig = [sc.kind, sc.words, selected.join(','), multi, busy, driven() ? pageChapter : '', driven()].join('|');
+    multiLabel.hidden = driven();
     if (!force && sig === lastSig) return;
     lastSig = sig;
     for (const [k, b] of Object.entries(pills)) { b.classList.toggle('on', sc.kind === k); b.disabled = busy; }
     multiBox.checked = multi; multiBox.disabled = busy;
     wordsLine.textContent = multi && (sc.kind === 'shots' || sc.kind === 'beats') && selected.length < 2 ? `${W.scopeLead} ${sc.words}. ${W.multiOn}` : `${W.scopeLead} ${sc.words}`;
-    chipsBox.replaceChildren(...(multi || selected.length > 1 ? selected.map((id) => {
+    chipsBox.replaceChildren(...(!driven() && (multi || selected.length > 1) ? selected.map((id) => {
       const n = numberOf(id);
       return h('span', { class: 'prompt-shot-chip' }, h('span', { text: isPicks ? LP.lineAt(n ?? '') : `Cảnh ${n ?? ''}`.trim() }),
         h('button', { type: 'button', class: 'prompt-shot-chip-del', title: W.dropShot(n ?? ''), disabled: busy, text: '×',
@@ -111,11 +117,20 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
     btnSend.disabled = busy || !sc.ok;
   }
   function selectionChanged() {
+    if (driven()) {                                                               // c4pages: the page owns the selection; a new one puts the scope back to "what is selected"
+      const s = pageSel.get();
+      const same = s.ids.join(',') === selected.join(',') && (s.chapter || null) === pageChapter;
+      selected = [...s.ids]; pageChapter = s.chapter || null;
+      if (!same) choice = 'auto';
+      paintScope(true);
+      return;
+    }
     const id = selectedNow();
     selected = multi ? addToSelection(selected, id, { multi, playing: !isPicks && ctx.playing }) : (id ? [id] : []);
     paintScope();
   }
   const offs = [];
+  if (pageSel) offs.push(pageSel.onChange(selectionChanged));
   if (isPicks) offs.push(picks?.onSelect?.(selectionChanged));
   else {
     offs.push(ctx.store.on((kind2) => {
@@ -376,7 +391,8 @@ export function mountPromptEdit(container, { pid, scope = null, kind = 'storyboa
 
   pick.ready.then(() => { if (!dead) renderThread(); });          // the cards name the agent by its label once the list of agents is known
   const sel0 = selectedNow();
-  selected = sel0 ? [sel0] : [];
+  selected = pageSel ? [...pageSel.get().ids] : sel0 ? [sel0] : [];
+  pageChapter = pageSel ? pageSel.get().chapter || null : null;
   paintScope(true);
   renderThread();
   loadThread();

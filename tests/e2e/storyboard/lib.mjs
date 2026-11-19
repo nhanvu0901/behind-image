@@ -33,7 +33,7 @@ export async function boot(projects = ['arnolfini_edit', 'technique_lab', 'demo_
   await send('Emulation.setDeviceMetricsOverride', { width: 1700, height: 1000, deviceScaleFactor: 1, mobile: false });
   const ev = async (e) => { const r = await send('Runtime.evaluate', { expression: e, awaitPromise: true, returnByValue: true }); if (!r.result) throw new Error('eval: ' + JSON.stringify(r.error)); if (r.result.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description || 'eval'); return r.result.result.value; };
   const waitApp = async () => { await sleep(400); for (let i = 0; i < 150; i++) { try { if (await ev('!!(window.__bti&&window.__bti.store.draft&&window.__tl)')) break; } catch { /* the page is still loading */ } await sleep(200); } await sleep(1200); };
-  const open = async (pid, q = '') => { await send('Page.navigate', { url: `${B}/?all=1${q}#/project/${pid}/edit` }); await sleep(500); await send('Page.reload'); await waitApp(); };
+  const open = async (pid, q = '') => { await send('Page.navigate', { url: `${B}/?all=1&mode=hand${q}#/project/${pid}/edit` }); await sleep(500); await send('Page.reload'); await waitApp(); };
   const reload = async () => { await send('Page.reload'); await waitApp(); };
   const shot = async (file) => { const r = await send('Page.captureScreenshot', { format: 'png' }); fs.writeFileSync(file, Buffer.from(r.result.data, 'base64')); };
   return { B, root, restore, ev, open, reload, shot, send, logs, stop };

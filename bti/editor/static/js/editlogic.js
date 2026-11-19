@@ -2,7 +2,7 @@
 // No DOM, no network. Tested in tests/editor_frontend/editlogic.test.mjs.
 //   scope words, the default scope, the turn card data for every status, the progress line, the clock, the preview range.
 import { STAGE_CODES, isVietnamese } from './errmsg.js';
-import { EDIT_LABELS as L, BOX_LABELS as BL } from './labels.js';
+import { EDIT_LABELS as L, BOX_LABELS as BL, PICKS_PAGE_LABELS as PP } from './labels.js';
 
 export const ACTIVE = new Set(['queued', 'waiting', 'running']);
 export const TURN_STATUS = ['running', 'applied', 'no_change', 'needs_choice', 'failed', 'cancelled', 'undone', 'escalate'];
@@ -52,8 +52,13 @@ export const shotNumber = (shots, id) => { const i = (shots || []).findIndex((s)
 export const chapterId = (ch, i) => (ch && ch.id) || `c${pad2((i < 0 ? 0 : i) + 1)}`;
 /** "Chương: The Merchant", else "Chương 3" (an id such as c03 is never shown). */
 export function chapterLabel(ch, i) {
-  const name = ch && typeof ch.name === 'string' ? ch.name.trim() : '';
+  const name = ch && typeof ch.name === 'string' ? readableName(ch.name.trim()) : '';
   return name && !/^c\d+$/i.test(name) ? `Chương: ${name}` : `Chương ${(i < 0 ? 0 : i) + 1}`;
+}
+/** c4pages: a name written in capitals or as an id ("COLD OPEN", "THE_MIRROR") is read as words ("Cold open", "The mirror"); any other name stays as it is. */
+export function readableName(s) {
+  const t = String(s || '').replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+  return t.length > 3 && t === t.toUpperCase() && t !== t.toLowerCase() ? t[0] + t.slice(1).toLowerCase() : t;
 }
 /** The chapter at time `t` (`wIdx`: the word at that time, for chapters that carry only word ranges). */
 export function chapterAt(chapters, t, wIdx = -1) {
@@ -66,8 +71,9 @@ export function chapterAt(chapters, t, wIdx = -1) {
 const numbersText = (nums) => (nums.length > 6 ? `${nums.slice(0, 6).join(', ')} và ${nums.length - 6} cảnh nữa` : nums.join(', '));
 /** The scope in words, never a raw id. scope: {kind, shots, chapter}. `current`: "đang chọn" (the box), else the plain form (a turn). */
 export function scopeWords(scope, { shots = [], chapters = [], current = false } = {}) {
-  const kind = scope?.kind || (scope?.shots ? 'shots' : scope?.chapter ? 'chapter' : 'all');
+  const kind = scope?.kind || (scope?.beats ? 'beats' : scope?.shots ? 'shots' : scope?.chapter ? 'chapter' : 'all');
   if (kind === 'all') return L.scopeAll;
+  if (kind === 'beats') { const n = (scope?.beats || []).length; return n ? PP.box.beatsCount(n) : PP.box.noLineChosen; }       // c4pages: a turn of the pictures box edits lines, not shots
   if (kind === 'chapter') {
     const i = chapters.findIndex((c, k) => chapterId(c, k) === scope.chapter);
     return i >= 0 ? chapterLabel(chapters[i], i) : 'Một chương';
@@ -82,13 +88,14 @@ export function scopeWords(scope, { shots = [], chapters = [], current = false }
 /** What a send would edit. choice: 'auto' | 'shots' | 'chapter' | 'all'.
  * Default (auto): the selected shot(s), else the chapter at the playhead (else the whole video when there are no chapters).
  * -> { kind, payload, words, ok, why } */
-export function pickScope({ choice = 'auto', selected = [], shots = [], chapters = [], t = 0, wIdx = -1 } = {}) {
+export function pickScope({ choice = 'auto', selected = [], shots = [], chapters = [], t = 0, wIdx = -1, chapter = null } = {}) {
   const valid = new Set(shots.map((s) => s.id));
   const sel = selected.filter((id) => valid.has(id));
-  const chap = chapterAt(chapters, t, wIdx);
+  const picked = chapter ? chapters.find((c, i) => chapterId(c, i) === chapter) || null : null;          // c4pages: the owner chose a whole chapter in the list of shots
+  const chap = picked || chapterAt(chapters, t, wIdx);
   const ci = chap ? chapters.indexOf(chap) : -1;
   let kind = choice;
-  if (kind === 'auto') kind = sel.length ? 'shots' : (chap ? 'chapter' : 'all');
+  if (kind === 'auto') kind = picked ? 'chapter' : sel.length ? 'shots' : (chap ? 'chapter' : 'all');
   if (kind === 'shots') {
     if (!sel.length) return { kind, payload: null, words: L.noShotChosen, ok: false, why: L.noShotChosen };
     return { kind, payload: { shots: sel }, words: scopeWords({ kind, shots: sel }, { shots, current: true }), ok: true, why: '' };
@@ -116,22 +123,23 @@ export const beatNumbers = (chapters) => new Map((chapters || []).flatMap((c) =>
 const listWords = (nums) => (nums.length > 6 ? `${nums.slice(0, 6).join(', ')} và ${nums.length - 6} dòng nữa` : nums.join(', '));
 /** The scope of a send on the pictures page. choice: 'auto' | 'beats' | 'chapter' | 'all'. Default: the selected line(s), else the chapter of the line
  *  being looked at, else the whole video. `chapters`: [{id, title, beats: [{id}]}] as the page has them. -> { kind, payload, words, ok, why } */
-export function pickBeatScope({ choice = 'auto', selected = [], chapters = [], beat = null } = {}) {
+export function pickBeatScope({ choice = 'auto', selected = [], chapters = [], beat = null, chapter = null, words = null } = {}) {
   const nums = beatNumbers(chapters);
   const sel = selected.filter((id) => nums.has(id));
-  const chap = (chapters || []).find((c) => (c.beats || []).some((b) => b.id === beat)) || null;
+  const picked = chapter ? (chapters || []).find((c) => c.id === chapter) || null : null;                // c4pages: the owner chose a whole chapter in the list of lines
+  const chap = picked || (chapters || []).find((c) => (c.beats || []).some((b) => b.id === beat)) || null;
   let kind = choice;
-  if (kind === 'auto') kind = sel.length ? 'beats' : (chap ? 'chapter' : 'all');
-  const P = BL.pictures;
+  if (kind === 'auto') kind = picked ? 'chapter' : sel.length ? 'beats' : (chap ? 'chapter' : 'all');
+  const P = words ? { ...BL.pictures, ...words } : BL.pictures;                                           // c4pages: the simple page says "đoạn" where the hand tools say "dòng"
   if (!nums.size) return { kind, payload: null, words: P.noNarration, ok: false, why: P.noNarration };
   if (kind === 'beats') {
     if (!sel.length) return { kind, payload: null, words: P.noLineChosen, ok: false, why: P.noLineChosen };
     const list = sel.map((id) => nums.get(id)).sort((a, b) => a - b);
-    return { kind, payload: { beats: sel }, words: P.linesWords(sel.length, listWords(list)), ok: true, why: '' };
+    return { kind, payload: { beats: sel }, words: P.linesWords(sel.length, (P.listWords || listWords)(list)), ok: true, why: '' };
   }
   if (kind === 'chapter') {
     if (!chap) return { kind, payload: null, words: P.chapterHere, ok: false, why: P.chapterHere };
-    const name = typeof chap.title === 'string' && chap.title.trim() && !/^c\d+$/i.test(chap.title.trim()) ? `Chương: ${chap.title.trim()}` : `Chương ${(chapters.indexOf(chap) + 1)}`;
+    const name = typeof chap.title === 'string' && chap.title.trim() && !/^c\d+$/i.test(chap.title.trim()) ? `Chương: ${readableName(chap.title.trim())}` : `Chương ${(chapters.indexOf(chap) + 1)}`;
     return { kind, payload: { chapter: chap.id }, words: name, ok: true, why: '' };
   }
   return { kind: 'all', payload: { all: true }, words: P.scopeAll, ok: true, why: '' };

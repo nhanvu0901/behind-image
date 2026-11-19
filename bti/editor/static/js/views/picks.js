@@ -18,6 +18,9 @@ import { watchIdle, jobWatcher } from '../idlewatch.js';
 import { mountPromptEdit } from '../promptedit.js';          // c2box: the prompt box of this step
 import * as L from './picks_logic.js';
 import { mountPicksAuto } from './picks_auto.js';                                // c3picks: "Để agent chọn hình"
+import { mountPickRows } from './picks_rows.js';                                // c4pages: the simple page (rows with their pictures); the hand tools below stay as they were
+import { voiceStarts, issueSentence } from './picks_rows_logic.js';
+import { PICKS_PAGE_LABELS as PW } from '../labels.js';
 
 // ------------------------------------------------------------------ words
 const LBL = PICKS_LABELS;
@@ -34,6 +37,7 @@ const $ = (s) => root?.querySelector(s);
 const S = { pid: null, data: null, beat: null, tab: 'main', q: { text: '', sources: { commons: true, met: true, pexels: true, pixabay: true, osm: false }, res: null, busy: false, for: '' },
   v: { text: '', res: null, busy: false, importing: false }, books: null, sugg: { beats: {} }, job: null };
 let auto = null;                                                              // c3picks: the agent's bar (views/picks_auto.js)
+let rows = null, mode = 'simple', starts = new Map(), rowsQueued = false;     // c4pages: the simple page (views/picks_rows.js), which face shows, the start of each line from the voice
 let D = null, R = null, dirty = false, editVersion = 0, Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') }), pollId = null;
 
 const P = () => `/api/projects/${S.pid}/picks`;
@@ -122,9 +126,11 @@ function thumb(a, region, box = 64) {
 // ------------------------------------------------------------------ top bar: the main painting
 function paintTop() {
   const top = $('#pk-top'); if (!top) return;
+  if (mode === 'simple') { rows?.paintHeader(); paintStatus(); return; }          // c4pages: the header of the simple page
   const a = mainAsset(), d = S.data, errs = (d.issues || []).filter((i) => i.level === 'error');
   const nv = d.narration;
   top.replaceChildren(...kids(
+    h('button', { id: 'pk-back', class: 'pk-back', text: PW.back, title: PW.backTitle, onclick: () => setMode('simple') }),
     h('div', { class: 'pk-main' }, thumb(a, null, 72),
       h('div', { class: 'pk-maininfo' },
         h('div', { class: 'pk-maintitle', text: a ? (a.title || D.main_asset) : 'Chưa chọn tranh chính' }),
@@ -146,14 +152,17 @@ function paintStatus() {
   el.textContent = dirty ? 'chưa lưu...' : S.data?.approved ? 'đã duyệt' : 'đã lưu';
 }
 
-function issueText(i) { const t = LBL.issue[i.code]; return typeof t === 'function' ? t(i) : t || (i.level === 'error' ? 'Có một lỗi trong chọn hình.' : 'Có một điều cần xem trong chọn hình.'); }
+function issueText(i) {
+  if (mode === 'simple') return issueSentence(i, { numberOf: (id) => allBeats().findIndex((b) => b.id === id) + 1 || null, assets: assets() });       // c4pages: a line by its number, a picture by its title
+  const t = LBL.issue[i.code]; return typeof t === 'function' ? t(i) : t || (i.level === 'error' ? 'Có một lỗi trong chọn hình.' : 'Có một điều cần xem trong chọn hình.');
+}
 function checkDialog() {
   const iss = S.data.issues || [];
   const errs = iss.filter((i) => i.level === 'error'), warns = iss.filter((i) => i.level !== 'error');
-  const row = (i) => h('li', { class: i.level, onclick: () => { if (i.beat && beatOf(i.beat)) { S.beat = i.beat; m.close(); renderAll(); } } }, issueText(i));
+  const row = (i) => h('li', { class: i.level, onclick: () => { if (i.beat && beatOf(i.beat)) { S.beat = i.beat; m.close(); if (mode === 'simple') rows?.select(i.beat, {}, { scroll: true }); else renderAll(); } } }, issueText(i));
   const m = modal({ title: 'Kiểm tra chọn hình', cls: 'wide v-pk',
     body: h('div', { class: 'body' },
-      !iss.length ? h('p', { text: 'Không có gì cần xem. Có thể duyệt.' }) : null,
+      !iss.length ? h('p', { text: PW.issue.noneAtAll }) : null,
       errs.length ? h('div', null, h('h4', { text: `Lỗi (${errs.length}): phải sửa trước khi duyệt` }), h('ul', { class: 'pk-issues' }, errs.map(row))) : null,
       warns.length ? h('div', null, h('h4', { text: `Cảnh báo (${warns.length}): không chặn việc duyệt` }), h('ul', { class: 'pk-issues' }, warns.map(row))) : null),
     footer: h('footer', null, h('button', { text: 'Đóng', onclick: () => m.close() })) });
@@ -162,7 +171,7 @@ async function approve() {
   const d = S.data;
   if (!d.narration.approved) return toast(ERR.narration_not_approved, 'warn', 7000);
   const none = L.emptyBeats(chapters(), D).length;
-  if (none && !(await confirmDialog(`${none} dòng chưa có hình. Bản nháp sẽ dùng tranh chính ở những dòng đó. Vẫn duyệt?`, { title: 'Duyệt chọn hình', ok: 'Duyệt' }))) return;
+  if (none && !(await confirmDialog(mode === 'simple' ? PW.confirmEmpty(none) : `${none} dòng chưa có hình. Bản nháp sẽ dùng tranh chính ở những dòng đó. Vẫn duyệt?`, { title: 'Duyệt chọn hình', ok: 'Duyệt' }))) return;
   await serverOp(() => api.post(`${P()}/approve`, { rev: R }), () => toast('Đã duyệt chọn hình.', 'ok'));
 }
 
@@ -181,6 +190,25 @@ function paintLeft() {
       }));
   }));
   col.scrollTop = top;
+  queueRows();
+}
+/** c4pages: draw the rows of the simple page again, once per frame however many changes came. */
+function queueRows() {
+  if (!rows || rowsQueued) return;
+  rowsQueued = true;
+  requestAnimationFrame(() => { rowsQueued = false; if (rows && mode === 'simple') rows.paint(); });
+}
+/** c4pages: switch between the simple page and the hand tools. `beat`: the line the hand tools open on; `tab`: the tab of the right column. */
+function setMode(m, beat = null, tab = null) {
+  if (!root) return;
+  mode = m; root.dataset.mode = m;
+  if (m === 'hand') {
+    if (beat && beatOf(beat)) S.beat = beat;
+    if (tab) S.tab = tab;
+    renderAll(); fireSelect();
+    if (tab === 'books') loadBooks();
+    $('#pk-mid')?.scrollTo?.(0, 0);
+  } else { rows?.paint(); paintTop(); if (S.beat) rows?.select(S.beat, {}, { scroll: true }); else rows?.notify(); }       // the line the owner worked on in the hand tools is the one selected
 }
 
 // ------------------------------------------------------------------ middle: the beat and its tray
@@ -726,9 +754,10 @@ function regionEditor(key) {
 const BAR = `<div id="pk-top" class="pk-top"></div>
 <div id="pk-auto" class="pk-auto"></div>
 <div id="pk-body" class="pk-body">
-  <section class="pk-col"><div class="col-h"><h2>Dòng lời dẫn</h2></div><div id="pk-left" class="col-b"></div></section>
-  <section class="pk-col"><div class="col-h"><h2>Dòng này</h2></div><div id="pk-mid" class="col-b"></div></section>
-  <section class="pk-col"><div class="col-h"><h2>Tìm hình</h2></div><div id="pk-right" class="col-b"></div></section>
+  <section class="pk-col pk-col-rows"><div id="pk-rows-col" class="pk-rows-col"></div></section>
+  <section class="pk-col pk-col-hand"><div class="col-h"><h2>Dòng lời dẫn</h2></div><div id="pk-left" class="col-b"></div></section>
+  <section class="pk-col pk-col-hand"><div class="col-h"><h2>Dòng này</h2></div><div id="pk-mid" class="col-b"></div></section>
+  <section class="pk-col pk-col-hand"><div class="col-h"><h2>Tìm hình</h2></div><div id="pk-right" class="col-b"></div></section>
   <section class="pk-col pk-col-box"><div class="col-h"><h2>Sửa chọn hình bằng lời</h2></div><div id="pk-box" class="col-b pk-box"></div></section>
 </div>`;
 function renderAll() { paintTop(); paintLeft(); paintMid(); paintRight(); }
@@ -752,6 +781,30 @@ const boxApi = {
   agentStarted: () => auto?.follow?.(),                                          // join2: the card handed lines to the pictures agent: its bar shows that job at once
 };
 
+/** c4pages: what the rows of the simple page ask of this page (the data, the saving and the hand tools stay here). */
+const rowsApi = {
+  simple: () => mode === 'simple',
+  projectTitle: () => shell?.pipeline?.title || '',
+  data: () => S.data, doc: () => D, chapters: () => chapters(), starts: () => starts,
+  reasonFor: (beatId, rec) => auto?.reasonFor(beatId, rec) || '',
+  whyMissing: (beatId) => auto?.whyMissing?.(beatId) || '',
+  thumb: (a, region, box) => thumb(a, region, box),
+  videoUrl: (a) => api.fileUrl(S.pid, a.file),
+  isDirty: () => dirty, busy: () => dirty || Q.busy === true,
+  add: (beatId, item) => { const index = L.addItem(D, beatId, item); touch(); paintLeft(); paintMid(); return { beatId, index, asset: item.asset, region: item.region || null }; },
+  /** Take back the picture "+" just added, when that line still has it at that place. */
+  undoAdd: (t) => {
+    const it = D.beats[t.beatId]?.items[t.index];
+    if (!it || it.asset !== t.asset || (it.region || null) !== t.region) return false;
+    L.removeItem(D, t.beatId, t.index); touch(); paintLeft(); paintMid();
+    return true;
+  },
+  openHand: (beatId, tab = null) => setMode('hand', beatId, tab),
+  setCurrent: (beatId) => { S.beat = beatId; },
+  approve: () => approve(), check: () => checkDialog(), drawRegions: () => { if (D?.main_asset) regionEditor(D.main_asset); },
+  get scriptHref() { return projectHash(S.pid, 'script'); },
+};
+
 export async function mount(host, ctx) {
   scope = ctx.scope; shell = ctx.shell;
   Object.assign(S, { pid: ctx.pipeline.project, data: null, beat: null, tab: 'main', books: null, sugg: { beats: {} }, job: null });
@@ -759,16 +812,34 @@ export async function mount(host, ctx) {
   S.v = { text: '', res: null, busy: false, importing: false };
   D = null; R = null; dirty = false; editVersion = 0; pollId = null; seen = jobWatcher();
   Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') });
-  root = h('div', { class: 'pk-root v-pk' }); root.innerHTML = BAR; host.append(root);
-  try { applyData(await api.get(P())); } catch (e) { root.replaceChildren(h('div', { class: 'view-msg', text: failText(e) })); return {}; }
+  rows = null; starts = new Map(); rowsQueued = false;
+  const q = new URLSearchParams(location.search);
+  mode = q.get('mode') === 'hand' ? 'hand' : 'simple';                          // c4pages: the page opens on the rows; ?mode=hand opens the hand tools (links and probes)
+  root = h('div', { class: 'pk-root v-pk' }); root.innerHTML = BAR; root.dataset.mode = mode; host.append(root);
+  root.append(h('div', { class: 'view-msg pk-loading', id: 'pk-loading', text: PW.loading }));
+  try { applyData(await api.get(P())); } catch (e) {
+    root.replaceChildren(h('div', { class: 'view-msg pk-fail' }, failText(e), ' ', h('button', { class: 'small', id: 'pk-retry', text: PW.retry, onclick: () => shell.go(projectHash(S.pid, 'picks')) })));
+    return {};
+  }
+  root.querySelector('#pk-loading')?.remove();
   S.tab = D.main_asset ? 'search' : 'main';
+  rows = mountPickRows({ top: $('#pk-top'), col: $('#pk-rows-col'), scope, api: rowsApi });
+  rows.selection.active = () => mode === 'simple';
+  scope.on(document, 'keydown', (e) => {                                           // Escape closes the hand tools (a dialog or a field answers its own Escape first)
+    if (e.key !== 'Escape' || mode !== 'hand' || e.defaultPrevented || document.querySelector('#modal-root .backdrop')) return;
+    const t = e.target;
+    if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+    setMode('simple');
+  });
   renderAll();
-  auto = mountPicksAuto($('#pk-auto'), { pid: S.pid, scope,                       // c3picks
+  rows.paint();
+  api.get(`/api/projects/${S.pid}/voice`).then((v) => { starts = voiceStarts(v); queueRows(); }).catch(() => { /* no times: the rows say the line number only */ });
+  auto = mountPicksAuto($('#pk-auto'), { pid: S.pid, scope, onInfo: queueRows,   // c3picks
     state: () => ({ doc: D, chapters: chapters(), approved: !!S.data?.approved, narrationOk: !!S.data?.narration?.approved, hasMain: !!mainAsset() }),
     reload, saveFirst: () => Q.run(saveNow).catch(() => {}) });
   selectListeners.clear();
   const boxHost = $('#pk-box');
-  if (boxHost) mountPromptEdit(boxHost, { pid: S.pid, scope, kind: 'picks', takeIn: takeInPicks, onJobEnd: pipeChanged, picks: boxApi });
+  if (boxHost) mountPromptEdit(boxHost, { pid: S.pid, scope, kind: 'picks', takeIn: takeInPicks, onJobEnd: pipeChanged, picks: boxApi, sel: rows.selection, words: PW.box });
   try { const r = await api.get(`/api/projects/${S.pid}/longjobs?kind=picks`); const run = (r.items || r || []).find?.((j) => ['queued', 'waiting', 'running'].includes(j.state)); if (run) watch(run.id); } catch { /* the runner may not answer */ }
   loadSuggestions();
   // a suggestion job started in another tab shows up here within a few seconds
@@ -785,6 +856,6 @@ export async function mount(host, ctx) {
     save: () => Q.run(saveNow),
     dirtyMessage: () => 'Chọn hình có chỗ sửa chưa lưu.',
     pipelineChanged: () => {},
-    unmount() { clearInterval(pollId); auto?.unmount(); auto = null; root = null; },
+    unmount() { clearInterval(pollId); auto?.unmount(); auto = null; rows?.unmount(); rows = null; root = null; },
   };
 }

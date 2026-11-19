@@ -3,6 +3,8 @@
 // #pk-auto; the page gives it four small functions (what the document looks like now, reload, save first, the project id).
 //   const auto = mountPicksAuto(host, { pid, scope, state: () => ({ doc, chapters, approved, narrationOk, hasMain }), reload, saveFirst });
 //   auto.reasonFor(beatId, rec)  the agent's reason to show under the pictures of a line ('' when the line is no longer as the agent wrote it)
+//   auto.whyMissing(beatId)      c4pages: why the last run left this line without a picture, in plain words ('' when it was not in the last result)
+//   onInfo()                     c4pages: called when what the page reads from GET .../picks/auto (the reasons, the last result) changed
 // The job is POST /api/projects/{pid}/picks/auto (a long job of kind `picks`); the page reads GET .../picks/auto (the running job, the last result,
 // the reasons) and GET /api/longjobs/{id}. The decisions are in picks_logic.js (pure, tested); the words in labels.js (PICKS_AUTO_LABELS) and errmsg.js.
 import { api } from '../api.js';
@@ -17,7 +19,7 @@ import * as PL from './picks_logic.js';
 const errText = (e) => { const c = e?.body?.code; return STAGE_CODES.picks[c] || STAGE_CODES.draft[c] || describeError(e).text; };
 const jobText = (job) => STAGE_CODES.picks[job?.error_code] || STAGE_CODES.draft[job?.error_code] || jobErrorText(job).text;
 
-export function mountPicksAuto(host, { pid, scope, state, reload, saveFirst }) {
+export function mountPicksAuto(host, { pid, scope, state, reload, saveFirst, onInfo = null }) {
   const U = `/api/projects/${encodeURIComponent(pid)}/picks/auto`;
   let dead = false, info = null, job = null, jobId = null, starting = false, ended = null, lastBody = null, polling = false;
   const root = h('div', { class: 'pk-auto-bar', 'data-picks-auto': '' });
@@ -110,7 +112,7 @@ export function mountPicksAuto(host, { pid, scope, state, reload, saveFirst }) {
     await reload();                                                               // the page shows the pictures the agent wrote
     paint();
   }
-  async function refreshInfo() { try { info = await api.get(U); } catch { /* the bar stays as it was */ } }
+  async function refreshInfo() { try { info = await api.get(U); onInfo?.(); } catch { /* the bar stays as it was */ } }
 
   scope.interval(() => { if (jobId) poll(); }, 1500);
   scope.add?.(() => { dead = true; pick.unmount(); });
@@ -118,8 +120,8 @@ export function mountPicksAuto(host, { pid, scope, state, reload, saveFirst }) {
     check: async () => {
       const o = await api.get(U);
       if (o.running) { info = o; jobId = o.running.id; job = o.running; ended = null; paint(); }
-      else if (!info) info = o;
-      else if (o.last?.finished !== info.last?.finished) { info = o; await reload(); paint(); }
+      else if (!info) { info = o; onInfo?.(); }
+      else if (o.last?.finished !== info.last?.finished) { info = o; await reload(); paint(); onInfo?.(); }
     } });
 
   (async () => {
@@ -130,6 +132,7 @@ export function mountPicksAuto(host, { pid, scope, state, reload, saveFirst }) {
   paint();
   return {
     reasonFor: (beatId, rec) => PL.autoReasonFor(rec, info?.reasons, beatId),
+    whyMissing: (beatId) => { const w = (info?.last?.result?.lines_without || []).find((x) => x.beat === beatId); return typeof w?.why === 'string' ? w.why : ''; },
     refresh: async () => { await refreshInfo(); paint(); },
     /** A run was started elsewhere on this page (the card of the prompt box): take its job in and follow it. */
     follow: async () => { await refreshInfo(); if (info?.running) { jobId = info.running.id; job = info.running; ended = null; } paint(); },

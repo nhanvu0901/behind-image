@@ -67,10 +67,11 @@ export async function settle(p, ms = 25000) {
   await sleep(250);
   return ok;
 }
-/** Go to a hash route in the same document (first call: a real navigation). */
+/** Go to a hash route in the same document (first call: a real navigation). c4pages: steps 4 and 5 open on their simple faces; the probes of the hand tools and of the
+ *  editor ask for the other face with ?mode=hand on the first address (it stays in the address while the hash changes). tests/e2e/pages/pages.mjs opens its own first address. */
 export async function go(p, base, hash) {
   const cur = await p.eval(`location.href`).catch(() => '');
-  if (!cur.startsWith(base)) await p.send('Page.navigate', { url: base + '/' + hash });
+  if (!cur.startsWith(base)) await p.send('Page.navigate', { url: base + '/?mode=hand' + hash });
   else await p.eval(`(() => { if (location.hash === ${JSON.stringify(hash)}) location.reload(); else location.hash = ${JSON.stringify(hash)}; })()`);
   return settle(p);
 }

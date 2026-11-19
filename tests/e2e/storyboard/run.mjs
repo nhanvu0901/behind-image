@@ -39,7 +39,7 @@ const key = async (k, code, mods = 0) => { await send('Input.dispatchKeyEvent', 
 const type = (t) => send('Input.insertText', { text: t });
 const J = (x) => JSON.stringify(x);
 async function open(pid) {
-  restore(); await send('Page.navigate', { url: `${B}/?all=1#/project/${pid}/edit` }); await sleep(600); await send('Page.reload');
+  restore(); await send('Page.navigate', { url: `${B}/?all=1&mode=hand#/project/${pid}/edit` }); await sleep(600); await send('Page.reload');
   await ev(`new Promise(async r=>{for(let i=0;i<100&&!window.__bti;i++) await new Promise(x=>setTimeout(x,200));r()})`); await sleep(1800);
 }
 const rect = (sel, txt = '') => ev(`(()=>{const e=[...document.querySelectorAll(${J(sel)})].filter(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0&&(${J(txt)}===''||e.textContent.includes(${J(txt)}))})[0];if(!e)return null;if(e.closest('#tab-body'))e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2}})()`);
@@ -278,7 +278,7 @@ const checks = {
     return [pageErrors.length === 0 && /không có ảnh/i.test(noteSrc) && handles === 3, `source view note "${noteSrc}", canvas-space handles on STATIC-06: ${handles}, page errors: ${pageErrors.join('; ') || 'none'}`];
   },
   async 'COV-mock'() { // ?mock=1: the editing view works on the in-browser fixtures
-    restore(); await send('Page.navigate', { url: `${B}/?mock=1#/project/arnolfini-mock/edit` }); await sleep(600); await send('Page.reload'); pageErrors.length = 0;
+    restore(); await send('Page.navigate', { url: `${B}/?mock=1&mode=hand#/project/arnolfini-mock/edit` }); await sleep(600); await send('Page.reload'); pageErrors.length = 0;
     await ev(`new Promise(async r=>{for(let i=0;i<100&&!window.__bti;i++) await new Promise(x=>setTimeout(x,200));r()})`); await sleep(2200);
     const n = await ev('__bti.store.draft.shots.length'); const q = await tlXY(30); await click(q.x, q.y); await sleep(300);
     const sel = await ev('__bti.store.sel.shot'); await clickSel('#btn-save'); await sleep(1500); const dirty = await ev('__bti.store.dirty');

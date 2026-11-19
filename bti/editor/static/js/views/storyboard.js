@@ -26,13 +26,61 @@ import { outsideIssues } from '../checks.js';
 import { missingLabel } from '../slots.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
+import { mountSimple } from '../sbsimple.js';             // c4pages: the simple page (list of shots in words) over the same player, box and editor
+import { EDIT_PAGE_LABELS as PAGE } from '../labels.js';
 
 let root = null, scope = null, shell = null;
 const $ = (s) => root.querySelector(s);
 const st = ctx.store;
 const msg = (t) => setStatus(t);
+// c4pages: the page has two faces over the same player, request box and editor: "simple" (the list of shots in words, the default) and "hand" (the editor as it always was).
+// The owner's last choice is remembered per project; a link that needs the editor (?select=, ?open=, ?t=, ?zoom=, ?source= or ?mode=hand) opens it there.
+let mode = 'simple', simple = null, fitted = false;
+const MODE_KEY = (pid) => `bti.edit.mode.${pid}`;
+function initialMode(pid) {
+  const q = new URLSearchParams(location.search);
+  const forced = q.get('mode');
+  if (forced === 'hand' || forced === 'simple') return forced;
+  if (['select', 'open', 't', 'zoom', 'source'].some((k) => q.has(k))) return 'hand';
+  try { return localStorage.getItem(MODE_KEY(pid)) === 'hand' ? 'hand' : 'simple'; } catch { return 'simple'; }
+}
+/** The request box sits beside the player in the editor; on the simple page it is the last of the three zones, so it comes after the list in the Tab order too. */
+function placeBox(m) {
+  const box = $('#prompt-edit-container'), main = $('#main');
+  if (!box || !main) return;
+  if (m === 'simple') main.insertBefore(box, $('#inspector')); else $('#preview-pane').append(box);
+}
+/** Switch between the simple page and the editor. The editor is drawn exactly as it was; the simple page repaints its list from the draft. */
+function setMode(m, { persist = true } = {}) {
+  if (!root || (m === mode && root.dataset.mode === m)) return;
+  mode = m; root.dataset.mode = m; placeBox(m);
+  if (persist) { try { localStorage.setItem(MODE_KEY(ctx.pid), m); } catch { /* the choice is simply not remembered */ } }
+  if (m === 'simple') {
+    for (const id of ['view-source', 'view-regions']) { const c = $('#' + id); if (c?.checked) { c.checked = false; c.dispatchEvent(new Event('change')); } }     // the simple page shows the picture as the video does
+    if (ctx.pick || ctx.slotPick) { ctx.pick = null; ctx.slotPick = null; bus.emit('pick'); }
+    simple?.paint();
+  } else fitTimelineWhenShown();
+  simple?.notify();                                                                                                      // the request box looks at the selection of the page or of the editor
+  updateTop();
+}
+/** The timeline was hidden (zero width) while the simple page showed: whatever it fitted then is not a view. Fit it once it has a size (the resize observer runs after the frame). */
+function fitTimelineWhenShown(n = 0) {
+  const v = window.__tl;
+  if (!v) return;
+  if (v.W > 0) { if (!fitted || !Number.isFinite(v.view.t0) || !(v.view.pps > 0)) { fitted = true; fitView(); ensureVisible(ctx.t); } return; }
+  if (n < 40) requestAnimationFrame(() => fitTimelineWhenShown(n + 1));
+}
+/** A link to a shot or a problem that needs the editor: the editor, with that shot (and overlay) selected and its tab open. */
+function openInEditor({ shot = null, overlay = null } = {}) {
+  setMode('hand');
+  if (shot && st.shotById(shot)) { A.selectItem(shot, overlay || null); setTab(overlay ? 'overlay' : 'shot'); ensureVisible(ctx.t); }
+}
+const nextStep = () => { const nx = shell.pipeline && nextOpenable(shell.pipeline.steps, 'edit'); return nx ? { label: nx.label, go: () => shell.go(projectHash(ctx.pid, nx.id)) } : null; };
 const HTML = `
+  <div class="sbar" id="sbar"></div>
   <div class="vbar" id="ebar">
+    <button id="btn-simple" title="${PAGE.hand.backHint}">${PAGE.hand.back}</button>
+    <span class="sep"></span>
     <button id="btn-save" class="primary" title="Lưu (Ctrl+S)">Lưu<span id="dirty-dot" class="dot" hidden></span></button>
     <button id="btn-check" title="Kiểm tra storyboard">Kiểm tra <span id="issue-count" class="count">0</span></button>
     <span class="sep"></span>
@@ -73,6 +121,8 @@ const HTML = `
       </div>
       <div id="prompt-edit-container"></div>
     </section>
+    <section id="sel-panel"></section>
+    <section id="shots-col" aria-label="${PAGE.listTitle}"><div class="empty muted">${PAGE.loading}</div></section>
     <aside id="inspector">
       <nav id="tabs">
         <button data-tab="shot" class="active">Shot</button>
@@ -123,6 +173,7 @@ export async function mount(host, mctx) {
   root = h('div', { class: 'edit-root' });
   root.innerHTML = HTML;
   host.append(root);
+  simple = null; fitted = false; mode = initialMode(pid); root.dataset.mode = mode; placeBox(mode);
   bus.clear(); ctx.reset();
   audio = new Audio(); audioOk = false; vStart = 0; vT0 = 0; raf = 0; saving = null; saveAgain = false; ctx.serverIssues = [];
   // the first listeners: derived state that every other module reads, and the rule "selecting moves the playhead into the item"
@@ -135,27 +186,33 @@ export async function mount(host, mctx) {
     window.__bti = null; window.__tl = null;
   });
   wireTopbar(); wireKeys();
-  scope.on(root, 'click', (e) => { const b = e.target.closest?.('button'); if (b && b.closest('#ebar, #tl-bar, #transport')) b.blur(); });   // Space plays, it does not press the last button again
+  scope.on(root, 'click', (e) => { const b = e.target.closest?.('button'); if (b && b.closest('#ebar, #tl-bar, #transport, #sbar')) b.blur(); });   // Space plays, it does not press the last button again
   scope.on($('#preview-tools'), 'change', (e) => e.target.blur?.());
   initPreview(root, scope); initTimeline(root, scope); initInspector(root);
   try { setRegistry(await api.style(STYLE_ID)); }
   catch (e) { errorToast(e, 'Không tải được danh sách kỹ thuật: ', 9000); return view; }
   await loadProject(pid);
+  if (!st.draft && mode === 'simple') { mode = 'hand'; root.dataset.mode = 'hand'; placeBox('hand'); }      // the project did not load: its message is shown where the editor puts it
+  $('#btn-simple').onclick = () => setMode('simple');
+  if (st.draft) {                                                                       // c4pages: the simple page; its selection is what the request box reads while it is showing
+    simple = mountSimple(root, { pid: ctx.pid, scope, shell, hooks: { approve, save, setMode, openInEditor, approving: () => approving, next: nextStep } });
+    simple.selection.active = () => mode === 'simple';
+  }
   const promptBox = $('#prompt-edit-container');
   if (promptBox) {
-    mountPromptEdit(promptBox, { pid: ctx.pid, scope, takeIn: takeInTurn, onPreview: ({ t0, t1 }) => previewClip(t0, t1) });
+    mountPromptEdit(promptBox, { pid: ctx.pid, scope, takeIn: takeInTurn, onPreview: ({ t0, t1 }) => previewClip(t0, t1), sel: simple?.selection || null });
   }
   const identityBox = $('#identity-container');          // "Kiểu mở đầu và mốc chương": changes the saved storyboard on the server, then it is taken in like a turn of the prompt box
   if (identityBox) mountIdentityPick(identityBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: IDENTITY_LABELS.tookInMerged, fail: IDENTITY_LABELS.tookInFail }) });
   applyUrlParams();
-  window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api };
+  window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api, setMode, simple, get mode() { return mode; } };
   return view;
 }
 const view = {
   isDirty: () => st.dirty,
   save: async () => { await save(); return !st.dirty; },
   dirtyMessage: () => 'Storyboard có chỗ sửa chưa lưu.',
-  pipelineChanged: () => updateApprove(),
+  pipelineChanged: () => { updateApprove(); if (mode === 'simple') simple?.paintBar(); },
 };
 
 async function loadProject(pid) {
@@ -226,6 +283,7 @@ function updateTop() {
   const pc = $('#prop-count'); pc.hidden = !ctx.proposalsCount; pc.textContent = ctx.proposalsCount;
   $('#t-total').textContent = fmtTime(ctx.duration());
   updateApprove();
+  if (mode === 'simple') simple?.paintBar();
 }
 /** Ask the server to check the draft. The answer is used only if the draft has not changed since the question (a newer one is on its way). */
 async function runValidate() {
@@ -304,7 +362,7 @@ async function approve() {
   if (approving) return;                                   // a second click while the check runs does nothing
   if (st.dirty) { toast('Lưu trước khi duyệt.', 'warn'); return; }
   const inc = incompleteItems();
-  if (inc.length) { await showIncomplete(inc); return; }
+  if (inc.length) { if (mode === 'simple') simple.showProblems(); else await showIncomplete(inc); return; }
   approving = true; updateApprove(); msg('đang kiểm tra khi duyệt...');
   try {
     const r = await api.approve(ctx.pid, st.rev);
@@ -314,14 +372,17 @@ async function approve() {
   } catch (e) {
     const issues = e.body?.issues || e.body?.detail?.issues;
     if (e.status === 409) toast('Bản trên server đã đổi, tải lại dự án rồi duyệt lại.', 'err', 6000);
-    else if (e.status === 422) {
+    else if (e.status === 422 && mode === 'simple') {                  // c4pages: the problems in words, not the technical list
+      if (issues) setIssues(issues);
+      if (simple.list?.summary.problemShots || simple.list?.summary.general) simple.showProblems(); else toast(PAGE.top.cannotApprove, 'err', 6000);
+    } else if (e.status === 422) {
       if (issues) setIssues(issues);
       const bad = undrawableItems(issues), inc2 = incompleteItems();
       if (bad.length) await showIncomplete(bad, { title: `Chưa duyệt được: ${bad.length} chỗ không vẽ được`, message: 'Khi thử vẽ lại, các shot dưới đây không dựng được hình với giá trị hiện tại. Sửa tham số của chúng (hoặc đổi kỹ thuật) rồi duyệt lại. Bấm một dòng để tới đó.', firstText: 'Tới chỗ đầu tiên' });
       else if (inc2.length) await showIncomplete(inc2);
       else { setTab('issues'); toast('Không duyệt được: storyboard còn lỗi. Xem tab Lỗi.', 'err', 6000); }
     } else errorToast(e, 'Duyệt thất bại: ');
-  } finally { approving = false; msg(''); updateApprove(); }
+  } finally { approving = false; msg(''); updateApprove(); if (mode === 'simple') simple?.paintBar(); }
 }
 
 function wireTopbar() {
@@ -552,6 +613,7 @@ function wireKeys() {
   scope.on(document, 'keydown', (e) => {
     const act = resolveShortcut(factsOf(e, { modalOpen: modalIsOpen(), picking: !!ctx.pick, slotPicking: !!ctx.slotPick, hasDraft: !!st.draft }));
     if (!act) return;
+    if (mode === 'simple' && ['split', 'lock', 'delete'].includes(act)) return;                    // c4pages: nothing is cut, locked or deleted from a page that shows no timeline
     if (act !== 'escape') e.preventDefault();
     switch (act) {
       case 'swallow': break;
