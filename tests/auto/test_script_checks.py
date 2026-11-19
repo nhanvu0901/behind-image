@@ -67,4 +67,5 @@ def test_every_warning_of_the_script_step_has_a_sentence_for_the_page_and_the_ne
     for code in ("source_author_named", "source_talk", "fact_for_owner", "outline_note"):
         assert re.search(r"\b%s:" % code, labels), "no label for %s in labels.js" % code
     assert "worker fixscript" in js and "worker fixscript" in labels
-    assert js.rstrip().splitlines()[-1] == "Object.assign(BUILD, FIXSCRIPT_ISSUES);" and labels.rstrip().splitlines()[-1] == "Object.assign(CODE, CODE_FIXSCRIPT);"
+    # each block is a complete statement of its own (other workers append their blocks after it, so it is not required to be the last line)
+    assert "Object.assign(BUILD, FIXSCRIPT_ISSUES);" in js.splitlines() and "Object.assign(CODE, CODE_FIXSCRIPT);" in labels.splitlines()
