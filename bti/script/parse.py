@@ -11,7 +11,8 @@ from dataclasses import dataclass, field
 
 from .stats import count_words
 from .. import textfold
-from .store import CERTAINTY, CHAPTER_ID_SRC, Beat, Fact, Hook, NChapter, Narration, OChapter, Outline, doc_problem, now_iso
+from .store import (CERTAINTY, CHAPTER_ID_SRC, MAX_NOTE_CHARS, MAX_NOTES, Beat, Fact, Hook, NChapter, Narration, OChapter, Outline, doc_problem,
+                    now_iso)
 
 FINAL_RE = re.compile(r"^(?:_|[^\w\n])*FINAL\s+SCRIPT(?:_|[^\w\n])*$", re.I | re.M)       # never across lines: [\W_] used to eat the newlines
 OUTLINE_RE = re.compile(r"^(?:_|[^\w\n])*OUTLINE(?:_|[^\w\n])*$", re.I | re.M)
@@ -402,6 +403,7 @@ def parse_outline(text: str, known_paragraph_ids: set[str] | list[str] | None = 
     known = set(known_paragraph_ids) if known_paragraph_ids else None
     body = _after_marker(text, OUTLINE_RE)
     thesis, hooks, hook_choice, facts, chapters, target = "", [], None, [], [], None
+    notes: list[str] = []
     section, cur, last_key = None, None, None
     fact_n = 0
 
@@ -441,6 +443,11 @@ def parse_outline(text: str, known_paragraph_ids: set[str] | list[str] | None = 
         m = re.match(r"^(target words|target|total words)\s*[:=]\s*~?([\d,]+)", low)
         if m:
             target = int(m.group(2).replace(",", ""))
+            continue
+        m = re.match(r"^(?:[-*•]\s*)?(?:owner\s+)?notes?\s*:\s*(\S.*)$", low)           # a remark of the model to the owner: kept apart, never part of a fact, a purpose or the narration
+        if m:
+            notes.append(line.split(":", 1)[1].strip()[:MAX_NOTE_CHARS])
+            last_key = None
             continue
         if section == "hooks":
             hm2 = re.match(r"^\s*(?:[-*•]\s*)?(?:(h\d+)|(\d+)[.)])?\s*[:.)-]?\s*(.+)$", line, re.I)
@@ -518,6 +525,7 @@ def parse_outline(text: str, known_paragraph_ids: set[str] | list[str] | None = 
     elif hook_choice:
         hook_choice = hook_choice.lower()
     o = Outline(thesis, hooks, hook_choice, chapters, facts, tw, {"kind": "paste", "model": "", "created_at": now_iso()})
+    o.notes = notes[:MAX_NOTES]
     bad = doc_problem("outline", o.to_dict())            # ids, roles and flags the page would refuse are refused here too
     if bad:
         return _fail(res, f"The outline produced a document that cannot be stored ({bad}).", body, "The outline could not be read.")

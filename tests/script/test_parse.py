@@ -1,6 +1,7 @@
 import pytest
 
 from bti.script.parse import paragraph_listing, parse_outline, parse_script
+from bti.script.prompting import render_outline
 from bti.script.store import Fact, OChapter, Outline
 
 OUT = Outline("t", [], None,
@@ -239,3 +240,84 @@ def test_outline_failure_lists_paragraphs():
     r = parse_outline("I cannot do this.\n\nSorry again, here are ideas about the painting and its history.")
     assert not r.ok and "Found 2 paragraph(s)" in r.error and "Nothing was saved" in r.error
     assert not parse_outline("").ok
+
+
+# ------------------------------------------------------------------ remarks of the model to the owner (the NOTE lines of the outline)
+NOTE_OUTLINE = """OUTLINE
+
+THESIS: What is the mirror really showing?
+
+HOOKS
+h1: Look at the mirror.
+HOOK CHOICE: h1
+
+FACTS
+f01 | established | PAY-01 | The painting is dated 1434.
+f02 | disputed | PAY-02, HOD-04 | A frame inscription is dated 1433. | conflict: HOD-04 reports the inscription, but its paragraph opens "Believed to be a self-portrait" and may describe another painting.
+
+CHAPTERS
+## c01 COLD OPEN
+ROLE: cold_open
+CARD: no
+BUDGET: 190
+PURPOSE: Open on a puzzle the viewer can see.
+NOTE: Paragraph HOD-04 seems to describe another painting, so no fact is built on its inscription.
+FACTS: f01, f02
+SHOW: D2
+
+## c02 CLOSING
+ROLE: closing
+BUDGET: 150
+PURPOSE: Close.
+FACTS: f01
+SHOW: the whole painting
+
+- Note: The restored source is used as one reading only.
+OWNER NOTE: A third remark, with a colon: inside.
+TARGET WORDS: 340
+"""
+
+
+def test_note_lines_are_kept_apart_from_facts_and_purposes():
+    r = parse_outline(NOTE_OUTLINE)
+    assert r.ok
+    o = r.outline
+    assert o.notes == ["Paragraph HOD-04 seems to describe another painting, so no fact is built on its inscription.",
+                       "The restored source is used as one reading only.", "A third remark, with a colon: inside."]
+    assert o.chapters[0].purpose == "Open on a puzzle the viewer can see."          # a NOTE line ends the purpose, it never joins it
+    assert o.chapters[0].facts == ["f01", "f02"] and o.chapters[0].show == ["D2"] and o.target_words == 340
+    assert all("NOTE" not in f.claim and "NOTE" not in (f.conflict or "") for f in o.facts)
+    assert o.to_dict()["notes"] == o.notes and Outline.from_dict(o.to_dict()).notes == o.notes
+
+
+def test_notes_are_not_in_the_text_the_narrator_is_given_and_do_not_come_back_as_facts():
+    o = parse_outline(NOTE_OUTLINE).outline
+    text = render_outline(o)
+    assert "NOTE" not in text and "HOD-04 seems to describe" not in text
+    back = parse_outline(text).outline
+    assert back.notes == [] and [f.id for f in back.facts] == [f.id for f in o.facts]
+
+
+def test_an_outline_without_notes_keeps_its_revision_and_its_approval():
+    plain = parse_outline(OUTLINE_TEXT).outline
+    assert "notes" not in plain.to_dict()                                   # absent, not []: the revision (and every approval of an existing outline) is unchanged
+    with_notes = Outline.from_dict({**plain.to_dict(), "notes": ["x"]})
+    assert with_notes.rev() != plain.rev()
+    assert Outline.from_dict(plain.to_dict()).rev() == plain.rev()
+
+
+def test_a_note_line_needs_text_and_at_most_five_are_kept():
+    text = NOTE_OUTLINE.replace("TARGET WORDS: 340", "\n".join(f"NOTE: remark {i}" for i in range(8)) + "\nNOTE:\nTARGET WORDS: 340")
+    o = parse_outline(text).outline
+    assert len(o.notes) == 5 and o.notes[0].startswith("Paragraph") and "NOTE" not in " ".join(o.notes)
+    long = parse_outline(NOTE_OUTLINE.replace("TARGET WORDS: 340", "NOTE: " + "x" * 2000 + "\nTARGET WORDS: 340")).outline
+    assert max(len(n) for n in long.notes) == 600
+
+
+def test_the_shape_check_of_a_document_with_notes():
+    from bti.script.store import doc_problem
+    d = parse_outline(NOTE_OUTLINE).outline.to_dict()
+    assert doc_problem("outline", d) is None
+    assert "notes must be a list" in doc_problem("outline", {**d, "notes": "a string"})
+    assert "notes must be a list" in doc_problem("outline", {**d, "notes": [1, 2]})
+    assert "at most 5" in doc_problem("outline", {**d, "notes": ["x"] * 6})

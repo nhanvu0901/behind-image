@@ -19,6 +19,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from bti.script import sourcenames
+from bti.script.stats import MAX_SENTENCE_WORDS
+
 REPO = Path(__file__).resolve().parents[2]
 
 
@@ -266,9 +269,9 @@ def narration_max_beat_words(o, max):
     return _ok(not bad, bad[:8] or (sorted(x[1] for x in longest)[-1] if longest else 0), "no line over %d words" % max, "lines over %d words: %s" % (max, ", ".join("%s (%d)" % x for x in bad[:6])))
 
 
-@criterion("narration.max_sentence_words", needs=("narration",), params={"max": P("int", 28)})
+@criterion("narration.max_sentence_words", needs=("narration",), params={"max": P("int", MAX_SENTENCE_WORDS)})
 def narration_max_sentence_words(o, max):
-    """No sentence is longer than `max` words."""
+    """No sentence is longer than `max` words (the default is the app's own limit, `bti.script.stats.MAX_SENTENCE_WORDS`)."""
     bad = []
     for _, b in _beats(o):
         for s in _sentences(b.get("text")):
@@ -300,14 +303,14 @@ def narration_chapters_match_outline(o):
     return _ok(got == want, got, "the %d chapters of the outline" % len(want), "chapters %s, the outline has %s" % (got, want))
 
 
-@criterion("narration.chapter_budgets", needs=("narration", "outline"), params={"tolerance": P("number", 0.3)})
-def narration_chapter_budgets(o, tolerance):
-    """Every chapter is as long as its budget, within `tolerance`."""
+@criterion("narration.chapter_budgets", needs=("narration", "outline"), params={"tolerance": P("number", 0.3), "max_over": P("number")})
+def narration_chapter_budgets(o, tolerance, max_over=None):
+    """Every chapter is as long as its budget, within `tolerance`; with `max_over`, none is more than that share over it (the budget is a ceiling)."""
     budget = {c["id"]: int(c.get("word_budget") or 0) for c in _outline(o).get("chapters") or []}
     bad = {}
     for c in o["narration"].get("chapters") or []:
         w = sum(len(_words(b.get("text"))) for b in c.get("beats") or [])
-        if budget.get(c["id"]) and abs(w / budget[c["id"]] - 1) > tolerance:
+        if budget.get(c["id"]) and (abs(w / budget[c["id"]] - 1) > tolerance or (max_over is not None and w / budget[c["id"]] - 1 > max_over)):
             bad[c["id"]] = [w, budget[c["id"]]]
     return _ok(not bad, bad, "every chapter is near its budget", "chapters off budget (words, budget): %s" % json.dumps(bad))
 
@@ -325,6 +328,24 @@ def narration_facts_in_outline(o):
     known = {f["id"] for f in _outline(o).get("facts") or []}
     bad = sorted({f for _, b in _beats(o) for f in b.get("facts") or [] if f not in known})
     return _ok(not bad, bad, "every cited fact exists", "cited facts that are not in the outline: %s" % ", ".join(bad))
+
+
+@criterion("narration.no_source_author_named", needs=("narration", "brief"), params={"talk": P("bool", True)})
+def narration_no_source_author_named(o, talk):
+    """No line names the author of a source book of the project (the names come from the brief); with `talk`, none speaks of "the books" or "the sources" either."""
+    names = sourcenames.author_names(o["brief"])
+    if not names:
+        return Result(False, None, "the brief names no author of a source, so there is nothing to look for")
+    named, spoke = {}, {}
+    for _, b in _beats(o):
+        found = sourcenames.find_authors(b.get("text") or "", names)
+        if found:
+            named[b["id"]] = found
+        if talk and sourcenames.find_source_talk(b.get("text") or ""):
+            spoke[b["id"]] = [w for _, w in sourcenames.find_source_talk(b.get("text") or "")]
+    bad = {**spoke, **{k: named[k] + spoke.get(k, []) for k in named}}
+    return _ok(not bad, {"lines": len(bad), "first": dict(list(bad.items())[:5])}, "no source author is named (looked for %s)" % ", ".join(sorted(names)),
+               "%d lines name an author or speak of the sources (first: %s)" % (len(bad), json.dumps(dict(list(bad.items())[:3]), ensure_ascii=False)))
 
 
 _MARKUP = re.compile(r"(\b[A-Z]{3}-\d{2,3}\b|\bf\d{2,}\b|\*\*|__|`|^\s*#|\[[^\]]{1,80}\]|<[^>]{1,40}>|\|)", re.M)

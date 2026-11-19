@@ -181,14 +181,15 @@ def test_outline_source_excluded(tproj):
 
 
 def test_warning_long_sentence_and_median_summary():
+    from bti.script.stats import MAX_SENTENCE_WORDS
     n, o = good()
-    # Beat with a sentence <= 28 words has no warning
-    n.chapters[0].beats[0].text = " ".join(["Word"] * 28) + "."
+    # Beat with a sentence <= the limit has no warning
+    n.chapters[0].beats[0].text = " ".join(["Word"] * MAX_SENTENCE_WORDS) + "."
     iss = validate.validate_narration(n, o)
     assert "long_sentence" not in codes(iss, "warning")
 
-    # Beat with a sentence > 28 words triggers warning "long_sentence"
-    n.chapters[0].beats[0].text = " ".join(["Word"] * 29) + "."
+    # Beat with a sentence > the limit (one number: stats.MAX_SENTENCE_WORDS, 25) triggers warning "long_sentence"
+    n.chapters[0].beats[0].text = " ".join(["Word"] * (MAX_SENTENCE_WORDS + 1)) + "."
     iss2 = validate.validate_narration(n, o)
     assert "long_sentence" in codes(iss2, "warning")
     long_iss = [i for i in iss2 if i["code"] == "long_sentence"]

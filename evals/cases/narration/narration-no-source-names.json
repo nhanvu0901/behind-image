@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-no-source-names",
+  "step": "narration",
+  "title": "The narration never names the authors of the source books",
+  "why": "prompts/script.md and prompts/rules_voice.md (rule 8: the viewer has never heard of the books) and docs/APP_GUIDE.md section 5.5: a line that names the author of a source book, or speaks of \"the books\" or \"the sources\", is the warning source_author_named or source_talk, and it stops an automatic run.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "no-names",
+      "kind": "narration.no_source_author_named",
+      "talk": true
+    }
+  ]
+}

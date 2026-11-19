@@ -1,0 +1,33 @@
+{
+ "painting": {
+  "title": "The Arnolfini Portrait",
+  "artist": "Jan van Eyck",
+  "year": "1434"
+ },
+ "sources": [
+  {
+   "code": "PAY",
+   "book_id": "payne_gae",
+   "book_title": "Great Art Explained",
+   "author": "James Payne",
+   "included": true,
+   "paragraphs": []
+  },
+  {
+   "code": "HOD",
+   "book_id": "hodge_aid",
+   "book_title": "Art in Detail: 100 Masterpieces",
+   "author": "Susie Hodge",
+   "included": true,
+   "paragraphs": []
+  },
+  {
+   "code": "MAD",
+   "book_id": "brookehitching_mad",
+   "book_title": "The Madman's Gallery",
+   "author": "Edward Brooke-Hitching",
+   "included": true,
+   "paragraphs": []
+  }
+ ]
+}

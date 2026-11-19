@@ -559,7 +559,7 @@ const BUILD = {
   spoken_chars: (i) => `Dòng ${w(i.beat)} có dấu câu mà giọng đọc không ngắt được (; : ( ) hoặc gạch ngang). Dùng dấu phẩy và dấu chấm.`,
   beat_too_long: (i, r) => { const m = /has (\d+) words/i.exec(r); return `Dòng ${w(i.beat)} dài ${m ? m[1] + ' từ' : 'quá'} (trên 90), nên tách ra.`; },
   /* worker dscript */
-  long_sentence: (i, r) => { const m = /with (\d+) words/i.exec(r); return `Dòng ${w(i.beat)} có câu dài ${m ? m[1] + ' từ' : 'quá'} (trên 28 từ); nên tách ra.`; },
+  long_sentence: (i, r) => { const m = /with (\d+) words/i.exec(r), lim = /more than (\d+)/i.exec(r); return `Dòng ${w(i.beat)} có câu dài ${m ? m[1] + ' từ' : 'quá'} (trên ${lim ? lim[1] : 25} từ); nên tách ra.`; },
   no_show: (i) => `Dòng ${w(i.beat)} chưa có gợi ý hình sẽ hiện.`,
   words_under: (i, r) => { const m = /Only (\d+) words, under 70% of the target (\d+)/i.exec(r); return m ? `Mới có ${m[1]} từ, dưới 70% mục tiêu ${m[2]} từ.` : 'Lời dẫn quá ngắn so với mục tiêu.'; },
   words_off_target: (i, r) => { const m = /(\d+) words; the target is (\d+)/i.exec(r); return m ? `Có ${m[1]} từ, mục tiêu ${m[2]} từ (lệch hơn 15%).` : 'Số từ lệch mục tiêu quá 15%.'; },
@@ -668,3 +668,12 @@ export function boxErrorText(e) {
   const t = typeof code === 'string' ? STAGE_CODES.draft[code] || STAGE_CODES.ops[code] || LONGJOB_CODES[code] : null;
   return t ? { text: t, detail: '' } : describeError(e);
 }
+
+/* worker fixscript: the sentences of the new checks of the script step (the outline's and the narration's). issueText() reads BUILD, so they are added to it here. */
+export const FIXSCRIPT_ISSUES = {
+  source_author_named: (i) => `Dòng ${w(i.beat)} nêu tên tác giả sách nguồn${Array.isArray(i.names) && i.names.length ? ' (' + i.names.join(', ') + ')' : ''}. Người xem chưa nghe tên các cuốn sách này: hãy kể bằng giọng người dẫn, đừng nhắc tên người viết.`,
+  source_talk: (i) => `Dòng ${w(i.beat)} nói về chính các sách hoặc đoạn nguồn${Array.isArray(i.found) && i.found.length ? ' ("' + i.found.join('", "') + '")' : ''}, hoặc có lời nhắn dành cho chủ kênh. Lời dẫn không nói về nguồn: hãy kể thành hai cách đọc cùng một vật.`,
+  fact_for_owner: (i) => `Dữ kiện ${w(i.fact)} có lời nhắn hoặc lời dặn dành cho người duyệt${Array.isArray(i.found) && i.found.length ? ' ("' + i.found.join('", "') + '")' : ''}. Lời dẫn được viết từ dữ kiện nên có thể đọc to nó: hãy xóa câu ấy khỏi dữ kiện.`,
+  outline_note: (i, r) => `Ghi chú của mô hình cho bạn: ${String(r || '').replace(/^Note for the owner:\s*/i, '')}`,
+};
+Object.assign(BUILD, FIXSCRIPT_ISSUES);

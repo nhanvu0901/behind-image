@@ -27,10 +27,22 @@ def test_narration_stats_per_chapter_budget():
     assert stats.narration_stats(n, o, 4.0)["minutes"] == round(400 / 4 / 60, 2)
 
 
+def test_the_sentence_limit_is_one_number():
+    assert stats.MAX_SENTENCE_WORDS == 25
+    assert stats.STYLE_TARGETS["max"] == stats.MAX_SENTENCE_WORDS
+    assert "p90_max" not in stats.STYLE_TARGETS and "share_over_25_max" not in stats.STYLE_TARGETS      # the old, vaguer limits (32 and a quarter over 25) are gone
+    S = lambda k: " ".join(["Word"] * k) + "."
+    prof = stats.sentence_profile([S(stats.MAX_SENTENCE_WORDS + 1)] * 10)
+    assert f"share_over_{stats.MAX_SENTENCE_WORDS}" in prof          # the key names the limit: change the number and this test says the key must be renamed
+    assert prof[f"share_over_{stats.MAX_SENTENCE_WORDS}"] == 1.0
+
+
 def test_sentence_profile_against_targets():
     S = lambda k: " ".join(["Word"] * k) + "."
     prof = stats.sentence_profile([f"{S(9)} {S(16)} {S(22)}"] * 4)
     assert prof["sentences"] == 12 and prof["median"] == 16 and prof["share_over_25"] == 0 and prof["notes"] == []
+    one = stats.sentence_profile([f"{S(9)} {S(16)} {S(22)} {S(26)}"] * 4)           # one sentence of 26 in four is no longer inside a "quarter that may be long"
+    assert one["share_over_25"] == 0.25 and any("longer than 25 words" in x for x in one["notes"])
     flat = stats.sentence_profile([S(40)] * 10)
     assert flat["share_over_25"] == 1.0 and flat["notes"]
     frag = stats.sentence_profile(["No. Yes. Ok. " + S(15)] * 5)

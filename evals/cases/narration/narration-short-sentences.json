@@ -3,7 +3,7 @@
   "name": "narration-short-sentences",
   "step": "narration",
   "title": "Sentences are short enough to be spoken",
-  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md: none over 28 words, a median of 8 to 18 (the app's sentence profile).",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md: none over 25 words (bti.script.stats.MAX_SENTENCE_WORDS, the one limit of the prompts, the check long_sentence and the documents), a median of 8 to 22 (the app's sentence profile).",
   "sample": {
     "project": "arnolfini-from-books",
     "start": "outline_approved"
@@ -13,7 +13,7 @@
     {
       "id": "longest",
       "kind": "narration.max_sentence_words",
-      "max": 28
+      "max": 25
     },
     {
       "id": "median",

@@ -7,7 +7,8 @@ from __future__ import annotations
 
 import re
 
-from .stats import WPS_DEFAULT, count_words, minutes, narration_stats, sentences
+from . import sourcenames
+from .stats import MAX_SENTENCE_WORDS, WPS_DEFAULT, count_words, minutes, narration_stats, sentences
 from .store import Narration, Outline, chapter_order_differs
 from .. import textfold
 
@@ -91,6 +92,12 @@ def validate_outline(o: Outline, brief: dict | None = None) -> list[dict]:
                     out.append(issue("warning", "source_excluded", f"Fact {f.id} cites excluded source: {', '.join(exc)}.", fact=f.id))
         if f.certainty == "disputed" and not f.conflict:
             out.append(issue("warning", "disputed_no_conflict", f"Fact {f.id} is disputed but no conflict is described.", fact=f.id))
+        for_owner = sourcenames.find_owner_address(f.claim) + sourcenames.find_owner_address(f.conflict or "")
+        if for_owner:
+            # a fact's text states what the sources say and nothing else: the narration is written from it and could speak a remark to the owner
+            out.append(issue("warning", "fact_for_owner",
+                             f"Fact {f.id} has a remark for the owner or an instruction in its text ({'; '.join(repr(x) for x in for_owner[:3])}); "
+                             "the narration is written from it and may speak it. Delete it, or move it to a NOTE line.", fact=f.id, found=for_owner[:3]))
     for c in o.chapters:
         for fid in c.facts:
             if fid not in known_f:
@@ -104,6 +111,8 @@ def validate_outline(o: Outline, brief: dict | None = None) -> list[dict]:
     total = sum(c.word_budget for c in o.chapters)
     if o.target_words and total and abs(total - o.target_words) > 0.15 * o.target_words:
         out.append(issue("warning", "budget_sum", f"The chapter budgets add up to {total} words; the target is {o.target_words}."))
+    for i, note in enumerate(o.notes, 1):
+        out.append(issue("warning", "outline_note", f"Note for the owner: {note}", note=i))
     return out
 
 
@@ -168,6 +177,7 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
                 # outline does not have means the narration was written for another one
                 out.append(issue("error", "unknown_chapter", f"Chapter {c.id} {c.title} is not in the outline.", chapter=c.id))
     known = outline.fact_ids() if outline else None
+    authors = sourcenames.author_names(brief)           # without the brief (an approval, a test) the names of the books are not known: only the phrases are checked
     for c in n.chapters:
         for b in c.beats:
             where = {"chapter": c.id, "beat": b.id}
@@ -180,14 +190,24 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
                 out.append(issue("error", "markup_in_text", f"Beat {b.id} in {c.id} has {m} in its text; the text must be spoken words only.", **where))
             elif SPOKEN_CHARS.search(b.text):
                 out.append(issue("warning", "spoken_chars", f"Beat {b.id} in {c.id} has punctuation the voice does not pause on (; : ( ) or a dash); use commas and full stops.", **where))
+            named = sourcenames.find_authors(b.text, authors)
+            if named:
+                out.append(issue("warning", "source_author_named",
+                                 f"Beat {b.id} in {c.id} names the author of a source book ({', '.join(named)}); the narrator tells it in his own voice, "
+                                 "without the name.", **where, names=named))
+            talk = sourcenames.find_source_talk(b.text)
+            if talk:
+                out.append(issue("warning", "source_talk",
+                                 f"Beat {b.id} in {c.id} speaks about the sources themselves ({'; '.join(repr(x) for _, x in talk[:3])}), or carries a remark "
+                                 "meant for the owner; tell it as two readings of the picture instead.", **where, found=[x for _, x in talk[:3]]))
             if w > 90:
                 out.append(issue("warning", "beat_too_long", f"Beat {b.id} in {c.id} has {w} words (more than 90); split it.", **where))
             b_sentences = sentences(b.text)
-            long_s = [s for s in b_sentences if count_words(s) > 28]
+            long_s = [s for s in b_sentences if count_words(s) > MAX_SENTENCE_WORDS]
             if long_s:
                 max_w = max(count_words(s) for s in long_s)
                 out.append(issue("warning", "long_sentence",
-                                 f"Beat {b.id} in {c.id} has a sentence with {max_w} words (more than 28); split it.",
+                                 f"Beat {b.id} in {c.id} has a sentence with {max_w} words (more than {MAX_SENTENCE_WORDS}); split it.",
                                  **where))
             if not b.show:
                 out.append(issue("warning", "no_show", f"Beat {b.id} in {c.id} has no hint of what is on screen.", **where))
@@ -208,7 +228,7 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
     out.append(issue("info", "length", f"{st['words']} words, about {st['minutes']:.1f} minutes at {wps} words per second."))
     med = st["sentence_profile"]["median"]
     med_str = f"{med:.1f}".rstrip("0").rstrip(".") if isinstance(med, float) else f"{med}"
-    out.append(issue("info", "sentence_median", f"Median sentence length: {med_str} words (target 8 to 18, none over 28)."))
+    out.append(issue("info", "sentence_median", f"Median sentence length: {med_str} words (target 8 to 18, none over {MAX_SENTENCE_WORDS})."))
     for note in st["sentence_profile"]["notes"]:
         out.append(issue("info", "sentence_profile", note))
     if outline and brief:

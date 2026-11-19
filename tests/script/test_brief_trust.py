@@ -48,8 +48,8 @@ def by_book(b):
 
 
 NOTE_WORDS = ("restored and reviewed rendering of a machine-translated book", "unmarked prose says what the book says", "names corrected",
-              "ideas and readings of the picture may be used", "Kelly Grovier argues", "once", "never as established fact",
-              "NO number, date or quotation", "unless another source of this dossier confirms it",
+              "ideas and readings of the picture may be used as readings of the picture", "never as established fact", "never in the author's name",
+              "one reading among others", "NO number, date or quotation", "unless another source of this dossier confirms it",
               "[…] marks a passage that could not be restored", "never guess what it said")
 
 
@@ -74,13 +74,12 @@ def test_each_level_is_marked_in_the_brief_and_the_page_fields(tmp_path):
 
 
 def test_the_restricted_things_are_named_and_the_note_is_short(tmp_path):
-    note = restored_note("Kelly Grovier")
+    note = restored_note()
     for kind in ("number", "date", "quotation"):
         assert kind in note
-    assert 'say "Kelly Grovier argues"' in note and len(note) < 600
-    assert "the author argues" in restored_note("")                                  # a book with no author on record
+    assert "argues" not in note and "Kelly" not in note and len(note) < 700                # the note does not ask the narration to name the author
     d, lib = project(tmp_path, [("grovier_nws", "restored", RESTORED_TEXT)], library=False)
-    assert "the author argues" in render_brief(build_brief(d, library_root=lib))
+    assert "never in the author's name" in render_brief(build_brief(d, library_root=lib))       # a book with no author on record: the same note
 
 
 def test_restored_is_included_by_default_and_low_is_not(tmp_path):
@@ -119,6 +118,7 @@ def test_flag_no_normal_source_for_each_mix(tmp_path):
     f, t = flag([("payne_gae", "normal", PLAIN), ("grovier_nws", "restored", RESTORED_TEXT)], exclude=["payne_gae"])   # the normal one left out
     assert f is True and "NO FULLY TRUSTED SOURCE" in t
     assert "every fact of this painting needs care" in t and '"established"' in t and '"likely"' in t
+    assert "tells it as a reading, not as an established fact" in t and "whose claim" not in t
 
 
 def test_words_of_a_restored_source_do_not_count_the_marks(tmp_path):

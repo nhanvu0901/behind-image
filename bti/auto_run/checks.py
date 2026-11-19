@@ -33,11 +33,21 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "unknown_fact": ("a chapter uses a fact that is not in the fact table", "có chương dùng dữ kiện không có trong bảng dữ kiện"),
         "disputed_no_conflict": ("a disputed fact has no conflict described, so the narration would state it as certain",
                                  "có dữ kiện còn tranh cãi nhưng chưa nói rõ chỗ tranh cãi"),
+        # worker fixscript: the narration is written FROM the fact table, so a remark to the owner left in a fact gets spoken (it did, twice, in the first video made end
+        # to end); taking it out is a ten-second edit before the gate, finding it after the voice is an hour of machine time
+        "fact_for_owner": ("a fact's text holds a remark for the owner or an instruction, and the narration is written from it: it would be spoken",
+                           "có dữ kiện chứa lời nhắn cho bạn, lời dẫn viết từ đó có thể đọc to lời nhắn ấy"),
     },
     "narration": {
         "words_off_target": ("the length is more than 15% away from the target: the video would not be the length that was planned",
                              "độ dài lời dẫn lệch quá 15% so với mục tiêu"),
         "unknown_fact": ("a line cites a fact that is not in the outline", "có dòng nhắc dữ kiện không có trong dàn ý"),
+        # worker fixscript: the voice that follows is about an hour of machine time and says every word of the line, so a name or a remark that should not be
+        # spoken is cheap to take out now and an hour to take out later; the viewer has never heard of the books, and these two read like a review of three books
+        "source_author_named": ("a line names the author of a source book, and the voice would say it (the viewer has never heard of the books)",
+                                "có dòng nêu tên tác giả sách nguồn, giọng đọc sẽ đọc to tên đó"),
+        "source_talk": ("a line speaks about the sources themselves (the books, a passage, a doubt about a source) or carries a remark meant for the owner, and the voice would read it aloud",
+                        "có dòng nói về chính các sách nguồn hoặc mang lời nhắn dành cho chủ kênh"),
     },
     "picks": {
         "beat_no_pick": ("more than a quarter of the lines of the narration have no picture (up to a quarter the run goes on: the draft shows the main painting there)",
@@ -59,7 +69,9 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
 }
 # gate -> codes that never stop the run (they stay in the log)
 TOLERATED: dict[str, frozenset[str]] = {
-    "outline": frozenset({"fact_unused", "no_hook_choice", "budget_sum"}),
+    # outline_note (worker fixscript): the model's own remark to the owner (a NOTE line, never part of a fact or of the narration). The page shows it among the checks and the
+    # run log keeps it with its count; it does not stop the run, because the narration never sees it and the outline already handled the thing it talks about
+    "outline": frozenset({"fact_unused", "no_hook_choice", "budget_sum", "outline_note"}),
     "narration": frozenset({"spoken_chars", "beat_too_long", "long_sentence", "no_show", "chapter_off_budget"}),
     # a flagged picture (size, licence or the like) is not a reason to stop: the owner said copyright is not a blocker, and a picture from the owner's own books always carries
     # the flag "unknown". The run goes on and writes the count into its log.

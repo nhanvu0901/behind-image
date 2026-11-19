@@ -86,7 +86,8 @@ test('validation issues are Vietnamese sentences (the dialog of U1-002)', () => 
   assert.equal(typeof issueText(null).text, 'string');
 });
 test('every code the server can raise has a Vietnamese sentence', () => {
-  const codes = ['no_thesis', 'no_chapters', 'duplicate_chapter', 'chapter_no_title', 'chapter_no_budget', 'duplicate_fact', 'fact_no_source', 'unknown_source_id', 'disputed_no_conflict', 'unknown_fact', 'fact_unused', 'no_hook_choice', 'budget_sum', 'outline_missing', 'outline_not_approved', 'outline_stale', 'chapter_missing', 'empty_chapter', 'chapter_order', 'unknown_chapter', 'empty_beat', 'markup_in_text', 'spoken_chars', 'beat_too_long', 'no_show', 'words_under', 'words_off_target', 'chapter_off_budget', 'length', 'source_share', 'overlap', 'chapter_by_position', 'chapter_twice', 'meta_orphan', 'no_chapter_lines', 'preamble_dropped', 'chapter_empty', 'budget_defaulted', 'no_facts', 'hook_defaulted'];
+  const codes = ['no_thesis', 'no_chapters', 'duplicate_chapter', 'chapter_no_title', 'chapter_no_budget', 'duplicate_fact', 'fact_no_source', 'unknown_source_id', 'disputed_no_conflict', 'unknown_fact', 'fact_unused', 'no_hook_choice', 'budget_sum', 'outline_missing', 'outline_not_approved', 'outline_stale', 'chapter_missing', 'empty_chapter', 'chapter_order', 'unknown_chapter', 'empty_beat', 'markup_in_text', 'spoken_chars', 'beat_too_long', 'no_show', 'words_under', 'words_off_target', 'chapter_off_budget', 'length', 'source_share', 'overlap', 'chapter_by_position', 'chapter_twice', 'meta_orphan', 'no_chapter_lines', 'preamble_dropped', 'chapter_empty', 'budget_defaulted', 'no_facts', 'hook_defaulted', 'long_sentence', 'sentence_median',
+    /* worker fixscript */ 'source_author_named', 'source_talk', 'fact_for_owner', 'outline_note'];
   for (const code of codes) { const t = issueText({ code, message: 'x', chapter: 'c01', fact: 'f01', beat: 'b1' }); assert.ok(!t.generic, code); assert.ok(isVietnamese(t.text) || /\d|c01|f01|b1/.test(t.text), code); }
 });
 test('failed model jobs', () => {
@@ -163,4 +164,17 @@ test('claude_outdated: a failed script job (kind config) shows the server senten
   assert.equal(turn.headline, OUTDATED_BARE);
   assert.equal(turn.extra, OUTDATED_FULL);
   assert.doesNotMatch(`${turn.headline} ${turn.extra}`, /hết hạn mức/);
+});
+
+// worker fixscript: the new checks of the script step say what was found, in Vietnamese, and the sentence limit is the server's
+test('the new script checks: a sentence in Vietnamese that carries what was found', () => {
+  const a = issueText({ level: 'warning', code: 'source_author_named', chapter: 'c01', beat: 'b0002', names: ['Hodge', 'Payne'], message: 'Beat b0002 in c01 names the author of a source book (Hodge, Payne); the narrator tells it in his own voice, without the name.' });
+  assert.ok(isVietnamese(a.text) && /b0002/.test(a.text) && /Hodge, Payne/.test(a.text) && !a.generic);
+  const t = issueText({ level: 'warning', code: 'source_talk', chapter: 'c04', beat: 'b0087', found: ['the books'], message: "Beat b0087 in c04 speaks about the sources themselves ('the books')." });
+  assert.ok(isVietnamese(t.text) && /b0087/.test(t.text) && /"the books"/.test(t.text) && !t.generic);
+  const f = issueText({ level: 'warning', code: 'fact_for_owner', fact: 'f10', found: ['the owner should', 'before it is used'], message: 'Fact f10 has a remark for the owner.' });
+  assert.ok(isVietnamese(f.text) && /f10/.test(f.text) && /the owner should/.test(f.text));
+  const n = issueText({ level: 'warning', code: 'outline_note', note: 1, message: 'Note for the owner: The paragraph HOD-04 seems to describe another painting.' });
+  assert.ok(isVietnamese(n.text) && /HOD-04 seems to describe another painting/.test(n.text) && !/Note for the owner/.test(n.text));
+  assert.match(issueText({ code: 'long_sentence', beat: 'b0147', message: 'Beat b0147 in c07 has a sentence with 26 words (more than 25); split it.' }).text, /26 từ.*trên 25 từ/);
 });

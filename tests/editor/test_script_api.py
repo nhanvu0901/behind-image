@@ -296,3 +296,60 @@ def test_no_key_value_is_ever_in_a_response(c, monkeypatch):
     monkeypatch.setenv("OPENROUTER_API_KEY", "AIzaTOPSECRET0000000000")
     for url in ("/api/models", P + "/brief", P + "/outline", P + "/narration"):
         assert "AIzaTOPSECRET" not in c.get(url).text
+
+
+# ------------------------------------------------------------------------------------------------------------ worker fixscript: voice, notes, length
+OUTLINE_WITH_NOTE = ("OUTLINE\nTHESIS: T\nHOOKS\nh1: a\nHOOK CHOICE: h1\nFACTS\nf01 | established | PAY-01 | A fact.\n"
+                     "f02 | disputed | PAY-02 | Another fact. | conflict: PAY-02 may describe another painting, so the owner should check it before it is used.\n"
+                     "CHAPTERS\n## c01 COLD OPEN\nBUDGET: 100\nFACTS: f01, f02\n## c02 CLOSING\nBUDGET: 100\nFACTS: f01\n"
+                     "NOTE: Paragraph PAY-02 seems to describe another painting.\nTARGET WORDS: 200")
+
+
+def test_the_notes_of_the_model_for_the_owner_are_kept_shown_among_the_checks_and_never_given_to_the_narrator(c):
+    r = c.post(P + "/outline/import", json={"text": OUTLINE_WITH_NOTE})
+    assert r.status_code == 200
+    o = r.json()
+    assert o["outline"]["notes"] == ["Paragraph PAY-02 seems to describe another painting."]
+    got = {i["code"]: i for i in o["issues"]}
+    assert got["outline_note"]["level"] == "warning" and got["outline_note"]["message"] == "Note for the owner: Paragraph PAY-02 seems to describe another painting."
+    assert got["fact_for_owner"]["fact"] == "f02" and got["fact_for_owner"]["level"] == "warning"       # the remark that was left inside a fact
+    assert not [i for i in o["issues"] if i["level"] == "error"]
+    saved = c.put(P + "/outline", json={"outline": {**o["outline"], "thesis": "T2"}, "base_rev": o["rev"]}).json()      # a save from the page keeps the notes
+    assert saved["outline"]["notes"] == o["outline"]["notes"] and saved["outline"]["thesis"] == "T2"
+    assert c.post(P + "/outline/approve", json={"rev": saved["rev"]}).status_code == 200                # warnings never block an approval
+    t = c.get(P + "/prompt", params={"phase": "script"}).text
+    assert "seems to describe another painting" not in t and "NOTE" not in t.split("THE APPROVED OUTLINE")[1].split("YOUR TASK")[0]
+
+
+def test_a_chapter_over_its_budget_is_written_again_once_and_the_job_says_so(c):
+    outline_ready(c)
+    jid = c.post(P + "/narration/generate", json={"model": "mock", "notes": "[mock:long c02]"}).json()["job_id"]
+    j = job(c, jid)
+    assert j["state"] == "done", j
+    rec = j["result"]["shortened"]
+    assert len(rec) == 1 and rec[0]["chapter"] == "c02" and rec[0]["kept"] == "rewrite" and rec[0]["after"] <= rec[0]["budget"] < rec[0]["words"]
+    c02 = next(x for x in j["chapters"] if x["id"] == "c02")
+    assert c02["attempts"] == 2 and c02["message"].startswith("đã cắt từ") and all(x["attempts"] == 1 for x in j["chapters"] if x["id"] != "c02")
+    assert not [i for i in c.get(P + "/narration").json()["issues"] if i["code"] in ("chapter_off_budget", "words_off_target")]
+    again = c.get(f"/api/jobs/{jid}").json()                                                            # the same on a later read
+    assert again["result"]["shortened"] == rec
+
+
+def test_a_line_that_names_an_author_of_a_source_book_is_a_warning_the_page_and_the_run_can_read(c):
+    brief = c.get(P + "/brief").json()
+    authors = [s["author"] for s in brief["sources"] if s.get("author")]
+    if not authors:
+        pytest.skip("the library of this machine has no book.json authors")
+    surname = authors[0].split()[-1]
+    n = narration_ready(c)
+    doc = n["narration"]
+    beat = doc["chapters"][0]["beats"][0]
+    beat["text"] = f"{surname} says she is his wife. The books agree on that."
+    put = c.put(P + "/narration", json={"narration": doc, "base_rev": n["rev"]}).json()
+    found = {(i["code"], i.get("beat")) for i in put["issues"]}
+    assert ("source_author_named", beat["id"]) in found and ("source_talk", beat["id"]) in found
+    named = next(i for i in put["issues"] if i["code"] == "source_author_named")
+    assert named["level"] == "warning" and named["chapter"] == "c01" and named["names"]
+    assert c.get(P + "/narration").json()["issues"] == put["issues"]                                    # the page and the run read the same list
+    r = c.post(P + "/narration/approve", json={"rev": put["rev"]})
+    assert r.status_code == 200 and r.json()["approved"] is True                                       # a warning never blocks the approval by itself

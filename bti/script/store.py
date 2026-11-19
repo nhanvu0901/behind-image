@@ -31,6 +31,8 @@ CHAPTER_ID_RE = re.compile(CHAPTER_ID_SRC)
 BEAT_ID_RE = re.compile(r"b\d{1,8}")
 FACT_ID_RE = re.compile(r"f\d{1,8}")
 HOOK_ID_RE = re.compile(r"h\d{1,6}")
+MAX_NOTES = 5                       # remarks to the owner an outline keeps (the prompt asks for at most three)
+MAX_NOTE_CHARS = 600
 
 
 # ---------------------------------------------------------------- locks
@@ -297,6 +299,9 @@ class Outline:
     source: dict = field(default_factory=lambda: _source({}, "manual"))
     approval: dict = field(default_factory=lambda: _approval({}))
     counters: dict = field(default_factory=lambda: {"chapter": 0, "fact": 0})
+    # remarks of the model to the OWNER (the `NOTE:` lines of the outline layout): something that is not a fact or a conflict, such as a source that looks
+    # wrong. They are shown in the checks of the page, and the narration never sees them. Absent from the file (and from the revision) when there are none.
+    notes: list[str] = field(default_factory=list)
 
     @classmethod
     def from_dict(cls, d: dict) -> "Outline":
@@ -321,12 +326,19 @@ class Outline:
                               _str(conflict) if conflict else None))
         o = cls(_str(d.get("thesis")), hooks, d.get("hook_choice") or None, chapters, facts,
                 _int(d.get("target_words"), 2000), _source(d.get("source")), _approval(d.get("approval")))
+        o.notes = _strs(d.get("notes"))[:MAX_NOTES]
         c = d.get("counters") if isinstance(d.get("counters"), dict) else {}
         o.counters = {"chapter": max(_int(c.get("chapter")), max([_numeric_tail(x.id) for x in chapters], default=0)),
                       "fact": max(_int(c.get("fact")), max([_numeric_tail(x.id) for x in facts], default=0))}
         return o
 
     def to_dict(self) -> dict:
+        d = self._to_dict()
+        if self.notes:                      # only when there are some: an outline without notes keeps the revision (and the approval) it always had
+            d["notes"] = self.notes
+        return d
+
+    def _to_dict(self) -> dict:
         return {
             "schema": SCHEMA_OUTLINE, "source": self.source, "thesis": self.thesis,
             "hook_options": [{"id": h.id, "text": h.text} for h in self.hook_options],
@@ -591,6 +603,8 @@ def doc_problem(kind: str, d) -> str | None:
                     return f"{name}.hook_options[{i}].{k} must be a string"
         if d.get("hook_choice") is not None and not isinstance(d.get("hook_choice"), str):
             return f"{name}.hook_choice must be a string or null"
+        if "notes" in d and not (_is_str_list(d["notes"]) and len(d["notes"]) <= MAX_NOTES):
+            return f"{name}.notes must be a list of at most {MAX_NOTES} strings"
     else:
         for k in ("project", "title", "language"):
             if k in d and d[k] is not None and not isinstance(d[k], str):
