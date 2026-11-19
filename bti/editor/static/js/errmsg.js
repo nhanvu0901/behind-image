@@ -320,6 +320,8 @@ const BY_CODE_HTTP = {
   at_least_one_source: () => 'Phải giữ lại ít nhất một nguồn sách.',
   /* worker mediafix */
   source_rate_limited: (b) => sourceLimitText(b),
+  /* worker mediafix3: a map was asked for without a place (an old or damaged source id): never drawn for a guessed place */
+  map_place_unknown: () => 'Không biết bản đồ này ở đâu nên không vẽ được. Hãy tìm lại địa điểm rồi chọn lại.',
   /* worker agentpick: the server's own sentence says which agent cannot run and why (Vietnamese, from the agent's check) */
   agent_unavailable: (b) => (typeof b?.detail === 'string' && isVietnamese(b.detail) ? b.detail : STAGE_CODES.settings.agent_unavailable),
 };

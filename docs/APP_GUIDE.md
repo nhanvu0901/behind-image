@@ -320,7 +320,7 @@ Phụ đề không bao giờ được vẽ vào hình; bước này không đưa
 
 **Chọn hình là gì?** Sau khi lời dẫn được duyệt, bạn quyết định mỗi dòng lời dẫn sẽ cho xem hình gì: bức tranh chính, một chi tiết của nó, hay một hình khác. Bước này nằm giữa Kịch bản và Dựng hình.
 
-**1. Chọn tranh chính (làm đầu tiên).** Mở tab "Tranh chính" ở cột bên phải. Ô tìm đã có sẵn tên tranh và tác giả; bấm "Tìm". Kết quả lấy từ Wikimedia Commons và The Met, mỗi ảnh cho biết kích thước (của bản gốc ở nguồn) và giấy phép. Ảnh quá lớn được lấy bản thu nhỏ do chính nguồn cung cấp; kích thước ghi trong dự án và các vùng bạn vẽ luôn tính theo đúng tệp đã lưu. Bấm "Làm tranh chính" ở ảnh bạn muốn. Cũng có thể lấy ảnh từ sách (tab "Sách") hoặc tải ảnh của bạn lên (tab "Tải lên").
+**1. Chọn tranh chính (làm đầu tiên).** Mở tab "Tranh chính" ở cột bên phải. Ô tìm đã có sẵn tên tranh và tác giả; bấm "Tìm". Kết quả lấy từ Wikimedia Commons và The Met, mỗi ảnh cho biết kích thước và giấy phép. Ảnh từ Wikimedia được lưu ở chiều rộng tối đa 3840 px, thường là 1920 hoặc 3840, vì Wikimedia phục vụ ổn định những cỡ này (thẻ ghi đúng cỡ sẽ được lưu); kích thước ghi trong dự án và các vùng bạn vẽ luôn tính theo đúng tệp đã lưu. Bấm "Làm tranh chính" ở ảnh bạn muốn. Cũng có thể lấy ảnh từ sách (tab "Sách") hoặc tải ảnh của bạn lên (tab "Tải lên").
 
 **2. Cờ cảnh báo.** Ảnh có thể mang một cờ: "Giấy phép bị hạn chế", "Chưa rõ giấy phép" hoặc "Ảnh nhỏ" (dưới 1200 px). Cờ chỉ để bạn biết: ảnh vẫn dùng được và không bao giờ bị từ chối. Nguồn và giấy phép luôn được ghi lại để điền vào phần mô tả video.
 

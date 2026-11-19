@@ -247,9 +247,11 @@ def test_osm_does_not_compose_and_cache_a_blank_map(tmp_path):
 
 
 def test_osm_serves_a_cached_map_without_any_request(tmp_path):
+    # CHANGED (mediafix3): the cache file is named for the centre and zoom it was drawn for, and the id carries them
+    src = _osm(tmp_path)
     (tmp_path / "osm").mkdir()
-    (tmp_path / "osm" / "1_z12.jpg").write_bytes(b"cached map")
-    dest = _osm(tmp_path).download({"source_id": "1:12", "_place_id": "1", "_zoom": 12}, tmp_path / "out.jpg")
+    src._cache_path(59.9, 10.7, 12).write_bytes(b"cached map")
+    dest = src.download({"source_id": "1:12:59.90000:10.70000"}, tmp_path / "out.jpg")
     assert dest.read_bytes() == b"cached map"                      # no request was needed, so there is nothing to refuse
 
 
@@ -261,7 +263,7 @@ def test_facade_search_and_import_refuse(tmp_path, monkeypatch):
     proj.mkdir()
     for source in ("commons", "met", "pexels", "pixabay", "osm"):
         refuses(api.search, "rocks", source=source)
-    for source, sid in (("commons", "File:A.jpg"), ("met", "436535"), ("pexels", "857251"), ("pixabay", "195893"), ("osm", "1:12")):
+    for source, sid in (("commons", "File:A.jpg"), ("met", "436535"), ("pexels", "857251"), ("pixabay", "195893"), ("osm", "1:12:59.90000:10.70000")):      # CHANGED (mediafix3): an osm id carries its place
         refuses(api.import_candidate, proj, source, sid)
     assert not list(proj.rglob("*.jpg")) and not list(proj.rglob("*.mp4"))
 

@@ -44,3 +44,15 @@ test('the other source errors keep their own sentences', () => {
   assert.match(stageErrorText('picks', new ApiError(503, { detail: 'x', code: 'source_unreachable' })).text, /bận hoặc không trả lời/);
   assert.match(stageErrorText('picks', new ApiError(502, { detail: 'x', code: 'source_error' })).text, /báo lỗi/);
 });
+
+// worker mediafix3: a map asked for without a place (code map_place_unknown) is shown with its own Vietnamese sentence
+test('a map without a known place says so in Vietnamese, through describeHttp, describeError and stageErrorText', () => {
+  const b = { detail: "the map has no known place: source id '297322:12' has no coordinates; search for the place again and pick it again", code: 'map_place_unknown' };
+  const want = 'Không biết bản đồ này ở đâu nên không vẽ được. Hãy tìm lại địa điểm rồi chọn lại.';
+  assert.equal(describeHttp(422, b).text, want);
+  assert.equal(describeError(new ApiError(422, b)).text, want);
+  assert.equal(stageErrorText('picks', new ApiError(422, b)).text, want);
+  assert.ok(isVietnamese(want));
+  assert.ok(!/\b(map|source|place|HTTP|422)\b/i.test(want), want);
+  assert.match(describeHttp(422, b).detail, /no known place/);        // the server's own words stay under detail
+});

@@ -28,6 +28,9 @@ SCALED_LONGEST_SIDE = 6000
 # by Wikimedia (HTTP 429, "Use thumbnail steps"). So this app never asks for a width that is not in this list.
 THUMB_STEPS = (20, 40, 60, 120, 250, 330, 500, 960, 1280, 1920, 3840)
 CARD_THUMB_WIDTH = 330          # the small picture of a search card (a step: it used to be 320, which is not)
+# mediafix3: Wikimedia serves renditions at the standard widths to anybody, but refuses the ORIGINAL (HTTP 429 with a long
+# Retry-After) to this server for hours. So an image at least this wide is stored as a rendition, never as its original.
+MIN_RENDITION_WIDTH = 1920
 _TAG = re.compile(r"<[^>]+>")
 _VIDEO_MIMES = ("video/", "application/ogg")
 
@@ -53,6 +56,48 @@ def rendition_width(w: int, h: int, longest: int = SCALED_LONGEST_SIDE, max_pixe
         if max(step, rh) <= longest or step * rh <= max_pixels:
             return step
     return None
+
+
+def _fits(step: int, w: int, h: int, longest: int = SCALED_LONGEST_SIDE, max_pixels: int = MAX_ORIGINAL_PIXELS) -> bool:
+    """A rendition `step` px wide of a `w` x `h` original is within the app's limits (longest side or pixel count)."""
+    rh = h * step / w
+    return max(step, rh) <= longest or step * rh <= max_pixels
+
+
+def rendition_target(w: int, h: int, size: int = 0) -> int | None:
+    """The standard width to download in place of the original of an image, or None when the original itself is taken.
+
+    The rule (mediafix3): the largest standard width that is NOT wider than the original and keeps the picture within the
+    app's limits (`_fits`), whenever that width is at least `MIN_RENDITION_WIDTH` (1920). 3048 x 4000 gives 1920, 3870 x 3042
+    gives 3840, 6703 x 8322 gives 3840. None (the original) when:
+      - the original is narrower than 1920 px: no rendition is good enough (a refused original falls back, see `download`);
+      - the original is exactly a standard width (1920, 3840): the rendition would be the original itself, and Wikimedia
+        answers the original's own address for it;
+      - the size is unknown and the file is not heavy.
+    An original that is too big by the app's older rule (longest side over 6000 px AND over 25 MP, or over 40 MB) keeps getting
+    a rendition even when no width of at least 1920 fits: the largest standard width below it (`rendition_width`)."""
+    heavy = size > MAX_ORIGINAL_BYTES
+    if not (w and h):
+        return standard_width(SCALED_LONGEST_SIDE) if heavy else None
+    for step in sorted(THUMB_STEPS, reverse=True):
+        if step > w or not _fits(step, w, h):
+            continue
+        if MIN_RENDITION_WIDTH <= step < w:
+            return step
+        break                      # the largest width that fits is the original's own width, or is under 1920
+    too_big = (max(w, h) > SCALED_LONGEST_SIDE and w * h > MAX_ORIGINAL_PIXELS) or heavy
+    return rendition_width(w, h) if too_big else None
+
+
+def expected_size(meta: dict) -> tuple[int, int]:
+    """The pixels of the file that `CommonsSource.download(meta, ...)` will store: the rendition's size (the height rounded
+    from the original's proportions) when a rendition is taken, else the original's size from the metadata ((0, 0) unknown)."""
+    w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
+    kind = meta.get("kind") or kind_of(meta.get("mime", ""))
+    target = rendition_target(w, h, int(meta.get("size") or 0)) if kind == "image" else None
+    if target and w and h:
+        return target, max(1, int(round(h * target / w)))
+    return w, h
 
 
 def _text(v: Any) -> str:
@@ -160,57 +205,118 @@ class CommonsSource:
     def credit(self, meta: dict) -> dict:
         return credit(meta)
 
+    def stored_size(self, meta: dict) -> tuple[int, int]:
+        """The pixels of the file `download` will store for `meta` (see `expected_size`): what a search card should show."""
+        return expected_size(meta)
+
+    def _rendition_url(self, meta: dict, width: int) -> str | None:
+        """The address of the rendition of `meta`'s file `width` px wide (one MediaWiki API call: `thumburl`), or None when the
+        API gives none. `width` must be one of `THUMB_STEPS`."""
+        title = unquote(str(meta.get("source_id") or "").strip())
+        if not title.lower().startswith("file:"):
+            title = "File:" + title
+        data = self._api({
+            "titles": title.replace("_", " "),
+            "prop": "imageinfo",
+            "iiprop": "url|size|mime",
+            "iiurlwidth": str(width),
+        })
+        for page in (data.get("query") or {}).get("pages") or []:
+            infos = page.get("imageinfo") or []
+            thumb = infos[0].get("thumburl") if infos else None
+            if thumb:
+                return thumb
+        return None
+
     def download(self, meta: dict, dest: Path, *, min_short_side: int | None = None,
                  max_bytes: int | None = None) -> Path:
-        """Download the file. Images shorter than `min_short_side` (default 1200 px)
-        are refused with ImageTooSmall before any bytes are fetched.
-        Large images (> 25 megapixels with a side over 6000 px, or > 40 MB) request a scaled rendition: the largest of
-        Wikimedia's standard widths (`THUMB_STEPS`) that is smaller than the original and keeps the longest side within 6000 px.
-        The size of the stored file can therefore differ from `meta["width"]` x `meta["height"]` (the original's): whoever
-        records the asset measures the file (`api.stored_image_size`).
-        Files over 60 MB (or max_bytes) after all that are refused with FileTooLarge."""
+        """Download the file and return the path it was written to (`dest`; see 4 below for the one case where it differs).
+
+        1. An image at least 1920 px wide is downloaded as a RENDITION: the largest of Wikimedia's standard widths
+           (`THUMB_STEPS`) that is not wider than the original and keeps the picture within the app's limits
+           (`rendition_target`). Wikimedia serves these to this server; the original is refused (HTTP 429) for hours.
+        2. An image narrower than 1920 px, or exactly a standard width, is downloaded as the original. When the source refuses
+           it with "too many requests" the largest standard width below the original is taken instead if it still passes
+           the size floor; otherwise the refusal is raised as it was (`MediaHTTPError`, `rate_limited`, `retry_after`).
+           No other retry is made: the polite-client rules of `bti.media.http` (one short retry, host cooldown) stay.
+        3. The size floor (`min_short_side`, default 1200 px) applies to the file that will be STORED (the rendition), checked
+           before any byte is fetched; the original's size does not matter. A video or any other file is never given a
+           rendition. An API answer whose `thumburl` equals the original's address is not a rendition.
+        4. A rendition can be another format than its original (Wikimedia answers a JPEG for a TIFF and a PNG for an SVG): it
+           is written beside `dest` with the extension of its own address, and that path is returned.
+        The size of the stored file therefore differs from `meta["width"]` x `meta["height"]` (the original's): whoever records
+        the asset measures the file (`api.stored_image_size`). Files over 60 MB (or max_bytes) are refused with FileTooLarge."""
         dest = Path(dest)
         kind = meta.get("kind") or kind_of(meta.get("mime", ""))
         floor = self.min_short_side if min_short_side is None else min_short_side
         w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
         size = int(meta.get("size") or 0)
-        if kind == "image" and w and h and min(w, h) < floor:
-            raise ImageTooSmall(f"{meta.get('source_id')}: {w}x{h} px, short side below {floor}")
+        target = rendition_target(w, h, size) if kind == "image" else None
+        sw, sh = expected_size(meta) if kind == "image" else (w, h)
+        if kind == "image" and sw and sh and min(sw, sh) < floor:
+            raise ImageTooSmall(f"{meta.get('source_id')}: {sw}x{sh} px would be stored (the original is {w}x{h}), "
+                                f"short side below {floor}")
         if not meta.get("url"):
             raise NotFound(f"{meta.get('source_id')}: no download url")
         cap = max_bytes or (MAX_VIDEO_BYTES if kind == "video" else MAX_IMAGE_BYTES)
         download_url = meta["url"]
         scaled = False
 
-        if kind == "image" and ((max(w, h) > SCALED_LONGEST_SIDE and w * h > MAX_ORIGINAL_PIXELS) or (size > MAX_ORIGINAL_BYTES)):
-            target_w = rendition_width(w, h, SCALED_LONGEST_SIDE)
-            if target_w:
-                title = unquote(str(meta.get("source_id") or "").strip())
-                if not title.lower().startswith("file:"):
-                    title = "File:" + title
-                data = self._api({
-                    "titles": title.replace("_", " "),
-                    "prop": "imageinfo",
-                    "iiprop": "url|size|mime",
-                    "iiurlwidth": str(target_w),
-                })
-                for page in (data.get("query") or {}).get("pages") or []:
-                    infos = page.get("imageinfo") or []
-                    thumb = infos[0].get("thumburl") if infos else None
-                    if thumb and thumb != meta["url"]:          # the same address as the original is no rendition
-                        download_url = thumb
-                        scaled = True
-                        break
+        if target:
+            thumb = self._rendition_url(meta, target)
+            if thumb and thumb != meta["url"]:          # the same address as the original is no rendition
+                download_url = thumb
+                scaled = True
 
         if not scaled and meta.get("size") and int(meta["size"]) > cap:
             raise http.FileTooLarge(f"{meta.get('source_id')}: {meta['size']} bytes exceeds cap {cap}")
-        http.download_file(download_url, dest, max_bytes=cap, opener=self._opener, sleep=self._sleep)
+        if scaled:
+            dest = _beside(dest, download_url)
+        try:
+            http.download_file(download_url, dest, max_bytes=cap, opener=self._opener, sleep=self._sleep)
+        except http.MediaHTTPError as refused:
+            if scaled or kind != "image" or not refused.rate_limited:
+                raise
+            dest = self._fallback_rendition(meta, dest, floor, cap, refused)
         if kind == "image" and not (w and h):
             aw, ah = image_size(dest)
             if aw and ah and min(aw, ah) < floor:
                 dest.unlink(missing_ok=True)
                 raise ImageTooSmall(f"{meta.get('source_id')}: {aw}x{ah} px, short side below {floor}")
         return dest
+
+    def _fallback_rendition(self, meta: dict, dest: Path, floor: int, cap: int, refused: http.MediaHTTPError) -> Path:
+        """The original was refused with "too many requests": take the largest standard width below it when that rendition
+        still passes the size floor. Any other outcome (no size known, the floor, no rendition address, the rendition refused
+        or failing too) raises the ORIGINAL refusal, so the caller sees the wait time the source asked for."""
+        w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
+        fb = rendition_width(w, h) if (w and h) else None
+        if not fb or min(fb, int(round(h * fb / w))) < floor:
+            raise refused
+        try:
+            thumb = self._rendition_url(meta, fb)
+            if not thumb or thumb == meta["url"]:
+                raise refused
+            target = _beside(dest, thumb)
+            http.download_file(thumb, target, max_bytes=cap, opener=self._opener, sleep=self._sleep)
+        except http.MediaHTTPError as other:
+            if other is refused:
+                raise
+            raise refused from other
+        return target
+
+
+def _beside(dest: Path, rendition_url: str) -> Path:
+    """`dest`, or `dest` with the extension of the rendition's own address when that is another image format (a TIFF's rendition
+    is a JPEG, an SVG's a PNG): the stored file must be named for what it is. jpg / jpeg and tif / tiff are the same format."""
+    same = {".jpeg": ".jpg", ".jpe": ".jpg", ".tiff": ".tif"}
+    have = Path(urlparse(rendition_url).path).suffix.lower()
+    if not re.fullmatch(r"\.[a-z0-9]{2,5}", have):
+        return dest
+    want = dest.suffix.lower()
+    if same.get(have, have) == same.get(want, want):
+        return dest
+    return dest.with_suffix(have)
 
 
 def credit(meta: dict) -> dict:
