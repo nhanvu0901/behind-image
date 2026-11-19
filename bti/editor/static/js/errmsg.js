@@ -288,6 +288,69 @@ export const STAGE_CODES = {
     unknown_step: 'Bước này không có trong danh sách bước.',
     agent_unavailable: 'Agent đang chọn chưa dùng được trên máy này.',
   },
+  /* worker c1state: the refusals every page can meet (the server now gives each one a code, see bti/editor/hints.py). Where the server's
+     own text already has an exact sentence (it names the beat, the shot, the field), BY_CODE_HTTP below keeps that one and uses these
+     only when the text has none. */
+  api: {
+    project_not_found: 'Không có dự án này.',
+    storyboard_not_found: 'Dự án chưa có storyboard.',
+    validation_failed: 'Storyboard còn lỗi nên chưa lưu hoặc duyệt được. Xem danh sách lỗi.',
+    save_refused: 'Storyboard còn lỗi nên chưa lưu hoặc duyệt được. Xem danh sách lỗi.',
+    storyboard_has_errors: 'Storyboard còn lỗi nên chưa làm tiếp được. Xem danh sách lỗi, sửa rồi thử lại.',
+    storyboard_incomplete: 'Còn cảnh chưa đủ hình hoặc đoạn phim nên chưa duyệt được. Xem danh sách lỗi để biết cảnh nào.',
+    base_rev_required: 'Thiếu mã phiên bản của bản đang sửa. Hãy tải lại trang.',
+    style_not_found: 'Không có kiểu (style) này.',
+    nothing_to_restore: 'Storyboard vẫn đọc được bình thường nên không có gì để khôi phục.',
+    no_history_copy: 'Trong lịch sử của dự án không còn bản storyboard nào đọc được. Hãy dựng bản nháp mới ở bước "Dựng hình".',
+    history_file_not_found: 'Không thấy bản lưu này trong lịch sử của dự án. Chọn bản khác.',
+    history_file_unreadable: 'Bản lưu này trong lịch sử không đọc được. Chọn bản khác.',
+    unknown_technique: 'Kỹ thuật không có trong danh sách.',
+    shot_not_found: 'Không tìm thấy cảnh này.',
+    no_audio_file: 'Dự án chưa có tệp âm thanh. Hãy làm bước "Giọng đọc" trước.',
+    preview_too_long: 'Đoạn xem thử quá dài. Chọn đoạn ngắn hơn.',
+    preview_too_many_frames: 'Đoạn xem thử có quá nhiều khung hình. Chọn đoạn ngắn hơn.',
+    job_not_found: 'Không tìm thấy tác vụ này (có thể máy chủ đã khởi động lại).',
+    asset_not_found: 'Không tìm thấy hình này.',
+    licence_rejected: 'Giấy phép của ảnh này không được chấp nhận. Chọn ảnh khác.',
+    unsupported_file_type: 'Loại tệp này chưa hỗ trợ. Chọn ảnh (jpg, png, webp) hoặc video (mp4, mov, webm, m4v).',
+    file_too_large: 'Tệp quá lớn (tối đa 80 MB). Chọn tệp nhỏ hơn.',
+    thumbnail_failed: 'Không tạo được ảnh nhỏ từ tệp này.',
+    proposal_not_found: 'Không tìm thấy đề xuất này.',
+    proposal_corrupt: 'Tệp đề xuất này bị hỏng nên đã được cất đi. Hãy dựng bản nháp mới.',
+    proposal_malformed: 'Đề xuất này sai cấu trúc nên không dùng được. Hãy dựng bản nháp mới.',
+    proposal_has_errors: 'Storyboard trong đề xuất còn lỗi nên chưa nhận được. Hãy dựng bản nháp mới.',
+    unknown_change_ids: 'Có thay đổi không còn trong đề xuất. Mở lại đề xuất rồi chọn lại.',
+    turn_not_found: 'Không tìm thấy lượt sửa này.',
+    turn_frame_not_found: 'Không có ảnh của cảnh này cho lượt sửa. Bản lưu của lượt đó có thể không còn.',
+    edit_running: 'Đang có một yêu cầu sửa chạy nên chưa xóa được lịch sử. Hãy hủy tác vụ trước.',
+    export_file_not_found: 'Không tìm thấy tệp này trong thư mục xuất. Có thể nó đã bị xóa.',
+    model_unavailable: 'Mô hình này chưa dùng được trên máy này (thiếu khóa hoặc chưa cài). Chọn mô hình khác.',
+    model_invalid: 'Tên mô hình gửi lên không hợp lệ. Chọn một mô hình ở ô trên thanh công cụ rồi thử lại.',
+    prompt_error: 'Chưa tạo được lời nhắc từ dàn ý và lời dẫn hiện có. Kiểm tra hai phần đó rồi thử lại.',
+    outline_unreadable: 'Không đọc được dàn ý từ văn bản đã dán. Chưa có gì bị ghi đè.',
+    narration_unreadable: 'Không xếp được lời dẫn từ văn bản đã dán. Chưa có gì bị ghi đè.',
+    document_invalid: 'Dữ liệu gửi lên sai cấu trúc nên chưa lưu được. Hãy tải lại trang rồi sửa lại.',
+    outline_has_errors: 'Dàn ý còn lỗi nên chưa duyệt được. Xem hộp "Kiểm tra".',
+    narration_has_errors: 'Lời dẫn còn lỗi nên chưa duyệt được. Xem hộp "Kiểm tra".',
+    locked_beats: 'Có dòng đang khóa sẽ bị viết lại. Mở khóa các dòng đó hoặc chọn viết lại cả dòng khóa.',
+    op_invalid: 'Thao tác này không làm được ở trạng thái hiện tại. Hãy tải lại rồi làm lại.',
+    merge_refused: 'Không gộp được hai tác phẩm này. Hãy chọn hai tác phẩm khác nhau.',
+    split_refused: 'Không tách được mục này ra khỏi tác phẩm.',
+    project_create_refused: 'Chưa tạo được dự án. Kiểm tra tên thư mục và các mục sách đã chọn rồi thử lại.',
+    project_source_missing: 'Thiếu tệp nguồn của tác phẩm này trong thư viện. Hãy báo cho người quản lý máy.',
+    picks_error: 'Phần chọn hình gặp lỗi. Thử lại, hoặc xem "chi tiết".',
+    bad_text_character: 'Văn bản có ký tự lạ nên chưa lưu được. Hãy xóa ký tự đó rồi gửi lại.',
+    source_unavailable: 'Nguồn bên ngoài đang bận hoặc không trả lời. Thử lại sau vài giây.',
+    source_timeout: 'Nguồn bên ngoài trả lời quá chậm. Thử lại sau.',
+    field_invalid: 'Dữ liệu gửi lên không hợp lệ.',
+    // only a program meets these (a wrong route or method, a body of the wrong shape): one shared sentence
+    route_not_found: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    method_not_allowed: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    request_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    body_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    field_required: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    accept_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+  },
 };
 const AMBIGUOUS = new Set(['busy', 'stale', 'not_found']);
 const UNIQUE_CODES = (() => {
@@ -325,6 +388,19 @@ const BY_CODE_HTTP = {
   /* worker agentpick: the server's own sentence says which agent cannot run and why (Vietnamese, from the agent's check) */
   agent_unavailable: (b) => (typeof b?.detail === 'string' && isVietnamese(b.detail) ? b.detail : STAGE_CODES.settings.agent_unavailable),
 };
+/* worker c1state: the codes the server now adds to refusals it used to send without one. A sentence made from the server's own text
+   (it names the beat, the shot, the field) is exact, so it stays; the code's own sentence answers when the text has none. */
+const c1stateTextSentence = (b) => { const t = describeHttp(0, { detail: b?.detail }).text; return t === GENERIC || t === BY_STATUS[404] ? null : t; };
+// these answer with their own sentence whatever the text says: only a program meets the first four (one shared sentence); for the others the code is
+// certain and its sentence says what to do, where the older sentence of the text only says what is wrong
+const C1STATE_OWN = ['route_not_found', 'method_not_allowed', 'request_invalid', 'body_invalid', 'file_too_large', 'unsupported_file_type', 'preview_too_long',
+  'preview_too_many_frames', 'proposal_not_found', 'proposal_corrupt', 'proposal_malformed', 'no_audio_file', 'model_unavailable'];
+for (const [k, v] of Object.entries(STAGE_CODES.api)) BY_CODE_HTTP[k] = C1STATE_OWN.includes(k) ? () => v : (b) => c1stateTextSentence(b) || v;
+for (const k of ['stale_revision', 'unknown_chapter', 'unknown_model', 'storyboard_corrupt']) {      // codes the stage tables already had: the text still wins
+  const own = BY_CODE_HTTP[k];
+  BY_CODE_HTTP[k] = (b) => c1stateTextSentence(b) || own(b);
+}
+for (const [k, status] of Object.entries({ bad_request: 400, forbidden: 403, conflict: 409, unsupported_media: 415 })) BY_CODE_HTTP[k] = () => BY_STATUS[status];
 /* worker mediafix: a picture source answered "too many requests". `b` is the error body or a search error entry
    ({code: 'source_rate_limited', retry_after: seconds | null}); the time is rounded UP to whole minutes, and left out when the source gave none. */
 export function sourceLimitText(b) {

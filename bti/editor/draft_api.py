@@ -28,12 +28,21 @@ router = APIRouter(prefix="/api/projects/{pid}/draft")
 
 def _pdir(request: Request, pid: str) -> Path:
     if not valid_pid(pid):
-        raise ApiError(404, "project not found")
+        raise ApiError(404, "project not found", code="project_not_found")
     root = Path(getattr(request.app.state, "projects_root", None) or Path(__file__).resolve().parents[2] / "projects")
     d = root / pid
     if not d.is_dir() or d.is_symlink():
-        raise ApiError(404, "project not found")
+        raise ApiError(404, "project not found", code="project_not_found")
     return d
+
+
+def _current_rev(d: Path) -> dict:
+    """`{current_rev}` of the saved storyboard, for an edit whose base_rev is stale ({} when the file cannot be read)."""
+    try:
+        from .common import compute_rev, read_json
+        return {"current_rev": compute_rev(read_json(d / "storyboard.json"))}
+    except Exception:       # noqa: BLE001
+        return {}
 
 
 def _who(rec: dict) -> dict:
@@ -70,7 +79,7 @@ def get_models(pid: str, request: Request, refresh: int = 0):
 def post_start(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     if not isinstance(body, dict):
-        raise ApiError(422, "body must be an object")
+        raise ApiError(422, "body must be an object", code="body_invalid")
     provider = body.get("provider", "agy")
     model = body.get("model")
     chapters = body.get("chapters")
@@ -96,7 +105,7 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
 def post_edit(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     if not isinstance(body, dict):
-        raise ApiError(422, "body must be an object")
+        raise ApiError(422, "body must be an object", code="body_invalid")
     instruction = body.get("instruction")
     if not isinstance(instruction, str) or not instruction.strip():
         raise ApiError(422, "instruction cannot be empty", code="edit_empty_instruction")
@@ -135,7 +144,7 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
                               followup=followup, base_rev=base_rev, mode=mode)
     except DraftError as e:
         status = 409 if e.code in ("draft_not_ready", "agy_missing", "claude_missing", "claude_auth", "scope_needs_storyboard", "edit_no_storyboard", "edit_needs_agy", "picks_missing", "timing_missing", "picks_no_main", "stale_revision") else 422
-        raise ApiError(status, e.message, code=e.code)
+        raise ApiError(status, e.message, code=e.code, **(_current_rev(d) if e.code == "stale_revision" else {}))
     except Exception as e:      # noqa: BLE001
         if type(e).__name__ == "Busy":
             raise ApiError(409, "a draft is already running for this project", code="busy", job_id=getattr(e, "job_id", None))
@@ -147,7 +156,7 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
 def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     if not isinstance(body, dict):
-        raise ApiError(422, "body must be an object")
+        raise ApiError(422, "body must be an object", code="body_invalid")
     action = body.get("action")
     if action not in ("overwrite", "discard"):
         raise ApiError(422, "action must be 'overwrite' or 'discard'", code="bad_action")
@@ -156,7 +165,7 @@ def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...
     turns = load_thread(d)
     turn = next((t for t in turns if t.get("id") == turn_id), None)
     if turn is None:
-        raise ApiError(404, "turn not found")
+        raise ApiError(404, "turn not found", code="turn_not_found")
     if turn.get("status") != "needs_choice":
         raise ApiError(409, "turn does not need choice", code="not_needs_choice")
 
@@ -184,7 +193,7 @@ def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...
         raise ApiError(410, "turn storyboard data lost", code="turn_data_lost")
     except Exception as e:      # noqa: BLE001 - the engine's ValidationError carries the issues; nothing was written
         if hasattr(e, "issues"):
-            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [])
+            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [], code="save_refused")
         raise
     update_turn(d, turn_id, status=res["status"], after_rev=res["after_rev"], changes=res["changes"], conflicts=[])
     return {"ok": True, "action": "overwrite", "status": res["status"], "rev": res["after_rev"], "after_rev": res["after_rev"]}
@@ -202,7 +211,7 @@ def undo_edit(pid: str, turn_id: str, request: Request, body: dict = Body(None))
     turns = load_thread(d)
     turn = next((t for t in turns if t.get("id") == turn_id), None)
     if turn is None:
-        raise ApiError(404, "turn not found")
+        raise ApiError(404, "turn not found", code="turn_not_found")
     if turn.get("status") == "undone":
         raise ApiError(409, "turn already undone", code="already_undone")
     if turn.get("status") != "applied":
@@ -220,7 +229,7 @@ def undo_edit(pid: str, turn_id: str, request: Request, body: dict = Body(None))
         raise ApiError(410, "Bản nháp trước lượt này không còn lưu; chỉ giữ 20 lượt gần nhất.", code="undo_unavailable")
     except Exception as e:      # noqa: BLE001
         if hasattr(e, "issues"):
-            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [])
+            raise ApiError(422, f"save refused: {e}", issues=getattr(e, "issues", []) or [], code="save_refused")
         raise
 
     update_turn(d, turn_id, status="undone")
@@ -231,16 +240,16 @@ def undo_edit(pid: str, turn_id: str, request: Request, body: dict = Body(None))
 def get_turn_frame(pid: str, turn_id: str, shot_id: str, when: str, request: Request):
     d = _pdir(request, pid)
     if when not in ("before", "after"):
-        raise ApiError(404, "when must be 'before' or 'after'")
+        raise ApiError(404, "when must be 'before' or 'after'", code="turn_frame_not_found", field="when")
 
     from bti.draft.thread import get_turn_storyboard
     sb = get_turn_storyboard(d, turn_id, when)
     if not sb:
-        raise ApiError(404, "turn storyboard not found")
+        raise ApiError(404, "turn storyboard not found", code="turn_frame_not_found")
 
     shot = next((s for s in sb.get("shots", []) if isinstance(s, dict) and s.get("id") == shot_id), None)
     if not shot:
-        raise ApiError(404, "shot not found")
+        raise ApiError(404, "shot not found", code="shot_not_found")
 
     # Compute frame time t
     t = None
@@ -298,7 +307,7 @@ def delete_thread(pid: str, request: Request):
         if mgr:
             act = mgr.active(pid, "draft")
             if act and (act.get("meta") or {}).get("mode") == "edit":
-                raise ApiError(409, "Không thể xóa lịch sử khi đang có yêu cầu sửa đang chạy. Hãy hủy tác vụ trước.")
+                raise ApiError(409, "Không thể xóa lịch sử khi đang có yêu cầu sửa đang chạy. Hãy hủy tác vụ trước.", code="edit_running")
     except ApiError:
         raise
     except Exception:

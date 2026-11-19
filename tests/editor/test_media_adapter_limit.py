@@ -91,4 +91,4 @@ def test_the_search_route_answers_with_the_code_and_the_wait(client):
     r = client.get("/api/media/search", params={"q": "mirror", "source": "met"})
     assert r.status_code == 503 and r.json()["code"] == "source_rate_limited" and r.json()["retry_after"] is None
     r = client.get("/api/media/search", params={"q": "mirror", "source": "pexels"})          # 503 with no time: today's answer
-    assert r.status_code == 503 and "code" not in r.json() and r.json()["retry_after"] == 10
+    assert r.status_code == 503 and r.json()["code"] != "source_rate_limited" and r.json()["retry_after"] == 10

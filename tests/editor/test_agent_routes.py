@@ -245,7 +245,7 @@ def test_a_request_that_names_a_model_keeps_working_as_today(c):
     r = c.post(A + "/outline/generate", json={"model": "nope"})
     assert r.status_code == 404
     r = c.post(A + "/outline/generate", json={"model": "paid"})
-    assert r.status_code == 409 and r.json()["missing_env"] == "NO_SUCH_KEY_FOR_TESTS" and "code" not in r.json()
+    assert r.status_code == 409 and r.json()["missing_env"] == "NO_SUCH_KEY_FOR_TESTS" and r.json()["code"] != "agent_unavailable"
 
 
 @pytest.mark.parametrize("bad", ["", "  ", 5, ["mock"], {"id": "mock"}])
