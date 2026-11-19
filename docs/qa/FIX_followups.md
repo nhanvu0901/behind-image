@@ -108,7 +108,48 @@ Per file (results exactly as printed are in section 6):
 
 ## 6. Results
 
-@@RESULTS@@
+### Browser probes (second instance of the app on the server, port 8572, stopped afterwards; `BTI_SSH_HOST=winbox-cmd`; lines exactly as printed)
+
+| Probe | Last full run | Runs |
+|---|---|---|
+| `tests/e2e/stages/prompt_edit.mjs` | `69 pass, 0 fail` | `68 pass, 1 fail` (the preview height, now fixed in `edit.css`), then `69 pass, 0 fail` twice |
+| `tests/e2e/shell_library_script/run.mjs` | `9 pass, 0 fail` | one stall at U1-008 (not reproduced), then `9 pass, 0 fail` twice |
+| `tests/e2e/shell_library_script/run_extra.mjs` | `15 pass, 0 fail` (U1-015 dropped, see section 3) | `13 pass, 2 fail`, `13 pass, 2 fail`, `14 pass, 1 fail` (U1-016, a wait), `15 pass, 0 fail` |
+| `tests/e2e/round2/run.mjs` | `all checks PASS` (19 checks; R2U-P6 and R2U-P6b dropped, see section 3) | `7 check(s) FAIL`, `3 check(s) FAIL`, one run aborted by me (reset route bug), `all checks PASS` |
+| `tests/e2e/round3/fixes.mjs` | `all checks PASS` (9 checks) | `1 check(s) FAIL` (F-006: a product defect, fixed in `agentpick.js`, section 7), then `all checks PASS` |
+| `tests/e2e/agent/agent_select.mjs` (covers the same control) | `65 pass, 0 fail` | one run after the `agentpick.js` change |
+
+Every failure of the earlier runs was the probe or the harness, not the product: fixed sleeps shorter than what an ssh tunnel needs (2 to 3 s to tell that the app is gone, about a second per request), a data copy that
+lacked `technique_lab`, a `GET` route the app answers "not found" before ours, the reset route failing on a file Windows still held, the missing machine default agent (a script job then ran the role's real `agy`
+model and was refused), and the 20-second stop timer of `remote.mjs` that killed a restarted instance. The checks were not relaxed; where a wait replaced a sleep the assertion is the same. Checks dropped, and what covers
+them: U1-015 (the "other model" dialog after a rate limit, whose controls are gone), R2U-P6 and R2U-P6b (the note under the old model list and its "Thử lại"): the agent select, the reason of an agent that cannot run and the
+one-button quota card are checked by `tests/e2e/agent/agent_select.mjs` (65 checks when it was written).
+
+**`round3/fixes.mjs` F-006 pointed at the product** (the check is my rewrite of the old one for the agent select). First full run, printed:
+`FAIL F-006 script: the outline and the beats show while /api/agents is still slow; the agent select says it is loading, then fills  -> {"shown":true,"ms":626,"early":["Đang tải...","",false,false,false],"later":true}`.
+While `GET /api/agents` is slow the select was an EMPTY, ENABLED select with "Đang tải..." beside it, whereas `agentlogic.selectView(null, null)` and its unit test define a disabled select whose only entry is "Đang tải...".
+Cause: `mountAgentPick` called `paint()` only after the first answer. Fixed (section 7); the check was not changed.
+
+### Python, snapshot `followups` on the server (`-q -p no:cacheprovider`, one folder per run, summary lines exactly as printed)
+
+```
+tests/script    254 passed, 7 skipped in 32.89s
+tests/draft     341 passed, 1 warning in 150.96s (0:02:30)
+tests/editor    478 passed, 1 warning in 243.13s (0:04:03)
+tests/settings  44 passed, 1 warning in 9.68s
+tests/library   1 failed, 142 passed in 6.39s
+tests/media     274 passed in 1.59s
+tests/picks     88 passed, 1 warning in 10.66s
+```
+
+The one failure is `tests/library/test_library.py::test_works_json_shape` and it is the only one: it reads the `works.json` files of the server's built library, which still lack `artist` for 45 works until they are
+rewritten (item 5; the three new library tests pass). The 7 skipped of `tests/script` are the same as in `docs/qa/FIX_claude_runner.md`.
+
+### Node, on the Mac
+
+`node --test tests/editor_frontend/*.test.mjs tests/picks/picks_logic.test.mjs tests/picks/sourcelimit.test.mjs` (also after the `agentpick.js` change): `ℹ tests 308`, `ℹ pass 307`, `ℹ fail 0`, `ℹ skipped 1`. The skipped test is "every code in
+bti.engine.storyboard.ISSUE_CODES has a Vietnamese template" (`# no .venv/bin/python`: the worktree has no Python environment); I added no engine issue code.
+
 
 ## 7. The two fixes the coordinator added
 
@@ -118,6 +159,17 @@ Per file (results exactly as printed are in section 6):
   ellipsis, what still does not fit scrolls sideways with no scroll bar, which would take height). Measured: 1280x720 row 32 px, stage 311 px; 1500x900 36 px / 343 px; 1920x1080 36 px / 523 px.
   `prompt_edit.mjs` printed `69 pass, 0 fail`.
 
+- `bti/editor/static/js/agentpick.js` (F-006): one line, `paint();` right after the `paint` function, so the select shows "Đang tải...", disabled, from the moment it is mounted until the agents arrive (what `selectView(null, null)` defines). Then `round3/fixes.mjs`:
+  `all checks PASS` (F-006 and the other 8) and `agent_select.mjs`: `65 pass, 0 fail`; the Node run is unchanged (`ℹ tests 308 / ℹ pass 307 / ℹ fail 0 / ℹ skipped 1`). My instance was stopped afterwards.
+
 ## 8. What I could not verify
 
-@@UNVERIFIED@@
+- No real Claude Code answer was seen. The text of the "too old" answer is the one the coordinator gave me from a real call on the server; how that program frames it (a result with `is_error` and which `api_error_status`, or a plain
+  line) is unknown, so it is tested in every shape. The page was never looked at with a real failed job of that kind.
+- The availability probe of `GET /api/agents` cannot know the minimum version; so Opus stays "available" until a call fails with this answer.
+- The server's built library was only read (a read-only probe of its `works.json` files through the snapshot); it was not rewritten and `test_works_json_shape` stays red there until it is. I did not run `regroup` or `build`.
+- Item 4: the camera keys of kept shots are not rescaled (known limit above); I did not look at an owner's real storyboard, so I cannot say which of them show `asset_size_mismatch` or what a re-draft will do to them.
+- `edit.css`: measured at 1280x720, 1500x900 and 1920x1080 in headless Chrome on the Mac against the server's second instance; not looked at on the owner's screen. At 1280 the picker's note collapses to nothing (the select and its label stay); the full note shows from about 1500 px wide.
+- The Node test of the ISSUE_CODES templates was skipped (no Python in the worktree).
+- `round3/run.mjs` (the tester's file, not in my list) was not ported or run; the probes were run through an ssh tunnel, whose latency is why their waits were made conditions instead of fixed sleeps.
+- A page that fails a probe is not proof of a product defect: only F-006 is, as explained above; I could not prove the cause of the one stall of `run.mjs` at U1-008 (a promise tied to a page or tunnel that closed is the most likely reading).
