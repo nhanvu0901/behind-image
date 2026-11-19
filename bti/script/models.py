@@ -1,7 +1,11 @@
 """config/models.json: the models the dropdown offers. A model whose key (or login) is missing is listed but disabled.
 
 A `provider: "antigravity"` entry is expanded from `agy models` into one entry `<id>:<slug>` per model (the CLI's
-default first), cached for about 10 minutes."""
+default first), cached for about 10 minutes.
+
+A `provider: "claudecode"` entry is one model of the Claude Code command line, id `claude:<model>@<effort>`. It is listed
+whether or not the program is usable; `claude_status` (installed and signed in, no model call, cached like the agy list) decides
+whether it is `enabled`, with the reason a page can show. Any other well-formed id of that family resolves too (see `resolve`)."""
 from __future__ import annotations
 
 import json
@@ -13,11 +17,13 @@ from pathlib import Path
 from .brief import REPO_ROOT
 from .env import has_key
 
-PROVIDERS = ("gemini", "openrouter", "mock", "antigravity")
+PROVIDERS = ("gemini", "openrouter", "mock", "antigravity", "claudecode")
 CACHE_SECONDS = 600
 FAIL_SECONDS = 60
 _cache: dict = {"at": 0.0, "ttl": 0, "rows": None, "error": None, "kind": None}
+_claude_cache: dict = {"at": 0.0, "ttl": 0, "info": None}
 _lock = threading.Lock()
+_claude_run = threading.Lock()          # one `claude auth status` at a time; held while it runs, so the others wait for its answer
 _flight: threading.Event | None = None
 
 
@@ -27,6 +33,7 @@ def models_path() -> Path:
 
 def reset_cache() -> None:
     _cache.update({"at": 0.0, "ttl": 0, "rows": None, "error": None, "kind": None})
+    _claude_cache.update({"at": 0.0, "ttl": 0, "info": None})
 
 
 def _cached():
@@ -80,6 +87,36 @@ def agy_models(refresh: bool = False) -> tuple[list[dict] | None, str | None]:
         return rows, err
 
 
+def claude_status(refresh: bool = False) -> dict:
+    """{"ok", "kind", "reason", "message"} of the Claude Code command line (installed and signed in), cached 10 minutes in this
+    process (1 minute after a failure); `refresh` forces a new check. Never calls a model and never raises."""
+    from .providers import claudecode
+    with _lock:
+        if not refresh and time.time() - _claude_cache["at"] < _claude_cache["ttl"]:
+            return _claude_cache["info"]
+    with _claude_run:
+        with _lock:                                  # another request may have answered while this one waited
+            if not refresh and time.time() - _claude_cache["at"] < _claude_cache["ttl"]:
+                return _claude_cache["info"]
+        info = claudecode.availability()
+        with _lock:
+            _claude_cache.update({"at": time.time(), "ttl": CACHE_SECONDS if info["ok"] else FAIL_SECONDS, "info": info})
+        return info
+
+
+def _claude_cached() -> dict | None:
+    """The cached answer of `claude_status` while it is fresh, else None; never starts the program."""
+    with _lock:
+        return _claude_cache["info"] if time.time() - _claude_cache["at"] < _claude_cache["ttl"] else None
+
+
+def _claude_spec(base: dict, info: dict | None) -> dict:
+    """A claudecode spec with the availability folded in (`unavailable` is the owner's sentence, `unavailable_reason` the code)."""
+    if info is None or info.get("ok"):
+        return base
+    return {**base, "unavailable": info["message"], "unavailable_kind": info["kind"], "unavailable_reason": info["reason"]}
+
+
 def load_raw(path: Path | None = None) -> list[dict]:
     p = Path(path) if path else models_path()
     try:
@@ -93,6 +130,9 @@ def load_models(path: Path | None = None, refresh: bool = False) -> list[dict]:
     """Specs ready for the providers. An unavailable agy gives one entry with `unavailable` set to the message."""
     out = []
     for m in load_raw(path):
+        if m["provider"] == "claudecode":
+            out.append(_claude_spec(m, claude_status(refresh)))
+            continue
         if m["provider"] != "antigravity":
             out.append(m)
             continue
@@ -111,13 +151,15 @@ def public(m: dict) -> dict:
     env = m.get("key_env")
     if m.get("unavailable"):
         ok, why = False, m["unavailable"]
-    elif m["provider"] in ("mock", "antigravity"):
+    elif m["provider"] in ("mock", "antigravity", "claudecode"):
         ok, why = True, None
     else:
         ok = has_key(env)
         why = None if ok else f"thiếu biến {env}"
     extra = ({"agy": {"ok": not m.get("unavailable"), "reason": m.get("unavailable_kind") if m.get("unavailable") else None}}
-             if m["provider"] == "antigravity" else {})
+             if m["provider"] == "antigravity" else
+             {"claude": {"ok": not m.get("unavailable"), "reason": m.get("unavailable_reason") if m.get("unavailable") else None}}
+             if m["provider"] == "claudecode" else {})
     return {**extra, "id": m["id"], "label": m.get("label") or m["id"], "provider": m["provider"], "model": m.get("model"),
             "default": bool(m.get("default")), "enabled": ok, "missing_env": None if ok or m.get("unavailable") else env,
             "message": why, "paid": m["provider"] in ("openrouter", "gemini")}
@@ -130,8 +172,19 @@ def public_models(path: Path | None = None, refresh: bool = False) -> list[dict]
 def resolve(model_id: str, path: Path | None = None) -> dict | None:
     """The spec of ONE model id, as `load_models` would list it, without running the CLI for a model that is not an
     Antigravity one. For `<antigravity id>:<slug>` the slug is checked against the cached list while that is fresh; with no
-    fresh list the spec is built from the slug and a wrong slug fails when the job runs (with the CLI's own message)."""
+    fresh list the spec is built from the slug and a wrong slug fails when the job runs (with the CLI's own message).
+    A `claude:<model>@<effort>` id resolves to its tracked entry, or, when none names it, to a spec built from the id (a wrong
+    model name is refused by the program when the job runs); the cached availability is folded in while it is fresh."""
     raw = load_raw(path)
+    from .providers import claudecode
+    parsed = claudecode.parse_model_id(model_id)
+    if parsed is not None:
+        base = next((m for m in raw if m["provider"] == "claudecode" and m["id"] == model_id), None)
+        if base is None:
+            tpl = next((m for m in raw if m["provider"] == "claudecode"), {})
+            base = {"id": model_id, "label": claudecode.label_for(*parsed), "provider": "claudecode", "model": parsed[0], "effort": parsed[1],
+                    "timeout": tpl.get("timeout", 900)}
+        return _claude_spec(base, _claude_cached())
     for m in raw:
         if m["provider"] != "antigravity" and m["id"] == model_id:
             return m

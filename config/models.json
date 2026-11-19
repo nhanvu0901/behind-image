@@ -1,5 +1,7 @@
 [
  {"id": "agy", "label": "Antigravity CLI", "provider": "antigravity", "default": true, "timeout": 900},
+ {"id": "claude:claude-opus-5-5@high", "label": "Claude Code: Opus 5.5 High", "provider": "claudecode",
+  "model": "claude-opus-5-5", "effort": "high", "timeout": 900},
  {"id": "openrouter-claude", "label": "Claude qua OpenRouter (trả tiền theo token)", "provider": "openrouter",
   "model": "anthropic/claude-sonnet-4.5", "key_env": "OPENROUTER_API_KEY", "timeout": 300},
  {"id": "mock", "label": "Mock (thử, không gọi mạng)", "provider": "mock",

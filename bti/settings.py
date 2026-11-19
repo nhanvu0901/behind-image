@@ -13,6 +13,7 @@ from typing import Any
 
 from bti.fsio import atomic_replace
 from bti.script.brief import REPO_ROOT
+from bti.script.providers.claudecode import is_claude_id
 
 DEFAULT_MODEL = "agy:gemini-3.8-flash-high"
 
@@ -99,8 +100,9 @@ def validate_model_updates(updates: dict[str, Any]) -> None:
         if not isinstance(model_id, str) or not model_id.strip():
             raise SettingsError("invalid_model", f"Model id for role {role!r} must be a non-empty string", 422)
         model_id = model_id.strip()
-        if role in AGENTIC_ROLES and not model_id.startswith("agy:"):
-            raise SettingsError("agentic_role_needs_agy", f"Role {role!r} requires an 'agy:' model (got {model_id!r})", 422)
+        if role in AGENTIC_ROLES and not (model_id.startswith("agy:") or is_claude_id(model_id)):
+            raise SettingsError("agentic_role_needs_agy",
+                                f"Role {role!r} requires an agent model: 'agy:<model>' or 'claude:<model>@<effort>' (got {model_id!r})", 422)
         spec = models_mod.resolve(model_id)
         if spec is None:
             raise SettingsError("unknown_model", f"Unknown model id: {model_id!r}", 422)

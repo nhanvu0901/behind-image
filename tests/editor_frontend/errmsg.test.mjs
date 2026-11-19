@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { describeHttp, describeError, issueText, jobErrorText, parseFailText, rawDetail, isVietnamese } from '../../bti/editor/static/js/errmsg.js';
+import { describeHttp, describeError, issueText, jobErrorText, parseFailText, rawDetail, isVietnamese, stageErrorText, stageJobErrorText } from '../../bti/editor/static/js/errmsg.js';
 import { ApiError } from '../../bti/editor/static/js/errors.js';
 
 const noEnglish = (t) => !/\b(the|must|not found|already|required|failed|error|is|are)\b/i.test(t);
@@ -110,4 +110,30 @@ test('new backend answers: data errors, delete refused while busy, interrupted j
   assert.match(describeHttp(409, { detail: 'a preview is being rendered for this project; wait for it to finish' }).text, /xem thử/);
   assert.match(jobErrorText({ error_kind: 'interrupted', error: 'the server restarted' }).text, /gián đoạn/);
   assert.match(describeHttp(500, { detail: 'internal error (ValueError)' }).text, /bất ngờ/);
+});
+
+// worker claudeprov: the second runner, Claude Code
+test('Claude Code failures are Vietnamese sentences the owner can act on', () => {
+  const signedOut = 'Claude Code trên máy chủ chưa đăng nhập. Hãy đăng nhập một lần trên máy chủ bằng lệnh `claude auth login`, rồi thử lại.';
+  for (const code of ['claude_missing', 'claude_auth', 'claude_rate_limit', 'claude_model', 'claude_config', 'claude_error', 'claude_no_result', 'claude_timeout']) {
+    const t = stageJobErrorText('draft', { error_code: code });
+    assert.ok(isVietnamese(t.text) && t.text.length > 20, code);
+    assert.equal(stageErrorText('draft', { body: { code } }).text, t.text, code);
+  }
+  assert.equal(stageJobErrorText('draft', { error_code: 'claude_auth' }).text, signedOut);
+  assert.match(stageJobErrorText('draft', { error_code: 'claude_missing' }).text, /claude auth login/);
+  assert.match(stageJobErrorText('draft', { error_code: 'claude_rate_limit' }).text, /Claude Code/);
+});
+test('a script job that Claude Code failed shows its own sentence, with the time the plan opens again', () => {
+  const quota = jobErrorText({ error_kind: 'rate_limit', error: 'Hạn mức của gói Claude Code đã dùng hết hoặc bị giới hạn lượt gọi. Thử lại sau 4 giờ 30 phút (khoảng 18:20).' });
+  assert.match(quota.text, /Claude Code.*4 giờ 30 phút/);
+  const signedOut = jobErrorText({ error_kind: 'auth', error: 'Claude Code trên máy chủ chưa đăng nhập. Hãy đăng nhập một lần trên máy chủ bằng lệnh `claude auth login`, rồi thử lại.' });
+  assert.match(signedOut.text, /claude auth login/);
+  // the other runners and the key-based providers keep their sentences
+  assert.match(jobErrorText({ error_kind: 'auth', error: 'the provider refused the key (HTTP 401)' }).text, /từ chối khóa truy cập/);
+  assert.match(jobErrorText({ error_kind: 'rate_limit', error: 'Hạn mức của gói Antigravity đã dùng hết hoặc bị giới hạn lượt gọi. Thử lại sau 2 phút.' }).text, /^Mô hình bị giới hạn/);
+});
+test('the settings sentence no longer says only agy can run the deep work', () => {
+  const t = describeHttp(422, { detail: "Role 'draft' requires an agent model", code: 'agentic_role_needs_agy' });
+  assert.match(t.text, /agy hoặc qua Claude Code/);
 });

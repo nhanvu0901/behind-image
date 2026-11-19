@@ -234,6 +234,15 @@ export const STAGE_CODES = {
     agy_no_result: 'Agent kết thúc mà không trả kết quả. Xem bản ghi của lần chạy rồi thử lại.',
     agy_rate_limit: 'Agent bị giới hạn lượt dùng hoặc hết hạn mức. Thử lại sau.',
     agy_timeout: 'Agent chạy quá thời gian cho phép nên bị dừng. Thử dựng từng chương.',
+    /* worker claudeprov: the second runner, Claude Code (`claude`) */
+    claude_missing: 'Chưa cài Claude Code (lệnh `claude`) trên máy chủ. Cài Claude Code, đăng nhập một lần bằng lệnh `claude auth login`, rồi thử lại.',
+    claude_auth: 'Claude Code trên máy chủ chưa đăng nhập. Hãy đăng nhập một lần trên máy chủ bằng lệnh `claude auth login`, rồi thử lại.',
+    claude_rate_limit: 'Hạn mức của gói Claude Code đã dùng hết hoặc bị giới hạn. Đợi hết chu kỳ hoặc chọn agent khác.',
+    claude_model: 'Claude Code không nhận ra tên mô hình này. Chọn mô hình khác.',
+    claude_config: 'Claude Code trên máy chủ không dùng được cho việc này (quá cũ hoặc không chạy được). Chạy `claude update` trên máy chủ rồi thử lại.',
+    claude_error: 'Claude Code báo lỗi khi chạy. Thử lại, hoặc dùng "Dựng tự động".',
+    claude_no_result: 'Claude Code dừng mà không trả kết quả. Xem bản ghi của lần chạy rồi thử lại.',
+    claude_timeout: 'Agent chạy quá thời gian cho phép nên bị dừng. Thử dựng từng chương.',
     edit_outside_scope: 'Agent đã thay đổi phần ngoài phạm vi được chỉ định hoặc cảnh đang khóa.',
     edit_no_storyboard: 'Chỉ sửa bằng prompt khi dự án đã có storyboard.',
     edit_bad_scope: 'Phạm vi sửa không hợp lệ (cần chọn cảnh, chương hoặc cả video).',
@@ -272,7 +281,7 @@ export const STAGE_CODES = {
     invalid_payload: 'Cài đặt gửi lên không hợp lệ.',
     unknown_role: 'Có việc không có trong danh sách việc.',
     invalid_model: 'Có việc chưa chọn mô hình.',
-    agentic_role_needs_agy: 'Việc dựng và sửa sâu cần mô hình chạy qua agy.',
+    agentic_role_needs_agy: 'Việc dựng và sửa sâu cần mô hình chạy qua agy hoặc qua Claude Code.',      // worker claudeprov: Claude Code now counts
     unknown_model: 'Có mô hình không có trong danh sách.',
   },
 };
@@ -365,8 +374,8 @@ export function jobErrorText(job) {
   let text;
   switch (kind) {
     case 'timeout': text = 'Mô hình không trả lời kịp.'; break;
-    case 'rate_limit': text = 'Mô hình bị giới hạn lượt gọi hoặc đã hết hạn mức.'; break;
-    case 'auth': text = 'Nhà cung cấp mô hình từ chối khóa truy cập. Kiểm tra khóa và quyền của nó.'; break;
+    case 'rate_limit': text = /Claude Code/.test(raw) && isVietnamese(raw) ? raw : 'Mô hình bị giới hạn lượt gọi hoặc đã hết hạn mức.'; break;       // worker claudeprov: Claude Code's own sentence carries the time it opens again
+    case 'auth': text = /Claude Code/.test(raw) && isVietnamese(raw) ? raw : 'Nhà cung cấp mô hình từ chối khóa truy cập. Kiểm tra khóa và quyền của nó.'; break;
     case 'config': text = isVietnamese(raw) ? raw : 'Mô hình này chưa được cấu hình (thiếu khóa hoặc chưa cài công cụ).'; break;
     case 'http': text = isVietnamese(raw) ? raw : 'Lỗi khi gọi mô hình (mạng hoặc dữ liệu trả về không đúng).'; break;
     case 'empty': text = 'Mô hình không trả về chữ nào.'; break;

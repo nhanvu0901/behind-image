@@ -69,8 +69,8 @@ def test_models_listing_never_shows_keys(monkeypatch, tmp_path):
 def test_repo_models_file_is_valid():
     ms = models_mod.load_models()
     raw = models_mod.load_raw()
-    assert {m["provider"] for m in raw} == {"antigravity", "openrouter", "mock"}                # no Gemini API entry
-    assert [m["id"] for m in raw if m.get("default")] == ["agy"] and "trả tiền" in raw[1]["label"]
+    assert {m["provider"] for m in raw} == {"antigravity", "claudecode", "openrouter", "mock"}   # no Gemini API entry; Claude Code is the second runner
+    assert [m["id"] for m in raw if m.get("default")] == ["agy"] and "trả tiền" in next(m for m in raw if m["provider"] == "openrouter")["label"]
     assert all("key" not in m for m in ms)                              # only the NAME of the variable is stored
 
 

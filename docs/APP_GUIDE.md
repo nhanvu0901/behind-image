@@ -191,6 +191,18 @@ Mã của nhà cung cấp Gemini API vẫn còn trong dự án nhưng không có
 
 Thêm một mô hình OpenRouter: thêm một dòng vào `config/models.json`, ví dụ `{"id": "or-x", "label": "X (trả tiền)", "provider": "openrouter", "model": "tên/trên-OpenRouter", "key_env": "OPENROUTER_API_KEY", "timeout": 300}`. Mô hình của Antigravity không cần thêm tay, chúng tự hiện từ `agy models`.
 
+### 5.4b Bộ chạy thứ hai: Claude Code (`claude`)
+
+Có hai bộ chạy, mỗi bộ chạy bằng chương trình của chính hãng, theo gói đăng ký của bạn: Gemini 3.8 Flash chạy bằng **Antigravity CLI** (`agy`, mục 5.4), Opus 5.5 High chạy bằng **Claude Code** (`claude`). Mô hình của Claude Code có mã dạng `claude:<mô hình>@<mức nỗ lực>`, hiện có một dòng trong danh sách: `claude:claude-opus-5-5@high`, hiện là **Claude Code: Opus 5.5 High**. Dùng được ở mọi chỗ dùng được mã `agy:` (kịch bản, sửa nhanh, dựng storyboard, sửa sâu); mã nào đúng dạng trên cũng được nhận, tên mô hình sai thì Claude Code từ chối khi chạy và trang báo bằng tiếng Việt.
+
+**Đăng nhập một lần trên máy chủ** (làm trong phiên làm việc của chủ máy, như `agy`): mở Terminal trên máy chủ, chạy `claude auth login` rồi làm theo trình duyệt. Kiểm tra bằng `claude auth status` (phải thấy `loggedIn: true`). Chưa cài hoặc chưa đăng nhập thì mô hình hiện "(không dùng được)" kèm lý do: *chưa cài Claude Code* hoặc *Claude Code trên máy chủ chưa đăng nhập*. Việc kiểm tra này không gọi mô hình, nhớ 10 phút (1 phút nếu đang lỗi); sau khi đăng nhập, tải lại trang hoặc đợi một phút. Ứng dụng không bao giờ truyền `ANTHROPIC_API_KEY` cho `claude`, nên luôn chạy theo gói đăng ký, không tính tiền theo token.
+
+**Một lần gọi** (dàn ý, lời dẫn, sửa nhanh): `claude -p --model <mô hình> --effort <mức> --output-format json --tools "" --safe-mode --setting-sources "" --strict-mcp-config --disable-slash-commands --no-session-persistence --permission-mode dontAsk --system-prompt <câu hệ thống>`, prompt đi qua đầu vào chuẩn. Không có công cụ nào, không lưu phiên, thư mục tạm trống, và không lẫn cài đặt riêng của người đang đăng nhập (hướng dẫn dự án, hook, skill, bộ nhớ, MCP, plugin): cùng một câu hỏi cho cùng một câu trả lời trên mọi máy.
+
+**Agent làm việc trong thư mục** (dựng storyboard, sửa sâu): `claude -p --input-format stream-json --output-format stream-json --verbose --tools Bash,Read,Write,Edit,Glob,Grep --permission-mode dontAsk --allowedTools ... --disallowedTools ...` cùng các tùy chọn tách biệt ở trên. Nó **không** chạy với quyền bỏ kiểm tra như `agy`: chỉ được đọc trong thư mục làm việc của nó, chỉ được ghi vào `out/`, chỉ được chạy ba lệnh hỗ trợ của lời dặn (`check`, `defaults`, `still`); web, thư mục khác, lệnh khác đều bị từ chối. Khi kiểm tra còn lỗi, lời nhắc sửa được gửi vào cùng tiến trình (cùng cuộc trò chuyện, tối đa 2 lần); không lưu phiên nào trên đĩa nên lần sửa tiếp theo dựng lại ngữ cảnh từ các lượt trước.
+
+Lỗi thường gặp (hiện tiếng Việt): chưa đăng nhập (`claude auth login`), hết hạn mức của gói kèm giờ mở lại, tên mô hình bị từ chối, quá thời gian, chưa cài `claude`. Cần Claude Code từ 2.1.233 (bản trên máy chủ); bản quá cũ thiếu các tùy chọn trên thì bị từ chối kèm lời nhắc `claude update`.
+
 ### 5.5 Ý nghĩa các thông báo kiểm tra
 
 **Lỗi (chặn duyệt)**

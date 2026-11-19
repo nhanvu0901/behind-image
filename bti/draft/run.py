@@ -27,7 +27,7 @@ from .thread import (append_turn, clear_thread, format_previous_exchanges,
 from bti.longjob import Part, PartError
 
 KIND = "draft"
-MODEL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{0,79}")
+MODEL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:@-]{0,79}")      # `@` is the effort part of a `claude:<model>@<effort>` id
 AGENT_TIMEOUT_S = 30 * 60
 KEEP_RUNS = 5
 
@@ -42,6 +42,15 @@ VI = {
     "agy_error": "agy báo lỗi khi chạy.",
     "agy_no_result": "agy dừng mà không trả kết quả.",
     "agy_timeout": "Agent chạy quá thời gian cho phép nên đã bị dừng.",
+    # worker claudeprov: the second runner, Claude Code (`claude`)
+    "claude_missing": "Chưa cài Claude Code (lệnh `claude`) trên máy chủ. Cài Claude Code, đăng nhập một lần bằng lệnh `claude auth login`, rồi thử lại.",
+    "claude_auth": "Claude Code trên máy chủ chưa đăng nhập. Hãy đăng nhập một lần trên máy chủ bằng lệnh `claude auth login`, rồi thử lại.",
+    "claude_rate_limit": "Hạn mức của gói Claude Code đã dùng hết hoặc bị giới hạn. Đợi hết chu kỳ hoặc chọn agent khác.",
+    "claude_model": "Claude Code không nhận ra tên mô hình này. Chọn mô hình khác.",
+    "claude_config": "Claude Code trên máy chủ không dùng được cho việc này (quá cũ hoặc không chạy được). Chạy `claude update` trên máy chủ rồi thử lại.",
+    "claude_error": "Claude Code báo lỗi khi chạy.",
+    "claude_no_result": "Claude Code dừng mà không trả kết quả.",
+    "claude_timeout": "Agent chạy quá thời gian cho phép nên đã bị dừng.",
     "draft_tampered": "Agent đã thay đổi tệp ngoài thư mục làm việc của nó. Kết quả bị bỏ; hãy kiểm tra dự án rồi chạy lại.",
     "draft_no_output": "Agent không viết tệp kết quả nào trong thư mục out/. Chưa có bản nháp.",
     "timing_missing": "Chưa có timing.json: làm bước Giọng đọc trước.", "picks_missing": "Chưa có picks.json: làm bước Chọn hình trước.",
@@ -69,6 +78,57 @@ PROVIDER_CODES = {"auth": "agy_auth", "rate_limit": "agy_rate_limit", "timeout":
                   "real_models_off": "real_models_off", "empty": "agy_no_result", "http": "agy_error", "blocked": "agy_error"}
 
 
+RATE_LIMIT_CODES = ("agy_rate_limit", "claude_rate_limit")
+
+
+def provider_code(e, model_id: str | None) -> str:
+    """The owner-facing code of a single-call provider error: the runner's own (`e.code`, set by the Claude Code provider), else the
+    kind's code of the other runner."""
+    return getattr(e, "code", None) or PROVIDER_CODES.get(getattr(e, "kind", None), "agy_error")
+
+
+def _bad_model_name(model: str | None) -> bool:
+    """A model name the request may not carry: not a plain id, or an id of the `claude:` family that is not `claude:<model>@<effort>`."""
+    return model is not None and (not MODEL_RE.fullmatch(model) or (model.startswith("claude:") and not _is_claude(model)))
+
+
+def _is_claude(model_id: str | None) -> bool:
+    from bti.script.providers.claudecode import is_claude_id
+    return is_claude_id(model_id)
+
+
+def agy_mod():
+    from .providers import agy
+    return agy
+
+
+def _agent_module(model_id: str | None):
+    """The runner of an agent model id: the Claude Code one for `claude:<model>@<effort>`, else the Antigravity one (`agy:<slug>`)."""
+    if _is_claude(model_id):
+        from .providers import claudecode
+        return claudecode
+    from .providers import agy
+    return agy
+
+
+def _check_agent_installed(model_id: str | None) -> None:
+    """Before a job starts: the runner of this model must be installed, and Claude Code must not be known to be signed out."""
+    if _is_claude(model_id):
+        from .providers import claudecode
+        if not claudecode.find_claude():
+            raise DraftError("claude_missing", "Claude Code (the `claude` command) is not installed on this machine")
+        from bti.script import models as models_mod
+        info = models_mod.claude_status()
+        if not info["ok"]:
+            info = models_mod.claude_status(refresh=True)         # the owner may have signed in since the answer was cached
+        if not info["ok"] and info["reason"] == "not_signed_in":
+            raise DraftError("claude_auth", "Claude Code is not signed in on this machine")
+        return
+    from .providers import agy
+    if not agy.find_agy():
+        raise DraftError("agy_missing", "agy (the Antigravity CLI) is not installed on this machine")
+
+
 def _norm_model(model: str | None) -> str | None:
     """One id form: a bare slug is an Antigravity model (`agy:<slug>`); ids that are configured models (`mock`, ...) stay."""
     if not model or model.startswith("agy:"):
@@ -88,10 +148,11 @@ def rate_limit_fields(seconds: int | None) -> dict:
 def rate_limit_sentence(code: str, seconds: int | None) -> str:
     """The owner's sentence for a failure: the code's own sentence, with when to try again for a quota."""
     base = vi(code)
-    if code != "agy_rate_limit" or not seconds:
+    if code not in RATE_LIMIT_CODES or not seconds:
         return base
     from bti.script.providers.antigravity import retry_at, wait_words
-    return "Hạn mức của gói Antigravity đã hết. Thử lại sau %s (khoảng %s)." % (wait_words(int(seconds)), retry_at(int(seconds)))
+    plan = "Claude Code" if code == "claude_rate_limit" else "Antigravity"
+    return "Hạn mức của gói %s đã hết. Thử lại sau %s (khoảng %s)." % (plan, wait_words(int(seconds)), retry_at(int(seconds)))
 
 
 def _fail_turn(project_dir: Path, turn_id: str | None, code: str, summary: str, *, start: float | None = None,
@@ -249,6 +310,8 @@ def _author(r: _Run) -> str:
     if r.provider == "auto":
         return "agent:auto"
     m = r.model or model_for("draft")
+    if _is_claude(m):
+        return f"agent:{m}"
     slug = m[len("agy:"):] if m.startswith("agy:") else m
     return f"agent:agy:{slug}"
 
@@ -344,9 +407,10 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 r.notes = auto.NOTES
                 ctx.progress(1.0, "Đã dựng tự động.")
                 return
-            from .providers import agy
             from .guard import Guard
             from .workspace import workspace_compile
+            m_agent = _norm_model(model) or model_for("draft")
+            agent_mod = _agent_module(m_agent)                  # agy for `agy:<slug>`, Claude Code for `claude:<model>@<effort>`
             guard = guard_factory(r.project_dir) if guard_factory else Guard(r.project_dir)
             n_ch = max(1, len(r.inputs.in_scope()))
 
@@ -361,8 +425,9 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 return summary_text(res) if res.errors else None
 
             r.cache.mkdir(parents=True, exist_ok=True)
-            r.agy = agy.run(r.ws.root, model=model, timeout=agent_timeout, check=check, cancel=ctx.cancelled, runner=ctx.run_process, on_progress=on_progress,
-                            transcript_path=r.cache / "events.jsonl", guard=guard, python=python, conversation_id=r.conversation_id_in)
+            r.agy = agent_mod.run(r.ws.root, model=m_agent if _is_claude(m_agent) else model, timeout=agent_timeout, check=check, cancel=ctx.cancelled,
+                                  runner=ctx.run_process, on_progress=on_progress, transcript_path=r.cache / "events.jsonl", guard=guard, python=python,
+                                  conversation_id=r.conversation_id_in)
         except DraftError as e:
             raise fail(e)
         a = r.agy
@@ -380,12 +445,12 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
                 update_turn(r.project_dir, r.turn_id, status="error", error="cancelled")
             return
         if a.status == "error":
-            wait = a.retry_after_seconds if a.error_code == "agy_rate_limit" else None
+            wait = a.retry_after_seconds if a.error_code in RATE_LIMIT_CODES else None
             _write_last(r, status="error", error=a.error_code, **rate_limit_fields(wait), **info)
             if r.turn_id:
                 update_turn(r.project_dir, r.turn_id, status="error", error=a.error_code, **rate_limit_fields(wait))
             ctx.meta.update(rate_limit_fields(wait))
-            raise PartError(a.error_code or "agy_error", rate_limit_sentence(a.error_code, wait) if a.error_code == "agy_rate_limit" else vi(a.error_code or "agy_error", a.error_message))
+            raise PartError(a.error_code or "agy_error", rate_limit_sentence(a.error_code, wait) if a.error_code in RATE_LIMIT_CODES else vi(a.error_code or "agy_error", a.error_message))
         if a.status == "timeout":
             r.partial = True
 
@@ -632,8 +697,8 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                     if turn_id:
                         update_turn(project_dir, turn_id, status="cancelled", error="cancelled")
                     return
-                code = PROVIDER_CODES.get(e.kind, "agy_error")
-                wait = getattr(e, "retry_after_seconds", None) if code == "agy_rate_limit" else None
+                code = provider_code(e, m_fast)
+                wait = getattr(e, "retry_after_seconds", None) if code in RATE_LIMIT_CODES else None
                 words = rate_limit_sentence(code, wait)
                 ctx.meta.update(rate_limit_fields(wait))            # the job's own record carries it too (never retried in this job)
                 _fail_turn(project_dir, turn_id, code, words, start=st.start_time, path="fast", notes=e.message, retry_after_seconds=wait)
@@ -682,10 +747,13 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
 
         # 2. Run deep path if chosen or escalated
         if st.chosen_path == "deep":
-            from .providers import agy
-            if not agy.find_agy():
-                _fail_turn(project_dir, turn_id, "agy_missing", vi("agy_missing"), start=st.start_time, path="deep")
-                raise PartError("agy_missing", vi("agy_missing"))
+            m_deep = _norm_model(model) or model_for("edit.deep")
+            deep_mod = _agent_module(m_deep)                    # agy for `agy:<slug>`, Claude Code for `claude:<model>@<effort>`
+            try:
+                _check_agent_installed(m_deep)
+            except DraftError as e:
+                _fail_turn(project_dir, turn_id, e.code, vi(e.code, e.message), start=st.start_time, path="deep")
+                raise PartError(e.code, vi(e.code, e.message))
             from . import workspace
             from .workspace import workspace_compile, read_out
             from .compile import compile_specs, summary_text
@@ -697,7 +765,7 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
             conv_id = None
             turns = load_thread(project_dir)
             now_ts = time.time()
-            for t in reversed(turns):
+            for t in reversed(turns if deep_mod is agy_mod() else []):         # a Claude Code run keeps no session: its context is rebuilt from the thread
                 if t.get("id") != turn_id and t.get("conversation_id") and t.get("at"):
                     try:
                         t_struct = time.strptime(t["at"][:19], "%Y-%m-%dT%H:%M:%S")
@@ -737,10 +805,9 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                     return summary_text(res)
                 return None
 
-            m_deep = _norm_model(model) or model_for("edit.deep")
             cache_dir = _cache(project_dir) / time.strftime("%Y%m%d-%H%M%S")
             cache_dir.mkdir(parents=True, exist_ok=True)
-            run_res = agy.run(ws.root, model=m_deep, timeout=agent_timeout, max_repairs=2, check=check, cancel=ctx.cancelled,
+            run_res = deep_mod.run(ws.root, model=m_deep, timeout=agent_timeout, max_repairs=2, check=check, cancel=ctx.cancelled,
                               runner=ctx.run_process, on_progress=on_progress, transcript_path=cache_dir / "events.jsonl",
                               guard=guard, python=python, conversation_id=conv_id)
 
@@ -755,8 +822,8 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
             if run_res.status in ("error", "timeout"):     # a run that did not finish applies nothing (a draft may use a partial result, an edit may not)
                 preserve_out()
                 code = run_res.error_code or "agy_error"
-                wait = getattr(run_res, "retry_after_seconds", None) if code == "agy_rate_limit" else None
-                msg = rate_limit_sentence(code, wait) if code == "agy_rate_limit" else vi(code, run_res.error_message)
+                wait = getattr(run_res, "retry_after_seconds", None) if code in RATE_LIMIT_CODES else None
+                msg = rate_limit_sentence(code, wait) if code in RATE_LIMIT_CODES else vi(code, run_res.error_message)
                 ctx.meta.update(rate_limit_fields(wait))
                 _fail_turn(project_dir, turn_id, code, msg, start=st.start_time, path="deep", notes=run_res.error_message, retry_after_seconds=wait)
                 raise PartError(code, msg)
@@ -905,7 +972,7 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
             raise DraftError("edit_empty_instruction", "instruction cannot be empty")
         if len(instruction) > 2000:
             raise DraftError("edit_bad_scope", "instruction must be 1 to 2000 characters")
-        if model is not None and not MODEL_RE.fullmatch(model):
+        if _bad_model_name(model):
             raise DraftError("bad_model", "the model name is not valid")
         if mode not in ("auto", "fast", "deep"):
             raise DraftError("edit_bad_scope", "mode must be auto, fast, or deep")
@@ -920,12 +987,10 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         effective_base_rev = base_rev or cur_rev
         edit_shots, scope_chapters, scope_words = resolve_edit_scope(inp, edit_scope or {})
 
-        # E9: For deep path, verify agy availability after validation
+        # E9: For deep path, verify the agent's availability after validation (agy, or Claude Code for a `claude:` model)
         needs_agy_check = (mode == "deep") or (mode == "auto" and len(edit_shots) > 12)
         if needs_agy_check:
-            from .providers import agy
-            if not agy.find_agy():
-                raise DraftError("agy_missing", "agy (the Antigravity CLI) is not installed on this machine")
+            _check_agent_installed(_norm_model(model) or model_for("edit.deep"))
 
         turn_id = f"t_{time.strftime('%Y%m%d_%H%M%S')}_{int(time.time()*1000)%1000:03d}"
         scope_kind = "shots" if "shots" in (edit_scope or {}) else ("chapter" if "chapter" in (edit_scope or {}) else "all")
@@ -979,14 +1044,12 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
 
     if provider not in ("agy", "auto"):
         raise DraftError("bad_provider", "provider must be agy or auto")
-    if model is not None and not MODEL_RE.fullmatch(model):
+    if _bad_model_name(model):
         raise DraftError("bad_model", "the model name is not valid")
     if not readiness(project_dir)["ok"]:
         raise DraftError("draft_not_ready", "voice (timing.json) and approved picks (picks.json) are needed first")
     if provider == "agy":
-        from .providers import agy
-        if not agy.find_agy():
-            raise DraftError("agy_missing", "agy (the Antigravity CLI) is not installed on this machine")
+        _check_agent_installed(_norm_model(model) or model_for("draft"))
     if chapters:
         load_inputs(project_dir, chapters)            # unknown chapter, no storyboard: refused here, not inside the job
     m = manager or _manager()

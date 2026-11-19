@@ -25,6 +25,7 @@ def _isolation(tmp_path, monkeypatch):
     """No real .env, no real keys, no network, default models file."""
     monkeypatch.setenv("BTI_ENV_FILE", str(tmp_path / "no.env"))
     monkeypatch.setenv("BTI_AGY_BIN", "")                      # the real agy is never reached from tests
+    monkeypatch.setenv("BTI_CLAUDE_BIN", "")                   # nor the real claude
     models_mod.reset_cache()
     for k in ("GEMINI_API_KEY", "OPENROUTER_API_KEY"):
         monkeypatch.delenv(k, raising=False)

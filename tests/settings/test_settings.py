@@ -88,3 +88,30 @@ def test_put_settings_agentic_requires_agy(client):
     res = client.put("/api/settings/models", json={"draft": "mock"})
     assert res.status_code == 422
     assert res.json().get("code") == "agentic_role_needs_agy"
+
+
+def test_put_settings_agentic_accepts_the_claude_code_family(client):
+    """worker claudeprov: the roles that need an agent accept `claude:<model>@<effort>` next to `agy:<slug>`."""
+    for role in AGENTIC_ROLES:
+        res = client.put("/api/settings/models", json={role: "claude:claude-opus-5-5@high"})
+        assert res.status_code == 200, res.text
+        assert model_for(role) == "claude:claude-opus-5-5@high"
+    res = client.get("/api/settings/models")
+    roles = {r["role"]: r for r in res.json()["roles"]}
+    assert roles["draft"]["value"] == "claude:claude-opus-5-5@high" and roles["draft"]["in_available"] is True      # the tracked entry is listed
+    assert roles["draft"]["agentic"] is True
+    claude = [m for m in res.json()["models"] if m["provider"] == "claudecode"]
+    assert [m["id"] for m in claude] == ["claude:claude-opus-5-5@high"] and claude[0]["label"] == "Claude Code: Opus 5.5 High"
+    assert claude[0]["enabled"] is False and claude[0]["claude"]["ok"] is False        # no real program in a test: listed, with a reason, never run
+
+
+def test_put_settings_claude_family_is_checked_in_one_place(client):
+    for bad in ("claude:claude-opus-5-5", "claude:x@ultra", "claude:@high", "claude:a b@high"):
+        res = client.put("/api/settings/models", json={"draft": bad})
+        assert res.status_code == 422 and res.json().get("code") == "agentic_role_needs_agy", bad
+    res = client.put("/api/settings/models", json={"script.outline": "claude:claude-sonnet-4-5@medium"})            # a well-formed id of the family, not tracked
+    assert res.status_code == 200 and model_for("script.outline") == "claude:claude-sonnet-4-5@medium"
+    res = client.put("/api/settings/models", json={"script.outline": "claude:x@ultra"})
+    assert res.status_code == 422 and res.json().get("code") == "unknown_model"
+    res = client.put("/api/settings/models", json={"draft": "mock"})                                                  # the old refusal stays
+    assert res.status_code == 422 and res.json().get("code") == "agentic_role_needs_agy"

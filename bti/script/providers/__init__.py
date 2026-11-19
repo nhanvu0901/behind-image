@@ -59,6 +59,8 @@ def get_provider(name: str) -> Complete:
         from .openrouter import complete
     elif name == "antigravity":
         from .antigravity import complete
+    elif name == "claudecode":
+        from .claudecode import complete
     elif name == "mock":
         from .mock import complete
     else:
