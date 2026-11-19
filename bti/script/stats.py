@@ -8,9 +8,15 @@ from .store import Narration, Outline
 
 WPS_DEFAULT = 2.41          # words per second, measured for this voice
 
+# THE sentence limit: the prompts say it (prompts/script.md, prompts/rules_voice.md, filled in by prompting.py), `long_sentence` checks it
+# (validate.py), the bench criterion `narration.max_sentence_words` defaults to it, and the documents quote it. One number, one place:
+# it used to be 28 in the prompts and the check but 25 in the profile and the documents, so a 26-word sentence passed silently.
+MAX_SENTENCE_WORDS = 25
+
 # style targets for the sentence profile (research: corpus median 17, p90 36, 23% over 25;
-# the spoken-text rule of the comic channel: mostly 8-22, never a fragment under 4, 32 as a hard ceiling)
-STYLE_TARGETS = {"median": (12, 22), "p90_max": 32, "share_over_25_max": 0.25, "share_under_4_max": 0.05}
+# the spoken-text rule of the comic channel: mostly 8-22, never a fragment under 4). The longest sentence is not a target any more:
+# it is the limit above, and every sentence over it is a `long_sentence` warning of its line.
+STYLE_TARGETS = {"median": (12, 22), "max": MAX_SENTENCE_WORDS, "share_under_4_max": 0.05}
 
 _ABBREV = {"mr", "mrs", "ms", "dr", "st", "vs", "c", "no", "vol", "fig", "ca", "jr", "sr", "prof", "e.g", "i.e"}
 _SPLIT = re.compile(r"(?<=[.!?])[\"”’')\]]*\s+(?=[\"“‘'(\[]*[A-Z0-9])")
@@ -54,15 +60,13 @@ def sentence_profile(texts: list[str]) -> dict:
                 "share_under_4": 0.0, "targets": STYLE_TARGETS, "notes": []}
     prof = {"sentences": n, "median": statistics.median(lens), "mean": round(sum(lens) / n, 1),
             "p90": round(_pct(lens, 0.9), 1), "max": lens[-1],
-            "share_over_25": round(sum(1 for x in lens if x > 25) / n, 3),
+            "share_over_25": round(sum(1 for x in lens if x > MAX_SENTENCE_WORDS) / n, 3),      # the share over THE limit (25: the key keeps its name)
             "share_under_4": round(sum(1 for x in lens if x < 4) / n, 3), "targets": STYLE_TARGETS}
     t, notes = STYLE_TARGETS, []
     if not (t["median"][0] <= prof["median"] <= t["median"][1]):
         notes.append(f"median sentence length {prof['median']} words is outside {t['median'][0]}-{t['median'][1]}")
-    if prof["p90"] > t["p90_max"]:
-        notes.append(f"the longest tenth of the sentences runs past {prof['p90']} words (target {t['p90_max']} at most)")
-    if prof["share_over_25"] > t["share_over_25_max"]:
-        notes.append(f"{prof['share_over_25']:.0%} of the sentences are longer than 25 words (target {t['share_over_25_max']:.0%} at most)")
+    if prof["share_over_25"] > 0:
+        notes.append(f"{prof['share_over_25']:.0%} of the sentences are longer than {MAX_SENTENCE_WORDS} words (the limit; each one is a warning of its line)")
     if prof["share_under_4"] > t["share_under_4_max"]:
         notes.append(f"{prof['share_under_4']:.0%} of the sentences are shorter than 4 words (target {t['share_under_4_max']:.0%} at most)")
     if n >= 8 and prof["max"] - lens[0] < 6:

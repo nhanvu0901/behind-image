@@ -4,6 +4,11 @@ It reads the prompt it is given (the same text a real model gets) and answers in
 Owner notes can steer it, which is how the page and the tests exercise the retry, cancel and failure paths:
   [mock:bad c02]        the first answer for chapter c02 has markup in it; the retry answer is clean
   [mock:alwaysbad c02]  every answer for chapter c02 has markup in it (the job fails after its retry)
+  [mock:long c02]       the first answer for chapter c02 is half as long again as its budget; the answer to the note that asks for a cut is within it
+  [mock:alwayslong c02] every answer for chapter c02 is half as long again as its budget (the cut does not help: the first text is kept)
+  [mock:cutbad c02]     like long, but the answer to the cut note has markup in it (the first text is kept)
+  [mock:cutfail c02]    like long, but the call that asks for the cut fails (the first text is kept)
+  [mock:cutslow]        the call that asks for a cut takes ~10 seconds (cancel can be tried during the second call)
   [mock:badoutline]     the first outline answer cannot be read; the retry is fine
   [mock:slow]           the call takes ~10 seconds (cancel and timeout can be tried)
   [mock:ratelimit]      the call fails with a rate-limit error
@@ -95,25 +100,31 @@ def _mock_outline(user: str, retry: bool) -> str:
     return "\n".join(L)
 
 
-def _chapter_beats(cid: str, title: str, budget: int, claims: list[str], bad: bool) -> list[str]:
+def _chapter_beats(cid: str, title: str, budget: int, claims: list[str], bad: bool, factor: float = 1.0) -> list[str]:
+    """Beats that add up to `budget` words and never pass it (the budget is a ceiling); `factor` > 1 is a chapter that is too long."""
     out, words = [], 0
     pool = claims or ["The picture rewards a long look."]
+    ceiling = budget * factor
     i = 0
-    while words < budget:
+    while True:
         c = pool[i % len(pool)]
-        joins = ["Look closely and you will see it. ", "Here the sources help us, though they do not agree on everything. ",
+        joins = ["Look closely and you will see it. ", "Here the readings help us, though they do not agree on everything. ",
                  "That detail is small, but it carries a lot of weight, and it is worth slowing down for. ",
                  "Now move your eye across the panel, and notice how the room holds its objects in place. "]
         text = joins[i % len(joins)] + c + " So the question becomes what a viewer in the fourteen thirties would have made of it."
+        if out and words + len(text.split()) > ceiling:
+            break
         out.append(text)
         words += len(text.split())
         i += 1
+        if words >= ceiling:
+            break
     if bad and out:
         out[0] = "[PAUSE] **" + out[0] + "** <b>"
     return out
 
 
-def _mock_script(user: str, retry: bool) -> str:
+def _mock_script(user: str, retry: bool, cut: bool = False) -> str:
     sec = user.split("THE APPROVED OUTLINE", 1)[-1].split("YOUR TASK", 1)[0]
     from ..parse import parse_outline
     o = parse_outline(sec).outline
@@ -124,10 +135,11 @@ def _mock_script(user: str, retry: bool) -> str:
     for c in (o.chapters if o else []):
         if c.id not in want:
             continue
-        bad = (f"[mock:alwaysbad {c.id}]" in user) or (f"[mock:bad {c.id}]" in user and not retry)
+        bad = (f"[mock:alwaysbad {c.id}]" in user) or (f"[mock:bad {c.id}]" in user and not retry) or (f"[mock:cutbad {c.id}]" in user and cut)
+        long_ = (f"[mock:alwayslong {c.id}]" in user) or (not cut and any(f"[mock:{k} {c.id}]" in user for k in ("long", "cutbad", "cutfail")))
         claims = [facts[f].claim for f in c.facts if f in facts]
         out.append(f"## {c.id} {c.title}")
-        for k, t in enumerate(_chapter_beats(c.id, c.title, c.word_budget, claims, bad)):
+        for k, t in enumerate(_chapter_beats(c.id, c.title, c.word_budget, claims, bad, 1.5 if long_ else 1.0)):
             fs = ", ".join(c.facts[k % max(1, len(c.facts)):][:2]) if c.facts else ""
             show = (c.show[k % len(c.show)] if c.show else "the whole painting")
             out += [t, f">> facts: {fs} | show: {show}", ""]
@@ -136,8 +148,8 @@ def _mock_script(user: str, retry: bool) -> str:
 
 
 def complete(spec: dict, system: str, user: str, *, timeout: float = 60, on_progress=None, cancel=None) -> str:
-    from ..prompting import RETRY_MARK
-    CALLS.append({"model": spec.get("id"), "user_len": len(user), "retry": RETRY_MARK in user,
+    from ..prompting import CUT_MARK, RETRY_MARK
+    CALLS.append({"model": spec.get("id"), "user_len": len(user), "retry": RETRY_MARK in user, "cut": CUT_MARK in user,
                   "user": user})
     if len(CALLS) > 200:
         del CALLS[:100]
@@ -145,7 +157,9 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 60, on_prog
         raise ProviderError("cancelled", "cancelled")
     if "[mock:ratelimit]" in user:
         raise ProviderError("rate_limit", "rate limit or quota reached (mock)")
-    _sleep(10 if "[mock:slow]" in user else DELAY, cancel)
+    if CUT_MARK in user and re.search(r"\[mock:cutfail c\d+\]", user):
+        raise ProviderError("http", "the call failed (mock)")
+    _sleep(10 if "[mock:slow]" in user or (CUT_MARK in user and "[mock:cutslow]" in user) else DELAY, cancel)
     if _CANNED:
         ans = _CANNED.pop(0)
         if on_progress:
@@ -155,7 +169,7 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 60, on_prog
     if "PHASE: outline" in user[:40]:
         text = _mock_outline(user, retry)
     elif "PHASE: script" in user[:40]:
-        text = _mock_script(user, retry)
+        text = _mock_script(user, retry, CUT_MARK in user)
     else:
         text = "mock response"
     if on_progress:

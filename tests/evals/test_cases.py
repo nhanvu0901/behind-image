@@ -8,11 +8,11 @@ from bti.evals import cases, criteria, samples
 
 REPO = Path(__file__).resolve().parents[2]
 # what the driver of each step hands to its criteria (bti/evals/driver.py)
-OUTPUTS = {"outline": {"outline", "issues", "brief", "approved", "job", "error"}, "narration": {"narration", "outline", "issues", "stats", "job", "error"},
+OUTPUTS = {"outline": {"outline", "issues", "brief", "approved", "job", "error"}, "narration": {"narration", "outline", "brief", "issues", "stats", "job", "error"},
            "draft": {"before", "storyboard", "timing", "issues", "picks", "proposal", "job", "error"},
            "edit_storyboard": {"before", "after", "storyboard", "timing", "issues", "scope", "answer", "job", "error"},
            "edit_picks": {"before", "after", "picks", "issues", "beat_ids", "scope", "answer", "job", "error"}, "picks_agent": {"picks", "issues", "beat_ids", "job", "error"}}
-WANT = {"outline": 10, "narration": 10, "draft": 10, "edit_storyboard": 3, "edit_picks": 3, "picks_agent": 3}
+WANT = {"outline": 10, "narration": 11, "draft": 10, "edit_storyboard": 3, "edit_picks": 3, "picks_agent": 3}
 
 
 def good_case(**over):

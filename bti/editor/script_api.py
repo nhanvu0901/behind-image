@@ -401,7 +401,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
             if n is None:
                 raise ApiError(404, "no narration to approve", code="no_narration")
             o = store.load_outline(d)
-            issues = validate.validate_narration(n, o, wps=wps_for(d))
+            issues = validate.validate_narration(n, o, wps=wps_for(d), brief=brief_for(d))     # the same list as GET .../narration: a refusal shows the warnings too
             errs = validate.blocking(issues)
             if errs:
                 diff = store.chapter_diff(n, o)

@@ -7,9 +7,9 @@ def paragraph_ids(n=6, prefix="PAY"):
 
 
 def brief():
-    return {"sources": [{"code": "PAY", "included": True, "paragraphs": [{"id": i, "text": "t"} for i in paragraph_ids(6, "PAY")]},
-                        {"code": "HOD", "included": True, "paragraphs": [{"id": i, "text": "t"} for i in paragraph_ids(4, "HOD")]},
-                        {"code": "MAD", "included": False, "paragraphs": [{"id": i, "text": "t"} for i in paragraph_ids(3, "MAD")]}]}
+    return {"sources": [{"code": "PAY", "author": "James Payne", "included": True, "paragraphs": [{"id": i, "text": "t"} for i in paragraph_ids(6, "PAY")]},
+                        {"code": "HOD", "author": "Susie Hodge", "included": True, "paragraphs": [{"id": i, "text": "t"} for i in paragraph_ids(4, "HOD")]},
+                        {"code": "MAD", "author": "Edward Brooke-Hitching", "included": False, "paragraphs": [{"id": i, "text": "t"} for i in paragraph_ids(3, "MAD")]}]}
 
 
 def outline():
@@ -39,7 +39,8 @@ def narration(per_chapter=333, sentence=10):
 
 
 def narration_outputs():
-    return {"narration": narration(), "outline": outline(), "issues": [{"level": "info", "code": "overlap", "message": "12% of the words sit in runs of 8 or more words"}]}
+    return {"narration": narration(), "outline": outline(), "brief": brief(),
+            "issues": [{"level": "info", "code": "overlap", "message": "12% of the words sit in runs of 8 or more words"}]}
 
 
 def timing():

@@ -123,6 +123,8 @@ Có hai đường làm, cùng dùng một prompt và một bộ đọc, nên k�
 
 Tác vụ mô hình chạy trên máy chủ nên vẫn chạy khi bạn rời bước này; quay lại sẽ thấy tiến độ và kết quả.
 
+**Giọng kể.** Lời dẫn là lời của một người kể chuyện nói với người xem chưa từng nghe tên các cuốn sách, không phải bài điểm sách. Vì vậy lời dẫn **không nêu tên tác giả của sách nguồn** và không nói "các sách", "cả hai sách", "các nguồn", "đoạn ấy"; chỗ các sách bất đồng được kể thành hai cách đọc cùng một vật ("một cách đọc thấy ..., cách khác thấy ..."; "có nhà sử học cho rằng ..., người khác ..."). Chỉ gọi tên người thuộc về câu chuyện: họa sĩ, những người trong tranh, người đặt vẽ, một học giả mà đề xuất của ông là một phần lịch sử của bức tranh (như Panofsky năm 1934). **Bảng dữ kiện của dàn ý vẫn ghi đúng ai nói gì**; chỉ lời đọc là đổi. Lời nhắn của mô hình dành cho bạn (một đoạn sách có vẻ mô tả bức tranh khác, một lựa chọn chỉ bạn quyết được) nằm ở dòng "Ghi chú của mô hình cho bạn" trong hộp Kiểm tra, không nằm trong dữ kiện và không bao giờ được đọc lên.
+
 ### 5.1 Màn hình
 
 Ba cột và một thanh trạng thái.
@@ -155,9 +157,10 @@ Bấm vào mã dữ kiện (`f03`) hoặc mã đoạn nguồn (`PAY-07`) ở c�
 ### 5.2 Đường 1: dùng nút bấm
 
 1. Chọn agent ở ô "Agent" (mặc định là Gemini 3.8 Flash qua Antigravity CLI, hoặc agent đặt trong Cài đặt). Muốn thử mà không tốn hạn mức, xem mục 5.7.
-2. **Lập dàn ý**. Đọc, sửa, đặc biệt: câu hỏi chính, chọn câu mở, bảng dữ kiện (kiểm tra các mã nguồn), ngân sách từ của chương. Chỗ nào các sách mâu thuẫn, mô hình phải ghi ở cột "Mâu thuẫn"; bạn là người quyết định, hệ thống không tự chọn.
+2. **Lập dàn ý**. Đọc, sửa, đặc biệt: câu hỏi chính, chọn câu mở, bảng dữ kiện (kiểm tra các mã nguồn), ngân sách từ của chương. Chỗ nào các sách mâu thuẫn, mô hình phải ghi ở cột "Mâu thuẫn" (chỉ ghi các sách nói gì, không kèm lời nhắn hay lời dặn cho bạn: nếu có, hộp Kiểm tra cảnh báo); bạn là người quyết định, hệ thống không tự chọn.
 3. Lưu, **Duyệt dàn ý**.
 4. **Viết lời dẫn**. Thanh dưới hiện từng chương: xanh dương đang chạy, xanh lá xong, đỏ lỗi. Chương nào không qua kiểm tra (có ký hiệu trong lời đọc, dòng trống, thiếu chương) được mô hình viết lại một lần, kèm thông báo lỗi của bộ kiểm tra. Nếu vẫn lỗi, tác vụ dừng, các chương đã xong được giữ, câu trả lời lỗi nằm ở ô "Dán".
+   **Độ dài.** Số từ ngân sách của chương là mức trần: prompt dặn viết nhiều nhất bằng số đó. Chương nào xong mà dài hơn ngân sách quá 10% thì được viết lại **một lần**, kèm lời nhắn nói cần cắt bao nhiêu từ và cho mô hình xem lại bản vừa viết (tối đa 4 chương mỗi lần chạy; mỗi lần viết lại là **một lần gọi mô hình thêm**). Thanh tiến độ ghi "đã cắt từ 310 xuống 247 từ", và kết quả của tác vụ (`shortened`) liệt kê các chương đó. Bản viết lại chỉ được giữ khi dùng được và gần ngân sách hơn bản đầu; nếu không, bản đầu được giữ và cảnh báo "Lệch mục tiêu" hoặc "Chương lệch ngân sách" vẫn hiện như trước. Khi còn quá dài, bấm "Viết lại chương" cho các chương ấy với ghi chú nói rõ con số ("nhiều nhất 230 từ"), hoặc tách, gộp, bỏ dòng bằng tay.
 5. Sửa lời dẫn:
    - sửa chữ trực tiếp trong ô;
    - **Tách**: đặt con trỏ vào giữa dòng rồi bấm Tách (dòng mới có mã mới);
@@ -183,7 +186,7 @@ Nếu agent hết hạn mức, hộp thoại nêu tên agent và giờ mở lạ
 #### Cách bộ đọc hiểu văn bản (để biết nó bỏ qua gì)
 
 - Lời dẫn: lấy phần sau dòng `FINAL SCRIPT` cuối cùng (không có thì lấy hết). Bỏ: hàng rào mã, danh sách câu mở, bảng, dòng đếm từ, các khối "Fact trace", "Audit", "Notes", "Sources"... (một khối như vậy sau lời dẫn kết thúc phần đọc). Dòng `## c02 TÊN CHƯƠNG` mở một chương, khớp với dàn ý theo mã, rồi theo tên (và theo thứ tự nếu bản dán không ghi mã). Mỗi đoạn là một dòng (beat). Dòng `>> facts: f03, f07 | show: cái gương; chữ phía trên` sau đoạn là thông tin phụ, không bắt buộc. Mã dữ kiện lạ được báo nhưng không làm hỏng việc đọc.
-- Dàn ý: lấy phần sau dòng `OUTLINE` cuối cùng. Các nhãn: `THESIS:`, `HOOKS` (`h1: ...`), `HOOK CHOICE:`, `FACTS` (mỗi dòng `f01 | established | PAY-07, HOD-02 | câu khẳng định | conflict: ...`), `CHAPTERS` (mỗi chương `## c01 TÊN` rồi `ROLE:`, `CARD:`, `BUDGET:`, `PURPOSE:`, `FACTS:`, `SHOW:`), `TARGET WORDS:`.
+- Dàn ý: lấy phần sau dòng `OUTLINE` cuối cùng. Các nhãn: `THESIS:`, `HOOKS` (`h1: ...`), `HOOK CHOICE:`, `FACTS` (mỗi dòng `f01 | established | PAY-07, HOD-02 | câu khẳng định | conflict: ...`), `CHAPTERS` (mỗi chương `## c01 TÊN` rồi `ROLE:`, `CARD:`, `BUDGET:`, `PURPOSE:`, `FACTS:`, `SHOW:`), `NOTE:` (một câu nhắn cho bạn, tối đa ba dòng, ở bất cứ chỗ nào; lưu riêng, không thành dữ kiện hay mục đích chương, và mô hình viết lời dẫn không thấy), `TARGET WORDS:`. Ở lời dẫn, dòng `>>` còn nhận thêm `note: ...` (ghi chú riêng của dòng, không đọc lên).
 
 ### 5.4 Mô hình: Antigravity CLI là mặc định
 
@@ -252,14 +255,19 @@ Lỗi thường gặp (hiện tiếng Việt): chưa đăng nhập (`claude auth
 | Dòng chưa có gợi ý hình (`no_show`) | Ô "cho xem" trống. Cần cho bước chọn hình sau này. |
 | Chương không có trong dàn ý (`unknown_chapter`) | Lời dẫn có chương mà dàn ý không có. |
 | Dấu câu giọng đọc không ngắt được (`spoken_chars`) | Có `; : ( )` hoặc gạch ngang. Giọng đọc chỉ ngắt ở dấu phẩy và dấu chấm. |
+| Câu quá dài (`long_sentence`) | Một dòng có câu dài hơn **25 từ**: đó là giới hạn duy nhất (prompt, bộ kiểm tra và tài liệu cùng một số). Tách câu. |
+| Lời dẫn nêu tên tác giả sách nguồn (`source_author_named`) | Một dòng có họ của người viết một trong các sách của dự án ("Payne nói", "Hodge đọc là ..."). Người xem chưa từng nghe tên họ: viết lại dòng bằng giọng người kể, hoặc bấm "Viết lại chương" với ghi chú. Chỉ tính họ viết hoa nguyên từ (không tính "hitching a ride", "Hodges"), và không tính người khác trùng họ khi trước họ có một tên khác trong câu ("Sir Thomas Hodge"). Tên đầu sách không được tìm. |
+| Lời dẫn nói về chính các nguồn (`source_talk`) | Một dòng nói "các sách", "cả hai sách", "các nguồn", "nguồn này", "đoạn ấy có thể mô tả bức tranh khác" hoặc mang lời nhắn dành cho chủ kênh ("chủ kênh nên kiểm tra"). Lời dẫn chỉ kể về bức tranh. "Quyển Exodus", "các cuốn sách trên bàn" không bị tính. |
 | Dàn ý: dữ kiện không dẫn đoạn nguồn, mã đoạn nguồn lạ, tranh cãi chưa mô tả mâu thuẫn, dữ kiện chưa chương nào dùng, chưa chọn câu mở, tổng ngân sách lệch mục tiêu | Mỗi dữ kiện nên dẫn ít nhất một mã đoạn có trong cột Nguồn. Dữ kiện "tranh cãi" cần ghi các nguồn nói gì khác nhau. |
+| Dàn ý: dữ kiện chứa lời nhắn cho bạn (`fact_for_owner`) | Chữ của một dữ kiện hoặc chỗ mâu thuẫn có lời nhắn hay lời dặn ("chủ kênh nên kiểm tra trước khi dùng", "hãy kiểm tra ..."). Lời dẫn được viết từ dữ kiện nên có thể đọc to nó: xóa câu ấy. Lời nhắn thật cho bạn thuộc dòng `NOTE:`. |
+| Dàn ý: ghi chú của mô hình cho bạn (`outline_note`) | Một dòng `NOTE:` mô hình để lại cho bạn (ví dụ một đoạn sách có vẻ mô tả bức tranh khác). Đọc nó trước khi duyệt dàn ý; nó không đi vào lời dẫn. |
 
 **Thông tin (không chặn)**
 
 | Thông báo | Nghĩa là gì |
 |---|---|
 | Độ dài (`length`) | Số từ và số phút ước tính, theo tốc độ **2,41 từ/giây** (đo từ giọng này). Đổi ở cột Nguồn, ô "Từ/giây". |
-| Nhịp câu (`sentence_profile`) | So độ dài câu với chuẩn kể chuyện (trung vị 12 đến 22 từ, 90% câu không quá 32 từ, không quá 25% câu trên 25 từ, không quá 5% câu dưới 4 từ, và có đổi nhịp dài ngắn). |
+| Nhịp câu (`sentence_profile`) | So độ dài câu với chuẩn kể chuyện (trung vị 12 đến 22 từ, không câu nào quá 25 từ, không quá 5% câu dưới 4 từ, và có đổi nhịp dài ngắn). |
 | Phần nguồn đã dùng (`source_share`) | Với mỗi sách, bao nhiêu đoạn được các dữ kiện đã dẫn trong lời dẫn chạm tới. |
 | Trùng với văn bản nguồn (`overlap`) | Tỷ lệ chữ nằm trong các đoạn 8 từ liên tiếp giống hệt sách. Chỉ để biết, không bao giờ chặn (chủ kênh đã quyết định bản quyền không chặn). |
 
@@ -637,7 +645,7 @@ Mặc định mọi cổng duyệt (dàn ý, lời dẫn, chọn hình, storyboa
 Khi công tắc **Agent tự chạy** đang bật, bên cạnh nó có nút **Chạy tự động**. Bấm vào: ứng dụng tự đi tiếp từ chỗ dự án đang đứng cho đến khi xuất xong video, trong lúc bạn đi làm việc khác. Có thể mất vài giờ (giọng đọc khoảng một giờ, xuất video khoảng 25 phút). Nút chỉ bấm được khi công tắc đang bật và dự án chưa có việc nào đang chạy.
 
 - **Nó làm gì.** Mỗi lần nó lấy đúng việc đầu tiên mà trang sẽ gợi ý làm tiếp (việc làm dự án tiến lên): dựng dàn ý, viết lời dẫn, đọc giọng, dựng bản nháp, áp dụng bản nháp, xuất video, và duyệt các cổng. Nó không làm gì khác: không tự sửa lời dẫn, không tự sửa storyboard, không tự chọn hình thay bạn.
-- **Cổng duyệt.** Nó chỉ duyệt cổng bạn đã tick trong hộp **Cho agent tự chạy dự án này**. Trước mỗi cổng nó đọc đúng những cảnh báo mà trang cho bạn xem trước khi duyệt, và **dừng lại nếu còn lỗi, hoặc một cảnh báo thuộc loại quan trọng**: dàn ý có dữ kiện chưa ghi nguồn, nguồn lạ hay nguồn bạn đã loại, dữ kiện tranh cãi chưa nói rõ mâu thuẫn; lời dẫn lệch độ dài quá 15% hoặc nhắc dữ kiện không có trong dàn ý; chọn hình có **hơn một phần tư số dòng lời dẫn chưa có hình** hoặc hình gắn vào dòng không còn trong lời dẫn; storyboard thiếu âm thanh, dài hơn giọng đọc, cảnh đầu không bắt đầu ở giây 0, nhãn chưa có vị trí, hình ghi sai kích thước. Các cảnh báo về cách viết (dấu câu khó đọc, câu dài, dòng chưa có gợi ý hình, ngân sách chương lệch...) nó cho qua và ghi lại trong nhật ký. Cảnh báo lạ chưa ai xếp loại cũng làm nó dừng.
+- **Cổng duyệt.** Nó chỉ duyệt cổng bạn đã tick trong hộp **Cho agent tự chạy dự án này**. Trước mỗi cổng nó đọc đúng những cảnh báo mà trang cho bạn xem trước khi duyệt, và **dừng lại nếu còn lỗi, hoặc một cảnh báo thuộc loại quan trọng**: dàn ý có dữ kiện chưa ghi nguồn, nguồn lạ hay nguồn bạn đã loại, dữ kiện tranh cãi chưa nói rõ mâu thuẫn, dữ kiện chứa lời nhắn cho bạn (lời dẫn viết từ đó có thể đọc to); lời dẫn lệch độ dài quá 15%, nhắc dữ kiện không có trong dàn ý, nêu tên tác giả sách nguồn hoặc nói về chính các sách và nguồn (giọng đọc mất khoảng một giờ nên chặn trước còn rẻ hơn sửa sau); chọn hình có **hơn một phần tư số dòng lời dẫn chưa có hình** hoặc hình gắn vào dòng không còn trong lời dẫn; storyboard thiếu âm thanh, dài hơn giọng đọc, cảnh đầu không bắt đầu ở giây 0, nhãn chưa có vị trí, hình ghi sai kích thước. Các cảnh báo về cách viết (dấu câu khó đọc, câu dài, dòng chưa có gợi ý hình, ngân sách chương lệch...) và ghi chú của mô hình cho bạn (`outline_note`) nó cho qua và ghi lại trong nhật ký. Cảnh báo lạ chưa ai xếp loại cũng làm nó dừng.
 - **Hai chỗ nó cho qua ở bước Chọn hình.** (1) **Hình bị gắn cờ** (ảnh nhỏ, chưa rõ giấy phép) không làm nó dừng: bản quyền không phải điều chặn, và ảnh lấy từ sách của bạn luôn mang cờ "chưa rõ"; nó ghi số hình có cờ vào nhật ký. (2) **Dòng chưa có hình**: từ một phần tư số dòng lời dẫn trở xuống nó vẫn đi tiếp (bản nháp dùng tranh chính ở các dòng đó), và nhật ký lẫn câu cuối cùng của lần chạy nói rõ có bao nhiêu dòng như vậy ("Có 3 dòng lời dẫn không có hình riêng: bản nháp dùng tranh chính ở các dòng đó."); nhiều hơn một phần tư thì nó dừng để bạn chọn hình.
 - **Việc tốn giờ máy hoặc gọi mô hình** chỉ chạy khi bạn cho phép loại việc đó; **việc tốn tiền thì không bao giờ**. Nó cũng không bao giờ khôi phục một storyboard bị hỏng: đó là quyết định của bạn.
 - **Không chạy hai việc cùng lúc** trên một dự án. Nếu bạn đang chạy một việc (ví dụ giọng đọc) thì chưa bấm được "Chạy tự động"; nếu một việc khác bắt đầu giữa chừng, nó dừng lại và nói rõ. Ngược lại, trong lúc chạy tự động, **ô sửa bằng lời (bước 4 và bước 5) và nút "Để agent chọn hình" bấm tay bị từ chối** với câu "Agent đang làm một việc khác cho dự án này...", vì chính lần chạy tự động tự làm các việc ấy từng bước; chờ nó xong hoặc bấm Dừng rồi mới dùng.

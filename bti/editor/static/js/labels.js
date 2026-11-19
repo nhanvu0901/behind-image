@@ -859,3 +859,10 @@ export const PICKS_PAGE_LABELS = {
     noNarration: 'Dự án chưa có lời dẫn để chọn hình.',
   },
 };
+
+/* worker fixscript: the labels of the new checks of the script step */
+export const CODE_FIXSCRIPT = {
+  source_author_named: 'Lời dẫn nêu tên tác giả sách nguồn', source_talk: 'Lời dẫn nói về chính các nguồn',
+  fact_for_owner: 'Dữ kiện có lời nhắn cho người duyệt', outline_note: 'Ghi chú của mô hình cho bạn',
+};
+Object.assign(CODE, CODE_FIXSCRIPT);

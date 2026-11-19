@@ -136,6 +136,12 @@ def test_narration_beats_and_sentences():
     wordy = O.narration_outputs()
     wordy["narration"] = O.narration(sentence=40)
     assert bad("narration.max_sentence_words", wordy, max=28)["value"][0][1] == 40
+    from bti.script.stats import MAX_SENTENCE_WORDS
+    assert criteria.REGISTRY["narration.max_sentence_words"].params["max"]["default"] == MAX_SENTENCE_WORDS == 25          # the bench's default is the app's one limit
+    good("narration.max_sentence_words", O.narration_outputs())
+    just_over = O.narration_outputs()
+    just_over["narration"] = O.narration(sentence=26)                                                                          # the 26-word sentence that used to pass
+    assert bad("narration.max_sentence_words", just_over)["value"][0][1] == 26
     assert good("narration.median_sentence_words", O.narration_outputs(), min=8, max=22)["value"] == 10
     assert bad("narration.median_sentence_words", wordy, min=8, max=22)["value"] == 40
     terse = O.narration_outputs()
@@ -156,6 +162,16 @@ def test_narration_issues_chapters_budgets_show_facts():
     o = O.narration_outputs()
     o["narration"]["chapters"][1]["beats"] += o["narration"]["chapters"][1]["beats"]
     assert "c02" in bad("narration.chapter_budgets", o)["value"]
+    # the budget is a ceiling: `max_over` fails a chapter that is over by more than that share even inside the symmetric tolerance
+    over = O.narration_outputs()
+    extra = over["narration"]["chapters"][2]["beats"][0]
+    over["narration"]["chapters"][2]["beats"].append({**extra, "id": "bx", "text": O.narration_text(50)})            # 333 words of budget, 4 x 83 + 50 = 382: 14.7% over
+    good("narration.chapter_budgets", over, tolerance=0.3)
+    good("narration.chapter_budgets", over, tolerance=0.3, max_over=0.2)
+    assert bad("narration.chapter_budgets", over, tolerance=0.3, max_over=0.1)["value"] == {"c03": [382, 333]}
+    under = O.narration_outputs()
+    under["narration"] = O.narration(per_chapter=260)
+    good("narration.chapter_budgets", under, tolerance=0.3, max_over=0.1)                                              # under the ceiling is fine for max_over
     good("narration.every_beat_has_show", O.narration_outputs())
     o = O.narration_outputs()
     o["narration"]["chapters"][0]["beats"][0]["show"] = []
@@ -178,6 +194,31 @@ def test_narration_spoken_words_and_copied_runs():
     assert bad("narration.copied_runs_at_most", o, max_share=0.25)["value"] == 0.6
     o["issues"] = []
     assert bad("narration.copied_runs_at_most", o)["value"] is None                      # the app gave no information: not a pass
+
+
+def test_narration_no_source_author_named():
+    """worker fixscript: the criterion looks for the surnames of the authors of the brief's sources (included or not) and, with `talk`, for "the books" and "the sources"."""
+    r = good("narration.no_source_author_named", O.narration_outputs())
+    assert "Payne" in r["detail"] and "Hodge" in r["detail"] and "Brooke-Hitching" in r["detail"]
+    named = O.narration_outputs()
+    named["narration"]["chapters"][0]["beats"][0]["text"] = "Payne says she is his wife. Hodge calls it a pose."
+    named["narration"]["chapters"][1]["beats"][2]["text"] = "Edward Brooke-Hitching reports a second wife."
+    r = bad("narration.no_source_author_named", named)
+    assert r["value"]["lines"] == 2 and r["value"]["first"][named["narration"]["chapters"][0]["beats"][0]["id"]] == ["Payne", "Hodge"]
+    spoke = O.narration_outputs()
+    spoke["narration"]["chapters"][0]["beats"][0]["text"] = "Both books say she is probably his wife."
+    assert bad("narration.no_source_author_named", spoke)["value"]["lines"] == 1
+    good("narration.no_source_author_named", spoke, talk=False)                         # without `talk` only the authors count
+    bad("narration.no_source_author_named", spoke, talk=True)
+    ok = O.narration_outputs()
+    ok["narration"]["chapters"][0]["beats"][0]["text"] = "Sir Thomas Hodge founded the guild, and the Book of Exodus tells of holy ground."
+    good("narration.no_source_author_named", ok)                                         # another person who shares a surname, and the Book of Exodus
+    nobody = O.narration_outputs()
+    nobody["brief"] = {"sources": [{"code": "PAY", "author": "", "included": True, "paragraphs": []}]}
+    assert bad("narration.no_source_author_named", nobody)["value"] is None              # no author on record: nothing to look for is not a pass
+    missing = O.narration_outputs()
+    del missing["brief"]
+    assert "nothing to check" in bad("narration.no_source_author_named", missing)["detail"]
 
 
 # ------------------------------------------------------------------------------------------------------------------------------- draft

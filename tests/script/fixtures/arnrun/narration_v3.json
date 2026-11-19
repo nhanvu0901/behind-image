@@ -1,0 +1,765 @@
+{
+ "schema": "bti.narration/1",
+ "project": "arnolfini-opus",
+ "title": "The Arnolfini Portrait",
+ "language": "en",
+ "chapters": [
+  {
+   "id": "c01",
+   "role": "cold_open",
+   "title": "COLD OPEN",
+   "card": false,
+   "beats": [
+    {
+     "id": "b0137",
+     "text": "High on the back wall, above a round mirror, runs a line of ornate script. In Latin, it says Jan van Eyck was here, 1434.",
+     "facts": [
+      "f42"
+     ],
+     "show": [
+      "the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0138",
+     "text": "Below it stand a man and a woman, hand in hand. Giovanni Arnolfini married Costanza Trenta in 1426. But Costanza died in 1433, a year before that signature.",
+     "facts": [
+      "f08"
+     ],
+     "show": [
+      "the couple full length"
+     ]
+    },
+    {
+     "id": "b0139",
+     "text": "Some historians still believe the woman here is Costanza. Others think she is a second wife, though no record of one has been found.",
+     "facts": [
+      "f09"
+     ],
+     "show": [
+      "the woman's face",
+      "the couple full length"
+     ]
+    },
+    {
+     "id": "b0140",
+     "text": "Follow his hand to hers, at the very centre of the panel. His grip is loose, almost tentative. It has been read as a marriage vow, and as a wife slipping from his grasp.",
+     "facts": [
+      "f44"
+     ],
+     "show": [
+      "close on the joined hands"
+     ]
+    },
+    {
+     "id": "b0141",
+     "text": "Centuries of close study have not settled what this small, crowded panel is for. Is it a wedding picture, a memorial to a wife already gone, or a merchant's showroom? The answer, as far as one exists, lies in objects we can check for ourselves.",
+     "facts": [
+      "f01"
+     ],
+     "show": [
+      "slow pull back from the hands to the whole painting"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c02",
+   "role": "chapter",
+   "title": "WHO IS IN THE ROOM",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0142",
+     "text": "Start with the man, his long pale face under a wide dark hat. So who was this man?",
+     "facts": [
+      "f06"
+     ],
+     "show": [
+      "close on the man's face and hat"
+     ]
+    },
+    {
+     "id": "b0143",
+     "text": "The oldest inventory names him Arnoult Fin, and most historians read that as Giovanni Arnolfini, an Italian merchant.",
+     "facts": [
+      "f06"
+     ],
+     "show": [
+      "the man full length",
+      "D2 the couple"
+     ]
+    },
+    {
+     "id": "b0144",
+     "text": "He came from Lucca but traded in Bruges, one of the busiest trading hubs in Europe. His family grew rich on silks, fabrics and precious objects, and worked as early merchant bankers too.",
+     "facts": [
+      "f06",
+      "f07",
+      "f02"
+     ],
+     "show": [
+      "the man's fur-lined tabard",
+      "the couple's clothes in detail"
+     ]
+    },
+    {
+     "id": "b0145",
+     "text": "Rich merchants like him wanted their new status seen, and a portrait was the fashionable way. In the 1430s, one historian argues, a Van Eyck was the most exclusive of all.",
+     "facts": [
+      "f02",
+      "f03"
+     ],
+     "show": [
+      "D1",
+      "the whole painting"
+     ]
+    },
+    {
+     "id": "b0146",
+     "text": "Jan van Eyck was court painter to the Duke of Burgundy, based in Bruges. By one count, only about twenty-three paintings are his alone, all religious works or portraits.",
+     "facts": [
+      "f04",
+      "f05"
+     ],
+     "show": [
+      "the whole painting",
+      "slow move across the panel surface"
+     ]
+    },
+    {
+     "id": "b0199",
+     "text": "This panel is often called one of the earliest portraits of a couple neither royal nor noble. They are shown at home, not at court or in church.",
+     "facts": [
+      "f11"
+     ],
+     "show": [
+      "the room around the couple",
+      "D2"
+     ]
+    },
+    {
+     "id": "b0148",
+     "text": "Then there is the woman. Giovanni married Costanza Trenta in 1426, and she died in 1433. Yet the signature above the mirror reads 1434.",
+     "facts": [
+      "f08",
+      "f10"
+     ],
+     "show": [
+      "the woman full length",
+      "D7 the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0149",
+     "text": "Some historians think this is still Costanza, who died before the panel was finished. Others see a second wife, though no record of one has been found.",
+     "facts": [
+      "f09",
+      "f08"
+     ],
+     "show": [
+      "the woman's figure",
+      "the two of them side by side"
+     ]
+    },
+    {
+     "id": "b0150",
+     "text": "Return to her face, pale inside the white frills of her headdress. Who she is decides whether this is a wedding, a memorial or a showroom.",
+     "facts": [
+      "f09"
+     ],
+     "show": [
+      "close on the woman's face and headdress"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c03",
+   "role": "chapter",
+   "title": "A WALKING ADVERTISEMENT",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0151",
+     "text": "Her dress comes first, a deep green held up in heavy folds. Many viewers take her to be pregnant, but historians agree she is simply lifting a full skirt.",
+     "facts": [
+      "f12"
+     ],
+     "show": [
+      "Costanza full length",
+      "the gathered green skirt"
+     ]
+    },
+    {
+     "id": "b0152",
+     "text": "Some read that gesture as the fashion of the day. Others see a stock pose that painters used to signal a wife's prized fertility.",
+     "facts": [
+      "f12"
+     ],
+     "show": [
+      "close on her hand holding the skirt"
+     ]
+    },
+    {
+     "id": "b0153",
+     "text": "By one estimate, that green took weeks of work by a team of dyers. Now follow the white edge at her sleeves, which is squirrel fur, lining the whole gown. An ordinary gown took about 600 pieces of belly fur, and this one may have used 2,000.",
+     "facts": [
+      "f14",
+      "f15",
+      "f16"
+     ],
+     "show": [
+      "the green fabric",
+      "the fur cuffs"
+     ]
+    },
+    {
+     "id": "b0154",
+     "text": "At her hem shows a glimpse of blue, a fur-trimmed underdress. Blue was costly and tied to the Virgin Mary, so showing so little has been read as wealth worn with restraint.",
+     "facts": [
+      "f20"
+     ],
+     "show": [
+      "the hem of the blue underdress"
+     ]
+    },
+    {
+     "id": "b0155",
+     "text": "Her frilled white headdress is read as the mark of a married woman, since unmarried women wore their hair loose.",
+     "facts": [
+      "f21"
+     ],
+     "show": [
+      "Costanza's face and headdress"
+     ]
+    },
+    {
+     "id": "b0156",
+     "text": "Then cross to Giovanni. His tabard, a sleeveless outer tunic, is dark plum lined with pine marten, and dark dyes cost more to make than light ones. Those colours have faded since.",
+     "facts": [
+      "f17",
+      "f18"
+     ],
+     "show": [
+      "Giovanni's tabard and fur edging"
+     ]
+    },
+    {
+     "id": "b0157",
+     "text": "Another estimate puts a hundred Russian pine martens in that lining, at a cost close to sable.",
+     "facts": [
+      "f17"
+     ],
+     "show": [
+      "close on the fur trim of the tabard"
+     ]
+    },
+    {
+     "id": "b0158",
+     "text": "His straw hat is woven in tiny plaits, and his soft boots show the shape of his feet.",
+     "facts": [
+      "f19"
+     ],
+     "show": [
+      "the straw hat",
+      "his boots"
+     ]
+    },
+    {
+     "id": "b0159",
+     "text": "Fur, silk, wool, linen and leather were all goods that passed through Flanders. The couple wear his trade like a walking advertisement, and their marriage has even been called a commercial union.",
+     "facts": [
+      "f13",
+      "f49"
+     ],
+     "show": [
+      "the couple side by side"
+     ]
+    },
+    {
+     "id": "b0160",
+     "text": "But that green may be saying more than its price.",
+     "facts": [
+      "f12"
+     ],
+     "show": [
+      "slow pull back across the green dress"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c04",
+   "role": "chapter",
+   "title": "A ROOM BUILT TO BE READ",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0161",
+     "text": "Behind the couple stands a great bed, hung with red cloth. Does that make this a bedroom?",
+     "facts": [
+      "f23"
+     ],
+     "show": [
+      "the bed with its red hangings"
+     ]
+    },
+    {
+     "id": "b0162",
+     "text": "Most historians think not, and read it as a room for receiving guests, though they differ on why. One reading points to the visitors in the mirror, and to rich homes that showed off a costly bed nobody slept in. Another notes that in Burgundy, beds were also used as seating.",
+     "facts": [
+      "f23"
+     ],
+     "show": [
+      "the bed",
+      "the two small figures in the mirror"
+     ]
+    },
+    {
+     "id": "b0163",
+     "text": "Either way, almost everything here is chosen to show wealth. An oriental carpet, rare in the north, lies on the floor. Oranges, imported fruit only the rich could afford, sit on the sill and the chest beside it.",
+     "facts": [
+      "f22",
+      "f27",
+      "f28"
+     ],
+     "show": [
+      "the carpet",
+      "the oranges on the sill and chest"
+     ]
+    },
+    {
+     "id": "b0164",
+     "text": "Other objects speak of faith. Carved gargoyles crouch on the bench just above their joined hands, creatures believed to ward off evil spirits. Beside the mirror hang amber prayer beads, a kind of rosary, often given by a groom to his bride.",
+     "facts": [
+      "f25",
+      "f32"
+     ],
+     "show": [
+      "the bench gargoyles above the hands",
+      "the amber beads beside the mirror"
+     ]
+    },
+    {
+     "id": "b0165",
+     "text": "High in the brass chandelier, only one candle is lit, and it has been read as the seeing eye of God.",
+     "facts": [
+      "f34"
+     ],
+     "show": [
+      "the chandelier and its single lit candle"
+     ]
+    },
+    {
+     "id": "b0166",
+     "text": "A last group touches on marriage and children. Through the window a cherry tree bears fruit, a sign of early summer, and to some a sign of love.",
+     "facts": [
+      "f31"
+     ],
+     "show": [
+      "the window and the cherry tree outside"
+     ]
+    },
+    {
+     "id": "b0167",
+     "text": "On the high-backed chair, a carved woman stands above a dragon. Some identify her as Saint Martha, patron of housewives, whose brush hangs nearby. Others name Saint Margaret, patron of childbirth, and that name matters for a couple with no recorded children.",
+     "facts": [
+      "f26",
+      "f08"
+     ],
+     "show": [
+      "the chair carving",
+      "the hanging brush"
+     ]
+    },
+    {
+     "id": "b0168",
+     "text": "Between all of these, on the back wall, hangs the one object the eye keeps returning to.",
+     "facts": [
+      "f22"
+     ],
+     "show": [
+      "the room with the mirror at its centre"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c05",
+   "role": "chapter",
+   "title": "THE MIRROR",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0169",
+     "text": "Now move in close to the round mirror on the back wall, where the whole room bends into one curved reflection. Glass mirrors of the day were convex like this one, and only the wealthy owned them.",
+     "facts": [
+      "f35"
+     ],
+     "show": [
+      "D5 the convex mirror filling the frame"
+     ]
+    },
+    {
+     "id": "b0170",
+     "text": "One historian argues that no one in 1434 could make a glass mirror this large. On that view, Van Eyck enlarged it on purpose, to give the room depth and a centre.",
+     "facts": [
+      "f36"
+     ],
+     "show": [
+      "the mirror in place on the back wall, between the couple"
+     ]
+    },
+    {
+     "id": "b0171",
+     "text": "Inside the glass we see the couple from behind. Facing them, in a doorway the painting never shows, stand two small figures. Giovanni raises his right hand towards them, perhaps in greeting.",
+     "facts": [
+      "f37",
+      "f38"
+     ],
+     "show": [
+      "close on the reflected backs of the couple",
+      "the two figures in the doorway",
+      "Giovanni's raised right hand"
+     ]
+    },
+    {
+     "id": "b0172",
+     "text": "Many historians think one of the visitors is Van Eyck himself. One reading makes the figure in blue the painter, and the other a stand-in for us, the viewer. Another pictures Van Eyck arriving with an assistant.",
+     "facts": [
+      "f37"
+     ],
+     "show": [
+      "close on the two figures in the doorway, the figure in blue"
+     ]
+    },
+    {
+     "id": "b0173",
+     "text": "Just above the mirror runs that signature, Jan van Eyck was here, 1434. It reads to some as a witty mark, and to others as an official record.",
+     "facts": [
+      "f42"
+     ],
+     "show": [
+      "D7 the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0174",
+     "text": "Ten tiny roundels circle the frame, each a scene from the Passion of Christ. They are the only plainly biblical scenes in the painting, often read as God's promise of salvation.",
+     "facts": [
+      "f39"
+     ],
+     "show": [
+      "the roundels around the mirror, left and right"
+     ]
+    },
+    {
+     "id": "b0175",
+     "text": "The spotless glass is read as purity, of the Virgin Mary to some, and of the marriage to others.",
+     "facts": [
+      "f41"
+     ],
+     "show": [
+      "the clear surface of the mirror"
+     ]
+    },
+    {
+     "id": "b0176",
+     "text": "One historian has observed something about where those scenes fall. Every scene after Christ's death sits on her side, from the Descent from the Cross to the Harrowing of Hell. Is that chance, or a sign that she was already gone?",
+     "facts": [
+      "f40"
+     ],
+     "show": [
+      "the roundels on Costanza's side of the mirror",
+      "pull back to Costanza beside it"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c06",
+   "role": "chapter",
+   "title": "WEDDING OR MEMORIAL",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0177",
+     "text": "Take the wedding case first. In 1934 the art historian Erwin Panofsky argued that this panel records a marriage ceremony, almost like a legal document.",
+     "facts": [
+      "f43"
+     ],
+     "show": [
+      "the whole painting",
+      "the couple full length"
+     ]
+    },
+    {
+     "id": "b0178",
+     "text": "On that reading, the joined hands are taking vows, and the signature above the mirror reads like a witness on an official record.",
+     "facts": [
+      "f44",
+      "f42"
+     ],
+     "show": [
+      "close on the joined hands",
+      "the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0179",
+     "text": "Drop to the lower left, where his wooden overshoes lie on the floor. Some link them to holy ground in the Book of Exodus, others to the sanctity of marriage.",
+     "facts": [
+      "f45"
+     ],
+     "show": [
+      "the overshoes lower left"
+     ]
+    },
+    {
+     "id": "b0180",
+     "text": "Her green dress and the oranges by the window complete the case, both read as signs of fertility and love.",
+     "facts": [
+      "f48"
+     ],
+     "show": [
+      "the green dress",
+      "the oranges on the sill and chest"
+     ]
+    },
+    {
+     "id": "b0181",
+     "text": "The weak spot is the woman. Panofsky's idea is now disputed, and no second wife appears in any record. If she is Costanza, she died in 1433, a year before the date above the mirror.",
+     "facts": [
+      "f43",
+      "f09",
+      "f08",
+      "f10"
+     ],
+     "show": [
+      "the woman's face",
+      "the signature reading 1434"
+     ]
+    },
+    {
+     "id": "b0182",
+     "text": "The memorial case starts with the small dog at her feet. Dogs usually mean loyalty, but it has been suggested this one echoes the dogs on women's tombs.",
+     "facts": [
+      "f46"
+     ],
+     "show": [
+      "the dog at her feet"
+     ]
+    },
+    {
+     "id": "b0183",
+     "text": "Every scene after Christ's death sits on her side of the mirror, and Giovanni may be dressed in mourning. Then there is his loose grip, as if she were slipping away.",
+     "facts": [
+      "f40",
+      "f47",
+      "f44"
+     ],
+     "show": [
+      "the roundels on her side of the mirror",
+      "Giovanni's dark clothes",
+      "the joined hands"
+     ]
+    },
+    {
+     "id": "b0184",
+     "text": "Some link the red bed to birthing chambers, and so to a death in childbirth. They also read the carved saint on the chair as Margaret, patron of childbirth.",
+     "facts": [
+      "f24",
+      "f26"
+     ],
+     "show": [
+      "the red bed",
+      "the chair carving"
+     ]
+    },
+    {
+     "id": "b0185",
+     "text": "Its weak spot is that each clue has a plainer reading. The bed may simply show status, the saint may be Martha, and a dog may just mean loyalty.",
+     "facts": [
+      "f24",
+      "f26",
+      "f46"
+     ],
+     "show": [
+      "the bed",
+      "the chair carving and hanging brush",
+      "the dog"
+     ]
+    },
+    {
+     "id": "b0186",
+     "text": "The two cases meet on money. Wedding or farewell, this was also a commercial union, and the panel was made to fix the couple's place in society.",
+     "facts": [
+      "f49"
+     ],
+     "show": [
+      "the couple full length in the furnished room"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c07",
+   "role": "chapter",
+   "title": "THE ALCHEMIST'S SURFACE",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0187",
+     "text": "Now turn from meaning to making. Van Eyck painted in oil, pigment mixed with linseed oil, and his contemporaries reportedly called him an alchemist. Some call him one of the first oil painters, while others say he refined the medium rather than invented it.",
+     "facts": [
+      "f50",
+      "f53"
+     ],
+     "show": [
+      "the whole painting",
+      "a raking close view of the paint surface"
+     ]
+    },
+    {
+     "id": "b0188",
+     "text": "He built colour in thin, see-through layers called glazes, which give the surface its glow and smoothness. He also worked wet paint into wet, and used a nearly dry brush for texture.",
+     "facts": [
+      "f51"
+     ],
+     "show": [
+      "close on the green folds of her dress",
+      "the fur at her sleeve"
+     ]
+    },
+    {
+     "id": "b0189",
+     "text": "Window light gleams on the brass chandelier, on the mirror and on her white headdress.",
+     "facts": [
+      "f52"
+     ],
+     "show": [
+      "the window",
+      "the chandelier",
+      "the mirror",
+      "her headdress"
+     ]
+    },
+    {
+     "id": "b0190",
+     "text": "The single orange on the sill casts a shadow and shows again in the glass behind it, a still life before the genre existed.",
+     "facts": [
+      "f29"
+     ],
+     "show": [
+      "close on the orange on the windowsill and its reflection in the glass"
+     ]
+    },
+    {
+     "id": "b0191",
+     "text": "Each amber bead beside the mirror holds its own highlight, strung on a green silk thread probably painted with a single hair.",
+     "facts": [
+      "f33"
+     ],
+     "show": [
+      "close on the amber beads and the green thread"
+     ]
+    },
+    {
+     "id": "b0192",
+     "text": "He has been called the first painter of everyday scenes, and not every object here is code. The orange and the beads are, I think, simply superbly painted.",
+     "facts": [
+      "f54"
+     ],
+     "show": [
+      "the windowsill and the beads side by side"
+     ]
+    },
+    {
+     "id": "b0193",
+     "text": "His work was studied, copied and sought abroad, and his influence has been traced to Durer, and to Velazquez in Las Meninas.",
+     "facts": [
+      "f55"
+     ],
+     "show": [
+      "the whole painting",
+      "Durer's Self-Portrait of 1500",
+      "Las Meninas"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c08",
+   "role": "closing",
+   "title": "CLOSING",
+   "card": false,
+   "beats": [
+    {
+     "id": "b0194",
+     "text": "Come back to the hands at the centre, and to the line above the mirror, Jan van Eyck was here, 1434.",
+     "facts": [
+      "f44",
+      "f42"
+     ],
+     "show": [
+      "the joined hands",
+      "the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0195",
+     "text": "Some things here are fairly secure. The man is most likely Giovanni Arnolfini, and everything around him shows wealth. Whatever its occasion, the panel was made to fix this couple's place in society.",
+     "facts": [
+      "f06",
+      "f22",
+      "f49"
+     ],
+     "show": [
+      "the man's face",
+      "the room with bed, carpet and chandelier",
+      "the couple full length"
+     ]
+    },
+    {
+     "id": "b0196",
+     "text": "Then the trail runs out. Nobody can say for certain who she is, or whether his loose grip is a vow or a farewell.",
+     "facts": [
+      "f09",
+      "f44",
+      "f01"
+     ],
+     "show": [
+      "the woman's face",
+      "close on the joined hands"
+     ]
+    },
+    {
+     "id": "b0197",
+     "text": "My own view leans towards a memorial for Costanza, made after she died. The grip, the dog and the scenes on her side all point that way.",
+     "facts": [
+      "f09",
+      "f44",
+      "f46",
+      "f40"
+     ],
+     "show": [
+      "the dog at her feet",
+      "the roundels on her side of the mirror"
+     ]
+    },
+    {
+     "id": "b0198",
+     "text": "But it is only a view. A single record of a second wife would overturn it. Until then, she remains the one thing in this room we cannot check.",
+     "facts": [
+      "f09",
+      "f01"
+     ],
+     "show": [
+      "slow pull back to the whole painting"
+     ]
+    }
+   ]
+  }
+ ]
+}

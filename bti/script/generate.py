@@ -5,21 +5,29 @@ complete, so a failure, a cancel or a timeout keeps what was written.
 """
 from __future__ import annotations
 
+import copy
 import threading
 import time
 from pathlib import Path
 
 from .brief import build_brief, load_options
 from .parse import parse_outline, parse_script
-from .prompting import build_prompt
+from .prompting import build_prompt, cut_note
 from .providers import ProviderError, get_provider
 from .runner import Job, JobError
-from .stats import WPS_DEFAULT
+from .stats import WPS_DEFAULT, count_words
 from .store import (NChapter, Narration, disk_rev, keep_paste, clear_paste, load_narration, load_outline, now_iso,
                     save_narration, save_outline, script_dir, script_lock)
 from .validate import markup_in, outline_gate
 
 PER_CALL_TIMEOUT = 300.0
+
+# THE length rule of the narration job: the budget of a chapter is a ceiling. A chapter that comes out more than CUT_OVER_SHARE over its budget is written
+# again ONCE, with a note that says how many words to cut (`prompting.cut_note`); at most MAX_CUTS chapters of one job get that second call (each one is a model
+# call more); the rewrite is kept only when it can be used and is nearer to the budget, otherwise the first text stays and the checks warn as before
+# (`chapter_off_budget`, `words_off_target`). The job says what happened in the chapter's message and in `result["shortened"]`.
+CUT_OVER_SHARE = 0.10
+MAX_CUTS = 4
 
 
 def call_model(spec: dict, system: str, user: str, job: Job, *, timeout: float | None = None) -> str:
@@ -115,6 +123,61 @@ def chapter_problems(ch: NChapter | None, cid: str) -> str | None:
     return None
 
 
+def chapter_words(ch: NChapter) -> int:
+    return sum(count_words(b.text) for b in ch.beats)
+
+
+def over_budget(words: int, budget: int) -> bool:
+    """True when `words` is more than CUT_OVER_SHARE over a (known) budget."""
+    return budget > 0 and words > budget * (1 + CUT_OVER_SHARE)
+
+
+def _read_chapter(text: str, outline, oc, pdir: Path, counter_start: int):
+    """(the parse result, the chapter, what is wrong with it or None) of a model's answer for the chapter `oc`."""
+    has_heads = any(ln.lstrip().startswith("##") for ln in text.splitlines())
+    use = outline
+    if not has_heads:
+        use = copy.copy(outline)
+        use.chapters = [oc]
+    res = parse_script(text, use, project=pdir.name, counter_start=counter_start)
+    problem = res.error if not res.ok else None
+    ch = None
+    if res.ok:
+        ch = res.narration.chapter(oc.id)
+        problem = chapter_problems(ch, oc.id)
+    return res, ch, problem
+
+
+def _cut_once(job: Job, pdir: Path, spec: dict, outline, oc, narr, brief: dict, notes: str, wps: float, res, ch, calls: int):
+    """The one rewrite of a chapter that is over its budget. -> (parse result, chapter, record of what happened); the first text is returned
+    (with a record that says why) whenever the rewrite cannot be used or is not nearer to the budget."""
+    words, budget = chapter_words(ch), oc.word_budget
+    rec = {"chapter": oc.id, "words": words, "budget": budget}
+    job.set_chapter(oc.id, state="retrying", attempts=calls + 1, message=f"viết lại ngắn hơn: {words} từ, ngân sách {budget}")
+    try:
+        p = build_prompt("script", pdir, notes=notes, chapters=[oc.id], narration=narr, outline=outline, brief=brief, wps=wps,
+                         cut_message=cut_note(words, budget, ch))
+        text = call_model(spec, p["system"], p["user"], job)
+    except JobError as e:
+        if e.kind == "cancelled":
+            raise
+        return res, ch, {**rec, "kept": "first", "why": "the second call failed (%s)" % e.kind}
+    res2, ch2, problem = _read_chapter(text, outline, oc, pdir, narr.counters["beat"])
+    if problem is not None:
+        return res, ch, {**rec, "kept": "first", "why": "the rewrite could not be used"}
+    after = chapter_words(ch2)
+    if abs(after - budget) >= abs(words - budget):
+        return res, ch, {**rec, "after": after, "kept": "first", "why": "the rewrite is not nearer to the budget"}
+    return res2, ch2, {**rec, "after": after, "kept": "rewrite"}
+
+
+def _cut_message(rec: dict) -> str:
+    """What the chapter line of the job says afterwards (Vietnamese: the page and `bti job` show it)."""
+    if rec["kept"] == "rewrite":
+        return f"đã cắt từ {rec['words']} xuống {rec['after']} từ (ngân sách {rec['budget']})"
+    return f"giữ bản đầu {rec['words']} từ, vượt ngân sách {rec['budget']}: bản viết lại không dùng được hoặc không ngắn hơn"
+
+
 def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None = None, notes: str = "", *,
                   wps: float = WPS_DEFAULT, base_locked=_UNSET) -> None:
     """`base_locked`: the ids of the beats that were locked when the owner's request started (fixed by the route before the
@@ -133,30 +196,29 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
                     if base_locked is _UNSET else set(base_locked))
     written: list[str] = []
     skipped: list[dict] = []
-    job.result = {"written": written, "skipped": skipped}
+    shortened: list[dict] = []          # the chapters that came out over their budget and were written again (see CUT_OVER_SHARE)
+
+    def result_of(rev: str | None = None) -> dict:
+        out = {"written": written, "skipped": skipped}
+        if shortened:
+            out["shortened"] = shortened
+        if rev is not None:
+            out["rev"] = rev
+        return out
+    job.result = result_of()
     for cid in want:
         if job.cancel.is_set():
             raise JobError("cancelled", "cancelled")
         oc = outline.chapter(cid)
         retry, text = None, ""
         ok = False
+        res = ch = None
         for attempt in (1, 2):
             job.set_chapter(cid, state="running" if attempt == 1 else "retrying", attempts=attempt)
             p = build_prompt("script", pdir, notes=notes, chapters=[cid], narration=narr, outline=outline,
                              brief=brief, retry_message=retry, wps=wps)
             text = call_model(spec, p["system"], p["user"], job)
-            has_heads = any(ln.lstrip().startswith("##") for ln in text.splitlines())
-            use = outline
-            if not has_heads:
-                import copy
-                use = copy.copy(outline)
-                use.chapters = [oc]
-            res = parse_script(text, use, project=pdir.name, counter_start=narr.counters["beat"])
-            problem = res.error if not res.ok else None
-            ch = None
-            if res.ok:
-                ch = res.narration.chapter(cid)
-                problem = chapter_problems(ch, cid)
+            res, ch, problem = _read_chapter(text, outline, oc, pdir, narr.counters["beat"])
             if problem is None:
                 ok = True
                 break
@@ -167,6 +229,12 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
             job.set_chapter(cid, state="failed", message=retry.splitlines()[0][:200])
             raise JobError("validation", f"Chapter {cid} failed validation twice ({retry.splitlines()[0][:200]}). "
                                          "The chapters written so far were kept, and the last answer is in the paste box.")
+        done_message = ""
+        if over_budget(chapter_words(ch), oc.word_budget) and len(shortened) < MAX_CUTS and not job.cancel.is_set():
+            res, ch, rec = _cut_once(job, pdir, spec, outline, oc, narr, brief, notes, wps, res, ch, attempt)
+            shortened.append(rec)
+            done_message = _cut_message(rec)
+            job.result = result_of()
         # Finish the chapter against the document AS IT IS ON DISK NOW, under the lock every save takes: only this chapter is
         # replaced; whatever the owner saved to other chapters while the model ran is kept.
         with script_lock(pdir):
@@ -179,7 +247,7 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
                 skipped.append({"chapter": cid, "beats": new_locks, "reason": "locked while the job ran"})
                 job.set_chapter(cid, state="skipped", message="beats locked while the job ran: " + ", ".join(new_locks))
                 narr = cur
-                job.result = {"written": written, "skipped": skipped, "rev": cur.rev()}
+                job.result = result_of(cur.rev())
                 job.changed()
                 continue
             beats = ch.beats
@@ -200,6 +268,5 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
             clear_paste(pdir, "narration")
             narr = cur                          # the next chapter's prompt sees the owner's edits too
             written.append(cid)
-        job.result = {"written": written, "skipped": skipped, "rev": rev}
-        words = sum(len(b.text.split()) for b in new.beats)
-        job.set_chapter(cid, state="done", words=words, message="")
+        job.result = result_of(rev)
+        job.set_chapter(cid, state="done", words=sum(len(b.text.split()) for b in new.beats), message=done_message)

@@ -162,7 +162,8 @@ def drive_narration(s: Session) -> dict:
     job = s.wait_job(r["job_id"], "GET /api/jobs/{job_id}")
     n = s.ok("GET", s.P + "/narration")
     o = s.ok("GET", s.P + "/outline")
-    return {"narration": n.get("narration"), "outline": o.get("outline"), "issues": n.get("issues") or [], "stats": n.get("stats"), "job": summary_of(job), "error": _job_failed(job)}
+    return {"narration": n.get("narration"), "outline": o.get("outline"), "brief": s.ok("GET", s.P + "/brief"), "issues": n.get("issues") or [], "stats": n.get("stats"),
+            "job": summary_of(job), "error": _job_failed(job)}
 
 
 def _project_view(s: Session) -> dict | None:
@@ -260,7 +261,8 @@ DRIVERS: dict[str, Callable[[Session], dict]] = {"outline": drive_outline, "narr
 
 # the model work one run of a case asks for, to say before anything starts: (calls in words, the least number of agent runs)
 COST = {"outline": ("1 agent call (the outline; one repeat of it when the first answer cannot be read)", 1),
-        "narration": ("1 job of about one agent call per chapter (6 to 8), each repeated once when it fails the checks", 8),
+        "narration": ("1 job of about one agent call per chapter (6 to 8), each repeated once when it fails the checks, and one call more for a chapter that comes out "
+                      "more than 10% over its budget (at most 4 of those per job)", 8),
         "draft": ("1 agent session in a folder, about 20 minutes for the whole video (less with `chapters`)", 1),
         "edit_storyboard": ("1 agent call (fast) or 1 agent session (deep), 30 seconds to 20 minutes", 1),
         "edit_picks": ("1 agent call", 1),
