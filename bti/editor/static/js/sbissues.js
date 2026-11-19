@@ -285,6 +285,10 @@ const BY_ARGS = {
   map_bad_via: (i, a) => `Đường đi thứ ${Number(a.index ?? 0) + 1}: các điểm uốn phải là cặp kinh độ, vĩ độ nằm trong thế giới, cách nhau bằng dấu chấm phẩy.`,
   map_bad_center: (i, a) => `${P(a)}: gõ kinh độ, vĩ độ (kinh độ từ -180 đến 180, vĩ độ từ -85 đến 85), hoặc để trống.`,
   map_unknown_iso: (i, a) => `Mã nước ${q(a.code ?? '')} (dòng thứ ${Number(a.index ?? 0) + 1}) không có trong dữ liệu bản đồ. Dùng mã hai chữ cái theo chuẩn ISO, ví dụ BE, FR, IT.`,
+  // --- compover: KEY-01, NUM-01, DOC-01
+  overlay_needs_camera: (i, a) => `Lớp phủ ${a.technique ?? ''} đặt chữ hoặc vùng sáng lên một bức tranh, nhưng shot nền ${a.base ?? ''} không chiếu bức tranh nào qua camera (thẻ chữ, sơ đồ, bản đồ...). Chuyển lớp phủ sang một shot có tranh, hoặc bỏ nó đi.`,
+  doc_lit_no_target: (i, a) => `Dòng sáng thứ ${Number(a.index ?? 0) + 1} chưa chỉ vào đâu. Điền tên một vùng của tranh ở ô "ref", hoặc gõ một khung ở ô "box".`,
+  doc_bad_box: (i, a) => `Dòng sáng thứ ${Number(a.index ?? 0) + 1}: khung phải gồm bốn số x trái, y trên, x phải, y dưới (điểm ảnh của ảnh gốc), với x phải lớn hơn x trái và y dưới lớn hơn y trên.`,
   // --- idapply: the channel identity of the storyboard (the selector "Kiểu mở đầu và mốc chương" of step 5)
   identity_style_unknown: () => 'kiểu mở đầu và mốc chương của video không hợp lệ. Hãy chọn lại ở ô "Kiểu mở đầu và mốc chương" của bước Dựng hình.',
   element_too_short: (i, a) => {

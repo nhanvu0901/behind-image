@@ -13943,6 +13943,636 @@
     "docs/design/research/R10_explainer_components.md parts 1 to 3",
     "docs/design/mock/2026-11-18-explainer/components.html (the plate)"
    ]
+  },
+  {
+   "id": "KEY-01",
+   "key": "labels_key",
+   "name": "Labels as a key to parts of a picture",
+   "label_vi": "Nhãn chỉ các phần của tranh",
+   "category": "annotation",
+   "kind": "overlay",
+   "intents": [
+    "point_at",
+    "context"
+   ],
+   "description": "Small text labels beside the parts of a picture a sentence names, one after another: no box, no line, each label fades in on the word that names its detail, sits outside the detail's region on the chosen side, follows the base shot's camera and keeps its size. The picture dims a little so the letters stand out. The technique places the labels: they never touch each other or leave the frame, they prefer the darker ground under the text, and a label that had to be pushed away from its detail gets a hairline to it.",
+   "usage_rule": "Use it when a sentence NAMES parts of the picture one after another (the candle, the mirror, the inscription, the dog): a key to the picture, the way a good art channel writes 'Theology', 'Medicine' on the panels of a ceiling. Overlay on any shot that shows one picture through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots); validation refuses it on cards, diagrams and maps. Give `labels`: a list (1 to 12) of {`text` (what is written, up to 60 characters), `ref` (a region name of the shot's picture, or [x, y] in source pixels), `side` (auto, n, ne, e, se, s, sw, w, nw: the side of the detail the text sits on; auto lets the technique choose), `at` (seconds from the start of the overlay, or a word anchor so the label lands on the word that names it), `style` (italic, regular, caps)}. The default labels are an example for the Arnolfini Portrait: ALWAYS set `labels` yourself, with regions that exist on the picture. Placement, spacing and keeping inside the frame are the technique's job, not yours. Put at most five labels on screen at a time; details that lie close together are better shown in two shots. Let the overlay last 4 to 10 s (at least 2.5 s) and start the last label at least 1.5 s before it ends.",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "labels",
+     "type": "items",
+     "default": [
+      {
+       "text": "One candle, lit",
+       "ref": "LIT",
+       "side": "w",
+       "at": 0.7,
+       "style": "italic"
+      },
+      {
+       "text": "Latin inscription",
+       "ref": "INSCR",
+       "side": "n",
+       "at": 1.6,
+       "style": "italic"
+      },
+      {
+       "text": "Convex mirror",
+       "ref": "MIRROR",
+       "side": "s",
+       "at": 2.5,
+       "style": "italic"
+      },
+      {
+       "text": "Amber beads",
+       "ref": "AMBER",
+       "side": "w",
+       "at": 3.4,
+       "style": "italic"
+      },
+      {
+       "text": "A brush",
+       "ref": "BRUSH",
+       "side": "e",
+       "at": 4.3,
+       "style": "italic"
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "labels",
+     "values": null,
+     "measured": null,
+     "min_items": 1,
+     "max_items": 12,
+     "fields": [
+      {
+       "name": "text",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{1,60}",
+       "pattern_hint": "Gõ một dòng, 1 đến 60 ký tự: chữ hiện cạnh chi tiết của tranh."
+      },
+      {
+       "name": "ref",
+       "type": "ref",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null
+      },
+      {
+       "name": "side",
+       "type": "enum",
+       "required": false,
+       "default": "auto",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "auto",
+        "n",
+        "ne",
+        "e",
+        "se",
+        "s",
+        "sw",
+        "w",
+        "nw"
+       ]
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "style",
+       "type": "enum",
+       "required": false,
+       "default": "italic",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": [
+        "italic",
+        "regular",
+        "caps"
+       ]
+      }
+     ]
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 2.4,
+     "min": 2.0,
+     "max": 3.0,
+     "unit": "% of frame height",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "dim_picture_to",
+     "type": "number",
+     "default": 0.78,
+     "min": 0.6,
+     "max": 1.0,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "fade_s",
+     "type": "number",
+     "default": 0.3,
+     "min": 0.1,
+     "max": 1.5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "leave_s",
+     "type": "number",
+     "default": 0.5,
+     "min": 0.1,
+     "max": 2.0,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "leader",
+     "type": "enum",
+     "default": "auto",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "none",
+      "hairline",
+      "auto"
+     ],
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 7.0,
+    "min_s": 2.5,
+    "max_s": 30.0,
+    "anchor": "word"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.explain_over.LabelsKey",
+    "reason": null,
+    "notes": "Each label: EB Garamond, cap height cap_pct of the frame height (caps style: 80 percent, tracked), #F1EADB with a soft shadow, fades in over fade_s at its `at` and out over the last leave_s. The picture dims to dim_picture_to from 0.4 s before the first label. The region name or point is mapped through the base shot's camera (view.to_screen); label sizes do not follow the zoom. Sides are chosen once from seven camera samples; each frame labels are clamped inside the frame and pushed apart along their side. Among sides that are equally near, the one with the darker picture under the text wins. `leader`: none, hairline (a line from every label to the edge of its detail), auto (default: a line only from a label that is far from its detail, in the hairline colour #8D877A, fading with the label). Valid on every base whose renderer provides view()."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 7,
+    "clip": "previews/KEY-01.mp4",
+    "thumb": "previews/KEY-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (KEY-01)",
+    "docs/design/research/R10_explainer_components.md C16 (GAE Vienna 5:00 to 5:11) and part 5.1",
+    "docs/design/mock/2026-11-18-explainer/components.html (labels)"
+   ]
+  },
+  {
+   "id": "NUM-01",
+   "key": "big_number",
+   "name": "Big number with a comparison",
+   "label_vi": "Con số lớn và so sánh",
+   "category": "annotation",
+   "kind": "overlay",
+   "intents": [
+    "quantify",
+    "context"
+   ],
+   "description": "A figure stated large over the dimmed picture, alone or against others: up to four rows, each a small italic label, the figure in big numerals with its units, and a count of small round marks that run out one after another so that a ratio can be seen at a glance; a caption says what one mark stands for and a small line gives the source.",
+   "usage_rule": "Use it when a sentence STATES a figure or compares figures (a price, a count, a size, 600 pelts against 2,000, a record): one to four rows. Overlay on any shot, with or without a picture. Give `rows`: a list (1 to 4) of {`label` (a few words, shown small above the figure), `value` (the figure as written, e.g. \"2,000\" or \"$450.3M\"; text, up to 16 characters), `units` (e.g. pelts), `count` (how many marks to run out, 0 for none; one mark should stand for a round quantity and the caption should say which), `at` (seconds from the start of the overlay, or a word anchor on the word that states the figure)}; `caption` (one short line, e.g. \"each dot is fifty squirrel pelts\") and `source` (a small line, e.g. \"Source: Christie's\"; empty for none). Rows run in order; give each about 2 s more than the one before. The default data is an example (600 against 2,000 squirrel pelts): ALWAYS set rows, caption and source together. Let the overlay last 5 to 9 s, long enough for the last row's marks (1.1 s) and the caption to appear.",
+   "channel_usage": "core",
+   "slots": [],
+   "params": [
+    {
+     "name": "rows",
+     "type": "items",
+     "default": [
+      {
+       "label": "An ordinary gown",
+       "value": "600",
+       "units": "pelts",
+       "count": 12,
+       "at": 1.0
+      },
+      {
+       "label": "This gown",
+       "value": "2,000",
+       "units": "pelts",
+       "count": 40,
+       "at": 2.9
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "rows",
+     "values": null,
+     "measured": null,
+     "min_items": 1,
+     "max_items": 4,
+     "fields": [
+      {
+       "name": "label",
+       "type": "string",
+       "required": false,
+       "default": "",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{0,60}",
+       "pattern_hint": "Gõ một dòng, tối đa 60 ký tự; để trống thì không có nhãn."
+      },
+      {
+       "name": "value",
+       "type": "string",
+       "required": true,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{1,16}",
+       "pattern_hint": "Gõ con số như muốn hiện, 1 đến 16 ký tự, ví dụ 2,000."
+      },
+      {
+       "name": "units",
+       "type": "string",
+       "required": false,
+       "default": "",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": ".{0,24}",
+       "pattern_hint": "Gõ một dòng, tối đa 24 ký tự; để trống thì không có đơn vị."
+      },
+      {
+       "name": "count",
+       "type": "number",
+       "required": false,
+       "default": 0,
+       "min": 0,
+       "max": 60,
+       "unit": "marks",
+       "values": null
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      }
+     ]
+    },
+    {
+     "name": "caption",
+     "type": "string",
+     "default": "each dot is fifty squirrel pelts",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,80}",
+     "pattern_hint": "Gõ một dòng, tối đa 80 ký tự; để trống thì không có chú thích."
+    },
+    {
+     "name": "source",
+     "type": "string",
+     "default": "Source: the sample narration of the Arnolfini video",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,80}",
+     "pattern_hint": "Gõ một dòng, tối đa 80 ký tự; để trống thì không có dòng nguồn."
+    },
+    {
+     "name": "dim_picture_to",
+     "type": "number",
+     "default": 0.38,
+     "min": 0.2,
+     "max": 1.0,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 8.0,
+     "min": 6.0,
+     "max": 14.0,
+     "unit": "% of frame height",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "align",
+     "type": "enum",
+     "default": "left",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "left",
+      "right"
+     ],
+     "measured": null
+    },
+    {
+     "name": "marks_s",
+     "type": "number",
+     "default": 1.1,
+     "min": 0.2,
+     "max": 4.0,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "leave_s",
+     "type": "number",
+     "default": 0.5,
+     "min": 0.1,
+     "max": 2.0,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 7.0,
+    "min_s": 3.0,
+    "max_s": 20.0,
+    "anchor": "word"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.explain_over.BigNumber",
+    "reason": null,
+    "notes": "The mock-up's sizes at cap_pct 8 (figure cap height 8 percent of the frame height); rows are stacked and centred, one factor makes them fit between 8 and 85 percent of the height. Per row from its `at`: label 0.35 s, figure from +0.25 s, units from +0.4 s, marks from +0.6 s spread over marks_s; the caption from the moment the first marks start (0.6 s after the first row that has marks) to the end; units 72 percent, as big as the label. Needs no picture: valid on every shot."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 7,
+    "clip": "previews/NUM-01.mp4",
+    "thumb": "previews/NUM-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (NUM-01)",
+    "docs/design/research/R10_explainer_components.md C9, C21, C22 and part 5.1",
+    "docs/design/mock/2026-11-18-explainer/components.html (number)"
+   ]
+  },
+  {
+   "id": "DOC-01",
+   "key": "doc_lit",
+   "name": "A lit line of a document",
+   "label_vi": "Dòng chữ được làm sáng",
+   "category": "highlight",
+   "kind": "overlay",
+   "intents": [
+    "point_at",
+    "isolate",
+    "context"
+   ],
+   "description": "One line of a document, an inscription or a signature stays lit while everything else dims; the lit window follows the base shot's camera, has a soft edge and no outline. Below it the line's meaning appears in today's words (italic) and the line as written (small capitals). Several lines can be lit one after another.",
+   "usage_rule": "Use it when a sentence READS or QUOTES a line that is visible in the picture: an inscription, a signature, a letter, a ledger, an inventory. Overlay on any shot that shows one picture or document through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots; let the camera move in on the line); validation refuses it on cards, diagrams and maps. Give `lit`: a list (1 to 6) of {`ref` (a region name of the picture; its ellipse gives the window) or `box` (\"x0, y0, x1, y1\" in source pixels, which wins over `ref`), `at` (seconds from the start of the overlay, or a word anchor), `hold_s` (how long it stays lit; 0 = until the next line is lit, or to the end)}; `reading` (the line in today's words), `original` (the line as written; it is shown in capitals), `reading_at` (seconds from the start of the overlay when the reading appears; the original follows 0.4 s later, so say it after the narrator starts the line). The default data is an example (Jan van Eyck's signature on the Arnolfini Portrait): ALWAYS set lit, reading, original and reading_at together. Let the overlay last 5 to 9 s (at least 3 s).",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "lit",
+     "type": "items",
+     "default": [
+      {
+       "ref": "INSCR",
+       "box": "",
+       "at": 1.0,
+       "hold_s": 0
+      }
+     ],
+     "min": null,
+     "max": null,
+     "unit": "lines",
+     "values": null,
+     "measured": null,
+     "min_items": 1,
+     "max_items": 6,
+     "fields": [
+      {
+       "name": "ref",
+       "type": "ref",
+       "required": false,
+       "default": null,
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null
+      },
+      {
+       "name": "box",
+       "type": "string",
+       "required": false,
+       "default": "",
+       "min": null,
+       "max": null,
+       "unit": null,
+       "values": null,
+       "pattern": "\\s*(?:-?\\d{1,6}(?:\\.\\d+)?\\s*[,;]\\s*-?\\d{1,6}(?:\\.\\d+)?\\s*[,;]\\s*-?\\d{1,6}(?:\\.\\d+)?\\s*[,;]\\s*-?\\d{1,6}(?:\\.\\d+)?)?\\s*",
+       "pattern_hint": "Gõ bốn số theo điểm ảnh của ảnh gốc: x trái, y trên, x phải, y dưới, cách nhau bằng dấu phẩy. Ví dụ: 1750, 1240, 2690, 1540. Để trống nếu dùng tên vùng."
+      },
+      {
+       "name": "at",
+       "type": "at",
+       "required": false,
+       "default": 1.0,
+       "min": 0,
+       "max": 600,
+       "unit": "s",
+       "values": null
+      },
+      {
+       "name": "hold_s",
+       "type": "number",
+       "required": false,
+       "default": 0,
+       "min": 0,
+       "max": 60,
+       "unit": "s",
+       "values": null
+      }
+     ]
+    },
+    {
+     "name": "dim_to",
+     "type": "number",
+     "default": 0.34,
+     "min": 0.25,
+     "max": 0.6,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "ramp_s",
+     "type": "number",
+     "default": 0.7,
+     "min": 0.2,
+     "max": 2.0,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "edge_px",
+     "type": "number",
+     "default": 28,
+     "min": 0,
+     "max": 200,
+     "unit": "px",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "pad_px",
+     "type": "number",
+     "default": 40,
+     "min": 0,
+     "max": 400,
+     "unit": "px",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "reading",
+     "type": "string",
+     "default": "Jan van Eyck was here. 1434",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,120}",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự: lời đọc hiện đại của dòng chữ."
+    },
+    {
+     "name": "original",
+     "type": "string",
+     "default": "Johannes de eyck fuit hic · 1434",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": ".{0,120}",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự: dòng chữ như đã viết (sẽ hiện bằng chữ hoa)."
+    },
+    {
+     "name": "reading_at",
+     "type": "number",
+     "default": 2.4,
+     "min": 0,
+     "max": 600,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "leave_s",
+     "type": "number",
+     "default": 0.5,
+     "min": 0.1,
+     "max": 2.0,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 7.0,
+    "min_s": 3.0,
+    "max_s": 30.0,
+    "anchor": "word"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.explain_over.LitLine",
+    "reason": null,
+    "notes": "The window is the box of the region's ellipse (or `box`), mapped through the base shot's camera, grown by pad_px; gain 1 inside and dim_to outside with a smoothstep edge edge_px wide centred on the border (no outline). Windows rise over ramp_s at their `at` and fall at at + hold_s (or when the next one rises). The reading goes below the window, above it when the window comes down into that place. Valid on every base whose renderer provides view()."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 7,
+    "clip": "previews/DOC-01.mp4",
+    "thumb": "previews/DOC-01.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-explainer-components.md section 4 (DOC-01)",
+    "docs/design/research/R10_explainer_components.md C18 (Getty J9yP1N0nLUg 2:52 to 3:26) and part 5.1",
+    "docs/design/mock/2026-11-18-explainer/components.html (doclit)"
+   ]
   }
  ]
 }

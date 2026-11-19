@@ -1,7 +1,8 @@
 """Shots that carry the seven ID-* techniques (channel identity), for the sweeps that need one reference item per technique.
 
 `projects/technique_lab` was built before the family existed; `append_identity_shots` adds one shot (or overlay) per technique to a
-COPY of its storyboard, each at its nominal length, so the registry sweeps cover all 79 ids without touching the lab project (the seven ID-* ones, then MAP-01, which came later still).
+COPY of its storyboard, each at its nominal length, so the registry sweeps cover all 82 ids without touching the lab project (the seven ID-* ones, then MAP-01, which came later still, then the overlays
+KEY-01, NUM-01 and DOC-01).
 """
 from __future__ import annotations
 
@@ -48,6 +49,23 @@ def append_map_shot(sb: dict) -> dict:
     return sb
 
 
+# compover: KEY-01, NUM-01 and DOC-01 are overlays on a shot that shows the Arnolfini Portrait (the regions of their default data are the lab picture's own).
+EXPLAIN_OVERLAYS = [("KEY-01", [(2220, 1410, 0.5), (2220, 1410, 0.54)]), ("NUM-01", [(3218, 2987, 0.822), (3218, 2987, 0.822)]), ("DOC-01", [(2220, 1302.5, 0.727), (2220, 1455, 1.2)])]
+
+
+def append_explain_shots(sb: dict, asset: str) -> dict:
+    """Three CAM-01 shots of 7.5 s after the last shot of `sb`, each carrying one default overlay of 7 s (KEY-01, NUM-01, DOC-01) on a camera that frames the example."""
+    t = float(sb["end"]["t"])
+    for n, (tid, cams) in enumerate(EXPLAIN_OVERLAYS):
+        camera = [{"at": {"rel": 0.0}, "cx": cams[0][0], "cy": cams[0][1], "zoom": cams[0][2], "ease": "linear"}, {"at": {"rel": 1.0}, "cx": cams[1][0], "cy": cams[1][1], "zoom": cams[1][2], "ease": "linear"}]
+        sb["shots"].append({"id": "ex%02d" % n, "start": {"t": round(t, 3)}, "technique": "CAM-01", "intent": "explore", "slots": {"image": {"asset": asset}}, "params": {"camera": camera},
+                            "transition_in": None, "locked": False, "source": "agent", "note": tid + " sweep",
+                            "overlays": [{"id": "exo%02d" % n, "technique": tid, "intent": "point_at", "start": {"t": round(t + 0.25, 3)}, "dur": 7.0, "params": {}, "locked": False, "source": "agent", "note": ""}]})
+        t += 7.5
+    sb["end"] = {"t": round(t, 3), "fade_s": 0}
+    return sb
+
+
 def add_to_project_dir(project_dir: Path) -> None:
     """Edit storyboard.json of a COPY of technique_lab on disk (the first shot's camera and asset are reused)."""
     p = Path(project_dir) / "storyboard.json"
@@ -55,4 +73,5 @@ def add_to_project_dir(project_dir: Path) -> None:
     first = sb["shots"][0]
     append_identity_shots(sb, first["slots"]["image"]["asset"], first["params"]["camera"])
     append_map_shot(sb)
+    append_explain_shots(sb, first["slots"]["image"]["asset"])
     p.write_text(json.dumps(sb, indent=1), encoding="utf-8")

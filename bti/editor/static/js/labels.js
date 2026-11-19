@@ -441,3 +441,11 @@ export const ITEM_FIELD = {
   shape: 'Dạng đường', draw_s: 'Thời gian vẽ', head: 'Đầu chạy',
 };
 export const itemFieldLabel = (name) => ITEM_FIELD[name] || name;
+
+// ---- compover: words of KEY-01 (labels), NUM-01 (rows of figures) and DOC-01 (lit lines): the choices and the fields of their rows
+Object.assign(VALUE, { italic: 'Nghiêng', regular: 'Thường', caps: 'Chữ hoa nhỏ', hairline: 'Nét mảnh' });
+Object.assign(PARAM_VALUE, { leader: { none: 'Không có nét nối', hairline: 'Nét mảnh cho mọi nhãn', auto: 'Chỉ khi nhãn bị đẩy xa chi tiết' } });
+Object.assign(ITEM_FIELD, {
+  text: 'Chữ', ref: 'Chi tiết của tranh', side: 'Phía đặt chữ', style: 'Kiểu chữ', label: 'Nhãn nhỏ', value: 'Con số', units: 'Đơn vị', count: 'Số chấm',
+  box: 'Khung trong ảnh gốc', hold_s: 'Giữ sáng (giây)',
+});
