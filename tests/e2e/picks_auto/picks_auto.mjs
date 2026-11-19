@@ -222,7 +222,7 @@ try {
     await go(p, base, `#/project/${JOIN}/picks`);
     await p.waitFor(`document.querySelectorAll('#pk-left .pk-beat').length === 6 && !!document.querySelector('.prompt-edit[data-box="picks"]')`, 40000);
     await p.click('#pk-left .pk-beat', 'b0004'); await sleep(500);
-    check('the scope line of the box says the line that was clicked', /Dòng 4 đang chọn/.test(await text('.prompt-edit[data-box="picks"] .prompt-scope-words')), await text('.prompt-edit[data-box="picks"] .prompt-scope-words'));
+    check('the scope line of the box says the line that was clicked', /Đoạn 4 đang chọn/.test(await text('.prompt-edit[data-box="picks"] .prompt-scope-words')), await text('.prompt-edit[data-box="picks"] .prompt-scope-words'));
     const before = (await joinThread()).turns.map((t) => t.id);
     await p.waitFor(`!document.querySelector('.prompt-edit[data-box="picks"] .prompt-instruction').disabled`, 30000);
     await ev(`(() => { const t = document.querySelector('.prompt-edit[data-box="picks"] .prompt-instruction'); t.value = ''; t.focus(); })()`);

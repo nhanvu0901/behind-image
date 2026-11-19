@@ -24,7 +24,7 @@ const check = async (id, title, fn) => {
   console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${title}${note ? '  -> ' + note : ''}`); if (!ok) failed++;
 };
 const open = async (p, hash, ready = '#view') => { await p.goto('about:blank', 150); await p.goto(B + '/' + hash, 1200); await p.waitFor(`!!document.querySelector(${JSON.stringify(ready)})`, 15000); await sleep(400); };
-const openEdit = async (p, pid, base = B) => { await p.goto('about:blank', 150); await p.goto(base + '/#/project/' + pid + '/edit', 1500); await p.waitFor('!!window.__bti', 20000); await sleep(1200); };
+const openEdit = async (p, pid, base = B) => { await p.goto('about:blank', 150); await p.goto(base + '/?mode=hand#/project/' + pid + '/edit', 1500); await p.waitFor('!!window.__bti', 20000); await sleep(1200); };
 const SHOTS = new URL('../../../.scratch/round2_ui_fix/shots/', import.meta.url).pathname;
 
 try {

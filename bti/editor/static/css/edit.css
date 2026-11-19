@@ -278,3 +278,91 @@ label.chk { display: inline-flex; align-items: center; gap: 6px; cursor: pointer
 .changes-row.undone { opacity: .65; }
 .changes-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .changes-lines { margin: 2px 0 0; padding-left: 18px; }
+
+/* c4pages: the simple page of step 5 (sbsimple.js). The same player, request box and editor sit in the same elements; `data-mode` on .edit-root says which face shows.
+   "simple": a header, the player (#stage, at least 300 px high at 1280x720) with what the selected shot is under it, the list of shots, the request box. "hand": everything above, unchanged. */
+.sbar, #sel-panel, #shots-col { display: none; }
+.prompt-multi-label[hidden] { display: none; }
+.edit-root[data-mode="simple"] { grid-template-rows: auto minmax(0, 1fr); }
+.edit-root[data-mode="simple"] #t-shot, .edit-root[data-mode="simple"] #ebar, .edit-root[data-mode="simple"] #timeline-wrap, .edit-root[data-mode="simple"] #inspector,
+.edit-root[data-mode="simple"] #preview-tools, .edit-root[data-mode="simple"] #handles { display: none; }
+.edit-root[data-mode="simple"] #sbar { display: flex; }
+.edit-root[data-mode="simple"] #sel-panel, .edit-root[data-mode="simple"] #shots-col { display: flex; }
+.edit-root[data-mode="simple"] #main { grid-template-columns: minmax(560px, 1.3fr) minmax(300px, .8fr) minmax(340px, .8fr); grid-template-rows: minmax(300px, 1fr) auto auto; }
+.edit-root[data-mode="simple"] #preview-pane { display: contents; }
+.edit-root[data-mode="simple"] #stage { grid-column: 1; grid-row: 1; border-right: 1px solid var(--border); }
+.edit-root[data-mode="simple"] #transport { grid-column: 1; grid-row: 2; border-right: 1px solid var(--border); }
+.edit-root[data-mode="simple"] #sel-panel { grid-column: 1; grid-row: 3; border-right: 1px solid var(--border); border-top: 1px solid var(--border); }
+.edit-root[data-mode="simple"] #shots-col { grid-column: 2; grid-row: 1 / 4; }
+.edit-root[data-mode="simple"] #prompt-edit-container { grid-column: 3; grid-row: 1 / 4; border-left: 0; }
+
+#sbar { align-items: center; gap: 12px; min-height: 48px; padding: 6px 14px; background: var(--panel); border-bottom: 1px solid var(--border); min-width: 0; overflow: hidden; }
+#sbar > * { flex: none; }
+#sbar .grow { flex: 1 1 0; min-width: 0; }
+.sb-title { margin: 0; font-size: 17px; font-weight: 700; white-space: nowrap; }
+.sb-project { color: var(--muted); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto !important; min-width: 0; }
+.sb-sum { white-space: nowrap; }
+.sb-problems { color: var(--danger); border-color: #6a2a2a; background: #2a1414; font-weight: 600; padding: 3px 10px; }
+.sb-problems.general { color: var(--warn); border-color: #6a5410; background: #2a2410; }
+.sb-why { max-width: 300px; white-space: normal; line-height: 1.25; flex: 0 1 auto !important; }
+.sb-dirty { white-space: nowrap; }
+#sbar button.blocked { color: var(--text); }
+
+#sel-panel { flex-direction: column; gap: 4px; padding: 8px 14px 10px; background: var(--panel); max-height: 168px; overflow: auto; min-width: 0; }
+.sel-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.sel-no { font-size: 14px; }
+.sel-sentence { font-size: 15px; font-weight: 600; line-height: 1.3; }
+.sel-spoken { font-size: 12px; line-height: 1.45; color: var(--text); max-height: 3.2em; overflow: hidden; }
+.sel-problem { font-size: 12px; color: var(--danger); }
+.sel-actions { margin-top: 2px; }
+.sel-none { padding: 6px 0; }
+
+#shots-col { flex-direction: column; min-width: 0; min-height: 0; border-right: 1px solid var(--border); background: var(--bg); }
+.shots-head { display: flex; align-items: baseline; gap: 10px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }
+.shots-head h2 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); white-space: nowrap; }
+.shots-foot { flex: none; padding: 6px 12px; border-top: 1px solid var(--border); background: var(--panel); font-size: 11px; line-height: 1.3; }
+.shots-scroll { flex: 1; min-height: 0; overflow: auto; outline: 0; }
+.shot-list, .chap-rows { list-style: none; margin: 0; padding: 0; }
+.chap-group { border-bottom: 1px solid var(--border); }
+.chap-head { display: flex; align-items: center; gap: 8px; padding: 0 8px 0 0; background: #131720; position: sticky; top: 0; z-index: 1; border-bottom: 1px solid var(--border); }
+.chap-toggle { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; text-align: left; border: 0; border-radius: 0; background: transparent; padding: 7px 10px; }
+.chap-toggle:hover:not(:disabled) { background: var(--elev); }
+.chap-arrow { color: var(--muted); width: 12px; flex: none; }
+.chap-names { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.25; }
+.chap-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.chap-count { font-size: 11px; white-space: nowrap; }
+.chap-bad { background: var(--danger); color: #fff; border-radius: 9px; font-size: 11px; padding: 0 6px; flex: none; }
+.chap-sel { white-space: nowrap; flex: none; }
+.chap-sel.on, .chap-on > .chap-head { border-color: var(--accent); }
+.chap-sel.on { background: #1a2a42; color: var(--accent); }
+.shot-item { margin: 0; }
+.shot-row { display: grid; grid-template-columns: 24px 40px 76px minmax(0, 1fr); gap: 8px; align-items: start; width: 100%; text-align: left; padding: 7px 10px; border: 0; border-bottom: 1px solid #1c2230; border-radius: 0; background: transparent; }
+.shot-row:hover { background: #151a24; border-color: transparent; border-bottom-color: #1c2230; }
+.shot-row.sel { background: #1a2a42; box-shadow: inset 3px 0 0 var(--accent); }
+.shot-row.now:not(.sel) { box-shadow: inset 3px 0 0 #3a4a68; }
+.shot-row.has-problem .sr-no { color: var(--danger); font-weight: 700; }
+.sr-no { color: var(--muted); font-size: 12px; text-align: right; padding-top: 2px; }
+.sr-time { color: var(--muted); font-size: 12px; padding-top: 2px; }
+.sr-frame { display: block; width: 76px; aspect-ratio: 16 / 9; background: #000; border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
+.sr-frame img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sr-frame.bad { background: repeating-linear-gradient(45deg, #0c0e13, #0c0e13 6px, #11141b 6px, #11141b 12px); }
+.sr-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sr-sentence { font-size: 13px; line-height: 1.35; overflow-wrap: anywhere; }
+.sr-meta { font-size: 11px; color: var(--muted); }
+.sr-prob { font-size: 12px; color: var(--danger); line-height: 1.3; }
+.shots-scroll .empty { padding: 24px 12px; }
+.prob-dialog { width: min(680px, 94vw); }
+.prob-list { list-style: none; margin: 0 0 12px; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.prob-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--elev); border: 1px solid var(--border); border-left: 3px solid var(--danger); border-radius: var(--radius); }
+.prob-text { flex: 1; min-width: 0; }
+/* the box of step 5 on the simple page keeps its own scroll; the thread shows the newest card first */
+.edit-root[data-mode="simple"] .prompt-edit { padding: 10px 12px; }
+
+/* the editor's own button back to the simple page */
+#btn-simple { white-space: nowrap; }
+
+.shot-row { scroll-margin-top: 52px; scroll-margin-bottom: 8px; }
+
+/* c4pages: the player says in words that a shot cannot be drawn (the engine's stand-in picture has the technique's id on it) */
+.stage-note { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; padding: 24px; text-align: center; line-height: 1.45; font-size: 15px; background: #1b1f2a; color: #ffd9a0; z-index: 3; }
+.edit-root[data-mode="simple"] .stage-note:not([hidden]) { display: flex; }

@@ -182,7 +182,7 @@ try {
     check('the box and its list of changes are there', await p.waitFor(`!!document.querySelector('.prompt-edit[data-box="picks"]') && !!document.querySelector('.prompt-edit[data-box="picks"] .changes-list')`, 40000));
     beatId = await ev(`document.querySelectorAll('button.pk-beat')[2]?.querySelector('.bid')?.textContent || ''`);
     await ev(`document.querySelectorAll('button.pk-beat')[2]?.click()`); await sleep(600);
-    check('the scope line says the line that was clicked', /Dòng 3 đang chọn/.test(await ev(`document.querySelector('.prompt-edit[data-box="picks"] .prompt-scope-words')?.textContent || ''`)), await ev(`document.querySelector('.prompt-edit[data-box="picks"] .prompt-scope-words')?.textContent || ''`));
+    check('the scope line says the line that was clicked', /Đoạn 3 đang chọn/.test(await ev(`document.querySelector('.prompt-edit[data-box="picks"] .prompt-scope-words')?.textContent || ''`)), await ev(`document.querySelector('.prompt-edit[data-box="picks"] .prompt-scope-words')?.textContent || ''`));
     pk = (await api.get(U(S4, '/picks'))).json;
     beatBefore = pk.picks.beats[beatId] || null;
     const t = await send(S4, true, 'dòng này cho xem cả bức tranh rồi chi tiết khuôn mặt');
