@@ -17,6 +17,7 @@ HOW TO FOLLOW THE OUTLINE
 - Cite the fact ids a paragraph rests on, in its >> line. Never put source ids (such as PAY-07) or fact ids in the spoken text.
 - Where a fact has a conflict note, say plainly that the sources differ and name them by author.
 - Sources marked LOW TRUST are not a basis for any statement.
+- Sources marked RESTORED give the author's ideas and readings, never established facts: say whose they are. Take no number, date or quotation from them unless the fact table also cites another source for it, and never guess what a […] mark hides.
 - Target sentence lengths for the ear: most sentences 8 to 18 words, none over 28, one idea per sentence. Split longer ideas into clean, separate sentences.
 
 {{NOTES}}

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import re
 
-from . import extract
+from . import extract, restored as restored_text
 
 TAG = re.compile(r"^\[([A-Za-z][\w-]*)\]\s?(.*)$")
 NON_BODY_TYPES = {"front", "contents", "notes", "credits", "index", "back", "blank"}
@@ -46,18 +46,25 @@ def layer_page(text: str) -> dict:
     return {"type": "body", "blocks": [{"kind": "p", "text": t}] if t else [], "continues": False}
 
 
-def entry(work: dict) -> dict:
-    """Assemble the pages of one entry. Returns {body, words, text_source, outline, pages:[{page,source,type}]}."""
+def entry(work: dict, restored: bool = False) -> dict:
+    """Assemble the pages of one entry. Returns {body, words, text_source, outline, pages:[{page,source,type}]}.
+
+    restored=True builds the text of a work at trust level `restored` (see restored.py) from the RESTORED pages and nothing else:
+    every [[? ... ?]] passage becomes the mark […]; plate pages are left out; no caption is kept (the review found the captions still
+    machine text, so outline["captions"] is empty); headings and the [meta] line stay; the words are the words that remain."""
     book_id = work["id"].split("/")[0]
     a, b = work["pdf_pages"]
     body_blocks, headings, captions, meta, pages, srcs = [], [], [], [], [], []
     prev_cont = False
     for p in range(a, b + 1):
-        text, src = extract.page_text(book_id, p)
-        pg = parse_page(text) if src == "clean" else layer_page(text)
+        if restored:
+            text, src = restored_text.mark_unclear(restored_text.page_text(book_id, p)), "restored"
+        else:
+            text, src = extract.page_text(book_id, p)
+        pg = parse_page(text) if src in ("clean", "restored") else layer_page(text)
         srcs.append(src)
         pages.append({"page": p, "source": src, "type": pg["type"]})
-        if pg["type"] in NON_BODY_TYPES:
+        if pg["type"] in NON_BODY_TYPES or (restored and pg["type"] == "plate"):
             prev_cont = False
             continue
         first = True
@@ -69,7 +76,8 @@ def entry(work: dict) -> dict:
             elif k == "meta":
                 meta.append(blk["text"])
             elif k == "caption":
-                captions.append({"page": p, "text": blk["text"]})
+                if not restored:
+                    captions.append({"page": p, "text": blk["text"]})
             elif k in ("credit", "note", "sic"):
                 pass
             else:  # p, quote
@@ -84,9 +92,10 @@ def entry(work: dict) -> dict:
         k = blk["kind"]
         lines.append({"h1": "# ", "h2": "## ", "h3": "### ", "quote": "> "}.get(k, "") + blk["text"])
     body = "\n\n".join(lines)
-    words = sum(len(blk["text"].split()) for blk in body_blocks if blk["kind"] in ("p", "quote"))
+    count = restored_text.count_words if restored else (lambda t: len(t.split()))
+    words = sum(count(blk["text"]) for blk in body_blocks if blk["kind"] in ("p", "quote"))
     kinds = set(srcs)
-    source = "clean" if kinds == {"clean"} else "layer" if kinds == {"layer"} else "mixed"
+    source = next(iter(kinds)) if len(kinds) == 1 else "mixed"          # clean, layer or restored; any mix is "mixed"
     if source == "layer" and work.get("headings"):  # digital layer text has no markup: use font-size headings
         headings = [{"level": 2, "text": h, "page": None} for h in work["headings"]]
     outline = {"headings": headings, "captions": captions, "meta": meta}

@@ -101,9 +101,9 @@ Với video mới, bấm **+ Tạo video mới**. Thư viện có hai thẻ:
 - **Tác phẩm**: mỗi tác phẩm là một video; các sách cùng nói về một tranh đã được gộp vào một hồ sơ. Lọc theo tên, thế kỷ, đã có dự án chưa, có trong từ 2 sách, có gồm chương chủ đề hay không. Bản quyền chỉ là thông tin ước lượng, không chặn gì.
 - **Kệ sách**: chọn một cuốn, xem các mục của nó (lọc theo tên, thế kỷ, bản quyền), mở một mục để xem các trang, văn bản trích (bản scan là văn bản OCR, có thể sai chữ), hình nhúng, và các sách khác có cùng tác phẩm.
 
-Bấm một tác phẩm để mở **hồ sơ**: tên, hoạ sĩ, năm (chỗ các sách ghi khác nhau được tô vàng), nguồn của từng sách (dàn ý theo cấu trúc, chú thích hình, các trang, văn bản thân bài). Sách dịch máy có nhãn "bản dịch máy, không dùng làm nguồn sự kiện". Ở hồ sơ có thể **Gộp với…** một tác phẩm khác thực ra là cùng một bức tranh, hoặc **Tách** một nguồn thành tác phẩm riêng (ghi vào `library/overrides/artworks.json`).
+Bấm một tác phẩm để mở **hồ sơ**: tên, hoạ sĩ, năm (chỗ các sách ghi khác nhau được tô vàng), nguồn của từng sách (dàn ý theo cấu trúc, chú thích hình, các trang, văn bản thân bài). Sách dịch máy có nhãn "bản dịch máy, không dùng làm nguồn sự kiện". Một tác phẩm của sách dịch máy đã được khôi phục và rà soát thì có nhãn **"Bản khôi phục"** thay cho nhãn đó: dùng được cho ý tưởng và mô tả bức tranh (lời dẫn sẽ nói "Kelly Grovier cho rằng…"), nhưng **không bảo đảm** số liệu, năm và trích dẫn; những thứ đó phải có một nguồn khác xác nhận, và dấu […] là chỗ chưa khôi phục được nên bị bỏ trống. Nếu tác phẩm chưa có nguồn tin cậy đầy đủ nào (chỉ có bản khôi phục hoặc bản dịch máy), trang ghi "Chưa có nguồn tin cậy đầy đủ cho tác phẩm này." và mọi dữ kiện cần kiểm tra thêm. Ở hồ sơ có thể **Gộp với…** một tác phẩm khác thực ra là cùng một bức tranh, hoặc **Tách** một nguồn thành tác phẩm riêng (ghi vào `library/overrides/artworks.json`).
 
-**Tạo dự án**: bấm "Tạo dự án", bỏ tick những nguồn không muốn dùng (mặc định bỏ sách dịch máy nếu còn nguồn khác), có thể đặt tên thư mục (slug: a-z, 0-9, `-`, `_`; không được bắt đầu bằng `lab_` hoặc `demo_`). Dự án nhận một bản sao hồ sơ và văn bản; chưa có storyboard. Tạo xong ứng dụng mở dự án ở bước Kịch bản.
+**Tạo dự án**: bấm "Tạo dự án", bỏ tick những nguồn không muốn dùng (mặc định bỏ sách dịch máy chưa khôi phục nếu còn nguồn khác; bản khôi phục được giữ), có thể đặt tên thư mục (slug: a-z, 0-9, `-`, `_`; không được bắt đầu bằng `lab_` hoặc `demo_`). Dự án nhận một bản sao hồ sơ và văn bản; chưa có storyboard. Tạo xong ứng dụng mở dự án ở bước Kịch bản.
 
 Với dự án đã có, bước **Tác phẩm** hiện hồ sơ tác phẩm của dự án: tên, hoạ sĩ, năm, các nguồn không thống nhất, các chi tiết có tên, và từng nguồn sách đang dùng (xem văn bản, mở mục trong thư viện). Chọn sách nào làm nguồn thì chỉnh ở bước Kịch bản, cột Nguồn.
 
@@ -127,7 +127,7 @@ Ba cột và một thanh trạng thái.
 
 | Cột | Nội dung |
 |---|---|
-| **Nguồn** (trái) | Thẻ tác phẩm, mục tiêu số từ và tốc độ đọc, các chi tiết có tên (D1, D2, ...), chỗ các sách không thống nhất, một thẻ cho mỗi sách với các đoạn đã đánh số (`PAY-07`, `HOD-02`, ...), ô tìm kiếm. Sách dịch máy có nhãn "bản dịch máy, không dùng làm nguồn sự kiện" và một ô tick để cho phép dùng. |
+| **Nguồn** (trái) | Thẻ tác phẩm, mục tiêu số từ và tốc độ đọc, các chi tiết có tên (D1, D2, ...), chỗ các sách không thống nhất, một thẻ cho mỗi sách với các đoạn đã đánh số (`PAY-07`, `HOD-02`, ...), ô tìm kiếm. Sách dịch máy có nhãn "bản dịch máy, không dùng làm nguồn sự kiện" và một ô tick để cho phép dùng; bản khôi phục có nhãn "Bản khôi phục", được dùng sẵn (bỏ tick nếu không muốn). |
 | **Dàn ý** (giữa) | Câu hỏi chính, chọn một trong các câu mở đầu, các chương (tên, vai trò, thẻ chương, số từ, mục đích, dữ kiện, cho xem), bảng dữ kiện (độ chắc chắn, mã đoạn nguồn, mâu thuẫn). |
 | **Lời dẫn** (phải) | Các chương, mỗi chương gồm nhiều dòng (beat). Mỗi dòng là một đoạn lời đọc, sửa trực tiếp được. |
 | **Thanh dưới** | Tổng số từ, số phút ước tính, thanh ngân sách từng chương, tiến độ của tác vụ đang chạy kèm nút Hủy. |

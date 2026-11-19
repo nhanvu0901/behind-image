@@ -28,6 +28,9 @@ BOOKS = [
          pdf_type="digital", unit="themed_chapter"),
 ]
 TRUST_NOTE_LOW = "Bản dịch máy, không dùng làm nguồn sự kiện: văn xuôi thiếu tin cậy, nhiều tên riêng bị dịch sai."
+# The note for a work whose machine-translated text was restored and reviewed (trust level `restored`, see restored.py).
+TRUST_NOTE_RESTORED = ("Bản khôi phục từ bản dịch máy, đã rà soát: dùng được cho ý và mô tả; "
+                       "số liệu, năm và trích dẫn phải có nguồn khác xác nhận.")
 BOOK_BY_ID = {b["id"]: b for b in BOOKS}
 
 

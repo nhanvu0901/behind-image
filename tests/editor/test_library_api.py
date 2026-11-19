@@ -2,7 +2,7 @@ import json
 
 import pytest
 
-from bti.library import catalogue, config
+from bti.library import catalogue, config, dossiers
 
 BUILT = (config.LIB_DIR / "books" / "hodge_aid" / "works.json").is_file()
 pytestmark = pytest.mark.skipif(not BUILT, reason="run python -m bti.library build first")
@@ -175,24 +175,74 @@ def test_merge_split_endpoint_validation(client, tmplib):
     assert json.loads((tmplib / "overrides" / "artworks.json").read_text())["merge"]
 
 
+LEVELS = {"normal", "restored", "low"}
+GARDEN = "bosch-the-garden-of-earthly-delights"
+
+
 @pytest.mark.skipif(not DOS, reason="dossiers not built")
 def test_low_trust_fields_and_default_exclusion(client):
+    """True before and after library/restored/grovier_nws is installed and the dossiers are rebuilt: Grovier's work is `low` in the
+    first state and `restored` in the second, so this reads the trust values the dossier itself holds and checks that the API
+    rows, the dossier view and the project defaults agree with them. A low source in by default, or a trust field that is gone, fails here."""
     row = client.get("/api/library/artworks", params={"q": "garden of earthly"}).json()[0]
-    assert row["low_trust_books"] == ["grovier_nws"] and row["words_low"] > 0 and row["only_low_trust"] is False
-    assert row["words_normal"] > 0
-    only = [r for r in client.get("/api/library/artworks").json() if r["only_low_trust"]]
-    assert len(only) > 10 and all(r["books"] == ["grovier_nws"] for r in only)
-    d = client.get("/api/library/artworks/bosch-the-garden-of-earthly-delights").json()["dossier"]
-    assert {s["book_id"]: s["trust"] for s in d["sources"]}["grovier_nws"] == "low"
-    assert d["totals"]["words_low"] > 0 and d["totals"]["words"] == d["totals"]["words_low"] + d["totals"]["words_normal"]
-    # default: low-trust left out; explicit empty exclude keeps everything
-    a = client.post("/api/library/projects", json={"artwork_key": "bosch-the-garden-of-earthly-delights", "slug": "g1"}).json()
-    assert "grovier_nws/018" not in [s["work_id"] for s in a["sources"]] and len(a["sources"]) == 3
-    b = client.post("/api/library/projects", json={"artwork_key": "bosch-the-garden-of-earthly-delights", "slug": "g2", "exclude": []}).json()
+    own = dossiers.load(GARDEN)                                       # the dossier as it was built
+    own_trust = {s["book_id"]: s["trust"] for s in own["sources"]}
+    g = own_trust["grovier_nws"]
+    assert g in ("low", "restored") and set(own_trust.values()) <= LEVELS
+    assert all(v == "normal" for b, v in own_trust.items() if b != "grovier_nws")
+    shown = client.get(f"/api/library/artworks/{GARDEN}").json()["dossier"]
+    assert {s["book_id"]: s["trust"] for s in shown["sources"]}["grovier_nws"] == g      # the page never labels the text above what it is
+    # the row: every field is there and says what the dossier says
+    for k in ("low_trust_books", "restored_books", "words_normal", "words_restored", "words_low", "only_low_trust", "no_normal_source"):
+        assert k in row, k
+    t = own["totals"]
+    assert t["words"] == t["words_normal"] + t.get("words_restored", 0) + t["words_low"]
+    assert (row["words_normal"], row["words_restored"], row["words_low"]) == (t["words_normal"], t.get("words_restored", 0), t["words_low"])
+    assert row["words_normal"] > 0 and (row["words_low"] > 0) == (g == "low") and (row["words_restored"] > 0) == (g == "restored")
+    assert row["low_trust_books"] == (["grovier_nws"] if g == "low" else []) and row["restored_books"] == (["grovier_nws"] if g == "restored" else [])
+    assert row["only_low_trust"] is False and row["no_normal_source"] is False         # the other three books are normal sources
+    # artworks that only Grovier covers: `low` before, `restored` after (works 2 and 54 stay low); none of them has a normal source
+    rows = client.get("/api/library/artworks").json()
+    solo = [r for r in rows if r["books"] == ["grovier_nws"]]
+    assert len(solo) > 10
+    for r in solo:
+        lv = dossiers.load(r["artwork_key"])["sources"][0]["trust"]
+        assert lv in ("low", "restored") and r["only_low_trust"] is (lv == "low") and r["no_normal_source"] is True
+    assert all(r["books"] == ["grovier_nws"] for r in rows if r["only_low_trust"])
+    # default sources: a low source is left out when others remain, a normal or restored one stays; judged by the project's own copy
+    a = client.post("/api/library/projects", json={"artwork_key": GARDEN, "slug": "g1"}).json()
+    got = {s["work_id"] for s in a["sources"]}
+    mine = {s["work_id"]: s["trust"] for s in json.loads((client.root / "g1" / "source" / "dossier.json").read_text(encoding="utf-8"))["sources"]}
+    assert set(mine) == got and set(mine.values()) <= LEVELS and "low" not in mine.values()
+    assert ("grovier_nws/018" in got) == (mine.get("grovier_nws/018") == "restored") and len(got) == 3 + ("grovier_nws/018" in got)
+    # an explicit empty exclude keeps everything
+    b = client.post("/api/library/projects", json={"artwork_key": GARDEN, "slug": "g2", "exclude": []}).json()
     assert len(b["sources"]) == 4
-    solo = only[0]["artwork_key"]
-    c = client.post("/api/library/projects", json={"artwork_key": solo, "slug": "g3"})
-    assert c.status_code == 200 and len(c.json()["sources"]) == 1  # only a low-trust source: kept, not empty
+    both = {s["work_id"]: s["trust"] for s in json.loads((client.root / "g2" / "source" / "dossier.json").read_text(encoding="utf-8"))["sources"]}
+    assert both["grovier_nws/018"] in ("low", "restored") and len(both) == 4
+    # an artwork with only one source keeps it, whatever its level
+    c = client.post("/api/library/projects", json={"artwork_key": solo[0]["artwork_key"], "slug": "g3"})
+    assert c.status_code == 200 and len(c.json()["sources"]) == 1
+
+
+@pytest.mark.skipif(not DOS, reason="dossiers not built")
+def test_a_low_source_is_left_out_by_default_in_any_state_of_the_library(client, tmplib):
+    """The exclusion rule itself, on the real artwork, whatever the state of the restoration: the owner forces Grovier to `low`."""
+    (tmplib / "overrides" / "books.json").write_text(json.dumps({"grovier_nws": {"trust": "low", "force": True}}), encoding="utf-8")
+    post = lambda b: client.post("/api/library/projects", json=b)
+    a = post({"artwork_key": GARDEN, "slug": "gl1"}).json()
+    assert "grovier_nws/018" not in [s["work_id"] for s in a["sources"]] and len(a["sources"]) == 3
+    mine = json.loads((client.root / "gl1" / "source" / "dossier.json").read_text(encoding="utf-8"))
+    assert {s["trust"] for s in mine["sources"]} == {"normal"}
+    b = post({"artwork_key": GARDEN, "slug": "gl2", "exclude": []}).json()
+    assert len(b["sources"]) == 4
+    both = json.loads((client.root / "gl2" / "source" / "dossier.json").read_text(encoding="utf-8"))
+    g = next(s for s in both["sources"] if s["work_id"] == "grovier_nws/018")
+    assert g["trust"] == "low" and g["text_source"] == "clean"                  # forced low: the plain text, not the restored one
+    solo = next(r for r in client.get("/api/library/artworks").json() if r["books"] == ["grovier_nws"])
+    assert solo["low_trust_books"] == ["grovier_nws"] and solo["restored_books"] == []
+    c = post({"artwork_key": solo["artwork_key"], "slug": "gl3"})
+    assert c.status_code == 200 and len(c.json()["sources"]) == 1               # only a low source: kept, not empty
 
 
 def test_search_with_d_bar_is_not_an_empty_search(client):

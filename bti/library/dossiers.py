@@ -70,13 +70,14 @@ def build_one(key: str, art: dict, out_dir: Path | None = None) -> dict:
     sources, images = [], []
     for w in works:
         bid = w["id"].split("/")[0]
-        e = clean.entry(w)
+        tr = catalogue.work_trust(w)          # normal, restored or low: decided per WORK (the book is only its starting point)
+        e = clean.entry(w, restored=tr["trust"] == "restored")     # a restored work gets its restored text and nothing else
         base = f"{bid}_{w['n']:03d}"
         (src_dir / f"{base}.txt").write_text(e["body"] + "\n", encoding="utf-8")
         s = {"work_id": w["id"], "book_id": bid, "n": w["n"], "pdf_pages": w["pdf_pages"], "words": e["words"],
              "text_source": e["text_source"], "ocr": e["ocr"], "title": w["title"], "artist": w.get("artist"),
-             "year": w.get("year"), "file": f"sources/{base}.txt", **catalogue.book_trust(bid), "outline": e["outline"],
-             "pages_clean": sum(1 for p in e["pages"] if p["source"] == "clean"), "pages_total": len(e["pages"])}
+             "year": w.get("year"), "file": f"sources/{base}.txt", **tr, "outline": e["outline"],
+             "pages_clean": sum(1 for p in e["pages"] if p["source"] in ("clean", "restored")), "pages_total": len(e["pages"])}
         if w.get("headline"):
             s["headline"] = w["headline"]
         sources.append(s)
@@ -88,16 +89,18 @@ def build_one(key: str, art: dict, out_dir: Path | None = None) -> dict:
            "totals": {"books": len({s["book_id"] for s in sources}), "sources": len(sources),
                       "words": sum(s["words"] for s in sources),
                       "words_normal": sum(s["words"] for s in sources if s["trust"] == "normal"),
+                      "words_restored": sum(s["words"] for s in sources if s["trust"] == "restored"),
                       "words_low": sum(s["words"] for s in sources if s["trust"] == "low"),
                       "pages_clean": sum(s["pages_clean"] for s in sources),
                       "pages_total": sum(s["pages_total"] for s in sources)},
-           "only_low_trust": bool(sources) and all(s["trust"] == "low" for s in sources),
+           "only_low_trust": bool(sources) and all(s["trust"] == "low" for s in sources),     # every source is `low`
+           "no_normal_source": bool(sources) and not any(s["trust"] == "normal" for s in sources),  # none is `normal` (restored and/or low)
            "images": images,
            "details": next((s["outline"]["details"] for s in sources if s["outline"].get("details")), []),
            "rights": min((w.get("rights") or {"status": "unknown"} for w in works),
                          key=lambda r: ["copyright_likely", "unknown", "pd_likely"].index(r["status"]),
                          default={"status": "unknown", "basis": ""}),
-           "text_source": "clean" if srcs == {"clean"} else "layer" if srcs == {"layer"} else "mixed"}
+           "text_source": next(iter(srcs)) if len(srcs) == 1 else "mixed"}      # clean, layer or restored; any mix is "mixed"
     catalogue.write_json(d / "dossier.json", doc)
     return doc
 
@@ -120,6 +123,29 @@ def build_all(keys: list[str] | None = None, log=print) -> dict:
             if k not in arts and (dossiers_dir() / k).is_dir():
                 shutil.rmtree(dossiers_dir() / k)
     return done
+
+
+def keys_of_book(book_id: str) -> list[str]:
+    """The artworks that have at least one work of this book: the dossiers a change of that book can touch."""
+    return [k for k, a in catalogue.load_artworks().items() if any(w.split("/")[0] == book_id for w in a["works"])]
+
+
+def build_book(book_id: str, log=print) -> dict:
+    """Rebuild only the dossiers that contain a work of `book_id` (the others are not read). Returns {artwork_key: dossier}."""
+    if book_id not in config.BOOK_BY_ID:
+        raise KeyError(f"unknown book {book_id!r}")
+    return build_all(keys_of_book(book_id), log)
+
+
+def live_trust(src: dict) -> dict:
+    """{trust, trust_note} of a source of a dossier as the library says now (an edit of overrides/books.json shows at once), but
+    never `restored` unless the dossier's own text for this source was built from the restored pages: a dossier that was not
+    rebuilt after a review keeps the text it has, and a label must not promise more than the text is."""
+    now = catalogue.work_trust({"id": src["work_id"], "pdf_pages": src["pdf_pages"]})
+    if now["trust"] == "restored" and src.get("trust") != "restored":
+        kept = src.get("trust")
+        return {"trust": kept if kept in catalogue.TRUST_LEVELS else "low", "trust_note": src.get("trust_note") or ""}
+    return now
 
 
 def load(key: str) -> dict | None:
@@ -153,7 +179,8 @@ def summary(done: dict) -> dict:
             "largest": [(d["artwork_key"], d["totals"]["words"], d["totals"]["sources"]) for d in top],
             "conflicts": sum(len(d["conflicts"]) for d in done.values()),
             "artworks_with_conflicts": sum(1 for d in done.values() if d["conflicts"]),
-            "sources_by_text": {k: srcs.count(k) for k in ("clean", "mixed", "layer")},
+            "sources_by_text": {k: srcs.count(k) for k in ("clean", "mixed", "layer", "restored")},
+            "sources_by_trust": {k: sum(1 for d in done.values() for s in d["sources"] if s["trust"] == k) for k in catalogue.TRUST_LEVELS},
             "pages_clean": pc, "pages_total": pt}
 
 

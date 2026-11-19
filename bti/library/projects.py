@@ -33,6 +33,13 @@ def parse_work_id(wid: str) -> tuple[str, int]:
     return bid, int(n)
 
 
+def _work_level(wid: str) -> str:
+    """The trust level (normal, restored or low) of one work of an artwork; the level of its book when the work is not in the catalogue."""
+    bid, n = wid.split("/")
+    w = catalogue.load_work(bid, int(n))
+    return catalogue.work_trust(w)["trust"] if w else catalogue.book_trust(bid)["trust"]
+
+
 def create_project(work_ids: list[str] | None, slug: str | None = None, projects_root: Path | None = None,
                    artwork_key: str | None = None, exclude: list[str] | None = None) -> dict:
     """Project from an ARTWORK (`artwork_key`, minus the `exclude`d work ids) or from explicit `work_ids`.
@@ -44,8 +51,8 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
             raise ProjectError(f"artwork {artwork_key!r} not found", 404)
         if work_ids:
             raise ProjectError("give artwork_key or work_ids, not both")
-        if exclude is None:  # default: low-trust (machine-translated) sources are left out unless nothing else is left
-            low = {w for w in art["works"] if catalogue.book_trust(w.split("/")[0])["trust"] == "low"}
+        if exclude is None:  # default: `low` sources are left out unless nothing else is left (normal and restored sources stay)
+            low = {wid for wid in art["works"] if _work_level(wid) == "low"}
             exclude = list(low) if len(low) < len(art["works"]) else []
         if not (isinstance(exclude, list) and all(isinstance(x, str) for x in exclude)):
             raise ProjectError("exclude must be a list of strings")

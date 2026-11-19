@@ -1,7 +1,8 @@
 // Step 1 of an existing project: the dossier of the chosen painting and the sources included (the brief the script step uses).
 import { api } from '../api.js';
 import { h } from '../util.js';
-import { LOW_TRUST } from '../labels.js';
+import { LOW_TRUST, NO_NORMAL_SOURCE, trustOf } from '../labels.js';
+import { restoredTag } from '../trust.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
 
@@ -19,8 +20,8 @@ export async function mount(host, { shell, scope, pipeline }) {
     const [bid, n] = s.work_id.split('/');
     return h('div', { class: 'srcrow', 'data-code': s.code },
       h('div', null, h('b', { text: s.book_title }), ' ', h('span', { class: 'sub', text: `${s.code} · ${s.author || ''} · ${s.words} từ · ${s.paragraphs.length} đoạn` }),
-        h('div', null, s.low_trust ? h('span', { class: 'tag lowtrust', title: s.trust_note, text: LOW_TRUST }) : null,
-          h('span', { class: 'tag', style: { marginLeft: s.low_trust ? '6px' : '0' }, text: s.included ? 'đang dùng làm nguồn' : 'không dùng làm nguồn' })),
+        h('div', null, s.low_trust ? h('span', { class: 'tag lowtrust', title: s.trust_note, text: LOW_TRUST }) : trustOf(s.trust) === 'restored' ? restoredTag(s.trust_note) : null,
+          h('span', { class: 'tag', style: { marginLeft: s.low_trust || trustOf(s.trust) === 'restored' ? '6px' : '0' }, text: s.included ? 'đang dùng làm nguồn' : 'không dùng làm nguồn' })),
         s.sections?.length ? h('div', { class: 'sub', text: 'Các mục: ' + s.sections.slice(0, 8).join(' · ') + (s.sections.length > 8 ? ' ...' : '') }) : null, box),
       h('div', { style: { display: 'flex', gap: '8px' } }, tog, h('a', { class: 'lnk', href: `#/library/work/${bid}/${Number(n)}`, text: 'Mở mục trong thư viện' })));
   };
@@ -31,6 +32,7 @@ export async function mount(host, { shell, scope, pipeline }) {
       next ? h('button', { class: 'primary', text: `Tiếp tục: ${next.label}`, onclick: () => shell.go(projectHash(pid, next.id)) }) : null,
       pipeline.artwork_key ? h('a', { class: 'lnk', href: `#/library/artwork/${encodeURIComponent(pipeline.artwork_key)}`, text: 'Xem hồ sơ đầy đủ trong thư viện', style: { alignSelf: 'center' } }) : null,
       h('a', { class: 'lnk', href: '#/library', text: 'Chọn tác phẩm khác (video mới)', style: { alignSelf: 'center' } })),
+    b.no_normal_source ? h('div', { class: 'conflict', text: NO_NORMAL_SOURCE }) : null,
     b.conflicts.length ? h('div', { class: 'panel' }, h('h4', { text: 'Các nguồn không thống nhất' }),
       b.conflicts.map((c) => h('div', { class: 'conflict', text: `${c.field}: ` + c.values.map((v) => `${v.src || v.work_id} ghi "${v.value}"`).join(' / ') }))) : null,
     b.details.length ? h('div', { class: 'panel' }, h('h4', { text: `Chi tiết có tên (${b.details.length})` }), h('div', { class: 'sub', text: b.details.map((d) => `${d.id} ${d.name}`).join(' · ') })) : null,

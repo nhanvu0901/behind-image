@@ -11,7 +11,8 @@
 import { api } from '../api.js';
 import { chapterDiffItems, headerRole } from '../chapdiff.js';
 import { h, kids, toast, errorToast, errorInto, detailFold, fillSelect, modal as uiModal, confirmDialog, modalOpen, setStatus } from '../util.js';
-import { LEVEL } from '../labels.js';
+import { LEVEL, NO_NORMAL_SOURCE, RESTORED_TEXT, trustOf, trustLabel, trustNote } from '../labels.js';
+import { restoredTag } from '../trust.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
 import { wordCount, tokenCount, findFolded, fold } from '../text.js';
@@ -310,6 +311,7 @@ function srcBody() {
   const kids = [];
   const p = b.painting;
   if (b.totals.included === 0) kids.push(h('div', { class: 'conf', role: 'alert', text: 'Chưa có nguồn nào được dùng. Dự án này chỉ có bản dịch máy: tick "Dùng sách này làm nguồn" ở sách bên dưới (nếu chấp nhận rủi ro) rồi mới lập dàn ý.' }));
+  if (b.no_normal_source) kids.push(h('div', { class: 'conf', text: NO_NORMAL_SOURCE }));       // every source given to the model is restored and/or low
   kids.push(h('h3', { class: 'sh', text: 'Tác phẩm' }), h('div', null, h('b', { text: p.title }), h('div', { class: 'muted', text: [p.artist, p.year].filter(Boolean).join(', ') })));
   kids.push(h('div', { class: 'fieldrow', style: { marginTop: '8px' } },
     h('label', { text: 'Mục tiêu (từ)' }), intField({ value: b.options.target_words, min: 300, max: 20000, step: 50, label: 'Mục tiêu số từ', onValid: (v) => setOption({ target_words: v }) }),
@@ -321,13 +323,14 @@ function srcBody() {
   kids.push(h('h3', { class: 'sh', text: 'Chi tiết có tên' }),
     h('div', null, b.details.length ? b.details.map((d) => h('span', { class: 'det', title: d.where.map((w) => `${w.src}: ${w.paras.join(', ')}`).join('; '), onclick: () => focusParas(d.where.flatMap((w) => w.paras)) }, h('b', { text: d.id }), d.name)) : h('span', { class: 'muted', text: 'Không có' })));
   kids.push(h('h3', { class: 'sh', text: 'Sách' }),
-    h('div', { class: 'tabs' }, b.sources.map((s) => h('button', { class: (s.code === S.tab ? 'active ' : '') + (s.low_trust ? 'low' : ''), onclick: () => { S.tab = s.code; renderSources(); }, text: `${s.code} ${s.book_id.split('_')[0]}` }))));
+    h('div', { class: 'tabs' }, b.sources.map((s) => h('button', { class: (s.code === S.tab ? 'active ' : '') + (s.low_trust ? 'low' : ''), title: trustLabel(s.trust), onclick: () => { S.tab = s.code; renderSources(); }, text: `${s.code} ${s.book_id.split('_')[0]}` }))));
   if (src) {
     const chkLabel = src.low_trust
       ? 'Dùng sách này làm nguồn (đã đọc và chấp nhận rủi ro)'
       : 'Dùng sách này làm nguồn';
     kids.push(h('div', { class: 'src-head' }, h('b', { text: src.book_title }), h('span', { class: 'muted', text: `${src.paragraphs.length} đoạn, ${src.words} từ` }),
-      src.low_trust ? h('span', { class: 'tag lowtrust', title: src.trust_note, text: 'bản dịch máy, không dùng làm nguồn sự kiện' }) : null),
+      src.low_trust ? h('span', { class: 'tag lowtrust', title: src.trust_note, text: 'bản dịch máy, không dùng làm nguồn sự kiện' }) : trustOf(src.trust) === 'restored' ? restoredTag(src.trust_note) : null),
+      trustOf(src.trust) === 'restored' ? h('div', { class: 'muted', style: { margin: '4px 0' }, text: trustNote('restored', src.trust_note) + ' ' + RESTORED_TEXT }) : null,
       h('label', { class: 'chk', style: { display: 'flex', gap: '6px', marginBottom: '6px' } }, h('input', { type: 'checkbox', checked: src.included, 'data-src': src.book_id, onchange: (e) => toggleSource(src, e.target) }), chkLabel),
       h('input', { type: 'search', placeholder: 'Tìm trong sách này (không cần gõ dấu)', value: S.search, style: { width: '100%', marginBottom: '8px' }, oninput: (e) => { S.search = e.target.value; renderParas(); } }),
       h('div', { id: 'paras' }));
