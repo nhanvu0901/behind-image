@@ -68,15 +68,21 @@ def check_licence(meta: dict) -> tuple[bool, str, str]:
     return _check_licence(meta)
 
 
-def _candidate(meta: dict) -> dict:
+def _candidate(meta: dict, stored: tuple[int, int] | None = None) -> dict:
+    """One search card. `stored`: the pixel size of the file an import would store, when that is not what the source says about
+    its original (a Commons image of 3048 x 4000 is stored as a 1920 x 2520 rendition): the card and the "small" flag then
+    say what the owner will get, and what the page shows after the import is the same."""
     ok, name, reason = _check_licence(meta)
     w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
+    use_stored = bool(stored and stored[0] > 0 and stored[1] > 0)
+    if use_stored:
+        w, h = int(stored[0]), int(stored[1])
     is_vid = meta.get("kind") == "video" or str(meta.get("mime") or "").startswith("video/")
     return {
         "source": meta.get("source", ""), "source_id": meta.get("source_id", ""),
         "title": meta.get("title", ""), "thumb_url": meta.get("thumb_url", ""),
-        "page_url": meta.get("page_url", ""), "width": meta.get("width", 0),
-        "height": meta.get("height", 0), "mime": meta.get("mime", ""),
+        "page_url": meta.get("page_url", ""), "width": w if use_stored else meta.get("width", 0),
+        "height": h if use_stored else meta.get("height", 0), "mime": meta.get("mime", ""),
         "author": meta.get("author", ""), "licence": name or meta.get("licence", ""),
         "licence_ok": ok, "licence_reason": reason,
         "flag": flag_for_meta(meta) if is_vid else with_size_flag(flag_for_meta(meta), w, h, MIN_SHORT_SIDE),
@@ -86,7 +92,9 @@ def _candidate(meta: dict) -> dict:
 def search(query: str, source: str = "commons", kind: str = "image", limit: int = 24) -> list[dict]:
     if kind not in ("image", "video"):
         raise ValueError("kind must be 'image' or 'video'")
-    return [_candidate(m) for m in get_source(source).search(query, kind, limit)]
+    src = get_source(source)
+    sized = getattr(src, "stored_size", None)          # a source that stores a scaled rendition says what size that is
+    return [_candidate(m, sized(m) if callable(sized) else None) for m in src.search(query, kind, limit)]
 
 
 def import_candidate(project_dir: Path, source: str, source_id: str, *,
@@ -109,6 +117,9 @@ def import_candidate(project_dir: Path, source: str, source_id: str, *,
 
 def _import(project_dir: Path, source: str, source_id: str, min_short_side: int | None, require_root: bool) -> dict:
     src = get_source(source)
+    check = getattr(src, "check_id", None)           # a source may refuse an id it can no longer serve, before the index answers for it
+    if callable(check):
+        check(source_id)
     ident = f"{source}:{source_id}"
     idx = _assets.load_index(project_dir)
     hit = idx["items"].get(ident)
@@ -144,7 +155,9 @@ def _import(project_dir: Path, source: str, source_id: str, min_short_side: int 
             finally:
                 raw_tmp.unlink(missing_ok=True)
         else:
-            src.download(meta, dest, min_short_side=0)          # the size floor only sets a flag, it never refuses
+            got = src.download(meta, dest, min_short_side=0)    # the size floor only sets a flag, it never refuses
+            if isinstance(got, Path) and got != dest and got.is_file():
+                dest = got                                       # a rendition in another format than its original has its own extension
             bad = image_problem(dest)
             if bad:
                 raise ImageDamaged(bad[1], bad[0])

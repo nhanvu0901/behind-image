@@ -14,7 +14,10 @@ from conftest import FakeNet, load, png_bytes
 @pytest.fixture
 def commons_net(monkeypatch):
     big = png_bytes(1300, 1250)
+    # CHANGED (mediafix3): the Arnolfini file (4386 x 6000) is now downloaded as the rendition its API answer names
+    # (the fixture's thumburl), not as the original, so that address is served here too
     net = FakeNet([("upload.wikimedia.org/wikipedia/commons/a/a0", big),
+                   ("upload.wikimedia.org/thumb/a.jpg", big),
                    ("upload.wikimedia.org/x/nc", b"nope"),
                    ("commons.wikimedia.org", load("commons_search.json"))])
     monkeypatch.setitem(api._SOURCES, "commons", CommonsSource(opener=net, sleep=lambda s: None))

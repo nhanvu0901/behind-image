@@ -94,8 +94,10 @@ def test_download_unknown_size_checked_after(tmp_path):
 
 
 def test_download_size_cap(tmp_path):
+    # CHANGED (mediafix3): the original was 3000 x 3000, which is now downloaded as a rendition (and the declared size of the
+    # ORIGINAL says nothing about the rendition's bytes); a 1500 x 1500 original is still taken as it is, so the cap applies up front
     meta = {"source_id": "File:x.png", "kind": "image", "url": "https://upload.wikimedia.org/x.png",
-            "width": 3000, "height": 3000, "size": 10_000}
+            "width": 1500, "height": 1500, "size": 10_000}
     src, net = make([("upload.wikimedia.org", b"x" * 10_000)])
     with pytest.raises(http.MediaHTTPError):
         src.download(meta, tmp_path / "x.png", max_bytes=5_000)

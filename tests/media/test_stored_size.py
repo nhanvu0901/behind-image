@@ -124,9 +124,11 @@ def test_met_image_whose_api_size_is_unknown_is_measured(monkeypatch, tmp_path):
 def test_osm_map_is_measured_not_trusted(monkeypatch, tmp_path):
     cache = tmp_path / "osmcache"
     cache.mkdir()
-    (cache / "555_z12.jpg").write_bytes(jpeg_bytes(300, 169))                # what the cache holds is not 2400 x 1350
-    monkeypatch.setitem(api._SOURCES, "osm", OsmSource(opener=FakeNet([]), sleep=lambda s: None, cache_dir=cache))
-    a = api.import_candidate(tmp_path / "p", "osm", "555:12")["asset"]
+    osm = OsmSource(opener=FakeNet([]), sleep=lambda s: None, cache_dir=cache)
+    osm._cache_path(59.9, 10.7, 12).write_bytes(jpeg_bytes(300, 169))       # what the cache holds is not 2400 x 1350
+    monkeypatch.setitem(api._SOURCES, "osm", osm)
+    # CHANGED (mediafix3): the map's id carries its place (coordinates), and the cache file is named for them
+    a = api.import_candidate(tmp_path / "p", "osm", "555:12:59.90000:10.70000")["asset"]
     assert (a["width"], a["height"]) == (300, 169) and (a["original_width"], a["original_height"]) == (2400, 1350)
 
 
