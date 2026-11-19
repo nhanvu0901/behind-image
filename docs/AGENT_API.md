@@ -68,7 +68,7 @@ ahead of it is (for example `picks.approve` with `needs: ["main_asset"]`).
 | `label` | Vietnamese, as the page's button says |
 | `method`, `path` | the real route, with this project's id (and the job or proposal id) filled in. Call it exactly as written |
 | `body` | an example JSON body that is valid as it stands, or `null`: then the call has no body, or the caller must supply one and `fill` lists its fields |
-| `fill`, `body_template` | only when `body` is null and the caller supplies content: the fields to supply, and a template with the values the state knows (for example the current `base_rev`) filled in |
+| `fill`, `body_template` | when the caller supplies content: the fields to supply, and a template with the values the state knows (for example the current `base_rev`) filled in. `body` is then null, except on `picks.ops` and `storyboard.ops` (below) |
 | `ready`, `needs` | `ready` is true when the call can be made now. Otherwise `needs` lists what is missing, as words from the table in section 3 |
 | `advances` | true when the call is ready and moves the project to its next state; a caller that walks the list takes the first ready action with `advances: true` |
 | `gate` | the call approves a gate (`outline.approve`, `narration.approve`, `picks.approve`, `storyboard.approve`) |
@@ -79,8 +79,14 @@ ahead of it is (for example `picks.approve` with `needs: ["main_asset"]`).
 | `job_id` | only on a cancel action: the job it stops |
 
 `storyboard.validate` is `GET /api/projects/{pid}`: its answer carries `issues`, the validation of the saved storyboard (the approve
-call refuses while errors remain). The two typed-operation calls `picks.ops` and `storyboard.ops` are listed only when the running app
-has those routes, so the answer is right before and after they are added.
+call refuses while errors remain).
+
+The typed operations (section 6) are listed whenever their step is open: `picks.ops` and `storyboard.ops` carry a `body` that is a **dry run**
+(`dry_run: true`, nothing is written) of the first example of the operations registry (`GET /api/ops/schema`; the example is the registry's own, not
+written for the state), with the current `base_rev` and an `actor` made from the project's agent; `fill: ["ops"]` and `body_template` give the real
+call. The registry's examples are written for the operations' test project: on another project the dry run may be refused with a typed error
+(`unknown_asset`, `unknown_shot`, ...), which is how an agent learns the ids of the project. `changes.list` appears once the change log has a batch;
+`changes.undo` names the newest batch that can be undone now (its copies are kept, nothing undid it, nothing it changed was changed since).
 
 ### `jobs`
 
@@ -129,7 +135,7 @@ loop:
 | `picks.suggest` | picks | `POST /api/projects/{pid}/picks/suggest` |  | yes |  | paid: You.com calls, charged per beat (auto_ok false) | Once the picks step is open. Paid: `auto_ok` is false, the owner must agree. Needs the approved narration and suggestions switched on. |
 | `picks.put` | picks | `PUT /api/projects/{pid}/picks` |  |  |  |  | Once the picks step is open. The caller supplies the picks document (`fill`). |
 | `picks.approve` | picks | `POST /api/projects/{pid}/picks/approve` | yes |  |  |  | While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances. |
-| `picks.ops` | picks | `POST /api/projects/{pid}/picks/ops` |  |  |  |  | Only when the running app has the route. Once the picks step is open; the caller supplies the operations (`fill`). |
+| `picks.ops` | picks | `POST /api/projects/{pid}/picks/ops` |  |  |  |  | Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
 | `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions or a clip) of the project runs. |
 | `draft.start` | edit | `POST /api/projects/{pid}/draft/start` |  | yes | draft | model: about 20 minutes | Once step 5 is open. Needs the voice and the approved picks, no draft job running and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. |
 | `proposal.apply` | edit | `POST /api/projects/{pid}/proposals/{prop_id}/apply` |  |  |  |  | While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date. |
@@ -138,7 +144,9 @@ loop:
 | `storyboard.approve` | edit | `POST /api/projects/{pid}/approve` | yes |  |  |  | While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first. Advances. |
 | `storyboard.preview` | edit | `POST /api/projects/{pid}/preview` |  | yes |  |  | While the storyboard is readable. Ready; renders a short clip (a job of a few seconds). |
 | `storyboard.put` | edit | `PUT /api/projects/{pid}/storyboard` |  |  |  |  | While the storyboard is readable. The caller supplies the document (`fill`); base_rev is the current rev. |
-| `storyboard.ops` | edit | `POST /api/projects/{pid}/storyboard/ops` |  |  |  |  | Only when the running app has the route. While the storyboard is readable; the caller supplies the operations (`fill`). |
+| `storyboard.ops` | edit | `POST /api/projects/{pid}/storyboard/ops` |  |  |  |  | While the storyboard is readable. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
+| `changes.list` | edit | `GET /api/projects/{pid}/changes` |  |  |  |  | Once the change log holds a batch (of the picks or the storyboard). Always ready. `step` is the step of the newest batch's document. |
+| `changes.undo` | edit | `POST /api/projects/{pid}/changes/{batch}/undo` |  |  |  |  | The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document. |
 | `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
 | `identity.set` | edit | `PUT /api/projects/{pid}/identity` |  |  |  |  | While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. |
 | `draft.cancel` | edit | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a draft job of the project runs. |
@@ -186,17 +194,17 @@ the status code of a refusal does not change):
      "fix": "GET the document again, apply your change to the revision in `current_rev` (the answer of that GET carries `rev`), then send the call again with it as base_rev.",
      "retry": "after_fix",
      "rev": "9f3c...", "current_rev": "9f3c..."}
-422 {"code": "field_invalid", "detail": "width must be an integer", "field": "width",
-     "fix": "Correct the request field that `field` (or `detail`) names, as `detail` says, and send the call again.", "retry": "after_fix"}
+422 {"code": "invalid_field", "detail": "width must be an integer", "fields": [{"path": "width", "problem": "width must be an integer"}],
+     "fix": "Correct the fields listed in `fields` and send the call again.", "retry": "after_fix"}
 ```
 
 | key | meaning |
 |---|---|
-| `code` | stable snake_case word. An error that has no specific code gets one from its status (`not_found`, `field_invalid`, `conflict`, `internal_error`, ...) |
+| `code` | stable snake_case word, one vocabulary for the whole API including the operations (`invalid_field`, `invalid_request`, `stale_revision`, `storyboard_not_found`, ...). An error that has no specific code gets one from its status (`not_found`, `invalid_field`, `conflict`, `internal_error`, ...) |
 | `detail` | the sentence for a person, as before (a list for a request the framework refused) |
 | `fix` | one English imperative sentence an agent can act on; it names the call to make when there is one. `{pid}` is the project's id when the call is a project route |
 | `retry` | `no`: the same call can never work (what it names does not exist, the machine cannot do it); `after_fix`: change the request or the project as `fix` says, then call; `later`: the same call may work in a moment (something is busy, a service is not answering) |
-| `field` | the request field that is wrong, when one is (a 422). `fields: [{path, problem}]` lists them for a request the framework refused (`code: request_invalid`) |
+| `fields` | the request fields that are wrong, when there are some (a 422): `[{path, problem, allowed?}]`, the form the operations use (`path` is `width`, or `ops[1].params.region` inside a batch). A raise that names one field gets it here; a request the framework refuses (`code: invalid_request`) lists every field |
 | `current_rev` | on a stale revision (`stale`, `stale_revision`): the revision to start again from. `rev` (as before) carries the same value where it was already there |
 
 Other keys an error already carried stay (`issues`, `rev`, `locked`, `job_id`, `allowed`, `restore_from`, `data_error`, ...). An error that
@@ -205,7 +213,12 @@ and the files and images the API serves.
 
 ## 5. The table of codes
 
-Includes the codes of failed jobs (`error_code` of a long-job record), which a caller reads from the job, not from an HTTP error.
+Includes the codes of failed jobs (`error_code` of a long-job record), which a caller reads from the job, not from an HTTP error. The codes of the
+operations (`bti/ops/errors.py`) are in this table with the very same sentence the operations send: the hint table reads their table, so the two cannot
+drift (a test checks it). Where the operations and the rest of the API named one situation twice, one name was kept: `storyboard_not_found` (the
+operations' `document_missing` is gone), `invalid_field` and `invalid_request` (the other side's `field_invalid`, `field_required`, `request_invalid`,
+`body_invalid`, `base_rev_required` are gone), the key `fields` (the other side's `field` is gone). `stale` (picks, agent, proposals: the page's own
+word) and `stale_revision` (storyboard, operations) both stay, with one sentence and the same `current_rev`.
 
 <!-- BEGIN GENERATED: codes -->
 | code | retry | fix |
@@ -228,6 +241,7 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `artwork_not_found` | no | Use an artwork key listed by GET /api/library/artworks. |
 | `asset_not_found` | no | Use an asset key that exists in the storyboard (GET /api/projects/{pid}/assets lists them). |
 | `at_least_one_source` | after_fix | Keep at least one book source included in the brief options. |
+| `audio_decode_failed` | after_fix | The audio file cannot be decoded: make the voice again (POST /api/projects/{pid}/voice/generate); if it repeats the file is damaged. |
 | `bad_action` | after_fix | Send action as "overwrite" or "discard". |
 | `bad_chapters` | after_fix | Send `chapters` as a list of chapter ids (at most 100). |
 | `bad_model` | after_fix | Send `model` as a plain model id, or leave it out to use the project's agent. |
@@ -238,8 +252,7 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `bad_scope` | after_fix | Send scope as "all", "changed" or a list of chunk ids (and reseed as a list of chunk ids). |
 | `bad_tempo` | after_fix | Send `tempo` as a number inside the range in `detail`. |
 | `bad_text_character` | after_fix | Remove lone surrogate characters from the text you send, then send it again. |
-| `base_rev_required` | after_fix | Add `base_rev` (the `rev` of the document you read) to the JSON body and send the call again. |
-| `body_invalid` | after_fix | Send a JSON object as the body of this call. |
+| `batch_not_found` | no | Take a batch id from the list at GET /api/projects/{pid}/changes. |
 | `book_not_catalogued` | after_fix | Rebuild the library catalogue (python -m bti.library build), then call again. |
 | `book_not_found` | no | Use a book id listed by GET /api/library/books. |
 | `book_pdf_missing` | no | The PDF of this book is missing from the server. |
@@ -252,6 +265,7 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `claude_missing` | no | Claude Code (the claude command) is not installed on the server: choose the other agent (PUT /api/projects/{pid}/agent). |
 | `claude_model` | after_fix | Use a Claude Code model id of the form claude:<model>@<effort>, or choose an agent. |
 | `claude_no_result` | later | Claude Code stopped without an answer: call again. |
+| `claude_outdated` | after_fix | Run `claude update` on the server (the owner does this once), then call again. |
 | `claude_rate_limit` | later | The Claude Code quota is used up: call again after `retry_after_seconds`, or choose the other agent. |
 | `claude_timeout` | later | The agent ran past its time limit and was stopped: call again, or work on fewer chapters. |
 | `compile_empty` | later | No shot could be built from the agent's result: run the draft again. |
@@ -260,12 +274,13 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `conflict` | after_fix | Read `detail`: the project is in a state that refuses this call. GET /api/projects/{pid}/state shows what to do first. |
 | `data_unusable` | after_fix | A data file of the project is missing or damaged: read `detail` for its name and repair it. |
 | `delete_not_confirmed` | after_fix | Call DELETE /api/projects/{pid}?confirm={pid}: `confirm` must be the exact project id. |
-| `document_corrupt` | after_fix | The project file named in `detail` cannot be read: restore it from a backup or history, or remove it, then call again. |
+| `document_corrupt` | after_fix | Restore a good copy of the file `detail` names (the storyboard has POST /api/projects/{pid}/storyboard/restore), then call again. |
 | `document_invalid` | after_fix | The document has the wrong shape (see `detail`): send a document as GET returns it. |
 | `dossier_not_found` | no | This artwork has no dossier yet: rebuild the library (python -m bti.library build). |
 | `draft_no_output` | later | The agent wrote no result file: run the draft again (POST /api/projects/{pid}/draft/start). |
 | `draft_not_ready` | after_fix | Make the voice (timing.json) and approve the picks first: GET /api/projects/{pid}/state shows which is missing. |
 | `draft_tampered` | after_fix | The agent changed files outside its workspace and its result was dropped: check the project, then run the draft again. |
+| `duplicate_ref` | after_fix | Give every ref in a batch a different name. |
 | `edit_bad_scope` | after_fix | Send scope as exactly one of {"shots": [ids]}, {"chapter": id} or {"all": true}, an instruction of 1 to 2000 characters and mode auto, fast or deep. |
 | `edit_degraded` | after_fix | The edit was refused because a shot would be degraded or incomplete: narrow the instruction. |
 | `edit_empty_instruction` | after_fix | Send `instruction` as a non-empty text. |
@@ -277,8 +292,6 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `edit_running` | later | An edit is running: cancel it (POST /api/longjobs/{job_id}/cancel) or wait, then delete the thread. |
 | `escalate` | after_fix | This request needs a closer look at the picture or more than the chosen scope: call again with mode deep. |
 | `export_file_not_found` | no | Use a file name listed by GET /api/projects/{pid}/export (`files`). |
-| `field_invalid` | after_fix | Correct the request field that `field` (or `detail`) names, as `detail` says, and send the call again. |
-| `field_required` | after_fix | Add the field that `field` names to the JSON body and send the call again. |
 | `file_too_large` | after_fix | Send a file of a supported kind (jpg, jpeg, png, webp, mp4, webm, mov or m4v) of at most 80 MB. |
 | `forbidden` | no | This call is not allowed on this project; read `detail` for the rule. |
 | `frames_mismatch` | after_fix | The video has the wrong number of frames: call POST /api/projects/{pid}/export/start again; if it repeats, validate the storyboard. |
@@ -289,25 +302,31 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `image_empty` | after_fix | The image file is empty: send another file. |
 | `image_extract_failed` | no | This image cannot be extracted from the book: skip it. |
 | `image_not_in_work` | no | Ask for an image listed by GET /api/library/works/{book}/{n}. |
+| `image_too_small` | after_fix | Choose a larger picture: its short side is below the smallest size the app stores. |
 | `image_truncated` | after_fix | The image is cut off: send a complete file. |
 | `image_unreadable` | after_fix | The image cannot be read: send a jpg, png or webp that opens. |
+| `import_failed` | no | Check source and source_id, or choose another picture; nothing was written. |
 | `internal_error` | no | This is a bug of the server, not of your input: do not repeat the call; report `detail`. |
 | `interrupted` | later | The server restarted while the job ran: start the same job again; finished parts are kept. |
 | `invalid` | after_fix | Correct the request as `detail` says and send it again. |
+| `invalid_field` | after_fix | Correct the fields listed in `fields` and send the call again. |
 | `invalid_model` | after_fix | Send each role's model as a non-empty model id string. |
 | `invalid_payload` | after_fix | Send the body in the shape of the route: read `detail`, correct it and send again. |
 | `invalid_project_path` | no | Use a project id that names a folder directly under the projects folder. |
+| `invalid_request` | after_fix | Send a JSON body in the shape this route takes (the operation routes take base_rev, actor and 1 to 200 operations) and correct the fields listed. |
 | `job_not_found` | no | Use the job id the start call answered with; after a server restart only finished jobs are still known. |
 | `join_failed` | later | The parts could not be joined: call POST /api/projects/{pid}/export/start again. |
 | `library_data_corrupt` | after_fix | A file of the book library is damaged: repair it or rebuild the library (python -m bti.library build), then call again. |
 | `library_file_unreadable` | after_fix | A file of the library cannot be read (see `detail`): repair it, then call again. |
 | `licence_rejected` | after_fix | The licence of this picture is not accepted: choose another picture. |
+| `locked` | after_fix | Send unlock for that shot or overlay first, or leave it out of the batch. |
 | `locked_beats` | after_fix | Unlock the beats named in `locked`, or send {"force": true} to replace them. |
 | `longjob_bad_kind` | after_fix | Use a job kind such as voice, draft, export or picks in `kind`, or leave it out. |
 | `longjob_missing` | no | The long-job runner is not installed on this server: the job cannot be started. |
 | `longjob_not_found` | no | Use the job id the start call answered with (GET /api/projects/{pid}/longjobs lists the jobs of a project). |
 | `longjob_running` | later | Cancel the long job (POST /api/longjobs/{job_id}/cancel) or wait until it is finished, then call again. |
 | `main_asset_unreadable` | after_fix | The main painting has no readable file: import it again (POST /api/projects/{pid}/picks/import with as_main). |
+| `map_place_unknown` | after_fix | Search for the place again (POST /api/projects/{pid}/picks/search with source osm) and import the result it gives. |
 | `merge_refused` | after_fix | Read `detail`: choose two different artworks that can be merged. |
 | `method_not_allowed` | no | Use another HTTP method for this path (the Allow header of the answer lists them). |
 | `model_invalid` | after_fix | Send `model` as a model id string, or leave it out to use the project's agent. |
@@ -330,12 +349,14 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `no_timing` | after_fix | Make the voice again (POST /api/projects/{pid}/voice/generate): timing.json is missing or empty. |
 | `no_voice` | after_fix | There is no voice mix yet: make it with POST /api/projects/{pid}/voice/generate. |
 | `not_approved` | after_fix | Approve the storyboard first: POST /api/projects/{pid}/approve with {"rev": <storyboard rev>}. |
-| `not_found` | no | Check the ids and the path in the call: what it names does not exist. List what exists with the matching GET route. |
+| `not_consecutive` | after_fix | Give shots that follow each other in the storyboard, in their order. |
+| `not_found` | after_fix | Use an id that exists: for a picture of the project's books take a source_id from GET /api/projects/{pid}/picks/book-images, for anything else list what exists with the matching GET route. |
 | `not_needs_choice` | no | This turn is not waiting for a choice: GET /api/projects/{pid}/draft/thread shows its status. |
 | `nothing_to_restore` | no | Leave the storyboard as it is: storyboard.json is readable, there is nothing to restore. |
 | `nothing_to_say` | after_fix | The narration has no sentence to speak: write it (POST /api/projects/{pid}/narration/generate). |
 | `op_invalid` | after_fix | Correct the operation named in `detail` (GET the narration for the current beat and chapter ids), then send the ops again. |
 | `options_error` | after_fix | Correct the option named in `detail` and send the options again. |
+| `out_of_scope` | after_fix | Remove the operation from the batch, or send the batch with a wider scope. |
 | `outline_has_errors` | after_fix | Fix the errors listed in `issues` (PUT /api/projects/{pid}/outline), then approve again. |
 | `outline_missing` | after_fix | Make the outline first: POST /api/projects/{pid}/outline/generate, then approve it. |
 | `outline_not_approved` | after_fix | Approve the outline: POST /api/projects/{pid}/outline/approve with {"rev": <outline rev>}. |
@@ -360,7 +381,7 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `project_gone` | no | The project was removed while the job ran. |
 | `project_is_symlink` | no | The project folder is a symbolic link: remove the link by hand; the API will not delete through it. |
 | `project_missing` | no | The project folder is missing: use the id of a project that exists. |
-| `project_not_found` | no | Use the id of a project that exists: GET /api/projects lists them. |
+| `project_not_found` | no | Take the project id from GET /api/projects. |
 | `project_protected` | no | This project is protected: do not delete it. |
 | `project_source_missing` | after_fix | A source file of the artwork is missing: rebuild the library (python -m bti.library build). |
 | `prompt_error` | after_fix | The prompt cannot be built from the current documents: read `detail`. |
@@ -375,28 +396,30 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `region_outside` | after_fix | Keep the region inside the picture (x and y between 0 and 1): see `region`. |
 | `region_shape` | after_fix | Give the region numeric x and y (and a short label): see `region` for the bad one. |
 | `render_failed` | after_fix | Change the values of the shot (and overlay, technique, asset) the answer names, save the storyboard, then render again. |
-| `request_invalid` | after_fix | Correct every request field listed in `fields` (their `path` and `problem`) and send the call again. |
 | `route_not_found` | no | There is no such route: check the path and the method against docs/AGENT_API.md or GET /openapi.json. |
 | `save_refused` | after_fix | The engine refused the document: read `issues`, fix the values they name, then send it again. |
 | `scope_needs_storyboard` | after_fix | This needs an existing storyboard: apply the first draft proposal first (POST /api/projects/{pid}/proposals/{id}/apply). |
 | `script_job_running` | later | Cancel the model job (POST /api/jobs/{job_id}/cancel) or wait until it is finished, then call again. |
 | `shot_not_found` | no | Use a shot id that exists in the storyboard (GET /api/projects/{pid}). |
-| `source_error` | later | The picture or video source failed; call again in a minute, or use another source. |
+| `shot_too_short` | after_fix | Choose a time that leaves every piece at least 0.2 seconds long. |
+| `slot_kind_mismatch` | after_fix | Use an asset of the kind the slot takes (allowed lists the kinds). |
+| `source_error` | after_fix | Choose another picture or another source, or try again in a minute; nothing was written. |
 | `source_not_found` | no | Use a source name listed in the artwork's dossier. |
-| `source_rate_limited` | later | The source asked to slow down: call again after `retry_after` seconds (a minute when it is null). |
+| `source_rate_limited` | later | Wait `retry_after` seconds (a minute when it is null), then send the call again; nothing was written. |
 | `source_text_missing` | after_fix | The source text file is missing: rebuild the library (python -m bti.library build). |
 | `source_timeout` | later | The service did not answer in time; call again in a minute. |
 | `source_unavailable` | later | The service this call needs is not answering; call again in a minute. |
-| `source_unreachable` | later | The picture source is busy or not answering: call again in a minute. |
+| `source_unreachable` | later | Send the call again in a minute; nothing was written. |
+| `span_mismatch` | after_fix | Make the first new shot start where the replaced run starts and keep every other start inside the run. |
 | `spec_invalid` | later | The model answered in the wrong shape even after one repair: call again, or use mode deep. |
 | `split_refused` | after_fix | Read `detail`: choose a work that can be split off. |
-| `stale` | after_fix | GET the document again, apply your change to the revision in `current_rev` (the answer of that GET carries `rev`), then send the call again with it as base_rev. |
-| `stale_revision` | after_fix | GET the document again, apply your change to the revision in `current_rev` (the answer of that GET carries `rev`), then send the call again with it as base_rev. |
+| `stale` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |
+| `stale_revision` | after_fix | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |
 | `storyboard_corrupt` | after_fix | Call POST /api/projects/{pid}/storyboard/restore (no body) to bring back the newest good copy from history/, then call again. |
 | `storyboard_has_errors` | after_fix | Fix every issue with level `error` in `issues` (GET /api/projects/{pid} lists them), then call again. |
 | `storyboard_incomplete` | after_fix | Fill in the items named in the answer (their technique needs a picture, a clip or a mask), then approve again. |
 | `storyboard_missing` | after_fix | This project has no storyboard yet: run the draft first (POST /api/projects/{pid}/draft/start). |
-| `storyboard_not_found` | after_fix | This project has no storyboard yet: run the draft (POST /api/projects/{pid}/draft/start), then apply its proposal. |
+| `storyboard_not_found` | after_fix | Make the storyboard first: run the draft (POST /api/projects/{pid}/draft/start) and apply its proposal, then call again. |
 | `storyboard_unreadable` | after_fix | Call POST /api/projects/{pid}/storyboard/restore to bring back the newest good copy: storyboard.json cannot be read. |
 | `storyboard_unusable` | after_fix | Repair storyboard.json: POST /api/projects/{pid}/storyboard/restore brings back the newest good copy from history/. |
 | `style_not_found` | no | Use a style id that exists under style/ (the storyboard names it in `style`). |
@@ -408,6 +431,7 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `suggest_off` | no | Suggestions are switched off in config/picks.json: search with POST /api/projects/{pid}/picks/search instead. |
 | `suggest_quota` | later | The suggestion service quota is used up: call again later, or use POST .../picks/search. |
 | `suggest_timeout` | later | The suggestion service did not answer in time: call again later. |
+| `technique_unavailable` | after_fix | Use a technique the engine can draw (engine.available is true in the registry). |
 | `template_missing` | no | The draft task template is missing from this installation: restore skills/storyboard_draft/TASK.template.md. |
 | `thumbnail_failed` | no | No thumbnail can be made of this file: use the file itself. |
 | `timing_corrupt` | after_fix | Make the voice again (POST /api/projects/{pid}/voice/generate): timing.json cannot be read. |
@@ -422,25 +446,33 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `turn_frame_not_found` | no | Use `when` before or after, and a turn and shot that exist (GET /api/projects/{pid}/draft/thread). |
 | `turn_not_applied` | no | Only an applied turn can be undone: GET /api/projects/{pid}/draft/thread shows its status. |
 | `turn_not_found` | no | Use a turn id listed by GET /api/projects/{pid}/draft/thread. |
-| `undo_conflict` | after_fix | Some shots were changed since this turn (see `conflicts`): call undo again with {"force": true} to override them. |
-| `undo_unavailable` | no | The earlier storyboard of this turn is no longer kept (only the last 20 turns are): edit the shots by hand instead. |
+| `undo_conflict` | after_fix | Undo the later batches first (newest first), or leave the things named in conflicts as they are. |
+| `undo_unavailable` | no | Make the change again with new operations: the copies of this batch were removed when the log was pruned. |
 | `undrawable` | after_fix | Change the shots named in `issues` so the engine can draw them, then approve again. |
 | `unknown_agent` | after_fix | Use one of the agent ids in `allowed` (GET /api/agents lists them). |
-| `unknown_asset` | after_fix | Use an asset key that exists in the picks (GET /api/projects/{pid}/picks lists them), or import the picture first. |
+| `unknown_asset` | after_fix | Use an asset key from `allowed` (GET /api/projects/{pid}/picks lists the assets too), or import the picture first (an import operation and its $ref, or POST /api/projects/{pid}/picks/import). |
+| `unknown_beat` | after_fix | Use a beat id of the approved narration (allowed lists them when there are few). |
 | `unknown_change_ids` | after_fix | Use change ids listed by GET /api/projects/{pid}/proposals/{id}, or send accept: "all". |
 | `unknown_chapter` | after_fix | Use chapter ids that exist in the outline (GET /api/projects/{pid}/outline). |
 | `unknown_model` | after_fix | Use a model id listed by GET /api/models (or GET /api/settings/models). |
+| `unknown_op` | after_fix | Use one of the operation names listed in allowed. |
+| `unknown_overlay` | after_fix | Use an overlay id of that shot from allowed, or a $ref made by an earlier operation. |
+| `unknown_param` | after_fix | Use one of the allowed parameter names of this technique. |
+| `unknown_ref` | after_fix | Define the ref on an earlier operation of the batch (import, split_shot, add_overlay) before you use it. |
+| `unknown_region` | after_fix | Use one of the allowed region names, or add the region first with set_region. |
 | `unknown_role` | after_fix | Use only role names listed by GET /api/settings/models. |
-| `unknown_source` | after_fix | Use one of the picture sources the picks page lists (commons, met, pexels, pixabay, osm). |
+| `unknown_shot` | after_fix | Use a shot id from allowed, or a $ref made by an earlier operation of the batch. |
+| `unknown_slot` | after_fix | Use one of the allowed slot names of this technique. |
+| `unknown_source` | after_fix | Use one of the picture sources commons, met, pexels, pixabay or osm (an import operation also takes book). |
 | `unknown_step` | after_fix | Use a step id that GET /api/projects/{pid}/agent lists under `effective`. |
-| `unknown_technique` | after_fix | Use a technique id that exists: GET /api/styles/{style} lists them. |
+| `unknown_technique` | after_fix | Use a technique id that exists (`allowed` lists them when there are few; GET /api/styles/{style} lists all of them). |
 | `unsupported_file_type` | after_fix | Send a file of a supported kind (jpg, jpeg, png, webp, mp4, webm, mov or m4v) of at most 80 MB. |
 | `unsupported_media` | after_fix | Send a file this route can read, or leave the file out. |
-| `validation_failed` | after_fix | Fix every issue with level `error` in `issues`, then send the storyboard again. |
+| `validation_failed` | after_fix | Correct every issue with level error in `issues` (the operations named by `op_index`, when there is one), then send again; nothing was written. |
 | `video_bad_range` | after_fix | Send `start` and `end` as numbers of seconds with a clip length inside the allowed range. |
 | `video_bad_url` | after_fix | Send a YouTube link (youtube.com or youtu.be) in `url`. |
 | `video_fetch_failed` | later | The video could not be fetched: call again in a minute, or use another link. |
-| `video_not_main` | after_fix | Choose a picture, not a video, as the main painting. |
+| `video_not_main` | after_fix | Choose an image, not a video, as the main picture. |
 | `video_timeout` | later | The video download took too long: call again, or choose a shorter range. |
 | `video_unreadable` | after_fix | The video cannot be read: send another file (mp4, webm, mov or m4v). |
 | `voice_align_failed` | later | The word timing could not be made: call POST /api/projects/{pid}/voice/generate again. |
@@ -452,5 +484,15 @@ Includes the codes of failed jobs (`error_code` of a long-job record), which a c
 | `voice_worker_failed` | later | The voice worker failed: call POST /api/projects/{pid}/voice/generate again, finished sentences are kept. |
 | `work_not_found` | no | Use a work id (book/n) listed by GET /api/library/books/{book}/works. |
 | `workspace_invalid` | after_fix | The draft workspace is damaged: run the draft again. |
+| `wrong_technique_kind` | after_fix | Use a technique of the kind that fits: base or card for a shot, overlay for an overlay. |
 | `youcom_key_missing` | no | The You.com key is not set on this machine: use the free sources, or paste a YouTube link. |
 <!-- END GENERATED: codes -->
+
+## 6. The operations routes
+
+Small named operations for the picks and the storyboard, sent in batches (all or nothing, a dry run, a change log, undo per batch). Everything about
+them is in **`docs/OPS.md`** (generated from the registry in `bti/ops/`): the five routes, the batch request, every operation with its schema and
+example, the change log, undo and the table of their error codes. The state answer lists them as `picks.ops`, `storyboard.ops`, `changes.list` and
+`changes.undo` (section 2). Their refusals have the same error body as every other (section 4): `code`, `detail`, `fix`, `retry`, and `fields` with the
+`path` of every wrong field (`ops[1].params.region`), `op_index`, `current_rev`, `issues` or `conflicts` where they apply. A request refused by the size
+or depth limit before it reaches a route (`too_large`, `too_deep`) has them too.

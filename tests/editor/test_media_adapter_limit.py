@@ -42,14 +42,14 @@ def test_the_wait_is_whole_seconds_as_the_media_layer_rounds_it():
 @pytest.mark.parametrize("status", [503, 502, 504, None])
 def test_the_other_unavailable_answers_keep_today_s_sentence_and_ten_seconds(status):
     e = _translate(MediaHTTPError("HTTP %s" % status, status))
-    assert not e.extra.get("code")                                              # a 503 with no time is not called a rate limit
-    assert e.status == 503 and e.extra == {"retryable": True, "retry_after": 10}
+    assert e.extra.get("code") != "source_rate_limited"                         # a 503 with no time is not called a rate limit (join: it has the code `source_unreachable`)
+    assert e.status == 503 and e.extra == {"retryable": True, "retry_after": 10, "code": "source_unreachable"}
     assert "Nguồn ảnh đang giới hạn tốc độ hoặc không phản hồi" in e.detail
 
 
 def test_other_statuses_keep_today_s_answer():
     e = _translate(MediaHTTPError("HTTP 403 forbidden", 403))
-    assert e.status == 502 and e.detail.startswith("media source error (HTTP 403)") and e.extra == {}
+    assert e.status == 502 and e.detail.startswith("media source error (HTTP 403)") and e.extra == {"code": "source_error"}
     e = _translate(MediaHTTPError("HTTP 404", 404))
     assert e.status == 502
 

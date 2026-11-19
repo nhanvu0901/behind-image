@@ -96,15 +96,15 @@ Every error body has `code`, `detail` (one English sentence), `fix` (one English
 
 | Code | Status | Retry | Meaning | Fix |
 |---|---|---|---|---|
-| `invalid_request` | 422 | `after_fix` | The request body is not a valid batch (missing or wrong envelope field, wrong number of operations, bad scope). | Send a JSON object with base_rev, actor and 1 to 200 operations, and correct the fields listed. |
+| `invalid_request` | 422 | `after_fix` | The request body is not valid for this route (a missing or wrong field of the envelope, a body that is not an object, a wrong number of operations, a bad scope). | Send a JSON body in the shape this route takes (the operation routes take base_rev, actor and 1 to 200 operations) and correct the fields listed. |
 | `unknown_op` | 422 | `after_fix` | An operation name is not one of the operations of this document. | Use one of the operation names listed in allowed. |
-| `invalid_field` | 422 | `after_fix` | A field of an operation is missing, has the wrong type, is out of range or is not allowed. | Correct the fields listed and send the batch again. |
+| `invalid_field` | 422 | `after_fix` | A field of the request or of an operation is missing, has the wrong type, is out of range or is not allowed. | Correct the fields listed in `fields` and send the call again. |
 | `unknown_shot` | 422 | `after_fix` | No shot with this id exists in the storyboard. | Use a shot id from allowed, or a $ref made by an earlier operation of the batch. |
 | `unknown_overlay` | 422 | `after_fix` | The shot has no overlay with this id. | Use an overlay id of that shot from allowed, or a $ref made by an earlier operation. |
 | `unknown_beat` | 422 | `after_fix` | No beat with this id exists in the narration. | Use a beat id of the approved narration (allowed lists them when there are few). |
-| `unknown_asset` | 422 | `after_fix` | No asset with this key exists in the document. | Use an asset key from allowed, or import the picture first with an import operation and refer to it by its $ref. |
+| `unknown_asset` | 422 | `after_fix` | No asset with this key exists in the document. | Use an asset key from `allowed` (GET /api/projects/{pid}/picks lists the assets too), or import the picture first (an import operation and its $ref, or POST /api/projects/{pid}/picks/import). |
 | `unknown_region` | 422 | `after_fix` | The asset has no region with this name. | Use one of the allowed region names, or add the region first with set_region. |
-| `unknown_technique` | 422 | `after_fix` | No technique with this id exists in the style registry. | Use one of the allowed technique ids. |
+| `unknown_technique` | 422 | `after_fix` | No technique with this id exists in the style registry. | Use a technique id that exists (`allowed` lists them when there are few; GET /api/styles/{style} lists all of them). |
 | `wrong_technique_kind` | 422 | `after_fix` | The technique exists but its kind does not fit where it is used. | Use a technique of the kind that fits: base or card for a shot, overlay for an overlay. |
 | `technique_unavailable` | 422 | `after_fix` | The technique is in the registry but the engine cannot draw it yet. | Use a technique the engine can draw (engine.available is true in the registry). |
 | `unknown_param` | 422 | `after_fix` | The technique has no parameter with this name. | Use one of the allowed parameter names of this technique. |
@@ -115,22 +115,22 @@ Every error body has `code`, `detail` (one English sentence), `fix` (one English
 | `shot_too_short` | 422 | `after_fix` | The time would make a shot shorter than 0.2 seconds. | Choose a time that leaves every piece at least 0.2 seconds long. |
 | `not_consecutive` | 422 | `after_fix` | The shots named are not a run of neighbours. | Give shots that follow each other in the storyboard, in their order. |
 | `span_mismatch` | 422 | `after_fix` | The new shots of replace_range do not cover exactly the span of the shots they replace. | Make the first new shot start where the replaced run starts and keep every other start inside the run. |
-| `video_not_main` | 422 | `after_fix` | A video cannot be the main picture. | Choose an image as the main picture. |
+| `video_not_main` | 422 | `after_fix` | A video cannot be the main picture. | Choose an image, not a video, as the main picture. |
 | `locked` | 409 | `after_fix` | The shot (or overlay) is locked; every operation on it is refused except unlock. | Send unlock for that shot or overlay first, or leave it out of the batch. |
 | `out_of_scope` | 422 | `after_fix` | An operation touches something outside the scope the batch declared. | Remove the operation from the batch, or send the batch with a wider scope. |
-| `stale_revision` | 409 | `after_fix` | base_rev is not the current revision of the document; nothing was written. | Read the document again, apply your operations to the new revision and send again with base_rev set to current_rev. |
-| `validation_failed` | 422 | `after_fix` | The batch would leave the document with a new error that the existing save would refuse. | Correct what the issues say in the operations named by op_index, then send the batch again; nothing was written. |
+| `stale_revision` | 409 | `after_fix` | base_rev is not the current revision of the document; nothing was written. | Read the document again, apply your change to the revision in `current_rev`, then send the call again with base_rev set to it. |
+| `validation_failed` | 422 | `after_fix` | The batch would leave the document with a new error that the existing save would refuse. | Correct every issue with level error in `issues` (the operations named by `op_index`, when there is one), then send again; nothing was written. |
 | `undo_conflict` | 409 | `after_fix` | Something the batch changed was changed again since, so it cannot be put back. | Undo the later batches first (newest first), or leave the things named in conflicts as they are. |
 | `undo_unavailable` | 409 | `no` | The record is still listed but its copies of the document are gone. | Make the change again with new operations: the copies of this batch were removed when the log was pruned. |
 | `batch_not_found` | 404 | `no` | No batch with this id is in the log. | Take a batch id from the list at GET /api/projects/{pid}/changes. |
 | `project_not_found` | 404 | `no` | No project with this id exists. | Take the project id from GET /api/projects. |
-| `document_missing` | 404 | `after_fix` | The project has no storyboard yet. | Make the storyboard first (step 5 of the pipeline), then send operations. |
-| `document_corrupt` | 409 | `no` | A file of the project cannot be read. | Restore a good copy of the file (the storyboard has POST /api/projects/{pid}/storyboard/restore). |
-| `unknown_source` | 422 | `after_fix` | The picture source of an import is not one of the known sources. | Use one of the allowed sources. |
-| `not_found` | 404 | `after_fix` | The picture to import is not part of the project's books. | Use a source_id from GET /api/projects/{pid}/picks/book-images. |
-| `source_rate_limited` | 503 | `later` | The picture source asked for fewer requests. | Wait retry_after seconds (a minute when it is null), then send the batch again; nothing was written. |
-| `source_unreachable` | 503 | `later` | The picture source is busy or did not answer. | Send the batch again in a minute; nothing was written. |
-| `source_error` | 502 | `no` | The picture source answered with an error. | Choose another picture or another source; nothing was written. |
+| `storyboard_not_found` | 404 | `after_fix` | The project has no storyboard yet. | Make the storyboard first: run the draft (POST /api/projects/{pid}/draft/start) and apply its proposal, then call again. |
+| `document_corrupt` | 409 | `after_fix` | A file of the project cannot be read. | Restore a good copy of the file `detail` names (the storyboard has POST /api/projects/{pid}/storyboard/restore), then call again. |
+| `unknown_source` | 422 | `after_fix` | The picture source of an import is not one of the known sources. | Use one of the picture sources commons, met, pexels, pixabay or osm (an import operation also takes book). |
+| `not_found` | 404 | `after_fix` | What the call names does not exist (a picture that is not part of the project's books, a beat, an asset). | Use an id that exists: for a picture of the project's books take a source_id from GET /api/projects/{pid}/picks/book-images, for anything else list what exists with the matching GET route. |
+| `source_rate_limited` | 503 | `later` | The picture source asked for fewer requests. | Wait `retry_after` seconds (a minute when it is null), then send the call again; nothing was written. |
+| `source_unreachable` | 503 | `later` | The picture source is busy or did not answer. | Send the call again in a minute; nothing was written. |
+| `source_error` | 502 | `after_fix` | The picture source answered with an error. | Choose another picture or another source, or try again in a minute; nothing was written. |
 | `import_failed` | 502 | `no` | A picture could not be brought into the project (any other reason). | Check source and source_id, or choose another picture; nothing was written. |
 
 

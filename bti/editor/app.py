@@ -143,7 +143,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     @app.exception_handler(RequestValidationError)
     async def _request_invalid(request: Request, e: RequestValidationError):
         errors = jsonable_encoder(e.errors())
-        return reply(request, {"detail": errors, "code": "request_invalid", "fields": hints_mod.validation_fields(errors)}, 422)
+        return reply(request, {"detail": errors, "code": "invalid_request", "fields": hints_mod.validation_fields(errors)}, 422)
 
     @app.exception_handler(Exception)
     async def _any_error(request: Request, e: Exception):
@@ -333,7 +333,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     def need_dict(body: Any, key: str) -> dict:
         v = body.get(key) if isinstance(body, dict) else None
         if not isinstance(v, dict):
-            raise ApiError(422, f"{key} (object) is required", code="field_required", field=key)
+            raise ApiError(422, f"{key} (object) is required", code="invalid_field", field=key)
         return v
 
     def with_thumb(pid: str, asset: dict) -> dict:
@@ -433,7 +433,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         sb_new = need_dict(body, "storyboard")
         base = body.get("base_rev")
         if not isinstance(base, str) or not base:
-            raise ApiError(422, "base_rev (string) is required", code="base_rev_required", field="base_rev")
+            raise ApiError(422, "base_rev (string) is required", code="invalid_request", field="base_rev")
         p = project(pid)
         with slock(pid):
             saved = saved_storyboard(pid)               # also re-checks, under the lock, that the project still exists
@@ -490,10 +490,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     def post_defaults(pid: str, body: dict = Body(...)):
         tech = body.get("technique")
         if not isinstance(tech, str) or not tech:
-            raise ApiError(422, "technique is required", code="field_required", field="technique")
+            raise ApiError(422, "technique is required", code="invalid_field", field="technique")
         ctx = body.get("context") or {}
         if not isinstance(ctx, dict):
-            raise ApiError(422, "context must be an object", code="field_invalid", field="context")
+            raise ApiError(422, "context must be an object", code="invalid_field", field="context")
         p = project(pid)
         saved_assets = saved_storyboard(pid).get("assets")
         slots = default_slots(engine.load_style(_style_of(saved_storyboard(pid))).get("techniques") or [], tech, ctx,
@@ -612,7 +612,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     @app.get("/api/projects/{pid}/waveform")
     def get_waveform(pid: str, bins: int = Query(4000)):
         if not 100 <= bins <= 20000:
-            raise ApiError(422, "bins must be between 100 and 20000", code="field_invalid", field="bins")
+            raise ApiError(422, "bins must be between 100 and 20000", code="invalid_field", field="bins")
         sb = saved_storyboard(pid)
         a = audio_path(pid, sb)
         if a is None:
@@ -638,7 +638,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         t0 = float(frames_mod.clean_t(body.get("t0"), "t0"))
         t1 = float(frames_mod.clean_t(body.get("t1"), "t1"))
         if not t1 > t0:
-            raise ApiError(422, "t1 must be greater than t0", code="field_invalid", field="t1")
+            raise ApiError(422, "t1 must be greater than t0", code="invalid_field", field="t1")
         if t1 - t0 > MAX_PREVIEW_S:
             raise ApiError(422, f"a preview is limited to {int(MAX_PREVIEW_S)} seconds", code="preview_too_long")
         width = int_field(body, "width", 640, limits.PREVIEW_WIDTH_MIN, limits.PREVIEW_WIDTH_MAX)
@@ -647,7 +647,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             raise ApiError(422, f"a preview is limited to {MAX_PREVIEW_FRAMES} frames (seconds x fps); shorten it or lower fps", code="preview_too_many_frames")
         draft = body.get("storyboard")
         if draft is not None and not isinstance(draft, dict):
-            raise ApiError(422, "storyboard must be an object", code="field_invalid", field="storyboard")
+            raise ApiError(422, "storyboard must be an object", code="invalid_field", field="storyboard")
         p = project(pid)
         d = pdir(pid)
         doc = strip_derived(draft) if draft else saved_storyboard(pid)
@@ -702,11 +702,11 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     def put_regions(pid: str, key: str, body: dict = Body(...)):
         regions = body.get("regions")
         if not isinstance(regions, dict):
-            raise ApiError(422, "regions (object) is required", code="field_required", field="regions")
+            raise ApiError(422, "regions (object) is required", code="invalid_field", field="regions")
         for name, r in regions.items():
             if not (isinstance(name, str) and name and isinstance(r, dict)
                     and all(isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool) for k in ("x", "y"))):
-                raise ApiError(422, f"region {name!r} needs numeric x and y", code="field_invalid", field="regions")
+                raise ApiError(422, f"region {name!r} needs numeric x and y", code="invalid_field", field="regions")
         p = project(pid)
         with slock(pid):
             doc = strip_derived(saved_storyboard(pid))
@@ -730,7 +730,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     def assets_import(pid: str, body: dict = Body(...)):
         source, sid = body.get("source"), body.get("source_id")
         if not isinstance(source, str) or not isinstance(sid, str) or not source or not sid:
-            raise ApiError(422, "source and source_id are required", code="field_required",
+            raise ApiError(422, "source and source_id are required", code="invalid_field",
                            field="source" if not isinstance(source, str) or not source else "source_id")
         d = pdir(pid)
         try:
@@ -1086,7 +1086,7 @@ def _iso(ts: float) -> str:
 
 def _thumb_response(pdir_: Path, f: Path, w: int) -> Response:
     if not 16 <= w <= 2048:
-        raise ApiError(422, "w must be between 16 and 2048", code="field_invalid", field="w")
+        raise ApiError(422, "w must be between 16 and 2048", code="invalid_field", field="w")
     from .common import file_signature
     cache = pdir_ / "cache" / "thumbs"
     make_parent(cache / "x", 2)                # never re-creates a deleted project folder (ProjectGone -> 404)

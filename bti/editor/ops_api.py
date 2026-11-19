@@ -43,7 +43,7 @@ def _from_helper(e: ApiError) -> ApiError:
     if e.status == 404 and e.detail == "project not found":
         code = "project_not_found"
     elif e.status == 404 and e.detail == "storyboard not found":
-        code = "document_missing"
+        code = "storyboard_not_found"
     elif e.status == 409 and e.extra.get("corrupt"):
         code = "document_corrupt"
     else:

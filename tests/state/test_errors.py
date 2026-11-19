@@ -13,9 +13,7 @@ from state_helpers import DEMO_SRC, make_book_project
 REPO = Path(__file__).resolve().parents[2]
 EDITOR = REPO / "bti" / "editor"
 # the classes whose first positional argument (or, for PicksError, the third) is the code
-POSITIONAL = {"VoiceError": 0, "ExportError": 0, "DraftError": 0, "AgentError": 0, "SettingsError": 0, "PicksError": 2}
-# editor files this build may not change: their raises carry no code, the handlers give them one by status (see test below)
-NOT_EDITED = {"common.py", "frames.py", "audio.py", "media_adapter.py", "engine_stub.py", "engine_adapter.py"}
+POSITIONAL = {"OpError": 0, "VoiceError": 0, "ExportError": 0, "DraftError": 0, "AgentError": 0, "SettingsError": 0, "PicksError": 2}
 ERROR_KEYS = {"detail", "code", "fix", "retry"}
 
 
@@ -39,6 +37,8 @@ def code_literals() -> dict[str, str]:
                 if kw.arg == "code" and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
                     found.setdefault(kw.value.value, f"{f.relative_to(REPO)}:{n.lineno}")
             i = POSITIONAL.get(_call_name(n))
+            if _call_name(n) == "OpError" and "ops" not in f.parts[-2:-1] and f.name != "ops_api.py":
+                i = None                          # bti/script/ops.py has its own OpError(message): only the operations' class takes a code first
             if i is not None and len(n.args) > i and isinstance(n.args[i], ast.Constant) and isinstance(n.args[i].value, str):
                 found.setdefault(n.args[i].value, f"{f.relative_to(REPO)}:{n.lineno}")
             if _call_name(n) == "_err" and len(n.args) == 3 and isinstance(n.args[2], ast.Constant):      # bti/longjob/api.py
@@ -65,27 +65,40 @@ def test_the_codes_made_at_run_time_have_a_hint():
     made |= {w + "_missing" for w in ("timing", "picks", "storyboard")} | {w + "_corrupt" for w in ("timing", "picks", "storyboard")}
     made |= {"outline_missing", "outline_not_approved", "outline_stale", "image_empty", "image_truncated", "image_unreadable",
              "not_approved", "approval_stale", "longjob_not_found", "project_not_found", "longjob_bad_kind", "options_error",
-             "picks_error", "request_invalid", "route_not_found", "document_corrupt", "library_data_corrupt", "bad_text_character",
+             "picks_error", "invalid_request", "route_not_found", "document_corrupt", "library_data_corrupt", "bad_text_character",
              "internal_error", "storyboard_corrupt"}
     assert not (made - set(hints.HINTS)), sorted(made - set(hints.HINTS))
 
 
 def test_no_editor_raise_of_ApiError_is_without_a_code():
-    """Every `ApiError(` of the files this build edits has a code (a `**` expansion may carry it); the raises of the helper modules
-    it may not edit are the only ones left, and the handlers give those a code by status."""
-    bare, helpers = [], 0
+    """Every `ApiError(` of the editor package has a code (a `**` expansion may carry it)."""
+    bare = []
     for f in sorted(EDITOR.glob("*.py")):
         tree = ast.parse(f.read_text(encoding="utf-8"))
         for n in ast.walk(tree):
-            if isinstance(n, ast.Call) and _call_name(n) == "ApiError":
-                if any(k.arg == "code" or k.arg is None for k in n.keywords):
-                    continue
-                if f.name in NOT_EDITED:
-                    helpers += 1
-                else:
-                    bare.append(f"{f.name}:{n.lineno}")
+            if isinstance(n, ast.Call) and _call_name(n) == "ApiError" and not any(k.arg == "code" or k.arg is None for k in n.keywords):
+                bare.append(f"{f.name}:{n.lineno}")
     assert not bare, "ApiError without code=: %s" % bare
-    assert helpers > 0
+
+
+def test_the_operations_table_and_the_hints_are_one_source():
+    """The operations' codes come from `bti/ops/errors.py`; an operations error carries the sentence of that table, so the hint of the same
+    code is the same sentence with the same retry word (nothing drifts), and nothing of the operations is missing from the hints."""
+    from bti.ops.errors import ERRORS
+    for code, (status, retry, fix, meaning) in ERRORS.items():
+        assert hints.HINTS[code] == {"retry": retry, "fix": fix}, code
+    from bti.ops.errors import OpError
+    for code in ERRORS:
+        e = OpError(code, "x")
+        assert e.fix == hints.HINTS[code]["fix"] and e.retry == hints.HINTS[code]["retry"], code
+
+
+def test_a_raise_site_may_name_one_field_the_body_says_fields():
+    b = hints.complete({"detail": "w must be an integer", "code": "invalid_field", "field": "w"}, 422)
+    assert "field" not in b and b["fields"] == [{"path": "w", "problem": "w must be an integer"}]
+    own = hints.complete({"detail": "x", "code": "invalid_field", "fields": [{"path": "ops[0].shot", "problem": "p", "allowed": ["s1"]}]}, 422)
+    assert own["fields"][0]["allowed"] == ["s1"]
+    assert hints.complete({"detail": "width must be an integer"}, 422)["fields"][0]["path"] == "width"
 
 
 def test_every_hint_is_one_imperative_english_sentence_with_a_retry_word():
@@ -116,13 +129,13 @@ def test_complete_keeps_what_is_there_and_adds_what_is_missing():
     own = hints.complete({"detail": "x", "code": "stale", "fix": "Do it my way.", "retry": "later", "rev": "abc"}, 409)
     assert own["fix"] == "Do it my way." and own["retry"] == "later" and own["current_rev"] == "abc" and own["rev"] == "abc"
     plain = hints.complete({"detail": "boom"}, 404)
-    assert plain["code"] == "not_found" and plain["retry"] == "no" and plain["fix"] and plain["detail"] == "boom"
+    assert plain["code"] == "not_found" and plain["retry"] == "after_fix" and plain["fix"] and plain["detail"] == "boom"
     unknown = hints.complete({"detail": "x", "code": "a_code_nobody_knows"}, 503)
     assert unknown["retry"] == "later" and unknown["code"] == "a_code_nobody_knows"
     assert hints.complete({"detail": "x", "code": "a_code_nobody_knows"}, 422)["retry"] == "after_fix"
-    assert hints.complete({"detail": "width must be an integer"}, 422)["field"] == "width"
-    assert hints.complete({"detail": "base_rev (string) is required"}, 422)["field"] == "base_rev"
-    assert "field" not in hints.complete({"detail": "the storyboard is wrong"}, 422)
+    assert hints.complete({"detail": "width must be an integer"}, 422)["fields"][0]["path"] == "width"
+    assert hints.complete({"detail": "base_rev (string) is required"}, 422)["fields"][0]["path"] == "base_rev"
+    assert "fields" not in hints.complete({"detail": "the storyboard is wrong"}, 422)
     assert hints.complete({"detail": "x", "code": "stale_revision", "rev": "r1"}, 409)["current_rev"] == "r1"
     pid = hints.complete({"detail": "x", "code": "storyboard_corrupt"}, 409, pid="demo")
     assert "/api/projects/demo/storyboard/restore" in pid["fix"] and "{pid}" not in pid["fix"]
@@ -158,12 +171,12 @@ def test_app_a_stale_storyboard_revision_carries_the_current_one(imp):
 
 
 def test_app_a_field_that_is_wrong_is_named(imp):
-    b = refused(imp.put("/api/projects/imp/storyboard", json={"storyboard": {}}), 422, "base_rev_required")
-    assert b["field"] == "base_rev" and b["detail"] == "base_rev (string) is required"
-    b = refused(imp.post("/api/projects/imp/preview", json={"t0": 5, "t1": 1}), 422, "field_invalid")
-    assert b["field"] == "t1"
-    b = refused(imp.post("/api/projects/imp/assets/import", json={"source": "commons"}), 422, "field_required")
-    assert b["field"] == "source_id"
+    b = refused(imp.put("/api/projects/imp/storyboard", json={"storyboard": {}}), 422, "invalid_request")
+    assert b["fields"][0]["path"] == "base_rev" and b["detail"] == "base_rev (string) is required"
+    b = refused(imp.post("/api/projects/imp/preview", json={"t0": 5, "t1": 1}), 422, "invalid_field")
+    assert b["fields"][0]["path"] == "t1"
+    b = refused(imp.post("/api/projects/imp/assets/import", json={"source": "commons"}), 422, "invalid_field")
+    assert b["fields"][0]["path"] == "source_id"
 
 
 def test_app_a_corrupt_storyboard_keeps_its_old_keys_and_names_the_restore_call(imp, root):
@@ -190,13 +203,13 @@ def test_app_unknown_project_and_unknown_route(imp):
 
 def test_app_a_request_the_framework_refuses_lists_its_fields(imp):
     r = imp.put("/api/projects/imp/storyboard", json=[1, 2])
-    b = refused(r, 422, "request_invalid", "after_fix")
+    b = refused(r, 422, "invalid_request", "after_fix")
     assert isinstance(b["detail"], list) and b["detail"][0]["type"] and b["fields"][0]["path"].startswith("body")
 
 
 def test_app_a_value_the_helpers_refuse_gets_a_code_and_a_field_by_status(imp):
-    b = refused(imp.post("/api/projects/imp/frame", json={"t": "abc", "storyboard": {}}), 422, "field_invalid", "after_fix")
-    assert b["field"] == "t" and b["detail"] == "t must be a number"
+    b = refused(imp.post("/api/projects/imp/frame", json={"t": "abc", "storyboard": {}}), 422, "invalid_field", "after_fix")
+    assert b["fields"][0]["path"] == "t" and b["detail"] == "t must be a number"
 
 
 def test_script_stale_outline_and_a_missing_outline(client, root):
@@ -206,7 +219,7 @@ def test_script_stale_outline_and_a_missing_outline(client, root):
     client.post(P + "/outline/import", json={"text": "nope"})                       # refused: nothing to compare with yet
     r = client.put(P + "/outline", json={"outline": {"schema": "x"}, "base_rev": "x"})
     assert r.status_code == 422 and r.json()["code"] == "document_invalid"
-    refused(client.get(P + "/prompt?phase=zzz"), 422, "field_invalid")
+    refused(client.get(P + "/prompt?phase=zzz"), 422, "invalid_field")
 
 
 def test_script_a_stale_narration_revision_carries_the_current_one(client, root, monkeypatch):
@@ -219,7 +232,7 @@ def test_script_a_stale_narration_revision_carries_the_current_one(client, root,
     assert b["current_rev"] == n["rev"] and b["rev"] == n["rev"]
     b = refused(client.post(P + "/narration/ops", json={"base_rev": "old", "ops": []}), 409, "stale_revision")
     assert b["current_rev"] == n["rev"]
-    refused(client.post(P + "/narration/ops", json={"base_rev": n["rev"], "ops": []}), 422, "field_invalid")
+    refused(client.post(P + "/narration/ops", json={"base_rev": n["rev"], "ops": []}), 422, "invalid_field")
 
 
 def test_script_narration_before_an_approved_outline(client, root):
@@ -233,8 +246,8 @@ def test_picks_a_field_a_missing_picks_file_and_a_stale_revision(client, root, m
     make_book_project(root)
     build("narration_approved", client, monkeypatch)
     P = "/api/projects/arn"
-    b = refused(client.post(P + "/picks/search", json={"query": 5}), 422, "field_invalid")
-    assert b["field"] == "query"
+    b = refused(client.post(P + "/picks/search", json={"query": 5}), 422, "invalid_field")
+    assert b["fields"][0]["path"] == "query"
     refused(client.post(P + "/picks/approve", json={"rev": "x"}), 404, "no_picks")
     from state_helpers import make_picks
     make_picks(client)
@@ -277,8 +290,8 @@ def test_draft_a_stale_edit_carries_the_current_revision(client, root, monkeypat
 def test_identity_agent_settings_and_pipeline_refusals(client, root):
     make_book_project(root)
     shutil.copytree(DEMO_SRC, root / "imp", ignore=shutil.ignore_patterns("cache", "history"))
-    b = refused(client.put("/api/projects/imp/identity", json={"style": "x"}), 422, "base_rev_required")
-    assert b["field"] == "base_rev"
+    b = refused(client.put("/api/projects/imp/identity", json={"style": "x"}), 422, "invalid_request")
+    assert b["fields"][0]["path"] == "base_rev"
     cur = client.get("/api/projects/imp").json()["rev"]
     refused(client.put("/api/projects/imp/identity", json={"style": "no_such", "base_rev": cur}), 422, "identity_style_unknown")
     a = client.get("/api/projects/arn/agent").json()
@@ -288,7 +301,7 @@ def test_identity_agent_settings_and_pipeline_refusals(client, root):
     assert b["current_rev"] == a["rev"] == b["rev"]
     refused(client.put("/api/settings/agent", json={}), 422, "invalid_payload")
     b = refused(client.delete("/api/projects/arn?confirm=wrong"), 422, "delete_not_confirmed")
-    assert b["field"] == "confirm" and "confirm=arn" in b["fix"]
+    assert b["fields"][0]["path"] == "confirm" and "confirm=arn" in b["fix"]
 
 
 def test_a_proposal_made_from_an_old_revision_carries_the_current_one(imp):
@@ -299,12 +312,12 @@ def test_a_proposal_made_from_an_old_revision_carries_the_current_one(imp):
 
 def test_proposals_and_library_refusals(imp):
     b = refused(imp.post("/api/projects/imp/proposals/p_demo_001/apply", json={"accept": ["zz"]}), 422, "unknown_change_ids")
-    assert b["field"] == "accept"
+    assert b["fields"][0]["path"] == "accept"
     refused(imp.post("/api/projects/imp/proposals/p_demo_001/apply", json={"accept": 3}), 422, "accept_invalid")
     refused(imp.get("/api/projects/imp/proposals/zzz"), 404, "proposal_not_found", "no")
     refused(imp.get("/api/library/books/zzz/works"), 404, "book_not_found", "no")
-    refused(imp.get("/api/library/artworks?sort=zzz"), 422, "field_invalid")
-    refused(imp.post("/api/library/projects", json={"work_ids": 3}), 422, "field_invalid")
+    refused(imp.get("/api/library/artworks?sort=zzz"), 422, "invalid_field")
+    refused(imp.post("/api/library/projects", json={"work_ids": 3}), 422, "invalid_field")
 
 
 def test_longjob_routes_and_the_body_limits_are_completed_by_the_net(imp):

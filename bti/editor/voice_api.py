@@ -83,7 +83,7 @@ def make_router(projects_root: Path | None = None, *, cfg: dict | None = None, s
     def put_settings(pid: str, request: Request, body: dict = Body(default={})):
         d = pdir(request, pid)
         if not isinstance(body, dict):
-            raise ApiError(422, "the body must be an object", code="body_invalid")
+            raise ApiError(422, "the body must be an object", code="invalid_request")
         c = vcfg()
         with files.project_lock(d):
             cur = files.read_settings(d)

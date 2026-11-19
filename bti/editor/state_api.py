@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Any, Callable
 
 from fastapi import APIRouter, Request
-from starlette.routing import Match
 
 from bti import agents as AG
 from bti.script import store as sstore
@@ -77,7 +76,6 @@ class Spec:
     role: str | None = None         # the agent role it runs (bti.agents) when it uses a model
     cost: tuple[str, str] | None = None
     auto_ok: bool = True
-    optional_route: bool = False    # listed only when the running app has this route
 
 
 P = "/api/projects/{pid}"
@@ -126,8 +124,8 @@ SPECS: list[Spec] = [
          when="Once the picks step is open. The caller supplies the picks document (`fill`)."),
     Spec("picks.approve", "picks", "Duyệt chọn hình", "POST", P + "/picks/approve", gate=True,
          when="While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances."),
-    Spec("picks.ops", "picks", "Sửa chọn hình", "POST", P + "/picks/ops", optional_route=True,
-         when="Only when the running app has the route. Once the picks step is open; the caller supplies the operations (`fill`)."),
+    Spec("picks.ops", "picks", "Sửa chọn hình", "POST", P + "/picks/ops",
+         when="Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md."),
     Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions or a clip) of the project runs."),
     # ---- storyboard (step 5, page step id `edit`)
     Spec("draft.start", "edit", "Dựng bản nháp", "POST", P + "/draft/start", long_job=True, follow=LONGJOBS, role="draft",
@@ -145,8 +143,12 @@ SPECS: list[Spec] = [
          when="While the storyboard is readable. Ready; renders a short clip (a job of a few seconds)."),
     Spec("storyboard.put", "edit", "Lưu storyboard", "PUT", P + "/storyboard",
          when="While the storyboard is readable. The caller supplies the document (`fill`); base_rev is the current rev."),
-    Spec("storyboard.ops", "edit", "Sửa storyboard", "POST", P + "/storyboard/ops", optional_route=True,
-         when="Only when the running app has the route. While the storyboard is readable; the caller supplies the operations (`fill`)."),
+    Spec("storyboard.ops", "edit", "Sửa storyboard", "POST", P + "/storyboard/ops",
+         when="While the storyboard is readable. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md."),
+    Spec("changes.list", "edit", "Lịch sử thay đổi", "GET", P + "/changes",
+         when="Once the change log holds a batch (of the picks or the storyboard). Always ready. `step` is the step of the newest batch's document."),
+    Spec("changes.undo", "edit", "Hoàn tác", "POST", P + "/changes/{batch}/undo",
+         when="The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document."),
     Spec("draft.edit", "edit", "Nhờ agent sửa", "POST", P + "/draft/edit", long_job=True, follow=LONGJOBS, role="edit.fast",
          cost=("model", "from about 30 seconds to about 20 minutes"),
          when="While the storyboard is readable. Ready unless a draft job runs or the agent cannot run. The caller supplies the instruction and the scope (`fill`)."),
@@ -192,28 +194,12 @@ def _try(fn: Callable, default: Any = None) -> Any:
         return default
 
 
-def route_exists(app, method: str, path: str) -> bool:
-    """Whether the running app answers `method` on the concrete `path` with a route of its own (not the static catch-all). It asks the
-    app's router, looked up at request time, so a route that is added later (or by another build) shows at once, whatever name its
-    path parameters have."""
-    scope = {"type": "http", "method": method, "path": path, "root_path": "", "query_string": b"", "headers": []}
-    for r in app.router.routes:
-        if getattr(r, "path", None) == "/{path:path}":
-            continue
-        try:
-            if r.matches(scope)[0] == Match.FULL:
-                return True
-        except Exception:       # noqa: BLE001 - a route that cannot say is not a route we can name
-            continue
-    return False
-
-
 class Ctx:
     """Everything the builders of the actions read. Built once per request."""
 
-    def __init__(self, root: Path, pid: str, pipe: dict, jobs: list[dict], has_route: Callable[[str, str], bool], picks_provider: Any = None):
+    def __init__(self, root: Path, pid: str, pipe: dict, jobs: list[dict], picks_provider: Any = None):
         self.root, self.pid, self.d = root, pid, root / pid
-        self.pipe, self.jobs, self.has_route, self.picks_provider = pipe, jobs, has_route, picks_provider
+        self.pipe, self.jobs, self.picks_provider = pipe, jobs, picks_provider
         self.steps = {s["id"]: s for s in pipe.get("steps", [])}
         self.imported = bool(pipe.get("imported"))
         self.problems: list[dict] = []
@@ -237,6 +223,10 @@ class Ctx:
         self.sb_approval = "none"
         self.has_history = False
         self.has_audio = self.has_timing = True
+        self.picks_ops_rev: str | None = None
+        self.change_count = 0
+        self.change_doc: str | None = None
+        self.undo_target: dict | None = None
 
     # -- steps
     def page_state(self, sid: str) -> str:
@@ -278,6 +268,13 @@ class Ctx:
         self._agents[role] = out
         return out
 
+    def actor(self, role: str) -> str:
+        """The `actor` of an example batch: `agent:<model id>` of the agent that works on this project for `role` (no availability check)."""
+        try:
+            return "agent:" + AG.model_for_project(self.d, role).model
+        except Exception:       # noqa: BLE001
+            return "cli:state"
+
     def problem(self, code: str, step: str | None, detail: str, fix: str | None = None, vi: str | None = None) -> None:
         """Record something wrong with the project's data: `detail` English (for the agent), `vi` the Vietnamese line the step shows."""
         h = hints_mod.hint(code, 409, self.pid)
@@ -310,6 +307,7 @@ def _load_picks(c: Ctx) -> None:
         return
     c.picks, c.narration_present = pd, bool(nv["present"])
     c.picks_rev = doc.revision(pd) if pd is not None else None
+    c.picks_ops_rev = doc.revision(pd if pd is not None else doc.empty())         # what the operations call the revision of a project with no picks yet
     c.picks_main = bool(pd and pd.get("main_asset") and pd["main_asset"] in pd["assets"])
     c.picks_ok = bool(doc.approval_state(pd, nv["rev"], nv["approved"])["approved"])
     c.narration_ok = c.narration_ok or bool(nv["approved"])
@@ -365,6 +363,36 @@ def _load_storyboard(c: Ctx) -> None:
                   vi="Thiếu tệp thời gian (timing.json): cần làm lại giọng đọc.")
 
 
+def _load_changes(c: Ctx) -> None:
+    """The change log (bti/ops/log.py): how many batches, and the newest one that can be undone now (the check `POST .../undo` makes first)."""
+    from bti.ops import undo as U
+    from bti.ops.log import LOG_DIR, ChangeLog, number
+    from bti.picks import doc as pdoc
+    if not (c.d / LOG_DIR).is_dir():
+        return
+    log = ChangeLog(c.d)
+    recs = log.list(limit=30)
+    c.change_count = len(recs)
+    c.change_doc = recs[0].get("doc") if recs else None
+    for r in recs:
+        kind = r.get("doc")
+        if r.get("undone_by") or not r.get("copies") or kind not in ("picks", "storyboard"):
+            continue
+        both = log.copies(r["batch"])
+        if both is None:
+            continue
+        if kind == "picks":
+            cur, rev = pdoc.load_or_new(c.d), c.picks_ops_rev
+        elif c.sb_exists and not c.sb_corrupt:
+            cur, rev = read_json(c.d / "storyboard.json"), c.sb_rev
+        else:
+            continue
+        later = [x for x in log.records(kind) if number(x["batch"]) > number(r["batch"])]
+        if not U.find_conflicts(kind, cur, both[0], both[1], later)[1]:
+            c.undo_target = {"batch": r["batch"], "doc": kind, "rev": rev}
+            return
+
+
 def _load_draft(c: Ctx) -> None:
     from bti.draft import run as draft_run
     r = draft_run.readiness(c.d)
@@ -388,10 +416,8 @@ def running_jobs(pid: str, d: Path, script_jobs, preview_jobs, longjobs) -> list
     for j in _try(lambda: longjobs.for_project(pid, d), []) if longjobs is not None else []:
         if j.get("state") in ACTIVE_JOB:
             row(j, str(j.get("kind")), "/api/longjobs/{job_id}", "/api/longjobs/{job_id}/cancel")
-    live = list(getattr(preview_jobs, "_jobs", {}).values()) if preview_jobs is not None else []
-    for j in live:
-        if isinstance(j, dict) and j.get("pid") == pid and j.get("state") in ("queued", "running"):
-            row(j, "preview", "/api/jobs/{job_id}", None)
+    for j in _try(lambda: preview_jobs.active(pid), []) if preview_jobs is not None else []:
+        row(j, "preview", "/api/jobs/{job_id}", None)
     out.sort(key=lambda r: r["started"] or "")
     return out
 
@@ -539,8 +565,23 @@ def b_picks_approve(c: Ctx):
     return E(list(dict.fromkeys(needs)), {"rev": c.picks_rev} if c.picks is not None else None, advances=True)
 
 
+def _example_batch(c: Ctx, doc: str, rev: str | None, role: str) -> tuple[dict, dict]:
+    """(body, template) of an operations call. The body is a DRY RUN (it writes nothing) of the first operation's example in the
+    operations registry (`GET /api/ops/schema` has every operation's own); the template is the real call with the operations left to
+    the caller."""
+    import copy
+    from bti.ops import registry
+    first = next(iter(registry.defs(doc).values()))
+    actor = c.actor(role)
+    return ({"base_rev": rev, "actor": actor, "dry_run": True, "ops": [copy.deepcopy(first.example)]},
+            {"base_rev": rev, "actor": actor, "ops": None, "dry_run": False})
+
+
 def b_picks_ops(c: Ctx):
-    return E(fill=["ops"], template={"base_rev": c.picks_rev, "ops": None}) if _picks_open(c) else None
+    if not _picks_open(c):
+        return None
+    body, template = _example_batch(c, "picks", c.picks_ops_rev, "picks")
+    return E(["documents_readable"] if c.picks_error else [], body, fill=["ops"], template=template)
 
 
 def _edit_open(c: Ctx) -> bool:
@@ -597,7 +638,25 @@ def b_storyboard_put(c: Ctx):
 
 
 def b_storyboard_ops(c: Ctx):
-    return E(fill=["ops"], template={"base_rev": c.sb_rev, "ops": None}) if _sb_ok(c) else None
+    if not _sb_ok(c):
+        return None
+    body, template = _example_batch(c, "storyboard", c.sb_rev, "edit.fast")
+    return E([], body, fill=["ops"], template=template)
+
+
+def b_changes_list(c: Ctx):
+    if not c.change_count or not (c.open("picks") or c.open("edit")):
+        return None
+    return E(step="picks" if c.change_doc == "picks" else "edit")
+
+
+def b_changes_undo(c: Ctx):
+    t = c.undo_target
+    if t is None:
+        return None
+    role = "picks" if t["doc"] == "picks" else "edit.fast"
+    return E([], {"base_rev": t["rev"], "actor": c.actor(role), "note": ""}, path_args={"batch": t["batch"]},
+             step="picks" if t["doc"] == "picks" else "edit")
 
 
 def b_draft_edit(c: Ctx):
@@ -635,7 +694,8 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "picks.approve": b_picks_approve, "picks.ops": b_picks_ops,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
-    "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "draft.edit": b_draft_edit, "identity.set": b_identity_set,
+    "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
+    "draft.edit": b_draft_edit, "identity.set": b_identity_set,
     "export.start": b_export_start,
 }
 CANCELS = set(CANCEL_ID.values())
@@ -657,7 +717,7 @@ def _action(spec: Spec, e: dict, c: Ctx, job: dict | None = None) -> dict:
     if job is not None:
         path = path.replace("{job_id}", str(job["id"]))
     needs = e["needs"]
-    out = {"id": spec.id, "step": spec.step, "label": _label(spec, c), "method": spec.method, "path": path, "body": e["body"],
+    out = {"id": spec.id, "step": e.get("step") or spec.step, "label": _label(spec, c), "method": spec.method, "path": path, "body": e["body"],
            "ready": not needs, "needs": needs, "gate": spec.gate, "auto_ok": spec.auto_ok, "long_job": spec.long_job,
            "uses_model": spec.role is not None, "agent": c.agent(spec.role) if spec.role else None,
            "cost": {"kind": spec.cost[0], "about": spec.cost[1]} if spec.cost else None,
@@ -677,8 +737,6 @@ def build_actions(c: Ctx) -> list[dict]:
     rows: list[tuple[dict, bool]] = []
     for spec in SPECS:
         if spec.id in CANCELS:
-            continue
-        if spec.optional_route and not c.has_route(spec.method, spec.path.replace("{pid}", c.pid)):
             continue
         e = _try(lambda: BUILDERS[spec.id](c))
         if e is not None:
@@ -716,8 +774,7 @@ def damaged_answer(pid: str, why: str, code: str, fix: str | None = None) -> dic
             "problems": [{"code": code, "step": None, "detail": why, "fix": fix or h["fix"]}]}
 
 
-def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, longjobs=None,
-                has_route: Callable[[str, str], bool] | None = None, picks_provider: Any = None) -> dict:
+def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, longjobs=None, picks_provider: Any = None) -> dict:
     """The whole answer of GET /api/projects/{pid}/state."""
     d = root / pid
     try:
@@ -727,11 +784,12 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
             log.warning("state: the pipeline of %s could not be computed", pid, exc_info=True)
         return damaged_answer(pid, str(e)[:300], "project_file_damaged" if "project.json" in str(e) else "document_corrupt")
     jobs = running_jobs(pid, d, script_jobs, preview_jobs, longjobs)
-    c = Ctx(root, pid, pipe, jobs, has_route or (lambda method, path: False), picks_provider)
+    c = Ctx(root, pid, pipe, jobs, picks_provider)
     if not c.imported:
         _try(lambda: _load_script(c))
         _try(lambda: _load_picks(c))
     _try(lambda: _load_storyboard(c))
+    _try(lambda: _load_changes(c))
     _try(lambda: _load_draft(c))
     steps = _steps_out(pipe)
     for p in c.problems:                                            # a step that carries a problem says so on its line
@@ -755,7 +813,7 @@ def make_router(projects_root: Path, *, pdir: Callable[[str], Path], script_jobs
         pdir(pid)
         mgr = getattr(request.app.state, "longjob_manager", None) or longjobs
         return build_state(root, pid, script_jobs=script_jobs, preview_jobs=preview_jobs, longjobs=mgr,
-                           has_route=lambda method, path: route_exists(request.app, method, path), picks_provider=getattr(request.app.state, "picks_provider", None))
+                           picks_provider=getattr(request.app.state, "picks_provider", None))
 
     return r
 

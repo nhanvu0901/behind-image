@@ -15,6 +15,8 @@ Mở http://127.0.0.1:8560/ . Chỉ nghe trên 127.0.0.1, cổng 8560 (không d�
 - `?mock=1` chạy ứng dụng với dữ liệu giả, không cần server; chỉ bước Dựng hình dùng được trong chế độ này.
 - `?all=1` hiện thêm các dự án `lab_*` và `demo_*` (mặc định bị ẩn).
 - Đổi thư mục dự án (để thử mà không đụng dữ liệu thật): đặt biến `BTI_PROJECTS_ROOT` trước khi chạy `tools/run_editor.sh`.
+- Agent chạy trong terminal (agy, Codex, Claude) làm việc với dự án qua API của ứng dụng: bắt đầu từ `docs/AGENT_API.md` (dự án đang ở đâu, việc gọi được ngay, lỗi và cách sửa).
+- Các thao tác nhỏ cho bước Chọn hình và Dựng hình (gửi theo lô, có nhật ký và hoàn tác) nằm ở `docs/OPS.md`; cả hai tệp được sinh từ mã và một bài test trượt nếu chúng cũ.
 
 ## 2. Khung ứng dụng
 

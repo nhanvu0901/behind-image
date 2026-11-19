@@ -155,7 +155,7 @@ def make_router(projects_root: Path) -> APIRouter:
         if xref not in {im["xref"] for im in extract.images(book_id, a, b)}:
             raise ApiError(404, "image is not part of this entry", code="image_not_in_work")
         if not 64 <= w <= 2400:
-            raise ApiError(422, "w must be between 64 and 2400", code="field_invalid", field="w")
+            raise ApiError(422, "w must be between 64 and 2400", code="invalid_field", field="w")
         try:
             return FileResponse(extract.render_image(book_id, xref, w), media_type="image/jpeg",
                                 headers={"Cache-Control": "private, max-age=86400"})
@@ -235,7 +235,7 @@ def make_router(projects_root: Path) -> APIRouter:
                 "title": lambda x: (catalogue.norm(x["title"]),),
                 "year": lambda x: (x["century"] is None, x["century"] or 0, catalogue.norm(x["title"]))}.get(sort)
         if keyf is None:
-            raise ApiError(422, "sort must be sources, words, title or year", code="field_invalid", field="sort")
+            raise ApiError(422, "sort must be sources, words, title or year", code="invalid_field", field="sort")
         out.sort(key=keyf)
         return out
 
@@ -293,7 +293,7 @@ def make_router(projects_root: Path) -> APIRouter:
     def merge(body: dict = Body(...)):
         a, b = body.get("key"), body.get("with")
         if not isinstance(a, str) or not isinstance(b, str):
-            raise ApiError(422, "key and with (artwork keys) are required", code="field_required", field="key" if not isinstance(a, str) else "with")
+            raise ApiError(422, "key and with (artwork keys) are required", code="invalid_field", field="key" if not isinstance(a, str) else "with")
         try:
             return {"artwork_key": dossiers.merge_artworks(a, b)}
         except KeyError:
@@ -305,7 +305,7 @@ def make_router(projects_root: Path) -> APIRouter:
     def split(body: dict = Body(...)):
         wid = body.get("work_id")
         if not isinstance(wid, str) or not libcfg.WORK_ID_RE.fullmatch(wid):
-            raise ApiError(422, "work_id is required", code="field_required", field="work_id")
+            raise ApiError(422, "work_id is required", code="invalid_field", field="work_id")
         try:
             return {"artwork_key": dossiers.split_work(wid)}
         except KeyError:
@@ -320,9 +320,9 @@ def make_router(projects_root: Path) -> APIRouter:
         key = body.get("artwork_key")
         excl = string_list(body.get("exclude"), "exclude", max_items=50, max_len=100)
         if slug is not None and not isinstance(slug, str):
-            raise ApiError(422, "slug must be a string", code="field_invalid", field="slug")
+            raise ApiError(422, "slug must be a string", code="invalid_field", field="slug")
         if key is not None and not isinstance(key, str):
-            raise ApiError(422, "artwork_key must be a string", code="field_invalid", field="artwork_key")
+            raise ApiError(422, "artwork_key must be a string", code="invalid_field", field="artwork_key")
         try:
             return libprojects.create_project(wids, slug, projects_root, artwork_key=key, exclude=excl)
         except libprojects.ProjectError as e:
@@ -335,7 +335,7 @@ def make_router(projects_root: Path) -> APIRouter:
 
 def _jpeg(book_id: str, pdf_page: int, w: int):
     if not 64 <= w <= 2400:
-        raise ApiError(422, "w must be between 64 and 2400", code="field_invalid", field="w")
+        raise ApiError(422, "w must be between 64 and 2400", code="invalid_field", field="w")
     try:
         f = extract.render_page(book_id, pdf_page, w)
     except IndexError:

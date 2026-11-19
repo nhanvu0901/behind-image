@@ -293,6 +293,34 @@ export const STAGE_CODES = {
   /* worker c1state: the refusals every page can meet (the server now gives each one a code, see bti/editor/hints.py). Where the server's
      own text already has an exact sentence (it names the beat, the shot, the field), BY_CODE_HTTP below keeps that one and uses these
      only when the text has none. */
+  /* worker join: the refusals of the typed operations (bti/ops, docs/OPS.md) that the instruction box shows to a person. The operations are made
+     by a model, so every sentence says what could not be done and what to say or choose instead; none shows an id. */
+  ops: {
+    unknown_op: 'Yêu cầu sửa này dùng một thao tác không có nên chưa làm. Hãy nói lại yêu cầu.',
+    unknown_shot: 'Không có cảnh này trong storyboard. Chọn lại cảnh cần sửa.',
+    unknown_overlay: 'Cảnh này không có lớp phủ đó. Chọn lại lớp phủ cần sửa.',
+    unknown_beat: 'Không có đoạn lời dẫn này. Chọn lại đoạn cần sửa.',
+    unknown_asset: 'Không có hình này trong dự án. Chọn hình khác, hoặc nhập hình trước.',
+    unknown_region: 'Hình này không có vùng đó. Thêm vùng trước, hoặc chọn vùng khác.',
+    unknown_param: 'Kỹ thuật này không có thông số đó. Chọn thông số khác.',
+    unknown_slot: 'Kỹ thuật này không có chỗ đặt hình đó. Chọn chỗ khác.',
+    wrong_technique_kind: 'Kỹ thuật này không dùng được ở chỗ này: cảnh và lớp phủ dùng hai loại kỹ thuật khác nhau. Chọn kỹ thuật khác.',
+    technique_unavailable: 'Kỹ thuật này chưa dựng được. Chọn kỹ thuật khác.',
+    slot_kind_mismatch: 'Hình này không hợp với chỗ đặt: chỗ đó cần loại khác (ảnh, video hoặc mặt nạ). Chọn hình khác.',
+    unknown_ref: 'Yêu cầu nhắc tới một thứ chưa được tạo ở bước trước. Hãy nói lại yêu cầu.',
+    duplicate_ref: 'Yêu cầu đặt hai thứ mới cùng một tên. Hãy nói lại yêu cầu.',
+    shot_too_short: 'Chỗ cắt này làm một cảnh ngắn hơn 0,2 giây. Chọn thời điểm khác.',
+    not_consecutive: 'Các cảnh được chọn không nằm kề nhau. Chọn các cảnh liền nhau.',
+    span_mismatch: 'Các cảnh mới không khớp với khoảng thời gian của các cảnh bị thay. Hãy nói lại yêu cầu.',
+    locked: 'Cảnh hoặc lớp phủ này đang khóa nên không sửa được. Mở khóa trước.',
+    out_of_scope: 'Yêu cầu này chạm tới phần ngoài phạm vi bạn đã chọn nên chưa làm. Chọn phạm vi rộng hơn, hoặc nói cụ thể hơn.',
+    undo_conflict: 'Không hoàn tác được vì có phần đã bị sửa tiếp sau lần sửa này. Hoàn tác các lần sửa sau trước, hoặc để nguyên phần đó.',
+    undo_unavailable: 'Không hoàn tác được lần sửa này vì bản lưu của nó đã bị xóa bớt. Hãy sửa lại bằng một yêu cầu mới.',
+    batch_not_found: 'Không tìm thấy lần sửa này trong lịch sử thay đổi.',
+    import_failed: 'Không nhập được hình này vào dự án. Chọn hình khác hoặc nguồn khác.',
+    audio_decode_failed: 'Không đọc được tệp âm thanh của dự án. Hãy làm lại bước "Giọng đọc".',
+    image_too_small: 'Ảnh này quá nhỏ để dùng. Chọn ảnh lớn hơn.',
+  },
   api: {
     project_not_found: 'Không có dự án này.',
     storyboard_not_found: 'Dự án chưa có storyboard.',
@@ -300,7 +328,6 @@ export const STAGE_CODES = {
     save_refused: 'Storyboard còn lỗi nên chưa lưu hoặc duyệt được. Xem danh sách lỗi.',
     storyboard_has_errors: 'Storyboard còn lỗi nên chưa làm tiếp được. Xem danh sách lỗi, sửa rồi thử lại.',
     storyboard_incomplete: 'Còn cảnh chưa đủ hình hoặc đoạn phim nên chưa duyệt được. Xem danh sách lỗi để biết cảnh nào.',
-    base_rev_required: 'Thiếu mã phiên bản của bản đang sửa. Hãy tải lại trang.',
     style_not_found: 'Không có kiểu (style) này.',
     nothing_to_restore: 'Storyboard vẫn đọc được bình thường nên không có gì để khôi phục.',
     no_history_copy: 'Trong lịch sử của dự án không còn bản storyboard nào đọc được. Hãy dựng bản nháp mới ở bước "Dựng hình".',
@@ -344,13 +371,11 @@ export const STAGE_CODES = {
     bad_text_character: 'Văn bản có ký tự lạ nên chưa lưu được. Hãy xóa ký tự đó rồi gửi lại.',
     source_unavailable: 'Nguồn bên ngoài đang bận hoặc không trả lời. Thử lại sau vài giây.',
     source_timeout: 'Nguồn bên ngoài trả lời quá chậm. Thử lại sau.',
-    field_invalid: 'Dữ liệu gửi lên không hợp lệ.',
+    invalid_field: 'Dữ liệu gửi lên không hợp lệ.',
     // only a program meets these (a wrong route or method, a body of the wrong shape): one shared sentence
     route_not_found: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
     method_not_allowed: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
-    request_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
-    body_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
-    field_required: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
+    invalid_request: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
     accept_invalid: 'Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy.',
   },
 };
@@ -396,7 +421,7 @@ const BY_CODE_HTTP = {
 const c1stateTextSentence = (b) => { const t = describeHttp(0, { detail: b?.detail }).text; return t === GENERIC || t === BY_STATUS[404] ? null : t; };
 // these answer with their own sentence whatever the text says: only a program meets the first four (one shared sentence); for the others the code is
 // certain and its sentence says what to do, where the older sentence of the text only says what is wrong
-const C1STATE_OWN = ['route_not_found', 'method_not_allowed', 'request_invalid', 'body_invalid', 'file_too_large', 'unsupported_file_type', 'preview_too_long',
+const C1STATE_OWN = ['route_not_found', 'method_not_allowed', 'file_too_large', 'unsupported_file_type', 'preview_too_long',
   'preview_too_many_frames', 'proposal_not_found', 'proposal_corrupt', 'proposal_malformed', 'no_audio_file', 'model_unavailable'];
 for (const [k, v] of Object.entries(STAGE_CODES.api)) BY_CODE_HTTP[k] = C1STATE_OWN.includes(k) ? () => v : (b) => c1stateTextSentence(b) || v;
 for (const k of ['stale_revision', 'unknown_chapter', 'unknown_model', 'storyboard_corrupt']) {      // codes the stage tables already had: the text still wins
@@ -404,6 +429,9 @@ for (const k of ['stale_revision', 'unknown_chapter', 'unknown_model', 'storyboa
   BY_CODE_HTTP[k] = (b) => c1stateTextSentence(b) || own(b);
 }
 for (const [k, status] of Object.entries({ bad_request: 400, forbidden: 403, conflict: 409, unsupported_media: 415 })) BY_CODE_HTTP[k] = () => BY_STATUS[status];
+/* worker join: the operations' own sentences (STAGE_CODES.ops) answer describeHttp, also where a stage table has the same code (`undo_conflict`
+   and `undo_unavailable` of a draft turn: the draft views read their own table through stageErrorText, which is not changed). */
+for (const [k, v] of Object.entries(STAGE_CODES.ops)) BY_CODE_HTTP[k] = () => v;
 /* worker mediafix: a picture source answered "too many requests". `b` is the error body or a search error entry
    ({code: 'source_rate_limited', retry_after: seconds | null}); the time is rounded UP to whole minutes, and left out when the source gave none. */
 export function sourceLimitText(b) {

@@ -48,7 +48,9 @@ def sources(monkeypatch):
     one = lambda n: {"query": {"pages": [copy.deepcopy(PAGES[n])]}}                                      # noqa: E731
     net = FakeNet([("Google+Art+Project", one(2)), ("Arnolfini+nc.jpg", one(3)), ("Arnolfini+small.png", one(1)),
                    ("Arnolfini+nolicence", one(5)),
-                   ("wikipedia/commons/a/a0", png_bytes(1300, 1250)), ("wikipedia/commons/s/s0", png_bytes(800, 600)),
+                   # CHANGED (join, as mediafix3 did in tests/picks): the 4386 x 6000 Arnolfini is downloaded as the rendition its API answer names
+                   ("wikipedia/commons/a/a0", png_bytes(1300, 1250)), ("upload.wikimedia.org/thumb/a.jpg", png_bytes(1300, 1250)),
+                   ("wikipedia/commons/s/s0", png_bytes(800, 600)),
                    ("x/nc.jpg", png_bytes(1300, 1250)), ("x/nl.jpg", png_bytes(1300, 1250)),
                    ("commons.wikimedia.org", load_fix("commons_search.json"))])
     monkeypatch.setitem(media_api._SOURCES, "commons", CommonsSource(opener=net, sleep=lambda s: None))

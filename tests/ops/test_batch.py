@@ -78,7 +78,7 @@ def test_an_unknown_project_and_a_project_without_a_storyboard(client):
     (client.root / "nosb").mkdir()
     (client.root / "nosb" / "project.json").write_text("{}", encoding="utf-8")
     r = client.post("/api/projects/nosb/storyboard/ops", json={"base_rev": "x", "actor": "human", "ops": [LOCK]})
-    assert r.status_code == 404 and r.json()["code"] == "document_missing" and r.json()["fix"]
+    assert r.status_code == 404 and r.json()["code"] == "storyboard_not_found" and r.json()["fix"]
     assert client.get("/api/projects/nope/changes").json()["code"] == "project_not_found"
 
 
@@ -344,7 +344,7 @@ def test_a_damaged_file_of_the_project_is_a_typed_error(client):
     rev, prev = sb_rev(client), pk_rev(client)
     (client.pdir / "timing.json").unlink()                                                            # the engine cannot place anything in time
     r = sb(client, [LOCK], rev=rev)
-    assert r.status_code == 409 and r.json()["code"] == "document_corrupt" and r.json()["fix"] and r.json()["retry"] == "no", r.text
+    assert r.status_code == 409 and r.json()["code"] == "document_corrupt" and r.json()["fix"] and r.json()["retry"] == "after_fix", r.text
     assert r.json()["data_error"] == "timing"
     (client.pdir / "picks.json").write_text("{broken", encoding="utf-8")
     r = pk(client, [{"op": "skip_beat", "beat": "b0004"}], rev=prev)
