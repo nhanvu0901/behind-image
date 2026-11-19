@@ -41,9 +41,9 @@ def clean_t(t, name: str = "t") -> float:
         return float(finite_number(t, name, 0, T_MAX_SECONDS))
     except ApiError as e:
         if name != "t":
-            raise ApiError(422, f"t0 and t1 must be numbers from 0 to {T_MAX_SECONDS}")
+            raise ApiError(422, f"t0 and t1 must be numbers from 0 to {T_MAX_SECONDS}", code="invalid_field", fields=[{"path": "t0", "problem": "must be a number from 0 up"}, {"path": "t1", "problem": "must be a number from 0 up"}])
         raise ApiError(422, "t must be a number" if "number" in e.detail and "between" not in e.detail
-                       and "from" not in e.detail and "finite" not in e.detail else "t out of range")
+                       and "from" not in e.detail and "finite" not in e.detail else "t out of range", code="invalid_field", field="t")
 
 
 def clean_width(width, default: int = 960) -> int:
@@ -51,7 +51,7 @@ def clean_width(width, default: int = 960) -> int:
         return int(finite_number(width, "width", limits.FRAME_WIDTH_MIN, limits.FRAME_WIDTH_MAX, integer=True, default=default))
     except ApiError as e:
         raise ApiError(422, "width must be an integer" if "an integer" in e.detail and "from" not in e.detail
-                       else f"width must be between {limits.FRAME_WIDTH_MIN} and {limits.FRAME_WIDTH_MAX}")
+                       else f"width must be between {limits.FRAME_WIDTH_MIN} and {limits.FRAME_WIDTH_MAX}", code="invalid_field", field="width")
 
 
 def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> bytes:
@@ -67,7 +67,7 @@ def render_jpeg(project, t: float, width: int, draft: dict | None = None) -> byt
             if isinstance(e, DataError):
                 raise
             logging.getLogger("bti.editor").warning("render failed", exc_info=e)
-            raise ApiError(500, f"render failed ({type(e).__name__})", render_failed=True)
+            raise ApiError(500, f"render failed ({type(e).__name__})", render_failed=True, code="render_failed")
         finally:
             if draft is not None:
                 try:
@@ -82,7 +82,7 @@ def cached_jpeg(project, cache_dir: Path, rev: str, t: float, width: int, tag: s
     try:
         make_parent(cache_dir / "x", 2)       # <project>/cache/frames: never re-creates a deleted project folder
     except ProjectGone:
-        raise ApiError(404, "project not found")
+        raise ApiError(404, "project not found", code="project_not_found")
     p = cache_dir / f"{tag}_{rev[:16]}_{int(round(t * 1000))}_{width}.jpg"
     try:
         return p.read_bytes()

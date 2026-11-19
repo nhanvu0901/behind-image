@@ -73,18 +73,18 @@ def safe_join(root: Path, rel: str) -> Path:
     """Resolve `rel` under `root`; raise ApiError(404) when it escapes, is malformed, has a segment longer than the
     file system allows, or the file system refuses the look-up (any OSError is "not found", never a 500)."""
     if not isinstance(rel, str) or not rel or "\x00" in rel or "\\" in rel:
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="not_found")
     if rel.startswith("/") or re.match(r"^[A-Za-z]:", rel):
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="not_found")
     parts = rel.split("/")
     if any(p in ("..", "") for p in parts) or not all(segment_ok(p) for p in parts):
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="not_found")
     try:
         root_r = root.resolve()
         target = (root_r / rel).resolve()
         target.relative_to(root_r)
     except (ValueError, OSError, RuntimeError):
-        raise ApiError(404, "not found")
+        raise ApiError(404, "not found", code="not_found")
     return target
 
 
@@ -96,22 +96,22 @@ def finite_number(v: Any, name: str, lo: float | None = None, hi: float | None =
     if v is None and default is not ...:
         return default
     if isinstance(v, bool) or not isinstance(v, (int, float)):
-        raise ApiError(422, f"{name} must be {'an integer' if integer else 'a number'}")
+        raise ApiError(422, f"{name} must be {'an integer' if integer else 'a number'}", code="invalid_field", field=name)
     if isinstance(v, float):
         if not math.isfinite(v):
-            raise ApiError(422, f"{name} must be a finite number")
+            raise ApiError(422, f"{name} must be a finite number", code="invalid_field", field=name)
         if integer:
             if not v.is_integer():
-                raise ApiError(422, f"{name} must be an integer")
+                raise ApiError(422, f"{name} must be an integer", code="invalid_field", field=name)
             v = int(v)
     kind = "an integer" if integer else "a number"
     try:                                               # an int beyond float range compares exactly, never converts
         if (lo is not None and v < lo) or (hi is not None and v > hi):
             if lo is not None and hi is not None:
-                raise ApiError(422, f"{name} must be {kind} from {lo} to {hi}")
-            raise ApiError(422, f"{name} must be {kind} {'>= ' + str(lo) if lo is not None else '<= ' + str(hi)}")
+                raise ApiError(422, f"{name} must be {kind} from {lo} to {hi}", code="invalid_field", field=name)
+            raise ApiError(422, f"{name} must be {kind} {'>= ' + str(lo) if lo is not None else '<= ' + str(hi)}", code="invalid_field", field=name)
     except OverflowError:
-        raise ApiError(422, f"{name} out of range")
+        raise ApiError(422, f"{name} out of range", code="invalid_field", field=name)
     return v
 
 
@@ -120,9 +120,9 @@ def string_list(v: Any, name: str, *, max_items: int = 500, max_len: int = 4000,
     if v is None and allow_none:
         return None
     if not isinstance(v, list) or not all(isinstance(x, str) for x in v):
-        raise ApiError(422, f"{name} must be a list of strings")
+        raise ApiError(422, f"{name} must be a list of strings", code="invalid_field", field=name)
     if len(v) > max_items or any(len(x) > max_len for x in v):
-        raise ApiError(422, f"{name} is too long")
+        raise ApiError(422, f"{name} is too long", code="invalid_field", field=name)
     return v
 
 
@@ -131,19 +131,19 @@ def text_field(body: Any, key: str, required: bool = False, max_len: int = 2_000
     v = body.get(key) if isinstance(body, dict) else None
     if v is None:
         if required:
-            raise ApiError(422, f"{key} (string) is required")
+            raise ApiError(422, f"{key} (string) is required", code="invalid_field", field=key)
         return ""
     if not isinstance(v, str):
-        raise ApiError(422, f"{key} must be a string")
+        raise ApiError(422, f"{key} must be a string", code="invalid_field", field=key)
     if len(v) > max_len:
-        raise ApiError(422, f"{key} is too long")
+        raise ApiError(422, f"{key} is too long", code="invalid_field", field=key)
     return v
 
 
 def id_field(v: Any, name: str, rx: re.Pattern, hint: str) -> str:
     """An id that matches `rx` entirely (never coerced, never trimmed)."""
     if not isinstance(v, str) or rx.fullmatch(v) is None:
-        raise ApiError(422, f"{name} must be {hint}")
+        raise ApiError(422, f"{name} must be {hint}", code="invalid_field", field=name)
     return v
 
 

@@ -99,7 +99,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         if v is None:
             return ""
         if not isinstance(v, str):
-            raise ApiError(422, "rev must be a string", code="field_invalid", field="rev")
+            raise ApiError(422, "rev must be a string", code="invalid_field", field="rev")
         return v
 
     def stale_409(cur: str):
@@ -196,7 +196,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
     def get_prompt(pid: str, phase: str = Query(...), chapters: str = Query(""), notes: str = Query("")):
         d = pdir(pid)
         if phase not in ("outline", "script"):
-            raise ApiError(422, "phase must be outline or script", code="field_invalid", field="phase")
+            raise ApiError(422, "phase must be outline or script", code="invalid_field", field="phase")
         o = store.load_outline(d)
         want = [c for c in re.split(r"[,\s]+", chapters) if c] or None
         if phase == "script":
@@ -379,7 +379,7 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                 raise stale_409(cur)
             ops = body.get("ops")
             if not isinstance(ops, list) or not ops:
-                raise ApiError(422, "ops must be a non-empty list of operations", code="field_invalid", field="ops")
+                raise ApiError(422, "ops must be a non-empty list of operations", code="invalid_field", field="ops")
             results = []
             outline = store.load_outline(d)
             try:

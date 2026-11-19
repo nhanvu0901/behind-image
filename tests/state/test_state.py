@@ -8,8 +8,8 @@ import pytest
 from state_helpers import DEMO_SRC, PID, STAGES, action, build, ids, make_book_project, route_ok, wait_job
 
 SCRIPT_REDO = ["outline.generate", "outline.import", "narration.generate", "narration.import", "narration.ops"]
-PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put"]
-EDIT_OPEN = ["draft.start", "storyboard.validate", "storyboard.preview", "storyboard.put", "draft.edit", "identity.set"]
+PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.ops"]
+EDIT_OPEN = ["draft.start", "storyboard.validate", "storyboard.preview", "storyboard.put", "storyboard.ops", "draft.edit", "identity.set"]
 
 # The exact list of action ids at each stage, in the order the answer gives them: the repair of a damaged project, then what
 # moves the project forward, then the other calls that are ready, then the ones gated ahead (each group in the order of the steps).
@@ -30,6 +30,7 @@ STAGE_OF = {"new": "selected", "outline_waiting": "selected", "narration_approve
             "picks_approved": "picked", "proposal_waiting": "picked", "drafted": "storyboard", "storyboard_approved": "approved",
             "exported": "rendered"}
 GATES = {"outline.approve", "narration.approve", "picks.approve", "storyboard.approve"}
+OPS_ACTIONS = ("picks.ops", "storyboard.ops")
 ACTION_KEYS = {"id", "step", "label", "method", "path", "body", "ready", "needs", "gate", "auto_ok", "long_job", "uses_model", "agent",
                "cost", "advances"}
 
@@ -104,7 +105,7 @@ def test_every_action_is_complete_and_honest(at, stage):
         if a["body"] is None and a["method"] != "GET":
             assert a.get("fill") or not a["ready"] or a["id"] in ("export.start",) or a["id"].endswith(".cancel"), a["id"]
         if a.get("fill"):
-            assert a["body"] is None and set(a["fill"]) <= set(a["body_template"]), a["id"]
+            assert (a["body"] is None or a["id"] in OPS_ACTIONS) and set(a["fill"]) <= set(a["body_template"]), a["id"]
     assert all(a["auto_ok"] for a in st["next_actions"] if a["gate"])
 
 
@@ -146,6 +147,11 @@ def _cases():
     return [(stage, aid) for stage in STAGES for aid in EXPECTED[stage]]
 
 
+def test_the_operations_actions_are_listed_whenever_their_step_is_open(at):
+    c, pid, st = at("narration_approved")
+    assert "picks.ops" in ids(st) and "storyboard.ops" not in ids(st)          # step 5 is locked: nothing to operate on yet
+
+
 @pytest.mark.parametrize("stage", STAGES)
 def test_every_action_names_a_real_route(at, stage):
     c, pid, st = at(stage)
@@ -159,6 +165,13 @@ def test_every_example_body_is_accepted_by_its_route(at, stage, aid):
     a = action(st, aid)
     if a["body"] is None and a["method"] != "GET":
         assert a.get("fill") or not a["ready"] or aid == "export.start"        # a body the caller must supply, or none is read
+    if aid in OPS_ACTIONS:
+        # the body is a dry run of the registry's first example, written for the operations fixture project (tests/state/test_ops_state.py runs
+        # it there): on another project the route answers it, or refuses it with a typed error of the operations
+        from bti.ops.errors import ERRORS
+        r = c.request(a["method"], a["path"], json=a["body"])
+        assert r.status_code == 200 or (r.status_code in (404, 409, 422) and r.json()["code"] in ERRORS and r.json()["fix"]), (aid, r.text[:300])
+        return
     if a.get("fill"):
         # the caller supplies content: the route refuses the empty template, and says which field (never a 5xx)
         r = c.request(a["method"], a["path"], json=a["body_template"])
@@ -269,33 +282,6 @@ def test_damaged_script_files_are_named_and_gate_the_script_calls(at):
     st = c.get(f"/api/projects/{pid}/state").json()
     assert st["problems"][0]["code"] == "document_corrupt" and st["problems"][0]["step"] == "script"
     assert "documents_readable" in action(st, "outline.generate")["needs"]
-
-
-def test_the_ops_actions_exist_only_when_the_app_has_the_routes(client, root, monkeypatch):
-    make_book_project(root)
-    pid = build("drafted", client, monkeypatch)
-    before = ids(client.get(f"/api/projects/{pid}/state").json())
-    assert "picks.ops" not in before and "storyboard.ops" not in before
-    seen = []
-
-    async def ops(pid: str):
-        seen.append(pid)
-        return {"ok": True}
-    client.app.add_api_route("/api/projects/{project_id}/picks/ops", ops, methods=["POST"])       # another name for the parameter: still the route
-    client.app.add_api_route("/api/projects/{pid}/storyboard/ops", ops, methods=["POST"])
-    st = client.get(f"/api/projects/{pid}/state").json()
-    assert "picks.ops" in ids(st) and "storyboard.ops" in ids(st)
-    p, s = action(st, "picks.ops"), action(st, "storyboard.ops")
-    assert (p["method"], p["path"], p["body"]) == ("POST", f"/api/projects/{pid}/picks/ops", None)
-    assert (s["method"], s["path"]) == ("POST", f"/api/projects/{pid}/storyboard/ops")
-    assert p["fill"] == ["ops"] and set(s["body_template"]) == {"base_rev", "ops"}
-    rev = client.get(f"/api/projects/{pid}").json()["rev"]
-    assert s["body_template"]["base_rev"] == rev
-    # one route is not the other
-    only = [r for r in client.app.routes if getattr(r, "path", "") == "/api/projects/{project_id}/picks/ops"]
-    client.app.router.routes.remove(only[0])
-    after = ids(client.get(f"/api/projects/{pid}/state").json())
-    assert "picks.ops" not in after and "storyboard.ops" in after
 
 
 def test_an_imported_project_has_no_script_steps_but_can_be_edited(client, root, monkeypatch):

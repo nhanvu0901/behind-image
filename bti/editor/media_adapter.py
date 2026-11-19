@@ -77,9 +77,9 @@ def _translate(e: Exception) -> Exception:
         return e
     if isinstance(e, ValueError):
         code = getattr(e, "code", None)
-        return ApiError(422, str(e)[:300], **({"code": code, "reason": str(e)[:300]} if code else {}))
+        return ApiError(422, str(e)[:300], **({"code": code or "invalid_field", "reason": str(e)[:300]}))
     if n == "ImageTooSmall":
-        return ApiError(422, str(e)[:300], reason=str(e)[:300])
+        return ApiError(422, str(e)[:300], reason=str(e)[:300], code="image_too_small")
     if n == "MediaHTTPError":
         st = getattr(e, "status", None)
         if getattr(e, "rate_limited", False):
@@ -89,11 +89,11 @@ def _translate(e: Exception) -> Exception:
                             retryable=True, retry_after=getattr(e, "retry_after", None))
         if st in (429, 503, 502, 504, None):
             return ApiError(503, "Nguồn ảnh đang giới hạn tốc độ hoặc không phản hồi (HTTP %s). Hãy thử lại sau vài giây." % (st or "?"),
-                            retryable=True, retry_after=10)
-        return ApiError(502, f"media source error (HTTP {st}): {e}"[:300])
+                            retryable=True, retry_after=10, code="source_unreachable")
+        return ApiError(502, f"media source error (HTTP {st}): {e}"[:300], code="source_error")
     if n == "NotFound":
-        return ApiError(404, str(e)[:300])
-    return ApiError(502, f"media facade failed: {n}: {e}"[:300])
+        return ApiError(404, str(e)[:300], code="not_found")
+    return ApiError(502, f"media facade failed: {n}: {e}"[:300], code="source_error")
 
 
 class MediaAdapter:
@@ -151,7 +151,7 @@ class MediaAdapter:
                 raise _translate(e)
         cand = next((c for c in _CANDS if c[0] == source and c[1] == source_id), None)
         if cand is None:
-            raise ApiError(404, "unknown candidate")
+            raise ApiError(404, "unknown candidate", code="not_found")
         _, _, title, author, lic, _, w, h = cand
         ok, name, reason = _licence_ok(lic)         # advisory: a restricted or unknown licence is flagged, never refused
         key = self._next_key(project_dir)
@@ -200,7 +200,7 @@ class MediaAdapter:
             raise ApiError(422, "file is not a readable image", code="image_unreadable", reason="file is not a readable image")
         ext = {"jpeg": "jpg", "png": "png", "webp": "webp"}.get(fmt)
         if ext is None:
-            raise ApiError(422, f"unsupported image format {fmt}")
+            raise ApiError(422, f"unsupported image format {fmt}", code="unsupported_file_type")
         key = self._next_key(project_dir)
         rel = f"media/upload_{key}.{ext}"
         dest = safe_join(project_dir, "media") / f"upload_{key}.{ext}"

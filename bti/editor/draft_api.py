@@ -79,7 +79,7 @@ def get_models(pid: str, request: Request, refresh: int = 0):
 def post_start(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     if not isinstance(body, dict):
-        raise ApiError(422, "body must be an object", code="body_invalid")
+        raise ApiError(422, "body must be an object", code="invalid_request")
     provider = body.get("provider", "agy")
     model = body.get("model")
     chapters = body.get("chapters")
@@ -105,7 +105,7 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
 def post_edit(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     if not isinstance(body, dict):
-        raise ApiError(422, "body must be an object", code="body_invalid")
+        raise ApiError(422, "body must be an object", code="invalid_request")
     instruction = body.get("instruction")
     if not isinstance(instruction, str) or not instruction.strip():
         raise ApiError(422, "instruction cannot be empty", code="edit_empty_instruction")
@@ -156,7 +156,7 @@ def post_edit(pid: str, request: Request, body: dict = Body(...)):
 def resolve_edit(pid: str, turn_id: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     if not isinstance(body, dict):
-        raise ApiError(422, "body must be an object", code="body_invalid")
+        raise ApiError(422, "body must be an object", code="invalid_request")
     action = body.get("action")
     if action not in ("overwrite", "discard"):
         raise ApiError(422, "action must be 'overwrite' or 'discard'", code="bad_action")

@@ -69,7 +69,7 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
         if not isinstance(want, str) or not want:
             raise ApiError(422, "style (string) is required", code="identity_style_required")
         if not isinstance(base, str) or not base:
-            raise ApiError(422, "base_rev (string) is required", code="base_rev_required", field="base_rev")
+            raise ApiError(422, "base_rev (string) is required", code="invalid_request", field="base_rev")
         p = project(pid)
         d = pdir(pid)
         with slock(pid):

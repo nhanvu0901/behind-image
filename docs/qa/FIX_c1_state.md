@@ -376,3 +376,150 @@ Not verified: no browser was opened, so no sentence was looked at on a real page
 refusal shows when its text is not the one I sampled (a refusal with a different detail than the raise site's) follows the rules above; the
 raise sites whose detail is built at run time (`model_unavailable`, `project_create_refused`, `merge_refused`, `split_refused`) were sampled with
 a realistic text, not the real one.
+
+## Join: the state and hints build joined with the operations, media, trust and follow-up builds (worker `c1state`, worktree `wt/join`)
+
+### One vocabulary of errors
+
+Where the two builds named one situation twice, one name was kept and applied on both sides and in both generated documents (`docs/AGENT_API.md`,
+`docs/OPS.md`):
+
+| Situation | Kept | Gone | Why |
+|---|---|---|---|
+| the project has no storyboard | `storyboard_not_found` | `document_missing` (operations) | says which document; every storyboard route answers it (app, frames, validate, the operations); the same family as `project_not_found`, `shot_not_found`, `batch_not_found` |
+| a field of the request is wrong or missing | `invalid_field` | `field_invalid`, `field_required` (mine) | the operations' name, used in their ~460 tests and the registry; a missing field is a wrong field with the problem "is required" |
+| the request body or envelope is not valid (not an object, `base_rev` missing, a body the framework refuses) | `invalid_request` | `request_invalid`, `body_invalid`, `base_rev_required` (mine) | the operations' name, same reason |
+| the wrong field(s) | `fields: [{path, problem, allowed?}]` | `field` (mine) | the form of the design document and of the operations. A raise site still names one field with `field="x"`; `hints.complete` turns it into `fields` (nothing else in the body changes), so the answer has only `fields` |
+| the revision to start again from | `current_rev` (both already used it) | nothing | `rev` stays only where it already was (an old key); the two builds agree |
+| a stale revision | `stale_revision` and `stale` both stay | nothing | `stale` is the page's own word (picks, agent, proposals: `errmsg.js` keys on it); both have the same sentence (`STALE_FIX` is the operations' sentence) and the same `current_rev` |
+
+**One source of the sentences.** The operations' table (`bti/ops/errors.py`) is read by `bti/editor/hints.py` (`HINTS[code] = {retry, fix}` for every
+code of `ERRORS`), and an operations error takes its `fix` and `retry` from the same table, so the two cannot drift. `tests/state/test_errors.py::
+test_the_operations_table_and_the_hints_are_one_source` checks both directions. For the codes the two builds shared, the entry of my table was removed
+and the operations' sentence was reworded where it was too specific to the batch routes, so that it is also right for the other routes that send the
+code: `invalid_request`, `invalid_field`, `unknown_asset`, `unknown_technique`, `unknown_source`, `video_not_main`, `stale_revision`,
+`validation_failed`, `project_not_found`, `storyboard_not_found`, `document_corrupt`, `not_found`, `source_rate_limited`, `source_unreachable`,
+`source_error`. Where the retry word differed, the operations' table won, except where it was wrong for what the sentence asks: `document_corrupt`
+(restore a copy, then call again) is `after_fix`, not `no`; `source_error` and `not_found` are `after_fix`. `docs/OPS.md` was regenerated (`python -m bti.ops.doc`).
+
+**New hints** (the 25 codes that were not in the table): the operations' own, `invalid_request`, `invalid_field`, `unknown_op`, `unknown_shot`,
+`unknown_overlay`, `unknown_beat`, `unknown_region`, `unknown_param`, `unknown_slot`, `wrong_technique_kind`, `technique_unavailable`,
+`slot_kind_mismatch`, `unknown_ref`, `duplicate_ref`, `shot_too_short`, `not_consecutive`, `span_mismatch`, `locked`, `out_of_scope`, `batch_not_found`,
+`import_failed`; and `claude_outdated`, `map_place_unknown`, `audio_decode_failed`, `image_too_small`. (`undo_conflict` and `undo_unavailable` already had one.)
+The scan (`code_literals`) now also reads the first argument of the operations' `OpError` (not the other `OpError` of `bti/script/ops.py`).
+
+### The state answer and the real operations
+
+* `picks.ops` and `storyboard.ops` are listed whenever their step is open (the route lookup at request time was removed: the routes are part of the app).
+  Their `body` is a **dry run** (`dry_run: true`) of the first example of the operations registry (`registry.defs(doc)`: set_main, set_technique), with
+  the current `base_rev` and `actor = "agent:<model of the project's agent>"`; `fill: ["ops"]` and `body_template` give the real call. Decision: the
+  registry's examples are written for the operations' fixture project, so a body that writes would be wrong on another project; a dry run writes nothing.
+  Tested on the fixture project (accepted: 200, `dry_run`, `batch: null`, the folder byte-identical) in `tests/state/test_ops_state.py`; on the other
+  fixtures of `tests/state` the route answers 200 or a typed error of the operations, which is stated in the test.
+* New actions `changes.list` (`GET /api/projects/{pid}/changes`, listed once the log holds a batch) and `changes.undo` (`POST .../changes/{batch}/undo`
+  for the **newest batch that can be undone now**: it has its copies, nothing undid it and nothing it changed was changed since: the same check the undo
+  route makes first, `bti.ops.undo.find_conflicts`; body `{base_rev, actor, note}`). Both carry the `step` of the document of the batch (`picks` or `edit`).
+  Tests: the first batch makes both appear; the undo works; the undone batch is not offered again; a page save of the same line makes the older batch the
+  target; no undo is offered when nothing can be undone.
+* Exact lists of the nine stages in `tests/state/test_state.py` now have `picks.ops` after `picks.put` and `storyboard.ops` after `storyboard.put`.
+
+### Refusals of the files I did not own, and the preview jobs (from my own "needs another worker")
+
+* `code=` (and `field=` where the sentence names one; `fields=` for the two of `t0` and `t1`) on the 34 refusals of `common.py` (`not_found`, `invalid_field`),
+  `frames.py` (`invalid_field`, `render_failed`, `project_not_found`), `audio.py` (`audio_decode_failed`), `media_adapter.py` (`source_unreachable`,
+  `source_error`, `not_found`, `image_too_small`, `unsupported_file_type`, `invalid_field` for a ValueError without a code) and `engine_stub.py`
+  (`style_not_found`, `unknown_technique`, `validation_failed`). Only keys were added; no status and no `detail` changed. The exception list of the scan
+  test is gone: **every `ApiError(` of `bti/editor` has a code** (a `**` expansion counts).
+* `bti/editor/jobs.py`: `JobManager.active(pid)` lists the project's queued or running preview jobs (`{id, state, progress, created}`); the state answer uses
+  it instead of the private table.
+
+### Vietnamese sentences for the operations' codes (`errmsg.js`, one block marked `worker join`)
+
+A new table `STAGE_CODES.ops` (read by `describeHttp` after the same loop that serves the other new codes; a stage table with the same code, such as the draft's
+`undo_conflict`, is untouched for the views that read it through `stageErrorText`). The same voice as the other sentences: short, no technical word, no
+exclamation mark, what could not be done and what to say or choose instead. As the page shows them:
+
+| code | sentence |
+|---|---|
+| `unknown_op` | Yêu cầu sửa này dùng một thao tác không có nên chưa làm. Hãy nói lại yêu cầu. |
+| `unknown_shot` | Không có cảnh này trong storyboard. Chọn lại cảnh cần sửa. |
+| `unknown_overlay` | Cảnh này không có lớp phủ đó. Chọn lại lớp phủ cần sửa. |
+| `unknown_beat` | Không có đoạn lời dẫn này. Chọn lại đoạn cần sửa. |
+| `unknown_asset` | Không có hình này trong dự án. Chọn hình khác, hoặc nhập hình trước. |
+| `unknown_region` | Hình này không có vùng đó. Thêm vùng trước, hoặc chọn vùng khác. |
+| `unknown_param` | Kỹ thuật này không có thông số đó. Chọn thông số khác. |
+| `unknown_slot` | Kỹ thuật này không có chỗ đặt hình đó. Chọn chỗ khác. |
+| `wrong_technique_kind` | Kỹ thuật này không dùng được ở chỗ này: cảnh và lớp phủ dùng hai loại kỹ thuật khác nhau. Chọn kỹ thuật khác. |
+| `technique_unavailable` | Kỹ thuật này chưa dựng được. Chọn kỹ thuật khác. |
+| `slot_kind_mismatch` | Hình này không hợp với chỗ đặt: chỗ đó cần loại khác (ảnh, video hoặc mặt nạ). Chọn hình khác. |
+| `unknown_ref` | Yêu cầu nhắc tới một thứ chưa được tạo ở bước trước. Hãy nói lại yêu cầu. |
+| `duplicate_ref` | Yêu cầu đặt hai thứ mới cùng một tên. Hãy nói lại yêu cầu. |
+| `shot_too_short` | Chỗ cắt này làm một cảnh ngắn hơn 0,2 giây. Chọn thời điểm khác. |
+| `not_consecutive` | Các cảnh được chọn không nằm kề nhau. Chọn các cảnh liền nhau. |
+| `span_mismatch` | Các cảnh mới không khớp với khoảng thời gian của các cảnh bị thay. Hãy nói lại yêu cầu. |
+| `locked` | Cảnh hoặc lớp phủ này đang khóa nên không sửa được. Mở khóa trước. |
+| `out_of_scope` | Yêu cầu này chạm tới phần ngoài phạm vi bạn đã chọn nên chưa làm. Chọn phạm vi rộng hơn, hoặc nói cụ thể hơn. |
+| `undo_conflict` | Không hoàn tác được vì có phần đã bị sửa tiếp sau lần sửa này. Hoàn tác các lần sửa sau trước, hoặc để nguyên phần đó. |
+| `undo_unavailable` | Không hoàn tác được lần sửa này vì bản lưu của nó đã bị xóa bớt. Hãy sửa lại bằng một yêu cầu mới. |
+| `batch_not_found` | Không tìm thấy lần sửa này trong lịch sử thay đổi. |
+| `import_failed` | Không nhập được hình này vào dự án. Chọn hình khác hoặc nguồn khác. |
+| `audio_decode_failed` | Không đọc được tệp âm thanh của dự án. Hãy làm lại bước "Giọng đọc". |
+| `image_too_small` | Ảnh này quá nhỏ để dùng. Chọn ảnh lớn hơn. |
+| `invalid_request` | Yêu cầu gửi lên máy chủ không đúng dạng. Hãy tải lại trang rồi thử lại. Nếu vẫn lỗi, báo cho người quản lý máy. |
+| `invalid_field` | Thông số xem thử không hợp lệ. |
+
+(`invalid_request` and `invalid_field` keep the older exact sentence when the server's text has one, for example "Thiếu mã phiên bản của bản đang sửa. Hãy tải lại trang.".
+`claude_outdated` and `map_place_unknown` already had a sentence from their workers. The operations' `stale_revision`, `validation_failed`, `unknown_technique`,
+`unknown_source`, `video_not_main`, `source_*` and `storyboard_not_found` already had one too.)
+
+`docs/APP_GUIDE.md` (Vietnamese, section 1): two lines saying where an agent finds `docs/AGENT_API.md` and `docs/OPS.md`. `docs/AGENT_API.md`: a new section 6 on the
+operations routes that points to `docs/OPS.md`, and the text of sections 2, 4 and 5 updated for the above. The refusal of the size and depth limits on the operations
+routes carries `code`, `fix` and `retry` through the middleware: tested on `picks/ops`, `storyboard/ops` and `changes/{batch}/undo` (`too_deep` and `too_large`).
+
+**Left for later, as asked:** the move of `engine_context` (and `default_slots`) out of `bti/editor/app.py` into a neutral module. `bti.ops.facts` still imports it from the
+editor package when it is called.
+
+### Existing test assertions changed
+
+* `tests/ops/test_batch.py`: `document_missing` became `storyboard_not_found` (the name kept); the damaged-file test expects `retry == "after_fix"` for
+  `document_corrupt` (was `"no"`).
+* `tests/editor/test_media_adapter_limit.py` (two assertions on the added code): the answer of a 503 or 502 or 504 without a wait now has `code: "source_unreachable"`
+  (`e.extra` was `{retryable, retry_after}`), and a 403 answer has `code: "source_error"` (`e.extra` was `{}`); "not a rate limit" is now stated as `!= "source_rate_limited"`.
+* `tests/ops/conftest.py` (fixture, not an assertion): the fake Commons source also serves the rendition named by its API answer, the same one-line change the media worker made in
+  `tests/picks/test_api.py`; this was the cause of the six red tests of the `import` operation.
+* My own tests of the earlier build were updated for the renames (`tests/state/test_errors.py`, `test_state.py`); new: `tests/state/test_ops_state.py`.
+
+### Files touched
+
+`bti/editor/`: `app.py`, `audio.py`, `common.py`, `draft_api.py`, `engine_stub.py`, `frames.py`, `hints.py`, `identity_api.py`, `jobs.py`, `library_api.py`, `media_adapter.py`,
+`ops_api.py`, `picks_api.py`, `script_api.py`, `state_api.py`, `static/js/errmsg.js`, `voice_api.py`; `bti/ops/errors.py`; `docs/AGENT_API.md`, `docs/APP_GUIDE.md`, `docs/OPS.md`,
+`docs/qa/FIX_c1_state.md`; `tests/editor/test_media_adapter_limit.py`, `tests/ops/conftest.py`, `tests/ops/test_batch.py`, `tests/state/test_errors.py`, `tests/state/test_state.py`,
+`tests/state/test_ops_state.py` (new).
+
+### Test summary lines (snapshot `join` on the server, one folder per run, no `-m slow`; as printed)
+
+```
+tests/state       226 passed, 1 warning in 146.11s (0:02:26)
+tests/ops         468 passed, 1 warning in 98.17s (0:01:38)
+tests/editor      481 passed, 1 warning in 233.17s (0:03:53)
+tests/picks       92 passed, 1 warning in 14.92s
+tests/draft       341 passed, 1 warning in 142.48s (0:02:22)
+tests/script      262 passed, 7 skipped in 33.03s
+tests/media       363 passed in 2.77s
+tests/library     1 failed, 162 passed, 1 warning in 5.28s     (the known failure: tests/library/test_library.py::test_works_json_shape on the stored library)
+node --test tests/editor_frontend/*.test.mjs tests/picks/picks_logic.test.mjs tests/picks/sourcelimit.test.mjs
+  ℹ tests 327   ℹ pass 326   ℹ fail 0   ℹ cancelled 0   ℹ skipped 1   ℹ todo 0
+```
+
+The one skipped Node test is `tests/editor_frontend/sbissues.test.mjs:135` (it needs `.venv/bin/python`, which the worktree does not have). `tests/editor` was first run with five
+failures of `test_media_adapter_limit.py` (the two assertions above); the lines shown are from the run after the change. `tests/ops` ran before the last edit of `tests/state/test_errors.py` and the
+`tests/editor` assertion change; none of the three touches code that `tests/ops` reads.
+
+### What I could not verify
+
+* No browser: the new sentences were checked with `describeHttp` in Node (and by the Node test of the tables), not on a page. The instruction box that will show the operations' refusals
+  does not exist yet.
+* The operations' example bodies are accepted on the operations' fixture project only; on a real project the dry run is likely to be refused with `unknown_*` (stated in the document).
+* `changes.undo` predicts the undo with the same conflict check the route makes first; the route can still refuse it for a reason it finds only when it applies the undo (a new error the restored
+  document would carry, `undo_conflict` with `issues`). Not exercised.
+* Nothing was run against the owner's app on port 8560 or the real sources; the real engine and the fakes of the operations tests were used. A real voice, draft, export or model call was never started.

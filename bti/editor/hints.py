@@ -5,7 +5,8 @@ Every error body of the API carries, next to its `detail` (a sentence for a pers
     fix     one English imperative sentence an agent can act on; it names the call to make when there is one
     retry   "no" (the same call can never work), "after_fix" (change the request or the project first) or "later" (the same
             call may work in a moment: something is busy or a service is not answering)
-and, where they apply, `field` (the request field that is wrong) and `current_rev` (the revision to start from again).
+and, where they apply, `fields` (the request fields that are wrong: `[{path, problem, allowed?}]`, the form the operations use)
+and `current_rev` (the revision to start from again).
 
 `complete(body, status)` adds what is missing and never changes a key that is there (an error that carries its own `fix` keeps
 it). `app.py` calls it in every exception handler; `ErrorHintMiddleware` is the net under the handlers: it completes the error
@@ -21,6 +22,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from bti.ops.errors import ERRORS as OPS_ERRORS        # the operations' table: the one source of the codes they share with the rest of the API
+
 RETRY = ("no", "after_fix", "later")
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DOC_PATH = REPO_ROOT / "docs" / "AGENT_API.md"
@@ -28,8 +31,7 @@ DOC_PATH = REPO_ROOT / "docs" / "AGENT_API.md"
 # the codes whose body may carry `rev` meaning "the revision to start again from": `complete` copies it to `current_rev`
 STALE_CODES = frozenset({"stale", "stale_revision"})
 
-STALE_FIX = ("GET the document again, apply your change to the revision in `current_rev` (the answer of that GET carries `rev`), "
-             "then send the call again with it as base_rev.")
+STALE_FIX = OPS_ERRORS["stale_revision"][2]          # `stale` (picks, agent, proposals) and `stale_revision` say the same sentence
 BUSY_FIX = ("Wait until the running job is finished (GET /api/projects/{pid}/longjobs lists it) or cancel it, then call again.")
 UPLOAD_FIX = "Send a file of a supported kind (jpg, jpeg, png, webp, mp4, webm, mov or m4v) of at most 80 MB."
 
@@ -44,7 +46,6 @@ HINTS: dict[str, dict] = {
     # --- generic: the codes an error gets when nothing more specific is known (by status), and the shared ones
     "bad_request": _t("after_fix", "Read `detail`, correct the request and send it again."),
     "forbidden": _t("no", "This call is not allowed on this project; read `detail` for the rule."),
-    "not_found": _t("no", "Check the ids and the path in the call: what it names does not exist. List what exists with the matching GET route."),
     "route_not_found": _t("no", "There is no such route: check the path and the method against docs/AGENT_API.md or GET /openapi.json."),
     "method_not_allowed": _t("no", "Use another HTTP method for this path (the Allow header of the answer lists them)."),
     "conflict": _t("after_fix", "Read `detail`: the project is in a state that refuses this call. GET /api/projects/{pid}/state shows what to do first."),
@@ -52,12 +53,6 @@ HINTS: dict[str, dict] = {
     "too_deep": _t("after_fix", "Flatten the JSON body to at most 40 levels of nesting."),
     "unsupported_media": _t("after_fix", "Send a file this route can read, or leave the file out."),
     "range_not_satisfiable": _t("after_fix", "Ask for a byte range inside the file, or send no Range header."),
-    "field_invalid": _t("after_fix", "Correct the request field that `field` (or `detail`) names, as `detail` says, and send the call again."),
-    "field_required": _t("after_fix", "Add the field that `field` names to the JSON body and send the call again."),
-    "request_invalid": _t("after_fix", "Correct every request field listed in `fields` (their `path` and `problem`) and send the call again."),
-    "body_invalid": _t("after_fix", "Send a JSON object as the body of this call."),
-    "base_rev_required": _t("after_fix", "Add `base_rev` (the `rev` of the document you read) to the JSON body and send the call again."),
-    "source_error": _t("later", "The picture or video source failed; call again in a minute, or use another source."),
     "source_unavailable": _t("later", "The service this call needs is not answering; call again in a minute."),
     "source_timeout": _t("later", "The service did not answer in time; call again in a minute."),
     "internal_error": _t("no", "This is a bug of the server, not of your input: do not repeat the call; report `detail`."),
@@ -65,10 +60,8 @@ HINTS: dict[str, dict] = {
 
     # --- revisions
     "stale": _t("after_fix", STALE_FIX),
-    "stale_revision": _t("after_fix", STALE_FIX),
 
     # --- projects
-    "project_not_found": _t("no", "Use the id of a project that exists: GET /api/projects lists them."),
     "project_busy": _t("later", "A save of this project is in progress: call again in a moment."),
     "project_file_damaged": _t("after_fix", "Repair or remove the damaged project.json by hand, then call again."),
     "project_protected": _t("no", "This project is protected: do not delete it."),
@@ -78,20 +71,17 @@ HINTS: dict[str, dict] = {
     "longjob_running": _t("later", "Cancel the long job (POST /api/longjobs/{job_id}/cancel) or wait until it is finished, then call again."),
     "script_job_running": _t("later", "Cancel the model job (POST /api/jobs/{job_id}/cancel) or wait until it is finished, then call again."),
     "preview_running": _t("later", "Wait until the preview is finished (GET /api/jobs/{job_id}), then call again."),
-    "storyboard_not_found": _t("after_fix", "This project has no storyboard yet: run the draft (POST /api/projects/{pid}/draft/start), then apply its proposal."),
     "storyboard_corrupt": _t("after_fix", "Call POST /api/projects/{pid}/storyboard/restore (no body) to bring back the newest good copy from history/, then call again."),
     "storyboard_unusable": _t("after_fix", "Repair storyboard.json: POST /api/projects/{pid}/storyboard/restore brings back the newest good copy from history/."),
     "timing_unusable": _t("after_fix", "Make the voice again with POST /api/projects/{pid}/voice/generate: timing.json is missing or damaged."),
     "style_unusable": _t("after_fix", "The style named by the storyboard is missing or damaged: set `style` in the storyboard to a style that exists under style/."),
     "data_unusable": _t("after_fix", "A data file of the project is missing or damaged: read `detail` for its name and repair it."),
-    "document_corrupt": _t("after_fix", "The project file named in `detail` cannot be read: restore it from a backup or history, or remove it, then call again."),
     "library_data_corrupt": _t("after_fix", "A file of the book library is damaged: repair it or rebuild the library (python -m bti.library build), then call again."),
     "nothing_to_restore": _t("no", "Leave the storyboard as it is: storyboard.json is readable, there is nothing to restore."),
     "no_history_copy": _t("no", "There is no good copy in history/: the storyboard cannot be restored; make a new draft with POST /api/projects/{pid}/draft/start."),
     "history_file_not_found": _t("after_fix", "Name a file that exists in the project's history/ folder, or leave `file` out to use the newest good one."),
     "history_file_unreadable": _t("after_fix", "The named history file is not a storyboard: name another file, or leave `file` out."),
     "save_refused": _t("after_fix", "The engine refused the document: read `issues`, fix the values they name, then send it again."),
-    "validation_failed": _t("after_fix", "Fix every issue with level `error` in `issues`, then send the storyboard again."),
     "storyboard_has_errors": _t("after_fix", "Fix every issue with level `error` in `issues` (GET /api/projects/{pid} lists them), then call again."),
     "storyboard_incomplete": _t("after_fix", "Fill in the items named in the answer (their technique needs a picture, a clip or a mask), then approve again."),
     "undrawable": _t("after_fix", "Change the shots named in `issues` so the engine can draw them, then approve again."),
@@ -99,7 +89,6 @@ HINTS: dict[str, dict] = {
     "shot_not_found": _t("no", "Use a shot id that exists in the storyboard (GET /api/projects/{pid})."),
     "no_audio_file": _t("after_fix", "This project has no audio file yet: make the voice first (POST /api/projects/{pid}/voice/generate)."),
     "style_not_found": _t("no", "Use a style id that exists under style/ (the storyboard names it in `style`)."),
-    "unknown_technique": _t("after_fix", "Use a technique id that exists: GET /api/styles/{style} lists them."),
     "preview_too_long": _t("after_fix", "Ask for a shorter preview: t1 - t0 must stay within the limit in `detail`."),
     "preview_too_many_frames": _t("after_fix", "Ask for fewer frames: shorten the range (t1 - t0) or lower `fps`."),
     "job_not_found": _t("no", "Use the job id the start call answered with; after a server restart only finished jobs are still known."),
@@ -167,9 +156,6 @@ HINTS: dict[str, dict] = {
     # --- picks step
     "picks_error": _t("after_fix", "Read `detail`, correct the request or the picks, then call again."),
     "invalid": _t("after_fix", "Correct the request as `detail` says and send it again."),
-    "unknown_asset": _t("after_fix", "Use an asset key that exists in the picks (GET /api/projects/{pid}/picks lists them), or import the picture first."),
-    "unknown_source": _t("after_fix", "Use one of the picture sources the picks page lists (commons, met, pexels, pixabay, osm)."),
-    "video_not_main": _t("after_fix", "Choose a picture, not a video, as the main painting."),
     "query_required": _t("after_fix", "Send `query` (words to search for) or a `beat`."),
     "confirm_required": _t("after_fix", "This call is paid: send confirm_paid: true only when the owner agreed to the cost."),
     "youcom_key_missing": _t("no", "The You.com key is not set on this machine: use the free sources, or paste a YouTube link."),
@@ -178,8 +164,6 @@ HINTS: dict[str, dict] = {
     "video_fetch_failed": _t("later", "The video could not be fetched: call again in a minute, or use another link."),
     "video_timeout": _t("later", "The video download took too long: call again, or choose a shorter range."),
     "tool_missing": _t("no", "A tool the clip needs (yt-dlp or ffmpeg) is not installed on this machine."),
-    "source_rate_limited": _t("later", "The source asked to slow down: call again after `retry_after` seconds (a minute when it is null)."),
-    "source_unreachable": _t("later", "The picture source is busy or not answering: call again in a minute."),
     "no_picks": _t("after_fix", "There are no picks yet: add the main painting (POST /api/projects/{pid}/picks/import with as_main) first."),
     "picks_have_errors": _t("after_fix", "Fix the errors listed in `issues` (the main painting, missing files, unknown assets or regions), then approve again."),
     "region_name": _t("after_fix", "Use a region name made of letters, digits, - and _ (see `region` for the bad one)."),
@@ -282,6 +266,14 @@ HINTS: dict[str, dict] = {
     "invalid_model": _t("after_fix", "Send each role's model as a non-empty model id string."),
     "unknown_role": _t("after_fix", "Use only role names listed by GET /api/settings/models."),
 
+    # --- files and pictures
+    "audio_decode_failed": _t("after_fix", "The audio file cannot be decoded: make the voice again (POST /api/projects/{pid}/voice/generate); if it repeats the file is damaged."),
+    "image_too_small": _t("after_fix", "Choose a larger picture: its short side is below the smallest size the app stores."),
+
+    # --- other runners and sources
+    "claude_outdated": _t("after_fix", "Run `claude update` on the server (the owner does this once), then call again."),
+    "map_place_unknown": _t("after_fix", "Search for the place again (POST /api/projects/{pid}/picks/search with source osm) and import the result it gives."),
+
     # --- long jobs
     "longjob_not_found": _t("no", "Use the job id the start call answered with (GET /api/projects/{pid}/longjobs lists the jobs of a project)."),
     "longjob_bad_kind": _t("after_fix", "Use a job kind such as voice, draft, export or picks in `kind`, or leave it out."),
@@ -308,11 +300,16 @@ HINTS: dict[str, dict] = {
 }
 
 
+# One source for the codes the operations routes share with the rest of the API: their table (bti/ops/errors.py) wins, and an
+# operations error carries exactly this sentence (it takes it from the same table), so the two cannot drift. tests/state checks it.
+for _code, (_status, _retry, _fix, _meaning) in OPS_ERRORS.items():
+    HINTS[_code] = _t(_retry, _fix)
+
 # ------------------------------------------------------------------------------------------------- codes made by the handlers
 def fallback_code(status: int) -> str:
     """The code of an error that carries none, by status (the raise sites outside this worker's files rely on it)."""
     return {400: "bad_request", 401: "forbidden", 403: "forbidden", 404: "not_found", 405: "method_not_allowed", 409: "conflict",
-            410: "not_found", 413: "too_large", 415: "unsupported_media", 416: "range_not_satisfiable", 422: "field_invalid",
+            410: "not_found", 413: "too_large", 415: "unsupported_media", 416: "range_not_satisfiable", 422: "invalid_field",
             500: "internal_error", 502: "source_error", 503: "source_unavailable", 504: "source_timeout"}.get(status, "bad_request" if status < 500 else "internal_error")
 
 
@@ -362,7 +359,7 @@ def infer_field(detail: Any) -> str | None:
 
 
 def complete(body: dict, status: int, pid: str | None = None) -> dict:
-    """The error body with `code`, `fix` and `retry` (and `field`, `current_rev` where they apply). A key that is already there is
+    """The error body with `code`, `fix` and `retry` (and `fields`, `current_rev` where they apply). A key that is already there is
     never changed: an error that carries its own `fix` keeps it."""
     out = dict(body)
     code = out.get("code")
@@ -374,10 +371,13 @@ def complete(body: dict, status: int, pid: str | None = None) -> dict:
         out["retry"] = h["retry"]
     if code in STALE_CODES and isinstance(out.get("rev"), str):
         out.setdefault("current_rev", out["rev"])
-    if status in (400, 422) and "field" not in out and "fields" not in out:
+    if "field" in out:                                  # a raise site names ONE field; the body says it the way the operations do
+        path = out.pop("field")
+        out.setdefault("fields", [{"path": str(path), "problem": str(out.get("detail", ""))[:200]}])
+    elif status in (400, 422) and "fields" not in out:
         f = infer_field(out.get("detail"))
         if f:
-            out["field"] = f
+            out["fields"] = [{"path": f, "problem": str(out.get("detail", ""))[:200]}]
     return out
 
 

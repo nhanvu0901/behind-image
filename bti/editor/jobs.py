@@ -37,6 +37,13 @@ class JobManager:
     def running(self, pid: str) -> bool:
         return any(j["pid"] == pid and j["state"] in ("queued", "running") for j in list(self._jobs.values()))
 
+    def active(self, pid: str) -> list[dict]:
+        """The preview jobs of project `pid` that are queued or running, oldest first: `{id, state, progress, created}` (copies)."""
+        with self._lock:
+            rows = [j for j in self._jobs.values() if j["pid"] == pid and j["state"] in ("queued", "running")]
+        return [{"id": j["id"], "state": j["state"], "progress": j["progress"], "created": j["created"]}
+                for j in sorted(rows, key=lambda j: j["created"])]
+
     def _persist(self, job: dict) -> None:
         if self.projects_root is not None and (self.projects_root / job["pid"]).is_dir():
             write_record(job_file(self.projects_root, job["pid"], job["id"]), self._public(job))

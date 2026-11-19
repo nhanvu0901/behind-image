@@ -68,10 +68,10 @@ def _str(body, key: str, required: bool = False, max_len: int = 400) -> str:
     v = body.get(key) if isinstance(body, dict) else None
     if v is None:
         if required:
-            raise ApiError(422, f"{key} (string) is required", code="field_required", field=key)
+            raise ApiError(422, f"{key} (string) is required", code="invalid_field", field=key)
         return ""
     if not isinstance(v, str) or len(v) > max_len:
-        raise ApiError(422, f"{key} must be a short string", code="field_invalid", field=key)
+        raise ApiError(422, f"{key} must be a short string", code="invalid_field", field=key)
     return v
 
 
@@ -106,16 +106,16 @@ def search_picks(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     srcs = body.get("sources")
     if srcs is not None and not (isinstance(srcs, list) and all(isinstance(s, str) for s in srcs)):
-        raise ApiError(422, "sources must be a list of strings", code="field_invalid", field="sources")
+        raise ApiError(422, "sources must be a list of strings", code="invalid_field", field="sources")
     beat = body.get("beat")
     if beat is not None and not isinstance(beat, str):
-        raise ApiError(422, "beat must be a string", code="field_invalid", field="beat")
+        raise ApiError(422, "beat must be a string", code="invalid_field", field="beat")
     limit = body.get("limit", 18)
     if isinstance(limit, bool) or not isinstance(limit, int):
-        raise ApiError(422, "limit must be an integer", code="field_invalid", field="limit")
+        raise ApiError(422, "limit must be an integer", code="invalid_field", field="limit")
     kind = body.get("kind")
     if kind is not None and kind not in ("image", "video", "all"):
-        raise ApiError(422, "kind must be 'image', 'video' or 'all'", code="field_invalid", field="kind")
+        raise ApiError(422, "kind must be 'image', 'video' or 'all'", code="invalid_field", field="kind")
     return service.search(d, _str(body, "query"), beat, srcs, limit, kind=kind or "image")
 
 
@@ -185,10 +185,10 @@ def video_search_picks(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     beat = body.get("beat")
     if beat is not None and not isinstance(beat, str):
-        raise ApiError(422, "beat must be a string", code="field_invalid", field="beat")
+        raise ApiError(422, "beat must be a string", code="invalid_field", field="beat")
     limit = body.get("limit", 6)
     if isinstance(limit, bool) or not isinstance(limit, int):
-        raise ApiError(422, "limit must be an integer", code="field_invalid", field="limit")
+        raise ApiError(422, "limit must be an integer", code="invalid_field", field="limit")
     search_fn = getattr(request.app.state, "video_search_fn", None)
     metadata_fn = getattr(request.app.state, "video_metadata_fn", None)
     return service.video_search(
@@ -210,7 +210,7 @@ def import_clip_picks(pid: str, request: Request, body: dict = Body(...)):
     url = _str(body, "url", True, 600)
     beat_id = body.get("beat_id")
     if beat_id is not None and not isinstance(beat_id, str):
-        raise ApiError(422, "beat_id must be a string", code="field_invalid", field="beat_id")
+        raise ApiError(422, "beat_id must be a string", code="invalid_field", field="beat_id")
     role = _str(body, "role", max_len=40) or "video"
     clip_imp = getattr(request.app.state, "clip_importer", None)
     out = service.start_clip_job(
@@ -243,7 +243,7 @@ def put_regions(pid: str, key: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     base = body.get("base_rev")
     if base is not None and not isinstance(base, str):
-        raise ApiError(422, "base_rev must be a string", code="field_invalid", field="base_rev")
+        raise ApiError(422, "base_rev must be a string", code="invalid_field", field="base_rev")
     service.set_regions(d, key, body.get("regions"), base)
     return _full(request, pid, d)
 
