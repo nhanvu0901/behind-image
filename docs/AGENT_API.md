@@ -134,9 +134,10 @@ loop:
 | `picks.import_clip` | picks | `POST /api/projects/{pid}/picks/import-clip` |  | yes |  | machine_time: about 1 minute | Once the picks step is open. Ready unless a picks job runs. The caller supplies the link and the range (`fill`). |
 | `picks.suggest` | picks | `POST /api/projects/{pid}/picks/suggest` |  | yes |  | paid: You.com calls, charged per beat (auto_ok false) | Once the picks step is open. Paid: `auto_ok` is false, the owner must agree. Needs the approved narration and suggestions switched on. |
 | `picks.put` | picks | `PUT /api/projects/{pid}/picks` |  |  |  |  | Once the picks step is open. The caller supplies the picks document (`fill`). |
+| `picks.auto` | picks | `POST /api/projects/{pid}/picks/auto` |  | yes | picks | model: about 20 minutes | Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true. It never approves and never calls the paid suggestion service. Advances while no line has pictures yet. |
 | `picks.approve` | picks | `POST /api/projects/{pid}/picks/approve` | yes |  |  |  | While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances. |
 | `picks.ops` | picks | `POST /api/projects/{pid}/picks/ops` |  |  |  |  | Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
-| `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions or a clip) of the project runs. |
+| `picks.cancel` | picks | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a picks job (suggestions, a clip or the agent's choice of pictures) of the project runs. |
 | `draft.start` | edit | `POST /api/projects/{pid}/draft/start` |  | yes | draft | model: about 20 minutes | Once step 5 is open. Needs the voice and the approved picks, no draft job running and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. |
 | `proposal.apply` | edit | `POST /api/projects/{pid}/proposals/{prop_id}/apply` |  |  |  |  | While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date. |
 | `storyboard.restore` | edit | `POST /api/projects/{pid}/storyboard/restore` |  |  |  |  | Only when storyboard.json is unreadable. Ready when history/ has a good copy. It is the repair: listed first. |
@@ -365,11 +366,17 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `page_not_found` | no | Ask for a page that exists in the book. |
 | `page_not_in_work` | no | Ask for a page inside the page range of this work. |
 | `part_missing` | later | A rendered part is missing: call POST /api/projects/{pid}/export/start again; finished parts are kept. |
+| `picks_approved` | after_fix | The picks are approved: send redo true to let the agent choose again (the approval is dropped and the picks must be approved again). |
+| `picks_auto_limit` | later | The agent used up the limits of one session (time and steps): call POST /api/projects/{pid}/picks/auto again; the parts that finished are kept. |
+| `picks_auto_no_output` | later | The agent wrote no usable file even after one repair message: call POST /api/projects/{pid}/picks/auto again, or choose the other agent. |
+| `picks_auto_stale` | after_fix | The narration or the main painting changed while the agent worked: call POST /api/projects/{pid}/picks/auto again. |
+| `picks_auto_tampered` | after_fix | The agent changed files outside its work folder and its result was dropped: check the project, then call POST /api/projects/{pid}/picks/auto again. |
 | `picks_corrupt` | after_fix | Save the picks again (PUT /api/projects/{pid}/picks) or repair picks.json: it cannot be read. |
 | `picks_error` | after_fix | Read `detail`, correct the request or the picks, then call again. |
 | `picks_have_errors` | after_fix | Fix the errors listed in `issues` (the main painting, missing files, unknown assets or regions), then approve again. |
 | `picks_missing` | after_fix | Choose the pictures first (see GET /api/projects/{pid}/picks): picks.json is missing. |
 | `picks_no_main` | after_fix | Choose the main painting (POST /api/projects/{pid}/picks/import with as_main), then approve the picks. |
+| `picks_nothing_to_do` | no | Every line already has pictures: send redo true to choose them again, or name the lines in `beats`. |
 | `picks_shape` | after_fix | Save the picks again (PUT /api/projects/{pid}/picks): picks.json has the wrong shape (see `detail`). |
 | `plan_failed` | after_fix | The export could not be planned: GET /api/projects/{pid} shows the storyboard's issues; fix them first. |
 | `preview_running` | later | Wait until the preview is finished (GET /api/jobs/{job_id}), then call again. |
@@ -496,3 +503,24 @@ example, the change log, undo and the table of their error codes. The state answ
 `changes.undo` (section 2). Their refusals have the same error body as every other (section 4): `code`, `detail`, `fix`, `retry`, and `fields` with the
 `path` of every wrong field (`ops[1].params.region`), `op_index`, `current_rev`, `issues` or `conflicts` where they apply. A request refused by the size
 or depth limit before it reaches a route (`too_large`, `too_deep`) has them too.
+
+## 7. The agent that chooses the pictures (`picks.auto`)
+
+`POST /api/projects/{pid}/picks/auto` starts one long job (kind `picks`, follow it at `GET /api/longjobs/{job_id}`, cancel it with `POST /api/longjobs/{job_id}/cancel`) that
+fills step 4 by itself. Body, all optional: `{"beats": [ids] | null, "redo": false, "base_rev": "<rev of GET .../picks>", "model": "<model id, tests only>"}`. It works on the
+lines that have no pictures (a line that already has pictures, or that is skipped, is left alone) unless `redo` is true; named `beats` limit it to those lines. Answer:
+`{"job_id", "model", "agent", "lines"}`.
+
+Four parts, each a part of the job (`parts[].key`): `plan` (the agent plans what each line needs and proposes boxes on the main painting), `search` (code: the free picture
+sources, never the paid suggestion service), `choose` (the agent looks at the candidates and at each box) and `write` (code: the typed operations, in batches whose actor is
+`agent:<model id>` and whose note says what the batch is, so that `GET .../changes` lists them and `POST .../changes/{batch}/undo` takes them back). The job never approves.
+Starting it again resumes a run that did not finish. Refusals (all with `code`, `fix`, `retry`): `narration_not_approved`, `picks_no_main`, `main_asset_unreadable`, `picks_approved`
+(approved picks need `redo`: the approval is dropped when the agent changes anything), `picks_nothing_to_do` (every line already has pictures), `not_found` (a line that is not in
+the narration), `stale` (`base_rev`), `busy` (a picks job runs), `agy_missing`, `claude_missing`, `claude_auth`. A failed job carries `error_code`: `picks_auto_no_output`,
+`picks_auto_limit`, `picks_auto_tampered`, `picks_auto_stale`, or the runner's own (`agy_rate_limit` and `claude_rate_limit` say when the quota opens again in `meta.retry_at`).
+
+`GET /api/projects/{pid}/picks/auto` answers `{"running": job | null, "last": {"finished", "job_id", "result", "model", "agent"} | null, "reasons": {beat: reason}, "agent", "limits"}`.
+The job's `result` (also `last.result`): `lines_total`, `lines_done`, `lines_with_pictures`, `lines_kept` (lines that need nothing new), `lines_without` (`[{beat, no, code, why}]`: lines
+nothing was found for, left as they were), `missing` (every wanted picture that was not found, with `why`), `pictures_imported`, `regions_made`, `regions_dropped`, `clips`, `batches`,
+`lines_by_others` (lines the owner filled meanwhile), `stopped` (`"time"` when the write part ran out of time), `sentence` (`Agent đã chọn hình cho 25/28 đoạn. 3 đoạn chưa có hình phù hợp.`),
+`limits`. Each line the agent wrote carries its reason as the line's note (`beats.<id>.note`); `reasons` lists them. The same function is `bti.picks.auto.escalate(pid, pdir, beat_ids, note=...)`.

@@ -106,7 +106,11 @@ def deny_rules(windows: bool | None = None) -> list[str]:
     return rules
 
 
-def build_command(claude: str, model_id: str | None = None, *, windows: bool | None = None) -> list[str]:
+SUPPORTS_ALLOW = True      # `build_command` and `run` take `allow=`: another work-folder agent (the automatic picks job) names its own helper commands
+
+
+def build_command(claude: str, model_id: str | None = None, *, windows: bool | None = None, allow: list[str] | None = None) -> list[str]:
+    """`allow`: the permission rules of the run (default: those of the storyboard draft's three helper commands, `allow_rules`)."""
     from bti.settings import model_for
     parsed = cc.parse_model_id(model_id or model_for("draft"))
     if parsed is None:
@@ -115,7 +119,7 @@ def build_command(claude: str, model_id: str | None = None, *, windows: bool | N
     cmd = [claude, "-p", "--model", model, "--effort", effort, "--input-format", "stream-json", "--output-format", "stream-json",
            "--verbose", "--tools", TOOLS]
     cmd += cc.isolation_args()
-    cmd += ["--permission-mode", "dontAsk", "--allowedTools"] + allow_rules(windows)
+    cmd += ["--permission-mode", "dontAsk", "--allowedTools"] + (allow_rules(windows) if allow is None else list(allow))
     deny = deny_rules(windows)
     if cc.is_shim(claude):          # a rule with a quote would be re-read by cmd.exe (see cc.arg_ok_for): that one rule is left out, the others stay
         deny = [d for d in deny if cc.arg_ok_for(claude, d)]
@@ -180,10 +184,12 @@ def _compact(line: str) -> str:
 
 def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max_repairs: int = 2, check=None, cancel=None,
         on_progress=None, transcript_path: Path | None = None, guard=None, prompt: str = PROMPT, python: str | None = None,
-        claude: str | None = None, out_dir_name: str = "out", runner=None, conversation_id: str | None = None) -> AgyResult:
+        claude: str | None = None, out_dir_name: str = "out", runner=None, conversation_id: str | None = None,
+        allow: list[str] | None = None) -> AgyResult:
     """Run the agent. `runner` is `ctx.run_process` of the long job (cancel, the part limit and the process-tree kill are then the
     job's); without it a `DefaultRunner` is used. Raises DraftError before the program starts (not installed, too old, not a Claude
-    id, another run in progress); once it has started, everything is reported in the returned AgyResult (never raised)."""
+    id, another run in progress); once it has started, everything is reported in the returned AgyResult (never raised).
+    `allow`: the permission rules naming the helper commands of the briefing (default: the storyboard draft's)."""
     import types
     if os.environ.get("BTI_NO_REAL_MODELS") == "1":
         raise DraftError("real_models_off", "real models are disabled (BTI_NO_REAL_MODELS=1)")
@@ -192,7 +198,7 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
         raise DraftError("claude_missing", "Claude Code (the `claude` command) is not installed on this machine")
     env = clean_env(python)
     check_cli(claude, env)
-    cmd = build_command(claude, model)
+    cmd = build_command(claude, model, allow=allow)
     if not all(cc.arg_ok_for(claude, a) for a in cmd):
         raise DraftError("claude_config", "the `claude` found here is a Windows .cmd shim and an option of the run cannot pass through cmd.exe; install the native claude.exe")
     if not agy.LOCK.acquire(blocking=False):             # one agent run at a time, whichever runner

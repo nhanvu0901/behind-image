@@ -262,3 +262,41 @@ def suggest_picks(pid: str, request: Request, body: dict = Body(...)):
 def get_suggestions(pid: str, request: Request):
     d = _pdir(request, pid)
     return suggest.load_suggestions(d)
+
+
+# ------------------------------------------------------------------ c3picks: the agent chooses the pictures ("Để agent chọn hình")
+@router.post("/projects/{pid}/picks/auto")
+@guard
+def auto_picks(pid: str, request: Request, body: dict = Body(None)):
+    """A long job (kind `picks`, follow it at GET /api/longjobs/{job_id}): plan, search, choose, write. Body (all optional):
+    `{"beats": [ids] | null, "redo": false, "base_rev": "<rev of GET .../picks>", "model": "<model id, tests only>"}`. Never approves, never
+    calls the paid suggestion service. Starting it again resumes a run that did not finish (bti/picks/auto/job.py)."""
+    from bti.picks import auto
+    d = _pdir(request, pid)
+    body = body if body is not None else {}
+    if not isinstance(body, dict):
+        raise ApiError(422, "the body must be an object", code="invalid_request")
+    beats, redo, base_rev, model = body.get("beats"), body.get("redo", False), body.get("base_rev"), body.get("model")
+    if beats is not None and not (isinstance(beats, list) and all(isinstance(b, str) for b in beats) and 0 < len(beats) <= 400):
+        raise ApiError(422, "beats must be null or a list of narration line ids", code="invalid_field", field="beats")
+    if not isinstance(redo, bool):
+        raise ApiError(422, "redo must be true or false", code="invalid_field", field="redo")
+    if base_rev is not None and not isinstance(base_rev, str):
+        raise ApiError(422, "base_rev must be a string", code="invalid_field", field="base_rev")
+    if model is not None and not isinstance(model, str):
+        raise ApiError(422, "model must be text", code="bad_model")
+    try:
+        rec = auto.start(pid, d, beats=beats, redo=redo, base_rev=base_rev, model=model or None)
+    except auto.AutoError as e:
+        raise ApiError(e.status, e.message, code=e.code, **e.extra)
+    meta = rec.get("meta") or {}
+    return {"job_id": rec["id"], "model": meta.get("model"), "agent": meta.get("agent"), "lines": len(meta.get("beats") or [])}
+
+
+@router.get("/projects/{pid}/picks/auto")
+@guard
+def get_auto_picks(pid: str, request: Request):
+    """The running automatic job, the last result, the reasons the agent gave per line and the agent that would run."""
+    from bti.picks import auto
+    return auto.overview(pid, _pdir(request, pid))
+

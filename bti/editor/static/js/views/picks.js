@@ -12,10 +12,11 @@ import { h, kids, toast, errorToast, setStatus, modal, ask, confirmDialog, debou
 import { makeSpaces } from '../coords.js';
 import { createQueue } from '../queue.js';
 import { describeError, jobErrorText, sourceLimitText, STAGE_CODES } from '../errmsg.js';
-import { PICKS_LABELS, SOURCE_LABELS } from '../labels.js';
+import { PICKS_LABELS, SOURCE_LABELS, PICKS_AUTO_LABELS } from '../labels.js';
 import { projectHash } from '../router.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
 import * as L from './picks_logic.js';
+import { mountPicksAuto } from './picks_auto.js';                                // c3picks: "Để agent chọn hình"
 
 // ------------------------------------------------------------------ words
 const LBL = PICKS_LABELS;
@@ -31,6 +32,7 @@ let root = null, scope = null, shell = null;
 const $ = (s) => root?.querySelector(s);
 const S = { pid: null, data: null, beat: null, tab: 'main', q: { text: '', sources: { commons: true, met: true, pexels: true, pixabay: true, osm: false }, res: null, busy: false, for: '' },
   v: { text: '', res: null, busy: false, importing: false }, books: null, sugg: { beats: {} }, job: null };
+let auto = null;                                                              // c3picks: the agent's bar (views/picks_auto.js)
 let D = null, R = null, dirty = false, editVersion = 0, Q = createQueue({ onBusy: (b) => setStatus(b ? 'đang xử lý...' : '') }), pollId = null;
 
 const P = () => `/api/projects/${S.pid}/picks`;
@@ -197,13 +199,19 @@ function paintMid() {
     h('h3', { class: 'sh', text: `Hình của dòng này (${rec.items.length})` }),
     rec.items.length ? h('div', { class: 'pk-tray' }, rec.items.map((it, i) => trayItem(b.id, it, i, rec.items.length)))
       : h('div', { class: 'muted pad', text: rec.status === 'skip' ? 'Dòng này được bỏ qua: không tính là thiếu hình.' : 'Chưa có hình. Bản nháp sẽ dùng tranh chính ở dòng này. Thêm hình từ cột bên phải hoặc từ các nút dưới đây.' }),
+    autoWhy(b.id, rec),
     h('div', { class: 'pk-quick' },
       main ? h('button', { text: '+ Cả tranh chính', onclick: () => addTo(b.id, { asset: D.main_asset }) }) : null,
       mainRegions.map(([name, r]) => h('button', { text: `+ ${r.label || name}`, title: `Vùng ${name} của tranh chính`, onclick: () => addTo(b.id, { asset: D.main_asset, region: name }) })),
       main ? h('button', { text: 'Vẽ vùng mới...', onclick: () => regionEditor(D.main_asset) }) : null),
     h('div', { class: 'pk-beatfoot' },
       h('label', { class: 'cb' }, h('input', { type: 'checkbox', checked: rec.status === 'skip', onchange: () => { L.toggleSkip(D, b.id); touch(); paintLeft(); paintMid(); } }), ' Bỏ qua dòng này (không tính là thiếu hình)'),
-      h('input', { type: 'text', class: 'grow', placeholder: 'Ghi chú cho dòng này (không bắt buộc)', value: rec.note || '', oninput: (e) => { L.ensureBeat(D, b.id).note = e.target.value; touch(); } }))));
+      h('input', { type: 'text', class: 'grow', placeholder: 'Ghi chú cho dòng này (không bắt buộc)', value: rec.note || '', oninput: (e) => { L.ensureBeat(D, b.id).note = e.target.value; $('#pk-mid .pk-agentwhy')?.remove(); touch(); } }))));       // c3picks: a note of the owner's is no longer the agent's reason
+}
+/** c3picks: the reason the agent gave for a line, under its pictures, while the line is still as the agent wrote it. */
+function autoWhy(beatId, rec) {
+  const t = auto?.reasonFor(beatId, rec);
+  return t ? h('div', { class: 'pk-agentwhy', title: PICKS_AUTO_LABELS.lineWhyTitle, text: PICKS_AUTO_LABELS.lineWhy(t) }) : null;
 }
 function trayItem(beatId, it, i, n) {
   const a = assets()[it.asset];
@@ -600,7 +608,7 @@ function tabSuggest(body) {
   else body.append(h('div', { class: 'pk-row' },
     h('button', { class: 'primary', text: 'Gợi ý thêm cho dòng này (tốn tiền)', disabled: !S.beat || !!j, onclick: () => suggestFor([S.beat]) }),
     h('button', { text: 'Cho các dòng chưa có hình (tốn tiền)', disabled: !!j, onclick: () => suggestFor(L.emptyBeats(chapters(), D).slice(0, 40)) })));
-  if (j && j.meta?.action !== 'clip') body.append(h('div', { class: 'pk-job' }, h('div', { text: `Đang chạy: ${Math.round((j.progress || 0) * 100)}%` }), h('div', { class: 'muted', text: (j.parts || []).filter((p) => p.state === 'running').map((p) => `${p.title}: ${p.note || ''}`).join(' · ') }),
+  if (j && !['clip', 'auto'].includes(j.meta?.action)) body.append(h('div', { class: 'pk-job' }, h('div', { text: `Đang chạy: ${Math.round((j.progress || 0) * 100)}%` }), h('div', { class: 'muted', text: (j.parts || []).filter((p) => p.state === 'running').map((p) => `${p.title}: ${p.note || ''}`).join(' · ') }),
     h('button', { class: 'small', text: 'Hủy', onclick: () => api.post(`/api/longjobs/${j.id}/cancel`).catch((e) => fail(e)) })));
   const mine = S.sugg.beats?.[S.beat];
   if (mine) {
@@ -715,6 +723,7 @@ function regionEditor(key) {
 
 // ------------------------------------------------------------------ whole page
 const BAR = `<div id="pk-top" class="pk-top"></div>
+<div id="pk-auto" class="pk-auto"></div>
 <div id="pk-body" class="pk-body">
   <section class="pk-col"><div class="col-h"><h2>Dòng lời dẫn</h2></div><div id="pk-left" class="col-b"></div></section>
   <section class="pk-col"><div class="col-h"><h2>Dòng này</h2></div><div id="pk-mid" class="col-b"></div></section>
@@ -733,6 +742,9 @@ export async function mount(host, ctx) {
   try { applyData(await api.get(P())); } catch (e) { root.replaceChildren(h('div', { class: 'view-msg', text: failText(e) })); return {}; }
   S.tab = D.main_asset ? 'search' : 'main';
   renderAll();
+  auto = mountPicksAuto($('#pk-auto'), { pid: S.pid, scope,                       // c3picks
+    state: () => ({ doc: D, chapters: chapters(), approved: !!S.data?.approved, narrationOk: !!S.data?.narration?.approved, hasMain: !!mainAsset() }),
+    reload, saveFirst: () => Q.run(saveNow).catch(() => {}) });
   try { const r = await api.get(`/api/projects/${S.pid}/longjobs?kind=picks`); const run = (r.items || r || []).find?.((j) => ['queued', 'waiting', 'running'].includes(j.state)); if (run) watch(run.id); } catch { /* the runner may not answer */ }
   loadSuggestions();
   // a suggestion job started in another tab shows up here within a few seconds
@@ -749,6 +761,6 @@ export async function mount(host, ctx) {
     save: () => Q.run(saveNow),
     dirtyMessage: () => 'Chọn hình có chỗ sửa chưa lưu.',
     pipelineChanged: () => {},
-    unmount() { clearInterval(pollId); root = null; },
+    unmount() { clearInterval(pollId); auto?.unmount(); auto = null; root = null; },
   };
 }

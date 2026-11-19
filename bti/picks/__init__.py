@@ -21,7 +21,12 @@ def state(project_dir) -> dict:
     except Exception as e:      # noqa: BLE001   a damaged file is reported by the page; the stepper must still answer
         return {"state": "none", "detail": "Tệp chọn hình (picks.json) hoặc lời dẫn bị hỏng.", "error": type(e).__name__}
     if suggest.running(pdir.name):
-        return {"state": "running", "detail": "Đang tìm gợi ý hình."}
+        try:                          # c3picks: the agent's own job says so (the stepper must answer whatever happens here)
+            from . import auto
+            mine = bool(auto.active_job(pdir.name))
+        except Exception:             # noqa: BLE001
+            mine = False
+        return {"state": "running", "detail": "Agent đang chọn hình." if mine else "Đang tìm gợi ý hình."}
     if d is None:
         return {"state": "none", "detail": "Chưa chọn hình.", "main_asset": None, "picked": 0, "beats": len(nv["beat_ids"])}
     beats = nv["beat_ids"]

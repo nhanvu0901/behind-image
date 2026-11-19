@@ -122,11 +122,14 @@ SPECS: list[Spec] = [
          when="Once the picks step is open. Paid: `auto_ok` is false, the owner must agree. Needs the approved narration and suggestions switched on."),
     Spec("picks.put", "picks", "Lưu chọn hình", "PUT", P + "/picks",
          when="Once the picks step is open. The caller supplies the picks document (`fill`)."),
+    Spec("picks.auto", "picks", "Để agent chọn hình", "POST", P + "/picks/auto", long_job=True, follow=LONGJOBS, role="picks",       # c3picks
+         cost=("model", "about 20 minutes"),
+         when="Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true. It never approves and never calls the paid suggestion service. Advances while no line has pictures yet."),
     Spec("picks.approve", "picks", "Duyệt chọn hình", "POST", P + "/picks/approve", gate=True,
          when="While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances."),
     Spec("picks.ops", "picks", "Sửa chọn hình", "POST", P + "/picks/ops",
          when="Once the picks step is open. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md."),
-    Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions or a clip) of the project runs."),
+    Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions, a clip or the agent's choice of pictures) of the project runs."),
     # ---- storyboard (step 5, page step id `edit`)
     Spec("draft.start", "edit", "Dựng bản nháp", "POST", P + "/draft/start", long_job=True, follow=LONGJOBS, role="draft",
          cost=("model", "about 20 minutes"),
@@ -213,6 +216,7 @@ class Ctx:
         self.picks_error: str | None = None
         self.picks_rev: str | None = None
         self.picks_main = self.picks_ok = False
+        self.picks_lines = (0, 0)             # c3picks: (lines of the narration, lines that are settled: pictures or skipped)
         self.picks_issues: list[dict] = []
         self.narration_present = False
         self.draft_ready = {"voice": False, "picks": False}
@@ -310,6 +314,8 @@ def _load_picks(c: Ctx) -> None:
     c.picks_ops_rev = doc.revision(pd if pd is not None else doc.empty())         # what the operations call the revision of a project with no picks yet
     c.picks_main = bool(pd and pd.get("main_asset") and pd["main_asset"] in pd["assets"])
     c.picks_ok = bool(doc.approval_state(pd, nv["rev"], nv["approved"])["approved"])
+    beats = (pd or {}).get("beats") or {}
+    c.picks_lines = (len(nv["beat_ids"]), sum(1 for b in nv["beat_ids"] if (beats.get(b) or {}).get("items") or (beats.get(b) or {}).get("status") == "skip"))     # c3picks
     c.narration_ok = c.narration_ok or bool(nv["approved"])
     if pd is not None:
         c.picks_issues = [i for i in doc.blocking(doc.issues(pd, c.d, nv["beat_ids"] if nv["present"] else None)) if i.get("code") != "no_main"]
@@ -540,6 +546,22 @@ def b_picks_suggest(c: Ctx):
     return E(needs, fill=["beats", "confirm_paid"], template={"beats": None, "confirm_paid": None})
 
 
+def b_picks_auto(c: Ctx):                                                   # c3picks
+    if not _picks_open(c):
+        return None
+    needs = [] if c.narration_ok else ["narration_approved"]
+    if c.picks_error:
+        needs.append("documents_readable")
+    elif not c.picks_main:
+        needs.append("main_asset")
+    if c.busy("picks"):
+        needs.append("no_running_job")
+    needs += _model_needs(c, "picks")
+    total, settled = c.picks_lines
+    body = {"beats": None, "redo": bool(c.picks_ok or (total and settled == total)), "base_rev": c.picks_ops_rev}       # every line settled or approved: only `redo` runs
+    return E(list(dict.fromkeys(needs)), body, advances=bool(not c.picks_ok and total and not settled))
+
+
 def b_picks_put(c: Ctx):
     if not _picks_open(c):
         return None
@@ -691,7 +713,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "narration.approve": b_narration_approve, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
-    "picks.approve": b_picks_approve, "picks.ops": b_picks_ops,
+    "picks.approve": b_picks_approve, "picks.ops": b_picks_ops, "picks.auto": b_picks_auto,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,

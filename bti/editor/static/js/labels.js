@@ -443,6 +443,33 @@ export const AGENT_LABELS = {
   author: { you: 'Bạn', auto: 'Dựng tự động', agent: (what) => `Agent ${what}` },
 };
 
+/* worker c3picks: "Để agent chọn hình" on the pictures page (views/picks_auto.js, views/picks_logic.js). The failures of the job are in errmsg.js. */
+export const PICKS_AUTO_LABELS = {
+  title: 'Agent chọn hình',
+  intro: 'Agent đọc lời dẫn, nhìn bức tranh chính rồi đề xuất hình cho từng dòng. Bạn chỉ cần sửa và duyệt: agent không bao giờ tự duyệt và không dùng dịch vụ trả tiền.',
+  button: 'Để agent chọn hình',
+  again: 'Chọn lại phần còn thiếu',
+  cancel: 'Dừng',
+  starting: 'Đang bắt đầu...',
+  working: 'Agent đang chọn hình.',
+  waiting: 'Đang chờ máy rảnh...',
+  disabled: { running: 'Agent đang làm việc.', narration: 'Cần duyệt lời dẫn trước.', main: 'Chọn tranh chính trước.', agent: 'Agent đang chọn chưa dùng được.' },
+  confirmRedo: { title: 'Chọn lại tất cả?', message: 'Mọi dòng đã có hình hoặc chọn hình đã được duyệt. Agent sẽ chọn lại tất cả và thay hình hiện có (hoàn tác được). Chọn hình phải duyệt lại sau đó.', ok: 'Chọn lại tất cả' },
+  confirmApproved: { title: 'Chọn hình đã được duyệt', message: 'Agent sẽ ghi vào các dòng còn thiếu và chọn hình phải duyệt lại sau đó.', ok: 'Tiếp tục' },
+  lineWhy: (text) => `Agent: ${text}`,
+  lineWhyTitle: 'Lý do agent đưa ra cho dòng này. Bạn sửa hình hoặc ghi chú thì dòng này không còn là của agent.',
+  detail: { pictures: (n) => `${n} hình mới`, regions: (n) => `${n} vùng chi tiết`, clips: (n) => `${n} clip`, kept: (n) => `${n} đoạn dùng lại hình trước`, others: (n) => `${n} đoạn bạn đã chọn trong lúc đó, agent không đụng tới` },
+  withoutTitle: (n) => `${n} đoạn chưa có hình phù hợp`,
+  withoutLine: (no, why) => `Đoạn ${no}: ${why}`,
+  missingTitle: 'Hình agent chưa tìm được',
+  stopped: { time: 'Hết thời gian của lần chạy này; bấm "Chọn lại phần còn thiếu" để làm tiếp.', cancelled: 'Đã dừng.' },
+  cancelled: 'Đã dừng. Phần đã làm xong được giữ lại; bấm "Để agent chọn hình" để làm tiếp.',
+  failed: (text) => `Agent chưa chọn xong: ${text}`,
+  startFail: 'Không bắt đầu được: ',
+  cancelFail: 'Không dừng được: ',
+  limits: (l) => `Mỗi lượt của agent tối đa ${l.minutes} phút và ${l.steps} bước.`,
+};
+
 // ---- compbase: the words of the choices of TIME-01, TREE-01 and STATE-01 (the words of their row fields are added after ITEM_FIELD, below)
 Object.assign(VALUE, { up: 'Phía trên', down: 'Phía dưới', descent: 'Con cháu (từ cha mẹ xuống con)', marriage: 'Hôn nhân', link: 'Quan hệ khác', a: 'Hình a (thứ nhất)', b: 'Hình b (thứ hai)' });
 

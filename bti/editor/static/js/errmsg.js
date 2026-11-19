@@ -197,6 +197,15 @@ export const STAGE_CODES = {
     tool_missing: 'Máy chủ thiếu công cụ yt-dlp hoặc ffmpeg để xử lý video.',
     // --- dsources
     source_no_key: 'Nguồn này chưa có khóa API trên máy chủ.',
+    /* worker c3picks: the agent that chooses the pictures ("Để agent chọn hình", bti/picks/auto): its own failures; the failures of its two runners are the draft's */
+    picks_approved: 'Chọn hình đã được duyệt. Chọn lại sẽ phải duyệt lại: hãy xác nhận chọn lại cả những dòng đã có hình.',
+    picks_nothing_to_do: 'Mọi dòng lời dẫn đều đã có hình.',
+    picks_no_main: 'Chưa chọn tranh chính ở bước Chọn hình.',
+    main_asset_unreadable: 'Tranh chính chưa có tệp ảnh đọc được. Chọn lại tranh chính.',
+    picks_auto_no_output: 'Agent không viết được tệp kết quả dùng được, kể cả sau một lần nhắc sửa. Chạy lại, hoặc chọn agent khác.',
+    picks_auto_limit: 'Agent đã dùng hết giới hạn của một lần chạy mà chưa có kết quả dùng được. Chạy lại để làm tiếp.',
+    picks_auto_tampered: 'Agent đã thay đổi tệp ngoài thư mục làm việc của nó. Kết quả bị bỏ; hãy kiểm tra dự án rồi chạy lại.',
+    picks_auto_stale: 'Lời dẫn hoặc tranh chính đã đổi trong lúc agent làm việc, nên kết quả không còn khớp. Chạy lại.',
   },
   export: {
     no_storyboard: 'Chưa có storyboard. Hãy dựng hình ở bước "Dựng hình" trước.',
