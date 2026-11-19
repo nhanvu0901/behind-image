@@ -118,6 +118,12 @@ Start from what the sentence does, not from the list of techniques. `techniques.
 | reads a quotation | quote | TXT-02 or STATIC-04 overlay |
 | names a new section | structure | X-ANN-01 label; cards are the compiler's |
 
+Explanatory devices (`MAP-01`, `TIME-01`, `TREE-01`, `KEY-01`, `NUM-01`, `STATE-01`, `DOC-01`; use only those `inputs/techniques.md` lists). Each makes one point that a picture alone cannot show, so use one only where the narration makes that point, never as decoration:
+- `MAP-01`: a place, a journey or a territory (use it for ANY place, journey or territory instead of STATIC-06, AN-04 and X-ANN-05); `TIME-01`: events with dates, in order or as a span; `TREE-01`: who is related to whom or who worked for whom; `KEY-01`: names for parts of the picture on screen; `NUM-01`: a figure, or two figures compared; `STATE-01`: the same picture in two states (before and after, colour and infrared); `DOC-01`: one line of a document, lit, with its reading.
+- Tie every item (a place, a date, a name, a row) to the word that names it: its `at` is that word, written `{"w": <the word's index in words.tsv>}`, so the item appears as it is spoken (a plain number of seconds from the start of the shot also works).
+- Coordinates, dates, figures, names and relations come only from the narration and the project's sources: leave an item out when you are unsure, never guess. The `example` in the catalogue is only a template: replace all of its data, never half of it.
+- How often: real videos use them sparingly, about 6 to 12 in a ten-minute video, never two in a row and none through general talk; many sentences are served better by a camera move.
+
 Habits that make a draft good:
 - Move the camera toward the thing named, as the name is spoken: start the shot a word before the detail's name, so the eye arrives with the word.
 - After a detail, come back: a context still that then returns to the painting is two shots, not one.

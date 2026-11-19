@@ -28,7 +28,7 @@ codes). The rule behind the registry is: whatever `validate` accepts without an 
 `min_items`/`max_items` (points/lines/items), `fields` (items, below) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
 frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
 `RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
-four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 79 techniques and all fourteen param types.
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 82 techniques and all fourteen param types.
 
 ## Layout
 
@@ -282,6 +282,37 @@ A param of type `at` is ONE moment: a number of seconds from the start of the el
 `anchor_invalid`, with `param` in the args and no `index`). A renderer reads it with `registry.at_seconds(self.p["name"], self.t0)` (seconds from the start of the element);
 `registry.at_params(spec)` lists the names. The page (`formgen.js`, `formui.js`) edits it as "seconds | word" with a number field and the button "= đầu phát" (the word at the playhead),
 the same control as an `at` field of an items row. `MAP-01.region_at` is the first user; a technique with a single-moment param declares `"type": "at"` with `min`, `max` in seconds.
+
+## The explanatory devices `TIME-01`, `TREE-01`, `STATE-01` (`techniques/explain_base.py`)
+
+Three base techniques, each the approved moving mock-up (`docs/design/mock/2026-11-18-explainer/components.html`, functions `timeline`, `tree`, `states`); contract
+`docs/design/2026-11-18-explainer-components.md` sections 2 to 5. Dark ground `#131519`, text `#E9E2D0`, hairlines `#8D877A` (2 px for the axis and stalks, 3.2 px for the connectors),
+second lines and edge labels at 72 percent, sizes as cap heights of the bundled EB Garamond. The agent gives data only; the technique solves the layout. Report with the numbers:
+`docs/qa/FIX_comp_base.md`. Stills, timings and the preview clips: `python tools/explain_base/render_examples.py stills OUTDIR | timing | preview`.
+
+* **`TIME-01`** (`items`: `date` a whole year, negative for BC, `label`, `side` auto|up|down, `at`, `accent`; `from`, `to` as text, empty = the items' range with one year of margin; `tick_every`
+  0 = automatic; `focus_s`, `dim_to`, `cap_pct`). The axis grows from the left over 0.8 s (ease in and out), ticks fade in (staggered), a stalk grows over 0.35 s from its `at` (ease out), the year fades in from
+  +0.2 s and the label from +0.35 s; at `focus_s` (0.8 s ramp) the accented items brighten, get a dot on the axis, and the others dim to `dim_to`. **Layout** (`solve_time`): for every item a depth first search over
+  side, stalk length (three lengths above the axis, 13, 24 and 35 percent of the height, two below, 13 and 24) and label place (centred and pushed into the frame, or shifted to either side), the accented items
+  first, then by date; a choice is refused when a label or year box touches another one (padding 1.2 percent of the width, 0.8 of the height), when a stalk runs through another item's box, or when a box leaves the
+  frame. The first choices are the mock-up's (alternate sides, short stalks, a longer one only where two labels would touch), so the default data comes out exactly as the mock-up. Data that cannot be laid out is the
+  error `time_crowded`; a date outside the axis is `time_date_outside`; `to` not after `from` is `time_range_inverted`.
+* **`TREE-01`** (`nodes`: `id`, `name`, `sub`, `row`, `col` (both -1 = automatic), `at`, `strong`; `edges`: `from`, `to`, `kind` descent|marriage|link, `label`, `at`; `cap_pct`). A name fades in over 0.4 s; a connector is
+  drawn over 0.7 s from `from` (ease in and out), its label fades in from +0.4 s. **Layout** (`solve_tree`, automatic when any name lacks `row` or `col`): spouses are one unit (a chain: a person has at most two
+  marriages, else `tree_marriage_shape`); generations are the longest path down along descent and link edges, a source whose people all stand further down moves down next to them; an edge that skips rows gets a
+  virtual node per skipped row so that it runs between the names; the order inside the rows comes from barycentre sweeps (the best of ten by number of crossings), a couple's members from where their parents stand;
+  the coordinates from a weighted least-squares relaxation with minimum gaps (pool adjacent violators, symmetric Gauss-Seidel, re-centred every sweep): a parent stands over the middle of a child couple, a child straight
+  below the middle of a marriage line, a small tree is spread over up to 82 percent of the width; text is made smaller (down to 64 percent) while a row is too wide, then `tree_too_big`. Descent from one of two spouses starts at
+  the middle of their marriage line and is drawn once when both spouses name the same child. Connectors are right-angled: down from the upper name, across in the gap between the rows (parallel runs get lanes), down into the lower
+  name. A marriage line is level with the names, between their ends. A label sits above its own horizontal run when that is long enough, else beside the longest vertical run, else where it touches least. A hand-made grid
+  (`row` and `col` on every name) maps the cells onto the frame (rows evenly spaced, columns up to 20 percent of the width apart); names that touch are `tree_overlap`, married names in different rows `tree_marriage_rows`.
+* **`STATE-01`** (slots `a` required with regions, `b` required; `label_a`, `label_b`, `camera`, `dissolve_s` 0.5 to 1.5, `holds` "h0; h1; ...", `first`, `label_cap_pct`, `shadow`). Both pictures are drawn as CAM-01 draws one, through the
+  shot's `camera` in the pixels of `a`; `b` is scaled to the width of `a` and centred on it, so two images of one crop line up at any pixel size (a different shape is not corrected). Timeline: hold, linear dissolve of
+  `dissolve_s`, hold ..., alternating from `first`; the last state is held to the end, a shorter shot cuts the schedule. A hold is exactly one picture. **The camera does not move during a change**: its clock stands still through a
+  dissolve and runs faster in the holds by the time lost, so the whole move of its keys is still made by the end of the shot; `view()` returns the camera and the regions of `a`, so overlays follow. Caption: small capitals,
+  tracking 0.14 em, at 4.5 percent from the left, baseline 6 percent above the bottom, soft shadow; it fades in at 0.3 s, flips through a fade at the middle of every dissolve, fades out ending 0.1 s before the end.
+* A shot of these three shorter than 3 s is the error `element_too_short`. Word anchors in an item's `at` are the `items` machinery's; `focus_s` is seconds only. Tests: `tests/engine/test_explain_base.py`,
+  `tests/editor_frontend/explain_base.test.mjs`, `tests/draft/test_explainers_briefing.py` (the catalogue's filled example and the briefing part).
 
 ## The atlas map `MAP-01` (`techniques/maps.py`, `geo.py`, `style/gae/geo/`)
 

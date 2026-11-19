@@ -2,6 +2,8 @@
 cannot drift from `style/gae/techniques.json`. It tells the agent WHEN to use a technique, what it needs and what it may change."""
 from __future__ import annotations
 
+import json
+
 from bti.engine import registry as R
 from bti.identity import read as read_identity
 
@@ -59,6 +61,23 @@ def _slot(s: dict) -> str:
 
 
 PROGRAM_ONLY = "PROGRAM ONLY: the channel identity, written by the compiler, never by you"
+EXPLAINER_FAMILIES = ("MAP-", "KEY-", "TIME-", "NUM-", "TREE-", "STATE-", "DOC-")      # the explanatory devices: each is printed with a filled example
+
+
+def _example(t: dict) -> str:
+    """The filled example of an explanatory device, taken from the registry defaults (so that it cannot drift): every list of items (a field that holds its default
+    and is not required is left out, the compiler fills it), plus the lists of lines and the texts that are not empty. Empty for any other technique."""
+    if not str(t.get("id", "")).startswith(EXPLAINER_FAMILIES):
+        return ""
+    ex = {}
+    for p in t.get("params") or []:
+        d = p.get("default")
+        if p["type"] == "items" and isinstance(d, list) and d:
+            keep = {f["name"]: f for f in p.get("fields") or []}
+            ex[p["name"]] = [{k: v for k, v in it.items() if k in keep and (keep[k].get("required") or v != keep[k].get("default"))} for it in d]
+        elif p["type"] in ("lines", "string") and d not in (None, "", []):
+            ex[p["name"]] = d
+    return json.dumps(ex, ensure_ascii=False, separators=(",", ":")) if ex else ""
 
 
 def _identity_section(cfg) -> list:
@@ -102,6 +121,8 @@ def generate(bundle: R.StyleBundle) -> str:
             out.append("- when: %s" % t["usage_rule"])
         out.append("- slots: %s" % (", ".join(_slot(s) for s in t.get("slots") or []) or "none"))
         out.append("- params: %s" % (", ".join(_p(p) for p in t.get("params") or []) or "none"))
+        if _example(t):
+            out.append("- example (the defaults; replace ALL of its data): %s" % _example(t))
         tm = t.get("timing") or {}
         if tm.get("default_s"):
             out.append("- length: usually %ss (min %s, max %s)" % (tm["default_s"], tm.get("min_s"), tm.get("max_s")))

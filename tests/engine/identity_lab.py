@@ -1,7 +1,7 @@
 """Shots that carry the seven ID-* techniques (channel identity), for the sweeps that need one reference item per technique.
 
 `projects/technique_lab` was built before the family existed; `append_identity_shots` adds one shot (or overlay) per technique to a
-COPY of its storyboard, each at its nominal length, so the registry sweeps cover all 79 ids without touching the lab project (the seven ID-* ones, then MAP-01, which came later still).
+COPY of its storyboard, each at its nominal length, so the registry sweeps cover all 82 ids without touching the lab project (the seven ID-* ones, then TIME-01, TREE-01 and STATE-01, then MAP-01, which came later still).
 """
 from __future__ import annotations
 
@@ -39,6 +39,17 @@ def append_identity_shots(sb: dict, asset: str, camera: list) -> dict:
     return sb
 
 
+def append_explain_base_shots(sb: dict, asset: str) -> dict:
+    """One shot each of TIME-01 and TREE-01 (the default examples, 8 s) and STATE-01 (both slots hold `asset`, 7.5 s) after the last shot of `sb`."""
+    t = float(sb["end"]["t"])
+    for tid, slots, dur in (("TIME-01", {}, 8.0), ("TREE-01", {}, 8.0), ("STATE-01", {"a": {"asset": asset}, "b": {"asset": asset}}, 7.5)):
+        sb["shots"].append({"id": "eb_" + tid.lower().replace("-", ""), "start": {"t": round(t, 3)}, "technique": tid, "intent": "context", "slots": slots, "params": {},
+                            "transition_in": None, "overlays": [], "locked": False, "source": "agent", "note": tid + " sweep"})
+        t += dur
+    sb["end"] = {"t": round(t, 3), "fade_s": 0}
+    return sb
+
+
 def append_map_shot(sb: dict) -> dict:
     """One MAP-01 shot of 8 s (the default example: Bruges to Lucca, Belgium) after the last shot of `sb`."""
     t = float(sb["end"]["t"])
@@ -54,5 +65,6 @@ def add_to_project_dir(project_dir: Path) -> None:
     sb = json.loads(p.read_text(encoding="utf-8"))
     first = sb["shots"][0]
     append_identity_shots(sb, first["slots"]["image"]["asset"], first["params"]["camera"])
+    append_explain_base_shots(sb, first["slots"]["image"]["asset"])
     append_map_shot(sb)
     p.write_text(json.dumps(sb, indent=1), encoding="utf-8")
