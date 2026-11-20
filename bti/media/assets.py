@@ -14,6 +14,7 @@ from pathlib import Path
 
 from ._io import read_json, write_json_atomic
 from .imageinfo import drawn_size
+from .contentbox import scale_asset_box        # panelbox: the painted area of a picture scales with it
 from .. import textfold
 from bti.fsio import atomic_replace
 
@@ -168,7 +169,7 @@ def reconcile_sizes(assets: dict, project_dir: Path) -> list[str]:
     """Make the declared `width` / `height` of every image asset in `assets` (a `picks.json` or `storyboard.json` `assets`
     object) equal the pixels of its stored file, IN PLACE, and return the keys that changed. No network, only file headers.
 
-    The regions of a corrected asset were drawn in the declared space, so each is scaled by the same factors (x and rx by
+    The regions (and the `content_box`, the painted area, see `bti.media.contentbox`) of a corrected asset were drawn in the declared space, so each is scaled by the same factors (x and rx by
     stored width / declared width, y and ry by stored height / declared height). The old declared size is kept as
     `original_width` / `original_height` when the record has none yet (it is what the source claimed). An asset whose file is
     missing or unreadable, a video, or one that already agrees is left alone, so the call is idempotent. When the declared
@@ -188,6 +189,7 @@ def reconcile_sizes(assets: dict, project_dir: Path) -> list[str]:
             continue
         if _pos(dw) and _pos(dh):
             scale_regions(a.get("regions"), sw / dw, sh / dh)
+            scale_asset_box(a, sw / dw, sh / dh)          # panelbox: `content_box` is in the same space as the regions
             if "original_width" not in a and "original_height" not in a:
                 a["original_width"], a["original_height"] = int(round(dw)), int(round(dh))
         a["width"], a["height"] = sw, sh

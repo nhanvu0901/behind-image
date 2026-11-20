@@ -194,7 +194,8 @@ def vocabulary():
 
 
 # words that are real but are written in the documents only (a command's own options, fields of a body, notes of the app's page)
-EXTRA_WORDS = {"error_kind", "transition_in"}      # a field of a job record that fails (bti/script/runner.py) and of a shot (the draft's briefing)
+EXTRA_WORDS = {"error_kind", "transition_in",      # a field of a job record that fails (bti/script/runner.py) and of a shot (the draft's briefing)
+               "content_box", "frame_moved_into_painting"}      # panelbox: a field of a picks asset (bti/picks/doc.py) and the warning of the draft compiler that moved a camera key (bti/draft/compile.py)
 
 
 def test_every_name_in_code_ticks_is_a_word_the_app_has():

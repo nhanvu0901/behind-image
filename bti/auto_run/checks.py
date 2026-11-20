@@ -97,6 +97,10 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "outside_on_painting": ("a line about something outside the painting has its picture but shows the painting for most of the line: the viewer never sees what the narrator speaks of",
                                 "có dòng nói về thứ ngoài tranh, đã có hình, nhưng vẫn chỉ hiện bức tranh"),
         "outside_picture_small": ("a picture that is not the painting is drawn smaller than 80% of its default fit: it sits small between black bars", "có hình ngoài tranh hiện nhỏ lọt thỏm giữa hai dải đen"),
+        # --- panelbox (2026-11-20): the camera never leaves the painted surface of the main painting (bti/media/contentbox.py, bti/engine/viewchecks.py)
+        "frame_off_painting": ("a camera key of a shot on the main painting shows more than 1% of the frame outside the painted area of the picture: a band of the museum photograph's black ground, "
+                               "or of the matte past the picture's edge, stands at a side of the frame (the first test video had about a dozen such shots, the close-ups of the mirror)",
+                               "có cảnh máy quay trượt ra ngoài mặt tranh: một dải đen của nền ảnh bảo tàng hiện ở mép khung hình"),
     },
 }
 # gate -> codes that never stop the run (they stay in the log)
@@ -107,7 +111,8 @@ TOLERATED: dict[str, frozenset[str]] = {
     "narration": frozenset({"spoken_chars", "beat_too_long", "long_sentence", "no_show", "chapter_off_budget"}),
     # a flagged picture (size, licence or the like) is not a reason to stop: the owner said copyright is not a blocker, and a picture from the owner's own books always carries
     # the flag "unknown". The run goes on and writes the count into its log.
-    "picks": frozenset({"asset_flag"}),
+    # panelbox: the painted area of the main painting was not sure (`content_box_unsure`): the whole picture is used, which is the old behaviour; the warning stays in the log
+    "picks": frozenset({"asset_flag", "content_box_unsure"}),
     # fixdraft: `shot_short` (under 1.5 s) is a flash, not a defect of substance: the video is still watchable and the owner sees it in the list
     "storyboard": frozenset({"project_name_differs", "unknown_source", "unknown_intent", "first_shot_transition", "shot_short"}),
 }

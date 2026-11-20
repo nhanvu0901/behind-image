@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from bti.media import contentbox as _contentbox          # panelbox: the painted area of a picture
 from bti.media import licence as _lic
 
 from . import context, doc
@@ -25,6 +26,18 @@ def media():
         return _media
     from bti.media import api
     return api
+
+
+def _boxed(pdir: Path, res):
+    """panelbox: a picture that came in (`{asset_key, asset}`) gets the program's finding of its painted area, `content_box` (`bti.media.contentbox`), before it is
+    added to the picks. A video, a file that does not read as a picture, or a fake of a test leaves the asset as it is."""
+    a = res.get("asset") if isinstance(res, dict) else None
+    if isinstance(a, dict) and a.get("kind") == "image":
+        try:
+            _contentbox.ensure(a, pdir)
+        except Exception:       # noqa: BLE001 - the box is an extra: a picture is never refused for it
+            pass
+    return res
 
 
 def _translate(e: BaseException) -> PicksError:
@@ -154,7 +167,7 @@ def _fetch_source(pdir: Path, source: str, source_id: str) -> dict:
     if source not in SOURCES:
         raise PicksError(422, f"unknown source {source[:30]!r}", "unknown_source")
     try:
-        return media().import_candidate(pdir, source, source_id, require_root=True)
+        return _boxed(pdir, media().import_candidate(pdir, source, source_id, require_root=True))
     except PicksError:
         raise
     except FileNotFoundError:
@@ -168,7 +181,7 @@ def _fetch_book(pdir: Path, source_id: str) -> dict:
     if not context.book_source_allowed(pdir, source_id):
         raise PicksError(404, "this picture is not part of the project's books", "not_found")
     try:
-        return media().import_candidate(pdir, "book", source_id, require_root=True)
+        return _boxed(pdir, media().import_candidate(pdir, "book", source_id, require_root=True))
     except FileNotFoundError:
         raise
     except Exception as e:      # noqa: BLE001
@@ -202,7 +215,7 @@ def import_book(pdir: Path, source_id: str, as_main: bool = False) -> dict:
 
 def upload(pdir: Path, file_path: Path, meta: dict, as_main: bool = False) -> dict:
     try:
-        res = media().add_upload(pdir, file_path, meta, require_root=True)
+        res = _boxed(pdir, media().add_upload(pdir, file_path, meta, require_root=True))
     except FileNotFoundError:
         raise
     except Exception as e:      # noqa: BLE001

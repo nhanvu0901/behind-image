@@ -71,7 +71,8 @@ def _region(x, y, rx, ry, label):
 def picks_assets():
     return {"A": _asset("A", "Test portrait", {"HEAD": _region(600, 380, 180, 200, "Head"), "HANDS": _region(620, 900, 200, 120, "Hands")}),
             "B": _asset("B", "Test landscape", {"CENTRE": _region(800, 500, 200, 200, "Centre")}),
-            "C": _asset("C", "Test detail", {}), "D": _asset("D", "Test other work", {})}
+            "C": _asset("C", "Test detail", {}),
+            "D": {**_asset("D", "Test other work", {}), "content_box": {"x0": 30, "y0": 40, "x1": 1170, "y1": 1460, "how": "set"}}}       # panelbox: D has a painted area set (the example of `clear_content_box`)
 
 
 def storyboard_assets():

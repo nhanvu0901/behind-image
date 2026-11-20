@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 from typing import Callable
 
+from bti.media import contentbox as pcb          # panelbox: the painted area of the main painting
 from bti.ops import OpError
 from bti.ops import runner as ops_runner
 from bti.ops.adapters import PicksAdapter
@@ -140,12 +141,24 @@ def download_all(pdir: Path, picks: dict, *, fetch_asset, cancelled, clock, dead
 # ---------------------------------------------------------------------------------------------------------------- the lines
 def region_ops(main_key: str, main_asset: dict, keep: dict, width: int, height: int) -> tuple[list[dict], dict, int]:
     """`set_region` operations for the kept boxes, the names to use in the lines (`plan name -> final name`) and how many are new.
-    A region the painting already has under that name with the same place is reused; under another place the new one gets NAME_2."""
+    A region the painting already has under that name with the same place is reused; under another place the new one gets NAME_2.
+
+    panelbox: the boxes of the plan are fractions of the PICTURE the agent was shown (the whole file, with the black ground round a museum photograph), so the pixels
+    they come to are cut to the painted area of the main painting (`content_box` of the asset, `bti.media.contentbox`): a region keeps its centre and radii as far as
+    they stay inside the box and is made smaller where they do not. A box of which under half lies inside the painted area was drawn on the ground: no region is made
+    for it, its name maps to None in the answer, and the lines that use it show the whole painting."""
     have = dict(main_asset.get("regions") or {})
     taken = set(have)
     ops, names, made = [], {}, 0
+    box = pcb.box_of(main_asset)
     for name, r in keep.items():
         want = shapes.box_to_region(r["box"], width, height)
+        if box is not None:
+            fitted = pcb.clamp_region(want, box)
+            if fitted is None:
+                names[name] = None
+                continue
+            want = {k: fitted[k] for k in ("x", "y", "rx", "ry")}
         same = next((n for n, h in have.items() if re.fullmatch(re.escape(name) + r"(_\d+)?", n)
                      and all(abs(int(h.get(k) or 0) - want[k]) <= 2 for k in ("x", "y", "rx", "ry"))), None)
         if same:
@@ -293,8 +306,9 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
     if cancelled():
         return {"stopped": "cancelled"}
     main = pdoc.load_or_new(pdir)["assets"][main_key]
+    pcb.ensure(main, pdir)                                      # panelbox: a project made before the painted area existed (in memory: the document is saved by the batches below)
     ops, names, made = region_ops(main_key, main, keep, int(main["width"]), int(main["height"]))
-    lost: set = set()
+    lost: set = {n for n, v in names.items() if v is None}      # panelbox: boxes drawn on the ground of the photograph
     problems: list[dict] = []
     if ops:
         try:

@@ -976,3 +976,8 @@ PICKS_AUTO_LABELS.detail.web = (n, max) => (max > 0 ? `tìm trên web ${n}/${max
 TITLE_LABELS.offVoice = 'Storyboard đang lệch với giọng đọc nên chưa nhận tựa này. Bấm "Khớp lại với giọng đọc" trước: storyboard sẽ lấy tựa ngay khi khớp xong.';
 TITLE_LABELS.tookInMerged = 'Đã cập nhật tựa video và ghép với các sửa chưa lưu của bạn.';
 TITLE_LABELS.tookInFail = 'Không tải được storyboard mới: ';
+/* worker panelbox (2026-11-20): the warning `content_box_unsure` of the picks (the program found a dark or light band round the main painting that it did not believe, so the whole picture
+   is the painted area, as it was before). The list "Cảnh báo" reads PICKS_LABELS.issue; the simple page reads PICKS_PAGE_LABELS.issue (its switch in views/picks_rows_logic.js needs a
+   `case 'content_box_unsure': return W.issue.contentBoxUnsure;` line, which that file's owner adds). */
+PICKS_LABELS.issue.content_box_unsure = () => 'Chưa chắc phần nào của tranh chính là mặt tranh (quanh ảnh có dải đen hoặc sáng chưa rõ): dùng cả ảnh như trước. Nếu ảnh có nền đen, hãy đặt vùng tranh cho đúng.';
+PICKS_PAGE_LABELS.issue.contentBoxUnsure = 'Chưa chắc phần nào của tranh chính là mặt tranh (quanh ảnh có dải đen hoặc sáng chưa rõ): dùng cả ảnh như trước.';

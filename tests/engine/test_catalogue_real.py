@@ -34,8 +34,12 @@ def test_a_finished_video_uses_techniques_the_catalogue_hides_and_still_validate
     hidden = {t for t in techniques_of(name) if t and not BUNDLE.offered(t)}
     assert hidden, "the point of the proof: %s uses hidden techniques" % name
     now = RD.issues_of(name, tmp_path)
-    assert now == BEFORE[name], "validate() of the stored storyboard changed"
-    assert not [i for i in now if i["level"] == "error"] and {i["code"] for i in now} <= {"audio_missing", "project_name_differs"}
+    assert [i for i in now if i["code"] != "frame_off_painting"] == BEFORE[name], "validate() of the stored storyboard changed"
+    # panelbox (2026-11-20): the one check that is new says something on the St. Eligius fixture even with a flat stub for the picture (whose painted area is the whole file):
+    # the two chapter marks (s0012, s0098) that start 4% wider than the shot they flow into go 3.8% past the edge of the picture. The real picture is judged in test_frame_off_real.py.
+    new_rows = [(i["args"]["shot"], i["args"]["share"]) for i in now if i["code"] == "frame_off_painting"]
+    assert new_rows == ([("s0012", 0.038), ("s0098", 0.038)] if name == "eligius" else [])
+    assert not [i for i in now if i["level"] == "error"] and {i["code"] for i in now} - {"frame_off_painting"} <= {"audio_missing", "project_name_differs"}
 
 
 def test_the_hidden_techniques_the_two_videos_use(tmp_path):

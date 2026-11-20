@@ -33,6 +33,7 @@ from bti.engine import storyboard as SB
 from bti.engine import viewchecks as VC
 from bti.engine.timing import AnchorError, Timing, norm
 from bti.media.assets import scale_regions
+from bti.media import contentbox as CB          # panelbox: the painted area of the main painting
 
 from . import spec as S
 from . import decompile as D
@@ -128,6 +129,7 @@ class _Compiler:
         self.eng = engine or DraftProject(inp.project_dir, {"schema": SB.SCHEMA, "shots": [], "assets": {}, "end": {"t": 1.0}}, self.t)
         self.assets = self._merge_assets(regions)
         self.main = inp.picks["main_asset"]
+        self.stamp_box()          # panelbox: the painted area of the main painting (kept in the storyboard's asset; every frame on it stays inside)
         self.eng.set_saved({"schema": SB.SCHEMA, "style": inp.style, "assets": self.assets, "shots": [], "end": {"t": max(1.0, self.t["duration"])}})
         self.beats_by_chapter: dict = {}
         for b in self.t["beats"]:
@@ -180,6 +182,8 @@ class _Compiler:
                 out[k] = copy.deepcopy(pick[k])
             else:
                 out.pop(k, None)                         # a fact the picks do not state is not kept from another file
+        if "content_box" in pick and self.inp.edit_shots is None:       # panelbox: the painted area is a fact of the picture too: a draft takes the picks' (a person may have set it); an edit keeps the saved asset as it is
+            out["content_box"] = copy.deepcopy(pick["content_box"])
         new_w, new_h = out.get("width"), out.get("height")
         if all(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in (old_w, old_h, new_w, new_h)) and (old_w, old_h) != (new_w, new_h):
             scale_regions(out.get("regions"), new_w / old_w, new_h / old_h)     # the regions were drawn in the old size: the same scaling as `reconcile_sizes`
@@ -240,7 +244,7 @@ class _Compiler:
         a = self.assets.get(self.main)
         if not (isinstance(a, dict) and a.get("kind") == "image"):
             return None
-        return Z.whole_camera(a.get("width"), a.get("height"), {"w": 1920, "h": 1080}, self.fit_pct())
+        return Z.whole_camera(a.get("width"), a.get("height"), {"w": 1920, "h": 1080}, self.fit_pct(), CB.box_of(a))          # panelbox: the box, not the file
 
     def zones(self) -> list:
         chs = self.t["chapters"]
@@ -282,12 +286,50 @@ class _Compiler:
             prev_end = c["end"]
         return zs
 
+    # ---------------------------------------------------------------- panelbox: the painted area of the main painting
+    def stamp_box(self) -> None:
+        """A draft gives the main painting's asset of the storyboard the finding of its picture when it has none and the program found something to take away
+        (`bti.media.contentbox.ensure`): the storyboard then says where the painting is, and a reader of the storyboard alone (the check, the identity applier) agrees
+        with the compiler. An edit never does: it must hand every asset back as it was (`decompile.scope_violations`), and finds the box in the file when it needs it."""
+        if self.inp.edit_shots is None:
+            CB.ensure(self.assets.get(self.main), self.inp.project_dir)
+
+    def box_for(self, info) -> tuple | None:
+        """The painted area `(x0, y0, x1, y1)` of the picture `info` describes when it is the main painting and the area is smaller than the picture, else None
+        (then every default, and so every old document, is exactly what it was)."""
+        if not info or info.get("key") != self.main:
+            return None
+        a = self.assets.get(self.main)
+        box = CB.box_of(a, self.inp.project_dir) if isinstance(a, dict) else None
+        if box is None or not (info.get("w") and info.get("h")):
+            return None
+        w, h = float(info["w"]), float(info["h"])
+        return box if (box[2] - box[0] < w - 1.0 or box[3] - box[1] < h - 1.0) else None
+
+    @staticmethod
+    def box_local(info: dict, box: tuple) -> dict:
+        """`info` as if the picture were its painted area: the size of the box, the regions moved by the corner of the box. The engine's defaults then fit the
+        painting, not the photograph; their camera keys are moved back by `shift_camera`."""
+        regs = {n: {**r, "x": r["x"] - box[0], "y": r["y"] - box[1]} for n, r in (info.get("regions") or {}).items()
+                if isinstance(r, dict) and isinstance(r.get("x"), (int, float)) and isinstance(r.get("y"), (int, float))}
+        return {**info, "w": box[2] - box[0], "h": box[3] - box[1], "regions": regs}
+
+    @staticmethod
+    def shift_camera(params: dict, box: tuple) -> dict:
+        for k in params.get("camera") or []:
+            if isinstance(k, dict) and isinstance(k.get("cx"), (int, float)) and isinstance(k.get("cy"), (int, float)):
+                k["cx"], k["cy"] = round(k["cx"] + box[0], 2), round(k["cy"] + box[1], 2)
+        return params
+
     # ---------------------------------------------------------------- defaults
     def defaults(self, tid, ctx, where: dict | None = None) -> dict:
         spec = self.bundle.spec(tid)
         if spec is None:
             return {}
         try:
+            box = self.box_for(ctx.get("asset") if isinstance(ctx, dict) else None)
+            if box is not None:                         # panelbox: the defaults of the engine are made for the painted area of the main painting
+                return self.shift_camera(self.eng.default_params(tid, {**ctx, "asset": self.box_local(ctx["asset"], box)}), box)
             return self.eng.default_params(tid, ctx)
         except Exception as e:      # noqa: BLE001 - a technique that cannot give defaults is not the agent's fault
             self.base_issues.append(S.problem("defaults_failed", (where or {}).get("chapter"), (where or {}).get("n"),
@@ -297,11 +339,13 @@ class _Compiler:
     def fit_zoom(self, info) -> float | None:
         if not (info and info.get("w") and info.get("h")):
             return None
+        box = self.box_for(info)            # panelbox: the fit of the painted area, not of the file
+        h = float(info["h"]) if box is None else box[3] - box[1]
         try:
-            keys = self.eng.default_params("CAM-03", {"asset": info}).get("camera") or []
+            keys = self.eng.default_params("CAM-03", {"asset": info if box is None else self.box_local(info, box)}).get("camera") or []
             return float(keys[-1]["zoom"]) if keys else None
         except Exception:       # noqa: BLE001
-            return 0.955 * 1080.0 / float(info["h"])
+            return 0.955 * 1080.0 / h
 
     def region_camera(self, tid, info, region_name) -> list | None:
         r = (info.get("regions") or {}).get(region_name) if info else None
@@ -309,18 +353,20 @@ class _Compiler:
         if not (r and z_fit and info.get("w") and info.get("h")):
             return None
         w, h = float(info["w"]), float(info["h"])
+        box = self.box_for(info)            # panelbox: the whole-painting end of the move is the painted area, centred and fitted
+        wcx, wcy = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2) if box is not None else (w / 2, h / 2)
         rx = float(r.get("rx") or 0.08 * w)
         ry = float(r.get("ry") or rx)
         z_det = min(1920 * 0.5 / (2 * rx), 1080 * 0.5 / (2 * ry))
         z_det = max(z_fit * 1.3, min(z_det, 6.0))
         cx, cy = float(r["x"]), float(r["y"])
         if tid == "CAM-05":
-            return [_key(0.0, w / 2, h / 2, z_fit, "inout_cubic"), _key(1.0, cx, cy, z_det)]
+            return [_key(0.0, wcx, wcy, z_fit, "inout_cubic"), _key(1.0, cx, cy, z_det)]
         if tid == "CAM-01":
             z1 = z_det * 0.85
             return [_key(0.0, cx, cy, z1), _key(1.0, cx, cy, z1 * 1.142)]
         if tid == "CAM-03":
-            return [_key(0.0, cx, cy, z_det, "in_quad"), _key(1.0, w / 2, h / 2, z_fit)]
+            return [_key(0.0, cx, cy, z_det, "in_quad"), _key(1.0, wcx, wcy, z_fit)]
         return None
 
     # ---------------------------------------------------------------- narration on screen
@@ -841,6 +887,40 @@ class _Compiler:
             o["ov_map"] = [before.get(ov.get("id")) for ov in b.get("overlays") or []]
         return new, report
 
+    # ---------------------------------------------------------------- panelbox: the camera stays on the painted surface
+    def fit_to_box(self, doc: dict, origin: list) -> list:
+        """Move or tighten, IN PLACE, every camera key of a shot on the main painting that would show more than 1% of its frame outside the painted area of the
+        picture (`bti.media.contentbox.fit_frame`: the zoom is raised only as far as the frame needs to fit the box, the centre moved to the nearest point inside it;
+        a key that holds the whole painting is the pull-back and stays). A locked shot and a shot the compiler keeps (outside the scope of an edit) are never touched.
+        -> one warning per shot that was changed, which says what the model wrote and what the compiler made of it."""
+        a = (doc.get("assets") or {}).get(self.main)
+        box = CB.box_of(a, self.inp.project_dir) if isinstance(a, dict) else None         # the stored box, else the finding of the file: the very box the validator judges by
+        if box is None:
+            return []
+        scope = set(self.inp.edit_shots) if self.edit and self.inp.edit_shots is not None else None
+        out = []
+        for s, o in zip(doc.get("shots") or [], origin):
+            if not isinstance(s, dict) or o["kind"] in ("locked", "kept") or s.get("locked") or (scope is not None and o["id"] not in scope):
+                continue
+            cam = (s.get("params") or {}).get("camera") if isinstance(s.get("params"), dict) else None
+            if not isinstance(cam, list) or SB.primary_slot(s)[1] != self.main:
+                continue
+            moved = []
+            for n, k in enumerate(cam):
+                if not (isinstance(k, dict) and all(isinstance(k.get(f), (int, float)) and not isinstance(k.get(f), bool) for f in ("cx", "cy", "zoom")) and k["zoom"] > 0):
+                    continue
+                share = CB.outside_share(box, k["cx"], k["cy"], k["zoom"])
+                cx, cy, z = CB.fit_frame(box, k["cx"], k["cy"], k["zoom"])
+                if (cx, cy, z) != (k["cx"], k["cy"], k["zoom"]):
+                    moved.append("key %d showed %.0f%% outside (centre %.0f, %.0f, zoom %.3g) and is now centre %.0f, %.0f, zoom %.3g" % (n + 1, share * 100, k["cx"], k["cy"], k["zoom"], cx, cy, z))
+                    k["cx"], k["cy"], k["zoom"] = cx, cy, z
+            if moved:
+                out.append(S.problem("frame_moved_into_painting", o["chapter"], o["n"],
+                                     "the camera of this shot (%s) went past the painted area of the main painting (x %d to %d, y %d to %d of the picture; what is outside it is the black ground of the "
+                                     "photograph, or the matte past the picture's edge) and the compiler moved it back: %s. Aim the camera inside the painted area, or zoom in." % (s.get("id"), box[0], box[2], box[1], box[3], "; ".join(moved)),
+                                     field="params.camera", level="warn"))
+        return out
+
     # ---------------------------------------------------------------- engine issues in spec terms
     def map_issue(self, iss: dict, origin: list) -> dict:
         path = iss.get("path") or ""
@@ -940,6 +1020,7 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
     for p in range(max_passes + 1):
         doc, origin, build_issues = c.build_doc(recs)
         doc, identity_report = c.apply_identity(doc, origin)
+        c.base_issues += c.fit_to_box(doc, origin)                  # panelbox: no camera key of a shot on the main painting stays outside its painted area
         mapped: list = []
         errs_engine = c.eng.validate(doc)
         mapped += [c.map_issue(i, origin) for i in errs_engine]

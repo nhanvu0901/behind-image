@@ -777,3 +777,12 @@ export const CATALOGUE_SENTENCES = {
 };
 export const CATALOGUE_CODES = Object.keys(CATALOGUE_SENTENCES);
 Object.assign(BUILD, CATALOGUE_SENTENCES);
+
+// ---- worker panelbox (2026-11-20): the check `frame_off_painting` (bti/engine/viewchecks.py): a camera key of a shot on the main painting shows more than 1% of its frame outside the painted
+// area of the picture (the black ground round a museum photograph of a panel). The sentence names the shot and the share, and says what to do. Added to BUILD like the two blocks above.
+export const PANELBOX_SENTENCES = {
+  frame_off_painting: (i) => { const a = i.args || {}; const pct = fdVn(Number(a.share) * 100, 0);
+    return `${fdShot(a)}: máy quay trượt ra ngoài mặt tranh, ${pct ? `${pct}% khung hình` : 'một phần khung hình'} là nền đen quanh ảnh chụp, hiện thành một dải ở mép khung. Dời tâm máy quay vào trong mặt tranh hoặc phóng to hơn; chỉ cảnh cho thấy cả bức mới được để lộ nền.`; },
+};
+export const PANELBOX_CODES = Object.keys(PANELBOX_SENTENCES);
+Object.assign(BUILD, PANELBOX_SENTENCES);

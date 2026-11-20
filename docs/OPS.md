@@ -347,6 +347,54 @@ Example:
 
 Sentences in `changes`: `default` = `Nhập hình từ {source}`; `main` = `Nhập hình từ {source} và đặt làm tranh chính`
 
+### `set_content_box`
+
+Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph round a panel. The camera of the video never leaves the box of the main painting; the program finds one by itself when a picture is imported or made the main one, and this replaces what it found.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `set_content_box` | yes | The operation name. |
+| `asset` | text | yes | An asset key of the picks document (such as A12), or a $ref made by an import earlier in the batch. |
+| `x0` | number | yes | Left edge of the painted area, pixels from the left edge of the picture. |
+| `y0` | number | yes | Top edge of the painted area, pixels from the top edge of the picture. |
+| `x1` | number | yes | Right edge of the painted area, pixels from the left edge of the picture (more than x0). |
+| `y1` | number | yes | Bottom edge of the painted area, pixels from the top edge of the picture (more than y0). |
+
+Example:
+
+```json
+{
+  "op": "set_content_box",
+  "asset": "A",
+  "x0": 40,
+  "y0": 50,
+  "x1": 1160,
+  "y1": 1550
+}
+```
+
+Sentence in `changes`: `Vùng tranh của {pic}: đã đặt`
+
+### `clear_content_box`
+
+Take away the painted area of a picture, so that the program finds it again from the picture (the main painting gets the new finding when the picks are saved).
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `clear_content_box` | yes | The operation name. |
+| `asset` | text | yes | An asset key of the picks document (such as A12), or a $ref made by an import earlier in the batch. |
+
+Example:
+
+```json
+{
+  "op": "clear_content_box",
+  "asset": "D"
+}
+```
+
+Sentence in `changes`: `Vùng tranh của {pic}: để chương trình tự tìm lại`
+
 
 ## Storyboard operations
 

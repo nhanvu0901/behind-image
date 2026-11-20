@@ -18,6 +18,7 @@ if the owner allowed it) approves the picks, and the storyboard draft starts fro
 - Gives: `picks.json`: the **main painting** (`main_asset`), the pictures imported into the project (`assets`, each with its source, author and licence), the **regions** of each picture (a named spot with a centre and a radius, in pixels of the stored file) and, per narration line, the list of pictures
   with a `role` (`main`, `detail`, `context`, `compare`, `document`, `map`, `video`). A line with no picture shows the main painting again. The pictures agent also writes, per line, `kinds` (what the line does: one or two of
   `detail`, `whole`, `outside`, `compare`, `journey`, `dates`, `figure`, `inscription`, `construction`, `relations`, `idea`) and `missing` (`[{what, code}]`: the pictures it asked for and did not find); both are absent in a document made before.
+  Every image asset may carry `content_box` (`{x0, y0, x1, y1, how}`, pixels of the stored file): the **painted area**. A museum photograph of a panel is often taken on a black ground, and the camera of the video must never leave the painting for that ground. The program finds the box by itself when a picture is imported and when it is made the main painting (`how`: `found` when a uniform dark or light band was taken away along the edges, `unsure` when it was not sure and kept the whole picture; the warning `content_box_unsure` says so for the main painting); a picture with no ground has no box and the whole picture is the painted area. If the box is wrong, `set_content_box` sets it (`how: set`) and `clear_content_box` lets the program find it again. The regions the pictures agent draws on the main painting are cut to the box.
 - Unlocks: the storyboard draft (step 5), together with the voice.
 
 ## The actions and operations it uses
@@ -52,6 +53,8 @@ revision itself, a refused batch writes nothing, and every batch can be undone (
 | `remove_pick` | Remove one picture of a narration line, by its position among the pictures of the line (counting from 0, as the earlier operations of the batch left them). |
 | `skip_beat` | Make a narration line show the main picture again (it keeps no pictures of its own). |
 | `import` | Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here. |
+| `set_content_box` | Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph round a panel. The camera of the video never leaves the box of the main painting; the program finds one by itself when a picture is imported or made the main one, and this replaces what it found. |
+| `clear_content_box` | Take away the painted area of a picture, so that the program finds it again from the picture (the main painting gets the new finding when the picks are saved). |
 <!-- END GENERATED: ops -->
 
 Pictures come from `picks.search` (the answer lists the `source` and `source_id` of each candidate) and are brought in with `picks.import`
