@@ -112,15 +112,19 @@ def import_candidate(project_dir: Path, source: str, source_id: str, *,
     Never refused for its licence or its size: `asset["credit"]["flag"]` is `rejected`, `unknown`, `small` or None
     (`min_short_side`, default 1200, is the limit for "small"). Importing the same item again returns the same
     key without downloading. `require_root`: the project folder must already exist
-    and no folder above `media/` is ever created (FileNotFoundError when the project was deleted meanwhile)."""
+    and no folder above `media/` is ever created (FileNotFoundError when the project was deleted meanwhile).
+
+    A download is POLITE (`bti.media.http.polite`): the requests of one host (Wikimedia: one service) go out at most one a second, and an answer of
+    "too many requests" is waited out (what the host asks, else 10, 30, 90 s) and the request sent again, three times, before the refusal is raised."""
     project_dir = Path(project_dir)
-    if require_root:
-        token = _http.NO_NEW_PARENTS.set(True)
-        try:
-            return _import(project_dir, source, source_id, min_short_side, True)
-        finally:
-            _http.NO_NEW_PARENTS.reset(token)
-    return _import(project_dir, source, source_id, min_short_side, False)
+    with _http.polite():
+        if require_root:
+            token = _http.NO_NEW_PARENTS.set(True)
+            try:
+                return _import(project_dir, source, source_id, min_short_side, True)
+            finally:
+                _http.NO_NEW_PARENTS.reset(token)
+        return _import(project_dir, source, source_id, min_short_side, False)
 
 
 def _import(project_dir: Path, source: str, source_id: str, min_short_side: int | None, require_root: bool) -> dict:

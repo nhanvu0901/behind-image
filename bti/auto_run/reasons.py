@@ -63,6 +63,7 @@ NEED_VI = {
     "main_asset": "bạn chọn tranh chính",
     "picks_errors": "bạn sửa lỗi trong phần chọn hình",
     "picks_approved": "bạn duyệt chọn hình",
+    "picks_saved_files": "agent chọn hình lại các dòng đang thiếu hình (các tệp của lần chạy trước không còn trong dự án)",       # fixes4
     "storyboard": "bản nháp storyboard (chưa có)",
     "storyboard_readable": "bạn khôi phục tệp storyboard đang bị hỏng",
     "storyboard_approved": "bạn duyệt storyboard",

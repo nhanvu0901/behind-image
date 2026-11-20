@@ -31,7 +31,6 @@ is `pending` and a resumed run searches it.
 from __future__ import annotations
 
 import os
-import threading
 import time
 from pathlib import Path
 from typing import Callable
@@ -150,22 +149,15 @@ def todo(state: dict) -> list[str]:
 
 
 # ---------------------------------------------------------------------------------------------------------------- thumbnails
-_pace_lock = threading.Lock()
-_pace_last = [None]
-
-
 def pace_wikimedia(url: str, *, sleep: Callable[[float], None] = time.sleep, clock: Callable[[], float] = time.monotonic) -> None:
     """Wait so that two downloads from a Wikimedia host (`upload.wikimedia.org`) are at least `WIKIMEDIA_PACE` seconds apart, whoever asks: Wikipedia's
-    candidates are many pictures at once, and the service answers "too many requests" to a client that does not keep to its rule."""
+    candidates are many pictures at once, and the service answers "too many requests" to a client that does not keep to its rule. The clock is the one the
+    downloads of the write part keep too (`bti.media.http.pace`: one a second for the whole Wikimedia service, thumbnails and imports alike)."""
     host = (urlparse(url).hostname or "").lower()
     if not host.endswith("wikimedia.org"):
         return
-    with _pace_lock:
-        now = clock()
-        if _pace_last[0] is not None and now - _pace_last[0] < WIKIMEDIA_PACE:
-            sleep(WIKIMEDIA_PACE - (now - _pace_last[0]))
-            now = clock()
-        _pace_last[0] = now
+    from bti.media import http
+    http.pace(url, sleep=sleep, interval=WIKIMEDIA_PACE, clock=clock)
 
 
 def default_fetch_thumb(pdir: Path, cand: dict, limited: dict | None = None, clock: Callable[[], float] = time.time) -> str | None:

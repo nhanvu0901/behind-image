@@ -579,3 +579,55 @@ def test_the_write_leaves_alone_a_line_the_owner_fills_while_the_job_runs(env):
     assert job["state"] == "done" and env.picks()["beats"]["b0003"]["note"] == "Của chủ video."
     r = result(job)
     assert (r["lines_total"], r["lines_by_others"]) == (5, 1) and r["lines_done"] == 5
+
+
+# ---------------------------------------------------------------------------------------------------------------- fixes4, point 1: the downloads of the write part
+def refusing(env, *, fail=("commons",), wait=None):
+    """A `fetch_asset` seam that is the real one, except that a source in `fail` answers "too many requests" (the answer the facade gives after its own
+    patient tries): `calls` lists what was asked, in order."""
+    from bti.picks.errors import PicksError
+    calls = []
+
+    def fetch(pdir, source, source_id):
+        calls.append((source, source_id))
+        if source in fail:
+            raise PicksError(503, "the image source limits downloads", "source_rate_limited", retryable=True, retry_after=wait)
+        return service.fetch_asset(pdir, source, source_id)
+    fetch.calls = calls
+    return fetch
+
+
+def test_a_picture_that_is_refused_after_the_patient_tries_closes_its_source_for_the_rest_of_the_write(env):
+    fetch = refusing(env, wait=75)
+    job = env.run(fetch_asset=fetch)
+    assert job["state"] == "done", job.get("error")
+    assert [s for s, _ in fetch.calls].count("commons") == 1                                       # the second Commons picture (the clip) was not even asked
+    assert ("osm", "1:12:51.2090:3.2247:Bruges") in fetch.calls                                    # another source is not held back
+    r = result(job)
+    miss = {m["beat"]: m for m in r["missing"]}
+    assert {m["code"] for m in r["missing"]} == {"import_limited"} and set(miss) == {"b0003", "b0004"}
+    assert "khoảng 2 phút" in miss["b0003"]["why"] and "khoảng 2 phút" in miss["b0004"]["why"]    # the wait the host asked for (75 s), said for both
+    b3, b4 = env.picks()["beats"]["b0003"], env.picks()["beats"]["b0004"]
+    assert [(i["asset"], i["role"]) for i in b3["items"]] == [("A", "main")] and b3["missing"] == [{"what": "Chân dung họa sĩ", "code": "import_limited"}]
+    assert [i["role"] for i in b4["items"]] == ["map"] and b4["missing"] == [{"what": "Kênh đào", "code": "import_limited"}]
+
+
+def test_a_refusal_with_no_time_is_listed_with_the_default_wait_of_a_minute(env):
+    job = env.run(fetch_asset=refusing(env, wait=None))
+    assert {m["code"] for m in result(job)["missing"]} == {"import_limited"}
+    assert all("khoảng 1 phút" in m["why"] for m in result(job)["missing"])
+
+
+def test_a_source_that_is_not_refused_is_downloaded_whole_and_nothing_is_missing(env):
+    fetch = refusing(env, fail=())
+    job = env.run(fetch_asset=fetch)
+    assert result(job)["missing"] == [] and len(fetch.calls) == 3 and result(job)["pictures_imported"] == 3
+
+
+def test_the_write_part_has_the_limit_and_the_estimate_that_the_paced_downloads_need():
+    import importlib
+    part_limit = importlib.import_module("bti.longjob.manager").PART_LIMIT_SECONDS
+    from bti.picks.auto import job as ajob
+    assert awrite.WRITE_SECONDS == 25 * 60 and ajob.EST_SECONDS["write"] == 300
+    patience = len(mhttp.PATIENT_WAITS) * mhttp.PATIENT_MAX_WAIT                                  # the longest wait of the one download that is under way at the deadline
+    assert awrite.WRITE_SECONDS + patience + 120 < part_limit                                     # the manager stops a part at 35 minutes: the deadline is inside it

@@ -11,6 +11,8 @@
     inputs/style.json       the style constants (pacing)
     inputs/current/<chapter>.json   the saved storyboard as draft specs, `locked` and `in_scope` marked (re-draft and edit)
     inputs/compile_input.json       what the helper commands compile from (do not edit)
+    picks.json              the picks of the project (the same document `compile_input.json` holds, its assets pointing at the copies in `images/`): the viewer checks read the
+                            `kinds` and the pictures of every line from it, in the workspace exactly as on the server (without it they are silent there). Do not edit
     images/<key>.jpg        copies no larger than 1568 px on the long side
     out/                    what the agent writes: <chapter>.json, regions.json, notes.md
     look/                   stills the agent draws for itself
@@ -306,6 +308,7 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
         "schema": "bti.draft.input/1", "title": inp.title, "style": inp.style, "timing": inp.timing, "picks": picks, "current": current,
         "scope": inp.scope, "edit_shots": sorted(scope_ids) if scope_ids is not None else None, "reserved_ids": inp.reserved_ids,
         "mode": mode})
+    _json(root / "picks.json", picks)                        # the viewer checks that read the kinds of the lines (`bti.engine.viewchecks`) look for picks.json beside the storyboard's project folder
 
     cmds = _wrappers(root, python, repo)
     chapters = inp.in_scope()

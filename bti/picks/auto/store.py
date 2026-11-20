@@ -5,6 +5,8 @@
     plan.json      part 1: the plan the agent wrote, checked and with the rules applied, and the model that made it
     search.json    part 2: for every wanted picture, its candidates (with thumbnails) or why there are none
     choice.json    part 3: the agent's choice, checked
+    choice2.json   the second choice (only with the owner's switch for the web search; its `n` counts inside `search.json`'s `round2.map[want]`)
+    retry.json     `picks.retry_missing` (bti/picks/auto/retry.py): the lines it looked at since this run, and what it did
     last.json      what the page shows after a run: the result, and the reason of every line the agent wrote
     thumbs/        the thumbnails of the candidates (small JPEGs, named by a hash of the source and id)
     runs/<id>/     the transcript of each agent session
@@ -21,7 +23,7 @@ from pathlib import Path
 from bti.script import store as sstore
 
 SCHEMA = "bti.picks.auto/1"
-FILES = ("run.json", "plan.json", "search.json", "choice.json")
+FILES = ("run.json", "plan.json", "search.json", "choice.json", "retry.json")      # retry.json (`bti.picks.auto.retry`): what the retry of the downloads did for this run
 LEVELS = 2                           # cache/picks_auto: the project folder exists, the two below it may be made
 
 

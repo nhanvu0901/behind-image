@@ -20,6 +20,8 @@ VI = {
     "picks_no_main": "Chưa chọn tranh chính ở bước Chọn hình.",
     "narration_not_approved": "Lời dẫn chưa được duyệt (hoặc đã đổi sau khi duyệt). Duyệt lời dẫn ở bước Kịch bản trước.",
     "main_asset_unreadable": "Tranh chính chưa có tệp ảnh đọc được. Chọn lại tranh chính.",
+    "retry_nothing_to_do": "Không có dòng nào đang thiếu hình vì nguồn giới hạn lượt tải.",
+    "retry_no_files": "Các tệp của lần chạy trước (kế hoạch, kết quả tìm, lựa chọn) không còn trong dự án. Hãy cho agent chọn hình lại các dòng này.",
     "agent_job_running": "Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời, dựng bản nháp hoặc chạy tự động). Chờ xong hoặc bấm Dừng rồi thử lại.",       # join2: the same sentence as the draft's
 }
 
@@ -58,6 +60,12 @@ def why(code: str, *, what: str = "", source: str = "", seconds: float | None = 
         return "Đã hết lượt tìm trên web của lần chạy này nên chưa tìm lại được %s. Chạy lại để tìm tiếp." % w
     if code == "web_no_key":
         return "Chưa có khóa để tìm trên web nên chưa tìm được %s ngoài các nguồn miễn phí. Thêm khóa You.com vào máy chủ rồi chạy lại." % w
+    if code == "retry_not_in_plan":
+        return "Dòng này không có trong kế hoạch của lần chạy trước nên không tải lại được."
+    if code == "retry_no_choice":
+        return "Lần chạy trước không ghi hình nào đã chọn cho chỗ còn thiếu của dòng này."
+    if code == "retry_line_changed":
+        return "Dòng này đã được sửa sau lần chạy của agent nên giữ nguyên."
     if code == "write_refused":
         return "Không ghi được hình cho %s%s." % (w, (": " + detail) if detail else "")
     if code == "box_dropped":
@@ -77,3 +85,13 @@ def result_sentence(done: int, total: int, without: int) -> str:
 def progress_session(label: str, steps: int, max_steps: int, elapsed: float, max_minutes: float) -> str:
     """The progress line of an agent session; the limits are in it, so the owner sees both what is spent and what is allowed."""
     return "%s: bước %d/%d, %d/%d phút." % (label, steps, max_steps, int(elapsed // 60), int(max_minutes))
+
+
+def retry_sentence(fixed: int, total: int, still: int, left: int) -> str:
+    """`Đã tải lại hình cho 5/6 đoạn. 1 đoạn vẫn bị giới hạn lượt tải.` (`picks.retry_missing`)."""
+    s = "Đã tải lại hình cho %d/%d đoạn." % (fixed, total)
+    if still > 0:
+        s += " %d chỗ vẫn bị giới hạn lượt tải, thử lại sau." % still
+    if left > 0:
+        s += " %d đoạn giữ nguyên." % left
+    return s

@@ -3500,7 +3500,7 @@
    "use_when": "The sentence makes a claim about depth, perspective or lines that do or do not meet: \"their angles suggest the painter did not know the new laws of perspective\", \"every line leads to the two central figures\". White lines are drawn one by one from the edges the claim is about toward the point where they meet, or fail to meet, then they vanish.",
    "needs": "The edges the lines follow, taken from the picture itself (the edges of the shelves, the floor tiles, a window frame) and the vanishing point as a point of the picture. The picture must show those edges.",
    "never_when": "The narration makes no claim about space; the lines would be drawn across things the narration does not name; a sentence that only says the room is narrow or deep.",
-   "example": "St. Eligius b0043: \"Look at the shelves behind the saint. Their angles suggest the painter did not know the new laws of perspective from Florence. He was still experimenting with space.\" (the finished video used only a camera move here)",
+   "example": "St. Eligius b0043: \"Look at the shelves behind the saint. Their angles suggest the painter did not know the new laws of perspective from Florence. He was still experimenting with space.\"",
    "slots": [
     {
      "name": "image",

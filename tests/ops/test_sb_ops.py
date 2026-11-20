@@ -100,7 +100,7 @@ def test_set_technique_lists_what_is_allowed(client):
     assert r.json()["fields"][0]["allowed"] == ["camera", "shadow"]
     r = sb(client, [{"op": "set_technique", "shot": "s0099", "technique": "CAM-03"}])
     assert r.json()["fields"][0]["allowed"] == ["s%04d" % i for i in range(1, 11)]
-    enum = next((t, p) for t in BUNDLE.techniques for p in t["params"] if p["type"] == "enum" and t["kind"] == "base" and BUNDLE.available(t["id"]))
+    enum = next((t, p) for t in BUNDLE.techniques for p in t["params"] if p["type"] == "enum" and t["kind"] == "base" and BUNDLE.available(t["id"]) and BUNDLE.offered(t["id"]))     # fixes4: an agent names only offered techniques
     r = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": enum[0]["id"], "params": {enum[1]["name"]: "no-such-value"}}])
     assert r.status_code == 422 and r.json()["fields"][0]["allowed"] == enum[1]["values"]
 
@@ -287,7 +287,7 @@ def test_set_overlay_start_end_and_open_end(client):
 
 
 def test_set_overlay_technique_takes_new_defaults(client):
-    new = next(t["id"] for t in BUNDLE.techniques if t["kind"] == "overlay" and BUNDLE.available(t["id"]) and t["id"] not in ("HI-01", "AN-01"))
+    new = next(t["id"] for t in BUNDLE.techniques if t["kind"] == "overlay" and BUNDLE.available(t["id"]) and BUNDLE.offered(t["id"]) and t["id"] not in ("HI-01", "AN-01"))     # fixes4: an agent names only offered techniques
     r = sb(client, [{"op": "set_overlay", "shot": "s0002", "overlay": "o2", "technique": new}])
     assert r.status_code == 200, r.text
     o = shot(client, "s0002")["overlays"][1]
@@ -716,3 +716,98 @@ def test_the_clear_note_is_one_of_the_changes_of_the_batch_and_an_undo_brings_it
     u = client.post("/api/projects/%s/changes/%s/undo" % (client.pid, batch), json={"base_rev": sb_rev(client), "actor": "human"})
     assert u.status_code == 200, u.text
     assert shot(client, "s0004")["note"] == "over the squirrel photo"
+
+
+# ---------------------------------------------------------------- fixes4: a batch written by an agent may only name the techniques it is offered
+HIDDEN_BASE = "LAY-02"                 # hidden: a four-tile grid; X-CMP-01 shows other works beside the painting one after another
+HIDDEN_OVERLAY = "STATIC-02"            # hidden: a source label; X-ANN-02 gives the title, maker and date of another work
+
+
+def test_an_agent_that_names_a_hidden_technique_is_told_which_one_to_use_instead(client):
+    r = refused(client, [{"op": "set_technique", "shot": "s0004", "technique": HIDDEN_BASE}], 422, "technique_not_offered", ["ops[0].technique"])
+    j = r.json()
+    assert j["technique"] == HIDDEN_BASE and j["use"] == ["X-CMP-01"] and j["op_index"] == 0
+    assert "LAY-02" in j["detail"] and "Use X-CMP-01 instead." in j["detail"] and "inputs/techniques.md" in j["detail"]
+    assert j["fields"][0]["problem"] == j["detail"].split(": ", 1)[1] and not BUNDLE.offered(HIDDEN_BASE)
+    allowed = j["fields"][0]["allowed"]
+    assert allowed and all(BUNDLE.offered(t) and BUNDLE.spec(t)["kind"] in ("base", "card") for t in allowed) and "X-CMP-01" in allowed and HIDDEN_BASE not in allowed
+    assert j["retry"] == "after_fix" and "`use`" in j["fix"] and "human" in j["fix"]
+
+
+def test_the_same_batch_of_a_person_is_taken(client):
+    r = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": HIDDEN_BASE}], actor="human")
+    assert r.status_code == 200, r.text
+    assert shot(client, "s0004")["technique"] == HIDDEN_BASE and shot(client, "s0004")["source"] == "human"
+
+
+@pytest.mark.parametrize("actor", ["agent:test-model", "agent:claude-opus-5-5@high", "cli:bti", "agent:auto"])
+def test_every_actor_that_is_not_the_owner_is_an_agent(client, actor):
+    r = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": HIDDEN_BASE}], actor=actor)
+    assert r.status_code == 422 and r.json()["code"] == "technique_not_offered", r.text
+
+
+def test_a_hidden_overlay_is_refused_for_an_agent_and_taken_from_a_person(client):
+    ops = [{"op": "add_overlay", "shot": "s0004", "technique": HIDDEN_OVERLAY, "params": {"text": "A source"}, "start": {"w": 70}, "dur": 3}]
+    r = refused(client, ops, 422, "technique_not_offered", ["ops[0].technique"])
+    assert r.json()["use"] == ["X-ANN-02"] and "Use X-ANN-02 instead." in r.json()["detail"]
+    assert all(BUNDLE.spec(t)["kind"] == "overlay" for t in r.json()["fields"][0]["allowed"])
+    assert sb(client, ops, actor="human").status_code == 200
+
+
+def test_a_hidden_technique_in_a_replacement_of_shots_and_in_a_change_of_overlay_is_refused_too(client):
+    r = sb(client, [{"op": "set_overlay", "shot": "s0002", "overlay": "o1", "technique": "X-HI-01"}])
+    assert r.status_code == 422 and r.json()["code"] == "technique_not_offered" and r.json()["use"] == ["HI-01"], r.text
+    assert paths(r) == ["ops[0].technique"]
+    ok = sb(client, [{"op": "set_overlay", "shot": "s0002", "overlay": "o1", "technique": "X-HI-01"}], actor="human")
+    assert ok.status_code == 200, ok.text
+
+
+def test_a_technique_with_no_replacement_says_it_is_left_out_or_has_no_use(client):
+    r = refused(client, [{"op": "set_technique", "shot": "s0004", "technique": "ID-BRAND-01"}], 422, "technique_not_offered", ["ops[0].technique"])
+    assert r.json()["use"] == [] and "instead" not in r.json()["detail"] and "Leave it out." in r.json()["detail"]      # the program writes it
+    r = refused(client, [{"op": "set_technique", "shot": "s0004", "technique": "HI-02"}], 422, "technique_not_offered", ["ops[0].technique"])
+    assert r.json()["use"] == [] and "no_material" not in r.json()["detail"] and "is not one of the techniques you are offered" in r.json()["detail"]
+
+
+def test_what_a_shot_or_an_overlay_already_has_is_never_refused_the_stored_storyboards_use_hidden_techniques(client):
+    assert shot(client, "s0004")["overlays"][0]["technique"] == HIDDEN_OVERLAY and not BUNDLE.offered(HIDDEN_OVERLAY)
+    ok = sb(client, [{"op": "set_params", "shot": "s0004", "overlay": "o1", "params": {"text": "SNOW"}},
+                     {"op": "set_overlay", "shot": "s0004", "overlay": "o1", "technique": HIDDEN_OVERLAY, "dur": 4},
+                     {"op": "set_technique", "shot": "s0004", "technique": "CAM-01"}])
+    assert ok.status_code == 200, ok.text
+    assert shot(client, "s0004")["overlays"][0]["technique"] == HIDDEN_OVERLAY and shot(client, "s0004")["technique"] == "CAM-01"
+    again = sb(client, [{"op": "set_technique", "shot": "s0005", "technique": "LAY-01"}])                     # an offered one is taken as before
+    assert again.status_code == 200, again.text
+
+
+def test_a_dry_run_says_it_too_and_an_unknown_technique_is_still_unknown(client):
+    r = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": HIDDEN_BASE}], dry_run=True)
+    assert r.status_code == 422 and r.json()["code"] == "technique_not_offered"
+    r = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": "NOPE-99"}])
+    assert r.status_code == 422 and r.json()["code"] == "unknown_technique"
+
+
+def test_the_new_code_is_in_the_table_the_hints_and_the_page():
+    from bti.editor import hints
+    from bti.ops.errors import ERRORS
+    assert ERRORS["technique_not_offered"][0] == 422 and "technique_not_offered" in hints.HINTS
+    page = (hints.REPO_ROOT / "bti" / "editor" / "static" / "js" / "errmsg.js").read_text(encoding="utf-8")
+    assert "technique_not_offered" in page
+
+
+def test_a_replace_range_keeps_the_hidden_techniques_the_run_already_has_and_refuses_a_new_hidden_one(client):
+    """fixes4: the deep edit puts a merged storyboard back as one `replace_range` (actor: the agent) that names every technique again, the stored hidden ones included."""
+    s4 = shot(client, "s0004")
+    assert s4["overlays"][0]["technique"] == HIDDEN_OVERLAY and not BUNDLE.offered(HIDDEN_OVERLAY)
+    keep = {"technique": s4["technique"], "slots": s4["slots"], "overlays": [{"technique": HIDDEN_OVERLAY, "params": {"text": "STILL HERE"}, "start": {"t": 24.0}, "dur": 4}]}
+    ok = sb(client, [{"op": "replace_range", "from_shot": "s0004", "to_shot": "s0004", "shots": [keep]}])
+    assert ok.status_code == 200, ok.text
+    new_id = ok.json()["created"]["shots"][0]                                                          # a replacement makes new shots with new ids
+    assert shot(client, new_id)["overlays"][0]["technique"] == HIDDEN_OVERLAY
+    r = refused(client, [{"op": "replace_range", "from_shot": new_id, "to_shot": new_id, "shots": [{"technique": HIDDEN_BASE, "slots": s4["slots"]}]}],
+                422, "technique_not_offered", ["ops[0].shots[0].technique"])
+    assert r.json()["use"] == ["X-CMP-01"]
+    r = refused(client, [{"op": "replace_range", "from_shot": "s0002", "to_shot": "s0002",
+                          "shots": [{"technique": shot(client, "s0002")["technique"], "slots": shot(client, "s0002")["slots"],
+                                     "overlays": [{"technique": HIDDEN_OVERLAY, "params": {"text": "NEW"}, "start": {"t": 10.0}, "dur": 3}]}]}],
+                422, "technique_not_offered", ["ops[0].shots[0].overlays[0].technique"])           # s0002 has no STATIC-02: it is new there

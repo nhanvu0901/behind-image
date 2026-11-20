@@ -736,7 +736,9 @@ DEVICE_KINDS = {"MAP-01": ("journey",), "TIME-01": ("dates",), "NUM-01": ("figur
                 "TREE-01": ("relations",), "LAY-01": ("compare",), "X-CMP-01": ("compare",)}
 OUTSIDE_ROLES = ("context", "document", "video")            # an outside picture of a beat (a `map` is drawn by MAP-01; a `compare` picture is another work, not the thing the line is about)
 NOT_THE_PAINTING_ROLES = OUTSIDE_ROLES + ("compare", "map")  # every picture that is not (a detail of) the main painting
-OUTSIDE_ON_PAINTING_SHARE = 0.5         # an outside picture must be on screen for at least this share of its beat
+OUTSIDE_ON_PAINTING_SHARE = 0.45        # an outside picture must be on screen for at least this share of a beat that has ONE kind (`outside` alone) ...
+OUTSIDE_ON_PAINTING_SHARE_TWO = 0.25    # ... and of a beat that has TWO kinds (`detail`, `outside`): the picture comes when the sentence reaches the thing, after the part about the painting
+OUTSIDE_ON_PAINTING_MIN_SECONDS = 3.5   # ... and in both cases for at least this long (a beat shorter than this: the whole of it)
 OUTSIDE_SMALL_SHARE = 0.8               # ... and drawn at no less than this share of its default fit
 SMALL_PICTURE_PX = 1000                 # a picture whose long side is under this is never enlarged beyond SMALL_PICTURE_MAX_ZOOM
 SMALL_PICTURE_MAX_ZOOM = 2.0
@@ -748,7 +750,8 @@ HINTS.update({
                           "LAY-01 and X-CMP-01: compare). On this line remove it and keep the picture the picks give, with a camera move."),
     "device_too_little": ("Remove the device or give it what it needs: a map needs two places or a route (for one place show the picture of the place), a time axis three dated events (for one year "
                           "use STATIC-09), a key three labels (for one or two use X-ANN-01), a tree three people."),
-    "outside_on_painting": ("Show the outside picture of this line for most of the line (X-LAY-01 for a picture, FOOT-01 for a clip), starting with the first shot of the line, instead of the painting."),
+    "outside_on_painting": ("Show the outside picture of this line for longer (X-LAY-01 for a picture, FOOT-01 for a clip): at least 45% of the line when it has one kind, 25% when it has two (the picture comes "
+                            "when the sentence reaches the thing), and never less than 3.5 seconds, instead of the painting."),
     "figure_on_wrong_picture": ("Put the large figure over the picture of the thing counted (the outside picture of this line, as a shot of its own or the base of the figure), not over the painting; "
                                 "if the picture was not found, leave the figure out and say the number with the camera move."),
     "outside_picture_small": ("Show the outside picture at its default fit: leave `camera` out (X-LAY-01 fills the frame's height) and write no zoom that leaves it small between black bars; "
@@ -901,6 +904,14 @@ def _figure_on_wrong_picture(c: _Ctx) -> list[dict]:
     return out
 
 
+def outside_needed(kinds: list, dur: float) -> tuple[float, float]:
+    """(the share, the seconds) an outside picture must be on screen in a beat of `dur` seconds whose kinds are `kinds`: 45% of a beat that has one kind, 25% of a beat that has two,
+    and in both cases at least 3.5 seconds (a beat shorter than that needs the picture for all of it). The two kinds of a line that does two things (`detail`, `outside`) say that the
+    picture comes when the sentence reaches the thing, not from its first word."""
+    share = OUTSIDE_ON_PAINTING_SHARE if len(kinds) <= 1 else OUTSIDE_ON_PAINTING_SHARE_TWO
+    return share, min(dur, max(share * dur, OUTSIDE_ON_PAINTING_MIN_SECONDS))
+
+
 def _outside_on_painting(c: _Ctx) -> list[dict]:
     out = []
     for r in _beat_rows(c):
@@ -919,11 +930,13 @@ def _outside_on_painting(c: _Ctx) -> list[dict]:
             if any(isinstance(v, dict) and v.get("asset") in assets for v in slots.values()):
                 secs += min(sp[1], r["t1"]) - max(sp[0], r["t0"])
         dur = r["t1"] - r["t0"]
-        if first is not None and secs < OUTSIDE_ON_PAINTING_SHARE * dur - 1e-9:
+        share, need = outside_needed(r["kinds"], dur)
+        if first is not None and secs < need - 1e-9:
             out.append(_issue("outside_on_painting", "shots[%d]" % first,
-                              "Line %s is about something outside the painting and the picks hold a picture of it, but that picture is on screen for only %.1f of the line's %.1f seconds (%.0f%%)."
-                              % (r["id"], secs, dur, secs / dur * 100), beat=r["id"], shot=c.sid(first), assets=sorted(assets), seconds=_r(secs), beat_seconds=_r(dur),
-                              share=_r(secs / dur, 2), limit=OUTSIDE_ON_PAINTING_SHARE))
+                              "Line %s is about something outside the painting and the picks hold a picture of it, but that picture is on screen for only %.1f of the line's %.1f seconds (%.0f%%); "
+                              "it needs %.0f%% of the line (%.1f seconds at the least)." % (r["id"], secs, dur, secs / dur * 100, share * 100, need),
+                              beat=r["id"], shot=c.sid(first), assets=sorted(assets), seconds=_r(secs), beat_seconds=_r(dur), share=_r(secs / dur, 2), limit=share,
+                              min_seconds=OUTSIDE_ON_PAINTING_MIN_SECONDS, needed_seconds=_r(need)))
     return out
 
 
@@ -955,7 +968,9 @@ def _outside_small(c: _Ctx) -> list[dict]:
 CATALOGUE_ISSUES = {
     "device_wrong_kind": "A device (MAP-01, TIME-01, NUM-01, DOC-01, AN-03, AN-06, TREE-01, LAY-01, X-CMP-01) on a line whose `kinds` (picks.json) do not call for it (warning). Judged only on lines that carry kinds. args: shot, overlay, technique, beats, kinds, needs.",
     "device_too_little": "A device with too little to show: MAP-01 with fewer than two places and no route, TIME-01 with fewer than three items, KEY-01 with fewer than three labels, TREE-01 with fewer than three people (warning). Judged only on lines that carry kinds. args: shot, overlay, technique, count, min, items, beats.",
-    "outside_on_painting": "A line of kind `outside` whose outside picture (a `context`, `document` or `video` item of its picks) is on screen for less than half of the line (warning). args: beat, shot, assets, seconds, beat_seconds, share, limit.",
+    "outside_on_painting": ("A line of kind `outside` whose outside picture (a `context`, `document` or `video` item of its picks) is on screen for less than 45% of the line, or for less than 25% when the line has two kinds "
+                            "(the picture comes when the sentence reaches the thing), or in both cases for less than 3.5 seconds (the whole line when it is shorter) (warning). "
+                            "args: beat, shot, assets, seconds, beat_seconds, share, limit (the share this line needs), min_seconds, needed_seconds."),
     "figure_on_wrong_picture": "A large figure (NUM-01) on a line of kind `figure` whose picks hold the picture of the thing counted, laid over another picture (warning). Judged only on lines that carry kinds. args: shot, overlay, asset, assets, beats.",
     "outside_picture_small": "An outside picture drawn smaller than 80% of its default fit (the frame's height or width; a picture under 1000 px is held to twice its size) (warning). Judged only on lines that carry kinds. args: shot, asset, zoom, fit, share, limit.",
 }

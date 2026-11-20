@@ -108,6 +108,15 @@ def test_an_example_is_a_real_sentence_of_the_two_narrations_with_its_line_id_or
     assert sorted(t for t in OFFERED if ALL[t]["example"].startswith("No sentence")) == ["AN-05", "AN-06", "STATE-01", "TREE-01"]
 
 
+def test_an_example_never_tells_the_model_what_an_earlier_video_did_not_use():
+    """fixes4: on the first real draft the model read, for AN-03, "(the finished video used only a camera move here)" and wrote in its notes "a camera move on the shelves serves this
+    line, as it did in the finished reference video": the example named the answer the technique is there to replace. An example is the sentence, never what a video did with it."""
+    ex = ALL["AN-03"]["example"]
+    assert ex.startswith("St. Eligius b0043: \"Look at the shelves behind the saint.") and "camera move" not in ex and "finished video" not in ex
+    for tid in OFFERED:
+        assert "used only" not in ALL[tid]["example"] and "did not use" not in ALL[tid]["example"], tid
+
+
 # ----------------------------------------------------------------------------------------------------------------- inputs/techniques.md
 @pytest.fixture(scope="module")
 def md():

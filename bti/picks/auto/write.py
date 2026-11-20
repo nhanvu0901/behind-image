@@ -33,6 +33,13 @@ from . import inputs as ainputs
 from . import search as asearch
 from . import shapes, store, texts
 
+# The write part's own deadline: 25 minutes, as before, and it still fits. It was set for a part that took about 2 minutes. Downloads are now polite
+# (`bti.media.http.polite`: a Commons picture is 3 requests, so 3 s apart at the least, then its transfer: up to 60 pictures is about 6 minutes) and patient
+# (a host that answers "too many requests" is waited for: 10 + 30 + 90 s, or what it asks, up to 120 s a time, so 2 to 6 minutes for the picture it happens to;
+# the first picture that is still refused after those tries closes its source for the rest of the part). That is 6 + 6 + the batches (a few minutes) = about
+# 15 minutes in the worst honest case. The deadline is only looked at before each download, and the long-job manager stops a whole part at 35 minutes
+# (`bti.longjob.manager.PART_LIMIT_SECONDS`): 25 minutes + the one download that is waiting when the deadline comes (6 minutes at the most) + the batches stay
+# inside it, 30 would not.
 WRITE_SECONDS = 25 * 60
 NOTE_MAX = 400
 
@@ -105,10 +112,15 @@ def final_regions(plan: dict, choice: dict) -> tuple[dict, list[str]]:
 # ---------------------------------------------------------------------------------------------------------------- downloads
 def download_all(pdir: Path, picks: dict, *, fetch_asset, cancelled, clock, deadline: float, progress) -> tuple[dict, dict]:
     """Bring every chosen picture into the project's media (not into picks.json yet). -> (`{(source, id): asset key}`,
-    `{(source, id): (code, detail, source name, seconds)}` for the ones that could not be had)."""
+    `{(source, id): (code, detail, source name, seconds)}` for the ones that could not be had).
+
+    One at a time, and polite: `fetch_asset` (`bti.picks.service.fetch_asset`) goes through `bti.media.api.import_candidate`, which sends at most one request a
+    second to a host and waits out a "too many requests" (what the host asks, else 10, 30, 90 s) before it gives up on a picture. A picture that is still
+    refused after that closes its source for the rest of this part (the host said no three times: asking for more pictures would only be rude): the others of
+    that source are listed as `import_limited` without a request, and `picks.retry_missing` imports them later, from the files of this run."""
     got: dict = {}
     failed: dict = {}
-    wait_until: dict = {}
+    closed: dict = {}                                            # source -> the seconds it asked us to wait, once a picture of it was refused for good
     todo = list(dict.fromkeys((p["pick"]["source"], p["pick"]["source_id"]) for p in picks.values() if p["pick"]))
     for k, (src, sid) in enumerate(todo, 1):
         if cancelled():
@@ -116,8 +128,8 @@ def download_all(pdir: Path, picks: dict, *, fetch_asset, cancelled, clock, dead
         if clock() > deadline:
             failed[(src, sid)] = ("time_up", "", None, None)
             continue
-        if wait_until.get(src, 0) > clock():
-            failed[(src, sid)] = ("import_limited", "", asearch.SOURCE_VI.get(src, src), int(wait_until[src] - clock()))
+        if src in closed:
+            failed[(src, sid)] = ("import_limited", "", asearch.SOURCE_VI.get(src, src), closed[src])
             continue
         progress(k - 1, len(todo), "Đang tải hình %d/%d" % (k, len(todo)))
         try:
@@ -126,7 +138,7 @@ def download_all(pdir: Path, picks: dict, *, fetch_asset, cancelled, clock, dead
         except PicksError as e:
             if e.code == "source_rate_limited":
                 wait = int(e.extra.get("retry_after") or asearch.DEFAULT_WAIT)
-                wait_until[src] = clock() + wait
+                closed[src] = wait
                 failed[(src, sid)] = ("import_limited", "", asearch.SOURCE_VI.get(src, src), wait)
             else:
                 failed[(src, sid)] = ("import_failed", e.code or "", asearch.SOURCE_VI.get(src, src), None)

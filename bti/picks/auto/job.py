@@ -39,7 +39,9 @@ from .inputs import AutoError
 KIND = "picks"
 ACTION = "auto"
 ROLE = "picks"
-EST_SECONDS = {"plan": 600, "search": 120, "choose": 480, "write": 120, "web": 180, "choose2": 240}
+# `write`: the downloads are paced one a second per host and may wait out a "too many requests" (`awrite.WRITE_SECONDS` says why the limit stays 25 minutes):
+# about 25 pictures at 3 requests each and their transfer, then the batches, is about 5 minutes (it was 2 when the downloads were not paced).
+EST_SECONDS = {"plan": 600, "search": 120, "choose": 480, "write": 300, "web": 180, "choose2": 240}
 # The limits of the two sessions of a run. What the real 61-line run of the first test video (project eligius, 2026-11-19) took: the plan 36 steps and 210 s
 # (20 boxes, a crop looked at for each), the choice of 21 pictures and 20 boxes 51 steps and 120 s (a little over one step for each sheet or crop it looked at).
 # A plan now asks for a picture on every line about something outside the painting, up to `shapes.MAX_WANTS` = 60 (it was 30): the choosing session looks at a

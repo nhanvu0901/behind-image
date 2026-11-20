@@ -245,7 +245,8 @@ def skip_beat(ctx, o):
 
 @op("picks", "import",
     summary="Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). "
-            "Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here.",
+            "Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here. "
+            "A download is polite and patient (one request a second to a host; a refusal of \"too many requests\" is waited for, up to about six minutes before the error `source_rate_limited`): send a batch with an import with a long timeout.",
     schema=S.obj("import", ["source", "source_id"], {
         "source": S.string("Where the picture is found: a picture source, or `book` for a picture of the project's books.", enum=SOURCES),
         "source_id": S.string("The id the search gave (or, for `book`, the source_id of GET .../picks/book-images).", min_length=1,

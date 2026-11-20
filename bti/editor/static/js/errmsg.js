@@ -777,3 +777,22 @@ export const CATALOGUE_SENTENCES = {
 };
 export const CATALOGUE_CODES = Object.keys(CATALOGUE_SENTENCES);
 Object.assign(BUILD, CATALOGUE_SENTENCES);
+
+// ---- worker fixes4 (2026-11-20): `picks.retry_missing` (bti/picks/auto/retry.py): the sentences of its two refusals. The other codes it can answer with are the picks job's own (`agent_job_running`, `busy`).
+Object.assign(STAGE_CODES.picks, {
+  retry_nothing_to_do: 'Không có dòng nào đang thiếu hình vì nguồn giới hạn lượt tải.',
+  retry_no_files: 'Các tệp của lần chạy trước (kế hoạch, kết quả tìm, lựa chọn) không còn trong dự án. Hãy cho agent chọn hình lại các dòng này.',
+});
+
+// ---- worker fixes4 (2026-11-20): `outside_on_painting` needs the picture for 45% of a line (25% of a line that does two things) and for 3.5 seconds at the least (bti/engine/viewchecks.py
+// `outside_needed`): the sentence says what the line needs (`args.limit`, `args.min_seconds`) and no longer asks for "most of the line".
+CATALOGUE_SENTENCES.outside_on_painting = (i) => { const a = i.args || {};
+  const lim = Number(a.limit), secs = Number(a.min_seconds);
+  const need = Number.isFinite(lim) && lim > 0 ? ` Cần ít nhất ${fdVn(lim * 100, 0)}% của dòng${Number.isFinite(secs) && secs > 0 ? ` và ít nhất ${fdVn(secs)} giây` : ''}.` : '';
+  return `Dòng ${a.beat ?? '?'} nói về thứ không có trong tranh và đã có hình của nó, nhưng hình ấy chỉ hiện ${fdVn(a.seconds)} trong ${fdVn(a.beat_seconds)} giây của dòng (${fdVn(Number(a.share) * 100, 0)}%).${need} Cho hình ấy hiện lâu hơn, thay vì bức tranh.`; };
+Object.assign(BUILD, CATALOGUE_SENTENCES);
+
+// ---- worker fixes4 (2026-11-20): `technique_not_offered` (bti/ops/sb_ops.py `_tech`): an agent's batch named a technique that is hidden from models (a person's batch may use any).
+Object.assign(STAGE_CODES.ops, {
+  technique_not_offered: 'Kỹ thuật này không dành cho yêu cầu do agent viết: có một kỹ thuật khác thay cho nó. Chọn kỹ thuật được đề nghị, hoặc tự đổi trên trang.',
+});

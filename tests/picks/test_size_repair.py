@@ -199,11 +199,12 @@ def test_a_second_try_inside_the_wait_sends_nothing_to_the_source(client, common
 
 
 def test_import_answers_429_without_a_time_with_a_null_wait(client, commons):
+    # fixes4: a download is patient: no time given, so it waits 10, 30, 90 s (no real sleep here) and asks again, three times: four requests, then the refusal
     net = commons([("commons.wikimedia.org", limited())])
     r = client.post(client.u("/import"), json={"source": "commons", "source_id": PD_ID})
-    assert r.json()["code"] == "source_rate_limited" and r.json()["retry_after"] is None and len(net.urls) == 1
+    assert r.json()["code"] == "source_rate_limited" and r.json()["retry_after"] is None and len(net.urls) == 4
     again = client.post(client.u("/import"), json={"source": "commons", "source_id": PD_ID})      # no time given: nothing is remembered
-    assert len(net.urls) == 2 and again.json()["code"] == "source_rate_limited"
+    assert len(net.urls) == 8 and again.json()["code"] == "source_rate_limited"
 
 
 def test_search_lists_the_limited_source_with_its_wait(client, commons, monkeypatch):

@@ -299,6 +299,30 @@ def auto_picks(pid: str, request: Request, body: dict = Body(None)):
     return {"job_id": rec["id"], "model": meta.get("model"), "agent": meta.get("agent"), "lines": len(meta.get("beats") or [])}
 
 
+@router.post("/projects/{pid}/picks/retry-missing")
+@guard
+def retry_missing_picks(pid: str, request: Request, body: dict = Body(None)):
+    """fixes4: a long job (kind `picks`, follow it at GET /api/longjobs/{job_id}), no model: the pictures the agent chose and the source refused (`missing` with the code `import_limited`)
+    are imported from the saved files of the last run (`cache/picks_auto`) and their lines are written again (bti/picks/auto/retry.py). Body (all optional):
+    `{"beats": [ids] | null, "actor": "human" | "agent:<id>" | "cli:<name>"}`. Never approves, never searches, never calls the paid services."""
+    from bti import auto as rule
+    from bti.picks import auto
+    from .auto_api import actor_of
+    d = _pdir(request, pid)
+    body = body if body is not None else {}
+    if not isinstance(body, dict):
+        raise ApiError(422, "the body must be an object", code="invalid_request")
+    actor = actor_of(body)
+    beats = body.get("beats")
+    if beats is not None and not (isinstance(beats, list) and all(isinstance(b, str) for b in beats) and 0 < len(beats) <= 400):
+        raise ApiError(422, "beats must be null or a list of narration line ids", code="invalid_field", field="beats")
+    try:
+        rec = auto.retry.start(pid, d, beats=beats, actor=actor, by_run=(actor == rule.RUN_ACTOR))
+    except auto.AutoError as e:
+        raise ApiError(e.status, e.message, code=e.code, **e.extra)
+    return {"job_id": rec["id"], "lines": len((rec.get("meta") or {}).get("beats") or [])}
+
+
 @router.get("/projects/{pid}/picks/auto")
 @guard
 def get_auto_picks(pid: str, request: Request):

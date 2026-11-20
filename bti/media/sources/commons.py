@@ -4,6 +4,7 @@ from __future__ import annotations
 import html
 import re
 import time
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import quote, unquote, urlparse
@@ -272,8 +273,10 @@ class CommonsSource:
             raise http.FileTooLarge(f"{meta.get('source_id')}: {meta['size']} bytes exceeds cap {cap}")
         if scaled:
             dest = _beside(dest, download_url)
+        way_round = (not scaled) and kind == "image" and self._fallback_width(meta, floor) is not None
         try:
-            http.download_file(download_url, dest, max_bytes=cap, opener=self._opener, sleep=self._sleep)
+            with (http.hasty() if way_round else nullcontext()):       # a refused original has a rendition to fall back on: do not wait for the original
+                http.download_file(download_url, dest, max_bytes=cap, opener=self._opener, sleep=self._sleep)
         except http.MediaHTTPError as refused:
             if scaled or kind != "image" or not refused.rate_limited:
                 raise
@@ -285,13 +288,22 @@ class CommonsSource:
                 raise ImageTooSmall(f"{meta.get('source_id')}: {aw}x{ah} px, short side below {floor}")
         return dest
 
+    @staticmethod
+    def _fallback_width(meta: dict, floor: int) -> int | None:
+        """The standard width to take when the original is refused ("too many requests"): the largest one below the original, when that rendition still
+        passes the size floor; None when there is none (no size known, or it would be under the floor)."""
+        w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
+        fb = rendition_width(w, h) if (w and h) else None
+        if not fb or min(fb, int(round(h * fb / w))) < floor:
+            return None
+        return fb
+
     def _fallback_rendition(self, meta: dict, dest: Path, floor: int, cap: int, refused: http.MediaHTTPError) -> Path:
         """The original was refused with "too many requests": take the largest standard width below it when that rendition
         still passes the size floor. Any other outcome (no size known, the floor, no rendition address, the rendition refused
         or failing too) raises the ORIGINAL refusal, so the caller sees the wait time the source asked for."""
-        w, h = int(meta.get("width") or 0), int(meta.get("height") or 0)
-        fb = rendition_width(w, h) if (w and h) else None
-        if not fb or min(fb, int(round(h * fb / w))) < floor:
+        fb = self._fallback_width(meta, floor)
+        if not fb:
             raise refused
         try:
             thumb = self._rendition_url(meta, fb)

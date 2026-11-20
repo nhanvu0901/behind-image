@@ -449,7 +449,8 @@ def test_thumbnails_from_a_wikimedia_host_are_a_second_apart_and_other_hosts_are
     def sleep(s):
         t["slept"].append(round(s, 3))
         t["now"] += s
-    monkeypatch.setattr(asearch, "_pace_last", [None])
+    from bti.media import http
+    monkeypatch.setattr(http, "_PACE_LAST", {})                                          # the one clock of the Wikimedia service (thumbnails and imports alike)
     for _ in range(3):
         asearch.pace_wikimedia("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/x.jpg/500px-x.jpg", sleep=sleep, clock=lambda: t["now"])
     assert t["slept"] == [1.0, 1.0]                                                       # the first goes at once, the next two wait out the second

@@ -107,6 +107,7 @@ Every error body has `code`, `detail` (one English sentence), `fix` (one English
 | `unknown_asset` | 422 | `after_fix` | No asset with this key exists in the document. | Use an asset key from `allowed` (GET /api/projects/{pid}/picks lists the assets too), or import the picture first (an import operation and its $ref, or POST /api/projects/{pid}/picks/import). |
 | `unknown_region` | 422 | `after_fix` | The asset has no region with this name. | Use one of the allowed region names, or add the region first with set_region. |
 | `unknown_technique` | 422 | `after_fix` | No technique with this id exists in the style registry. | Use a technique id that exists (`allowed` lists them when there are few; GET /api/styles/{style} lists all of them). |
+| `technique_not_offered` | 422 | `after_fix` | The technique exists but is hidden from a batch written by an agent: the program writes it, another technique replaces it, or it needs material the pictures step does not give. | Use the technique that `use` names instead (`allowed` lists the ones you are offered, `inputs/techniques.md` of a draft says when to use each). A batch of a person (the page, the actor `human`) may use any technique. |
 | `wrong_technique_kind` | 422 | `after_fix` | The technique exists but its kind does not fit where it is used. | Use a technique of the kind that fits: base or card for a shot, overlay for an overlay. |
 | `technique_unavailable` | 422 | `after_fix` | The technique is in the registry but the engine cannot draw it yet. | Use a technique the engine can draw (engine.available is true in the registry). |
 | `unknown_param` | 422 | `after_fix` | The technique has no parameter with this name. | Use one of the allowed parameter names of this technique. |
@@ -324,7 +325,7 @@ Sentence in `changes`: `Đoạn {n}: dùng lại tranh chính`
 
 ### `import`
 
-Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here.
+Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here. A download is polite and patient (one request a second to a host; a refusal of "too many requests" is waited for, up to about six minutes before the error `source_rate_limited`): send a batch with an import with a long timeout.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|

@@ -11,18 +11,26 @@ HTTP 429 (and 503 that carries `Retry-After`) means "stop asking": this layer wa
 asks for a few seconds (`SHORT_RETRY_AFTER`); otherwise it fails at once with a `MediaHTTPError` that has `rate_limited` and
 `retry_after` (seconds, None when the source gave no time), and it sends nothing more to that host until the time the source
 named has passed (`_COOLDOWN`). Other 5xx answers and timeouts keep the growing backoff (2, 4, 8 s) up to `tries` attempts.
+
+A DOWNLOAD of a picture (the import path of `bti.media.api`, run under `polite()`) is politer and more patient than a search: no two requests go to
+the same host (for Wikimedia: the same service, `commons.`, `upload.`, `en.wikipedia.org` ...) less than `PACE_INTERVAL` (one second) apart, and
+a 429 (or a 503 that carries `Retry-After`) is waited out: the time the host asks, else 10 s, then 30 s, then 90 s, and the request is sent again, three
+times in all (`PATIENT_WAITS`); a host that asks for more than `PATIENT_MAX_WAIT` is not waited for (the error carries its time, as before).
 """
 from __future__ import annotations
 
+import contextvars
 import email.utils
 import json
 import math
 import re
 import socket
+import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any, Callable
 from bti.fsio import atomic_replace
@@ -36,11 +44,18 @@ BASE_DELAY = 2.0
 MAX_WAIT = 60.0
 SHORT_RETRY_AFTER = 5.0           # "a few seconds": a longer Retry-After is not waited out inside one request
 MAX_COOLDOWN = 3600.0             # the longest a source's own "wait" is honoured locally (a silly value must not lock a host for ever)
+PACE_INTERVAL = 1.0               # a polite request: at least this many seconds after the last one to the same host (service)
+PATIENT_WAITS = (10.0, 30.0, 90.0)  # a polite request that is answered "too many requests" with no time: the waits before the three new tries
+PATIENT_MAX_WAIT = 120.0          # a host that asks for longer than this is not waited for (the caller reports its time and goes on)
 _RETRY = {500, 502, 504}          # transient server answers: growing backoff
 _LIMITED = {429, 503}             # "too many requests" / "come back later": one short honoured retry, else fail at once
 
 _now = time.monotonic             # tests replace it
 _COOLDOWN: dict[str, tuple[float, int]] = {}      # host -> (monotonic time until which the source asked us to wait, status)
+POLITE: contextvars.ContextVar = contextvars.ContextVar("bti_media_polite", default=False)   # set by `polite()`: paced requests (one a second per host)
+PATIENT: contextvars.ContextVar = contextvars.ContextVar("bti_media_patient", default=False)  # set by `polite()`: "too many requests" is waited out
+_PACE_LOCK = threading.Lock()
+_PACE_LAST: dict[str, float] = {}                 # host key -> monotonic time of the last polite request to it
 
 
 class MediaHTTPError(RuntimeError):
@@ -102,14 +117,72 @@ def reset_cooldowns() -> None:
     _COOLDOWN.clear()
 
 
-def _cooldown_check(url: str) -> None:
-    """Send nothing to a host that said "wait N seconds" while those seconds are not over."""
+def reset_pacing() -> None:
+    """Forget when the last polite request to each host went out (tests)."""
+    with _PACE_LOCK:
+        _PACE_LAST.clear()
+
+
+def host_key(url: str) -> str:
+    """The host a request is paced by. Wikimedia's hosts (`commons.`, `upload.`, `en.wikipedia.org` ...) are ONE service with one rule ("about one request a
+    second"), so they share one key; any other host is its own."""
+    host = _host(url).lower()
+    for service in ("wikimedia.org", "wikipedia.org"):
+        if host == service or host.endswith("." + service):
+            return "wikimedia"
+    return host
+
+
+def pace(url: str, *, sleep: Callable[[float], None] = time.sleep, interval: float = PACE_INTERVAL, clock: Callable[[], float] | None = None) -> None:
+    """Wait (with `sleep`) so that two requests to the same host (see `host_key`) are at least `interval` seconds apart, whoever makes them; then count this
+    one. The lock is held while waiting: concurrent callers queue up, which is the point."""
+    now_fn = clock or _now
+    key = host_key(url)
+    with _PACE_LOCK:
+        now = now_fn()
+        last = _PACE_LAST.get(key)
+        if last is not None and 0 <= now - last < interval:
+            sleep(interval - (now - last))
+            now = now_fn()
+        _PACE_LAST[key] = now
+
+
+@contextmanager
+def polite():
+    """Inside this block every request that goes through `open_url` is paced (one a second per host) and patient (a 429 is waited out, see the module's
+    words). Used by the import path of `bti.media.api` (the downloads of pictures); searches are not polite, they fail fast and say when to come back."""
+    t1, t2 = POLITE.set(True), PATIENT.set(True)
+    try:
+        yield
+    finally:
+        PATIENT.reset(t2)
+        POLITE.reset(t1)
+
+
+@contextmanager
+def hasty():
+    """Inside a `polite()` block: do not wait out "too many requests" for the requests of this block (they are still paced). For a request that has a way
+    round (Commons: a refused original has a rendition to fall back on), where waiting would only delay the other way."""
+    token = PATIENT.set(False)
+    try:
+        yield
+    finally:
+        PATIENT.reset(token)
+
+
+def _cooldown_check(url: str, wait_out: Callable[[float], None] | None = None) -> None:
+    """Send nothing to a host that said "wait N seconds" while those seconds are not over. A polite caller (`wait_out` is its `sleep`) waits those seconds
+    out when they are not more than `PATIENT_MAX_WAIT`, then goes on."""
     host = _host(url)
     until = _COOLDOWN.get(host)
     if until is None:
         return
     left = until[0] - _now()
     if left <= 0:
+        _COOLDOWN.pop(host, None)
+        return
+    if wait_out is not None and left <= PATIENT_MAX_WAIT:
+        wait_out(left)
         _COOLDOWN.pop(host, None)
         return
     raise MediaHTTPError(f"HTTP {until[1]} for {_short(url)}: the source asked us to wait, {int(math.ceil(left))} s left",
@@ -134,24 +207,39 @@ def open_url(url: str, *, timeout: float = 30, tries: int = MAX_TRIES,
     this waits that long and tries ONCE more; in every other case (no `Retry-After`, a longer one, or a second refusal) it
     raises `MediaHTTPError` at once, with `retry_after` set when the source gave a time, and the host is left alone until
     that time has passed. 500, 502, 504 and timeouts are retried with a growing wait (2, 4, 8 s; `Retry-After` honoured,
-    capped) up to `tries` attempts."""
+    capped) up to `tries` attempts.
+
+    Under `polite()` (a download of a picture) the request is also paced (see `pace`) and a "too many requests" is waited out: the `Retry-After` time,
+    else `PATIENT_WAITS` (10, 30, 90 s), and the request is sent again, three times; a time of more than `PATIENT_MAX_WAIT` is not waited for."""
     if opener is None:                                   # no injected transport: this would be a real request (A7 safety switch)
         refuse_if_real_models_off(f"network request to {_host(url)}")
         opener = urllib.request.urlopen
-    _cooldown_check(url)
+    paced, patient = POLITE.get(), PATIENT.get()
+    _cooldown_check(url, sleep if patient else None)
     hdrs = {"User-Agent": USER_AGENT, "Accept": "*/*", **(headers or {})}
     delay = BASE_DELAY
     attempt = 0
     limited_retried = False
+    patience = 0                                         # how many times a polite request waited out "too many requests"
     while True:
         attempt += 1
+        if paced:
+            pace(url, sleep=sleep)
         req = urllib.request.Request(url, headers=hdrs)
         try:
             return opener(req, timeout=timeout)
         except urllib.error.HTTPError as exc:
             if exc.code in _LIMITED:
                 wait = _retry_after(exc)
-                if wait is not None and wait <= SHORT_RETRY_AFTER and not limited_retried:
+                if patient:
+                    if (exc.code == 429 or wait is not None) and patience < len(PATIENT_WAITS):
+                        pause = wait if wait is not None else PATIENT_WAITS[patience]
+                        if pause <= PATIENT_MAX_WAIT:
+                            patience += 1
+                            attempt -= 1                 # a patient wait is not one of the `tries` of the 5xx / timeout backoff
+                            sleep(pause)                 # what the host asked for (else 10, 30, 90 s), then the same request again
+                            continue
+                elif wait is not None and wait <= SHORT_RETRY_AFTER and not limited_retried:
                     limited_retried = True
                     sleep(wait)
                     continue
@@ -199,7 +287,6 @@ def get_json(url: str, params: dict[str, Any] | None = None, **kw) -> Any:
         raise MediaHTTPError(f"response was not JSON for {_short(url)}") from exc
 
 
-import contextvars
 NO_NEW_PARENTS: contextvars.ContextVar = contextvars.ContextVar("bti_media_no_new_parents", default=False)
 
 

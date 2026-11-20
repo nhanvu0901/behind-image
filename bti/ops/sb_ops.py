@@ -105,12 +105,21 @@ def next_overlay_id(doc: dict) -> str:
     return "o%d" % (_overlay_floor(doc) + 1)
 
 
-def _tech(ctx, tid: str, kinds: tuple, field: str = "technique") -> dict:
+def _tech(ctx, tid: str, kinds: tuple, field: str = "technique", *, existing: bool = False) -> dict:
+    """The registry entry of a technique an operation names, or the refusal. `existing`: the technique is one the shot or the overlay ALREADY has (an operation that only
+    changes its parameters or its pictures): never refused for being hidden, the stored storyboards use hidden techniques.
+
+    A batch written by an agent (an actor that is not `human`: `agent:<model id>` or `cli:<name>`, see `Ctx.source`) may only NAME a technique that is offered to models
+    (`offered` of the registry, the catalogue of `inputs/techniques.md`): a hidden one is the error `technique_not_offered`, which says why and what to use instead (`use`).
+    A batch of a person (the page, the actor `human`) may use any technique that exists."""
     b = ctx.facts.bundle
     spec = b.spec(tid)
     usable = [t["id"] for t in b.techniques if t["kind"] in kinds and b.available(t["id"])]
     if spec is None:
         ctx.bad(field, "no technique %r in the style registry" % str(tid)[:40], allowed=usable, code="unknown_technique")
+    if ctx.source == "agent" and not existing and not b.offered(tid):
+        use = [u for u in ((spec.get("hidden_reason") or {}).get("use") or []) if b.offered(u)]
+        ctx.bad(field, b.not_offered_text(tid), allowed=[t for t in usable if b.offered(t)], code="technique_not_offered", technique=tid, use=use)
     if spec["kind"] not in kinds:
         ctx.bad(field, "%s is a %s technique; a %s technique is needed here" % (tid, spec["kind"], " or ".join(kinds)),
                 allowed=usable, code="wrong_technique_kind")
@@ -308,11 +317,11 @@ def _overlay_window(ctx, ot0: float, ot1: float, t0: float, t1: float, field: st
         ctx.bad(at(end_name), "an overlay must last longer than 0 seconds")
 
 
-def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str, base: str) -> dict:
+def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str, base: str, *, existing: bool = False) -> dict:
     """A new overlay inside `shot` (which spans [t0, t1]) from the fields of an add_overlay: the page's `addOverlay`, plus the
     checks. `base` is the field prefix of the errors ('' or 'shots[1].overlays[0].')."""
     tl = ctx.facts.timeline
-    spec = _tech(ctx, spec_o["technique"], ("overlay",), base + "technique")
+    spec = _tech(ctx, spec_o["technique"], ("overlay",), base + "technique", existing=existing)
     if spec_o.get("start") is not None:
         a, ot0 = _anchor_arg(ctx, spec_o["start"], base + "start")
     else:
@@ -364,7 +373,7 @@ def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str
 def set_technique(ctx, o):
     i, shot = _find(ctx, o["shot"])
     _guard(ctx, shot)
-    spec = _tech(ctx, o["technique"], ("base", "card"))
+    spec = _tech(ctx, o["technique"], ("base", "card"), existing=o["technique"] == shot.get("technique"))
     t0, t1 = _span(ctx, i)
     slots = carry_slots(spec["slots"], shot.get("slots"), ctx.doc["assets"])
     akey = _primary_asset({"slots": slots})
@@ -406,7 +415,7 @@ def set_params(ctx, o):
     item = ov if ov is not None else shot
     if ov is not None and ov.get("locked") is True:
         ctx.bad("overlay", "overlay %s of shot %s is locked" % (ov.get("id"), shot["id"]), code="locked", shot=shot["id"], overlay=ov.get("id"))
-    spec = _tech(ctx, item.get("technique"), ("overlay",) if ov is not None else ("base", "card"), "overlay" if ov is not None else "shot")
+    spec = _tech(ctx, item.get("technique"), ("overlay",) if ov is not None else ("base", "card"), "overlay" if ov is not None else "shot", existing=True)
     akey = _primary_asset(shot, ov)
     wanted_default = []
     for name, v in o["params"].items():
@@ -462,7 +471,7 @@ def set_slot(ctx, o):
     if ov is not None and ov.get("locked") is True:
         ctx.bad("overlay", "overlay %s of shot %s is locked" % (ov.get("id"), shot["id"]), code="locked", shot=shot["id"], overlay=ov.get("id"))
     item = ov if ov is not None else shot
-    spec = _tech(ctx, item.get("technique"), ("overlay",) if ov is not None else ("base", "card"), "overlay" if ov is not None else "shot")
+    spec = _tech(ctx, item.get("technique"), ("overlay",) if ov is not None else ("base", "card"), "overlay" if ov is not None else "shot", existing=True)
     if o["asset"] is None:
         if o["slot"] not in {s["name"] for s in spec["slots"]}:
             ctx.bad("slot", "%r is not a slot of %s" % (o["slot"], spec["id"]), allowed=sorted(s["name"] for s in spec["slots"]),
@@ -546,7 +555,7 @@ def set_overlay(ctx, o):
     ctx.touch("shot:" + shot["id"])
     new = copy.deepcopy(ov)
     if o.get("technique") is not None:
-        spec = _tech(ctx, o["technique"], ("overlay",), "technique")
+        spec = _tech(ctx, o["technique"], ("overlay",), "technique", existing=o["technique"] == ov.get("technique"))
         slots = carry_slots(spec["slots"], ov.get("slots"), ctx.doc["assets"])
         s0, s1 = tl.overlay_span(ov, t0, t1)
         new["technique"] = o["technique"]
@@ -802,6 +811,10 @@ def replace_range(ctx, o):
             ctx.bad("shots[%d]" % k, "the new shot would last %.2f s: every shot lasts at least %.1f s" % (bounds[k + 1] - bounds[k], MIN_SHOT),
                     code="shot_too_short")
     new_ids = next_shot_ids(ctx.doc, len(o["shots"]))
+    # the techniques the replaced shots already have (a shot's own and its overlays'): the deep edit puts a merged storyboard back as ONE `replace_range` that names every technique
+    # again, the stored ones included, and the stored storyboards use hidden techniques: an agent is never refused for what the run already holds, only for a new hidden one
+    carried_base = {s.get("technique") for s in run}
+    carried_overlay = {ov.get("technique") for s in run for ov in s.get("overlays") or []}
     for s in run:
         ctx.touch("shot:" + s["id"])
     for nid in new_ids:
@@ -810,7 +823,7 @@ def replace_range(ctx, o):
     oid_floor = _overlay_floor(ctx.doc)
     for k, ns in enumerate(o["shots"]):
         base = "shots[%d]." % k
-        spec = _tech(ctx, ns["technique"], ("base", "card"), base + "technique")
+        spec = _tech(ctx, ns["technique"], ("base", "card"), base + "technique", existing=ns["technique"] in carried_base)
         slots = _check_slots(ctx, spec, ns["slots"], base + "slots") if ns.get("slots") else carry_slots(spec["slots"], first.get("slots"), ctx.doc["assets"])
         akey = _primary_asset({"slots": slots})
         given = ns.get("params") or {}
@@ -830,7 +843,7 @@ def replace_range(ctx, o):
         shot["params"] = params
         for m, so in enumerate(ns.get("overlays") or []):
             oid_floor += 1
-            shot["overlays"].append(_build_overlay(ctx, shot, so, n0, n1, "o%d" % oid_floor, "%soverlays[%d]." % (base, m)))
+            shot["overlays"].append(_build_overlay(ctx, shot, so, n0, n1, "o%d" % oid_floor, "%soverlays[%d]." % (base, m), existing=so["technique"] in carried_overlay))
         new_shots.append(shot)
     ctx.doc["shots"][i:j + 1] = new_shots
     for k, ns in enumerate(o["shots"]):

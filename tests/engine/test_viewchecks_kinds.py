@@ -60,7 +60,7 @@ def picks_of(kinds=None, items=None, main="A", status=None):
     return {"schema": "bti.picks/1", "main_asset": main, "assets": {}, "beats": beats, "approval": {"approved": True}}
 
 
-def make(tmp_path, shots, *, picks="none", assets=None, end=120.0):
+def make(tmp_path, shots, *, picks="none", assets=None, end=120.0, each=20.0):
     d = tmp_path / "proj"
     (d / "media").mkdir(parents=True, exist_ok=True)
     from PIL import Image
@@ -69,7 +69,7 @@ def make(tmp_path, shots, *, picks="none", assets=None, end=120.0):
     doc = {"schema": "bti.storyboard/1", "project": "proj", "style": "gae", "canvas": {"w": 1920, "h": 1080, "fps": 30}, "timing": "timing.json",
            "assets": assets or {"A": asset(1000, 1500, "a"), "B": asset(900, 700, "b", "An outside picture"), "C": asset(600, 400, "c", "A small engraving")},
            "shots": shots, "end": {"t": end}, "approvals": {"storyboard": None}}
-    tm = Timing({"duration": end, "words": make_words(300, step=end / 300), "beats": beats_of()})
+    tm = Timing({"duration": end, "words": make_words(300, step=end / 300), "beats": beats_of(each=each)})
     pk = d / "picks.json"
     if picks == "none":
         if pk.exists():
@@ -234,12 +234,51 @@ def test_a_line_about_something_outside_that_stays_on_the_painting_is_flagged(tm
     assert rows[0]["path"] == "shots[1]"
 
 
-@pytest.mark.parametrize("seconds,flagged", [(8.0, True), (9.9, True), (10.0, False), (14.0, False), (20.0, False)])
-def test_the_outside_picture_must_be_on_screen_for_half_of_its_beat(tmp_path, seconds, flagged):
+@pytest.mark.parametrize("seconds,flagged", [(8.0, True), (8.9, True), (9.0, False), (9.9, False), (14.0, False), (20.0, False)])
+def test_the_outside_picture_must_be_on_screen_for_45_percent_of_a_beat_that_has_one_kind(tmp_path, seconds, flagged):
     shots = [shot(1, 0, camera=WIDE), shot(2, 20, "X-LAY-01", key="B"), shot(3, 20 + seconds, camera=WIDE)]
     if seconds >= 20:
         shots = [shot(1, 0, camera=WIDE), shot(2, 20, "X-LAY-01", key="B"), shot(3, 40, camera=WIDE)]
     doc, tm, d = outside_doc(tmp_path, shots)
+    rows = got(doc, tm, d, "outside_on_painting")
+    assert bool(rows) is flagged
+    if flagged:
+        assert rows[0]["args"]["limit"] == 0.45 and rows[0]["args"]["min_seconds"] == 3.5 and rows[0]["args"]["needed_seconds"] == 9.0
+        assert "needs 45% of the line (9.0 seconds at the least)" in rows[0]["message"]
+
+
+@pytest.mark.parametrize("seconds,flagged", [(4.0, True), (4.9, True), (5.0, False), (8.4, False)])
+def test_a_beat_that_does_two_things_needs_the_outside_picture_for_a_quarter_of_it(tmp_path, seconds, flagged):
+    """b0011 of the first run of the new rules (`detail`, `outside`): the picture came when the sentence reached the thing, 42% of the line, and that is right."""
+    shots = [shot(1, 0, camera=WIDE), shot(2, 20, camera=WIDE), shot(3, 20 + 20 - seconds, "X-LAY-01", key="B"), shot(4, 40, camera=WIDE)]
+    doc, tm, d = outside_doc(tmp_path, shots, kinds=("detail", "outside"))
+    rows = got(doc, tm, d, "outside_on_painting")
+    assert bool(rows) is flagged
+    if flagged:
+        assert rows[0]["args"]["limit"] == 0.25 and rows[0]["args"]["needed_seconds"] == 5.0
+
+
+def test_the_other_order_of_the_two_kinds_is_the_same_and_a_third_word_is_not_a_kind_the_check_knows(tmp_path):
+    shots = [shot(1, 0, camera=WIDE), shot(2, 20, camera=WIDE), shot(3, 34, "X-LAY-01", key="B"), shot(4, 40, camera=WIDE)]       # 6 seconds of 20: 30%
+    for kinds in (("outside", "detail"), ("whole", "outside"), ("outside", "journey")):
+        doc, tm, d = outside_doc(tmp_path / "-".join(kinds), shots, kinds=kinds)
+        assert got(doc, tm, d, "outside_on_painting") == [], kinds
+
+
+@pytest.mark.parametrize("kinds,dur,share,need", [
+    (["outside"], 20.0, 0.45, 9.0), (["detail", "outside"], 20.0, 0.25, 5.0), (["outside", "detail"], 14.1, 0.25, 3.525),
+    (["outside"], 13.1, 0.45, 5.895), (["outside"], 7.0, 0.45, 3.5), (["detail", "outside"], 11.7, 0.25, 3.5), (["detail", "outside"], 8.0, 0.25, 3.5),
+    (["outside"], 3.0, 0.45, 3.0), (["detail", "outside"], 2.0, 0.25, 2.0)])           # a beat shorter than 3.5 s needs the picture for all of it
+def test_what_a_beat_needs_is_the_share_of_its_kinds_and_never_less_than_three_and_a_half_seconds(kinds, dur, share, need):
+    s_, n_ = VC.outside_needed(kinds, dur)
+    assert s_ == share and n_ == pytest.approx(need)
+
+
+@pytest.mark.parametrize("kinds,seconds,flagged", [(("outside",), 3.5, True), (("outside",), 3.6, False), (("detail", "outside"), 3.4, True), (("detail", "outside"), 3.5, False)])
+def test_a_short_beat_needs_the_picture_for_three_and_a_half_seconds_whatever_its_share(tmp_path, kinds, seconds, flagged):
+    """Beats of 8 s (b0002 is 8-16 s): 45% is 3.6 s and 25% is 2 s, so the 3.5 s floor decides the second case."""
+    shots = [shot(1, 0, camera=WIDE), shot(2, 8, "X-LAY-01", key="B"), shot(3, 8 + seconds, camera=WIDE), shot(4, 16, camera=WIDE)]
+    doc, tm, d = make(tmp_path, shots, picks=picks_of({"b0002": list(kinds)}, {"b0002": [("A", "detail"), ("B", "context")]}), each=8.0, end=48.0)
     assert bool(got(doc, tm, d, "outside_on_painting")) is flagged
 
 

@@ -206,3 +206,42 @@ def test_wrapper_scripts_work_from_the_workspace_without_pythonpath(proj, tmp_pa
     r = subprocess.run([str(ws.root / ("still.cmd" if os.name == "nt" else "still")), "--shot", "c02:1", "--width", "200"], cwd=str(ws.root), env=env,
                        capture_output=True, text=True, timeout=240)
     assert r.returncode == 0 and (ws.root / "look" / "c02_1.jpg").is_file(), r.stdout + r.stderr
+
+
+# ---------------------------------------------------------------------------------------------------------------- fixes4: picks.json in the workspace
+def test_the_workspace_holds_the_picks_so_that_the_viewer_checks_that_read_the_kinds_run_in_the_agents_check(proj, tmp_path):
+    d = json.loads((proj / "picks.json").read_text(encoding="utf-8"))
+    d["beats"]["b0004"]["kinds"] = ["detail"]                                          # a line that points at a thing in the painting: a two-panel comparison does not belong on it
+    (proj / "picks.json").write_text(json.dumps(d), encoding="utf-8")
+    inp = load_inputs(proj)
+    ws = W.build(inp, root=tmp_path / "ws")
+    mine = json.loads((ws.root / "picks.json").read_text(encoding="utf-8"))
+    compiled = json.loads((ws.root / "inputs" / "compile_input.json").read_text(encoding="utf-8"))["picks"]
+    assert mine == compiled and mine["beats"]["b0004"]["kinds"] == ["detail"]           # the very document the helpers compile from: its assets point at the copies
+    assert all(a["file"].startswith("images/") for a in mine["assets"].values() if a.get("kind") != "video") and str(proj) not in json.dumps(mine)
+    bad = json.loads(json.dumps(GOOD))
+    bad["c02"]["shots"].insert(1, {"beat": "b0004", "start_word": 34, "technique": "LAY-01", "intent": "compare", "slots": {"left": {"asset": "A"}, "right": {"asset": "B"}},
+                                   "params": {"caption_left": "Main", "caption_left_sub": "", "caption_right": "Street", "caption_right_sub": ""}, "overlays": [], "note": "two pictures"})
+    for cid, sp in bad.items():
+        (ws.root / "out" / (cid + ".json")).write_text(json.dumps(sp), encoding="utf-8")
+    res, _ = W.workspace_compile(ws.root, draw=False)
+    assert not res.errors, res.errors
+    flagged = [(i["code"], i["chapter"], i["shot"]) for i in res.warnings if i["code"] == "device_wrong_kind"]
+    assert flagged == [("device_wrong_kind", "c02", 2)]                                  # the agent's own `check` says it, as the server's compile does
+    from bti.draft.compile import summary_text
+    assert "warning device_wrong_kind: chapter c02, shot 2 (LAY-01)" in summary_text(res)
+    ref = compile_specs(inp, {c: __import__("helpers").clean_spec(s, c) for c, s in bad.items()}, draw=False)
+    assert [i["code"] for i in ref.warnings if i["code"] == "device_wrong_kind"] == ["device_wrong_kind"]
+
+
+def test_without_kinds_in_the_picks_those_checks_stay_silent_in_the_workspace_as_they_do_on_the_server(proj, tmp_path):
+    ws = W.build(load_inputs(proj), root=tmp_path / "ws")
+    assert (ws.root / "picks.json").is_file()
+    assert not any("kinds" in b for b in json.loads((ws.root / "picks.json").read_text(encoding="utf-8"))["beats"].values())
+    bad = json.loads(json.dumps(GOOD))
+    bad["c02"]["shots"].insert(1, {"beat": "b0004", "start_word": 34, "technique": "LAY-01", "intent": "compare", "slots": {"left": {"asset": "A"}, "right": {"asset": "B"}},
+                                   "params": {"caption_left": "Main", "caption_left_sub": "", "caption_right": "Street", "caption_right_sub": ""}, "overlays": [], "note": "two pictures"})
+    for cid, sp in bad.items():
+        (ws.root / "out" / (cid + ".json")).write_text(json.dumps(sp), encoding="utf-8")
+    res, _ = W.workspace_compile(ws.root, draw=False)
+    assert not [i for i in res.warnings if i["code"] in ("device_wrong_kind", "device_too_little", "outside_on_painting", "outside_picture_small", "figure_on_wrong_picture")]

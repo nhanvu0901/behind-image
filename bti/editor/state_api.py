@@ -47,6 +47,8 @@ NEEDS: dict[str, tuple[str, str]] = {
     "main_asset": ("No main painting is chosen in the picks.", "Import a picture with as_main true (picks.import), or send picks.put with main_asset."),
     "picks_errors": ("The picks have errors other than the main painting (a missing file, an unknown asset or region).", "Read `issues` of GET /api/projects/{pid}/picks and fix them."),
     "picks_approved": ("The picks are not approved, or they changed after they were approved.", "Call picks.approve."),
+    "picks_saved_files": ("The saved files of the last run of the agent's choice of pictures (cache/picks_auto: plan, search, choice) are not in the project, so what the agent chose cannot be read again.",
+                          "Call picks.auto for these lines (with redo true): it chooses again."),      # fixes4
     "storyboard": ("The project has no storyboard yet.", "Run draft.start, then proposal.apply."),
     "storyboard_readable": ("storyboard.json cannot be read.", "Call storyboard.restore."),
     "storyboard_approved": ("The storyboard is not approved, or it was edited after it was approved.", "Call storyboard.approve."),
@@ -145,6 +147,14 @@ SPECS: list[Spec] = [
     Spec("picks.auto", "picks", "Để agent chọn hình", "POST", P + "/picks/auto", long_job=True, follow=LONGJOBS, role="picks",       # c3picks
          cost=("model", "about 20 minutes"),
          when="Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true, and while another long job of the project runs (the agent's choice, a prompt-box turn or a draft: one at a time; an automatic run goes on: only the run itself, as the `actor` `agent:auto`, takes it, any other caller is refused with `agent_job_running`). It never approves and never calls the paid suggestion service. Advances while no line has pictures yet."),
+    Spec("picks.retry_missing", "picks", "Tải lại hình đã chọn", "POST", P + "/picks/retry-missing", long_job=True, follow=LONGJOBS,         # fixes4
+         when="Listed only while a line of the picks says that a picture the agent chose could not be downloaded (`missing` with the code `import_limited`: the source limited the downloads; a `web_budget` is not retried here). "
+              "No model and no search: for each such line it reads what the agent chose in the saved files of the last run of picks.auto (cache/picks_auto: plan, search, choice, and the second choice when there is one), "
+              "imports that picture (at most one request a second to a host, and a refusal of \"too many requests\" is waited for), and writes the line again the way picks.auto would have written it: the plan's pictures in the plan's order, "
+              "the agent's reason as the note of the new picture, `missing` without what it fixed, one batch of the change log for the line (undoable). A line that was changed after the agent wrote it is left alone. "
+              "Ready while such lines exist and the saved files are there (`picks_saved_files` otherwise), the picks are open, and no agent job runs. It advances once for the lines it has not looked at since the last run of picks.auto: "
+              "the automatic run takes it once, before the pictures gate; a line still limited after that stays listed (call it again later by hand). Optional body field `beats` (a list of line ids) limits it to those lines. "
+              "Writing drops the approval of the picks, as every edit does."),
     Spec("picks.edit", "picks", "Nhờ agent sửa chọn hình", "POST", P + "/picks/edit", long_job=True, follow=LONGJOBS, role="picks",       # c2box
          cost=("model", "about 30 seconds"),
          when="Once the picks step is open. Ready unless the agent cannot run, another long job of the project runs (a prompt-box turn, a draft or the agent's choice of pictures: one at a time) or an automatic run goes on. The caller supplies the instruction and the scope (`fill`): {\"beats\": [ids]}, {\"chapter\": id} or {\"all\": true}. One call, typed picks operations (never an import), one batch in the change log; a request that needs a new picture ends as `escalate`, and then POST .../picks/auto with those lines does the work."),
@@ -259,6 +269,9 @@ class Ctx:
         self.picks_main = self.picks_ok = False
         self.picks_lines = (0, 0)             # c3picks: (lines of the narration, lines that are settled: pictures or skipped)
         self.picks_issues: list[dict] = []
+        self.retry_lines: list[str] = []                  # fixes4: the lines that say `import_limited` (picks.retry_missing)
+        self.retry_files = False                          # ... whether the saved files of the last run of picks.auto are there
+        self.retry_untried: list[str] = []                # ... and which of the lines it has not looked at yet
         self.narration_present = False
         self.draft_ready = {"voice": False, "picks": False}
         self.draft_state: dict = {"state": "none"}
@@ -394,6 +407,9 @@ def _load_picks(c: Ctx) -> None:
     c.narration_ok = c.narration_ok or bool(nv["approved"])
     if pd is not None:
         c.picks_issues = [i for i in doc.blocking(doc.issues(pd, c.d, nv["beat_ids"] if nv["present"] else None)) if i.get("code") != "no_main"]
+        from bti.picks.auto import retry                                                # fixes4
+        f = retry.facts(c.d, pd)
+        c.retry_lines, c.retry_files, c.retry_untried = f["lines"], f["files"], f["untried"]
 
 
 def _has_history_copy(d: Path) -> bool:
@@ -713,6 +729,22 @@ def b_picks_auto(c: Ctx):                                                   # c3
     return E(list(dict.fromkeys(needs)), body, advances=bool(not c.picks_ok and total and not settled))
 
 
+def b_picks_retry_missing(c: Ctx):                                          # fixes4
+    """Listed while a line says `import_limited`; ready when the saved files of the last run are there; advances for the lines it has not looked at yet."""
+    if not _picks_open(c) or not c.retry_lines:
+        return None
+    needs = [] if c.narration_ok else ["narration_approved"]
+    if c.picks_error:
+        needs.append("documents_readable")
+    elif not c.picks_main:
+        needs.append("main_asset")
+    if not c.retry_files:
+        needs.append("picks_saved_files")
+    if c.agent_busy("picks"):                                               # nor while the pictures agent, a prompt-box turn, a draft or the title writer works
+        needs.append("no_running_job")
+    return E(list(dict.fromkeys(needs)), {"beats": None, "actor": "cli:state"}, advances=bool(c.retry_untried))
+
+
 def b_picks_put(c: Ctx):
     if not _picks_open(c):
         return None
@@ -935,7 +967,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "narration.approve": b_narration_approve, "title.generate": b_title_generate, "title.set": b_title_set, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
-    "picks.auto": b_picks_auto, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
+    "picks.auto": b_picks_auto, "picks.retry_missing": b_picks_retry_missing, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
