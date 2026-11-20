@@ -21,10 +21,16 @@ VOICE_CONFIG = REPO_ROOT / "config" / "voice.json"
 SERVER_CONFIG = REPO_ROOT / "config" / "server.json"
 
 TEMPO_KEYS = ("tempo",)
+# The two silences a project may set for itself (`voice/settings.json`, keys `lead` and `title`), in seconds: the silence before the first
+# word and the silence that holds the channel-name beat. A project without its own value uses `silence.lead` / `silence.title`.
+LEAD_RANGE = (0.2, 15.0)
+TITLE_RANGE = (3.0, 30.0)
+SILENCE_RANGES = {"lead": LEAD_RANGE, "title": TITLE_RANGE}
 DEFAULT_SYNTH = {"exaggeration": 0.35, "cfg_weight": 0.5, "temperature": 0.7, "device": "cpu"}
 
 _BUILTIN = {
     "silence": {"sentence": 0.20, "beat": 0.45, "chapter": 1.0, "card": 3.2, "card_length": 2.8, "title": 6.2, "lead": 0.35, "tail": 2.5},
+    "intro": {"lead": 5.0, "title": 10.2},
     "tempo": 1.0, "tempo_range": [1.0, 1.2],
     "pad": {"enabled": True, "level_db": -24, "duck": 0.37, "chord_seconds": 10},
     "chunk": {"min_chars": 40, "max_chars": 280},
@@ -123,6 +129,37 @@ def clamp_tempo(v, cfg: dict) -> float:
     if x != x:
         x = cfg.get("tempo", 1.0)
     return round(min(max(x, lo), hi), 3)
+
+
+def _in_range(v, rng) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v == v and rng[0] <= v <= rng[1]
+
+
+def silence_settings(saved: dict | None, cfg: dict) -> dict:
+    """The two per-project silences in force: `{"lead", "title", "own": {"lead": bool, "title": bool}, "default": {"lead", "title"},
+    "intro": {"lead", "title"}}`. A project's own value (a number in its range) wins; otherwise the value is `silence.lead` /
+    `silence.title` of the voice config, exactly as before the project could choose, so a project that never set one keeps its
+    timing and its `assemble_sig`. `intro` is what a project the app creates gets written at creation."""
+    s = saved if isinstance(saved, dict) else {}
+    out: dict = {"own": {}, "default": {}, "intro": {}}
+    for k, rng in SILENCE_RANGES.items():
+        dflt = float(cfg["silence"][k])
+        own = _in_range(s.get(k), rng)
+        out[k] = float(s[k]) if own else dflt
+        out["own"][k] = own
+        out["default"][k] = dflt
+        out["intro"][k] = float((cfg.get("intro") or {}).get(k, dflt))
+    return out
+
+
+def silenced(cfg: dict, saved: dict | None) -> dict:
+    """`cfg` with the project's own `lead` and `title` in `silence` (the same object when the project has none)."""
+    sil = silence_settings(saved, cfg)
+    if not any(sil["own"].values()):
+        return cfg
+    out = dict(cfg)
+    out["silence"] = {**cfg["silence"], "lead": sil["lead"], "title": sil["title"]}
+    return out
 
 
 def project_settings(saved: dict | None, cfg: dict) -> dict:

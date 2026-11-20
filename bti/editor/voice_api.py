@@ -2,7 +2,10 @@
 
     GET  /api/projects/{pid}/voice               state, chunks by chapter, settings, pronunciation table, estimate, mix
     POST /api/projects/{pid}/voice/generate      {scope: "all" | "changed" | [chunk ids], reseed?: [chunk ids]} -> {job_id}
-    PUT  /api/projects/{pid}/voice/settings      {tempo?, pad?, pronounce?}
+    PUT  /api/projects/{pid}/voice/settings      {tempo?, pad?, lead?, title?, pronounce?}
+                                                 `lead` (0.2 to 15) is the silence before the first word and `title` (3 to 30) the silence that
+                                                 holds the channel-name beat, in seconds; null takes the project's own value away (the GET shows
+                                                 `silence`: the values in force and whether each is the project's own)
     GET  /api/projects/{pid}/voice/chunks/{id}.wav
     GET  /api/projects/{pid}/voice/mix
 
@@ -16,7 +19,7 @@ from fastapi import APIRouter, Body, Request
 from fastapi.responses import FileResponse
 
 from bti.voice import describe, files, run as voice_run
-from bti.voice.config import clamp_tempo, load_voice_config, project_settings
+from bti.voice.config import SILENCE_RANGES, clamp_tempo, load_voice_config, project_settings
 from bti.voice.errors import VoiceError
 
 from .common import ApiError, valid_pid
@@ -99,7 +102,20 @@ def make_router(projects_root: Path | None = None, *, cfg: dict | None = None, s
                 if not isinstance(body["pad"], bool):
                     raise ApiError(422, "pad must be true or false", code="bad_pad")
                 cur["pad"] = body["pad"]
-            if "tempo" in body or "pad" in body:
+            wrote = "tempo" in body or "pad" in body
+            for key, (lo, hi) in SILENCE_RANGES.items():              # the two silences of this project (null removes the project's own)
+                if key not in body:
+                    continue
+                v = body[key]
+                if v is None:
+                    cur.pop(key, None)
+                elif isinstance(v, bool) or not isinstance(v, (int, float)) or v != v or not lo <= v <= hi:
+                    bad = "bad_lead" if key == "lead" else "bad_title"
+                    raise ApiError(422, "%s must be a number of seconds from %s to %s (or null to use the standard one)" % (key, lo, hi), code=bad)
+                else:
+                    cur[key] = round(float(v), 3)
+                wrote = True
+            if wrote:
                 files.write_settings(d, cur)
             if "pronounce" in body:
                 tab = body["pronounce"]

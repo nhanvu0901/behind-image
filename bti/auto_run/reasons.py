@@ -74,6 +74,7 @@ NEED_VI = {
     "suggest_enabled": "bạn bật gợi ý hình",
     "locked_beats": "bạn mở khóa các dòng lời dẫn đang khóa",
     "draft_proposal": "bản nháp dựng xong",
+    "storyboard_fits_voice": "bạn bấm \"Khớp lại với giọng đọc\" (thẻ chương, tên kênh và điểm cuối đang lệch so với giọng đọc mới)",
     "auto_enabled": "bạn bật \"Cho agent tự chạy dự án này\"",
 }
 

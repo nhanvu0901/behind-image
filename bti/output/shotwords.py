@@ -13,6 +13,8 @@ import math
 import re
 from typing import Any, Callable
 
+from bti.draft.zones import OPENING_ID
+
 MAX = 96
 ID_LOOKING = re.compile(r"^[A-Z0-9_]{2,}$")
 VI = re.compile(r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]", re.I)
@@ -35,7 +37,8 @@ CAMERA = {
 }
 NAMES = {"MAP-01": "Bản đồ", "STATIC-06": "Bản đồ và tuyến", "TIME-01": "Trục thời gian", "TREE-01": "Sơ đồ quan hệ", "STATE-01": "Một tranh, hai trạng thái"}
 CARD = {"X-CARD-01": "Thẻ chương", "X-CARD-02": "Thẻ tiêu đề", "X-CARD-03": "Credit cuối phim", "X-CARD-04": "Thẻ câu hỏi", "TXT-01": "Tiêu đề chương", "ID-MARK-01": "Mốc chương",
-        "ID-MARK-02": "Mốc chương", "ID-BRAND-01": "Tên kênh", "ID-BRAND-02": "Tên kênh"}
+        "ID-MARK-02": "Mốc chương", "ID-BRAND-01": "Tên kênh", "ID-BRAND-02": "Tên kênh", "ID-BRAND-03": "Tên kênh và tựa video"}
+OPENING = "Mở đầu: cả bức tranh"       # the program's opening shot (the shot with the reserved id `bti.draft.zones.OPENING_ID`)
 OVERLAY = {
     "HI-01": "vòng sáng", "AN-01": "khoanh tròn", "AN-02": "viền quanh", "AN-03": "tia phối cảnh", "AN-05": "thước kích thước", "AN-06": "lưới", "X-ANN-01": "nhãn chi tiết",
     "X-ANN-02": "nhãn tác phẩm", "X-ANN-03": "nhãn tóm tắt", "X-ANN-04": "viền từng nhóm", "X-ANN-05": "chấm bản đồ", "AN-04": "bản đồ có đường đi", "X-HI-01": "làm tối xung quanh",
@@ -328,7 +331,9 @@ def shot_sentence(shot: Any, env: dict | None = None) -> str:
     tech_fn = env.get("tech")
     tech = (tech_fn(shot.get("technique")) if callable(tech_fn) else None) or None
     base = ""
-    if tech and _text(tech.get("label_vi")):
+    if shot.get("id") == OPENING_ID:
+        base = OPENING
+    elif tech and _text(tech.get("label_vi")):
         try:
             base = _base_sentence(shot, tech, env)
         except Exception:         # noqa: BLE001 - as the page does: the name of the technique stands in

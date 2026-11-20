@@ -27,6 +27,7 @@ The engine draws exactly what the storyboard says; it never decides.
 | `proposal.apply` | edit | Áp dụng |  |  |  |
 | `storyboard.restore` | edit | Khôi phục bản gần nhất |  |  |  |
 | `storyboard.validate` | edit | Kiểm tra |  |  |  |
+| `storyboard.retime` | edit | Khớp lại với giọng đọc |  |  |  |
 | `storyboard.approve` | edit | Duyệt storyboard | yes |  |  |
 | `storyboard.preview` | edit | Xem thử |  |  | yes |
 | `storyboard.put` | edit | Lưu storyboard |  |  |  |
@@ -69,7 +70,7 @@ The catalogue of techniques, under its headings (a shot takes a `base` or `card`
 |---|---|
 | annotation | `AN-01` Circle draw; `AN-02` Object outline; `AN-03` Perspective rays; `AN-04` Map circle and arrow; `AN-05` Dimension ruler; `AN-06` Grid and geometric regions; `AN-07` Dot field densifying; `KEY-01` Labels as a key to parts of a picture; `NUM-01` Big number with a comparison; `X-ANN-01` Detail label strip (one line); `X-ANN-02` Artwork label (two lines); `X-ANN-03` Recap labels at closing; `X-ANN-04` Sequential group outlines; `X-ANN-05` Map point markers one by one |
 | camera | `CAM-01` Push-in; `CAM-02` Layered relative motion; `CAM-03` Pull-back; `CAM-04` Pan up; `CAM-05` Zoom and shift; `CAM-06` Hold and label reveal |
-| card | `ID-BRAND-01` Channel name written by light; `ID-BRAND-02` Channel name on a dimmed picture; `ID-MARK-01` Chapter mark written by light; `ID-MARK-02` Chapter mark on a dimmed picture; `X-CARD-01` Chapter card on black; `X-CARD-02` Main title card; `X-CARD-03` End credit; `X-CARD-04` Question card on white |
+| card | `ID-BRAND-01` Channel name written by light; `ID-BRAND-02` Channel name on a dimmed picture; `ID-BRAND-03` Channel name and video title written by light; `ID-MARK-01` Chapter mark written by light; `ID-MARK-02` Chapter mark on a dimmed picture; `X-CARD-01` Chapter card on black; `X-CARD-02` Main title card; `X-CARD-03` End credit; `X-CARD-04` Question card on white |
 | compare | `CMP-01` Grey and colour scan side by side; `CMP-02` Stages versus finished; `CMP-03` White and colour versions; `CMP-04` Colour blocks beside detail; `CMP-05` Two colour states; `STATE-01` The same picture in two states; `X-CMP-01` Swap one side of a split; `X-CMP-02` Wipe compare |
 | diagram | `DIA-01` Grid and projection rays; `DIA-02` Two views of one object; `DIA-03` Cross-section and light rays; `DIA-04` Figure and separated pieces; `DIA-05` Process silhouette; `DIA-06` Room model and UV image; `DIA-07` Eye and vision diagram; `TIME-01` Time axis with dates; `TREE-01` Relations: family and patrons |
 | footage | `FOOT-01` Material footage and palette |
@@ -80,7 +81,7 @@ The catalogue of techniques, under its headings (a shot takes a `base` or `card`
 | text | `ID-LABEL-01` Artwork label without a strip; `ID-OPEN-02` Opening: dim and name; `TXT-01` Chapter title on blurred image; `TXT-02` Sliding italic text |
 | transition | `TR-01` Dissolve; `TR-02` Image slide in/out; `TR-03` Panel opening; `TR-04` Full-to-crop hard cut; `X-TR-01` Hard cut; `X-TR-02` Strip slides in, then splits |
 
-85 techniques in 12 headings; `bti` does not list their parameters: GET /api/styles/{style} does, and `bti schema ops storyboard` shows how `set_technique` and `set_params` take them.
+86 techniques in 12 headings; `bti` does not list their parameters: GET /api/styles/{style} does, and `bti schema ops storyboard` shows how `set_technique` and `set_params` take them.
 <!-- END GENERATED: techniques -->
 
 ## A worked session
@@ -136,7 +137,8 @@ Take these from `skills/storyboard_draft/TASK.template.md` and `skills/storyboar
 - **Move toward the thing as it is named.** Start the shot a word before the detail's name; end a spotlight or ring when the sentence moves on; after a detail come back to the painting.
 - **Prefer the core techniques**; use occasional and rare ones where a line clearly calls for them; never a technique of the `shorts` heading (they are for Shorts). Do not use the same technique four times in a row.
 - **Never put the narration on screen.** Labels are one to five words of your own ("Latin inscription"); no parameter holds a sentence of the narration. The video has no burned-in subtitles.
-- **The channel identity is the program's.** The `ID-*` techniques (the opening, the channel-name beat, the chapter marks) are written by the compiler: never add one, never write a title card or a chapter card. Change their style with `identity.set`.
+- **The channel identity is the program's.** The `ID-*` techniques (the opening, the channel-name beat, the chapter marks) are written by the compiler: never add one, never write a title card or a chapter card. Change their style with `identity.set`. The video starts with the program's opening shot (`s0000`: the whole painting before the first word, when the first word starts at 3.3 s or later); never write or change it, and never start the model's first shot with a still view of the whole painting. The title shown under the channel name is the field `video_title` of the storyboard's `identity` object (`identity.set` with `--set video_title="..."` besides `style`; one line, at most 90 characters).
+- **After the voice was made again, fit the storyboard to it.** The cards, the channel-name beat and the end of the video are anchored by absolute time; when the voice is assembled again (another silence before the first word or before the title, or one sentence read again) every word moves and they do not. `bti status` then lists `storyboard.retime` ("Khớp lại với giọng đọc") as the next command: run `bti do <project> storyboard.retime`. It moves what is off, puts the opening shot in (or takes it out), sets the end and applies the identity again; it changes no shot of the model or the owner (except the start of the shot after the opening shot), leaves locked shots and a wrong number of cards and says so (`report.left`), costs nothing and is one batch you can `bti undo`. Until it is done `storyboard.approve` and `export.start` are not ready and the routes refuse with `storyboard_off_voice`. The automatic run does it by itself before the gate.
 - **Respect locks and scope.** Never touch a locked shot; a batch with a `scope` that an operation leaves is refused whole (`out_of_scope`).
 
 ## The warnings of `storyboard.validate` that are the owner's rejections
@@ -170,4 +172,5 @@ None of these blocks a save or the approval, but an automatic run stops at them 
 | `edit_outside_scope`, `escalate`, `cannot`, `edit_no_change` | A request in words could not be met within its scope: narrow it, widen the scope, or do it with operations. |
 | `storyboard_corrupt`, `storyboard_unreadable` | `storyboard.restore` brings back the newest good copy from `history/`. |
 | `storyboard_has_errors`, `storyboard_incomplete`, `undrawable` | Fix what `storyboard.validate` lists, then approve. |
+| `storyboard_off_voice` | The voice was made again and the cards, the channel-name beat or the end sit where the old voice put them: run `bti do <project> storyboard.retime`, then approve again. |
 | `gate_needs_human` (exit 3) | The owner has not allowed you to approve this gate: stop and ask. |

@@ -29,10 +29,12 @@ def family(bundle):
     return sorted(t["id"] for t in bundle.techniques if cfg.is_identity_technique(t["id"]))
 
 
-def test_the_family_is_the_seven_techniques_of_the_block(bundle):
+def test_the_family_is_the_seven_techniques_of_the_block_and_the_earlier_form_of_the_beat(bundle):
     cfg = ID.read(bundle.style)
     named = {t for s in cfg.styles.values() for t in (s.open, s.label_role, s.brand, s.mark) if t}
-    assert set(family(bundle)) == named and len(named) == 7
+    assert len(named) == 7
+    earlier = {t for s in cfg.styles.values() for ids in s.earlier.values() for t in ids}       # ID-BRAND-01: the title slot of every video made before ID-BRAND-03
+    assert earlier == {"ID-BRAND-01"} and set(family(bundle)) == named | earlier
 
 
 def test_every_identity_technique_is_listed_and_marked_program_only(bundle):

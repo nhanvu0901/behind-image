@@ -95,11 +95,15 @@ def test_registry_entries_are_complete():
 
 
 def test_style_block_names_the_techniques_of_each_style():
+    """Changed by worker introflow (2026-11-20, the new opening): `raking` names `ID-BRAND-03` for the channel-name beat (nominal 9.1 s with the video's title) and lists
+    `ID-BRAND-01` as its EARLIER form (`earlier`: every video made before still holds it); its opening overlay is nominal 0 to 3.6 s and its label 1.2 s for 3.8 s (they sit on
+    the program's opening shot, which shows the whole painting before the first word), the chapter mark stays 3.2 s. `dim` is as it was."""
     b = R.load_bundle("gae")
     idn = b.style["identity"]
     assert idn["channel_name"] == "RAKING LIGHT" and idn["default_style"] == "raking" and set(idn["styles"]) == {"raking", "dim"}
     assert b.spec(idn["styles"]["dim"]["mark_transition"]["technique"])["kind"] == "transition"
     assert idn["styles"]["dim"]["mark_transition"]["dur"] == 0.75 and idn["styles"]["raking"]["mark_transition"] is None
+    new_look = {"open": 3.6, "label": 3.8, "brand": 9.1, "mark": 3.2}              # the block's own nominal numbers of `raking`
     used = []
     for name, st in idn["styles"].items():
         assert st["label_vi"]
@@ -111,9 +115,13 @@ def test_style_block_names_the_techniques_of_each_style():
             assert b.spec(tid)["kind"] == kind and b.available(tid), (name, role)
             used.append(tid)
             nom = st["nominal"][role]
-            assert nom["dur_s"] == NOMINAL[tid] and nom.get("start_s", 0) >= 0, (name, role)
-    assert sorted(used) == sorted(IDS)
-    assert idn["styles"]["raking"]["nominal"]["label"]["start_s"] == 6.2 and idn["styles"]["dim"]["nominal"]["open"]["start_s"] == 7.0
+            assert nom["dur_s"] == (new_look[role] if name == "raking" else NOMINAL[tid]) and nom.get("start_s", 0) >= 0, (name, role)
+    assert sorted(used) == sorted([t for t in IDS if t != "ID-BRAND-01"] + ["ID-BRAND-03"])
+    assert b.spec("ID-BRAND-03")["timing"]["default_s"] == 9.1 and idn["styles"]["raking"]["brand"] == "ID-BRAND-03"
+    assert idn["styles"]["raking"]["earlier"] == {"brand": ["ID-BRAND-01"]} and b.available("ID-BRAND-01")       # still a registered technique of the family
+    assert "earlier" not in idn["styles"]["dim"]
+    assert idn["styles"]["raking"]["nominal"]["open"]["start_s"] == 0.0 and idn["styles"]["raking"]["nominal"]["label"]["start_s"] == 1.2
+    assert idn["styles"]["dim"]["nominal"]["open"]["start_s"] == 7.0
     assert idn["min_element_s"] == 1.5
 
 
@@ -495,7 +503,7 @@ def test_the_sample_project_draws_every_technique(arnolfini, tmp_path):
     arnolfini.use_draft(sb)
     try:
         rs = arnolfini.resolve(sb)
-        for s in rs["shots"][-6:]:
+        for s in rs["shots"][-7:]:
             assert arnolfini.frame_at(s["_t0"] + 0.5 * (s["_t1"] - s["_t0"]), 320).shape == (180, 320, 3), s["technique"]
     finally:
         arnolfini.use_draft(None)

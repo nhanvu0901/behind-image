@@ -1,6 +1,6 @@
 """R2B-012, permanent form: whatever `validate` accepts without an error, the engine can draw.
 
-For every one of the 85 techniques (taken from its reference configuration in `projects/technique_lab`; the ID-*, TIME-01, TREE-01, STATE-01, MAP-01, KEY-01, NUM-01 and DOC-01 ones from `identity_lab.py`) and for every
+For every one of the 86 techniques (taken from its reference configuration in `projects/technique_lab`; the eight ID-*, TIME-01, TREE-01, STATE-01, MAP-01, KEY-01, NUM-01 and DOC-01 ones from `identity_lab.py`) and for every
 parameter of every one of the fourteen registry types (number, enum, bool, string, text, color, point, points, lines, box, camera,
 asset, items, at), the parameter is replaced one at a time by a set of odd values: wrong but well typed, extreme, empty, degenerate.
 The draft is validated; when validate reports no error the frame in the middle of the item MUST be drawn (no exception, and

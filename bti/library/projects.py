@@ -40,6 +40,19 @@ def _work_level(wid: str) -> str:
     return catalogue.work_trust(w)["trust"] if w else catalogue.book_trust(bid)["trust"]
 
 
+def _write_intro_silences(d: Path) -> None:
+    """A project the app creates gets the two silences of the new opening (`intro` of config/voice.json: the lead before the first word and
+    the silence that holds the channel-name beat) written into its own voice settings. A project made another way (by hand, in a test, an
+    older one) has none and keeps `silence.lead` and `silence.title`."""
+    from bti.voice import files as voice_files
+    from bti.voice.config import SILENCE_RANGES, load_voice_config
+    intro = load_voice_config().get("intro")
+    own = {k: round(float(intro[k]), 3) for k, (lo, hi) in SILENCE_RANGES.items()
+           if isinstance(intro, dict) and isinstance(intro.get(k), (int, float)) and not isinstance(intro.get(k), bool) and lo <= intro[k] <= hi}
+    if own:
+        voice_files.write_settings(d, own)
+
+
 def create_project(work_ids: list[str] | None, slug: str | None = None, projects_root: Path | None = None,
                    artwork_key: str | None = None, exclude: list[str] | None = None) -> dict:
     """Project from an ARTWORK (`artwork_key`, minus the `exclude`d work ids) or from explicit `work_ids`.
@@ -111,6 +124,7 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
         if len(set(keys)) > 1:
             proj["mixed_artwork_keys"] = keys
         catalogue.write_json(d / "project.json", proj)
+        _write_intro_silences(d)
     except BaseException:
         shutil.rmtree(d, ignore_errors=True)
         raise

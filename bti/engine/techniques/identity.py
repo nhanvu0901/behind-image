@@ -4,6 +4,7 @@ Style `raking` ("Vệt sáng quét"): a soft band of light sweeps over the dimme
     ID-OPEN-01   overlay  raking reveal of the shot under it (the opening)
     ID-LABEL-01  overlay  two-line artwork label without a strip
     ID-BRAND-01  base     channel name written by the band
+    ID-BRAND-03  base     channel name written by the band, then a second sweep writes the video's title and a small line under it
     ID-MARK-01   base     chapter mark written by the band
 Style `dim` ("Tối lại, hiện tên"): the picture dims and a line of text fades in.
     ID-OPEN-02   overlay  dim and name (the opening)
@@ -11,7 +12,7 @@ Style `dim` ("Tối lại, hiện tên"): the picture dims and a line of text fa
     ID-MARK-02   base     chapter mark on the dimmed picture
 Design and numbers: docs/design/2026-11-18-identity-raking-light.md (sections 2 to 4); moving mock-ups: docs/design/2026-11-18-d13-identity-mock.html.
 
-Rules shared by all seven:
+Rules shared by all eight (the ids are not consecutive: ID-BRAND-03 came later, beside ID-BRAND-01, which it leaves as it was):
   * Times in the params are NOMINAL seconds from the start of the element (the overlay, or the shot for a base technique). When the
     element is shorter than its nominal length every time is scaled by (actual length / nominal length); a longer element keeps the
     nominal times and holds its last state (the brand beats), or ends plain (opening, marks). An element is meant to be >= 1.5 s.
@@ -27,6 +28,9 @@ Rules shared by all seven:
 from __future__ import annotations
 
 import math
+import struct
+import threading
+from typing import NamedTuple
 
 import cv2
 import numpy as np
@@ -42,6 +46,7 @@ INK = (244, 239, 228)            # the video ink of the mock-up, #f4efe4 (RGB)
 SHADOW_ALPHA = 0.6               # soft shadow behind every line of text (mock-up: 0 0 .9cqw rgba(0,0,0,.6))
 SHADOW_SIGMA = 0.0045            # Gaussian sigma of that shadow, as a fraction of the canvas width (0.9cqw blur radius / 2)
 MAX_LINE_W_PCT = 88.0            # a line of text is never wider than this share of the frame: it is made smaller instead (never wrapped)
+TITLE_MAX_W_PCT = 84.0           # ID-BRAND-03: the title and the small line under it keep a margin of 8 % of the width on each side (a longer line is made smaller)
 
 
 # ----------------------------------------------------------------------------- timeline helpers
@@ -70,9 +75,204 @@ def fade_window(tau, t_in, d_in, t_out, d_out):
     return ramp01(tau, t_in, d_in) * (1.0 - ramp01(tau, t_out, d_out))
 
 
+# ----------------------------------------------------------------------------- pair kerning (ID-BRAND-03's title)
+# The bundled faces keep their kerning in the GPOS table; Pillow's basic layout (the only one on the server: no libraqm) reads only the old
+# `kern` table, so "Wa" in the italic face came out with a gap. `_Kerning` reads the pair adjustments of the face's `kern` feature with the
+# standard library; a face that cannot be read simply gets no kerning (never an error).
+_U16, _I16, _U32 = struct.Struct(">H"), struct.Struct(">h"), struct.Struct(">I")
+
+
+def _u16(d, o):
+    return _U16.unpack_from(d, o)[0]
+
+
+def _i16(d, o):
+    return _I16.unpack_from(d, o)[0]
+
+
+def _u32(d, o):
+    return _U32.unpack_from(d, o)[0]
+
+
+class _Kerning:
+    """Horizontal pair adjustments of a TrueType face (GPOS pair adjustment lookups of the `kern` feature, formats 1 and 2, also behind an
+    extension lookup). `pair(a, b)` is the adjustment between two characters in font units (negative: closer), 0 for anything unknown."""
+
+    def __init__(self, d):
+        self.d = d
+        n = _u16(d, 4)
+        tb = {d[12 + 16 * i:16 + 16 * i].decode("latin-1"): _u32(d, 20 + 16 * i) for i in range(n)}
+        self.upem = _u16(d, tb["head"] + 18)
+        self._cmap = self._read_cmap(tb["cmap"])
+        self._glyphs = {}
+        self._sets = {}
+        self.lookups = self._read_lookups(tb["GPOS"])
+
+    def _read_cmap(self, off):
+        d = self.d
+        best = None
+        for want in ((3, 10), (0, 4), (0, 6), (3, 1), (0, 3), (0, 2), (0, 1), (0, 0)):
+            for i in range(_u16(d, off + 2)):
+                if (_u16(d, off + 4 + 8 * i), _u16(d, off + 6 + 8 * i)) == want:
+                    best = off + _u32(d, off + 8 + 8 * i)
+                    break
+            if best is not None:
+                break
+        if best is None:
+            raise ValueError("no usable cmap")
+        fmt = _u16(d, best)
+        if fmt == 4:
+            segx2 = _u16(d, best + 6)
+            ends = best + 14
+            starts = ends + segx2 + 2
+            deltas = starts + segx2
+            ranges = deltas + segx2
+            return (4, [(_u16(d, ends + 2 * i), _u16(d, starts + 2 * i), _i16(d, deltas + 2 * i), _u16(d, ranges + 2 * i), ranges + 2 * i)
+                        for i in range(segx2 // 2)])
+        if fmt == 12:
+            return (12, [(_u32(d, best + 16 + 12 * i), _u32(d, best + 20 + 12 * i), _u32(d, best + 24 + 12 * i)) for i in range(_u32(d, best + 12))])
+        raise ValueError("cmap format %d" % fmt)
+
+    def glyph(self, ch):
+        c = ord(ch)
+        if c in self._glyphs:
+            return self._glyphs[c]
+        d, g = self.d, 0
+        fmt, segs = self._cmap
+        if fmt == 4:
+            for e, st, dl, ro, rpos in segs:
+                if st <= c <= e:
+                    if ro == 0:
+                        g = (c + dl) & 0xFFFF
+                    else:
+                        g = _u16(d, rpos + ro + 2 * (c - st))
+                        g = (g + dl) & 0xFFFF if g else 0
+                    break
+        else:
+            for st, e, g0 in segs:
+                if st <= c <= e:
+                    g = g0 + c - st
+                    break
+        self._glyphs[c] = g
+        return g
+
+    def _coverage(self, o):
+        d = self.d
+        out = {}
+        if _u16(d, o) == 1:
+            for i in range(_u16(d, o + 2)):
+                out[_u16(d, o + 4 + 2 * i)] = i
+        else:
+            for i in range(_u16(d, o + 2)):
+                st, e, si = _u16(d, o + 4 + 6 * i), _u16(d, o + 6 + 6 * i), _u16(d, o + 8 + 6 * i)
+                for g in range(st, e + 1):
+                    out[g] = si + g - st
+        return out
+
+    def _classdef(self, o):
+        d = self.d
+        out = {}
+        if _u16(d, o) == 1:
+            first = _u16(d, o + 2)
+            for i in range(_u16(d, o + 4)):
+                out[first + i] = _u16(d, o + 6 + 2 * i)
+        else:
+            for i in range(_u16(d, o + 2)):
+                st, e, c = _u16(d, o + 4 + 6 * i), _u16(d, o + 6 + 6 * i), _u16(d, o + 8 + 6 * i)
+                for g in range(st, e + 1):
+                    out[g] = c
+        return out
+
+    def _read_lookups(self, g):
+        d = self.d
+        feature_list, lookup_list = g + _u16(d, g + 6), g + _u16(d, g + 8)
+        wanted = []
+        for i in range(_u16(d, feature_list)):
+            if d[feature_list + 2 + 6 * i:feature_list + 6 + 6 * i] == b"kern":
+                fo = feature_list + _u16(d, feature_list + 6 + 6 * i)
+                wanted += [_u16(d, fo + 4 + 2 * k) for k in range(_u16(d, fo + 2))]
+        out = []
+        for idx in sorted(set(wanted)):
+            lo = lookup_list + _u16(d, lookup_list + 2 + 2 * idx)
+            ltype, subs = _u16(d, lo), []
+            for k in range(_u16(d, lo + 4)):
+                so = lo + _u16(d, lo + 6 + 2 * k)
+                t = ltype
+                if ltype == 9:                                       # an extension lookup: the real subtable is behind a 32-bit offset
+                    t, so = _u16(d, so + 2), so + _u32(d, so + 4)
+                if t != 2:
+                    continue
+                fmt, v1, v2 = _u16(d, so), _u16(d, so + 4), _u16(d, so + 6)
+                cov = self._coverage(so + _u16(d, so + 2))
+                if fmt == 1:
+                    subs.append((1, cov, v1, v2, so, None, None, 0))
+                elif fmt == 2:
+                    subs.append((2, cov, v1, v2, so, self._classdef(so + _u16(d, so + 8)), self._classdef(so + _u16(d, so + 10)), _u16(d, so + 14)))
+            if subs:
+                out.append(subs)
+        return out
+
+    @staticmethod
+    def _size(fmt):
+        return 2 * bin(fmt & 0xFF).count("1")
+
+    def _xadvance(self, o, fmt):
+        """XAdvance of the value record at `o` (0 when the value format has none)."""
+        return _i16(self.d, o + 2 * bin(fmt & 3).count("1")) if fmt & 4 else 0
+
+    def _value(self, sub, g1, g2):
+        fmt, cov, v1, v2, so, cd1, cd2, c2n = sub
+        if g1 not in cov:
+            return None
+        d = self.d
+        rec = self._size(v1) + self._size(v2)
+        if fmt == 1:
+            key = (so, g1)
+            if key not in self._sets:
+                ps = so + _u16(d, so + 10 + 2 * cov[g1])
+                self._sets[key] = {_u16(d, ps + 2 + (2 + rec) * i): ps + 2 + (2 + rec) * i + 2 for i in range(_u16(d, ps))}
+            at = self._sets[key].get(g2)
+            return None if at is None else self._xadvance(at, v1)
+        return self._xadvance(so + 16 + (cd1.get(g1, 0) * c2n + cd2.get(g2, 0)) * rec, v1)
+
+    def pair(self, a, b):
+        g1, g2 = self.glyph(a), self.glyph(b)
+        if not g1 or not g2:
+            return 0
+        total = 0
+        for subs in self.lookups:
+            for sub in subs:
+                v = self._value(sub, g1, g2)
+                if v is not None:                                    # the first subtable of a lookup that knows the pair decides
+                    total += v
+                    break
+        return total
+
+
+_KERNING = {}
+_KERNING_LOCK = threading.Lock()
+
+
+def _kerning(kind):
+    """The `_Kerning` of a bundled face, or None when the face has none or cannot be read (read once per file, then kept)."""
+    try:
+        path = vfx.bundled_font_path(kind)
+    except KeyError:                                                     # not a bundled face
+        return None
+    key = (kind, str(path))
+    with _KERNING_LOCK:
+        if key not in _KERNING:
+            try:
+                _KERNING[key] = _Kerning(path.read_bytes())
+            except Exception:                                            # noqa: BLE001 - a face that cannot be read is set without kerning
+                _KERNING[key] = None
+        return _KERNING[key]
+
+
 # ----------------------------------------------------------------------------- text
-def _build_ink(W, H, text, kind, cap_pct, tracking_pct, baseline_pct, centre_pct, x_pct, align, max_w_pct, shadow):
-    """One line of text (ink and a soft shadow) as a canvas-positioned `vfx.Layer`."""
+def _build_ink(W, H, text, kind, cap_pct, tracking_pct, baseline_pct, centre_pct, x_pct, align, max_w_pct, shadow, kern=False):
+    """One line of text (ink and a soft shadow) as a canvas-positioned `vfx.Layer`. `kern`: a sentence (no tracking) is set glyph by glyph with
+    the pair kerning of its face."""
     ratio = vfx.cap_ratio(kind)
     size = max(6, int(round(cap_pct / 100.0 * H / ratio)))
     max_w = max_w_pct / 100.0 * W
@@ -83,6 +283,13 @@ def _build_ink(W, H, text, kind, cap_pct, tracking_pct, baseline_pct, centre_pct
         if trk > 0:                                  # tracked capitals: letter by letter (no trailing space after the last letter)
             adv = [ft.getlength(c) for c in text]
             return ft, trk, adv, sum(adv) + trk * (len(text) - 1)
+        if kern:
+            k = _kerning(kind)
+            if k is not None:                        # a kerned sentence: each glyph's advance carries the adjustment to the next one
+                adv = [ft.getlength(c) for c in text]
+                for i in range(len(text) - 1):
+                    adv[i] += k.pair(text[i], text[i + 1]) * sz / k.upem
+                return ft, 0.0, adv, sum(adv)
         return ft, 0.0, None, ft.getlength(text)    # a sentence: whole string, so the face's own kerning applies
 
     ft, trk, adv, width = measure(size)
@@ -121,15 +328,16 @@ def _build_ink(W, H, text, kind, cap_pct, tracking_pct, baseline_pct, centre_pct
 
 
 def ink_layer(ctx, text, kind, cap_pct, tracking_pct=0.0, *, baseline_pct=None, centre_pct=None, x_pct=50.0, align="center",
-              max_w_pct=MAX_LINE_W_PCT, shadow=True):
+              max_w_pct=MAX_LINE_W_PCT, shadow=True, kern=False):
     """Cached one-line text layer, or None when there is nothing to draw. The cap height is `cap_pct` % of the frame height; the line
     is centred (or left aligned) at `x_pct` % of the width and sits with the middle of its capitals at `centre_pct` % of the height
-    (or its baseline at `baseline_pct`). The cache key holds every input."""
+    (or its baseline at `baseline_pct`). `kern` sets a sentence glyph by glyph with its face's pair kerning (off for every older technique). The cache
+    key holds every input."""
     if not isinstance(text, str) or not text.strip():
         return None
-    key = ("idtext", text, kind, float(cap_pct), float(tracking_pct), baseline_pct, centre_pct, float(x_pct), align, float(max_w_pct), bool(shadow))
+    key = ("idtext", text, kind, float(cap_pct), float(tracking_pct), baseline_pct, centre_pct, float(x_pct), align, float(max_w_pct), bool(shadow), bool(kern))
     return ctx.layer(key, lambda: _build_ink(ctx.w, ctx.h, text, kind, float(cap_pct), float(tracking_pct), baseline_pct, centre_pct,
-                                             float(x_pct), align, float(max_w_pct), bool(shadow)))
+                                             float(x_pct), align, float(max_w_pct), bool(shadow), bool(kern)))
 
 
 def _asset_texts(context):
@@ -450,4 +658,94 @@ class MarkDim(_IdBase):
         txt = context.get("title") or context.get("text")
         if isinstance(txt, str) and txt.strip():
             d["title"] = txt
+        return d
+
+
+# ----------------------------------------------------------------------------- ID-BRAND-03: the channel name, then the video's title
+class BeatState(NamedTuple):
+    """The state of the ID-BRAND-03 beat at one instant (every time in nominal seconds)."""
+    tau: float            # nominal time from the start of the shot
+    q_name: float         # progress 0..1 of the first sweep (writes the channel name)
+    q_title: float        # progress 0..1 of the second sweep (writes the title and the small line); 0 when the beat has no second sweep
+    q_light: float        # progress of the band that is lighting the picture now (the first sweep, then the second)
+    ahead: float          # brightness of the picture ahead of that band
+    behind: float         # brightness of the picture behind it
+
+
+@technique("ID-BRAND-03", "base")
+class BrandTitle(_BandBase):
+    """The channel name, then the video's title (its own shot, nominal 9.1 s, hard cut at the end). Style raking.
+
+    Nominal timeline (s from the start of the shot): the picture dims from 100 % to `floor` over dim_s; from sweep_delay_s a band crosses the
+    frame for sweep_s and writes the channel name (capitals, tracked) along its path, the picture behind the band sits at `wake`; for
+    name_hold_s nothing moves; then the band crosses a second time, in the same direction, for title_sweep_s and writes the title (italic, as
+    given) and, under it, the small line (capitals, tracked); the name stays and does not move, and the picture stays at `wake` before and
+    behind this second band; for title_hold_s everything is held until the shot ends.
+
+    Nominal length = sweep_delay_s + sweep_s + name_hold_s + title_sweep_s + title_hold_s. With no `title` and no `subtitle` there is no
+    second sweep: nominal length = sweep_delay_s + sweep_s + name_hold_s and the name sits at y_alone_pct instead of y_pct. With only one of
+    the two lines the second sweep writes that line, at its own place (title_y_pct or sub_y_pct). A shorter shot scales every time; a longer
+    one keeps the nominal times and holds the last state. A line wider than TITLE_MAX_W_PCT of the frame is made smaller until it fits."""
+
+    @staticmethod
+    def _line(p, name):
+        v = p.get(name)
+        return v.strip() if isinstance(v, str) else ""
+
+    def nominal_s(self):
+        p = self.p
+        n = float(p["sweep_delay_s"]) + float(p["sweep_s"]) + float(p["name_hold_s"])
+        if self._line(p, "title") or self._line(p, "subtitle"):
+            n += float(p["title_sweep_s"]) + float(p["title_hold_s"])
+        return n
+
+    def __init__(self, tid, shot, ctx):
+        super().__init__(tid, shot, ctx)
+        p = self.p
+        title, sub = self._line(p, "title"), self._line(p, "subtitle").upper()
+        self.has_lines = bool(title or sub)
+        self.t_name = float(p["sweep_delay_s"])                                                      # nominal start of the first sweep
+        self.t_title = self.t_name + float(p["sweep_s"]) + float(p["name_hold_s"])                   # nominal start of the second sweep
+        y_name = float(p["y_pct"]) if self.has_lines else float(p["y_alone_pct"])
+        name = p["text"].upper() if isinstance(p["text"], str) else ""
+        self.name_layer = ink_layer(ctx, name, "eb_medium", float(p["cap_pct"]), float(p["tracking_pct"]), centre_pct=y_name, shadow=bool(p["shadow"]))
+        self.title_layer = ink_layer(ctx, title, "eb_italic", float(p["title_cap_pct"]), 0.0, centre_pct=float(p["title_y_pct"]),
+                                     max_w_pct=TITLE_MAX_W_PCT, shadow=bool(p["shadow"]), kern=True)
+        self.sub_layer = ink_layer(ctx, sub, "eb_regular", float(p["sub_cap_pct"]), float(p["sub_tracking_pct"]), centre_pct=float(p["sub_y_pct"]),
+                                   max_w_pct=TITLE_MAX_W_PCT, shadow=bool(p["shadow"]))
+
+    def state(self, t):
+        """The BeatState at video time t. Light: the picture dims, the first band leaves it at `wake` behind it, and during the second
+        sweep it sits at `wake` on both sides of the band (the band is the only light that moves)."""
+        p = self.p
+        tau = self.tau(t)
+        ahead = 1.0 - (1.0 - float(p["floor"])) * ss01(tau, 0.0, float(p["dim_s"]))
+        wake = max(float(p["wake"]), ahead)
+        q_name = ramp01(tau, self.t_name, float(p["sweep_s"]))
+        q_title = ramp01(tau, self.t_title, float(p["title_sweep_s"])) if self.has_lines else 0.0
+        if self.has_lines and tau >= self.t_title:
+            return BeatState(tau, q_name, q_title, q_title, wake, wake)
+        return BeatState(tau, q_name, q_title, q_name, ahead, wake)
+
+    def _write(self, f, layer, q):
+        """Draw a line of text revealed by the band at progress q (nothing before the band starts, all of it once the band has left)."""
+        if layer is None or q <= 0.0:
+            return
+        mask = None if q >= 1.0 else (lambda x0, y0, x1, y1: self.band.reveal_box(q, x0, y0, x1, y1))
+        composite_layer_masked(f, layer, mask, 1.0)
+
+    def finish(self, f, t):
+        s = self.state(t)
+        f = self.band.light(f, s.q_light, s.ahead, s.behind, float(self.p["warm"]))
+        self._write(f, self.name_layer, s.q_name)
+        self._write(f, self.title_layer, s.q_title)
+        self._write(f, self.sub_layer, s.q_title)
+        return f
+
+    @classmethod
+    def default_params(cls, tid, spec, context, bundle):
+        d = cls._defaults(tid, spec, context, bundle)
+        name = bundle.sv("identity", "channel_name", None)
+        if isinstance(name, str) and name.strip():
+            d["text"] = name
         return d

@@ -35,12 +35,13 @@ from bti.media.assets import scale_regions
 
 from . import spec as S
 from . import decompile as D
+from . import zones as Z
 from .engine import DraftProject
 from .inputs import DraftError, DraftInputs, beat_picks
 
-CARD_S = 2.8
-TITLE_CARD_S = 2.9
-MIN_CARD_S = 1.0
+CARD_S = Z.CARD_S
+TITLE_CARD_S = Z.TITLE_CARD_S
+MIN_CARD_S = Z.MIN_CARD_S
 PACE_SHORT_S, PACE_LONG_S = 1.5, 30.0
 REPEAT_RUN = 4
 NARRATION_GRAM = 5
@@ -204,14 +205,35 @@ class _Compiler:
         return out
 
     # ---------------------------------------------------------------- zones and cards
+    def brand_length(self) -> float:
+        """`B` of the beat rule (`zones.title_length`): the nominal length of the channel-name beat of the style the video gets, else 2.9 s."""
+        cfg = self.identity_cfg
+        style_id = (ID.chosen_style(self.inp.current, self.bundle.style) or cfg.default_style) if cfg is not None else None
+        return Z.brand_length(cfg, style_id)
+
+    def fit_pct(self) -> float:
+        """The painting's height as a percent of the frame (style.json `matte.painting_height_pct`), whether or not an identity is applied."""
+        cfg = ID.read(self.bundle.style)
+        return cfg.fit_pct if cfg is not None else Z.DEFAULT_FIT_PCT
+
+    def opening_camera(self) -> list | None:
+        """The camera keys of the opening shot (the whole main painting), None when the picture's size is not known."""
+        a = self.assets.get(self.main)
+        if not (isinstance(a, dict) and a.get("kind") == "image"):
+            return None
+        return Z.whole_camera(a.get("width"), a.get("height"), {"w": 1920, "h": 1080}, self.fit_pct())
+
     def zones(self) -> list:
         chs = self.t["chapters"]
+        placed = None if self.edit else Z.place(chs, self.words, self.brand_length())      # the pure part: bti/draft/zones.py (the fit to the voice calls it too)
+        if placed is not None:
+            for cid, msg in placed["issues"]:
+                self.base_issues.append(S.problem("card_no_room", cid, None, msg, level="warn"))
         zs = []
         prev_end = 0.0
-        title_done = False
         for k, c in enumerate(chs):
             z = {"id": c["id"], "name": c["name"], "w0": c["w0"], "w1": c["w1"], "start": c["start"], "end": c["end"],
-                 "card": None, "title": None, "kept_cards": []}
+                 "card": None, "title": None, "kept_cards": [], "opening": None}
             lead = c.get("lead")
             if self.edit:       # edit mode: the cards of the saved storyboard stay exactly as they are
                 first_spoken = (
@@ -226,41 +248,14 @@ class _Compiler:
                 for cc in self.cur:
                     if self.is_card(cc["shot"]) and prev_end - EPS <= cc["t0"] < first_spoken - EPS:
                         z["kept_cards"].append(cc)
-            elif lead and lead["kind"] in ("title", "card", "plain"):
-                # the voice says what the silence before the first word is for: place the cards from it
-                end, gap = lead["end"], lead["end"] - lead["start"]
-                want_card = lead["kind"] == "card" or (lead["kind"] == "title" and c["card"])
-                cd = min(CARD_S, gap) if want_card else 0.0
-                if want_card and cd >= MIN_CARD_S:
-                    z["card"] = {"start": end - cd, "dur": cd}
-                elif want_card:
-                    self.base_issues.append(S.problem("card_no_room", c["id"], None, "the silence before the chapter is only %.1f s: no card was placed" % gap, level="warn"))
-                    cd = 0.0
-                if lead["kind"] == "title" and not title_done:
-                    td = min(TITLE_CARD_S, gap - cd)
-                    if td >= MIN_CARD_S:
-                        z["title"] = {"start": end - cd - td, "dur": td}
-                        title_done = True
-                if z["card"] or z["title"]:
-                    z["start"] = end                    # the first shot starts where the cards end
-            elif c["card"]:
-                if c["card_start"] is not None and c["card_end"] is not None and c["card_end"] > c["card_start"]:
-                    cs, cd = c["card_start"], c["card_end"] - c["card_start"]
-                else:
-                    gap = c["start"] - prev_end
-                    cd = min(CARD_S, gap)
-                    cs = c["start"] - cd
-                if cd >= MIN_CARD_S:
-                    z["card"] = {"start": max(0.0, cs), "dur": cd}
-                    if not title_done and cs - TITLE_CARD_S >= prev_end + 0.2 - EPS:
-                        z["title"] = {"start": cs - TITLE_CARD_S, "dur": TITLE_CARD_S}
-                        title_done = True
-                else:
-                    self.base_issues.append(S.problem("card_no_room", c["id"], None, "the chapter has a card but the silence before it is only %.1f s: no card was placed" % max(0.0, c["start"] - prev_end), level="warn"))
-            if k == 0 and (z["title"] or z["card"]) and not self.edit:      # the first picture of the video starts at 0
-                f = z["title"] or z["card"]
-                f["dur"] += f["start"]
-                f["start"] = 0.0
+            else:
+                p = placed["chapters"][k]
+                z["card"], z["title"] = p["card"], p["title"]
+                if p["first_start"] is not None:
+                    z["start"] = p["first_start"]                       # the first shot starts where the cards end
+                if k == 0 and placed["opening"] is not None and not (z["card"] or z["title"]) and self.opening_camera() is not None:
+                    z["opening"] = placed["opening"]                    # the program's opening shot; the model's first shot starts 0.35 s before the first word
+                    z["start"] = z["opening"]["start"] + z["opening"]["dur"]
             z["zone_start"] = min([x["t0"] for x in z["kept_cards"]] + [(z["title"] or z["card"] or {"start": c["start"]})["start"]])
             if k == 0:
                 z["zone_start"] = 0.0
@@ -524,7 +519,20 @@ class _Compiler:
                     "source": "agent", "note": "chapter card", "params": self.defaults("X-CARD-01", {"title": zone["name"]})}
             out.append({"shot": shot, "chapter": zone["id"], "n": None, "beat": None, "kind": "card", "t0": zone["card"]["start"],
                         "anchor": {"t": round(zone["card"]["start"], 3)}, "ov_specs": [], "zone": zone})
+        if zone.get("opening"):
+            out.append(self.opening_rec(zone))
         return out
+
+    def opening_rec(self, zone) -> dict:
+        """The program's opening shot (`zones.opening_shot`): the whole main painting from 0 to 0.35 s before the first word, no overlays of its own
+        (`apply_identity` puts the opening on it). Its id is the reserved one, so that it is found again after every kind of edit."""
+        info = self.info(self.main)
+        base = self.defaults(Z.OPENING_TECHNIQUE, {"asset": info} if info else {}, {"chapter": zone["id"], "n": None})
+        shot = Z.opening_shot(self.main, self.assets.get(self.main), {"w": 1920, "h": 1080}, self.fit_pct(), base)
+        shot.pop("id")
+        shot.pop("start")
+        return {"shot": shot, "chapter": zone["id"], "n": None, "beat": None, "kind": "opening", "t0": 0.0, "anchor": {"t": 0.0}, "ov_specs": [],
+                "zone": zone, "id": Z.OPENING_ID}
 
     def fallback_shot(self, rec, stage: int) -> dict:
         shot = rec["shot"]
@@ -599,11 +607,15 @@ class _Compiler:
 
     def assign_ids(self, recs: list) -> None:
         used = {r["old_id"] for r in recs if (r["kind"] in ("locked", "kept") or r.get("verbatim")) and r.get("old_id")}
-        old = [c for c in self.cur if not c["locked"] and c["shot"].get("id") not in used]
+        # the id of the opening shot belongs to that shot alone: no other shot takes it over, and it takes nobody's
+        old = [c for c in self.cur if not c["locked"] and c["shot"].get("id") not in used and not Z.is_opening(c["shot"])]
         taken: set = set()
         for r in recs:
             if r["kind"] in ("locked", "kept") or r.get("verbatim"):
                 r["id"] = r["old_id"] or self._new_id()
+                continue
+            if r["kind"] == "opening":
+                r["id"] = Z.OPENING_ID
                 continue
             match, best = None, None
             r_card = r["kind"] in ("card", "title")
@@ -767,7 +779,7 @@ class _Compiler:
         rest = m.group(3) or ""
         rest = re.sub(r"^start$", "start_word", rest)
         out["field"] = rest or None
-        kind = {"agent": "", "card": "chapter card ", "title": "title card ", "locked": "locked shot ", "kept": "unchanged shot ", "filler": "continuation shot "}[o["kind"]]
+        kind = {"agent": "", "card": "chapter card ", "title": "title card ", "locked": "locked shot ", "kept": "unchanged shot ", "filler": "continuation shot ", "opening": "opening shot "}[o["kind"]]
         where = "chapter %s, %s" % (o["chapter"], ("%sshot %d" % (kind, o["n"])) if o["n"] else ("%s(%s)" % (kind or "shot ", o["id"])))
         if ovi:
             where += ", overlay %d" % ovi

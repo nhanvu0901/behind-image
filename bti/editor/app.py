@@ -535,6 +535,11 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                 raise ApiError(422, "cannot approve while items are incomplete: "
                                + "; ".join(f"{i['path']}: {i['message']}" for i in todo[:8])
                                + (f" (and {len(todo) - 8} more)" if len(todo) > 8 else ""), issues=issues, incomplete=True, code="storyboard_incomplete")
+            # introflow: the cards, the channel-name beat and the end of the video must sit where the voice puts them (the action storyboard.retime fixes it)
+            from bti.draft import retime as retime_mod
+            off_voice = retime_mod.project_off_voice(pdir(pid), saved)
+            if off_voice:
+                raise ApiError(409, retime_mod.off_voice_message(off_voice), code="storyboard_off_voice", problems=off_voice[:20])
             # whatever validate accepts the engine must be able to draw: draw small frames across shots and overlays
             # compiled under ENGINE_LOCK, drawn by a thread pool without holding ENGINE_LOCK (D16)
             drawn = engine_adapter_mod.draw_check_stepwise(p, saved)
@@ -962,6 +967,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     from .identity_api import make_router as _identity_router        # opening, channel-name beat and chapter marks (needs this app's save path)
     app.include_router(_identity_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
                                         load_style=lambda sid: engine.load_style(sid).get("style") or {}))
+    # introflow: fit the storyboard to the voice again (POST .../storyboard/retime; the function is bti/draft/retime.py)
+    from .retime_api import make_router as _retime_router
+    app.include_router(_retime_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
+                                      load_style=lambda sid: engine.load_style(sid).get("style") or {}))
     from .auto_api import make_router as _auto_router               # c5cli: automatic running (which gates an agent may approve)
     app.include_router(_auto_router(pdir=pdir))
     from .state_api import make_router as _state_router              # where a project stands and what may be called next (agents)

@@ -661,7 +661,7 @@ export const SHOT_WORDS = {
   title: (t) => t,
   // text cards: "Thẻ tiêu đề: <title>"
   card: { 'X-CARD-01': 'Thẻ chương', 'X-CARD-02': 'Thẻ tiêu đề', 'X-CARD-03': 'Credit cuối phim', 'X-CARD-04': 'Thẻ câu hỏi', 'TXT-01': 'Tiêu đề chương', 'ID-MARK-01': 'Mốc chương', 'ID-MARK-02': 'Mốc chương',
-    'ID-BRAND-01': 'Tên kênh', 'ID-BRAND-02': 'Tên kênh' },
+    'ID-BRAND-01': 'Tên kênh', 'ID-BRAND-02': 'Tên kênh', 'ID-BRAND-03': 'Tên kênh và tựa video' },
   // overlays: a short phrase each ("vòng sáng"); the others use the lower-case `label_vi`
   overlay: {
     'HI-01': 'vòng sáng', 'AN-01': 'khoanh tròn', 'AN-02': 'viền quanh', 'AN-03': 'tia phối cảnh', 'AN-05': 'thước kích thước', 'AN-06': 'lưới', 'X-ANN-01': 'nhãn chi tiết',
@@ -877,3 +877,20 @@ export const OUTPUT_LABELS = {
   saveFail: 'Chưa lưu được: ',
   loadFail: 'Chưa đọc được cài đặt này: ',
 };
+
+// ---- worker introflow (2026-11-20): the new opening and "Khớp lại với giọng đọc". One line with a button on the storyboard page (retimeline.js), shown
+// only while the state answer lists the action `storyboard.retime`; the same words are what the owner reads in the change log and in shots.md.
+export const RETIME_LABELS = {
+  line: 'Giọng đọc đã được làm lại nên thẻ chương, tên kênh hoặc điểm cuối của video đang lệch.',
+  button: 'Khớp lại với giọng đọc',
+  hint: 'Dời thẻ chương, đoạn hiện tên kênh và điểm cuối cho đúng chỗ giọng đọc để lại, thêm hoặc bỏ cảnh mở đầu cả bức tranh. Các cảnh bạn hoặc agent đã dựng giữ nguyên. Có thể hoàn tác.',
+  busy: 'Đang khớp lại...',
+  done: (n) => (n ? `Đã khớp lại với giọng đọc (${n} cảnh).` : 'Storyboard đã khớp với giọng đọc, không có gì phải đổi.'),
+  left: 'Còn chỗ chưa tự khớp được (cảnh đang khóa hoặc số thẻ chương không đúng). Xem lại các thẻ chương.',
+  fail: 'Không khớp lại được: ',
+  loadFail: 'Không đọc được trạng thái của dự án: ',
+  tookInMerged: 'Đã khớp lại và ghép với các sửa chưa lưu của bạn.',
+  tookInFail: 'Không tải được storyboard mới: ',
+};
+// the words the owner reads for the opening shot and the channel-name beat (the Python twin is bti/output/shotwords.py)
+export const OPENING_WORDS = { opening: 'Mở đầu: cả bức tranh', brand: 'Tên kênh và tựa video' };

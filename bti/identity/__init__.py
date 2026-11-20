@@ -5,10 +5,10 @@ the `identity` block of style.json lists. Contract: docs/design/2026-11-18-ident
 """
 from __future__ import annotations
 
-from .apply import REASONS, apply_identity
+from .apply import REASONS, apply_identity, with_video_title
 from .config import IdentityConfig, IdentityError, StyleDef, is_mismatch, need, options, read
 
-__all__ = ["apply_identity", "REASONS", "IdentityConfig", "IdentityError", "StyleDef", "is_mismatch", "need", "options", "read", "chosen_style"]
+__all__ = ["apply_identity", "with_video_title", "video_title_of", "REASONS", "IdentityConfig", "IdentityError", "StyleDef", "is_mismatch", "need", "options", "read", "chosen_style"]
 
 
 def chosen_style(storyboard, style) -> str | None:
@@ -17,3 +17,10 @@ def chosen_style(storyboard, style) -> str | None:
     sid = ident.get("style") if isinstance(ident, dict) else None
     cfg = read(style)
     return sid if cfg is not None and isinstance(sid, str) and cfg.style(sid) is not None else None
+
+
+def video_title_of(storyboard) -> str | None:
+    """The video's own title (`identity.video_title`), None when there is none."""
+    ident = storyboard.get("identity") if isinstance(storyboard, dict) else None
+    v = ident.get("video_title") if isinstance(ident, dict) else None
+    return v if isinstance(v, str) and v.strip() else None
