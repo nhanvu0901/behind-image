@@ -1,12 +1,13 @@
 # The paintings of the library, as a queue for the pipeline
 
-Generated on 2026-11-19 by `tools/paintings_table.py` from `library/artworks.json` and `library/dossiers/` (297 entries: 285 artworks and 12 themed chapters). Do not edit the table by hand: change the script's notes and run it again.
+Generated on 2026-11-19 by `tools/paintings_table.py` from `library/artworks.json` and `library/dossiers/` and an `output/index.json` (297 entries: 285 artworks and 12 themed chapters). Do not edit the table by hand: change the script's notes and run it again.
 
 ## How to read it
 
 - **key**: the artwork key of the library; a project is created from it (`POST /api/library/projects` with `artwork_key`).
 - **status**: where the artwork stands as a subject for a video.
-  - `in-progress`: a project exists.
+  - `done`: the output folder of the artwork holds the finished video (from the `output/index.json` this table was made with).
+  - `in-progress`: a project exists and its output folder has no finished video yet (the project column says where it stands).
   - `recommended-1` to `recommended-5`, `runner-up`: the ranking of the research of 2026-11-19 (interesting story, little coverage on YouTube, a large reproduction).
   - `considered`: looked at in that research, not shortlisted.
   - `candidate`: enough text for a twelve-minute script (1,500 words of source text or more, or two books or more); YouTube and the reproduction are not checked yet.
@@ -24,7 +25,8 @@ Generated on 2026-11-19 by `tools/paintings_table.py` from `library/artworks.jso
 
 | status | artworks |
 |---|---|
-| `in-progress` | 2 |
+| `done` | 1 |
+| `in-progress` | 1 |
 | `recommended-1` | 1 |
 | `recommended-2` | 1 |
 | `recommended-3` | 1 |
@@ -43,8 +45,8 @@ Generated on 2026-11-19 by `tools/paintings_table.py` from `library/artworks.jso
 
 | # | status | key | title | artist | year | books | words N / R / L | img | rights | project | YouTube | reproduction | note |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 1 | `in-progress` | `eyck-the-arnolfini-portrait` | The Arnolfini Portrait | Jan van Eyck | 1434 | payne_gae, hodge_aid, brookehitching_mad | 3476 / 0 / 0 | 14 | pd_likely | arnolfini-opus (being made), arnolfini-live (rendered, old pipeline) | heavy: Great Art Explained 780k | 3840x5253 as saved by the app (Commons original 4386x6000) |  |
-| 2 | `in-progress` | `munch-the-scream` | The Scream | Edvard Munch | 1893 | payne_gae, hodge_aid, grovier_nws | 3196 / 746 / 0 | 12 | pd_likely | scream (pictures approved, draft not started) | heavy: Great Art Explained 1.03 million | not checked |  |
+| 1 | `done` | `eyck-the-arnolfini-portrait` | The Arnolfini Portrait | Jan van Eyck | 1434 | payne_gae, hodge_aid, brookehitching_mad | 3476 / 0 / 0 | 14 | pd_likely | arnolfini-opus (video 12:44, 2026-11-19) | heavy: Great Art Explained 780k | 3840x5253 as saved by the app (Commons original 4386x6000) |  |
+| 2 | `in-progress` | `munch-the-scream` | The Scream | Edvard Munch | 1893 | payne_gae, hodge_aid, grovier_nws | 3196 / 746 / 0 | 12 | pd_likely | scream (at step: edit, 2026-11-19) | heavy: Great Art Explained 1.03 million | not checked |  |
 | 3 | `recommended-1` | `tour-the-fortune-teller` | The Fortune Teller | Georges de La Tour |  | hagen_wgps | 2694 / 0 / 0 | 0 | pd_likely |  | small: top 3,893 views, no large channel | 3806x3148 (Commons, Google Art Project) | Smuggled out of France in 1960; a scholar called it a forgery and found the word MERDE woven into a scarf (removed in 1982). The forgery claim is a minority view. |
 | 4 | `recommended-2` | `altdorfer-the-battle-of-issus` | The Battle of Issus | Albrecht Altdorfer | 1529 | hagen_wgps | 2638 / 0 / 0 | 0 | pd_likely |  | small: Smarthistory 4:44 with 29k, the rest under 5k | 4592x6000 (Commons, Google Art Project) | Troop numbers on the banners (300,000 against 32,000), a map of the Mediterranean behind the battle, hung in Napoleon's bathroom. Best fit for the map and number components. |
 | 5 | `recommended-3` | `tintoretto-the-abduction-of-the-body` | The Abduction of the Body of St Mark | Tintoretto | 1562–1566 | hagen_wgps | 2912 / 0 / 0 | 0 | pd_likely |  | none found for this painting; clips up to 7k | 7720x9600 (Commons) | Venice had its saint stolen from Egypt, hidden under pork; the doctor who paid is painted beside the saint; trimmed in 1807, a pyre overpainted until 1949. |
