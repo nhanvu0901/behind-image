@@ -877,3 +877,15 @@ export const OUTPUT_LABELS = {
   saveFail: 'Chưa lưu được: ',
   loadFail: 'Chưa đọc được cài đặt này: ',
 };
+
+// ---- websearch: the web search of the automatic choice of pictures (bti/picks/auto/webround.py): the one switch in the settings dialog (websearchswitch.js)
+export const WEBSEARCH_LABELS = {
+  loading: 'Đang tải...',
+  title: 'Chọn hình tự động',
+  on: 'Tìm hình trên web khi chọn hình tự động',
+  hint: (n) => `Khi bật, lúc agent chọn hình tự động mà Wikipedia và các nguồn ảnh miễn phí chưa có hình đúng, ứng dụng tìm thêm trên web bằng dịch vụ You.com. Việc này tốn tiền: mỗi lần chạy tối đa ${n} lượt tìm. Tắt thì không tốn khoản nào. Hình tìm được trên web chưa rõ giấy phép nên được đánh dấu để bạn xem lại.`,
+  saved: 'Đã lưu.',
+  saveFail: 'Chưa lưu được: ',
+  loadFail: 'Chưa đọc được cài đặt này: ',
+};
+

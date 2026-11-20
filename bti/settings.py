@@ -188,3 +188,20 @@ def set_output_clean(flag: bool) -> dict:
     current["output"] = block
     _write_user_settings(current)
     return get_output_settings()
+
+
+# ---- websearch: the owner's choices about the pictures step (`run/settings.json`, key `picks`): the switch of the web search of the automatic choice of pictures
+def get_picks_block() -> dict:
+    """The owner's `picks` block of the settings file (a copy; {} when there is none)."""
+    block = load_user_settings().get("picks")
+    return dict(block) if isinstance(block, dict) else {}
+
+
+def set_picks_block(updates: dict) -> dict:
+    """Merge `updates` into the owner's `picks` block (the other settings are kept) and write it. Returns the block."""
+    current = load_user_settings()
+    block = dict(current.get("picks")) if isinstance(current.get("picks"), dict) else {}
+    block.update(updates)
+    current["picks"] = block
+    _write_user_settings(current)
+    return dict(block)

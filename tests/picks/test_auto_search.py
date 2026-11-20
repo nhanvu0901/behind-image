@@ -212,3 +212,278 @@ def test_a_picture_of_the_books_can_be_the_choice_for_a_context_picture(env, mon
     assert item["note"] == "Hình trong sách của bạn đúng ý."
     choose_call = env.agent.calls[1]
     assert "images/books_1.jpg" in choose_call["files"]
+
+
+# ---------------------------------------------------------------------------------------------------------------- websearch: Wikipedia first, and the web
+class WikiFake(FakeSource):
+    """The Wikipedia source: its candidates are Commons files that say where they came from (the article, the site, a few words)."""
+
+    def __init__(self, items=None, fail=None):
+        super().__init__("wikipedia", items, fail)
+
+
+def wmeta(sid, title="Noyon Cathedral", q="", **kw):
+    return meta("commons", sid, "Picture " + sid, q, page_title=title, site="Wikipedia", snippet="Cathedral in France", via="wikipedia", **kw)
+
+
+def ctx_want(**kw):
+    base = dict(entity="Noyon Cathedral", search="Noyon Cathedral facade", alt=["Noyon cathedral nave"], kind="place", what="Nhà thờ Noyon")
+    base.update(kw)
+    return want(**base)
+
+
+def test_a_context_want_asks_wikipedia_first_by_its_entity_and_then_the_free_sources(env, monkeypatch):
+    wiki = WikiFake([wmeta("File:Noyon A.jpg"), wmeta("File:Noyon B.jpg")])
+    commons = FakeSource("commons", [meta("commons", "File:C1.jpg", "C1", "noyon"), meta("commons", "File:C2.jpg", "C2", "noyon")])
+    install_sources(monkeypatch, {"commons": commons, "wikipedia": wiki}, keys=())
+    st, _ = run_search(env, [ctx_want()])
+    w = st["wants"]["b0001.1"]
+    assert [q for q, k, n in wiki.searches] == ["Noyon Cathedral"] and wiki.searches[0][2] == asearch.WIKI_LIMIT          # the name of the thing, not the plan's words
+    assert [q for q, k, n in commons.searches] == ["Noyon Cathedral facade"]                                           # the free sources keep the plan's words
+    assert [c["source_id"] for c in w["candidates"]][:2] == ["File:Noyon A.jpg", "File:Noyon B.jpg"] or w["candidates"][0]["via"] == "wikipedia"
+    assert w["candidates"][0]["via"] == "wikipedia" and w["candidates"][0]["page_title"] == "Noyon Cathedral" and w["candidates"][0]["site"] == "Wikipedia"
+    assert w["candidates"][0]["snippet"] == "Cathedral in France" and w["entity"] == "Noyon Cathedral" and w["period"] == "then"
+    assert [c["source"] for c in w["candidates"]][:2] == ["commons", "commons"] and w["status"] == "found"
+
+
+def test_wikipedia_is_asked_with_the_plans_words_when_there_is_no_entity_and_a_second_time_only_when_the_first_found_nothing(env, monkeypatch):
+    wiki = WikiFake([wmeta("File:Noyon A.jpg", q="facade")])
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": wiki}, keys=())
+    run_search(env, [ctx_want(entity="")])
+    assert [q for q, k, n in wiki.searches] == ["Noyon Cathedral facade"]
+    wiki.searches.clear()
+    run_search(env, [ctx_want()])                                                          # the entity finds nothing ("noyon cathedral" is not in the item's words): the plan's words are asked too
+    assert [q for q, k, n in wiki.searches] == ["Noyon Cathedral", "Noyon Cathedral facade"]
+    wiki2 = WikiFake([wmeta("File:Noyon A.jpg", q="noyon")])
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": wiki2}, keys=())
+    run_search(env, [ctx_want()])
+    assert [q for q, k, n in wiki2.searches] == ["Noyon Cathedral"]                       # found: one ask
+
+
+def test_a_map_and_a_clip_never_ask_wikipedia(env, monkeypatch):
+    wiki = WikiFake([wmeta("File:Noyon A.jpg")])
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "osm": FakeSource("osm", [meta("osm", "1:12:51.2:3.2:Bruges", "Bruges", "bruges")]), "wikipedia": wiki}, keys=())
+    run_search(env, [want(type="map", place="Bruges, Belgium", what="Bản đồ"), want(id="b0001.2", n=2, type="clip", search="canal", alt=[], seconds=6, what="Kênh")])
+    assert wiki.searches == []
+
+
+def test_wikipedia_that_fails_never_makes_a_want_a_failed_one_and_a_wait_it_asks_for_is_kept(env, monkeypatch):
+    wiki = WikiFake(fail=RuntimeError("boom"))
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": wiki}, keys=())
+    st, _ = run_search(env, [ctx_want(kind="work")])
+    assert (st["wants"]["b0001.1"]["status"], st["wants"]["b0001.1"]["code"]) == ("none", "no_candidates")          # Commons answered (with nothing): not "search failed"
+    clock = {"t": 1000.0}
+    wiki = WikiFake(fail=mhttp.MediaHTTPError("HTTP 429", 429, retry_after=90))
+    install_sources(monkeypatch, {"commons": FakeSource("commons", [meta("commons", "File:a.jpg", "A", "")]), "wikipedia": wiki}, keys=())
+    st, _ = run_search(env, [ctx_want(), ctx_want(id="b0001.2", n=2)], clock=lambda: clock["t"])
+    assert len(wiki.searches) == 1 and st["limited"]["wikipedia"] == 1090.0                                           # the second want left it alone
+    assert [w["status"] for w in st["wants"].values()] == ["found", "found"]
+
+
+def test_up_to_eight_candidates_when_wikipedia_or_the_web_gave_some_and_six_otherwise(env, monkeypatch):
+    wiki = WikiFake([wmeta("File:W%d.jpg" % i, q="noyon") for i in range(1, 6)])
+    commons = FakeSource("commons", [meta("commons", "File:C%d.jpg" % i, "C%d" % i, "noyon") for i in range(1, 7)])
+    install_sources(monkeypatch, {"commons": commons, "wikipedia": wiki}, keys=())
+    st, _ = run_search(env, [ctx_want(kind="work")])
+    c = st["wants"]["b0001.1"]["candidates"]
+    assert len(c) == asearch.PER_WANT_WEB == 8 and [x["via"] if x.get("via") else "c" for x in c][:4] == ["wikipedia", "c", "wikipedia", "c"]      # mixed, Wikipedia's first
+    install_sources(monkeypatch, {"commons": commons, "wikipedia": WikiFake()}, keys=())
+    st, _ = run_search(env, [ctx_want(kind="work")])
+    assert len(st["wants"]["b0001.1"]["candidates"]) == asearch.PER_WANT == 6
+
+
+def test_spare_wikipedia_candidates_replace_the_ones_whose_thumbnail_cannot_be_had(env, monkeypatch):
+    wiki = WikiFake([wmeta("File:W%d.jpg" % i, q="noyon") for i in (1, 2)] + [wmeta("File:nothumb W3.jpg", q="noyon"), wmeta("File:nothumb W4.jpg", q="noyon")]
+                    + [wmeta("File:W%d.jpg" % i, q="noyon") for i in (5, 6, 7, 8, 9, 10)])
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": wiki}, keys=())
+    st, _ = run_search(env, [ctx_want(kind="work")])
+    ids = [c["source_id"] for c in st["wants"]["b0001.1"]["candidates"]]
+    assert len(ids) == 8 and not any("nothumb" in i for i in ids) and ids[-1].startswith("File:W")                  # eight with a thumbnail: two spares took the place of the two that had none
+    assert [c["n"] for c in st["wants"]["b0001.1"]["candidates"]] == list(range(1, 9))
+
+
+# ---- the paid web search of round one
+def web_fake(answers=None, errors=None):
+    """The `Web.search` seam: `answers` maps a query to the items it finds; every call is recorded."""
+    calls = []
+
+    def search(pdir, query, limit):
+        calls.append((query, limit))
+        return {"items": [dict(m) for m in (answers or {}).get(query, [])], "errors": list((errors or {}).get(query, []))}
+    search.calls = calls
+    return search
+
+
+def wcard(sid, title="A page", site="museum.example.org", **kw):
+    return {"source": "web", "source_id": sid, "title": title, "page_title": title, "site": site, "via": "web", "snippet": "About it", "licence": "", "flag": "unknown",
+            "thumb_url": sid.split()[0], "page_url": "https://%s/p" % site, "width": 0, "height": 0, "mime": "image/jpeg", "author": site, **kw}
+
+
+def test_the_web_is_asked_once_for_a_want_that_has_fewer_than_three_candidates_and_it_is_counted(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons", [meta("commons", "File:a.jpg", "A", "noyon")]), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({"Noyon Cathedral facade": [wcard("https://img.example.org/a.jpg https://museum.example.org/p"), wcard("https://img.example.org/b.jpg https://museum.example.org/p")]})
+    web = asearch.Web(on=True, max=5, search=fake)
+    st, saved = run_search(env, [ctx_want(kind="work")], web=web)
+    w = st["wants"]["b0001.1"]
+    assert fake.calls == [("Noyon Cathedral facade", asearch.WEB_LIMIT)] and web.spent == 1                        # the plan's words, once, counted
+    assert [c["source"] for c in w["candidates"]] == ["web", "commons", "web"] or [c["source"] for c in w["candidates"]][0] == "web"   # the web's candidates go first
+    assert all(c["thumb"] for c in w["candidates"]) and w["web"] == {"queries": ["Noyon Cathedral facade"]}
+    assert st["web"] == {"on": True, "max": 5, "searches": 1, "stopped": None} and saved[-1]["web"]["searches"] == 1          # kept in search.json
+    assert [c["page_title"] for c in w["candidates"] if c["source"] == "web"] == ["A page", "A page"] and w["candidates"][0]["site"] == "museum.example.org"
+
+
+def test_enough_candidates_from_the_free_sources_mean_no_web_search_and_a_switch_that_is_off_means_none_at_all(env, monkeypatch):
+    commons = FakeSource("commons", [meta("commons", "File:c%d.jpg" % i, "C%d" % i, "noyon") for i in range(1, 5)])
+    install_sources(monkeypatch, {"commons": commons, "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({"Noyon Cathedral facade": [wcard("https://img.example.org/a.jpg")]})
+    web = asearch.Web(on=True, max=5, search=fake)
+    run_search(env, [ctx_want(kind="work")], web=web)
+    assert fake.calls == [] and web.spent == 0
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": WikiFake()}, keys=())
+    st, _ = run_search(env, [ctx_want(kind="work")], web=None)                                              # no `Web` = the owner's switch is off: no way to a paid call
+    assert fake.calls == [] and "web" not in st and st["wants"]["b0001.1"]["code"] == "no_candidates"
+    st, _ = run_search(env, [ctx_want(kind="work")], web=asearch.Web(on=False, max=5, search=fake))
+    assert fake.calls == []
+
+
+def test_only_context_pictures_are_searched_on_the_web(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "osm": FakeSource("osm"), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({})
+    run_search(env, [want(type="map", place="Bruges, Belgium", what="Bản đồ"), want(id="b0001.2", n=2, type="clip", search="canal", alt=[], seconds=6, what="Kênh")],
+               web=asearch.Web(on=True, max=5, search=fake))
+    assert fake.calls == []
+
+
+def test_a_want_that_could_not_be_searched_because_the_budget_was_spent_has_the_code_web_budget(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({})
+    web = asearch.Web(on=True, max=1, search=fake)
+    st, _ = run_search(env, [ctx_want(kind="work"), ctx_want(id="b0001.2", n=2, kind="work")], web=web)
+    first, second = st["wants"]["b0001.1"], st["wants"]["b0001.2"]
+    assert len(fake.calls) == 1 and web.spent == 1 and web.left() == 0
+    assert (first["status"], first["code"]) == ("none", "no_candidates") and (second["status"], second["code"]) == ("none", "web_budget")
+
+
+def test_a_refusal_before_anything_was_sent_stops_the_web_for_the_run_and_costs_nothing(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake(errors={"Noyon Cathedral facade": [{"source": "web", "code": "web_no_key", "message": "x"}]})
+    web = asearch.Web(on=True, max=5, search=fake)
+    st, _ = run_search(env, [ctx_want(kind="work"), ctx_want(id="b0001.2", n=2, kind="work")], web=web)
+    assert len(fake.calls) == 1 and web.spent == 0 and web.stopped == "web_no_key" and st["web"]["stopped"] == "web_no_key"        # the second want did not even try
+    assert not web.usable()
+
+
+def test_a_web_search_that_the_service_limits_is_counted_and_the_host_is_left_alone(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake(errors={"Noyon Cathedral facade": [{"source": "web", "code": "source_rate_limited", "retry_after": 120}]})
+    web = asearch.Web(on=True, max=5, search=fake)
+    st, _ = run_search(env, [ctx_want(kind="work"), ctx_want(id="b0001.2", n=2, kind="work")], web=web, clock=lambda: 500.0)
+    assert len(fake.calls) == 1 and web.spent == 1 and st["limited"]["web"] == 620.0
+    assert st["wants"]["b0001.2"]["status"] == "limited" and st["wants"]["b0001.2"]["code"] == "source_limited"
+
+
+def test_a_resumed_search_goes_on_counting_from_what_the_run_spent(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({})
+    st, _ = run_search(env, [ctx_want(kind="work")], web=asearch.Web(on=True, max=2, search=fake))
+    resumed = asearch.Web.from_state(st, True, 2, search=fake)
+    assert resumed.spent == 1 and resumed.left() == 1
+    assert asearch.Web.from_state(st, False, 2).stopped is None and asearch.Web.from_state({}, True, 3).spent == 0
+
+
+def test_a_web_picture_whose_real_size_is_small_is_dropped_after_its_thumbnail(env, monkeypatch):
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({"Noyon Cathedral facade": [wcard("https://img.example.org/big.jpg"), wcard("https://img.example.org/tiny.jpg"), wcard("https://img.example.org/mid.jpg")]})
+
+    def thumbs(pdir, cand, limited=None, clock=None):
+        rel = fake_thumb(pdir, cand, limited, clock)
+        cand["width"], cand["height"] = {"big.jpg": (2000, 1500), "tiny.jpg": (580, 120), "mid.jpg": (600, 40)}[cand["source_id"].rsplit("/", 1)[1]]
+        return rel
+    st, _ = run_search(env, [ctx_want(kind="work")], web=asearch.Web(on=True, max=5, search=fake), fetch_thumb=thumbs)
+    assert [c["source_id"] for c in st["wants"]["b0001.1"]["candidates"]] == ["https://img.example.org/big.jpg", "https://img.example.org/mid.jpg"]       # 580 px on the long side: dropped
+
+
+def test_the_paid_search_goes_only_through_the_one_door_with_the_ticket_and_the_permission_of_the_job(env, monkeypatch):
+    from bti.media.sources.web import WebSource
+    from bti.picks import service
+    from bti.media.youcom import RawCall
+    asked = []
+
+    class Client:
+        def search(self, q, profile):
+            asked.append(q)
+            return RawCall(api="search", payload={"results": {"web": [{"url": "https://s.example.org/p", "title": "A page", "original_thumbnail_url": "https://s.example.org/i/a.jpg"}]}},
+                           status_code=200)
+    monkeypatch.setitem(__import__("bti.media.api", fromlist=["x"])._SOURCES, "web", WebSource(client=Client()))
+    r = service.search(env.pdir, "x", None, ["web"], 5)                                      # a page or an agent asking for it: left out silently
+    assert r["items"] == [] and r["errors"] == [] and asked == []
+    assert service.search(env.pdir, "x", None, None, 5)["errors"] == [] and asked == []      # not in a default search either
+    r = service.search(env.pdir, "x", None, ["web"], 5, allow_paid=True)                      # allowed, but without the ticket the source itself refuses
+    assert r["items"] == [] and [e["code"] for e in r["errors"]] == ["web_off"] and asked == []
+    r = asearch.default_web_search(env.pdir, "Noyon", 5)                                      # the job's own function: allowed and ticketed
+    assert [(i["source"], i["page_title"]) for i in r["items"]] == [("web", "A page")] and asked == ["Noyon"]
+
+
+def test_a_web_thumbnail_is_fetched_with_the_web_clients_rules_and_its_real_size_is_noted(env, monkeypatch):
+    from bti.media.sources import web as webmod
+    got = []
+
+    def fetch_image(url, dest, *, max_bytes, **kw):
+        got.append((url, max_bytes))
+        p = Path(dest).with_suffix(".png")
+        p.write_bytes(PNG)
+        return p
+    monkeypatch.setattr(webmod, "fetch_image", fetch_image)
+    c = {"source": "web", "source_id": "https://img.example.org/a.png https://site.example.org/p", "thumb_url": "https://img.example.org/a.png"}
+    rel = asearch.default_fetch_thumb(env.pdir, c)
+    assert rel.endswith(".jpg") and (env.pdir / rel).is_file() and (c["width"], c["height"]) == (1300, 1250) and got == [("https://img.example.org/a.png", asearch.WEB_THUMB_BYTES)]
+    th = env.pdir / "cache" / "picks_auto" / "thumbs"
+    assert not list(th.glob("*.raw")) and not list(th.glob("*_web.*"))                       # nothing is left behind
+    monkeypatch.setattr(webmod, "fetch_image", lambda url, dest, **kw: (_ for _ in ()).throw(webmod.NotAnImage("a page")))
+    assert asearch.default_fetch_thumb(env.pdir, {**c, "source_id": "https://img.example.org/b.png"}) is None
+
+
+def test_thumbnails_from_a_wikimedia_host_are_a_second_apart_and_other_hosts_are_not_paced(env, monkeypatch):
+    t = {"now": 100.0, "slept": []}
+
+    def sleep(s):
+        t["slept"].append(round(s, 3))
+        t["now"] += s
+    monkeypatch.setattr(asearch, "_pace_last", [None])
+    for _ in range(3):
+        asearch.pace_wikimedia("https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/x.jpg/500px-x.jpg", sleep=sleep, clock=lambda: t["now"])
+    assert t["slept"] == [1.0, 1.0]                                                       # the first goes at once, the next two wait out the second
+    t["now"] += 5
+    asearch.pace_wikimedia("https://upload.wikimedia.org/x.jpg", sleep=sleep, clock=lambda: t["now"])
+    asearch.pace_wikimedia("https://img.example.org/x.jpg", sleep=sleep, clock=lambda: t["now"])
+    asearch.pace_wikimedia("https://upload.example/t.jpg", sleep=sleep, clock=lambda: t["now"])
+    assert t["slept"] == [1.0, 1.0]                                                       # five seconds passed: no wait; other hosts: never
+
+
+# ---------------------------------------------------------------------------------------------------------------- the contract: kinds, entity, period, places, object and event
+def test_object_is_searched_like_work_and_event_like_other_without_the_met(monkeypatch):
+    install_sources(monkeypatch, {}, keys=("pexels", "pixabay"))
+    assert asearch.sources_for(want(kind="object")) == ["commons", "met"] == asearch.sources_for(want(kind="work"))
+    assert asearch.sources_for(want(kind="event")) == ["commons", "pexels", "pixabay"] and "met" not in asearch.sources_for(want(kind="event"))
+    assert asearch.sources_for(want(kind="other")) == ["commons", "met", "pexels", "pixabay"]
+
+
+def test_a_want_carries_its_entity_period_kinds_and_places_with_defaults_when_the_plan_has_none():
+    old = asearch._new_want({"id": "b1.1", "beat": "b1", "n": 1, "type": "context", "search": "x", "alt": [], "kind": "work", "what": "A"})
+    assert (old["entity"], old["period"], old["kinds"], old["places"]) == ("", "then", [], [])
+    new = asearch._new_want({"id": "b1.1", "beat": "b1", "n": 1, "type": "context", "search": "x", "alt": [], "kind": "event", "what": "A", "entity": " Battle  of Nancy ",
+                             "period": "now", "kinds": ["outside", "journey"]})
+    assert (new["entity"], new["period"], new["kinds"]) == ("Battle of Nancy", "now", ["outside", "journey"])
+
+
+def test_a_map_want_that_names_places_is_searched_by_the_first_one_and_never_fails(env, monkeypatch):
+    osm = FakeSource("osm", [meta("osm", "1:12:45.7:4.8:Lyon", "Bản đồ Lyon", "lyon")])
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "osm": osm, "wikipedia": WikiFake()}, keys=())
+    journey = {"id": "b0008.2", "beat": "b0008", "n": 2, "type": "map", "places": ["Lyon, France", "Lübeck, Germany"], "kinds": ["outside", "journey"], "what": "Hành trình"}
+    assert asearch.place_of(journey) == "Lyon, France" and asearch.queries_for(journey) == ["Lyon, France"]
+    assert asearch.place_of({"place": "Oslo", "places": ["Oslo", "Bergen"]}) == "Oslo" and asearch.place_of({"type": "map"}) == ""
+    st, _ = run_search(env, [journey])
+    w = st["wants"]["b0008.2"]
+    assert [q for q, k, n in osm.searches] == ["Lyon, France"] and w["status"] == "found" and w["places"] == ["Lyon, France", "Lübeck, Germany"] and w["kinds"] == ["outside", "journey"]
+    nameless = {"id": "b0008.3", "beat": "b0008", "n": 3, "type": "map", "places": ["Lyon, France"]}
+    assert asearch._new_want(nameless)["what"] == "Lyon, France"

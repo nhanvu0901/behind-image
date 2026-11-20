@@ -1,0 +1,7 @@
+{
+  "_note": "The pictures step. suggest: the paid 'Gợi ý hình' button (youcom | off). auto_web_search: whether the automatic choice of pictures may search the web (You.com, PAID: 'on' is the owner's standing permission for up to auto_web_search_max searches a run); the owner's own choice on the settings page (run/settings.json, block picks) overrides these two. web_blocked_hosts: sites whose pictures are never offered (watermarked stock agencies and print shops), added to the built-in list in bti/media/sources/web.py.",
+  "suggest": "youcom",
+  "auto_web_search": "off",
+  "auto_web_search_max": 80,
+  "web_blocked_hosts": []
+}

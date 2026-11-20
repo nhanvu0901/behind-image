@@ -705,3 +705,12 @@ Object.assign(STAGE_CODES.draft, {
   draft_note_too_long: 'Ghi chú cho bản nháp quá dài (tối đa 600 ký tự). Hãy rút gọn rồi dựng lại.',
   draft_note_invalid: 'Ghi chú cho bản nháp phải là chữ. Hãy gõ lại rồi dựng lại.',
 });
+
+// ---- websearch: the refusals of the web search of the automatic choice of pictures and of importing a picture found on a web page
+Object.assign(STAGE_CODES.picks, {
+  web_off: 'Tìm trên web chỉ chạy khi agent chọn hình tự động và khi bạn đã bật "Tìm hình trên web khi chọn hình tự động" ở Cài đặt.',
+  web_no_key: 'Chưa có khóa You.com trên máy chủ nên chưa tìm được trên web.',
+  not_an_image: 'Địa chỉ này không trả về ảnh dùng được (không phải ảnh, hoặc là ảnh vector).',
+  unsafe_url: 'Địa chỉ ảnh này không được tải về (không phải địa chỉ công khai trên mạng).',
+});
+

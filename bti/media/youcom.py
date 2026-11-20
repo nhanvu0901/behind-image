@@ -1,5 +1,5 @@
 # Copied from comic-book-pipeline/stages/research_scout/youcom.py (read-only source).
-# Changes: User-Agent is generic (the WAF 403s the default Python-urllib UA); added strict()
+# Changes: User-Agent is generic (the WAF 403s the default Python-urllib UA; it names no person and no project); added strict()
 # and is_live. The key comes ONLY from the YDC_API_KEY environment variable; no .env is read.
 """Small, auditable You.com HTTP boundary for the Stage 1 research scout."""
 
@@ -117,7 +117,7 @@ class YouComClient:
     def _headers(self, *, content_type: bool = False) -> dict[str, str]:
         headers = {
             "X-API-Key": self.api_key,
-            "User-Agent": "behind-the-image-media/0.1",
+            "User-Agent": "ImageResearch/1.0 (art documentary research; generic client)",
             "Accept": "application/json",
         }
         if content_type:

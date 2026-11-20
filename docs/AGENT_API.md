@@ -579,6 +579,26 @@ nothing was found for, left as they were), `missing` (every wanted picture that 
 `lines_by_others` (lines the owner filled meanwhile), `stopped` (`"time"` when the write part ran out of time), `sentence` (`Agent đã chọn hình cho 25/28 đoạn. 3 đoạn chưa có hình phù hợp.`),
 `limits`. Each line the agent wrote carries its reason as the line's note (`beats.<id>.note`); `reasons` lists them. The same function is `bti.picks.auto.escalate(pid, pdir, beat_ids, note=...)`.
 
+### The web search of the pictures agent (the owner's switch `auto_web_search`)
+
+The `search` part asks **Wikipedia first** for every context picture (free, no key: the thing is looked up by its `entity`, else by its `search` words, and the pictures of the best three articles are offered as
+Wikimedia Commons files), then the free sources as before, and never the paid suggestion. **One paid thing exists, and it is the owner's to allow:** the web search (You.com). The switch is `GET/PUT /api/settings/web-search`
+(`{"auto_web_search": "on" | "off", "auto_web_search_max": 80, "source": "default" | "config" | "owner"}`; the code's default is off; `config/picks.json` sets a machine default and the owner's choice on the settings page,
+`run/settings.json` block `picks`, wins). **A PUT whose `actor` is not `human` is 403 `spend_needs_human`: an agent never switches it on.** With it OFF nothing paid is ever called and the job has the four parts above. With it ON
+the permission is the owner's standing one: `picks.auto` is started by an agent and by the automatic run exactly as without it, its cost line (`next_actions[].cost.about` of the state answer) says
+`about 20 minutes, up to 80 web searches (You.com)`, and the job has **six parts**: `plan`, `search`, `choose`, `web`, `choose2`, `write`.
+
+- `search`: a context picture that has fewer than three candidates after Wikipedia and the free sources gets ONE web search with its `search` words (round one).
+- `web` (round two): after the first choosing session every wanted picture it answered null, and every one that had no candidate, gets a web search with its `search` and, when that gives nothing new, with its first
+  alternative (a query a want already had is not asked again). `choose2`: ONE more choosing session that sees only the wants that got new candidates (their new candidates only, numbered from 1) and decides only those; the write
+  part reads both choices as one. The web's candidates have the licence unknown (`flag` `unknown`); a page of Wikipedia, Wikimedia Commons or the Met found by the web is resolved by that source (known licence); pictures of
+  stock agencies and print shops that carry watermarks are never offered (`config/picks.json`, `web_blocked_hosts`, is added to the built-in list).
+- Every web search counts against `auto_web_search_max` for the run. A wanted picture that could not be searched because the count was used up has the code `web_budget` (in `lines_without`, `missing`, `search.json`); with the
+  key missing or real requests off the web is left alone for the run and nothing is counted (`web.stopped`). The count is in `result.web` = `{"on", "max", "searches", "stopped"}`, in `cache/picks_auto/search.json` and `last.json`,
+  and in the closing sentence (`Agent đã chọn hình cho 25/28 đoạn. 3 đoạn chưa có hình phù hợp. Đã tìm trên web 12/80 lần.`). `GET .../picks/auto` also answers `web`: what the next run would use.
+- The search is refused for any other caller: `POST .../picks/search` with `sources: ["web"]` finds nothing and costs nothing (the source `web` is searched only inside this job); `import` accepts a `web` candidate
+  (`source_id` = the picture's address and, after a space, the page's), refusing an address that names a private or local machine (`unsafe_url`) or that is not a picture (`not_an_image`).
+
 ## 8. The prompt box of step 4 and the hand-over to the pictures agent (`picks.edit`, `picks.auto`)
 
 Step 4 has two ways to let a model work, and they join here. **The prompt box** (`picks.edit`, `POST /api/projects/{pid}/picks/edit`: `{"instruction", "scope": {"beats": [ids]} | {"chapter": id} | {"all": true}, "base_rev"?, "model"?}`)

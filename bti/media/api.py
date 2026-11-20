@@ -20,6 +20,8 @@ from .sources.met import MetSource
 from .sources.pexels import PexelsSource
 from .sources.pixabay import PixabaySource
 from .sources.osm import OsmSource
+from .sources.web import WebSource
+from .sources.wikipedia import WikipediaSource
 
 __all__ = ["search", "import_candidate", "add_upload", "moment_search", "inspect_video_url",
            "import_clip", "check_licence", "LicenceRejected", "VideoDamaged", "MIN_SHORT_SIDE"]
@@ -41,6 +43,8 @@ _FACTORIES = {
     "pexels": PexelsSource,
     "pixabay": PixabaySource,
     "osm": OsmSource,
+    "wikipedia": WikipediaSource,       # free: the pictures of the articles about a thing (they are Commons files, handed to `commons`)
+    "web": WebSource,                   # PAID (You.com): refuses to search outside the automatic picks job's ticket (`sources/web.py`)
 }
 _VIDEO_EXT = {".mp4", ".webm", ".ogv", ".mov", ".mkv", ".m4v"}
 
@@ -78,7 +82,7 @@ def _candidate(meta: dict, stored: tuple[int, int] | None = None) -> dict:
     if use_stored:
         w, h = int(stored[0]), int(stored[1])
     is_vid = meta.get("kind") == "video" or str(meta.get("mime") or "").startswith("video/")
-    return {
+    card = {
         "source": meta.get("source", ""), "source_id": meta.get("source_id", ""),
         "title": meta.get("title", ""), "thumb_url": meta.get("thumb_url", ""),
         "page_url": meta.get("page_url", ""), "width": w if use_stored else meta.get("width", 0),
@@ -87,6 +91,10 @@ def _candidate(meta: dict, stored: tuple[int, int] | None = None) -> dict:
         "licence_ok": ok, "licence_reason": reason,
         "flag": flag_for_meta(meta) if is_vid else with_size_flag(flag_for_meta(meta), w, h, MIN_SHORT_SIDE),
     }
+    for k in ("page_title", "site", "snippet", "via"):            # where a card came from (Wikipedia, a web page): what the choosing step reads
+        if meta.get(k):
+            card[k] = meta[k]
+    return card
 
 
 def search(query: str, source: str = "commons", kind: str = "image", limit: int = 24) -> list[dict]:
