@@ -7,7 +7,7 @@ from pathlib import Path
 from bti.script import store
 
 from . import files, planner
-from .config import load_server_config, load_voice_config, voice_worker
+from .config import SILENCE_RANGES, load_server_config, load_voice_config, silence_settings, voice_worker
 from .errors import VoiceError
 from .plan import make_plan
 from .chunks import written_hash
@@ -66,7 +66,12 @@ def describe(pdir: Path, pid: str | None = None, *, cfg: dict | None = None, ser
     worker = voice_worker(server) if prov == "chatterbox" else None
     out: dict = {"state": "none", "detail": "", "reasons": [], "provider": prov, "configured": prov != "chatterbox" or worker is not None,
                  "approved": False, "settings": None, "pronounce": {}, "chunks": [], "chapters": [], "counts": None,
-                 "estimate": None, "mix": None, "timing": None, "job": None, "defaults": {"tempo_range": cfg["tempo_range"]}}
+                 "estimate": None, "mix": None, "timing": None, "job": None, "defaults": {"tempo_range": cfg["tempo_range"]},
+                 "silence": None}
+    try:         # the two silences in force (lead and title), whether they are the project's own, and what the config and a new project get
+        out["silence"] = {**silence_settings(files.read_settings(pdir), cfg), "range": {k: list(v) for k, v in SILENCE_RANGES.items()}}
+    except Exception:         # a damaged settings file never breaks the page
+        out["silence"] = None
     n = store.load_narration(pdir)
     if n is None:
         out["detail"] = "Chưa có lời dẫn."

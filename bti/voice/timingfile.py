@@ -9,6 +9,8 @@ from .errors import VoiceError
 
 def build_timing(plan, spans: list[dict], words: list[dict], ranges: list[tuple[int, int]], duration: float, cfg: dict) -> dict:
     chunks = plan.chunks
+    # the silences of THIS project (its own `lead` and `title` over the config's): the plan carries the config it was made with
+    sil = ((getattr(plan, "cfg", None) or {}).get("silence")) or cfg["silence"]
     beats: list[dict] = []
     by_beat: dict[str, dict] = {}
     texts = {b.id: b.text for ch in plan.narration.chapters for b in ch.beats}
@@ -42,11 +44,11 @@ def build_timing(plan, spans: list[dict], words: list[dict], ranges: list[tuple[
         lead = {"kind": kind, "start": round(sp["start"] - gap, 4), "end": round(max(first_w, sp["start"]), 4)}
         item = {"id": ch.id, "name": ch.title or ch.id, "start": start, "end": round(end, 4), "card": bool(ch.card), "lead": lead}
         if ch.card:      # the chapter card sits at the end of the silence, 2.8 s (0.2 s of air before it, none after)
-            item["card_start"] = round(sp["start"] - float(cfg["silence"]["card_length"]), 4)
+            item["card_start"] = round(sp["start"] - float(sil["card_length"]), 4)
             item["card_end"] = round(sp["start"], 4)
         if kind == "title":
             item["title_start"] = lead["start"]
-            item["title_end"] = round(lead["start"] + float(cfg["silence"]["title"]), 4)
+            item["title_end"] = round(lead["start"] + float(sil["title"]), 4)
         chapters.append(item)
     timing = {"duration": round(duration, 4), "words": words, "beats": beats, "chapters": chapters}
     problem = shape_problem(timing)

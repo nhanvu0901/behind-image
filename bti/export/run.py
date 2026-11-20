@@ -205,6 +205,10 @@ def start(project_dir: Path, *, manager=None, tools: render.Tools | None = None,
     settings = settings or load_settings()
     tools = tools or render.Tools.from_settings(settings)
     inp = load_inputs(project_dir)
+    from bti.draft import retime          # introflow: a storyboard that does not fit the voice is not exported (the action storyboard.retime fixes it)
+    off = retime.project_off_voice(project_dir, inp.storyboard)
+    if off:
+        raise ExportError("storyboard_off_voice", retime.off_voice_message(off), 409, problems=off[:20])
     starts, end = (timeline or engine_timeline)(project_dir, inp.rev)
     specs = plan.plan_parts(starts, end, settings.fps, settings.part_seconds)
     job_parts = build_parts(project_dir, inp, specs, end, tools, settings, part_cls)

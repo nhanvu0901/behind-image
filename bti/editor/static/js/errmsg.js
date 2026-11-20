@@ -705,3 +705,19 @@ Object.assign(STAGE_CODES.draft, {
   draft_note_too_long: 'Ghi chú cho bản nháp quá dài (tối đa 600 ký tự). Hãy rút gọn rồi dựng lại.',
   draft_note_invalid: 'Ghi chú cho bản nháp phải là chữ. Hãy gõ lại rồi dựng lại.',
 });
+
+// ---- worker introflow (2026-11-20): the silences before the first word and before the channel name, the video's title under the channel name, and
+// "Khớp lại với giọng đọc" (the cards, the channel-name beat and the end of the video must sit where the voice puts them). The sentences are added to the
+// stage tables the pages read and to the table `describeHttp` reads, so that every page that shows an error shows these in plain words.
+export const INTROFLOW_SENTENCES = {
+  bad_lead: 'Khoảng lặng trước lời đầu tiên phải từ 0,2 đến 15 giây.',
+  bad_title: 'Khoảng lặng dành cho tên kênh phải từ 3 đến 30 giây.',
+  video_title_invalid: 'Tựa video phải là chữ, một dòng.',
+  video_title_too_long: 'Tựa video quá dài. Giữ trong một dòng, tối đa 90 ký tự.',
+  storyboard_off_voice: 'Giọng đọc đã được làm lại nên thẻ chương, tên kênh hoặc điểm cuối của storyboard đang lệch. Bấm "Khớp lại với giọng đọc" ở bước Dựng hình rồi làm tiếp.',
+};
+Object.assign(STAGE_CODES.voice, { bad_lead: INTROFLOW_SENTENCES.bad_lead, bad_title: INTROFLOW_SENTENCES.bad_title });
+Object.assign(STAGE_CODES.draft, { video_title_invalid: INTROFLOW_SENTENCES.video_title_invalid, video_title_too_long: INTROFLOW_SENTENCES.video_title_too_long,
+  storyboard_off_voice: INTROFLOW_SENTENCES.storyboard_off_voice });
+Object.assign(STAGE_CODES.export, { storyboard_off_voice: INTROFLOW_SENTENCES.storyboard_off_voice });
+for (const [k, v] of Object.entries(INTROFLOW_SENTENCES)) BY_CODE_HTTP[k] = () => v;

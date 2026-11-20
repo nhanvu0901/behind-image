@@ -67,9 +67,11 @@ def test_the_fast_briefing_carries_the_rule(rule):
 
 
 def test_the_briefings_are_not_much_bigger_than_before():
-    """Before this worker: 23,600 characters (23,693 bytes) for the draft task and 7,714 (7,868 bytes) for the fast briefing. The rules cost 3,130 and 1,309."""
-    assert len(TASK) < 27_000 and len(TASK) - 23_600 < 3_300
-    assert len(FAST) < 9_300 and len(FAST) - 7_714 < 1_400
+    """Before this worker: 23,600 characters (23,693 bytes) for the draft task and 7,714 (7,868 bytes) for the fast briefing. The rules cost 3,130 and 1,309.
+    Worker introflow added what the program writes at the start of the video (the opening shot `s0000`: the model's first shot is never a still view of the whole
+    painting): about 450 and 180 more characters."""
+    assert len(TASK) < 27_500 and len(TASK) - 23_600 < 3_800
+    assert len(FAST) < 9_500 and len(FAST) - 7_714 < 1_800
 
 
 def test_the_rendered_task_has_the_rules_and_no_open_braces(proj, tmp_path):

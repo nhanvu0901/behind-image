@@ -1,5 +1,6 @@
 {
   "silence": {"sentence": 0.20, "beat": 0.45, "chapter": 1.0, "card": 3.2, "card_length": 2.8, "title": 6.2, "lead": 0.35, "tail": 2.5},
+  "intro": {"lead": 5.0, "title": 10.2},
   "tempo": 1.0,
   "tempo_range": [1.0, 1.2],
   "pad": {"enabled": true, "level_db": -24, "duck": 0.37, "chord_seconds": 10},

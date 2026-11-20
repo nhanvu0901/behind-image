@@ -11,8 +11,9 @@ Shape of the block (every value may also be wrapped as `{"value": ..., "source":
       "channel_name": "RAKING LIGHT",
       "default_style": "raking",
       "styles": {
-        "raking": {"label_vi": "Vệt sáng quét", "open": "ID-OPEN-01", "label": "ID-LABEL-01", "brand": "ID-BRAND-01", "mark": "ID-MARK-01",
-                   "nominal": {"open": {"start_s": 0.0, "dur_s": 9.0}, "label": {"start_s": 6.2, "dur_s": 4.5}}},
+        "raking": {"label_vi": "Vệt sáng quét", "open": "ID-OPEN-01", "label": "ID-LABEL-01", "brand": "ID-BRAND-03", "mark": "ID-MARK-01",
+                   "earlier": {"brand": ["ID-BRAND-01"]},
+                   "nominal": {"open": {"start_s": 0.0, "dur_s": 3.6}, "label": {"start_s": 1.2, "dur_s": 3.8}, "brand": {"dur_s": 9.1}}},
         "dim":    {"label_vi": "Tối lại, hiện tên", "open": "ID-OPEN-02", "brand": "ID-BRAND-02", "mark": "ID-MARK-02",
                    "mark_transition": {"technique": "TR-01", "dur": 0.75}}
       }
@@ -21,6 +22,11 @@ Shape of the block (every value may also be wrapped as `{"value": ..., "source":
 A style may leave `label` out (the `dim` opening writes the title itself, `label: null`); `mark_transition` is optional (null: a hard
 cut). Optional: `nominal: {role: {start_s, dur_s}}` per style (where in the video the opening overlays start, and for how long) and
 `min_element_s` (no element is shorter).
+
+`earlier: {role: [technique, ...]}` (optional, per style) names the techniques of an EARLIER FORM of the same style: a storyboard made
+before the style's technique for that role changed still holds them (every video made before `ID-BRAND-03` has `ID-BRAND-01` as its
+title slot under the style `raking`). Such a shot is the style's own, not another style's: `is_mismatch` does not report it, and
+`apply_identity` writes the style's current technique over it when the identity is applied again. Nothing else reads the key.
 """
 from __future__ import annotations
 
@@ -62,9 +68,14 @@ class StyleDef:
     transition: dict | None = None           # {"technique", "dur"} of the mark's entry, or None (a hard cut)
     start_s: dict = field(default_factory=dict)       # optional per-role nominal start (seconds into the video)
     dur_s: dict = field(default_factory=dict)         # optional per-role nominal length (seconds)
+    earlier: dict = field(default_factory=dict)       # role -> techniques of an earlier form of this style (still its own, see the module docstring)
 
     def technique(self, role: str) -> str | None:
         return self.label_role if role == "label" else getattr(self, role)
+
+    def own(self, role: str) -> set[str]:
+        """The techniques that are this style's for `role`: its current one and the earlier forms."""
+        return {t for t in ((self.technique(role),) + tuple(self.earlier.get(role) or ())) if t}
 
 
 @dataclass(frozen=True)
@@ -134,6 +145,20 @@ def _nominal(entry: dict, field_name: str) -> dict:
     return out
 
 
+def _earlier(entry: dict) -> dict:
+    """role -> tuple of technique ids, from `earlier: {role: [ids]}` (anything that is not a list of non-empty strings is left out)."""
+    raw = _plain(entry.get("earlier"))
+    out = {}
+    if isinstance(raw, dict):
+        for role, ids in raw.items():
+            ids = _plain(ids)
+            if role in ROLES and isinstance(ids, (list, tuple)):
+                kept = tuple(t for t in ids if isinstance(t, str) and t)
+                if kept:
+                    out[role] = kept
+    return out
+
+
 def block_of(style) -> dict | None:
     """The `identity` block of a style.json document (the block itself is accepted too); None when there is none."""
     if not isinstance(style, dict):
@@ -162,7 +187,7 @@ def read(style) -> IdentityConfig | None:
         label = g("label_vi") or g("name_vi") or g("title_vi") or FALLBACK_LABELS.get(sid) or sid
         # `label` is the role of the two-line label; a style that names a display text there instead is not supported
         styles[sid] = StyleDef(id=sid, label=label, open=g("open"), label_role=g("label"), brand=g("brand"), mark=g("mark"),
-                               transition=_transition(entry), start_s=_nominal(entry, "start_s"), dur_s=_nominal(entry, "dur_s"))
+                               transition=_transition(entry), start_s=_nominal(entry, "start_s"), dur_s=_nominal(entry, "dur_s"), earlier=_earlier(entry))
     if not styles:
         return None
     name = _plain(b.get("channel_name"))
@@ -194,9 +219,10 @@ def options(style) -> list[dict]:
 
 def is_mismatch(cfg: IdentityConfig, style_id: str, technique) -> bool:
     """True when `technique` is part of the identity (the old title and chapter cards, or any style's title slot or chapter mark)
-    but is not the title slot or the chapter mark of `style_id`."""
+    but is not the title slot or the chapter mark of `style_id` (nor an earlier form of it: `StyleDef.earlier`, so that a storyboard made
+    before the style's technique changed is not reported)."""
     sd = cfg.style(style_id)
     if sd is None or not isinstance(technique, str):
         return False
     part = technique in cfg.old_look() or cfg.is_family(technique, "brand") or cfg.is_family(technique, "mark")
-    return part and technique not in (sd.brand, sd.mark)
+    return part and technique not in (sd.own("brand") | sd.own("mark"))

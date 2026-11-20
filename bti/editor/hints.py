@@ -150,6 +150,8 @@ HINTS: dict[str, dict] = {
     "bad_scope": _t("after_fix", 'Send scope as "all", "changed" or a list of chunk ids (and reseed as a list of chunk ids).'),
     "bad_tempo": _t("after_fix", "Send `tempo` as a number inside the range in `detail`."),
     "bad_pad": _t("after_fix", "Send `pad` as true or false."),
+    "bad_lead": _t("after_fix", "Send `lead` as a number of seconds from 0.2 to 15 (or null to use the standard one)."),
+    "bad_title": _t("after_fix", "Send `title` as a number of seconds from 3 to 30 (or null to use the standard one)."),
     "bad_pronounce": _t("after_fix", "Send `pronounce` as an object of written form -> spoken form (at most 500 entries)."),
     "cancelled": _t("later", "The job was cancelled: start it again to continue; finished parts are kept."),
 
@@ -255,6 +257,10 @@ HINTS: dict[str, dict] = {
     "edit_running": _t("later", "An edit is running: cancel it (POST /api/longjobs/{job_id}/cancel) or wait, then delete the thread."),
     "identity_style_required": _t("after_fix", "Send `style` as an identity style id (GET /api/projects/{pid}/identity lists them)."),
     "identity_style_unknown": _t("after_fix", "Use one of the ids in `allowed` as `style`."),
+    "video_title_invalid": _t("after_fix", "Send `video_title` as text: one line of at most 90 characters (\"\" takes the title away)."),
+    "video_title_too_long": _t("after_fix", "Shorten `video_title` to one line of at most 90 characters."),
+    "storyboard_off_voice": _t("after_fix", "The cards, the channel-name beat or the end of the video sit where an earlier voice put them (`problems` lists them): call the action storyboard.retime "
+                                            "(POST /api/projects/{pid}/storyboard/retime with {\"base_rev\": <storyboard rev>}), then call this again."),
 
     # --- export step
     "no_storyboard": _t("after_fix", "There is no storyboard yet: run the draft and apply its proposal first."),

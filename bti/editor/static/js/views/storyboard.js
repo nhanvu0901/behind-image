@@ -9,7 +9,7 @@ import { h, toast, errorToast, modal, debounce, fmtTime, setStatus, ask, confirm
 import { stripDerived } from '../logic.js';
 import { mergeStoryboard, mergedNote } from '../sbmerge.js';
 import { jobFailText } from '../errmsg.js';
-import { EDIT_LABELS, IDENTITY_LABELS } from '../labels.js';
+import { EDIT_LABELS, IDENTITY_LABELS, RETIME_LABELS } from '../labels.js';
 import { initPreview, requestFrame } from '../preview.js';
 import { initTimeline, seek, ensureVisible, fitView, zoomToShowWords } from '../timeline.js';
 import { initInspector, setTab } from '../inspector.js';
@@ -18,6 +18,7 @@ import { openProposals } from '../proposals.js';
 import { mountDraftPanel } from '../draftpanel.js';
 import { mountPromptEdit } from '../promptedit.js';
 import { mountIdentityPick } from '../identitypick.js';
+import { mountRetimeLine } from '../retimeline.js';      // introflow: "Khớp lại với giọng đọc"
 import * as A from '../actions.js';
 import { shotIndexAt, wordIndexAt, clone } from '../logic.js';
 import * as E from '../edit.js';
@@ -104,6 +105,7 @@ const HTML = `
         <span class="muted" id="map-note"></span>
         <span class="grow"></span>
         <span id="identity-container"></span>
+        <span id="retime-container"></span>
         <span class="muted" id="frame-state"></span>
       </div>
       <div id="stage"><div id="stage-box"><canvas id="frame"></canvas><svg id="handles"></svg></div></div>
@@ -204,6 +206,8 @@ export async function mount(host, mctx) {
   }
   const identityBox = $('#identity-container');          // "Kiểu mở đầu và mốc chương": changes the saved storyboard on the server, then it is taken in like a turn of the prompt box
   if (identityBox) mountIdentityPick(identityBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: IDENTITY_LABELS.tookInMerged, fail: IDENTITY_LABELS.tookInFail }) });
+  const retimeBox = $('#retime-container');             // introflow: shown only while the voice was made again and the storyboard no longer fits it
+  if (retimeBox) mountRetimeLine(retimeBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: RETIME_LABELS.tookInMerged, fail: RETIME_LABELS.tookInFail }) });
   applyUrlParams();
   window.__bti = { ctx, store: st, save, play, seek, audio, A, E, api, setMode, simple, get mode() { return mode; } };
   return view;

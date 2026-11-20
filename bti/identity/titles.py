@@ -13,6 +13,8 @@ SMALL_WORDS = frozenset(("a", "an", "the", "and", "or", "nor", "but", "for", "ye
 # Particles inside a person's name: "Jan van Eyck", "Leonardo da Vinci".
 NAME_PARTICLES = frozenset(("van", "von", "der", "den", "de", "del", "della", "di", "da", "du", "le", "la", "el", "al", "bin", "ibn", "ten", "ter", "zu"))
 
+VIDEO_TITLE_MAX = 90          # characters of the video's title (one line) after trimming
+
 _NUMBER = re.compile(r"^\s*\d{1,3}\s*[.)]\s*")
 _SPACE = re.compile(r"\s+")
 

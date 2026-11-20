@@ -87,7 +87,9 @@ def _identity_section(cfg) -> list:
            "The opening, the channel-name beat and the chapter marks of a video are made by the compiler in one of the styles the owner chose. "
            "Their techniques are listed below, each marked PROGRAM ONLY: you are never offered them as a choice, and you never write a title card or a "
            "chapter card. The opening overlay and the label sit on the first shot of the video (you may see them in its `overlays`); the channel-name "
-           "beat and the chapter marks are cards that the program keeps (you are not shown them)."]
+           "beat and the chapter marks are cards that the program keeps (you are not shown them). The program also writes the opening SHOT: when the voice "
+           "starts late it shows the whole painting from 0 until 0.35 s before the first word (the shot `s0000`, with the opening overlay and the label on it); "
+           "your first shot starts on the first word and is never a still view of the whole painting."]
     for sid, sd in cfg.styles.items():
         out.append("- style `%s` (%s): %s" % (sid, sd.label, "; ".join("%s = %s" % (roles[r], sd.technique(r)) for r in roles if sd.technique(r))))
     out.append("")

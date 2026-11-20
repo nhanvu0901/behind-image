@@ -139,9 +139,11 @@ def test_the_briefings_stay_short():
     """The part of the draft task is read on every call: it may not grow by more than 1.6 KB over its size before the part (22,250 bytes). The fast
     briefing is rewritten for typed operations: its fixed text stays under 10 KB (the generated parts are measured by tests/draft/test_box_briefing.py).
     Worker fixdraft added the rules 13 to 17 (the full frame, the highlights, the text on the screen, the first half minute, the pictures of the lines):
-    the draft task went from 23,693 to 26,823 bytes, so its bound went from 22,250 + 1,700 to 27,000 bytes; the fast briefing from 7,868 to 9,177 bytes."""
+    the draft task went from 23,693 to 26,823 bytes, so its bound went from 22,250 + 1,700 to 27,000 bytes; the fast briefing from 7,868 to 9,177 bytes.
+    Worker introflow added the opening shot the program writes (the model's first shot starts on the first word and is never a still view of the whole
+    painting): the draft task went from 26,827 to 27,252 bytes and the fast briefing from 9,177 to 9,355, so the bound of the draft task is 27,500."""
     assert len(part(TASK).encode("utf-8")) < 1900
-    assert len(TASK.encode("utf-8")) < 27_000 and len(FAST.encode("utf-8")) < 10_000
+    assert len(TASK.encode("utf-8")) < 27_500 and len(FAST.encode("utf-8")) < 10_000
 
 
 def test_the_rendered_task_of_a_draft_and_of_an_edit_holds_the_part(proj, tmp_path):

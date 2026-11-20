@@ -9,7 +9,7 @@ from bti.script import store
 
 from . import files
 from .chunks import Chunk, build_chunks
-from .config import load_voice_config, project_settings
+from .config import load_voice_config, project_settings, silenced
 from .errors import VoiceError
 
 
@@ -17,7 +17,7 @@ from .errors import VoiceError
 class Plan:
     chunks: list[Chunk]
     narration: object
-    settings: dict                      # {tempo, pad}
+    settings: dict                      # {tempo, pad}; the project's own `lead` and `title` silences are in `cfg["silence"]`
     table: dict
     seeds: dict
     provider: str
@@ -68,7 +68,9 @@ def make_plan(pdir: Path, *, cfg: dict | None = None, provider: str, worker: dic
     manifest = files.read_manifest(pdir) or {}
     seeds = manifest.get("seeds") if isinstance(manifest.get("seeds"), dict) else {}
     table = files.read_pronounce(pdir)
-    settings = project_settings(files.read_settings(pdir), cfg)
+    saved = files.read_settings(pdir)
+    settings = project_settings(saved, cfg)
+    cfg = silenced(cfg, saved)          # the gaps of this project: its own `lead` and `title` over the config's (the same cfg when it has none)
     sig = settings_signature(provider, worker)
     chunks = build_chunks(n, table, cfg, sig, seeds)
     if not chunks:

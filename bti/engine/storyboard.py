@@ -1042,8 +1042,9 @@ def _element_floor(spec: dict) -> float | None:
 
 
 def _check_identity(sb: dict, shots: list, bundle: R.StyleBundle, err, warn) -> None:
-    """The optional top-level `identity: {"style": ...}` (contract 2026-11-18, section 5 and 6): the style must be one the style.json
-    block lists (error), and a structure shot whose technique is part of the identity but not of the chosen style is a warning."""
+    """The optional top-level `identity: {"style": ..., "video_title": ...}` (contract 2026-11-18, section 5 and 6): the style must be one the
+    style.json block lists (error), `video_title` (optional) a string, and a structure shot whose technique is part of the identity but not of
+    the chosen style (or of an earlier form of it, `identity.earlier` of the block) is a warning."""
     ident = sb.get("identity")
     if ident is None:
         return
@@ -1054,6 +1055,8 @@ def _check_identity(sb: dict, shots: list, bundle: R.StyleBundle, err, warn) -> 
     if not isinstance(ident, dict):
         err("identity", "identity must be an object like {\"style\": \"%s\"}" % (allowed[0] if allowed else "raking"), "identity_style_unknown", style=None, allowed=allowed)
         return
+    if ident.get("video_title") is not None and not isinstance(ident["video_title"], str):          # the video's own title (one line): shown under the channel name
+        err("identity.video_title", "identity.video_title must be a string", "not_a_string", field="video_title")
     if not isinstance(sid, str) or sid not in allowed:
         err("identity.style", "unknown identity style %r (choose one of: %s)" % (sid, ", ".join(allowed) or "none: this style has no identity block"),
             "identity_style_unknown", style=sid if isinstance(sid, str) else None, allowed=allowed)

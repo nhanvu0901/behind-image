@@ -6,7 +6,9 @@ Contract: docs/design/2026-11-18-identity-raking-light.md section 6. In short, f
   1. the opening: the `ID-OPEN-*` and `ID-LABEL-*` overlays of every unlocked shot are removed and the style's own are put on the
      shot that is on screen at their nominal start (at least 3 s long: the start moves earlier inside the shot, else it is skipped);
   2. the title slot (the first `X-CARD-02` / `ID-BRAND-*` structure shot) becomes the style's channel-name beat, on the picture of
-     the shot before it at that shot's last camera key, with a 3 % push;
+     the shot before it at that shot's last camera key, with a 3 % push. When the beat's technique has the params `title` and `subtitle`
+     (`ID-BRAND-03`) they are written too: `title` is the video's title (`identity.video_title` of the storyboard) and `subtitle` the
+     painting's title and the artist and year; without a video title `title` is the painting's title and `subtitle` the artist and year;
   3. every chapter card (`X-CARD-01`, `TXT-01`, `ID-MARK-*` structure shot) becomes the style's chapter mark "N. Title" on the
      picture of the next non-structure shot, with a camera that ENDS exactly on that shot's first camera key (start 4 % wider);
   4. id, start, intent, note and `locked` of a shot are kept; a locked shot is not changed and is listed in the report;
@@ -39,7 +41,8 @@ MARK_WIDER = 1.04           # a mark starts 4 % wider than the shot it flows int
 EPS = 1e-9
 
 # The nominal timeline of the opening (contract section 3): (start second in the video, length). The block's own `nominal` numbers
-# win; these are used only when it has none for a role. A style with neither starts at 0 and lasts 6 s.
+# win (style.json: since the opening shot the opening is 0 to 3.6 s and the label 1.2 to 5.0 s); these older numbers are used only when it
+# has none for a role. A style with neither starts at 0 and lasts 6 s.
 NOMINAL = {
     "raking": {"open": (0.0, 9.0), "label": (6.2, 4.5)},
     "dim": {"open": (7.0, 5.0)},
@@ -145,6 +148,7 @@ class _Applier:
         self._skipped_keys: set = set()
         self.before = [_canon(s) for s in self.shots]
         self._resolve_times()
+        self._text: dict | None = None
 
     # ------------------------------------------------------------------------------------------------------- times
     def _resolve_times(self):
@@ -308,7 +312,7 @@ class _Applier:
 
     def opening(self):
         cfg = self.cfg
-        text = self.texts()                     # before the old overlays go: their words are one of the sources
+        text = self._text if self._text is not None else self.texts()       # computed before the old overlays go: their words are one of the sources
         for i, s in enumerate(self.shots):
             if not isinstance(s, dict) or not isinstance(s.get("overlays"), list):
                 continue
@@ -415,7 +419,28 @@ class _Applier:
             else:
                 key = self.main_asset()
                 keys = self.whole_keys(key) if key else None
-            self.rewrite(s, self.sd.brand, key, {"camera": keys, "text": self.cfg.channel_name}, None)
+            wanted = {"camera": keys, "text": self.cfg.channel_name}
+            wanted.update(self.brand_texts())
+            self.rewrite(s, self.sd.brand, key, wanted, None)
+
+    def video_title(self) -> str:
+        """The video's title (`identity.video_title` of the storyboard) in one line, "" when there is none."""
+        ident = self.sb.get("identity")
+        v = ident.get("video_title") if isinstance(ident, dict) else None
+        return T.one_line(v) if isinstance(v, (str, int, float)) and not isinstance(v, bool) else ""
+
+    def brand_texts(self) -> dict:
+        """The `title` and `subtitle` params of the channel-name beat, when its technique has them (the registry defaults say so): the video's
+        title and under it a small line "<painting's title> · <Artist, year>" (the words of the label); without a video title the painting's
+        title and "<Artist, year>"."""
+        names = self.defaults(self.sd.brand)
+        if "title" not in names or "subtitle" not in names:
+            return {}
+        text = self._text if self._text is not None else self.texts()
+        vt = self.video_title()
+        if vt:
+            return {"title": vt, "subtitle": " · ".join(p for p in (text["title"], text["artist_year"]) if p)}
+        return {"title": text["title"], "subtitle": text["artist_year"]}
 
     # ------------------------------------------------------------------------------------------------------- 3. chapter marks
     def chapter_marks(self):
@@ -477,6 +502,7 @@ class _Applier:
     # ------------------------------------------------------------------------------------------------------- everything
     def run(self):
         if self.shots:
+            self._text = self.texts()
             self.opening()
             self.title_slot()
             self.chapter_marks()
@@ -494,8 +520,23 @@ class _Applier:
             core_old = {k: v for k, v in old.items() if k not in ("overlays", "source")}
             if _canon(core) != _canon(core_old):
                 s["source"] = "identity"
-        self.sb = _after(self.sb, "style", "identity", {"style": self.style_id})
+        ident = self.sb.get("identity") if isinstance(self.sb.get("identity"), dict) else {}
+        self.sb = _after(self.sb, "style", "identity", {"style": self.style_id, **{k: v for k, v in ident.items() if k != "style"}})      # the video's title stays
         return self.sb, {"style": self.style_id, "changed": [c for c in changed if c is not None], "skipped": self.skipped}
+
+
+def with_video_title(storyboard: dict, title: str | None) -> dict:
+    """A copy of the storyboard whose `identity.video_title` is `title` (one line; None or "" removes it). The `identity` object keeps its other
+    keys; when there is none yet it is made, right after `style`. The beat's texts follow when `apply_identity` runs on the result."""
+    sb = copy.deepcopy(storyboard)
+    ident = dict(sb["identity"]) if isinstance(sb.get("identity"), dict) else {}
+    if title:
+        ident["video_title"] = title
+    else:
+        ident.pop("video_title", None)
+    if "identity" not in sb and not ident:
+        return sb
+    return _after(sb, "style", "identity", ident)
 
 
 def apply_identity(storyboard: dict, style_id: str, style: dict, timing, meta: dict | None = None, *, defaults=None) -> tuple[dict, dict]:

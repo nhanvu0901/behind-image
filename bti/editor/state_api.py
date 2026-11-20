@@ -59,6 +59,8 @@ NEEDS: dict[str, tuple[str, str]] = {
     "suggest_enabled": ("Picture suggestions are switched off on this machine.", "Use picks.search instead."),
     "locked_beats": ("Some beats of the narration are locked and would be replaced.", "Unlock them, or send {\"force\": true} (the body shown does)."),
     "draft_proposal": ("There is no draft proposal to apply.", "Call draft.start and wait for its job."),
+    "storyboard_fits_voice": ("The storyboard does not fit the voice: the cards, the channel-name beat or the end of the video sit where an earlier voice put them.",
+                              "Call storyboard.retime (it moves them, and puts the opening shot in or takes it out), then ask for the state again."),
 }
 
 
@@ -145,8 +147,14 @@ SPECS: list[Spec] = [
          when="Only when storyboard.json is unreadable. Ready when history/ has a good copy. It is the repair: listed first."),
     Spec("storyboard.validate", "edit", "Kiểm tra", "GET", P,
          when="While the storyboard is readable. Always ready; the answer's `issues` are the validation of the saved storyboard."),
+    Spec("storyboard.retime", "edit", "Khớp lại với giọng đọc", "POST", P + "/storyboard/retime",
+         when="While the storyboard is readable, the voice is done and the storyboard does not fit it (a card, the channel-name beat or the end of the video sits where an earlier "
+              "voice put it; the opening shot is missing or no longer needed): listed only then. No model and no cost. Moves them to where the voice puts them, puts the opening "
+              "shot in or takes it out, and applies the identity style again; no shot of the model or the owner is changed except the start of the shot after the opening shot. "
+              "One batch in the change log (undoable). Advances when something can be moved; approving the storyboard and the export are refused (`storyboard_off_voice`) until it is done."),
     Spec("storyboard.approve", "edit", "Duyệt storyboard", "POST", P + "/approve", gate=True,
-         when="While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first. Advances."),
+         when="While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first, and while the storyboard "
+              "does not fit the voice (`storyboard_off_voice`: call storyboard.retime). Advances."),
     Spec("storyboard.preview", "edit", "Xem thử", "POST", P + "/preview", long_job=True, follow=JOBS,
          when="While the storyboard is readable. Ready; renders a short clip (a job of a few seconds)."),
     Spec("storyboard.put", "edit", "Lưu storyboard", "PUT", P + "/storyboard",
@@ -161,7 +169,7 @@ SPECS: list[Spec] = [
          cost=("model", "from about 30 seconds to about 20 minutes"),
          when="While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`)."),
     Spec("identity.set", "edit", "Chọn kiểu mở đầu", "PUT", P + "/identity",
-         when="While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them."),
+         when="While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. Optional body field `video_title` (`--set video_title=...`): the video's title shown under the channel name, one line of at most 90 characters (an empty text takes it away); with a title the style may also be left out of a direct call to the route."),
     Spec("draft.cancel", "edit", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a draft job of the project runs."),
     # ---- export
     Spec("export.start", "export", "Xuất video", "POST", P + "/export/start", long_job=True, follow=LONGJOBS,
@@ -247,6 +255,7 @@ class Ctx:
         self.picks_ops_rev: str | None = None
         self.auto: dict = auto_mod.default_doc()          # c5cli: what the owner allowed (auto.json)
         self.sb_record: Any = None                        # c5cli: the storyboard's approval record
+        self.sb_off: list = []                            # introflow: what of the storyboard does not sit where the voice puts it (bti/draft/retime.off_voice)
         self.change_count = 0
         self.change_doc: str | None = None
         self.undo_target: dict | None = None
@@ -397,6 +406,8 @@ def _load_storyboard(c: Ctx) -> None:
     c.sb_record = (sb.get("approvals") or {}).get("storyboard") if isinstance(sb.get("approvals"), dict) else None      # c5cli
     c.has_audio = _file_named(c.d, sb, "audio", "audio/mix.m4a")
     c.has_timing = _file_named(c.d, sb, "timing", "timing.json")
+    from bti.draft import retime
+    c.sb_off = _try(lambda: retime.project_off_voice(c.d, sb), [])          # introflow
     if not c.has_timing:
         c.problem("timing_unusable", "voice", "the timing file the storyboard names is missing",
                   vi="Thiếu tệp thời gian (timing.json): cần làm lại giọng đọc.")
@@ -742,7 +753,16 @@ def b_storyboard_validate(c: Ctx):
 def b_storyboard_approve(c: Ctx):
     if not _sb_ok(c) or c.sb_approval == "fresh":
         return None
-    return E([], {"rev": c.sb_rev}, advances=True)
+    return E(["storyboard_fits_voice"] if c.sb_off else [], {"rev": c.sb_rev}, advances=True)
+
+
+def b_storyboard_retime(c: Ctx):
+    """introflow: listed while the storyboard does not fit the voice; ready when the voice is done; it advances when something of it can be moved (a problem
+    that `retime` cannot repair, like a number of cards that differs from the number of chapters, only blocks the gate)."""
+    if not _sb_ok(c) or not c.sb_off:
+        return None
+    needs = [] if c.draft_ready["voice"] else ["voice_done"]
+    return E(needs, {"base_rev": c.sb_rev, "actor": "cli:retime"}, advances=any(p.get("repair") for p in c.sb_off), problems=[p["code"] for p in c.sb_off][:12])
 
 
 def b_storyboard_preview(c: Ctx):
@@ -792,6 +812,8 @@ def b_export_start(c: Ctx):
     needs = c.blocker_need("export")
     if c.sb_exists and not c.sb_corrupt and c.sb_approval != "fresh":
         needs.append("storyboard_approved")
+    elif c.sb_off:                                   # introflow: an approved storyboard whose voice was made again since
+        needs.append("storyboard_fits_voice")
     if not c.has_audio:
         needs.append("audio_mix")
     if not c.has_timing:
@@ -843,7 +865,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
     "picks.auto": b_picks_auto, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
-    "storyboard.validate": b_storyboard_validate, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
+    "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
     "draft.edit": b_draft_edit, "identity.set": b_identity_set,
     "export.start": b_export_start, "auto.run": b_auto_run, "output.build": b_output_build,

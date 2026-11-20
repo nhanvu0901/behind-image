@@ -27,6 +27,7 @@ The engine draws exactly what the storyboard says; it never decides.
 | `proposal.apply` | edit | Áp dụng |  |  |  |
 | `storyboard.restore` | edit | Khôi phục bản gần nhất |  |  |  |
 | `storyboard.validate` | edit | Kiểm tra |  |  |  |
+| `storyboard.retime` | edit | Khớp lại với giọng đọc |  |  |  |
 | `storyboard.approve` | edit | Duyệt storyboard | yes |  |  |
 | `storyboard.preview` | edit | Xem thử |  |  | yes |
 | `storyboard.put` | edit | Lưu storyboard |  |  |  |
@@ -136,7 +137,8 @@ Take these from `skills/storyboard_draft/TASK.template.md` and `skills/storyboar
 - **Move toward the thing as it is named.** Start the shot a word before the detail's name; end a spotlight or ring when the sentence moves on; after a detail come back to the painting.
 - **Prefer the core techniques**; use occasional and rare ones where a line clearly calls for them; never a technique of the `shorts` heading (they are for Shorts). Do not use the same technique four times in a row.
 - **Never put the narration on screen.** Labels are one to five words of your own ("Latin inscription"); no parameter holds a sentence of the narration. The video has no burned-in subtitles.
-- **The channel identity is the program's.** The `ID-*` techniques (the opening, the channel-name beat, the chapter marks) are written by the compiler: never add one, never write a title card or a chapter card. Change their style with `identity.set`.
+- **The channel identity is the program's.** The `ID-*` techniques (the opening, the channel-name beat, the chapter marks) are written by the compiler: never add one, never write a title card or a chapter card. Change their style with `identity.set`. The video starts with the program's opening shot (`s0000`: the whole painting before the first word, when the first word starts at 3.3 s or later); never write or change it, and never start the model's first shot with a still view of the whole painting. The title shown under the channel name is the field `video_title` of the storyboard's `identity` object (`identity.set` with `--set video_title="..."` besides `style`; one line, at most 90 characters).
+- **After the voice was made again, fit the storyboard to it.** The cards, the channel-name beat and the end of the video are anchored by absolute time; when the voice is assembled again (another silence before the first word or before the title, or one sentence read again) every word moves and they do not. `bti status` then lists `storyboard.retime` ("Khớp lại với giọng đọc") as the next command: run `bti do <project> storyboard.retime`. It moves what is off, puts the opening shot in (or takes it out), sets the end and applies the identity again; it changes no shot of the model or the owner (except the start of the shot after the opening shot), leaves locked shots and a wrong number of cards and says so (`report.left`), costs nothing and is one batch you can `bti undo`. Until it is done `storyboard.approve` and `export.start` are not ready and the routes refuse with `storyboard_off_voice`. The automatic run does it by itself before the gate.
 - **Respect locks and scope.** Never touch a locked shot; a batch with a `scope` that an operation leaves is refused whole (`out_of_scope`).
 
 ## The warnings of `storyboard.validate` that are the owner's rejections
@@ -170,4 +172,5 @@ None of these blocks a save or the approval, but an automatic run stops at them 
 | `edit_outside_scope`, `escalate`, `cannot`, `edit_no_change` | A request in words could not be met within its scope: narrow it, widen the scope, or do it with operations. |
 | `storyboard_corrupt`, `storyboard_unreadable` | `storyboard.restore` brings back the newest good copy from `history/`. |
 | `storyboard_has_errors`, `storyboard_incomplete`, `undrawable` | Fix what `storyboard.validate` lists, then approve. |
+| `storyboard_off_voice` | The voice was made again and the cards, the channel-name beat or the end sit where the old voice put them: run `bti do <project> storyboard.retime`, then approve again. |
 | `gate_needs_human` (exit 3) | The owner has not allowed you to approve this gate: stop and ask. |

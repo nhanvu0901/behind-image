@@ -180,14 +180,15 @@ loop:
 | `proposal.apply` | edit | `POST /api/projects/{pid}/proposals/{prop_id}/apply` |  |  |  |  | While the project has no storyboard and a draft proposal exists. Advances when the draft is up to date. |
 | `storyboard.restore` | edit | `POST /api/projects/{pid}/storyboard/restore` |  |  |  |  | Only when storyboard.json is unreadable. Ready when history/ has a good copy. It is the repair: listed first. |
 | `storyboard.validate` | edit | `GET /api/projects/{pid}` |  |  |  |  | While the storyboard is readable. Always ready; the answer's `issues` are the validation of the saved storyboard. |
-| `storyboard.approve` | edit | `POST /api/projects/{pid}/approve` | yes |  |  |  | While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first. Advances. |
+| `storyboard.retime` | edit | `POST /api/projects/{pid}/storyboard/retime` |  |  |  |  | While the storyboard is readable, the voice is done and the storyboard does not fit it (a card, the channel-name beat or the end of the video sits where an earlier voice put it; the opening shot is missing or no longer needed): listed only then. No model and no cost. Moves them to where the voice puts them, puts the opening shot in or takes it out, and applies the identity style again; no shot of the model or the owner is changed except the start of the shot after the opening shot. One batch in the change log (undoable). Advances when something can be moved; approving the storyboard and the export are refused (`storyboard_off_voice`) until it is done. |
+| `storyboard.approve` | edit | `POST /api/projects/{pid}/approve` | yes |  |  |  | While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first, and while the storyboard does not fit the voice (`storyboard_off_voice`: call storyboard.retime). Advances. |
 | `storyboard.preview` | edit | `POST /api/projects/{pid}/preview` |  | yes |  |  | While the storyboard is readable. Ready; renders a short clip (a job of a few seconds). |
 | `storyboard.put` | edit | `PUT /api/projects/{pid}/storyboard` |  |  |  |  | While the storyboard is readable. The caller supplies the document (`fill`); base_rev is the current rev. |
 | `storyboard.ops` | edit | `POST /api/projects/{pid}/storyboard/ops` |  |  |  |  | While the storyboard is readable. `body` is a dry run (it writes nothing) of the registry's first example operation; send your own operations with `fill`. See docs/OPS.md. |
 | `changes.list` | edit | `GET /api/projects/{pid}/changes` |  |  |  |  | Once the change log holds a batch (of the picks or the storyboard). Always ready. `step` is the step of the newest batch's document. |
 | `changes.undo` | edit | `POST /api/projects/{pid}/changes/{batch}/undo` |  |  |  |  | The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document. |
 | `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
-| `identity.set` | edit | `PUT /api/projects/{pid}/identity` |  |  |  |  | While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. |
+| `identity.set` | edit | `PUT /api/projects/{pid}/identity` |  |  |  |  | While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. Optional body field `video_title` (`--set video_title=...`): the video's title shown under the channel name, one line of at most 90 characters (an empty text takes it away); with a title the style may also be left out of a direct call to the route. |
 | `draft.cancel` | edit | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a draft job of the project runs. |
 | `export.start` | export | `POST /api/projects/{pid}/export/start` |  | yes |  | machine_time: about 25 minutes | Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. |
 | `export.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an export job of the project runs. |
@@ -223,6 +224,7 @@ loop:
 | `suggest_enabled` | Picture suggestions are switched off on this machine. | Use picks.search instead. |
 | `locked_beats` | Some beats of the narration are locked and would be replaced. | Unlock them, or send {"force": true} (the body shown does). |
 | `draft_proposal` | There is no draft proposal to apply. | Call draft.start and wait for its job. |
+| `storyboard_fits_voice` | The storyboard does not fit the voice: the cards, the channel-name beat or the end of the video sit where an earlier voice put them. | Call storyboard.retime (it moves them, and puts the opening shot in or takes it out), then ask for the state again. |
 <!-- END GENERATED: needs -->
 
 ## 4. The error body
@@ -291,6 +293,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `auto_running` | later | An automatic run of this project is going: follow it (GET /api/longjobs/{job_id}) or stop it (POST /api/longjobs/{job_id}/cancel), then call again. |
 | `bad_action` | after_fix | Send action as "overwrite" or "discard". |
 | `bad_chapters` | after_fix | Send `chapters` as a list of chapter ids (at most 100). |
+| `bad_lead` | after_fix | Send `lead` as a number of seconds from 0.2 to 15 (or null to use the standard one). |
 | `bad_model` | after_fix | Send `model` as a plain model id, or leave it out to use the project's agent. |
 | `bad_pad` | after_fix | Send `pad` as true or false. |
 | `bad_pronounce` | after_fix | Send `pronounce` as an object of written form -> spoken form (at most 500 entries). |
@@ -299,6 +302,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `bad_scope` | after_fix | Send scope as "all", "changed" or a list of chunk ids (and reseed as a list of chunk ids). |
 | `bad_tempo` | after_fix | Send `tempo` as a number inside the range in `detail`. |
 | `bad_text_character` | after_fix | Remove lone surrogate characters from the text you send, then send it again. |
+| `bad_title` | after_fix | Send `title` as a number of seconds from 3 to 30 (or null to use the standard one). |
 | `batch_not_found` | no | Take a batch id from the list at GET /api/projects/{pid}/changes. |
 | `book_not_catalogued` | after_fix | Rebuild the library catalogue (python -m bti.library build), then call again. |
 | `book_not_found` | no | Use a book id listed by GET /api/library/books. |
@@ -480,6 +484,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `storyboard_incomplete` | after_fix | Fill in the items named in the answer (their technique needs a picture, a clip or a mask), then approve again. |
 | `storyboard_missing` | after_fix | This project has no storyboard yet: run the draft first (POST /api/projects/{pid}/draft/start). |
 | `storyboard_not_found` | after_fix | Make the storyboard first: run the draft (POST /api/projects/{pid}/draft/start) and apply its proposal, then call again. |
+| `storyboard_off_voice` | after_fix | The cards, the channel-name beat or the end of the video sit where an earlier voice put them (`problems` lists them): call the action storyboard.retime (POST /api/projects/{pid}/storyboard/retime with {"base_rev": <storyboard rev>}), then call this again. |
 | `storyboard_unreadable` | after_fix | Call POST /api/projects/{pid}/storyboard/restore to bring back the newest good copy: storyboard.json cannot be read. |
 | `storyboard_unusable` | after_fix | Repair storyboard.json: POST /api/projects/{pid}/storyboard/restore brings back the newest good copy from history/. |
 | `style_not_found` | no | Use a style id that exists under style/ (the storyboard names it in `style`). |
@@ -535,6 +540,8 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `video_fetch_failed` | later | The video could not be fetched: call again in a minute, or use another link. |
 | `video_not_main` | after_fix | Choose an image, not a video, as the main picture. |
 | `video_timeout` | later | The video download took too long: call again, or choose a shorter range. |
+| `video_title_invalid` | after_fix | Send `video_title` as text: one line of at most 90 characters ("" takes the title away). |
+| `video_title_too_long` | after_fix | Shorten `video_title` to one line of at most 90 characters. |
 | `video_unreadable` | after_fix | The video cannot be read: send another file (mp4, webm, mov or m4v). |
 | `voice_align_failed` | later | The word timing could not be made: call POST /api/projects/{pid}/voice/generate again. |
 | `voice_assemble_failed` | later | The mix could not be made: call POST /api/projects/{pid}/voice/generate again. |
@@ -698,3 +705,22 @@ published, or whose approval was withdrawn, keeps its old files and is marked `o
 over (its runs are added to `runs`); an older project never does by itself, only through `output.build`.
 
 The switch `PUT /api/settings/output {"clean_after_export": false}` (`GET` the same path) turns the cleaning after an export off. The cleaning removes exactly the paths listed in `bti/output/clean.py` and nothing else.
+
+## 11. The new opening, the video's title and fitting the storyboard to the voice (`storyboard.retime`)
+
+Every video opens with the whole painting before the first word, then the channel name and under it the video's title (`docs/design/2026-11-18-identity-raking-light.md`, section 10). The parts that must be the same in every video are written by the program, never by a model.
+
+```
+PUT  /api/projects/{pid}/voice/settings   {"lead": 5.0, "title": 10.2}     seconds; lead 0.2 to 15, title 3 to 30; null takes the project's own value away
+GET  /api/projects/{pid}/voice            -> ... "silence": {"lead": 5.0, "title": 10.2, "own": {"lead": true, "title": true}, "default": {"lead": 0.35, "title": 6.2}, "intro": {"lead": 5.0, "title": 10.2}, "range": {...}}
+PUT  /api/projects/{pid}/identity         {"video_title": "The Goldsmith Who Sold Time", "base_rev": "..."}   style may be left out (the present one stays); "" takes the title away
+POST /api/projects/{pid}/storyboard/retime   {"base_rev": "...", "actor": "cli:name"}  -> {"rev", "changed": [shot ids], "batch": "batch_0007", "report": {...}}
+```
+
+- **The two silences.** A project the app creates gets `intro` of `config/voice.json` (5.0 and 10.2 s) written into its `voice/settings.json`; a project without its own values uses `silence.lead` 0.35 and `silence.title` 6.2 exactly as before (its voice state, timing and `assemble_sig` do not change). A change of either value makes the voice `stale` (`mix_settings_changed`: "cần ghép lại"); `voice.generate` with scope `changed` then assembles and aligns again and speaks no sentence again. Errors: `bad_lead`, `bad_title`.
+- **The opening shot.** When the first word starts at 3.3 s or later and the video starts with a cold open, the first shot is the program's: `CAM-01` on the main painting, the id `s0000`, `{"t": 0}` to 0.35 s before the first word, the entire painting inside the frame, no overlays of its own (`ID-OPEN-01` and `ID-LABEL-01` sit on it). The model's first shot starts on the first word (`{"w": 0, "off": -0.35}`).
+- **The beat.** `ID-BRAND-03` of the style `raking`: 9.1 s with the new silences (`min(B, gap - card - 1.2)`; 5.4 s with the old ones), texts `text` (the channel name), `title` (the video's title; without one, the painting's title) and `subtitle` ("<painting> · <Artist, year>"). A storyboard whose slot is still `ID-BRAND-01` under `raking` is the earlier form of the same style: no `identity_technique_mismatch`, it renders as before and becomes `ID-BRAND-03` when the identity is applied again (the retime does that).
+- **`storyboard.retime`** (`Khớp lại với giọng đọc`; no model, no cost). Listed when the storyboard does not fit the voice: the first shot does not start at 0; the opening shot is missing (or present although the first word starts earlier than 3.3 s); the beat does not end where the chapter card starts (the silence ends) or starts before its silence; a chapter card does not end where its silence ends or does not start where the compiler puts it; the number of cards is not the number of chapters that have one; `end` is not the duration of the voice (tolerance 0.05 s; the LENGTH of the beat is not a problem). Ready when the voice is done; `advances` when something can be moved. It moves what is off, puts the opening shot in or takes it out (the next shot then starts 0.35 s before the first word, or at 0), sets `end` and applies the identity style again. No shot of the model or of the owner is touched except the start of the shot after an inserted or removed opening shot; a locked shot is left and listed in `report.left`; the number of cards is reported, never repaired. The same call twice changes nothing the second time and writes no revision. One batch in the change log (`bti changes`, `bti undo`; the shots come back, `end` and `identity` stay); the storyboard's approval stops standing by the existing rule.
+- **The guard.** `POST /api/projects/{pid}/approve` and `POST /api/projects/{pid}/export/start` refuse with `409 storyboard_off_voice` (`problems` lists them; retry after the fix: call `storyboard.retime`) while the storyboard does not fit the voice. In the state answer `storyboard.approve` and `export.start` then carry the need `storyboard_fits_voice`. The automatic run takes `storyboard.retime` itself before the storyboard gate.
+- **To get the new opening on a video made before this change** (what the coordinator does): `PUT .../voice/settings {"lead": 5.0, "title": 10.2}`; `voice.generate` (scope `changed`: no sentence is spoken again) and wait; `PUT .../identity {"video_title": "..."}`; `storyboard.retime` (`bti do <project> storyboard.retime`); approve the storyboard again; export.
+
