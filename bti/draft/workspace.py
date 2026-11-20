@@ -3,7 +3,8 @@
     TASK.md                 the instructions (from skills/storyboard_draft/TASK.template.md)
     INSTRUCTION.md          edit mode only: the owner's words and the scope
     check / defaults / still   (.cmd on Windows) the three helper commands, each a one-line wrapper around `python -m bti.draft.*`
-    inputs/beats.json       chapters and beats: text, facts, show words, start, end, w0, w1, the picks of each beat
+    inputs/beats.json       chapters and beats: text, facts, show words, start, end, w0, w1, the picks of each beat, what the line does (`kinds`) and the
+                            pictures that were asked for it and not found (`missing`, `[{what, code}]`)
     inputs/words.tsv        index, word, start, end
     inputs/assets.json      the pictures: copy path, copy size, source size, scale, regions
     inputs/techniques.md    the registry in short, generated
@@ -33,7 +34,7 @@ from bti.engine import registry as R
 from . import decompile as D
 from . import spec as S
 from . import techniques_md
-from .inputs import NOTE_MAX, DraftError, DraftInputs, beat_picks, line_assets, narration_notes, shot_assets
+from .inputs import NOTE_MAX, DraftError, DraftInputs, beat_kinds, beat_missing, beat_picks, line_assets, narration_notes, shot_assets
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = REPO_ROOT / "skills" / "storyboard_draft" / "TASK.template.md"
@@ -188,7 +189,8 @@ def _beats_doc(inp: DraftInputs) -> dict:
                 continue
             n = notes.get(b["id"], {})
             beats.append({"id": b["id"], "text": b["text"], "facts": n.get("facts", []), "show": n.get("show", []), "start": round(b["start"], 3),
-                          "end": round(b["end"], 3), "w0": b["w0"], "w1": b["w1"], "picks": beat_picks(inp.picks, b["id"])})
+                          "end": round(b["end"], 3), "w0": b["w0"], "w1": b["w1"], "picks": beat_picks(inp.picks, b["id"]),
+                          "kinds": beat_kinds(inp.picks, b["id"]), "missing": beat_missing(inp.picks, b["id"])})
         chapters.append({"id": c["id"], "name": c["name"], "start": round(c["start"], 3), "end": round(c["end"], 3), "card": c["card"],
                          "w0": c["w0"], "w1": c["w1"], "beats": beats})
     return {"title": inp.title, "duration": round(inp.timing["duration"], 3), "n_words": len(inp.timing["words"]),

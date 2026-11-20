@@ -9,7 +9,10 @@
 So every write is a batch of the change log, and the newest ones can be undone. Pictures are downloaded BEFORE the batches (outside any
 lock, each one alone, so that one source that refuses does not sink a chapter); the `import` operation then finds them in the project's
 index and costs nothing. A line whose pictures could not all be had is written with the ones that were, and says what is missing in its
-note; a line with none is left as it was and listed. This module never approves anything.
+note and in the line's `missing` (`{what, code}`). A line about something outside the painting whose picture was not found at all (no candidates,
+or the choosing session answered null) is written with its plan's `fallback` (the part of the painting it named) and the same `missing`, never left
+unwritten; a line of an older plan, which names no fallback, with nothing found is left as it was and listed. Every line is written with its `kinds`
+(a plan saved before they existed has none, and then none are written). This module never approves anything.
 """
 from __future__ import annotations
 
@@ -167,17 +170,21 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
         def whole():
             if not any(i["asset"] == "main" and not i["region"] for i in items):
                 items.append({"asset": "main", "region": None, "role": "main", "note": ""})
-        for n, it in enumerate(ln["show"], 1):
+
+        def painting(it: dict) -> None:
+            """A `whole` or `detail` item of the plan (a line's own, or its fallback) as an item of the picks."""
             if it["type"] == "whole":
                 whole()
-            elif it["type"] == "detail":
-                if it["region"] in dropped:
-                    notes.append(texts.why("box_dropped", what=it["region"]))
-                    whole()
-                elif it["region"] in lost:
-                    whole()
-                else:
-                    items.append({"asset": "main", "region": names.get(it["region"], it["region"]), "role": "detail", "note": ""})
+            elif it["region"] in dropped:
+                notes.append(texts.why("box_dropped", what=it["region"]))
+                whole()
+            elif it["region"] in lost:
+                whole()
+            else:
+                items.append({"asset": "main", "region": names.get(it["region"], it["region"]), "role": "detail", "note": ""})
+        for n, it in enumerate(ln["show"], 1):
+            if it["type"] in ("whole", "detail"):
+                painting(it)
             else:
                 p = picks["%s.%d" % (ln["beat"], n)]
                 if p["pick"]:
@@ -195,8 +202,11 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                     missing.append({"want": p["id"], "what": p["what"], "code": p["code"] or "no_candidates",
                                     "why": texts.why(p["code"] or "no_candidates", what=p["what"], source=p.get("source") or "", seconds=p.get("seconds"),
                                                      detail=p["reason"])})
+        fallback = ln.get("fallback")
+        if fallback and ln["show"] and not items:                  # nothing asked for was found: the line shows the part of the painting its plan named
+            painting(fallback)
         lines.append({"beat": ln["beat"], "no": b["no"], "chapter": b["chapter"], "reason": ln["reason"], "show": ln["show"], "items": items,
-                      "missing": missing, "notes": notes})
+                      "missing": missing, "notes": notes, "kinds": list(ln.get("kinds") or [])})
     return lines
 
 
@@ -246,14 +256,16 @@ def _ops_for(lines: list[dict], main_key: str) -> list[dict]:
                 refs[it["src"]] = "p%d" % (len(refs) + 1)
                 ops.append({"op": "import", "source": it["src"][0], "source_id": it["src"][1], "ref": refs[it["src"]]})
     for ln in lines:
+        kinds = {"kinds": list(ln["kinds"])} if ln.get("kinds") else {}
         if not ln["show"]:
-            ops.append({"op": "skip_beat", "beat": ln["beat"], "reason": _cut(ln["reason"], NOTE_MAX)})
+            ops.append({"op": "skip_beat", "beat": ln["beat"], "reason": _cut(ln["reason"], NOTE_MAX), **kinds})
             continue
         items = []
         for it in ln["items"]:
             asset = main_key if it["asset"] == "main" else "$" + refs[it["src"]]
             items.append({"asset": asset, "region": it["region"], "role": it["role"], **({"note": it["note"]} if it["note"] else {})})
-        ops.append({"op": "set_picks", "beat": ln["beat"], "items": items, "reason": line_note(ln)})
+        ops.append({"op": "set_picks", "beat": ln["beat"], "items": items, "reason": line_note(ln), **kinds,
+                    "missing": [{"what": _cut(m["what"], pdoc.MISSING_WHAT_MAX), "code": m["code"]} for m in ln["missing"][:pdoc.MAX_MISSING]]})
     return ops
 
 
@@ -329,7 +341,9 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
         for ln in ok:
             ln["state"] = "written"
             prev[ln["beat"]] = {"reason": line_note(ln), "kind": "pictures" if ln["show"] else "keep",
-                                "clips": sum(1 for i in ln["items"] if i["role"] == "video"), "missing": ln["missing"], "no": ln["no"]}
+                                "clips": sum(1 for i in ln["items"] if i["role"] == "video"), "missing": ln["missing"], "no": ln["no"],
+                                "outside_without": bool(set(ln.get("kinds") or ()) & set(pdoc.OUTSIDE_KINDS) and not any(i["role"] in ("context", "document", "map", "video")
+                                                                                                                      for i in ln["items"]))}
         run_state["imported"] = int(run_state.get("imported") or 0) + w.created_assets
         w.created_assets = 0
         run_state["batches"] = list(run_state.get("batches") or []) + w.batches
@@ -339,7 +353,7 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
     result = {"lines_total": 0, "lines_done": 0, "lines_with_pictures": 0, "lines_kept": 0, "lines_without": [], "missing": list(problems),
               "pictures_imported": int(run_state.get("imported") or 0), "regions_made": int(run_state.get("regions_made") or 0),
               "regions_dropped": list(dropped), "clips": 0, "batches": list(run_state.get("batches") or []), "stopped": stopped,
-              "lines_by_others": 0, "reasons": {}}
+              "lines_by_others": 0, "reasons": {}, "outside_without": []}
     for ln in lines:
         st = ln["state"]
         if st == "others":
@@ -351,6 +365,8 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
             result["lines_done"] += 1
             result["lines_kept" if rec["kind"] == "keep" else "lines_with_pictures"] += 1
             result["clips"] += int(rec.get("clips") or 0)
+            if rec.get("outside_without"):
+                result["outside_without"].append(ln["beat"])      # about something outside the painting, written with the painting only (it is in `missing` too)
             result["reasons"][ln["beat"]] = {"reason": rec["reason"], "kind": rec["kind"]}
             result["missing"] += [{**m, "beat": ln["beat"], "no": ln["no"]} for m in rec.get("missing") or []]
             continue

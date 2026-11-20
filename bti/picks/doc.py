@@ -4,8 +4,13 @@
 
     {"schema": "bti.picks/1", "main_asset": "A",
      "assets": {"A": {file, kind, title, artist, year, width, height, credit{..., flag}, regions{NAME: {x, y, rx, ry, label}}}},
-     "beats": {"b0007": {"items": [{asset, region, role, note}], "status": "todo|picked|skip", "note": ""}},
+     "beats": {"b0007": {"items": [{asset, region, role, note}], "status": "todo|picked|skip", "note": "",
+                         "kinds": ["outside"], "missing": [{"what": "...", "code": "agent_none"}]}},
      "approval": {"approved", "sha1", "approved_at", "narration_sha1"}}
+
+`kinds` (optional, one or two of `LINE_KINDS`, in the order the line speaks) says what the line does; the automatic choice of pictures writes it from
+its plan. `missing` (optional) lists the pictures that were asked for and not found (`what` is the thing, `code` why). A document made before these two
+existed has neither: a beat without them is read, saved and hashed exactly as it was, and raises no warning that needs them.
 
 The field names are read by the storyboard draft agent: do not rename them. `assets` has the shape of `storyboard.assets`.
 
@@ -42,6 +47,13 @@ KEY_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,39}")
 REGION_RE = re.compile(r"[A-Za-z0-9_][A-Za-z0-9_ .-]{0,39}")
 MAX_ITEMS = 30
 MAX_ASSETS = 400
+# what a line of the narration does (the plan of the automatic choice of pictures writes it, see bti/picks/auto/shapes.py for what each kind must show)
+LINE_KINDS = ("detail", "whole", "outside", "compare", "journey", "dates", "figure", "inscription", "construction", "relations", "idea")
+OUTSIDE_KINDS = ("outside", "compare")       # the kinds whose line needs a picture of something that is not in the painting
+MAX_KINDS = 2
+MAX_MISSING = 10
+MISSING_WHAT_MAX = 160
+CODE_RE = re.compile(r"[a-z][a-z0-9_]{0,39}")
 
 
 # ---------------------------------------------------------------- lock
@@ -136,6 +148,24 @@ def _item(i: Any) -> dict | None:
             "role": i.get("role") if i.get("role") in ROLES else "detail", "note": _s(i.get("note"))}
 
 
+def _kinds(v: Any) -> list[str]:
+    """The known words of a `kinds` list, without repeats, at most `MAX_KINDS` (an unknown word is dropped)."""
+    out: list[str] = []
+    for k in v if isinstance(v, list) else []:
+        if k in LINE_KINDS and k not in out:
+            out.append(k)
+    return out[:MAX_KINDS]
+
+
+def _missing(v: Any) -> list[dict]:
+    """The well-formed entries `{what, code}` of a `missing` list (at most `MAX_MISSING`)."""
+    out: list[dict] = []
+    for m in v if isinstance(v, list) else []:
+        if isinstance(m, dict) and isinstance(m.get("what"), str) and m["what"].strip() and isinstance(m.get("code"), str) and CODE_RE.fullmatch(m["code"]):
+            out.append({"what": " ".join(m["what"].split())[:MISSING_WHAT_MAX], "code": m["code"]})
+    return out[:MAX_MISSING]
+
+
 def normalize(d: Any) -> dict:
     """A forgiving read of a document on disk (older or hand-edited files). Unknown keys of an asset's credit are kept."""
     d = d if isinstance(d, dict) else {}
@@ -152,6 +182,9 @@ def normalize(d: Any) -> dict:
         items = [x for x in (_item(i) for i in raw_items) if x is not None]
         status = b.get("status") if b.get("status") in STATUSES else ("picked" if items else "todo")
         beats[bid] = {"items": items, "status": status, "note": _s(b.get("note"))}
+        for key, val in (("kinds", _kinds(b.get("kinds"))), ("missing", _missing(b.get("missing")))):
+            if val:                                          # absent when empty: a document made before these existed keeps its revision
+                beats[bid][key] = val
     main = d.get("main_asset")
     return {"schema": SCHEMA, "main_asset": main if isinstance(main, str) and main in assets else None,
             "assets": assets, "beats": beats, "approval": _approval(d.get("approval"))}
@@ -194,6 +227,13 @@ def doc_problem(d: Any) -> str | None:
             return f"picks.beats.{bid}.status must be one of {', '.join(STATUSES)}"
         if "note" in b and b["note"] is not None and not isinstance(b["note"], str):
             return f"picks.beats.{bid}.note must be a string"
+        kinds = b.get("kinds")
+        if kinds is not None and not (isinstance(kinds, list) and len(kinds) <= MAX_KINDS and all(k in LINE_KINDS for k in kinds)):
+            return f"picks.beats.{bid}.kinds must be a list of at most {MAX_KINDS} of: {', '.join(LINE_KINDS)}"
+        missing = b.get("missing")
+        if missing is not None and not (isinstance(missing, list) and len(missing) <= MAX_MISSING and all(
+                isinstance(m, dict) and isinstance(m.get("what"), str) and isinstance(m.get("code"), str) for m in missing)):
+            return f"picks.beats.{bid}.missing must be a list of at most {MAX_MISSING} objects like {{\"what\": \"...\", \"code\": \"agent_none\"}}"
         items = b.get("items", [])
         if not isinstance(items, list) or len(items) > MAX_ITEMS:
             return f"picks.beats.{bid}.items must be a list of at most {MAX_ITEMS}"
@@ -345,6 +385,10 @@ def issues(d: dict | None, pdir: Path | None = None, beat_ids: list[str] | None 
         if known is not None and bid not in known:
             out.append({"level": "warning", "code": "beat_unknown", "beat": bid,
                         "message": f"picks for beat {bid}, which is not in the narration"})
+        elif outside_without_picture(d, bid):
+            out.append({"level": "warning", "code": "outside_no_picture", "beat": bid,
+                        "message": f"beat {bid} is about something outside the painting but shows only the main painting: no picture of the thing itself "
+                                   f"was found{_missing_words(b)}"})
     if known is not None:
         for bid in beat_ids or []:
             b = d["beats"].get(bid)
@@ -352,6 +396,39 @@ def issues(d: dict | None, pdir: Path | None = None, beat_ids: list[str] | None 
                 out.append({"level": "warning", "code": "beat_no_pick", "beat": bid,
                             "message": f"beat {bid} has no pick: the draft will use the main painting there"})
     return out
+
+
+def _missing_words(b: dict) -> str:
+    what = [m["what"] for m in b.get("missing") or []]
+    return " (looked for: %s)" % "; ".join(what[:3]) if what else ""
+
+
+def outside_without_picture(d: dict, bid: str) -> bool:
+    """Is this beat a line about something outside the painting (`kinds` holds `outside` or `compare`) that shows only the main painting, so that the picture
+    of the thing itself is missing? A line the owner or the agent settled with `skip` (the main picture again, on purpose) is not; a beat without `kinds`
+    (a document made before they existed) never is."""
+    b = (d.get("beats") or {}).get(bid)
+    if not b or b.get("status") == "skip" or not set(b.get("kinds") or ()) & set(OUTSIDE_KINDS):
+        return False
+    main = d.get("main_asset")
+    return all(i["asset"] == main for i in b["items"])
+
+
+def outside_summary(d: dict | None, beat_ids: list[str] | None = None) -> dict:
+    """`{"lines": n, "with_picture": n, "without": [beat ids]}`: the lines about something outside the painting (kinds `outside` or `compare`, not `skip`),
+    how many of them show a picture of something else than the main painting, and which do not. `beat_ids`: the narration's lines, in order (a beat that
+    is not in it is not counted); None: the beats of the document. A document with no `kinds` anywhere says `{"lines": 0, "with_picture": 0, "without": []}`."""
+    d = d or empty()
+    order = [b for b in (beat_ids if beat_ids is not None else d["beats"]) if b in d["beats"]]
+    lines, without = 0, []
+    for bid in order:
+        b = d["beats"][bid]
+        if b.get("status") == "skip" or not set(b.get("kinds") or ()) & set(OUTSIDE_KINDS):
+            continue
+        lines += 1
+        if outside_without_picture(d, bid):
+            without.append(bid)
+    return {"lines": lines, "with_picture": lines - len(without), "without": without}
 
 
 def blocking(iss: list[dict]) -> list[dict]:

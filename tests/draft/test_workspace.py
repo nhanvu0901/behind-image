@@ -31,6 +31,21 @@ def test_workspace_holds_copies_only(proj, tmp_path):
     assert len((r / "inputs" / "words.tsv").read_text().splitlines()) == 61
 
 
+def test_beats_json_carries_what_each_line_does_and_the_pictures_that_were_not_found(proj, tmp_path):
+    d = json.loads((proj / "picks.json").read_text(encoding="utf-8"))
+    d["beats"]["b0002"]["kinds"] = ["detail"]
+    d["beats"]["b0004"].update(kinds=["outside", "figure"], missing=[{"what": "Noyon Cathedral", "code": "agent_none"}, {"what": "x", "code": 5}, "junk"])
+    (proj / "picks.json").write_text(json.dumps(d), encoding="utf-8")
+    ws = W.build(load_inputs(proj), root=tmp_path / "ws")
+    doc = json.loads((ws.root / "inputs" / "beats.json").read_text(encoding="utf-8"))
+    beats = {b["id"]: b for c in doc["chapters"] for b in c["beats"]}
+    assert beats["b0002"]["kinds"] == ["detail"] and beats["b0002"]["missing"] == []
+    assert beats["b0004"]["kinds"] == ["outside", "figure"] and beats["b0004"]["missing"] == [{"what": "Noyon Cathedral", "code": "agent_none"}]
+    assert beats["b0001"]["kinds"] == [] and beats["b0001"]["missing"] == []                          # a beat of a document made before the two fields existed
+    assert set(beats["b0002"]) == {"id", "text", "facts", "show", "start", "end", "w0", "w1", "picks", "kinds", "missing"}        # nothing else changes there
+    assert beats["b0002"]["picks"] == [{"asset": "A", "region": "MIRROR", "role": "detail", "note": ""}]
+
+
 def test_images_are_downscaled_with_the_scale_recorded(tmp_path):
     import cv2
     from helpers import make_synth_project

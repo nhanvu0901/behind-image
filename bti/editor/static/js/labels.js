@@ -877,3 +877,9 @@ export const OUTPUT_LABELS = {
   saveFail: 'Chưa lưu được: ',
   loadFail: 'Chưa đọc được cài đặt này: ',
 };
+
+/* worker linekinds: the warning `outside_no_picture` of the picks (a line about something outside the painting that shows only the main painting, because the picture of the
+   thing itself was not found). The list "Cảnh báo" reads PICKS_LABELS.issue; the simple page reads PICKS_PAGE_LABELS.issue (its switch in views/picks_rows_logic.js needs a
+   `case 'outside_no_picture': return W.issue.outsideNoPicture(line);` line, which that file's owner adds). */
+PICKS_LABELS.issue.outside_no_picture = (i) => `Dòng ${i.beat} nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.`;
+PICKS_PAGE_LABELS.issue.outsideNoPicture = (line) => `${line} nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.`;

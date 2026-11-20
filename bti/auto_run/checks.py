@@ -11,6 +11,8 @@ the run looks first, so it stops with the sentence of the problem and nothing is
     * a warning in TOLERATED is style or housekeeping: the run goes on, and the log keeps the warning with its count.
     * a warning in SHARE_LIMITS stops the run only when MORE than that share of the lines of the document has it (a line with no picture: more than a
       quarter of the narration stops; at or below a quarter the run goes on, the storyboard draft shows the main painting there, and the run says how many).
+      The share of `outside_no_picture` (a line about something outside the painting that shows only the main painting) is of the lines about something
+      outside the painting (`outside.lines` of GET .../picks), not of all the lines: more than 34% of them stops, at or below it the run goes on and says how many.
     * a warning that is in neither list STOPS (a new check somebody adds is looked at by the owner until it is sorted into one of the lists).
     * `info` issues are never looked at.
 
@@ -53,6 +55,10 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "beat_no_pick": ("more than a quarter of the lines of the narration have no picture (up to a quarter the run goes on: the draft shows the main painting there)",
                          "hơn một phần tư số dòng lời dẫn chưa có hình"),
         "beat_unknown": ("a picture is attached to a line that is not in the narration any more", "có hình gắn vào dòng không còn trong lời dẫn"),
+        # worker linekinds: the owner's first test video showed the painting for 86% of the time although half of the narration spoke of things that are not in it
+        "outside_no_picture": ("more than 34% of the lines about something outside the painting show only the main painting, because no picture of the thing itself was found "
+                               "(up to 34% the run goes on: the draft shows the main painting there)",
+                               "hơn 34% số dòng nói về thứ ngoài bức tranh chỉ có tranh chính, chưa tìm được hình của chính thứ đó"),
     },
     "storyboard": {
         "audio_missing": ("the audio file does not exist", "thiếu tệp âm thanh"),
@@ -97,7 +103,10 @@ TOLERATED: dict[str, frozenset[str]] = {
 }
 # gate -> {code: share}: the warning stops the run only when MORE than this share of the lines of the document has it (the code is also in STOPS, for the sentence)
 NO_PICK_LIMIT = 0.25
-SHARE_LIMITS: dict[str, dict[str, float]] = {"picks": {"beat_no_pick": NO_PICK_LIMIT}}
+OUTSIDE_NO_PICTURE_LIMIT = 0.34          # worker linekinds: of the lines about something outside the painting (kinds `outside` or `compare`), not of all lines
+SHARE_LIMITS: dict[str, dict[str, float]] = {"picks": {"beat_no_pick": NO_PICK_LIMIT, "outside_no_picture": OUTSIDE_NO_PICTURE_LIMIT}}
+# the number a share is of: "lines" (the lines of the narration, the default) or "outside" (the lines about something outside the painting)
+SHARE_OF: dict[str, str] = {"outside_no_picture": "outside"}
 UNKNOWN_WHY = ("a check the run does not know yet", "có cảnh báo mới mà chạy tự động chưa biết")
 
 def document_path(approve_path: str, gate: str) -> str:
@@ -111,10 +120,16 @@ def _level(issue: dict) -> str:
     return str(issue.get("level") or "")
 
 
-def judge(gate: str, issues: Any, lines: int | None = None) -> dict:
+def share_base(code: str, lines: int | None, outside: int | None) -> int | None:
+    """The number of lines the share of a warning `code` is of: `outside` for a warning of the lines about something outside the painting, else `lines`."""
+    return outside if SHARE_OF.get(code) == "outside" else lines
+
+
+def judge(gate: str, issues: Any, lines: int | None = None, outside: int | None = None) -> dict:
     """{errors: [...], stopping: [...], tolerated: [...]} for the issues of the document of `gate`. Each entry is the issue with `why` (English) and
-    `why_vi` added (a stopping warning) or as it is (an error: its own message). `lines`: how many lines the document has (the narration's, for the picks):
-    a warning of SHARE_LIMITS passes while it is on no more than that share of them (unknown number of lines: it stops, the safe side)."""
+    `why_vi` added (a stopping warning) or as it is (an error: its own message). `lines`: how many lines the document has (the narration's, for the picks);
+    `outside`: how many of them are about something outside the painting (`outside.lines` of GET .../picks). A warning of SHARE_LIMITS passes while it is on
+    no more than that share of them (unknown number of lines: it stops, the safe side)."""
     errors, stopping, tolerated = [], [], []
     stops, ok, limits = STOPS.get(gate, {}), TOLERATED.get(gate, frozenset()), SHARE_LIMITS.get(gate, {})
     rows = [i for i in (issues if isinstance(issues, list) else []) if isinstance(i, dict)]
@@ -124,7 +139,8 @@ def judge(gate: str, issues: Any, lines: int | None = None) -> dict:
         if lv in ERROR_LEVELS:
             errors.append({**_brief(i), "why": str(i.get("message") or code), "why_vi": "có lỗi trong tài liệu này"})
         elif lv in WARN_LEVELS:
-            if code in ok or (code in limits and isinstance(lines, int) and lines > 0 and counts[code] <= limits[code] * lines):
+            base = share_base(code, lines, outside)
+            if code in ok or (code in limits and isinstance(base, int) and base > 0 and counts[code] <= limits[code] * base + 1e-9):
                 tolerated.append(_brief(i))
             else:
                 why, why_vi = stops.get(code, UNKNOWN_WHY)
@@ -145,9 +161,9 @@ def tally(tolerated: list[dict]) -> dict[str, int]:
     return dict(Counter(str(t.get("code") or "") for t in tolerated))
 
 
-def vet(gate: str, issues: Any, lines: int | None = None) -> tuple[str, list[dict], list[dict]]:
+def vet(gate: str, issues: Any, lines: int | None = None, outside: int | None = None) -> tuple[str, list[dict], list[dict]]:
     """('error' | 'warning' | 'ok', the entries that stop the run, the warnings it let through)."""
-    v = judge(gate, issues, lines)
+    v = judge(gate, issues, lines, outside)
     if v["errors"]:
         return "error", v["errors"], v["tolerated"] + v["stopping"]
     if v["stopping"]:
