@@ -327,7 +327,7 @@ Bring one found picture into the project (the same sources and code path as POST
 | Field | Type | Required | Meaning |
 |---|---|---|---|
 | `op` | `import` | yes | The operation name. |
-| `source` | one of `commons`, `met`, `pexels`, `pixabay`, `osm`, `book` | yes | Where the picture is found: a picture source, or `book` for a picture of the project's books. |
+| `source` | one of `commons`, `met`, `pexels`, `pixabay`, `osm`, `web`, `book` | yes | Where the picture is found: a picture source, or `book` for a picture of the project's books. |
 | `source_id` | text | yes | The id the search gave (or, for `book`, the source_id of GET .../picks/book-images). |
 | `as_main` | true or false | no | Also make it the main picture. |
 | `ref` | text | no | A name for the asset this operation brings in; later operations of the batch write it as $name. |

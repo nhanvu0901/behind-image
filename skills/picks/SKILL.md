@@ -67,6 +67,11 @@ sources (never the paid suggestion), looks at the candidates and writes the choi
 lists what was not found in `missing` (in the result and in the line's `missing`), so nothing is lost silently; a line of an older plan with nothing found is left as it was and listed in `lines_without`. Name lines with `--set beats='["b0003","b0004"]'` to work on those only. It works on the lines that have no pictures; once every line has pictures, or the picks are approved, it needs `--set redo=true`
 (refused as `picks_nothing_to_do` or `picks_approved` otherwise: the approval is dropped when it changes anything, so approve again after). It never approves.
 
+The agent looks things up on Wikipedia first (free). The owner may also have switched on **the web search** ("Tìm hình trên web khi chọn hình tự động", `bti status` shows the extra cost as `up to N web searches`): then a line whose picture the
+free sources do not have is searched on the web (You.com, paid, at most N searches a run) and one more short choosing session looks at the new candidates only. That switch is the owner's: `PUT /api/settings/web-search` from an agent is refused
+(exit 3), and with it off nothing paid is ever called. The result's closing sentence then says how many web searches the run made, and a line that could not be searched for lack of budget is listed with the code `web_budget`.
+Pictures found on the web have an unknown licence (`flag: unknown`): they show on the page flagged, for the owner to look at.
+
 Then correct with `picks.edit` (the request box): one model call, about half a minute, `bti do <project> picks.edit --yes-cost --wait --set instruction="the first line shows only the face" --set scope='{"beats":["b0001"]}'`. It rearranges, adds and removes
 pictures and regions the project already has, in one batch you can undo. It cannot import or look: when the job's result says `escalate` the request needs a picture the project does not have, so choose it with `picks.auto` for those lines, or search by hand (`picks.search`, `picks.import`).
 The page's card does this in one click (the button "Để agent chọn hình" on the turn). A voice, a draft, a prompt-box turn and the agent's choice of pictures run one at a time on a project: while one runs the other is refused (exit 5, `agent_job_running` or `no_running_job` in `bti status`): wait for it

@@ -15,7 +15,7 @@ from .registry import op
 ROLES = list(pdoc.ROLES)
 SOURCES = list(psvc.SOURCES) + ["book"]
 SOURCE_VI = {"commons": "Wikimedia Commons", "met": "Bảo tàng Metropolitan", "pexels": "Pexels", "pixabay": "Pixabay",
-             "osm": "OpenStreetMap", "book": "sách của dự án"}
+             "osm": "OpenStreetMap", "book": "sách của dự án", "web": "trang web"}          # websearch: a picture found by the web search of the automatic choice
 
 _REF_PATTERN = r"^\$[A-Za-z][A-Za-z0-9_]{0,31}$"
 BEAT = S.string("A narration line (beat) id, such as b0003.", pattern=r"^b\d{1,8}$", hint="the letter b followed by digits, like b0003")

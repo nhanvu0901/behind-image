@@ -827,6 +827,22 @@ def b_export_start(c: Ctx):
 RUN_MANUAL = frozenset({"picks.import_clip", "draft.edit", "picks.edit"})
 
 
+def cost_about(spec: Spec) -> str:
+    """What a cost line says: the spec's own words, and for `picks.auto` with the owner's switch for the web search ON, the paid searches it may make
+    (`, up to 80 web searches (You.com)`). With the switch off the line is the spec's, so nothing paid is ever implied."""
+    about = spec.cost[1]
+    if spec.id == "picks.auto":
+        from bti.picks import websettings
+        from bti.picks.auto import webround
+        try:
+            on = websettings.for_run()
+        except Exception:       # noqa: BLE001 - a damaged settings file never breaks the state answer
+            on = {"on": False, "max": 0}
+        if on["on"]:
+            about += webround.cost_line(on["max"])
+    return about
+
+
 def run_cost(c: Ctx) -> dict | None:
     """The cost of `auto.run`: the sum of what it may start from where the project stands, and only of the kinds the owner allowed (`spend` of auto.json). Every
     long action with a cost that is not paid and not a person's own request (RUN_MANUAL) and whose step is not done yet counts: an action somebody adds later
@@ -834,7 +850,7 @@ def run_cost(c: Ctx) -> dict | None:
     left: dict[str, list[tuple[str, str]]] = {}
     for s in SPECS:
         if s.cost and s.cost[0] != "paid" and s.long_job and s.id not in RUN_MANUAL and not s.id.startswith("auto.") and c.page_state(s.step) != "done" and auto_mod.spend_allowed(c.auto, s.cost[0]):
-            left.setdefault(s.cost[0], []).append((s.id.split(".")[0], s.cost[1]))
+            left.setdefault(s.cost[0], []).append((s.id.split(".")[0], cost_about(s)))
     if not left:
         return None
     about = "; ".join("%s: %s" % (k, ", ".join("%s (%s)" % x for x in v)) for k, v in left.items())
@@ -892,7 +908,7 @@ def _action(spec: Spec, e: dict, c: Ctx, job: dict | None = None) -> dict:
     out = {"id": spec.id, "step": e.get("step") or spec.step, "label": _label(spec, c), "method": spec.method, "path": path, "body": e["body"],
            "ready": not needs, "needs": needs, "gate": spec.gate, "auto_ok": _auto_ok(spec, c), "long_job": spec.long_job,
            "uses_model": spec.role is not None, "agent": c.agent(spec.role) if spec.role else None,
-           "cost": ({"kind": spec.cost[0], "about": spec.cost[1]} if spec.cost else None) if spec.id != "auto.run" else e.get("run_cost"),      # c6auto: the run's own cost
+           "cost": ({"kind": spec.cost[0], "about": cost_about(spec)} if spec.cost else None) if spec.id != "auto.run" else e.get("run_cost"),      # c6auto: the run's own cost
            "advances": bool(e["advances"]) and not needs and spec.id != "auto.run"}
     if spec.follow:
         out["follow"] = spec.follow

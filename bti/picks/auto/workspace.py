@@ -14,7 +14,8 @@
 
 and, for the choose session only:
 
-    inputs/wants.json         the pictures to choose, each with its numbered candidates, and the pictures of the owner's books (B1, B2 ...)
+    inputs/wants.json         the pictures to choose, each with its numbered candidates (up to eight: their page title, site and, for those found by
+                              Wikipedia or the web, a few words about them), and the pictures of the owner's books (B1, B2 ...)
     inputs/regions.json       the proposed boxes on the main painting
     images/w_<id>.jpg         one contact sheet of numbered thumbnails per wanted picture
     images/books_<k>.jpg      contact sheets of the pictures in the owner's books
@@ -44,6 +45,9 @@ PREFIX = "bti-picks-"
 HELPER_MODULE = "bti.picks.auto.helper"
 BOOKS_PER_SHEET = 12
 MAX_BOOK_PICTURES = 24
+MAX_SHOWN = 8                  # candidates of one wanted picture the choosing session looks at
+CANDIDATE_KEYS = ("n", "title", "source", "author", "licence", "flag", "width", "height", "page_url", "media")
+CANDIDATE_MORE = ("page_title", "site", "snippet")        # only the candidates Wikipedia or the web found have them
 
 
 class WorkspaceError(Exception):
@@ -169,13 +173,16 @@ def build_plan(inp: Inputs, limits, *, root: Path | None = None, template: Path 
     return Workspace(root=root, mode="plan")
 
 
-def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, root: Path | None = None, template: Path | None = None) -> tuple[Workspace, shapes.ChoiceCtx]:
+def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, root: Path | None = None, template: Path | None = None,
+                 second: bool = False) -> tuple[Workspace, shapes.ChoiceCtx]:
     """The folder of part 3 (choose): the plan's wanted pictures with their candidates, the owner's book pictures, and the proposed boxes.
-    `search`: the saved search state (`bti.picks.auto.search`). `books`: [{"n", "label", "source_id", "thumb": Path | None}]."""
+    `search`: the saved search state (`bti.picks.auto.search`). `books`: [{"n", "label", "source_id", "thumb": Path | None}].
+    `second`: the folder of the SECOND session of a run that searched the web again (`bti.picks.auto.webround`): `search` then holds only the wants that
+    got new candidates (numbered from 1), there are no boxes to review, and each want says what the first session answered (`earlier`)."""
     root = Path(root) if root else Path(tempfile.mkdtemp(prefix=PREFIX))
     root.mkdir(parents=True, exist_ok=True)
-    shown = {wid: w for wid, w in search["wants"].items() if w.get("candidates")}
-    used = [n for n in plan["regions"] if any(i["type"] == "detail" and i["region"] == n for ln in plan["lines"] for i in ln["show"])]
+    shown = {wid: {**w, "candidates": w["candidates"][:MAX_SHOWN]} for wid, w in search["wants"].items() if w.get("candidates")}
+    used = [] if second else [n for n in plan["regions"] if any(i["type"] == "detail" and i["region"] == n for ln in plan["lines"] for i in ln["show"])]
     ctx = shapes.ChoiceCtx(wants={wid: len(w["candidates"]) for wid, w in shown.items()}, books=len(books), regions=used)
     cmds = _common(inp, root, "choose", {"choice": ctx.to_json()})
     # the wanted pictures
@@ -187,10 +194,20 @@ def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, 
         if w["type"] != "map":
             sheet = "images/w_%s.jpg" % wid.replace(".", "_")
             images.contact_sheet([(str(c["n"]), (Path(inp.pdir) / c["thumb"]) if c.get("thumb") else None) for c in w["candidates"]], root / sheet)
-        rows.append({"id": wid, "line": w["beat"], "line_no": b["no"], "line_text": b["text"], "line_reason": by_line.get(w["beat"], {}).get("reason", ""),
-                     "type": w["type"], "kind": w.get("kind"), "what": w["what"], "searched": w.get("queries", []), "sheet": sheet,
-                     "candidates": [{k: c.get(k) for k in ("n", "title", "source", "author", "licence", "flag", "width", "height", "page_url", "media")}
-                                    for c in w["candidates"]]})
+        row = {"id": wid, "line": w["beat"], "line_no": b["no"], "line_text": b["text"], "line_reason": by_line.get(w["beat"], {}).get("reason", ""),
+               "type": w["type"], "kind": w.get("kind"), "what": w["what"], "searched": w.get("queries", []), "sheet": sheet,
+               "candidates": [{**{k: c.get(k) for k in CANDIDATE_KEYS}, **{k: c[k] for k in CANDIDATE_MORE if c.get(k)}} for c in w["candidates"]]}
+        if w.get("entity"):
+            row["entity"] = w["entity"]
+        if w.get("period") and w["type"] == "context":
+            row["period"] = w["period"]
+        if w.get("kinds"):                              # what the line does (the plan's `kinds`): an `outside` line wants the thing itself
+            row["kinds"] = list(w["kinds"])
+        if w.get("places"):
+            row["places"] = list(w["places"])
+        if second:
+            row["first_look"] = w.get("earlier") or ""
+        rows.append(row)
     book_rows = []
     sheets = []
     for k in range(0, len(books), BOOKS_PER_SHEET):
@@ -215,6 +232,6 @@ def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, 
         reg_rows.append({"name": name, "box": r["box"], "what": r["what"], "lines": lines, "line_texts": {b: inp.beat(b)["text"] for b in lines}, "crop": dest})
     _json(root / "inputs" / "regions.json", {"note": "`crop` is exactly what the camera will show for the box.", "regions": reg_rows})
     extra = {"N_WANTS": len(rows), "N_BOOKS": len(books), "N_REGIONS": len(reg_rows), "WANT_LIST": ", ".join(w["id"] for w in rows),
-             "REGION_LIST": ", ".join(used)}
+             "REGION_LIST": ", ".join(used), "SECOND_LOOK": "yes" if second else ""}
     _write(root / "TASK.md", render(_template("CHOOSE.template.md", template), _values(inp, cmds, limits, extra)))
     return Workspace(root=root, mode="choose"), ctx

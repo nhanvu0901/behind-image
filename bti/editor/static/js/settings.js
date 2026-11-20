@@ -9,13 +9,14 @@ import { modelRows, modelChanges, applyAllModels, modelListState, modelOptionTex
 import { defaultView, findAgent } from './agentlogic.js';
 import { loadAgents } from './agentpick.js';
 import { outputSwitchBox } from './outputswitch.js';          // outfolder: the switch of the output folder
+import { webSearchSwitchBox } from './websearchswitch.js';  // websearch: the switch of the web search of the automatic choice of pictures
 
 export function openModelSettings() {
   const agentBox = h('div', { class: 'settings-agent', 'data-settings-agent': '' }, h('div', { class: 'hint', text: T.loading }));
   const advBody = h('div', { class: 'settings-adv-body' }, h('div', { class: 'hint', text: T.loading }));
   const adv = h('details', { class: 'settings-advanced' }, h('summary', { text: AL.settings.advanced }),
     h('div', { class: 'hint settings-adv-hint', text: AL.settings.advancedHint }), advBody);
-  const body = h('div', { class: 'body settings-body', style: { width: 'min(760px, 94vw)' } }, agentBox, outputSwitchBox(), adv);          // outfolder: + the switch
+  const body = h('div', { class: 'body settings-body', style: { width: 'min(760px, 94vw)' } }, agentBox, outputSwitchBox(), webSearchSwitchBox(), adv);          // outfolder: + the switch; websearch: + the switch
   const dlg = modal({ title: AL.settings.title, body });
   loadAgentBox();
   load();

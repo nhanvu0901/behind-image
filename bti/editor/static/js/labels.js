@@ -899,3 +899,14 @@ export const OPENING_WORDS = { opening: 'Mở đầu: cả bức tranh', brand: 
    `case 'outside_no_picture': return W.issue.outsideNoPicture(line);` line, which that file's owner adds). */
 PICKS_LABELS.issue.outside_no_picture = (i) => `Dòng ${i.beat} nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.`;
 PICKS_PAGE_LABELS.issue.outsideNoPicture = (line) => `${line} nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.`;
+// ---- websearch: the web search of the automatic choice of pictures (bti/picks/auto/webround.py): the one switch in the settings dialog (websearchswitch.js)
+export const WEBSEARCH_LABELS = {
+  loading: 'Đang tải...',
+  title: 'Chọn hình tự động',
+  on: 'Tìm hình trên web khi chọn hình tự động',
+  hint: (n) => `Khi bật, lúc agent chọn hình tự động mà Wikipedia và các nguồn ảnh miễn phí chưa có hình đúng, ứng dụng tìm thêm trên web bằng dịch vụ You.com. Việc này tốn tiền: mỗi lần chạy tối đa ${n} lượt tìm. Tắt thì không tốn khoản nào. Hình tìm được trên web chưa rõ giấy phép nên được đánh dấu để bạn xem lại.`,
+  saved: 'Đã lưu.',
+  saveFail: 'Chưa lưu được: ',
+  loadFail: 'Chưa đọc được cài đặt này: ',
+};
+

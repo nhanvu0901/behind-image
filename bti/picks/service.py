@@ -12,8 +12,10 @@ from bti.media import licence as _lic
 from . import context, doc
 from .errors import PicksError
 
-SOURCES = ("commons", "met", "pexels", "pixabay", "osm")
+SOURCES = ("commons", "met", "pexels", "pixabay", "osm", "web")      # the sources a picture can be imported from (`web`: an address found by the web search)
 KEYED_SOURCES = {"pexels": "PEXELS_API_KEY", "pixabay": "PIXABAY_API_KEY"}
+SEARCH_ONLY = ("wikipedia",)       # free, asked for candidates only: what it offers are Commons files, imported as `commons`
+PAID_SOURCES = ("web",)            # the You.com web search: never in a default search, and searched only for a caller that says `allow_paid` (the automatic job)
 MIN_SHORT_SIDE = 1200
 _media = None            # tests replace this with a module-like object; None means `bti.media.api`
 
@@ -210,8 +212,9 @@ def upload(pdir: Path, file_path: Path, meta: dict, as_main: bool = False) -> di
 
 
 # ---------------------------------------------------------------- search
-def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit: int = 18, kind: str = "image") -> dict:
-    """Candidates from Commons, Met, Pexels, Pixabay, OSM. With no `query`, the first query of `beat` (its `show` words).
+def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit: int = 18, kind: str = "image", *, allow_paid: bool = False) -> dict:
+    """Candidates from Commons, Met, Pexels, Pixabay, OSM (and, asked for by name, Wikipedia; the paid `web` only with `allow_paid`, which only the
+    automatic picks job says). With no `query`, the first query of `beat` (its `show` words).
     Each source that fails is reported in `errors`; the others still answer. Candidates already imported say so (`imported`)."""
     query = (query or "").strip()
     if not query and beat:
@@ -224,9 +227,9 @@ def search(pdir: Path, query: str, beat: str | None = None, sources=None, limit:
         raise PicksError(422, "query is required", "query_required")
     from bti.script import env
     if sources is not None:
-        srcs = [s for s in sources if s in SOURCES]
+        srcs = [s for s in sources if (s in SOURCES or s in SEARCH_ONLY) and (s not in PAID_SOURCES or allow_paid)]
     else:
-        srcs = [s for s in SOURCES if s not in KEYED_SOURCES or env.has_key(KEYED_SOURCES[s])]
+        srcs = [s for s in SOURCES if s not in PAID_SOURCES and (s not in KEYED_SOURCES or env.has_key(KEYED_SOURCES[s]))]
     limit = max(1, min(int(limit), 40))
     items, errors = [], []
     seen = set()

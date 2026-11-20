@@ -50,3 +50,30 @@ def put_settings_output(body: dict[str, Any] = Body(...)):
         return set_output_clean(body["clean_after_export"])
     except SettingsError as e:
         raise ApiError(e.status_code, e.message, code=e.code)
+
+
+# ---- websearch: the owner's switch of the web search of the automatic choice of pictures (bti/picks/websettings.py; `run/settings.json`, block `picks`)
+@router.get("/web-search")
+def get_settings_web_search():
+    """`{auto_web_search: "on" | "off", auto_web_search_max, source}`: whether the automatic choice of pictures may search the web (PAID, You.com) and how many
+    searches one run may make. Off unless the owner switched it on."""
+    from bti.picks import websettings
+    return websettings.settings()
+
+
+@router.put("/web-search")
+def put_settings_web_search(body: dict[str, Any] = Body(...)):
+    """`{auto_web_search?: "on" | "off", auto_web_search_max?: 1..500, actor?}`. Answers like GET. Only the owner changes it: a PUT whose `actor` is not
+    `human` is 403 `spend_needs_human` (the page sends no actor; an agent never switches on a paid thing). 422 `invalid_payload`."""
+    from bti.editor.auto_api import actor_of
+    from bti.picks import websettings
+    if not isinstance(body, dict):
+        raise ApiError(422, "the body must be an object", code="invalid_payload")
+    actor = actor_of(body)
+    if actor != "human":
+        raise ApiError(403, "An agent never switches on a paid search: the owner does it on the settings page.", code="spend_needs_human", kind="paid", actor=actor)
+    try:
+        return websettings.save(body.get("auto_web_search"), body.get("auto_web_search_max"))
+    except SettingsError as e:
+        raise ApiError(e.status_code, e.message, code=e.code)
+

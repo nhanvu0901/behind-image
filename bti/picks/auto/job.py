@@ -12,6 +12,10 @@ Why two work-folder sessions and not one kept open: see `docs/qa/FIX_c3_picks_ag
 not hold an agent process or a quota; each session has its own limits and its own repair round; a cancelled run resumes from the files of the
 parts that finished, and a different agent can take over after a quota failure).
 
+With the owner's switch `auto_web_search` ON (`bti.picks.websettings`) there are two more parts after the choosing session (`bti.picks.auto.webround`):
+a second round of searches (the web, PAID, counted against `auto_web_search_max`) for the wants the session answered null, and ONE more choosing session
+that sees only those wants (`cache/picks_auto/choice2.json`). With the switch off the job is exactly the four parts above and nothing paid is called.
+
 The job is the same kind as the other long jobs of step 4 (`picks`): one at a time per project. Starting it again RESUMES a run that did not
 finish (same narration, same main painting, same lines): a part whose file is there is skipped, the search only does what is left, and the
 write part skips the lines it already wrote. A line that already has pictures is not worked on unless the request says `redo`.
@@ -26,14 +30,16 @@ from bti import agents as AG
 from bti.draft import run as draft_run
 from bti.draft.inputs import DraftError
 
-from . import helper, inputs as ainputs, search as asearch, session, shapes, store, texts, workspace
+from bti.picks import websettings
+
+from . import helper, inputs as ainputs, search as asearch, session, shapes, store, texts, webround, workspace
 from . import write as awrite
 from .inputs import AutoError
 
 KIND = "picks"
 ACTION = "auto"
 ROLE = "picks"
-EST_SECONDS = {"plan": 600, "search": 120, "choose": 480, "write": 120}
+EST_SECONDS = {"plan": 600, "search": 120, "choose": 480, "write": 120, "web": 180, "choose2": 240}
 # The limits of the two sessions of a run. What the real 61-line run of the first test video (project eligius, 2026-11-19) took: the plan 36 steps and 210 s
 # (20 boxes, a crop looked at for each), the choice of 21 pictures and 20 boxes 51 steps and 120 s (a little over one step for each sheet or crop it looked at).
 # A plan now asks for a picture on every line about something outside the painting, up to `shapes.MAX_WANTS` = 60 (it was 30): the choosing session looks at a
@@ -65,11 +71,24 @@ class _Run:
         self.plan: dict | None = None
         self.search: dict | None = None
         self.choice: dict | None = None
+        self.choice2: dict | None = None
         self.model = resolved.model
+        cfg = seams.get("web")                                  # tests: {"on", "max", "search"}; else the owner's switch as it is when the run starts
+        cfg = cfg if isinstance(cfg, dict) else websettings.for_run()
+        self.web_on, self.web_max, self.web_search = bool(cfg.get("on")), int(cfg.get("max", websettings.DEFAULT_MAX)), cfg.get("search")
+
+    def web(self, st: dict) -> "asearch.Web | None":
+        """The paid web search of this run (None when the owner's switch was off when it started: then nothing paid is ever called)."""
+        return asearch.Web.from_state(st, True, self.web_max, search=self.web_search) if self.web_on else None
 
     def begin(self) -> dict:
         if self.state is None:
             self.state, self.resumed = store.begin(self.pdir, self.key, self.inp.targets, self.inp.redo)
+            if not self.resumed:                                # a new run forgets the second session of an earlier one too (`store.reset` knows only the first four files)
+                try:
+                    (store.cache_dir(self.pdir) / "choice2.json").unlink(missing_ok=True)
+                except OSError:
+                    pass
             if self.resumed:                                    # the lines the earlier attempt planned for, not only the ones still without pictures
                 self.inp.targets = [b["id"] for b in self.inp.beats if b["id"] in set(self.state.get("targets") or [])]
             self.state["model"] = self.model
@@ -96,6 +115,13 @@ class _Run:
         d = store.read(self.pdir, "choice.json")
         if d and d.get("key") == self.key and isinstance(d.get("choice"), dict):
             self.choice = d["choice"]
+            return d
+        return None
+
+    def load_choice2(self) -> dict | None:
+        d = store.read(self.pdir, "choice2.json")
+        if d and d.get("key") == self.key and isinstance(d.get("choice"), dict):
+            self.choice2 = d["choice"]
             return d
         return None
 
@@ -199,7 +225,7 @@ def make_parts(r: _Run):
             store.write(r.pdir, "search.json", s)
         st = asearch.run(r.pdir, plan, st, wants, main_key=r.inp.painting.key, cancelled=ctx.cancelled, progress=ctx.progress, save=save,
                          search=r.s.get("search"), fetch_thumb=r.s.get("fetch_thumb"), clock=r.s.get("clock") or time.time,
-                         budget_s=r.s.get("search_budget_s") or asearch.SEARCH_SECONDS)
+                         budget_s=r.s.get("search_budget_s") or asearch.SEARCH_SECONDS, web=r.web(st), wiki_search=r.s.get("wiki_search"))
         if ctx.cancelled():
             return None
         if st.get("books") is None:
@@ -209,12 +235,16 @@ def make_parts(r: _Run):
         r.search = st
         found = sum(1 for w in st["wants"].values() if w["status"] == "found")
         ctx.progress(1.0, "Tìm xong: %d/%d hình có ứng viên." % (found, len(st["wants"])))
-        return {"search": {"wants": len(st["wants"]), "found": found, "books": len(st["books"] or []),
-                           "limited": sorted({w["source"] for w in st["wants"].values() if w["status"] == "limited" and w.get("source")})}}
+        out = {"wants": len(st["wants"]), "found": found, "books": len(st["books"] or []),
+               "limited": sorted({w["source"] for w in st["wants"].values() if w["status"] == "limited" and w.get("source")})}
+        if r.web_on:
+            out["web"] = st.get("web")
+        return {"search": out}
 
     # ---------------------------------------------------------------------------------------------------------- part 3: choose
     def shown_of(st: dict) -> list[str]:
-        return sorted(wid for wid, w in st["wants"].items() if w.get("candidates"))
+        """The wants the FIRST choosing session sees: those with candidates of round one (the second round's candidates are not part of it)."""
+        return sorted(wid for wid, w in st["wants"].items() if any(c.get("round", 1) == 1 for c in w.get("candidates") or []))
 
     def regions_of(plan: dict) -> list[str]:
         return sorted(n for n in plan["regions"])
@@ -264,6 +294,81 @@ def make_parts(r: _Run):
         return {"choose": {"wants": len(rep.value["wants"]), "picked": picked, "regions": len(rep.value["regions"]),
                            "session": {"steps": out.steps, "turns": out.turns, "repairs": out.repairs, "elapsed": round(out.elapsed)}}}
 
+    # ---------------------------------------------------------------------------------------------------------- the web round (only with the owner's switch on)
+    def first_choice() -> dict:
+        d = r.load_choice()
+        return d["choice"] if d else (r.choice or {"wants": {}, "regions": {}})
+
+    def web_done(ctx) -> bool:
+        r.begin()
+        st = r.search or r.load_search()
+        return bool(st and webround.searched(st))
+
+    def run_web(ctx):
+        r.begin()
+        plan = r.plan or r.load_plan()
+        st = r.search or r.load_search() or asearch.new_state()
+        if plan is None:
+            raise PartError("picks_auto_no_output", texts.vi("picks_auto_no_output"))
+
+        def save(s):
+            s["key"] = r.key
+            store.write(r.pdir, "search.json", s)
+        web = r.web(st)
+        st = webround.search_round_two(r.pdir, shapes.wants_of(plan), st, first_choice(), main_key=r.inp.painting.key, web=web,
+                                       fetch_thumb=r.s.get("fetch_thumb") or asearch.default_fetch_thumb, clock=r.s.get("clock") or time.time,
+                                       cancelled=ctx.cancelled, progress=ctx.progress, save=save)
+        if ctx.cancelled():
+            return None
+        r.search = st
+        again = webround.second_wants(st)
+        ctx.progress(1.0, "Tìm thêm xong: %d hình có ứng viên mới." % len(again))
+        return {"web": {**(st.get("web") or {}), "wants_with_new_candidates": len(again), "budget_short": len((st.get("round2") or {}).get("budget") or [])}}
+
+    def choose2_done(ctx) -> bool:
+        r.begin()
+        st = r.search or r.load_search()
+        if st is None:
+            return False
+        again = webround.second_wants(st)
+        if not again:
+            return True                                           # nothing new to look at: the model is not called
+        d = r.load_choice2()
+        return bool(d and d.get("shown") == again)
+
+    def run_choose2(ctx):
+        r.begin()
+        plan = r.plan or r.load_plan()
+        st = r.search or r.load_search() or asearch.new_state()
+        if plan is None:
+            raise PartError("picks_auto_no_output", texts.vi("picks_auto_no_output"))
+        again = webround.second_wants(st)
+        if not again:
+            ctx.progress(1.0, "Không có hình mới nào để chọn lại: bỏ qua bước này.")
+            return {"choose2": {"wants": 0, "skipped": True}}
+        if ctx.cancelled():
+            return None
+        try:
+            ws, cctx = workspace.build_choose(r.inp, plan, webround.second_search_view(st, first_choice()), lim["choose"], books=[], second=True)
+        except workspace.WorkspaceError as e:
+            raise PartError(e.code, texts.vi(e.code, e.message))
+        ctx.progress(0.02, "Đã chuẩn bị các tờ hình mới cho agent.")
+        out, rep = _session(r, ctx, ws, "choose2", "Agent đang chọn lại hình", lim["choose"])
+        if out.status == "cancelled" or ctx.cancelled():
+            shutil.rmtree(ws.root, ignore_errors=True)
+            return None
+        if out.status == "tampered" or not rep.ok:
+            raise _fail(out, ctx)
+        store.write(r.pdir, "choice2.json", {"schema": store.SCHEMA, "key": r.key, "model": r.model, "agent": r.res.public(), "choice": rep.value,
+                                             "shown": again, "session": {"steps": out.steps, "turns": out.turns, "repairs": out.repairs,
+                                                                         "status": out.status, "elapsed": round(out.elapsed)}})
+        r.choice2 = rep.value
+        _finish_workspace(ws, True)
+        picked = sum(1 for w in rep.value["wants"].values() if w["pick"])
+        ctx.progress(1.0, "Agent đã chọn %d/%d hình trong số hình mới." % (picked, len(rep.value["wants"])))
+        return {"choose2": {"wants": len(rep.value["wants"]), "picked": picked,
+                            "session": {"steps": out.steps, "turns": out.turns, "repairs": out.repairs, "elapsed": round(out.elapsed)}}}
+
     # ---------------------------------------------------------------------------------------------------------- part 4: write
     def run_write(ctx):
         r.begin()
@@ -275,6 +380,9 @@ def make_parts(r: _Run):
         if choice is None:
             d = r.load_choice()
             choice = d["choice"] if d else {"wants": {}, "regions": {}}
+        if r.web_on:                                            # the first and the second session as one choice (their picks mean the same candidates)
+            second = r.choice2 or (r.load_choice2() or {}).get("choice")
+            choice = webround.merge_choice(choice, second, st)
         if _stale(r):
             raise PartError("picks_auto_stale", texts.vi("picks_auto_stale"))
         try:
@@ -287,17 +395,24 @@ def make_parts(r: _Run):
             return None
         sentence = texts.result_sentence(res["lines_done"], res["lines_total"], len(res["lines_without"]))
         out = {k: v for k, v in res.items() if k != "reasons"}
+        if r.web_on:                                            # how many web searches the run made (kept in search.json and in last.json too)
+            out["web"] = st.get("web") or asearch.Web.from_state(st, True, r.web_max).public()
+            sentence += webround.web_sentence(out["web"])
         out.update(sentence=sentence, agent=r.res.public(), limits={"plan": lim["plan"].public(), "choose": lim["choose"].public()})
         _finish_run(r, out, res.get("reasons") or {}, ctx)
         ctx.progress(1.0, sentence)
         return out
 
-    return [
-        Part(key="plan", title=texts.PART_TITLES["plan"], run=run_plan, est_seconds=EST_SECONDS["plan"], is_done=plan_done),
-        Part(key="search", title=texts.PART_TITLES["search"], run=run_search, est_seconds=EST_SECONDS["search"], is_done=search_done),
-        Part(key="choose", title=texts.PART_TITLES["choose"], run=run_choose, est_seconds=EST_SECONDS["choose"], is_done=choose_done),
-        Part(key="write", title=texts.PART_TITLES["write"], run=run_write, est_seconds=EST_SECONDS["write"]),
+    titles = webround.part_titles(r.web_on, texts.PART_TITLES)
+    parts = [
+        Part(key="plan", title=titles["plan"], run=run_plan, est_seconds=EST_SECONDS["plan"], is_done=plan_done),
+        Part(key="search", title=titles["search"], run=run_search, est_seconds=EST_SECONDS["search"], is_done=search_done),
+        Part(key="choose", title=titles["choose"], run=run_choose, est_seconds=EST_SECONDS["choose"], is_done=choose_done),
     ]
+    if r.web_on:                                                # the second round: more searches (paid, counted) and one more choosing session
+        parts += [Part(key="web", title=titles["web"], run=run_web, est_seconds=EST_SECONDS["web"], is_done=web_done),
+                  Part(key="choose2", title=titles["choose2"], run=run_choose2, est_seconds=EST_SECONDS["choose2"], is_done=choose2_done)]
+    return parts + [Part(key="write", title=titles["write"], run=run_write, est_seconds=EST_SECONDS["write"])]
 
 
 def _books_for(pdir: Path, st: dict) -> list[dict]:
@@ -338,8 +453,8 @@ def start(pid: str, pdir: Path, *, beats: list | None = None, redo: bool = False
           owner_note: str = "", manager=None, by_run: bool = False, **seams) -> dict:
     """Start the job; -> the job's public record (`["id"]`). Raises `AutoError` (the refusals of the route, with their HTTP status).
     `by_run`: the caller is the automatic run (it takes this action itself as its step): the run's own job is not a reason to refuse, any other caller
-    is refused while a run goes on. `seams` (tests): search, fetch_thumb, fetch_book_thumb, fetch_asset, clock, python, guard_factory, plan_limits,
-    choose_limits, search_budget_s, write_budget_s."""
+    is refused while a run goes on. `seams` (tests): search, wiki_search, web (`{"on", "max", "search"}`: the owner's switch, the budget and the web search),
+    fetch_thumb, fetch_book_thumb, fetch_asset, clock, python, guard_factory, plan_limits, choose_limits, search_budget_s, write_budget_s."""
     pdir = Path(pdir)
     if not isinstance(redo, bool):
         raise AutoError("invalid", "redo must be true or false", 422)
@@ -363,7 +478,8 @@ def start(pid: str, pdir: Path, *, beats: list | None = None, redo: bool = False
         raise AutoError("agent_job_running", "%s is working on this project: wait for it or cancel it, then call again" % draft_run.AGENT_JOB_WHO.get(other.get("kind"), "another job"),
                         409, job_id=other.get("id"))
     meta = {"action": ACTION, "model": res.model, "agent": res.public(), "beats": list(inp.targets), "redo": bool(redo),
-            "limits": {"plan": run.limits["plan"].public(), "choose": run.limits["choose"].public()}}
+            "limits": {"plan": run.limits["plan"].public(), "choose": run.limits["choose"].public()},
+            "web": {"on": run.web_on, "max": run.web_max}}
     try:
         return m.start(kind=KIND, pid=pid, project_dir=pdir, parts=make_parts(run), meta=meta)
     except Exception as e:      # noqa: BLE001
@@ -396,4 +512,5 @@ def overview(pid: str, pdir: Path) -> dict:
     return {"running": active_job(pid), "last": {k: last.get(k) for k in ("finished", "job_id", "result", "model", "agent")} if last else None,
             "reasons": last.get("reasons") or {}, "agent": res.public(),
             "limits": {"plan": PLAN_LIMITS.public(), "choose": CHOOSE_LIMITS.public(),
-                       "search_seconds": asearch.SEARCH_SECONDS, "write_seconds": awrite.WRITE_SECONDS}}
+                       "search_seconds": asearch.SEARCH_SECONDS, "write_seconds": awrite.WRITE_SECONDS},
+            "web": websettings.for_run()}

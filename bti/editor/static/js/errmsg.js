@@ -721,3 +721,11 @@ Object.assign(STAGE_CODES.draft, { video_title_invalid: INTROFLOW_SENTENCES.vide
   storyboard_off_voice: INTROFLOW_SENTENCES.storyboard_off_voice });
 Object.assign(STAGE_CODES.export, { storyboard_off_voice: INTROFLOW_SENTENCES.storyboard_off_voice });
 for (const [k, v] of Object.entries(INTROFLOW_SENTENCES)) BY_CODE_HTTP[k] = () => v;
+// ---- websearch: the refusals of the web search of the automatic choice of pictures and of importing a picture found on a web page
+Object.assign(STAGE_CODES.picks, {
+  web_off: 'Tìm trên web chỉ chạy khi agent chọn hình tự động và khi bạn đã bật "Tìm hình trên web khi chọn hình tự động" ở Cài đặt.',
+  web_no_key: 'Chưa có khóa You.com trên máy chủ nên chưa tìm được trên web.',
+  not_an_image: 'Địa chỉ này không trả về ảnh dùng được (không phải ảnh, hoặc là ảnh vector).',
+  unsafe_url: 'Địa chỉ ảnh này không được tải về (không phải địa chỉ công khai trên mạng).',
+});
+

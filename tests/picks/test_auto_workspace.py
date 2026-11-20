@@ -253,3 +253,68 @@ def test_old_work_folders_of_this_job_are_cleaned_and_nothing_else(tmp_path, mon
     os.utime(old, (t, t))
     os.utime(other, (t, t))
     assert workspace.clean_old() == 1 and not old.exists() and other.exists() and new.exists()
+
+
+# ---------------------------------------------------------------------------------------------------------------- websearch: what the choosing session reads, and its second look
+def test_each_candidate_shows_its_page_title_its_site_and_its_snippet_and_the_session_sees_at_most_eight(pdir, tmp_path):
+    inp = load(pdir)
+    p = shapes.check_plan(PLAN, inp.plan_ctx()).value
+    wants = shapes.wants_of(p)
+    many = [cand(pdir, n, "w%d" % n, via="wikipedia", page_title="Noyon Cathedral", site="Wikipedia", snippet="Cathedral in France") for n in range(1, 8)]
+    many += [cand(pdir, 8, "web8", source="web", page_title="A museum page", site="museum.example.org", snippet="A portrait of the duke", flag="unknown", licence=""),
+             cand(pdir, 9, "tooMany"), cand(pdir, 10, "tooMany2")]
+    st = search_state(pdir, wants, b0003_1=many)
+    st["wants"]["b0003.1"].update({"entity": "Philip the Good", "period": "then"})
+    ws, cctx = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    assert cctx.wants == {"b0003.1": 8}                                                         # the numbers the session may answer are 1..8
+    row = json.loads((ws.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
+    assert [c["n"] for c in row["candidates"]] == list(range(1, 9))
+    assert row["candidates"][0]["page_title"] == "Noyon Cathedral" and row["candidates"][0]["site"] == "Wikipedia" and row["candidates"][0]["snippet"] == "Cathedral in France"
+    assert row["candidates"][7]["site"] == "museum.example.org" and row["candidates"][7]["snippet"] == "A portrait of the duke" and row["candidates"][7]["flag"] == "unknown"
+    assert row["entity"] == "Philip the Good" and row["period"] == "then" and "first_look" not in row and isinstance(row.get("kinds", []), list) and not row.get("places")      # the plan's kinds travel with the want
+    plain = cand(pdir, 1, "plain")
+    st2 = search_state(pdir, wants, b0003_1=[plain])
+    ws2, _ = workspace.build_choose(inp, p, st2, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c2")
+    r2 = json.loads((ws2.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
+    assert set(r2["candidates"][0]) == {"n", "title", "source", "author", "licence", "flag", "width", "height", "page_url", "media"}          # a candidate without the page's words is shown as before
+
+
+def test_the_choosing_briefing_has_the_new_rules_and_every_old_one(pdir, tmp_path):
+    inp = load(pdir)
+    p = shapes.check_plan(plan(), inp.plan_ctx()).value
+    ws, _ = workspace.build_choose(inp, p, {"wants": {}, "books": []}, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    task = (ws.root / "TASK.md").read_text(encoding="utf-8")
+    assert "{{" not in task and "second look" not in task
+    for rule in ("A line about the past wants a picture made in that period", "a painting, a drawing, a print, a manuscript page, a coin, a seal, an object in a museum",
+                 "Prefer it to a modern photograph, a reconstruction, a film still", "A **photograph of today** is right when the want says `\"period\": \"now\"`",
+                 "for a building or an object that survives", "or when nothing else shows the thing", "Never a watermarked picture", "Say in the reason what the picture is and from when",
+                 "`page_title`", "`snippet`", "`entity`", "at most eight"):
+        assert rule in task, rule
+
+
+def test_the_second_look_folder_holds_only_the_new_candidates_no_boxes_and_what_was_said_before(pdir, tmp_path):
+    inp = load(pdir)
+    p = shapes.check_plan(PLAN, inp.plan_ctx()).value
+    wants = shapes.wants_of(p)
+    st = search_state(pdir, wants, b0003_1=[cand(pdir, 1, "new1", source="web", page_title="P", site="s.example.org"), cand(pdir, 2, "new2")])
+    st["wants"]["b0003.1"]["earlier"] = "Cả sáu hình đều là người khác."
+    ws, cctx = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c", second=True)
+    assert cctx.wants == {"b0003.1": 2} and cctx.regions == [] and cctx.books == 0
+    task = (ws.root / "TASK.md").read_text(encoding="utf-8")
+    assert "{{" not in task and "This is a second look" in task and "ONLY the new candidates" in task and "`first_look`" in task
+    row = json.loads((ws.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
+    assert row["first_look"] == "Cả sáu hình đều là người khác." and json.loads((ws.root / "inputs" / "regions.json").read_text(encoding="utf-8"))["regions"] == []
+    assert not list((ws.root / "images").glob("d_*.jpg")) and not list((ws.root / "images").glob("books_*"))
+    # the same check the agent runs: only the wanted pictures, no boxes
+    (ws.root / "out" / "choice.json").write_text(json.dumps({"wants": [{"id": "b0003.1", "pick": 2, "reason": "Ảnh chân dung vẽ thời đó."}], "regions": []}), encoding="utf-8")
+    assert helper(ws.root, "check").returncode == 0
+
+
+def test_the_row_of_a_want_carries_what_the_line_does_and_the_places_of_a_journey_when_the_plan_gave_them(pdir, tmp_path):
+    inp = load(pdir)
+    p = shapes.check_plan(PLAN, inp.plan_ctx()).value
+    st = search_state(pdir, shapes.wants_of(p), b0003_1=[cand(pdir, 1, "a")])
+    st["wants"]["b0003.1"].update({"kinds": ["outside"], "places": ["Lyon, France", "Lübeck, Germany"]})
+    ws, _ = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    row = json.loads((ws.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
+    assert row["kinds"] == ["outside"] and row["places"] == ["Lyon, France", "Lübeck, Germany"]
