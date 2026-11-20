@@ -83,14 +83,25 @@ NOTES: list[tuple[str, str, dict]] = [
     ("relic", "carpaccio", dict(status="runner-up", yt="almost none: clips under 1.7k", repro="4326x4068 (Commons)",
         note="Venice in 1494 as a snapshot: the wooden Rialto bridge, the chimneys, the crowd. Lower drama.")),
     ("steel mill", "menzel", dict(status="considered", yt="small: best English video 6.3k", repro="6016x4000 (Commons)", note="Fewer hidden details.")),
-    ("belshazzar", "rembrandt", dict(status="considered", yt="small: National Gallery 15.6k", repro="not checked", note="The Hebrew writing on the wall; an X-ray shows overpainting.")),
-    ("eligius", "christus", dict(status="considered", yt="small: 15k to 16k", repro="not checked", note="")),
-    ("procris", "piero", dict(status="considered", yt="small: National Gallery film 36k", repro="not checked", note="")),
+    ("belshazzar", "rembrandt", dict(status="considered", yt="small: National Gallery 15.6k", repro="5308x4226 (Commons)", note="The Hebrew writing on the wall; an X-ray shows overpainting.")),
+    ("eligius", "christus", dict(status="considered", yt="small: 15k to 16k", repro="3504x4000 (Commons, Metropolitan Museum)",
+        note="The museum now calls it A Goldsmith in His Shop; our one book calls the goldsmith St Eligius.")),
+    ("procris", "piero", dict(status="considered", yt="small: National Gallery film 36k", repro="7688x2720 (Commons): a very wide panel", note="")),
     ("portinari", "goes", dict(status="considered", yt="small: Smarthistory 48.6k", repro="not checked", note="Two books.")),
     ("sardanapal", "delacroix", dict(status="considered", yt="small: all under 15k", repro="not checked", note="Read only by its headings.")),
     ("sunday afternoon", "rivera", dict(status="considered", yt="medium: Spanish up to 68k, Sotheby's 42k", repro="not checked", note="A hotel hid it for seven years.")),
     ("john the baptist", "manuel", dict(status="considered", yt="not checked", repro="1256x1641 (Commons): too small for close-ups", note="Signed with a dagger.")),
     ("draught of fishes", "witz", dict(status="considered", yt="not checked", repro="2920x2568 (Commons): small", note="")),
+    ("chalk cliffs", "friedrich", dict(status="candidate", yt="not checked", repro="4237x5465 (Commons): upright",
+        note="Painted after the painter's honeymoon of 1818; the figures may be himself, his wife and his brother.")),
+    ("roman campagna", "tischbein", dict(status="candidate", yt="small videos in English and German, views not measured", repro="8086x6418 (Commons)",
+        note="Goethe travelling incognito; only one foot touches the ground.")),
+    ("orrery", "wright", dict(status="candidate", yt="several small videos and a Smarthistory one, views not measured", repro="6527x4581 (Commons)",
+        note="The philosopher resembles Newton; the Lunar Society; a lamp stands for the sun.")),
+    ("entry into brussels", "ensor", dict(status="candidate", yt="several small videos, views not measured", repro="12900x7352 (Commons, Getty)",
+        note="The banner Vive la Sociale; painted in the attic of his parents' house.")),
+    ("bacchus and ariadne", "titian", dict(status="candidate", yt="not checked", repro="5529x4000 (Commons)",
+        note="Two books, thin text. The patron's cheetahs, the constellation, a figure taken from the Laocoon.")),
     ("qingming", "zhang", dict(status="covered", yt="heavy: Chinese explainers 0.3 to 1.7 million, English animation 182k", repro="Commons' large file is the Qing court copy, not the Song original", note="")),
     ("cossacks", "repin", dict(status="covered", yt="heavy: 803k, 375k, 315k", repro="not checked", note="")),
     ("mona lisa", "vinci", dict(status="covered", yt="heavy: Great Art Explained 2.4 million", repro="not checked", note="")),
@@ -215,6 +226,11 @@ def status_of(r: dict) -> str:
     return "thin-text"
 
 
+# the owner's test batch of 2026-11-19: ten paintings from the middle of the ranking, made first (in this order, each as a full video with Opus) to test the
+# content before the five recommended ones are spent
+TEST_BATCH = ["christus-st-eligius", "friedrich-chalk-cliffs-on-rugen", "rembrandt-belshazzar-s-feast", "derby-a-philosopher-giving-a-lecture",
+              "tischbein-goethe-in-the-roman-campagna", "carpaccio-miracle-of-the-relic-of", "cosimo-the-death-of-procris", "ensor-christ-s-entry-into-brussels",
+              "surikov-the-boyarina-morozova", "titian-bacchus-and-ariadne"]
 PROJECT_STATUS: dict[str, str] = {}              # artwork key -> `done` | `in-progress` (filled from an index.json)
 ORDER = ["done", "in-progress", "recommended-1", "recommended-2", "recommended-3", "recommended-4", "recommended-5", "runner-up", "considered", "candidate",
          "covered", "covered-assumed", "not-flat", "thin-text", "theme"]
@@ -272,6 +288,7 @@ def main(argv: list[str] | None = None) -> int:
     L.append("  - `not-flat`: not a flat painting (sculpture, embroidery, ceiling, installation): the pipeline's camera moves do not fit.")
     L.append(f"  - `thin-text`: one book and under {MIN_WORDS:,} words: not enough for a long video.")
     L.append("  - `theme`: a themed chapter of a book, not one artwork.")
+    L.append("- **test**: `test-1` to `test-10`: the owner's test batch of 2026-11-19, ten paintings from the middle of the ranking that are made first, in this order, to test the content before the recommended ones.")
     L.append("- **words N / R / L**: words of source text by trust: normal / restored (the reviewed text of the machine-translated book, usable for ideas and readings, not for hard facts) / low (not used for facts).")
     L.append("- **img**: pictures of the artwork found in the books. **rights**: the library's own estimate (`pd_likely` public domain likely, and so on); copyright is not a blocker for the owner.")
     L.append("- **YouTube** and **reproduction**: from web searches and the Wikimedia Commons file data on 2026-11-19; `not checked` means nobody looked. Views are what the search pages showed that day.")
@@ -288,8 +305,8 @@ def main(argv: list[str] | None = None) -> int:
     L.append("")
     L.append("## The table")
     L.append("")
-    L.append("| # | status | key | title | artist | year | books | words N / R / L | img | rights | project | YouTube | reproduction | note |")
-    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    L.append("| # | status | key | title | artist | year | books | words N / R / L | img | rights | project | YouTube | reproduction | note | test |")
+    L.append("|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for i, r in enumerate(rows, 1):
         n = r["note"] or {}
         w = r["words"]
@@ -298,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
             "%d / %d / %d" % (w["normal"], w["restored"], w["low"]), r["images"], r["rights"], PROJECTS.get(r["key"], ""),
             n.get("yt", "not checked") if r["kind"] == "artwork" else "", n.get("repro", "not checked") if r["kind"] == "artwork" else "",
             " ".join(x for x in [n.get("note", ""), ("Same painting as `%s`: merge the two first." % twin[r["key"]]) if r["key"] in twin else ""] if x),
+            ("`test-%d`" % (TEST_BATCH.index(r["key"]) + 1)) if r["key"] in TEST_BATCH else "",     # last, so that the columns before it keep their places
         ]) + " |")
     L.append("")
     OUT.write_text("\n".join(L), encoding="utf-8")
