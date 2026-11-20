@@ -16,13 +16,19 @@ The plan (`bti.picks.plan/1`):
 
     {"schema": "bti.picks.plan/1",
      "regions": [{"name": "HEAD", "box": [x0, y0, x1, y1], "what": "<a few words, Vietnamese>"}],
-     "lines": [{"beat": "b0001", "reason": "<one short sentence, Vietnamese>",
+     "lines": [{"beat": "b0001", "reason": "<one short sentence, Vietnamese>", "kinds": ["outside"],
                 "show": [{"type": "whole"},
                          {"type": "detail", "region": "HEAD"},
-                         {"type": "context", "search": "english words", "alt": ["other words"], "kind": "portrait",
-                          "what": "<what it should show, Vietnamese>"},
-                         {"type": "map", "place": "Oslo, Norway"},
-                         {"type": "clip", "search": "english words", "what": "...", "seconds": 6}]}]}
+                         {"type": "context", "search": "english words", "alt": ["other words"], "kind": "portrait", "entity": "Philip the Good",
+                          "period": "then", "what": "<what it should show, Vietnamese>"},
+                         {"type": "map", "places": ["Lübeck, Germany", "Bruges, Belgium"], "what": "..."},
+                         {"type": "clip", "search": "english words", "what": "...", "seconds": 6}],
+                "fallback": {"type": "detail", "region": "HEAD"}}]}
+
+`kinds` (required on every line; one or two of `KINDS`, in the order the line speaks) says what the line does, and the program checks that the pictures
+asked for are the ones that kind needs (`kind_problems`): an `outside` line asks for a picture of the thing itself and names a `fallback` (a `whole` or
+`detail` item shown when nothing is found), a map belongs only to a `journey` and names two or more `places`, a `compare` asks for the other work, and so on.
+A plan saved before `kinds` existed is still read by the writing part (`write.py`) and the wants (`wants_of`): they take what is there.
 
 `box` is in fractions of the painting (0 = left or top edge, 1 = right or bottom edge), so it does not depend on how the picture was
 scaled. A line with `"show": []` needs nothing new. The choice (`bti.picks.choice/1`):
@@ -40,17 +46,25 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from bti.picks import doc as pdoc
+
 PLAN_SCHEMA = "bti.picks.plan/1"
 CHOICE_SCHEMA = "bti.picks.choice/1"
 MAX_FILE_BYTES = 1_000_000
 
 TYPES = ("whole", "detail", "context", "map", "clip")
-CONTEXT_KINDS = ("work", "portrait", "document", "photo", "place", "other")
+CONTEXT_KINDS = ("work", "portrait", "document", "photo", "place", "object", "event", "other")
+PERIODS = ("then", "now")        # `then`: a picture made in the time the line speaks of; `now`: a photograph of today is right
+DEFAULT_PERIOD = "then"
+KINDS = pdoc.LINE_KINDS          # what a line does: the one list the plan, the picks document and the operations share
+MAX_KINDS = pdoc.MAX_KINDS
+MAX_PLACES = 6                   # names on the map of a journey
 ACTIONS = ("keep", "adjust", "drop")
 
 MAX_ITEMS = 3                    # pictures on one narration line
 MAX_REGIONS = 20                 # regions the plan may add to the main painting (the choosing session looks at each one)
-MAX_WANTS = 30                   # pictures a plan may ask for from elsewhere (context, map, clip): the choosing session looks at a sheet for each
+MAX_WANTS = 60                   # pictures a plan may ask for from elsewhere (context, map, clip): the choosing session looks at a sheet for each
+                                 # (30 until 2026-11-20: a line about something outside the painting now always asks for its picture, see KINDS)
 MAX_ALT = 2                      # alternative search words of a context picture
 CLIPS_PER_CHAPTER = 1            # the owner's decision (2026-11-18)
 CLIP_SECONDS = (4.0, 10.0)
@@ -253,16 +267,38 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list) -> dict
             if len(alts) > MAX_ALT:
                 notes.append("%s: only the first %d alternatives of `alt` are searched" % (where, MAX_ALT))
                 alts = alts[:MAX_ALT]
-        if search is None or what is None or kind_of not in CONTEXT_KINDS:
+        entity = None
+        if it.get("entity") is not None:
+            entity = _text(it.get("entity"), 2, 120)
+            if entity is None:
+                errors.append("%s: `entity` must be the name under which an encyclopedia knows the thing (\"Philip the Good\", \"Noyon Cathedral\"), 2 to 120 characters" % where)
+        period = it.get("period", DEFAULT_PERIOD)
+        if period not in PERIODS:
+            errors.append("%s: `period` must be \"then\" (a picture made in the time the line speaks of) or \"now\" (a photograph of today is right), not %r" % (where, str(period)[:30]))
+        if search is None or what is None or kind_of not in CONTEXT_KINDS or period not in PERIODS or (it.get("entity") is not None and entity is None):
             return None
-        return {"type": "context", "search": search, "alt": alts, "kind": kind_of, "what": _short(what, WHAT_MAX)}
+        out = {"type": "context", "search": search, "alt": alts, "kind": kind_of, "what": _short(what, WHAT_MAX), "period": period}
+        if entity:
+            out["entity"] = entity
+        return out
     if kind == "map":
-        place = _text(it.get("place"), 2, 80)
-        if place is None:
-            errors.append("%s: `place` must be the name of the place, 2 to 80 characters (for example \"Oslo, Norway\")" % where)
+        raw_places = it.get("places")
+        if raw_places is None and it.get("place") is not None:
+            raw_places = [it.get("place")]                       # a plan made before `places` existed
+        if not isinstance(raw_places, list) or not raw_places or len(raw_places) > MAX_PLACES:
+            errors.append("%s: `places` must be a list of 1 to %d place names, each with its country (for example [\"Lübeck, Germany\", \"Bruges, Belgium\"])"
+                          % (where, MAX_PLACES))
             return None
-        what = _text(it.get("what"), 2, WHAT_MAX + 80) or ("Bản đồ " + place)
-        return {"type": "map", "place": place, "what": _short(what, WHAT_MAX)}
+        places = []
+        for pl in raw_places:
+            name = _text(pl, 2, 80)
+            if name is None:
+                errors.append("%s: every entry of `places` must be the name of a place, 2 to 80 characters (for example \"Oslo, Norway\")" % where)
+                return None
+            if name not in places:
+                places.append(name)
+        what = _text(it.get("what"), 2, WHAT_MAX + 80) or ("Bản đồ " + ", ".join(places[:3]))
+        return {"type": "map", "place": places[0], "places": places, "what": _short(what, WHAT_MAX)}       # `place` stays: the map search reads it
     # clip
     search = _text(it.get("search"), 3, 120)
     what = _text(it.get("what"), 3, WHAT_MAX + 80)
@@ -281,6 +317,130 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list) -> dict
         notes.append("%s: a clip lasts 4 to 10 seconds, so %g s becomes %g s" % (where, float(sec), fixed))
         sec = fixed
     return {"type": "clip", "search": search, "what": _short(what, WHAT_MAX), "seconds": float(sec)}
+
+
+# ---------------------------------------------------------------------------------------------------------------- what each kind of line must ask for
+# kind -> (what the line does, what it must ask for): the table of the plan template (skills/picks_auto/PLAN.template.md) in the same words
+KIND_TABLE = {
+    "detail": ("points at a thing that is in the painting", "a `detail` item"),
+    "whole": ("speaks of the painting as one object (its date, its size, where it hangs, its fate)", "a `whole` item"),
+    "outside": ("is about a person, a place, an object, an event or a custom that is NOT in the painting",
+                "at least one `context` (or `clip`) item, and a line-level `fallback` (a `detail` or `whole` item shown when nothing is found)"),
+    "compare": ("sets the painting or one detail beside another work", "a `context` item of kind `work` and a `detail` or `whole` item"),
+    "journey": ("is about a movement or a tie between two or more places", "a `map` item with `places` (two or more names)"),
+    "dates": ("gives three or more dated events of one story", "a `detail` or `whole` item (the storyboard adds the time axis)"),
+    "figure": ("has a quantity as its point", "the picture of the thing counted: a `context` item when it is outside the painting, else a `detail`"),
+    "inscription": ("reads words that are visible in the picture", "a `detail` item on the words"),
+    "construction": ("explains how the picture is built (perspective, geometry, a visible technique)", "a `detail` or `whole` item"),
+    "relations": ("ties three or more people together (family, patrons)", "a `detail`, `whole` or `context` item"),
+    "idea": ("gives a reading or an opinion that no picture can show", "a `detail` or `whole` item"),
+}
+CONTEXT_ITEM = '{"type": "context", "search": "<the thing and what sort of picture>", "entity": "<its name>", "period": "then", "kind": %s, "what": "<Vietnamese>"}'
+DETAIL_ITEM = '{"type": "detail", "region": "<NAME>"}'
+FALLBACK_ITEM = '"fallback": {"type": "whole"} (or {"type": "detail", "region": "<NAME>"} for the part of the painting nearest to what the line says)'
+CODES_OF_KINDS = ("kinds_missing", "kinds_shape", "kinds_unknown", "kinds_too_many", "kinds_repeated", "outside_only_painting", "outside_no_fallback",
+                  "map_without_journey", "journey_no_map", "journey_one_place", "compare_no_work", "compare_no_painting", "kind_needs_painting",
+                  "figure_no_picture", "context_without_kind", "fallback_bad")
+
+
+def kind_words() -> str:
+    return ", ".join(KINDS)
+
+
+def kinds_problem(raw: Any, where: str) -> tuple[list[str] | None, str | None]:
+    """`(kinds, None)` for a usable `kinds` of one line, else `(None, the sentence that says what to write)`. A line without `kinds` is not reported here
+    (the plan check lists those together)."""
+    if not isinstance(raw, list) or not raw:
+        return None, ("%s: `kinds` must be a list of one or two words saying what the line does, from: %s; for example \"kinds\": [\"detail\"] [kinds_shape]"
+                      % (where, kind_words()))
+    if len(raw) > MAX_KINDS:
+        return None, ("%s: `kinds` has %d words; a line has one or two (in the order it speaks). Keep the one or two that matter most, and give the other things the "
+                      "line says no picture of their own [kinds_too_many]" % (where, len(raw)))
+    bad = [str(k)[:30] for k in raw if k not in KINDS]
+    if bad:
+        return None, "%s: kind %s is not one of: %s [kinds_unknown]" % (where, ", ".join(repr(b) for b in bad), kind_words())
+    if len(set(raw)) != len(raw):
+        return None, "%s: `kinds` names %r twice; write each thing the line does once [kinds_repeated]" % (where, raw[0])
+    return list(raw), None
+
+
+def kind_problems(kinds: list[str], show: list[dict], fallback: dict | None, where: str) -> list[str]:
+    """What is wrong between a line's `kinds` and the pictures it asks for, one sentence per rule, each saying exactly what to add. `show` and `fallback` are
+    the normalised items (no error in them). The rules are the table `KIND_TABLE`."""
+    out: list[str] = []
+    types = [i["type"] for i in show]
+    contexts = [i for i in show if i["type"] == "context"]
+    clips = [i for i in show if i["type"] == "clip"]
+    maps = [(n, i) for n, i in enumerate(show) if i["type"] == "map"]
+    has_detail, has_whole = "detail" in types, "whole" in types
+    if "outside" in kinds:
+        if not contexts and not clips:
+            painting = has_detail or has_whole
+            what_it_shows = ("only the painting and a map (a map is not the picture of a place that is merely mentioned)" if maps and painting else
+                             "only a map (a map is not the picture of a place that is merely mentioned)" if maps else
+                             "only the painting" if types else "nothing new (`\"show\": []`)")
+            out.append("%s: kinds says \"outside\", so the line must ask for a picture of the thing itself, but it shows %s. Add %s to `show` (or a clip of "
+                       "the thing); if the line is really about something in the painting, change kinds to \"detail\" or \"whole\" [outside_only_painting]"
+                       % (where, what_it_shows, CONTEXT_ITEM % '"<portrait|place|object|event|work|document|photo>"'))
+        if fallback is None:
+            out.append("%s: an \"outside\" line needs a line-level `fallback`, the picture of the painting that is shown when nothing is found for the line. Add %s [outside_no_fallback]"
+                       % (where, FALLBACK_ITEM))
+    if "journey" in kinds:
+        if not maps:
+            out.append("%s: kinds says \"journey\" but the line asks for no map. Add {\"type\": \"map\", \"places\": [\"<place A, country>\", \"<place B, country>\"], "
+                       "\"what\": \"<Vietnamese>\"} to `show`, or change kinds [journey_no_map]" % where)
+        for n, m in maps:
+            if len(m["places"]) < 2:
+                out.append("%s.show[%d]: the map of a \"journey\" needs two or more names in `places` and this one has %d (%s). Give the places the line moves between "
+                           "or ties together, each with its country (\"Lübeck, Germany\", \"Bruges, Belgium\"); one place is not a journey [journey_one_place]"
+                           % (where, n, len(m["places"]), m["places"][0]))
+    elif maps:
+        n = maps[0][0]
+        out.append("%s.show[%d]: a map belongs only to a line about a journey or a tie between two or more places, and kinds says %s, not \"journey\". For a place that is "
+                   "merely mentioned (\"born at Limoges\", \"Bruges was the commercial capital\") ask for a view of the place instead: %s with kinds \"outside\". If "
+                   "the line does move between places, put \"journey\" in kinds and give the map two or more `places` [map_without_journey]"
+                   % (where, n, ", ".join(repr(k) for k in kinds), CONTEXT_ITEM % '"<place>"'))
+    if "compare" in kinds:
+        if not any(c["kind"] == "work" for c in contexts):
+            out.append("%s: kinds says \"compare\" but the line asks for no other work. Add %s next to the painting, with the other work's title and painter in `search` "
+                       "[compare_no_work]" % (where, CONTEXT_ITEM % '"work"'))
+        if not (has_detail or has_whole):
+            out.append("%s: kinds says \"compare\" but the line shows no part of this painting beside the other work. Add %s or {\"type\": \"whole\"} to `show` "
+                       "[compare_no_painting]" % (where, DETAIL_ITEM))
+    if show:                                                    # `"show": []` keeps the picture before it: only the kinds that need a picture are asked for one
+        for k, ok, add in (("detail", has_detail, DETAIL_ITEM + " (declare its box in `regions`)"),
+                           ("whole", has_whole, '{"type": "whole"}'),
+                           ("dates", has_detail or has_whole, DETAIL_ITEM + " or {\"type\": \"whole\"}"),
+                           ("inscription", has_detail, DETAIL_ITEM + " on the words (declare its box in `regions`)"),
+                           ("construction", has_detail or has_whole, DETAIL_ITEM + " or {\"type\": \"whole\"}"),
+                           ("idea", has_detail or has_whole, DETAIL_ITEM + " or {\"type\": \"whole\"}"),
+                           ("relations", has_detail or has_whole or bool(contexts), DETAIL_ITEM + ", {\"type\": \"whole\"} or a context picture")):
+            if k in kinds and not ok:
+                out.append("%s: kinds says \"%s\" (the line %s) but its pictures do not match: add %s to `show`, or change kinds to what the line really does [kind_needs_painting]"
+                           % (where, k, KIND_TABLE[k][0], add))
+    if "figure" in kinds and not (contexts or clips or has_detail):
+        out.append("%s: kinds says \"figure\", so the line must show the thing that is counted. Add %s when the thing is outside the painting, else %s [figure_no_picture]"
+                   % (where, CONTEXT_ITEM % '"<photo|object|place|event>"', DETAIL_ITEM))
+    if (contexts or clips) and not {"outside", "compare", "figure", "relations"} & set(kinds):
+        out.append("%s: the line asks for a picture from elsewhere (%s) but kinds says %s. Put \"outside\" in kinds (and name a `fallback`), or \"compare\" when it is "
+                   "another work set beside this one, or take the picture out of `show` [context_without_kind]"
+                   % (where, "a context picture" if contexts else "a clip", ", ".join(repr(k) for k in kinds)))
+    return out
+
+
+def _fallback(raw: Any, where: str, regions: dict, errors: list) -> dict | None:
+    """The line-level `fallback`: one item, `whole` or `detail`, shown when the picture asked for is not found. None when it is not given or not usable."""
+    if raw is None:
+        return None
+    if isinstance(raw, list) and len(raw) == 1:
+        raw = raw[0]
+    if not (isinstance(raw, dict) and raw.get("type") in ("whole", "detail")):
+        errors.append("%s: `fallback` must be one item, {\"type\": \"whole\"} or {\"type\": \"detail\", \"region\": \"NAME\"}: the part of the painting shown when nothing is "
+                      "found for the line [fallback_bad]" % where)
+        return None
+    n = len(errors)
+    got = _item(raw, where + ".fallback", regions, errors, [])
+    return got if len(errors) == n else None
 
 
 def apply_clip_rule(lines: list[dict], chapters: dict) -> list[str]:
@@ -398,6 +558,8 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
         return rep
     target_set = set(ctx.targets)
     seen: dict[str, dict] = {}
+    no_kinds: list[str] = []                                     # lines that left `kinds` out, listed in one sentence
+    judged: dict[str, tuple[str, int]] = {}                      # line -> (where, how many pictures it asked for) of the lines whose kinds were compared with their pictures
     for k, ln in enumerate(raw_lines):
         where = "lines[%d]" % k
         if not isinstance(ln, dict):
@@ -427,6 +589,7 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
         if len(show_raw) > MAX_ITEMS:
             err.append("%s: `show` has %d pictures; a line shows at most %d" % (where, len(show_raw), MAX_ITEMS))
             continue
+        n_before = len(err)
         items: list[dict] = []
         for n, it in enumerate(show_raw):
             got = _item(it, "%s.show[%d]" % (where, n), known, err, notes)
@@ -436,11 +599,29 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
                 notes.append("%s.show[%d]: the same picture twice in a line; the second one is dropped" % (where, n))
                 continue
             items.append(got)
-        seen[bid] = {"beat": bid, "reason": reason, "show": items}
+        fallback = _fallback(ln.get("fallback"), where, known, err) if "fallback" in ln else None
+        kinds = None
+        if ln.get("kinds") is None:
+            no_kinds.append(bid)
+        else:
+            kinds, problem = kinds_problem(ln.get("kinds"), where)
+            if problem:
+                err.append(problem)
+        sound = len(err) == n_before
+        if kinds and sound:                                      # the pictures are only compared with the kinds when each of them is sound by itself
+            err.extend(kind_problems(kinds, items, fallback, where))
+        if kinds and sound:
+            judged[bid] = (where, len(items))
+        seen[bid] = {"beat": bid, "reason": reason, "kinds": kinds or [], "show": items, **({"fallback": fallback} if fallback else {})}
     asked = sum(1 for ln in seen.values() for i in ln["show"] if i["type"] in ("context", "map", "clip"))
     if asked > MAX_WANTS:
-        err.append("the plan asks for %d pictures from elsewhere (context, map, clip); ask for at most %d, the most important ones, and show the painting on the other lines"
-                   % (asked, MAX_WANTS))
+        err.append("the plan asks for %d pictures from elsewhere (context, map, clip); ask for at most %d: a line about something outside the painting asks for its picture, "
+                   "but a line about the painting itself, an idea or a date needs none" % (asked, MAX_WANTS))
+    if no_kinds:
+        more = " and %d more" % (len(no_kinds) - 20) if len(no_kinds) > 20 else ""
+        err.append("%d line(s) have no `kinds`: %s%s. Every line says what it does with one or two words of: %s (see the table in TASK.md); for example "
+                   "`\"kinds\": [\"detail\"]`, and a line about something outside the painting `\"kinds\": [\"outside\"]` with a `context` picture and a `fallback` [kinds_missing]"
+                   % (len(no_kinds), ", ".join(no_kinds[:20]), more, kind_words()))
     missing = [b for b in ctx.targets if b not in seen]
     if missing:
         more = " and %d more" % (len(missing) - 12) if len(missing) > 12 else ""
@@ -449,7 +630,13 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
         return rep
     lines = [seen[b] for b in ctx.targets]                # ctx.targets is in narration order
     notes.extend(apply_clip_rule(lines, ctx.chapters))
-    used = {i["region"] for ln in lines for i in ln["show"] if i["type"] == "detail"}
+    for ln in lines:                                             # a clip the rule took out may have been the only picture an `outside` line asked for
+        where, asked_n = judged.get(ln["beat"], (None, 0))
+        if where and len(ln["show"]) != asked_n:
+            err.extend(kind_problems(ln["kinds"], ln["show"], ln.get("fallback"), where + " after the clip rule"))
+    if err:
+        return rep
+    used = {i["region"] for ln in lines for i in ln["show"] + ([ln["fallback"]] if ln.get("fallback") else []) if i["type"] == "detail"}
     for name in regions:
         if name not in used:
             notes.append("region %s is not used by any line, so it will not be made" % name)
@@ -461,12 +648,17 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
 # ---------------------------------------------------------------------------------------------------------------- wants
 def wants_of(plan: dict) -> list[dict]:
     """The pictures the plan asks for that must be found elsewhere (context, map, clip), numbered per line: `b0006.2` is the second
-    picture of line b0006. In the order of the narration."""
+    picture of line b0006. In the order of the narration. Each carries the line's `kinds`, and a context picture its `entity` (when given) and `period`."""
     out = []
     for ln in plan["lines"]:
         for n, it in enumerate(ln["show"], 1):
             if it["type"] in ("context", "map", "clip"):
-                out.append({"id": "%s.%d" % (ln["beat"], n), "beat": ln["beat"], "n": n, **it})
+                row = {"id": "%s.%d" % (ln["beat"], n), "beat": ln["beat"], "n": n, **it, "kinds": list(ln.get("kinds") or [])}
+                if it["type"] == "context":
+                    row["period"] = it.get("period") or DEFAULT_PERIOD           # `entity` comes with the item when the plan gave it
+                if it["type"] == "map" and "places" not in it:
+                    row["places"] = [it["place"]]                                # a plan saved before `places` existed
+                out.append(row)
     return out
 
 

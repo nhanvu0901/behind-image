@@ -894,3 +894,8 @@ export const RETIME_LABELS = {
 };
 // the words the owner reads for the opening shot and the channel-name beat (the Python twin is bti/output/shotwords.py)
 export const OPENING_WORDS = { opening: 'Mở đầu: cả bức tranh', brand: 'Tên kênh và tựa video' };
+/* worker linekinds: the warning `outside_no_picture` of the picks (a line about something outside the painting that shows only the main painting, because the picture of the
+   thing itself was not found). The list "Cảnh báo" reads PICKS_LABELS.issue; the simple page reads PICKS_PAGE_LABELS.issue (its switch in views/picks_rows_logic.js needs a
+   `case 'outside_no_picture': return W.issue.outsideNoPicture(line);` line, which that file's owner adds). */
+PICKS_LABELS.issue.outside_no_picture = (i) => `Dòng ${i.beat} nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.`;
+PICKS_PAGE_LABELS.issue.outsideNoPicture = (line) => `${line} nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.`;

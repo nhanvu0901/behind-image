@@ -27,6 +27,15 @@ REGION = S.string("A region name of the asset (letters, digits, spaces, _ . -)."
 NOTE = S.string("A short note (up to 400 characters).", max_length=400)
 REF = S.string("A name for the asset this operation brings in; later operations of the batch write it as $name.",
                pattern=r"^[A-Za-z][A-Za-z0-9_]{0,31}$", hint="a name of letters, digits and _, starting with a letter")
+KINDS = S.array(S.string("What the line does.", enum=list(pdoc.LINE_KINDS)),
+                "What the line does: one or two of %s, in the order the line speaks (the automatic choice of pictures writes them). Leave it out to keep what "
+                "the line has; send [] to remove it." % ", ".join(pdoc.LINE_KINDS), max_items=pdoc.MAX_KINDS)
+MISSING = S.array(S.plain_object({
+    "what": S.string("The picture that was asked for and not found.", min_length=1, max_length=pdoc.MISSING_WHAT_MAX),
+    "code": S.string("Why it was not found (for example agent_none, no_candidates).", pattern="^" + pdoc.CODE_RE.pattern + "$", hint="lower-case words joined by _")},
+    required=["what", "code"], title="a missing picture {what, code}"),
+    "The pictures that were asked for the line and not found (at most %d). Leave it out to keep what the line has; send [] to remove it." % pdoc.MAX_MISSING,
+    max_items=pdoc.MAX_MISSING)
 ITEM = S.plain_object({
     "asset": ASSET,
     "region": S.string("A region of that asset to show, or null for the whole picture.", pattern=REGION["pattern"], nullable=True,
@@ -69,6 +78,18 @@ def _item(ctx, it: dict, base: str) -> dict:
             ctx.bad(base + "region", "no region %r on asset %r" % (region, key), allowed=sorted(regs), code="unknown_region")
     role = it.get("role") or ("video" if a.get("kind") == "video" else "detail")
     return {"asset": key, "region": region, "role": role, "note": it.get("note") or ""}
+
+
+def _keep_what_is_known(ctx, b: dict, o: dict) -> None:
+    """`kinds` and `missing` of a line stay as they are unless the operation sends new ones (an empty list takes them away)."""
+    if "kinds" in o and len(set(o["kinds"])) != len(o["kinds"]):
+        ctx.bad("kinds", "the same word is written twice: name each thing the line does once", allowed=list(pdoc.LINE_KINDS))
+    for key in ("kinds", "missing"):
+        if key in o:
+            if o[key]:
+                b[key] = [dict(x) if isinstance(x, dict) else x for x in o[key]]
+            else:
+                b.pop(key, None)
 
 
 def _say_beat(ctx, bid: str, variant: str = "default", **vars) -> None:
@@ -142,7 +163,8 @@ def remove_region(ctx, o):
         "beat": BEAT,
         "items": S.array(ITEM, "The pictures of the line, in the order they are shown (1 to %d)." % pdoc.MAX_ITEMS, min_items=1,
                          max_items=pdoc.MAX_ITEMS),
-        "reason": S.string("Why these pictures; kept as the note of the line (up to 400 characters).", max_length=400)}),
+        "reason": S.string("Why these pictures; kept as the note of the line (up to 400 characters).", max_length=400),
+        "kinds": KINDS, "missing": MISSING}),
     example={"op": "set_picks", "beat": "b0003", "items": [{"asset": "B"}, {"asset": "A", "region": "HEAD", "role": "detail"}],
              "reason": "Both pictures show the room."},
     sentences="Đoạn {n}: thay {k} hình")
@@ -154,6 +176,7 @@ def set_picks(ctx, o):
     b["items"], b["status"] = items, "picked"
     if "reason" in o:
         b["note"] = o["reason"]
+    _keep_what_is_known(ctx, b, o)
     _say_beat(ctx, bid, k=len(items))
 
 
@@ -205,7 +228,8 @@ def remove_pick(ctx, o):
 @op("picks", "skip_beat",
     summary="Make a narration line show the main picture again (it keeps no pictures of its own).",
     schema=S.obj("skip_beat", ["beat"], {
-        "beat": BEAT, "reason": S.string("Why; kept as the note of the line (up to 400 characters).", max_length=400)}),
+        "beat": BEAT, "reason": S.string("Why; kept as the note of the line (up to 400 characters).", max_length=400),
+        "kinds": KINDS, "missing": MISSING}),
     example={"op": "skip_beat", "beat": "b0003", "reason": "The main picture says it all."},
     sentences="Đoạn {n}: dùng lại tranh chính")
 def skip_beat(ctx, o):
@@ -215,6 +239,7 @@ def skip_beat(ctx, o):
     b["items"], b["status"] = [], "skip"
     if "reason" in o:
         b["note"] = o["reason"]
+    _keep_what_is_known(ctx, b, o)
     _say_beat(ctx, bid)
 
 

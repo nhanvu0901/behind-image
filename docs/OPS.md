@@ -222,6 +222,8 @@ Replace all the pictures of one narration line (use skip_beat to show the main p
 | `beat` | text | yes | A narration line (beat) id, such as b0003. |
 | `items` | list of a picture item {asset, region?, role?, note?} | yes | The pictures of the line, in the order they are shown (1 to 30). |
 | `reason` | text | no | Why these pictures; kept as the note of the line (up to 400 characters). |
+| `kinds` | list of one of `detail`, `whole`, `outside`, `compare`, `journey`, `dates`, `figure`, `inscription`, `construction`, `relations`, `idea` | no | What the line does: one or two of detail, whole, outside, compare, journey, dates, figure, inscription, construction, relations, idea, in the order the line speaks (the automatic choice of pictures writes them). Leave it out to keep what the line has; send [] to remove it. |
+| `missing` | list of a missing picture {what, code} | no | The pictures that were asked for the line and not found (at most 10). Leave it out to keep what the line has; send [] to remove it. |
 
 Example:
 
@@ -303,6 +305,8 @@ Make a narration line show the main picture again (it keeps no pictures of its o
 | `op` | `skip_beat` | yes | The operation name. |
 | `beat` | text | yes | A narration line (beat) id, such as b0003. |
 | `reason` | text | no | Why; kept as the note of the line (up to 400 characters). |
+| `kinds` | list of one of `detail`, `whole`, `outside`, `compare`, `journey`, `dates`, `figure`, `inscription`, `construction`, `relations`, `idea` | no | What the line does: one or two of detail, whole, outside, compare, journey, dates, figure, inscription, construction, relations, idea, in the order the line speaks (the automatic choice of pictures writes them). Leave it out to keep what the line has; send [] to remove it. |
+| `missing` | list of a missing picture {what, code} | no | The pictures that were asked for the line and not found (at most 10). Leave it out to keep what the line has; send [] to remove it. |
 
 Example:
 

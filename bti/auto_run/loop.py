@@ -50,6 +50,14 @@ def _lines_of(doc: dict) -> int | None:
     return len(ids) if isinstance(ids, list) else None
 
 
+def _outside_of(doc: dict) -> int | None:
+    """How many lines of the narration are about something outside the painting (`outside.lines` of GET .../picks, the lines whose `kinds` hold `outside` or
+    `compare`); None for another document or when it is not said (then the share of `outside_no_picture` cannot be judged and the warning stops the run)."""
+    out = doc.get("outside")
+    n = out.get("lines") if isinstance(out, dict) else None
+    return n if isinstance(n, int) and not isinstance(n, bool) else None
+
+
 class _Stop(Exception):
     def __init__(self, result: dict):
         super().__init__(result.get("reason"))
@@ -288,14 +296,15 @@ class Run:
         rep = self.call("GET", checks.document_path(a["path"], gate))
         if not rep.ok or not isinstance(rep.data, dict):
             raise _Stop(reasons.make("action_failed", **{**base, "action": "%s (reading its document)" % a["id"]}, error=self._error(rep)))
-        lines = _lines_of(rep.data)
-        verdict, stoppers, tolerated = checks.vet(gate, rep.data.get("issues"), lines)
+        lines, outside = _lines_of(rep.data), _outside_of(rep.data)
+        verdict, stoppers, tolerated = checks.vet(gate, rep.data.get("issues"), lines, outside)
         if verdict == "error":
             raise _Stop(reasons.make("quality_error", gate=gate, count=len(stoppers), issues=stoppers, **base))
         if verdict == "warning":
             raise _Stop(reasons.make("quality_warning", gate=gate, count=len(stoppers), issues=stoppers, **base))
         for code, n in checks.tally(tolerated).items():
-            self.tolerated[(gate, code)] = {"gate": gate, "code": code, "count": n, **({"lines": lines} if code in checks.SHARE_LIMITS.get(gate, {}) and lines else {})}
+            base = checks.share_base(code, lines, outside)
+            self.tolerated[(gate, code)] = {"gate": gate, "code": code, "count": n, **({"lines": base} if code in checks.SHARE_LIMITS.get(gate, {}) and base else {})}
         return tolerated
 
     def _refused(self, a: dict, base: dict, rep: Reply, err: dict) -> None:

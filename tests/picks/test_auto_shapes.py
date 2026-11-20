@@ -3,7 +3,7 @@ import copy
 import json
 
 import pytest
-from auto_helpers import CHOICE, PLAN, choice, plan
+from auto_helpers import CHOICE, PLAN, choice, infer_kinds, plan
 
 from bti.picks.auto import shapes, texts
 
@@ -17,8 +17,10 @@ def ctx(targets=IDS, existing=None):
     return shapes.PlanCtx(beats=BEATS, targets=list(targets), existing_regions=existing or {})
 
 
-def line(beat, show, reason="Lý do ngắn."):
-    return {"beat": beat, "reason": reason, "show": show}
+def line(beat, show, reason="Lý do ngắn.", **more):
+    """A line of a plan; `kinds` (and the `fallback` of a line about something outside the painting) are what the pictures say unless `more` gives them."""
+    ln = {"beat": beat, "reason": reason, "show": show, **more}
+    return ln if "kinds" in more else infer_kinds(ln)
 
 
 def check(p, **kw):
@@ -37,6 +39,7 @@ def test_the_example_plan_is_valid_and_normalised():
     assert set(rep.value["regions"]) == {"MIRROR", "HEAD"} and rep.value["regions"]["HEAD"]["box"] == [0.1, 0.05, 0.3, 0.25]
     wants = shapes.wants_of(rep.value)
     assert [w["id"] for w in wants] == ["b0003.1", "b0004.1", "b0004.2"] and [w["type"] for w in wants] == ["context", "map", "clip"]
+    assert [w["kinds"] for w in wants] == [["outside"], ["outside", "journey"], ["outside", "journey"]]
     assert len(rep.warnings) == 1 and "b0005 to b0006" in rep.warnings[0]            # a last line with nothing new keeps the framing of the one before
     assert rep.text().endswith("0 error(s), 0 note(s), 1 warning(s)")
 
@@ -126,7 +129,7 @@ def test_context_map_and_clip_fields_are_checked():
     assert "`search` must be 3 to 120" in only_errors(check(plan(lines=[line("b0001", bad_ctx), *PLAN["lines"][1:]])))
     assert "`what` must say" in only_errors(check(plan(lines=[line("b0001", [{"type": "context", "search": "van Eyck"}]), *PLAN["lines"][1:]])))
     assert "kind 'cat'" in only_errors(check(plan(lines=[line("b0001", [{"type": "context", "search": "van Eyck", "what": "xx", "kind": "cat"}]), *PLAN["lines"][1:]])))
-    assert "`place` must be the name" in only_errors(check(plan(lines=[line("b0001", [{"type": "map"}]), *PLAN["lines"][1:]])))
+    assert "`places` must be a list" in only_errors(check(plan(lines=[line("b0001", [{"type": "map"}], kinds=["journey"]), *PLAN["lines"][1:]])))
     assert "type 'gif'" in only_errors(check(plan(lines=[line("b0001", [{"type": "gif"}]), *PLAN["lines"][1:]])))
     rep = check(plan(lines=[line("b0001", [{"type": "context", "search": "van Eyck", "what": "Họa sĩ", "alt": ["a b c", "d e f", "g h i"]}]), *PLAN["lines"][1:]]))
     assert rep.ok and rep.value["lines"][0]["show"][0]["alt"] == ["a b c", "d e f"] and any("alternatives" in n for n in rep.notes)
@@ -142,16 +145,18 @@ def test_a_clip_lasts_four_to_ten_seconds():
 
 def test_two_clips_in_one_chapter_and_a_clip_on_a_painting_line_are_cut_to_the_rule():
     clip = lambda s: {"type": "clip", "search": "canal boat " + s, "what": "Cảnh " + s, "seconds": 6}      # noqa: E731
-    lines = [line("b0001", [{"type": "whole"}, clip("a")]),                         # a clip on a painting line: dropped
-             line("b0002", [{"type": "context", "search": "van Eyck", "what": "Họa sĩ"}, clip("b")]),      # c01: the first clip that is allowed
-             line("b0003", [clip("c")]),                                            # c02: the first of its chapter
-             line("b0004", [clip("d")]),                                            # c02: a second one: dropped
-             line("b0005", [{"type": "detail", "region": "HEAD"}, clip("e")]),      # a painting line again
-             line("b0006", [clip("f")])]                                            # c03: the first of its chapter (b0005's was dropped)
+    ctx_item = lambda s: {"type": "context", "search": "van Eyck " + s, "what": "Họa sĩ " + s}            # noqa: E731
+    lines = [line("b0001", [{"type": "whole"}, ctx_item("a"), clip("a")]),                  # a clip on a painting line: dropped, the picture stays
+             line("b0002", [ctx_item("b"), clip("b")]),                                    # c01: the first clip that is allowed
+             line("b0003", [clip("c")]),                                                   # c02: the first of its chapter
+             line("b0004", [ctx_item("d"), clip("d")]),                                    # c02: a second one: dropped, the picture stays
+             line("b0005", [{"type": "detail", "region": "HEAD"}, ctx_item("e"), clip("e")]),   # a painting line again
+             line("b0006", [clip("f")])]                                                   # c03: the first of its chapter (b0005's was dropped)
     rep = check(plan(lines=lines))
-    assert rep.ok
+    assert rep.ok, rep.text()
     kept = [(ln["beat"], [i["type"] for i in ln["show"]]) for ln in rep.value["lines"]]
-    assert kept == [("b0001", ["whole"]), ("b0002", ["context", "clip"]), ("b0003", ["clip"]), ("b0004", []), ("b0005", ["detail"]), ("b0006", ["clip"])]
+    assert kept == [("b0001", ["whole", "context"]), ("b0002", ["context", "clip"]), ("b0003", ["clip"]), ("b0004", ["context"]),
+                    ("b0005", ["detail", "context"]), ("b0006", ["clip"])]
     assert len([n for n in rep.notes if "the clip was dropped" in n]) == 3
     assert any("b0004" in n and "one clip per chapter" in n for n in rep.notes) and any("b0001" in n and "painting itself" in n for n in rep.notes)
 
@@ -258,10 +263,10 @@ def test_a_plan_may_not_ask_for_more_pictures_from_elsewhere_than_the_choosing_s
     n = shapes.MAX_WANTS + 1
     beats = [{"id": "b%04d" % i, "chapter": "c%02d" % (i // 10), "words": 20} for i in range(1, n + 1)]
     ctx_ = shapes.PlanCtx(beats=beats, targets=[b["id"] for b in beats])
-    lines = [{"beat": b["id"], "reason": "Lý do.", "show": [{"type": "map", "place": "Oslo, Norway"}]} for b in beats]
+    lines = [{"beat": b["id"], "reason": "Lý do.", "kinds": ["journey"], "show": [{"type": "map", "places": ["Oslo, Norway", "Bergen, Norway"]}]} for b in beats]
     rep = shapes.check_plan({"regions": [], "lines": lines}, ctx_)
-    assert not rep.ok and "asks for %d pictures from elsewhere" % n in only_errors(rep) and "at most %d" % shapes.MAX_WANTS in only_errors(rep)
-    ok = shapes.check_plan({"regions": [], "lines": lines[:-1] + [{"beat": beats[-1]["id"], "reason": "Lý do.", "show": []}]}, ctx_)
+    assert shapes.MAX_WANTS == 60 and not rep.ok and "asks for %d pictures from elsewhere" % n in only_errors(rep) and "at most %d" % shapes.MAX_WANTS in only_errors(rep)
+    ok = shapes.check_plan({"regions": [], "lines": lines[:-1] + [{"beat": beats[-1]["id"], "reason": "Lý do.", "kinds": ["idea"], "show": []}]}, ctx_)
     assert ok.ok and len(shapes.wants_of(ok.value)) == shapes.MAX_WANTS
 
 

@@ -406,3 +406,109 @@ def test_a_picks_project_without_a_picks_file_takes_its_first_batch(client):
     (client.pdir / "picks.prev.json").unlink(missing_ok=True)
     r = pk(client, [{"op": "skip_beat", "beat": "b0001"}])
     assert r.status_code == 200 and picks(client)["beats"]["b0001"]["status"] == "skip"
+
+
+# ---------------------------------------------------------------- kinds and missing of a line (worker linekinds)
+KINDS = ["outside", "figure"]
+MISSING = [{"what": "Noyon Cathedral", "code": "agent_none"}]
+
+
+def set_known(client, beat="b0004", **more):
+    r = pk(client, [{"op": "set_picks", "beat": beat, "items": [{"asset": "A"}], "reason": "Tranh chính.", "kinds": KINDS, "missing": MISSING, **more}])
+    assert r.status_code == 200, r.text
+    return r
+
+
+def test_set_picks_writes_kinds_and_missing_and_the_document_keeps_them(client):
+    set_known(client)
+    b = picks(client)["beats"]["b0004"]
+    assert b["kinds"] == KINDS and b["missing"] == MISSING and b["status"] == "picked" and b["items"][0]["asset"] == "A"
+    assert pdoc.load(client.pdir)["beats"]["b0004"]["kinds"] == KINDS
+
+
+def test_a_later_edit_of_the_pictures_keeps_kinds_and_missing_unless_it_sends_new_ones(client):
+    set_known(client)
+    pk(client, [{"op": "set_picks", "beat": "b0004", "items": [{"asset": "B"}]}])                              # an edit of the items
+    pk(client, [{"op": "add_pick", "beat": "b0004", "asset": "C"}])
+    pk(client, [{"op": "remove_pick", "beat": "b0004", "index": 0}])
+    b = picks(client)["beats"]["b0004"]
+    assert [i["asset"] for i in b["items"]] == ["C"] and b["kinds"] == KINDS and b["missing"] == MISSING
+    pk(client, [{"op": "set_picks", "beat": "b0004", "items": [{"asset": "D"}], "kinds": ["detail"]}])         # new kinds: replaced; missing stays
+    b = picks(client)["beats"]["b0004"]
+    assert b["kinds"] == ["detail"] and b["missing"] == MISSING
+    pk(client, [{"op": "skip_beat", "beat": "b0004"}])                                                         # skip keeps them too
+    b = picks(client)["beats"]["b0004"]
+    assert b["status"] == "skip" and b["items"] == [] and b["kinds"] == ["detail"] and b["missing"] == MISSING
+    pk(client, [{"op": "skip_beat", "beat": "b0005", "kinds": ["idea"], "reason": "Cùng ý."}])                 # skip_beat takes kinds
+    assert picks(client)["beats"]["b0005"]["kinds"] == ["idea"] and "missing" not in picks(client)["beats"]["b0005"]
+
+
+def test_an_empty_list_takes_kinds_or_missing_away(client):
+    set_known(client)
+    pk(client, [{"op": "set_picks", "beat": "b0004", "items": [{"asset": "B"}], "missing": []}])
+    b = picks(client)["beats"]["b0004"]
+    assert "missing" not in b and b["kinds"] == KINDS
+    pk(client, [{"op": "set_picks", "beat": "b0004", "items": [{"asset": "B"}], "kinds": []}])
+    assert "kinds" not in picks(client)["beats"]["b0004"]
+
+
+@pytest.mark.parametrize("op,code,where", [
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "kinds": ["picture"]}, "invalid_field", ["ops[0].kinds[0]"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "kinds": ["detail", "whole", "idea"]}, "invalid_field", ["ops[0].kinds"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "kinds": ["detail", "detail"]}, "invalid_field", ["ops[0].kinds"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "kinds": "outside"}, "invalid_field", ["ops[0].kinds"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "missing": [{"what": "x"}]}, "invalid_field", ["ops[0].missing[0].code"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "missing": [{"what": "x", "code": "Bad Code"}]}, "invalid_field", ["ops[0].missing[0].code"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "missing": [{"what": "x", "code": "a", "extra": 1}]}, "invalid_field", ["ops[0].missing[0].extra"]),
+    ({"op": "set_picks", "beat": "b0004", "items": [{"asset": "A"}], "missing": [{"what": "x", "code": "a"}] * 11}, "invalid_field", ["ops[0].missing"]),
+    ({"op": "skip_beat", "beat": "b0004", "kinds": ["nothing"]}, "invalid_field", ["ops[0].kinds[0]"]),
+])
+def test_kinds_and_missing_wrong_fields(client, op, code, where):
+    before = snapshot(client.pdir)
+    r = pk(client, [op])
+    assert r.status_code == 422 and r.json()["code"] == code, r.text
+    assert paths(r) == where
+    untouched(client, r, before)
+
+
+def test_the_schema_of_the_operation_lists_the_eleven_words_and_the_two_fields(client):
+    for name in ("set_picks", "skip_beat"):
+        sch = client.get("/api/ops/schema").json()["picks"][name]["schema"]
+        assert set(sch["properties"]["kinds"]["items"]["enum"]) == set(pdoc.LINE_KINDS) and sch["properties"]["kinds"]["maxItems"] == 2
+        assert sch["properties"]["missing"]["items"]["required"] == ["what", "code"] and "kinds" not in sch["required"]
+
+
+def test_undo_gives_kinds_and_missing_back(client):
+    r1 = set_known(client)
+    r2 = pk(client, [{"op": "set_picks", "beat": "b0004", "items": [{"asset": "B"}], "kinds": ["detail"], "missing": []}])
+    assert picks(client)["beats"]["b0004"]["kinds"] == ["detail"]
+    out = client.post("/api/projects/%s/changes/%s/undo" % (PID, r2.json()["batch"]), json={"base_rev": pk_rev(client), "actor": "human"})
+    assert out.status_code == 200, out.text
+    b = picks(client)["beats"]["b0004"]
+    assert b["kinds"] == KINDS and b["missing"] == MISSING and [i["asset"] for i in b["items"]] == ["A"]
+    out = client.post("/api/projects/%s/changes/%s/undo" % (PID, r1.json()["batch"]), json={"base_rev": pk_rev(client), "actor": "human"})
+    assert out.status_code == 200, out.text
+    assert "b0004" not in picks(client)["beats"]                                                              # the line did not exist before the first batch
+
+
+def test_a_save_of_the_page_keeps_what_the_agent_knows_of_a_line_unless_it_sends_new_ones(client):
+    set_known(client)
+    page = client.get("/api/projects/%s/picks" % PID).json()
+    body = page["picks"]
+    for key in ("kinds", "missing"):                                                                          # a page that does not know the fields sends none
+        body["beats"]["b0004"].pop(key, None)
+    r = client.put("/api/projects/%s/picks" % PID, json={"picks": body, "base_rev": page["rev"]})
+    assert r.status_code == 200, r.text
+    b = picks(client)["beats"]["b0004"]
+    assert b["kinds"] == KINDS and b["missing"] == MISSING
+    page = client.get("/api/projects/%s/picks" % PID).json()
+    body = page["picks"]
+    body["beats"]["b0004"]["kinds"] = ["detail"]
+    body["beats"]["b0004"]["missing"] = []
+    r = client.put("/api/projects/%s/picks" % PID, json={"picks": body, "base_rev": page["rev"]})
+    b = picks(client)["beats"]["b0004"]
+    assert r.status_code == 200 and b["kinds"] == ["detail"] and "missing" not in b
+    page = client.get("/api/projects/%s/picks" % PID).json()
+    page["picks"]["beats"]["b0004"]["kinds"] = ["nonsense"]
+    r = client.put("/api/projects/%s/picks" % PID, json={"picks": page["picks"], "base_rev": page["rev"]})
+    assert r.status_code == 422 and "kinds" in r.text

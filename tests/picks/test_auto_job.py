@@ -72,13 +72,13 @@ def test_what_the_agent_is_given_and_the_limits_that_are_in_the_job(env):
     job = env.run()
     plan_call, choose_call = env.agent.calls
     assert (plan_call["mode"], choose_call["mode"]) == ("plan", "choose")
-    assert plan_call["model"] == job["meta"]["model"] and plan_call["timeout"] == 20 * 60 and plan_call["max_repairs"] == 1
+    assert plan_call["model"] == job["meta"]["model"] and plan_call["timeout"] == 30 * 60 and plan_call["max_repairs"] == 1
     ext = ".cmd" if os.name == "nt" else ""
     assert {"TASK.md", "check" + ext, "crop" + ext, "inputs/painting.json", "inputs/narration.json", "images/main.jpg", "inputs/main_large.jpg"} <= set(plan_call["files"])
     assert {"inputs/wants.json", "images/w_b0003_1.jpg", "images/w_b0004_2.jpg", "images/d_MIRROR.jpg", "images/d_HEAD.jpg"} <= set(choose_call["files"])
     assert "images/w_b0004_1.jpg" not in choose_call["files"]                                  # a map has no sheet: its candidate is a place
-    assert job["meta"]["limits"] == {"plan": {"minutes": 20, "steps": 80, "repairs": 1}, "choose": {"minutes": 20, "steps": 80, "repairs": 1}}
-    assert result(job)["limits"]["plan"]["steps"] == 80
+    assert job["meta"]["limits"] == {"plan": {"minutes": 30, "steps": 120, "repairs": 1}, "choose": {"minutes": 40, "steps": 220, "repairs": 1}}      # they grew with the cap of 60 wants
+    assert result(job)["limits"]["plan"]["steps"] == 120 and result(job)["limits"]["choose"]["steps"] == 220
     assert job["meta"]["action"] == "auto" and job["kind"] == "picks" and job["meta"]["agent"]["id"] in ("gemini", "opus")
     assert job["meta"]["beats"] == ["b0001", "b0002", "b0003", "b0004", "b0005", "b0006"]
 
@@ -153,7 +153,7 @@ def test_redo_is_needed_for_lines_that_have_pictures_and_an_approved_document_ne
         assert e.value.code == "picks_approved" and e.value.status == 409
     calls = len(env.agent.calls)
     p = json.loads(json.dumps(PLAN))
-    p["lines"][0]["show"] = [{"type": "detail", "region": "HEAD"}]                              # the agent now plans something else for the first line
+    p["lines"][0]["show"], p["lines"][0]["kinds"] = [{"type": "detail", "region": "HEAD"}], ["detail"]      # the agent now plans something else for the first line
     env.agent.plan = p
     job = env.run(redo=True)
     assert job["state"] == "done" and result(job)["lines_total"] == 6 and result(job)["lines_done"] == 6
@@ -242,22 +242,23 @@ def test_a_second_job_of_the_kind_is_refused_while_one_runs(env):
 # ---------------------------------------------------------------------------------------------------------------- the rules
 def test_a_plan_with_two_clips_in_a_chapter_and_a_clip_on_a_painting_line_is_cut_to_the_rule(env):
     clip = lambda w: {"type": "clip", "search": "canal boat", "what": "Cảnh " + w, "seconds": 20}                    # noqa: E731
-    p = plan(lines=[{"beat": "b0001", "reason": "Cả tranh.", "show": [{"type": "whole"}, clip("1")]},                # on a painting line: dropped
-                    {"beat": "b0002", "reason": "Chi tiết.", "show": [{"type": "detail", "region": "MIRROR"}]},
-                    {"beat": "b0003", "reason": "Cảnh một.", "show": [clip("2")]},                                    # the first clip of c02
-                    {"beat": "b0004", "reason": "Cảnh hai.", "show": [clip("3")]},                                    # a second one in c02: dropped
-                    {"beat": "b0005", "reason": "Đầu.", "show": [{"type": "detail", "region": "HEAD"}]},
-                    {"beat": "b0006", "reason": "Giữ.", "show": []}])
+    pic = lambda w: {"type": "context", "search": "Jan van Eyck portrait", "kind": "portrait", "what": "Họa sĩ " + w}      # noqa: E731
+    p = plan(lines=[{"beat": "b0001", "reason": "Cả tranh.", "kinds": ["outside"], "show": [{"type": "whole"}, pic("1"), clip("1")], "fallback": {"type": "whole"}},   # on a painting line: dropped
+                    {"beat": "b0002", "reason": "Chi tiết.", "kinds": ["detail"], "show": [{"type": "detail", "region": "MIRROR"}]},
+                    {"beat": "b0003", "reason": "Cảnh một.", "kinds": ["outside"], "show": [clip("2")], "fallback": {"type": "whole"}},      # the first clip of c02
+                    {"beat": "b0004", "reason": "Cảnh hai.", "kinds": ["outside"], "show": [pic("4"), clip("3")], "fallback": {"type": "whole"}},      # a second one in c02: dropped
+                    {"beat": "b0005", "reason": "Đầu.", "kinds": ["detail"], "show": [{"type": "detail", "region": "HEAD"}]},
+                    {"beat": "b0006", "reason": "Giữ.", "kinds": ["idea"], "show": []}])
     env.agent.plan = p
     job = env.run()
     assert job["state"] == "done", job.get("error")
     saved = store.read(env.pdir, "plan.json")
     shown = {ln["beat"]: [i["type"] for i in ln["show"]] for ln in saved["plan"]["lines"]}
-    assert shown == {"b0001": ["whole"], "b0002": ["detail"], "b0003": ["clip"], "b0004": [], "b0005": ["detail"], "b0006": []}
+    assert shown == {"b0001": ["whole", "context"], "b0002": ["detail"], "b0003": ["clip"], "b0004": ["context"], "b0005": ["detail"], "b0006": []}
     assert len([n for n in saved["notes"] if "the clip was dropped" in n]) == 2 and any("a clip lasts 4 to 10 seconds" in n for n in saved["notes"])
     assert saved["plan"]["lines"][2]["show"][0]["seconds"] == 10.0
     r = result(job)
-    assert r["clips"] == 1 and env.picks()["beats"]["b0003"]["items"][0]["role"] == "video" and env.picks()["beats"]["b0004"]["status"] == "skip"
+    assert r["clips"] == 1 and env.picks()["beats"]["b0003"]["items"][0]["role"] == "video" and env.picks()["beats"]["b0006"]["status"] == "skip"
 
 
 def test_a_detail_the_choose_step_drops_shows_the_whole_painting_and_its_box_is_not_made(env):
@@ -271,18 +272,78 @@ def test_a_detail_the_choose_step_drops_shows_the_whole_painting_and_its_box_is_
     assert r["regions_dropped"] == ["HEAD"] and r["regions_made"] == 1 and r["lines_done"] == 6
 
 
-def test_a_want_with_no_candidates_is_listed_and_the_job_goes_on(env):
+def test_a_want_with_no_candidates_is_written_with_the_fallback_and_listed_as_missing(env):
     env.sources["commons"].items = [m for m in env.sources["commons"].items if m["kind"] == "video"]
     env.sources["met"].items = []
     job = env.run()
     assert job["state"] == "done"
     r = result(job)
-    assert (r["lines_total"], r["lines_done"]) == (6, 5) and [x["beat"] for x in r["lines_without"]] == ["b0003"]
-    assert r["lines_without"][0]["code"] == "no_candidates" and "Chân dung họa sĩ" in r["lines_without"][0]["why"] and r["lines_without"][0]["no"] == 3
-    assert r["sentence"] == "Agent đã chọn hình cho 5/6 đoạn. 1 đoạn chưa có hình phù hợp."
-    assert "b0003" not in env.picks()["beats"] or env.picks()["beats"]["b0003"]["items"] == []                              # left as it was
+    assert (r["lines_total"], r["lines_done"]) == (6, 6) and r["lines_without"] == []                                         # no longer left unwritten
+    assert [(m["beat"], m["code"], m["no"]) for m in r["missing"]] == [("b0003", "no_candidates", 3)] and "Chân dung họa sĩ" in r["missing"][0]["why"]
+    assert r["sentence"] == "Agent đã chọn hình cho 6/6 đoạn." and r["outside_without"] == ["b0003"]
+    b = env.picks()["beats"]["b0003"]
+    assert b["items"] == [{"asset": "A", "region": None, "role": "main", "note": ""}] and b["status"] == "picked"            # its fallback: the whole painting
+    assert b["kinds"] == ["outside"] and b["missing"] == [{"what": "Chân dung họa sĩ", "code": "no_candidates"}]
+    assert "Chưa tìm được: Chân dung họa sĩ." in b["note"]
     assert "images/w_b0003_1.jpg" not in env.agent.calls[1]["files"]                                                         # the agent was not shown an empty sheet
     assert store.read(env.pdir, "search.json")["wants"]["b0003.1"]["status"] == "none"
+    d = env.picks()
+    assert [i["beat"] for i in doc.issues(d, None, [f"b000{n}" for n in range(1, 7)]) if i["code"] == "outside_no_picture"] == ["b0003"]
+    assert doc.outside_summary(d) == {"lines": 2, "with_picture": 1, "without": ["b0003"]}
+
+
+def test_a_picture_the_agent_answered_null_for_is_written_with_the_fallback_the_plan_named(env):
+    p = plan()
+    p["lines"][2]["fallback"] = {"type": "detail", "region": "HEAD"}                                     # the part of the painting nearest to the line
+    env.agent.plan = p
+    env.agent.choice = choice(wants=[{"id": "b0003.1", "pick": None, "reason": "Không hình nào đúng người."}, *CHOICE["wants"][1:]])
+    job = env.run()
+    assert job["state"] == "done", job.get("error")
+    r = result(job)
+    assert r["lines_done"] == 6 and r["lines_without"] == [] and [(m["beat"], m["code"]) for m in r["missing"]] == [("b0003", "agent_none")]
+    b = env.picks()["beats"]["b0003"]
+    assert [(i["asset"], i["region"], i["role"]) for i in b["items"]] == [("A", "HEAD", "detail")]
+    assert b["kinds"] == ["outside"] and b["missing"] == [{"what": "Chân dung họa sĩ", "code": "agent_none"}] and "Chưa tìm được" in b["note"]
+
+
+def test_a_fallback_box_the_choosing_session_drops_shows_the_whole_painting(env):
+    p = plan()
+    p["lines"][2]["fallback"] = {"type": "detail", "region": "HEAD"}
+    env.agent.plan = p
+    env.agent.choice = choice(wants=[{"id": "b0003.1", "pick": None, "reason": "Không hình nào đúng người."}, *CHOICE["wants"][1:]],
+                              regions=[CHOICE["regions"][0], {"name": "HEAD", "action": "drop", "reason": "Khung không trúng khuôn mặt."}])
+    job = env.run()
+    assert job["state"] == "done"
+    assert [(i["asset"], i["region"], i["role"]) for i in env.picks()["beats"]["b0003"]["items"]] == [("A", None, "main")]
+
+
+def test_kinds_are_written_on_every_line_and_a_found_picture_leaves_no_missing_entry(env):
+    job = env.run()
+    assert job["state"] == "done" and result(job)["outside_without"] == [] and result(job)["missing"] == []
+    beats = env.picks()["beats"]
+    assert {b: v["kinds"] for b, v in beats.items()} == {"b0001": ["whole"], "b0002": ["detail"], "b0003": ["outside"], "b0004": ["outside", "journey"],
+                                                         "b0005": ["detail", "whole"], "b0006": ["idea"]}              # a skipped line has them too
+    assert all("missing" not in v for v in beats.values())
+    assert [o.get("kinds") for r in env.changes() for o in r["ops"] if o["op"] == "skip_beat"] == [["idea"]]
+    assert beats["b0003"]["items"][0]["asset"] != "A" and doc.outside_summary(env.picks()) == {"lines": 2, "with_picture": 2, "without": []}
+
+
+def test_a_line_of_an_older_plan_has_no_fallback_and_nothing_found_leaves_it_as_it_was():
+    """A plan saved before `kinds` existed (a resumed run reads it back from cache/picks_auto/plan.json): no kinds are written and a line with nothing stays unwritten."""
+    from bti.picks.auto import texts
+    old = {"lines": [{"beat": "b0003", "reason": "Nói về họa sĩ.", "show": [{"type": "context", "search": "x y z", "alt": [], "kind": "portrait", "what": "Chân dung họa sĩ"}]},
+                     {"beat": "b0004", "reason": "Nơi vẽ.", "show": [{"type": "map", "place": "Bruges, Belgium", "what": "Bản đồ Bruges"}]}]}
+
+    class Inp:
+        def beat(self, bid):
+            return {"no": int(bid[1:]), "chapter": "c02"}
+    picks = {"b0003.1": {"id": "b0003.1", "beat": "b0003", "pick": None, "reason": "", "code": "no_candidates", "what": "Chân dung họa sĩ", "source": None, "seconds": None},
+             "b0004.1": {"id": "b0004.1", "beat": "b0004", "pick": {"source": "osm", "source_id": "m1"}, "reason": "Đúng.", "code": None, "what": "Bản đồ Bruges"}}
+    lines = awrite.build_lines(Inp(), old, picks, {("osm", "m1"): "K1"}, {}, {}, [], set())
+    assert lines[0]["items"] == [] and lines[0]["kinds"] == [] and lines[0]["missing"][0]["code"] == "no_candidates"            # nothing to write: left as it was
+    ops = awrite._ops_for([lines[1]], "A")
+    assert ops[-1]["op"] == "set_picks" and "kinds" not in ops[-1] and ops[-1]["missing"] == []                                 # an older plan says no kinds
+    assert texts.why("no_candidates", what="x")
 
 
 def test_a_source_that_is_rate_limited_is_left_alone_and_its_wants_are_listed_without_waiting(env):
@@ -292,15 +353,18 @@ def test_a_source_that_is_rate_limited_is_left_alone_and_its_wants_are_listed_wi
     job = env.run()
     assert time.monotonic() - t0 < 20 and job["state"] == "done"                                                             # nothing waited for the two minutes
     r = result(job)
-    assert [x["beat"] for x in r["lines_without"]] == ["b0003"] and r["lines_without"][0]["code"] == "source_limited"
-    assert "đang giới hạn lượt tải" in r["lines_without"][0]["why"] and "khoảng 2 phút" in r["lines_without"][0]["why"]
+    assert r["lines_without"] == [] and r["lines_done"] == 6                                                                  # the line about the painter shows its fallback
+    assert {m["want"] for m in r["missing"]} == {"b0003.1", "b0004.2"} and {m["code"] for m in r["missing"]} == {"source_limited"}
+    miss = {m["beat"]: m for m in r["missing"]}
+    assert "đang giới hạn lượt tải" in miss["b0003"]["why"] and "khoảng 2 phút" in miss["b0003"]["why"]
     assert len(env.sources["commons"].searches) == 1 and len(env.sources["met"].searches) == 1                                # left alone: not asked again by the clip want either
     wants = store.read(env.pdir, "search.json")["wants"]
     assert wants["b0003.1"]["status"] == "limited" and wants["b0004.2"]["status"] == "limited" and wants["b0004.1"]["status"] == "found"
     # the line with a map and a clip is written with the map; what is missing is listed
-    assert [i["role"] for i in env.picks()["beats"]["b0004"]["items"]] == ["map"]
-    assert {m["want"] for m in r["missing"]} == {"b0003.1", "b0004.2"}
-    assert "Chưa tìm được: Kênh đào." in env.picks()["beats"]["b0004"]["note"]
+    b4 = env.picks()["beats"]["b0004"]
+    assert [i["role"] for i in b4["items"]] == ["map"] and b4["missing"] == [{"what": "Kênh đào", "code": "source_limited"}]
+    assert "Chưa tìm được: Kênh đào." in b4["note"]
+    assert [i["role"] for i in env.picks()["beats"]["b0003"]["items"]] == ["main"] and result(job)["outside_without"] == ["b0003"]      # b0004 has its map
 
 
 def test_a_candidate_with_no_thumbnail_cannot_be_chosen_and_the_main_painting_is_never_a_context_picture(env):
@@ -309,7 +373,8 @@ def test_a_candidate_with_no_thumbnail_cannot_be_chosen_and_the_main_painting_is
     env.sources["met"].items = []
     job = env.run()
     r = result(job)
-    assert [x["beat"] for x in r["lines_without"]] == ["b0003"] and r["lines_without"][0]["code"] == "no_thumbs"
+    assert r["lines_without"] == [] and [(m["beat"], m["code"]) for m in r["missing"]] == [("b0003", "no_thumbs")]
+    assert env.picks()["beats"]["b0003"]["missing"] == [{"what": "Chân dung họa sĩ", "code": "no_thumbs"}]
     # the main painting itself, found by the search, is dropped from the candidates
     from bti.media import assets as massets
     src = env.sources["commons"]
@@ -320,6 +385,7 @@ def test_a_candidate_with_no_thumbnail_cannot_be_chosen_and_the_main_painting_is
     job = env.run(beats=["b0003"], redo=True)
     cand = store.read(env.pdir, "search.json")["wants"]["b0003.1"]["candidates"]
     assert [c["source_id"] for c in cand] == ["File:Portrait B.jpg"]
+    assert "missing" not in env.picks()["beats"]["b0003"]                                                                     # found this time: the old entry is cleared
 
 
 # ---------------------------------------------------------------------------------------------------------------- the agent's files

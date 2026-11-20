@@ -172,6 +172,22 @@ def beat_picks(picks: dict, beat_id: str) -> list[dict]:
     return out
 
 
+def beat_kinds(picks: dict, beat_id: str) -> list[str]:
+    """What the line does (`kinds` of the picks document: one or two of the words the pictures step knows), in the order the line speaks; [] for a beat of a
+    document made before they existed."""
+    entry = (picks.get("beats") or {}).get(beat_id)
+    kinds = entry.get("kinds") if isinstance(entry, dict) else None
+    return [k for k in kinds if isinstance(k, str)] if isinstance(kinds, list) else []
+
+
+def beat_missing(picks: dict, beat_id: str) -> list[dict]:
+    """The pictures that were asked for the line and not found: `[{what, code}]`; [] when none, or in a document made before `missing` existed."""
+    entry = (picks.get("beats") or {}).get(beat_id)
+    rows = entry.get("missing") if isinstance(entry, dict) else None
+    return [{"what": m["what"], "code": m["code"]} for m in rows if isinstance(m, dict) and isinstance(m.get("what"), str) and isinstance(m.get("code"), str)] \
+        if isinstance(rows, list) else []
+
+
 def line_assets(inp) -> set | None:
     """The pictures that some line of the narration has (a beat that is still in the timing, not skipped) and the main painting; None when
     the picks say nothing about lines (they were made from the saved storyboard's assets), then nothing is hidden."""

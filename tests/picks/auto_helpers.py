@@ -23,16 +23,19 @@ PLAN = {
         {"name": "MIRROR", "box": [0.40, 0.30, 0.60, 0.55], "what": "Tấm gương lồi"},
         {"name": "HEAD", "box": [0.10, 0.05, 0.30, 0.25], "what": "Khuôn mặt"}],
     "lines": [
-        {"beat": "b0001", "reason": "Mở bằng cả bức tranh.", "show": [{"type": "whole"}]},
-        {"beat": "b0002", "reason": "Nói về tấm gương.", "show": [{"type": "detail", "region": "MIRROR"}]},
-        {"beat": "b0003", "reason": "Nói về họa sĩ.",
-         "show": [{"type": "context", "search": "Jan van Eyck portrait", "alt": ["van Eyck self portrait"], "kind": "portrait", "what": "Chân dung họa sĩ"}]},
-        {"beat": "b0004", "reason": "Nói về nơi vẽ.",
-         "show": [{"type": "map", "place": "Bruges, Belgium", "what": "Bản đồ Bruges"},
-                  {"type": "clip", "search": "canal boat", "what": "Kênh đào", "seconds": 6}]},
-        {"beat": "b0005", "reason": "Khuôn mặt người đàn ông.",
+        {"beat": "b0001", "reason": "Mở bằng cả bức tranh.", "kinds": ["whole"], "show": [{"type": "whole"}]},
+        {"beat": "b0002", "reason": "Nói về tấm gương.", "kinds": ["detail"], "show": [{"type": "detail", "region": "MIRROR"}]},
+        {"beat": "b0003", "reason": "Nói về họa sĩ.", "kinds": ["outside"],
+         "show": [{"type": "context", "search": "Jan van Eyck portrait", "alt": ["van Eyck self portrait"], "kind": "portrait", "entity": "Jan van Eyck",
+                   "period": "then", "what": "Chân dung họa sĩ"}],
+         "fallback": {"type": "whole"}},
+        {"beat": "b0004", "reason": "Nói về nơi vẽ.", "kinds": ["outside", "journey"],
+         "show": [{"type": "map", "places": ["Bruges, Belgium", "Antwerp, Belgium"], "what": "Bản đồ Bruges và Antwerp"},
+                  {"type": "clip", "search": "canal boat", "what": "Kênh đào", "seconds": 6}],
+         "fallback": {"type": "whole"}},
+        {"beat": "b0005", "reason": "Khuôn mặt người đàn ông.", "kinds": ["detail", "whole"],
          "show": [{"type": "detail", "region": "HEAD"}, {"type": "whole"}]},
-        {"beat": "b0006", "reason": "Vẫn cùng ý.", "show": []}]}
+        {"beat": "b0006", "reason": "Vẫn cùng ý.", "kinds": ["idea"], "show": []}]}
 
 CHOICE = {
     "schema": "bti.picks.choice/1",
@@ -43,6 +46,26 @@ CHOICE = {
     "regions": [
         {"name": "MIRROR", "action": "keep", "reason": ""},
         {"name": "HEAD", "action": "adjust", "box": [0.08, 0.04, 0.32, 0.28], "reason": "Nới khung để thấy cả đầu."}]}
+
+
+def infer_kinds(line):
+    """What a plan written before `kinds` existed would say: `kinds` and, for a line about something outside the painting, the `fallback` that the check wants.
+    `FakeAgent.fit` applies it to a line whose `kinds` the prepared plan leaves out, so that the plans of the older tests stay valid."""
+    line = dict(line)
+    types = [i.get("type") for i in line.get("show") or [] if isinstance(i, dict)]
+    kinds = []
+    for t, k in (("detail", "detail"), ("whole", "whole")):
+        if t in types:
+            kinds.append(k)
+    if "context" in types or "clip" in types:
+        kinds = ["outside"]
+        line.setdefault("fallback", {"type": "whole"})
+    if "map" in types:
+        kinds = (["outside"] if "outside" in kinds else []) + ["journey"]
+        line["show"] = [dict(i, places=list(i.get("places") or [i["place"], "Antwerp, Belgium"])) if isinstance(i, dict) and i.get("type") == "map" else i
+                        for i in line["show"]]
+    line["kinds"] = kinds[:2] or ["idea"]
+    return line
 
 
 def plan(**changes):
@@ -177,16 +200,16 @@ class FakeAgent:
 
     @staticmethod
     def fit(content, ws_root, mode):
-        """What a real agent does by reading its inputs: a prepared plan keeps only the lines it must cover and leaves out the regions the
-        painting already has; a prepared choice answers every wanted picture and box it was shown (null / keep for those the file leaves out)."""
+        """What a real agent does by reading its inputs: a prepared plan keeps only the lines it must cover (and says what each does, `kinds`, when the
+        prepared plan did not) and leaves out the regions the painting already has; a prepared choice answers every wanted picture and box it was shown (null / keep for those the file leaves out)."""
         ctx = json.loads((Path(ws_root) / "inputs" / "context.json").read_text(encoding="utf-8"))
         c = copy.deepcopy(content)
         if mode == "plan":
             p = ctx["plan"]
-            c["lines"] = [ln for ln in c.get("lines", []) if ln.get("beat") in p["targets"]]
+            c["lines"] = [ln if ln.get("kinds") else infer_kinds(ln) for ln in c.get("lines", []) if ln.get("beat") in p["targets"]]
             c["regions"] = [r for r in c.get("regions", []) if r.get("name") not in p["existing_regions"]]
             have = {ln["beat"] for ln in c["lines"]}
-            c["lines"] += [{"beat": b, "reason": "Giữ như đoạn trước.", "show": []} for b in p["targets"] if b not in have]
+            c["lines"] += [{"beat": b, "reason": "Giữ như đoạn trước.", "kinds": ["idea"], "show": []} for b in p["targets"] if b not in have]
         else:
             q = ctx["choice"]
             c["wants"] = [w for w in c.get("wants", []) if w.get("id") in q["wants"]]

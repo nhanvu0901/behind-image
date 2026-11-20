@@ -498,7 +498,8 @@ def autorun_tables() -> str:
     for gate in reasons.GATES:
         stops = checks.STOPS[gate]
         share = checks.SHARE_LIMITS.get(gate, {})
-        names = ["`%s`%s" % (c, (" (only when more than %d%% of the lines have it)" % round(share[c] * 100)) if c in share else "") for c in stops]
+        names = ["`%s`%s" % (c, (" (only when more than %d%% of the %shave it)" % (round(share[c] * 100), "lines about something outside the painting "
+                                                                                   if checks.SHARE_OF.get(c) == "outside" else "lines ")) if c in share else "") for c in stops]
         rows.append("| `%s` | %s | %s | %s |" % (gate, ", ".join(names), "; ".join("%s: %s" % (c, w[0]) for c, w in stops.items()).replace("|", "\\|"),
                                               ", ".join("`%s`" % c for c in sorted(checks.TOLERATED[gate])) or "none"))
     return "\n".join(rows)

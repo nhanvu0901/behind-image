@@ -199,12 +199,13 @@ def flags(n):
     return [{"level": "warning", "code": "asset_flag", "message": "asset K%d is flagged unknown" % i, "asset": "K%d" % i, "flag": "unknown"} for i in range(n)]
 
 
-def picks_run(tmp_path, issues, lines, *, then=None):
-    """The loop at the picks gate with `lines` lines in the narration and these issues; `then`: the state that follows the approval (default: exported)."""
+def picks_run(tmp_path, issues, lines, *, then=None, outside=None):
+    """The loop at the picks gate with `lines` lines in the narration and these issues; `then`: the state that follows the approval (default: exported);
+    `outside`: how many of the lines are about something outside the painting (`outside.lines` of GET .../picks; left out: the answer does not say)."""
     gate = act("picks.approve", "picks", gate=True, body={"rev": "r"})
     gate["path"] = "/api/projects/arn/picks/approve"
     narration = {"beat_ids": ["b%04d" % (i + 1) for i in range(lines)]} if lines is not None else {}
-    docs = {"/api/projects/arn/picks": {"issues": issues, "narration": narration}}
+    docs = {"/api/projects/arn/picks": {"issues": issues, "narration": narration, **({"outside": {"lines": outside, "with_picture": 0, "without": []}} if outside is not None else {})}}
     t = Scripted(PID, [made_state([gate], current="picks"), then or exported()], docs=docs, posts={gate["path"]: Reply(200, {})})
     return (*run_loop(tmp_path, t), t)
 
@@ -272,12 +273,73 @@ def test_the_end_of_a_later_stop_still_says_how_many_lines_have_none(tmp_path):
     assert res["lines_without_pick"] == 2 and "Có 2 dòng lời dẫn không có hình riêng" in res["sentence"] and res["sentence"].count("Có 2 dòng") == 1
 
 
+def no_outside(n, first=1):
+    return [{"level": "warning", "code": "outside_no_picture", "message": "beat b%04d is about something outside the painting but shows only the main painting" % (first + i),
+             "beat": "b%04d" % (first + i)} for i in range(n)]
+
+
+@pytest.mark.parametrize("outside,none", [(10, 0), (10, 3), (3, 1), (6, 2), (100, 34), (1, 0), (50, 17)])
+def test_lines_about_something_outside_that_have_only_the_painting_up_to_34_percent_of_them_let_the_run_go_on_and_it_says_how_many(tmp_path, outside, none):
+    res, r, log, t = picks_run(tmp_path, no_outside(none), 61, outside=outside)
+    assert res["reason"] == "exported" and len(posts(t)) == 1
+    step = log.rec["steps"][0]
+    if none:
+        assert res["tolerated"] == [{"gate": "picks", "code": "outside_no_picture", "count": none, "lines": outside}]                      # the share is of the outside lines
+        assert res["lines_outside_without_picture"] == none and "outside_no_picture x%d" % none in step["note"]
+        assert res["sentence"].endswith("Có %d dòng nói về thứ ngoài bức tranh mà chưa tìm được hình của thứ đó (trong %d dòng như vậy): bản nháp dùng tranh chính ở các dòng đó."
+                                        % (none, outside))
+        assert "%d of the %d line(s) about something outside the painting show only the main painting" % (none, outside) in res["detail"]
+        assert step["tolerated"] == [{"code": "outside_no_picture", "count": none}] and log.rec["result"]["lines_outside_without_picture"] == none        # the run log says how many
+    else:
+        assert "tolerated" not in res and "lines_outside_without_picture" not in res and res["sentence"] == "Xong: video đã được xuất."
+
+
+@pytest.mark.parametrize("outside,none", [(10, 4), (3, 2), (1, 1), (6, 3), (100, 35), (50, 18), (30, 11)])
+def test_more_than_34_percent_of_the_outside_lines_with_only_the_painting_stops_the_run_with_the_list(tmp_path, outside, none):
+    res, r, log, t = picks_run(tmp_path, no_outside(none, first=7), 61, outside=outside)
+    assert (res["outcome"], res["reason"], res["gate"]) == ("needs_owner", "quality_warning", "picks") and posts(t) == []
+    assert [i["code"] for i in res["issues"]] == ["outside_no_picture"] * none and [i["beat"] for i in res["issues"]] == ["b%04d" % (7 + k) for k in range(none)]    # the list
+    assert "hơn 34% số dòng nói về thứ ngoài bức tranh" in res["sentence"] and res["step"] == "picks"
+    assert res["issues"][0]["why"].startswith("more than 34% of the lines about something outside the painting")
+
+
+def test_the_share_is_of_the_outside_lines_not_of_all_the_lines_and_a_missing_number_stops_the_run_the_safe_side(tmp_path):
+    res, _, _, t = picks_run(tmp_path, no_outside(4), 100, outside=10)                      # 4% of the narration but 40% of the outside lines
+    assert res["reason"] == "quality_warning" and posts(t) == []
+    res, _, _, t = picks_run(tmp_path, no_outside(30), 100, outside=100)                    # more than a quarter of all lines, but 30% of the outside lines
+    assert res["reason"] == "exported" and len(posts(t)) == 1
+    for outside in (None, 0):
+        res, _, _, t = picks_run(tmp_path, no_outside(1), 61, outside=outside)
+        assert res["reason"] == "quality_warning" and posts(t) == []
+
+
+def test_the_two_shares_are_judged_apart(tmp_path):
+    both = no_pick(3) + no_outside(3, first=20)                                             # 3 of 61 lines have no picture; 3 of 10 outside lines have only the painting
+    res, _, _, t = picks_run(tmp_path, both, 61, outside=10)
+    assert res["reason"] == "exported" and {x["code"] for x in res["tolerated"]} == {"beat_no_pick", "outside_no_picture"}
+    assert res["lines_without_pick"] == 3 and res["lines_outside_without_picture"] == 3
+    assert res["sentence"].count("Có 3 dòng") == 2
+    res, _, _, t = picks_run(tmp_path, no_pick(3) + no_outside(4, first=20), 61, outside=10)
+    assert res["reason"] == "quality_warning" and {i["code"] for i in res["issues"]} == {"outside_no_picture"} and posts(t) == []         # only the one that is over the share stops it
+    res, _, _, t = picks_run(tmp_path, no_pick(20) + no_outside(3, first=20), 61, outside=10)
+    assert res["reason"] == "quality_warning" and {i["code"] for i in res["issues"]} == {"beat_no_pick"} and posts(t) == []
+
+
+def test_a_picks_document_without_kinds_gives_no_outside_lines_and_raises_nothing_new(tmp_path):
+    res, _, _, t = picks_run(tmp_path, no_pick(2), 12, outside=0)
+    assert res["reason"] == "exported" and [x["code"] for x in res["tolerated"]] == ["beat_no_pick"] and "lines_outside_without_picture" not in res
+
+
 def test_the_lists_and_the_share_rule_are_the_ones_the_documents_say():
-    assert checks.NO_PICK_LIMIT == 0.25 and checks.SHARE_LIMITS == {"picks": {"beat_no_pick": 0.25}}
+    assert checks.NO_PICK_LIMIT == 0.25 and checks.OUTSIDE_NO_PICTURE_LIMIT == 0.34
+    assert checks.SHARE_LIMITS == {"picks": {"beat_no_pick": 0.25, "outside_no_picture": 0.34}} and checks.SHARE_OF == {"outside_no_picture": "outside"}
     assert "beat_no_pick" in checks.STOPS["picks"] and checks.STOPS["picks"]["beat_no_pick"][1].startswith("hơn một phần tư")
-    assert set(checks.STOPS["picks"]) == {"beat_no_pick", "beat_unknown"} and checks.TOLERATED["picks"] == frozenset({"asset_flag"})
+    assert checks.STOPS["picks"]["outside_no_picture"][1].startswith("hơn 34% số dòng nói về thứ ngoài bức tranh")
+    assert set(checks.STOPS["picks"]) == {"beat_no_pick", "beat_unknown", "outside_no_picture"} and checks.TOLERATED["picks"] == frozenset({"asset_flag"})
     text = (REPO / "docs" / "AGENT_API.md").read_text(encoding="utf-8")
-    assert "`beat_no_pick` (only when more than 25% of the lines have it)" in text and "| `picks` | `beat_no_pick` (only when more than 25% of the lines have it), `beat_unknown` |" in text
+    assert "`beat_no_pick` (only when more than 25% of the lines have it)" in text
+    assert "`outside_no_picture` (only when more than 34% of the lines about something outside the painting have it)" in text
+    assert "| `picks` | `beat_no_pick` (only when more than 25% of the lines have it), `beat_unknown`, `outside_no_picture` (only when more than 34% of the lines about something outside the painting have it) |" in text
     for words in ("hơn một phần tư", "asset_flag", "beat_no_pick"):
         assert words in (REPO / "docs" / "APP_GUIDE.md").read_text(encoding="utf-8") + (REPO / "AGENTS.md").read_text(encoding="utf-8") + text, words
 
@@ -302,7 +364,7 @@ def warning_codes(files) -> dict[str, str]:
 def test_every_warning_code_the_picks_document_and_the_storyboard_can_give_is_in_one_of_the_two_lists():
     from bti.engine import storyboard as SB
     picks = warning_codes([REPO / "bti" / "picks" / "doc.py"])
-    assert {"beat_no_pick", "asset_flag", "beat_unknown"} <= set(picks)
+    assert {"beat_no_pick", "asset_flag", "beat_unknown", "outside_no_picture"} <= set(picks)
     engine = warning_codes(sorted((REPO / "bti" / "engine").rglob("*.py")))
     engine.update({c: "ISSUE_CODES" for c, text in SB.ISSUE_CODES.items() if "(warning)" in text})
     assert {"audio_missing", "canvas_not_1080p", "incomplete"} <= set(engine)

@@ -72,7 +72,8 @@ def payload(pdir: Path, pid: str, suggest_info: dict | None = None) -> dict:
         "osm": {"available": True, "has_key": True},
     }
     return {"project": pid, "exists": d is not None, "picks": cur, "rev": rev, "approved": ap["approved"], "approval_reason": ap["reason"],
-            "issues": iss, "narration": nv, "identity": ident, "details": det,
+            "issues": iss, "outside": doc.outside_summary(cur, nv["beat_ids"] if nv["present"] else None),
+            "narration": nv, "identity": ident, "details": det,
             "default_main_query": " ".join(x for x in (ident["title"], ident["artist"]) if x),
             "suggest": suggest_info or {"available": False},
             "video_tools": vtools,
@@ -106,6 +107,11 @@ def put(pdir: Path, raw: dict, base_rev) -> str:
             keep["regions"] = nk.get("regions", {})
             assets[k] = keep
         new["assets"] = assets
+        for bid, b in new["beats"].items():                   # what the agent knows of a line (`kinds`, `missing`) stays unless this save sends new ones
+            raw_b = (raw.get("beats") or {}).get(bid) or {}
+            for key in ("kinds", "missing"):
+                if key not in raw_b and old["beats"].get(bid, {}).get(key):
+                    b[key] = old["beats"][bid][key]
         main = raw.get("main_asset")
         if main is not None and main not in assets:
             raise PicksError(422, f"main_asset {str(main)[:40]} is not one of the assets", "unknown_asset")

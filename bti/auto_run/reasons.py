@@ -209,6 +209,8 @@ REASON_OF_OUTCOME: dict[str, list[str]] = {o: [r for r, v in REASONS.items() if 
 NO_PICK_VI = "Có {count} dòng lời dẫn không có hình riêng: bản nháp dùng tranh chính ở các dòng đó."
 NO_PICK_EN = "{count} line(s) of the narration have no picture of their own: the draft shows the main painting there."
 FLAG_EN = "{count} picture(s) carry a flag (size or licence): an automatic run lets them through."
+OUTSIDE_VI = "Có {count} dòng nói về thứ ngoài bức tranh mà chưa tìm được hình của thứ đó (trong {lines} dòng như vậy): bản nháp dùng tranh chính ở các dòng đó."
+OUTSIDE_EN = "{count} of the {lines} line(s) about something outside the painting show only the main painting (no picture of the thing itself was found)."
 
 
 def add_tolerated(result: dict, tolerated: list[dict]) -> dict:
@@ -223,6 +225,12 @@ def add_tolerated(result: dict, tolerated: list[dict]) -> dict:
         result["lines_without_pick"] = n
         result["sentence"] = (str(result.get("sentence") or "").rstrip() + " " + NO_PICK_VI.format(count=n)).strip()
         result["detail"] = (str(result.get("detail") or "").rstrip() + " " + NO_PICK_EN.format(count=n)).strip()
+    out = [t for t in tolerated if t.get("code") == "outside_no_picture"]
+    if out:                                                  # worker linekinds: the lines about something outside the painting that have only the painting
+        n_out, of = sum(int(t["count"]) for t in out), max(int(t.get("lines") or 0) for t in out)
+        result["lines_outside_without_picture"] = n_out
+        result["sentence"] = (str(result.get("sentence") or "").rstrip() + " " + OUTSIDE_VI.format(count=n_out, lines=of or n_out)).strip()
+        result["detail"] = (str(result.get("detail") or "").rstrip() + " " + OUTSIDE_EN.format(count=n_out, lines=of or n_out)).strip()
     flags = sum(int(t["count"]) for t in tolerated if t.get("code") == "asset_flag")
     if flags:
         result["detail"] = (str(result.get("detail") or "").rstrip() + " " + FLAG_EN.format(count=flags)).strip()

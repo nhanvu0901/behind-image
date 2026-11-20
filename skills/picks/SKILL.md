@@ -16,7 +16,8 @@ if the owner allowed it) approves the picks, and the storyboard draft starts fro
 
 - Needs: the narration approved. It can be worked while the voice (step 3) runs.
 - Gives: `picks.json`: the **main painting** (`main_asset`), the pictures imported into the project (`assets`, each with its source, author and licence), the **regions** of each picture (a named spot with a centre and a radius, in pixels of the stored file) and, per narration line, the list of pictures
-  with a `role` (`main`, `detail`, `context`, `compare`, `document`, `map`, `video`). A line with no picture shows the main painting again.
+  with a `role` (`main`, `detail`, `context`, `compare`, `document`, `map`, `video`). A line with no picture shows the main painting again. The pictures agent also writes, per line, `kinds` (what the line does: one or two of
+  `detail`, `whole`, `outside`, `compare`, `journey`, `dates`, `figure`, `inscription`, `construction`, `relations`, `idea`) and `missing` (`[{what, code}]`: the pictures it asked for and did not find); both are absent in a document made before.
 - Unlocks: the storyboard draft (step 5), together with the voice.
 
 ## The actions and operations it uses
@@ -61,15 +62,17 @@ Pictures come from `picks.search` (the answer lists the `source` and `source_id`
 ## Let the agent choose first, then correct with the request box
 
 For a whole video the quickest way is to let the pictures agent choose first and to correct what it chose afterwards. `bti do <project> picks.auto --yes-cost --wait` plans what each line needs, searches the free picture
-sources (never the paid suggestion), looks at the candidates and writes the choices as batches whose actor is the agent (it takes about twenty minutes; the answer says `Agent đã chọn hình cho 25/28 đoạn.` and lists the lines nothing
-fitting was found for, which it left as they were). Name lines with `--set beats='["b0003","b0004"]'` to work on those only. It works on the lines that have no pictures; once every line has pictures, or the picks are approved, it needs `--set redo=true`
+sources (never the paid suggestion), looks at the candidates and writes the choices as batches whose actor is the agent (it takes about twenty minutes; the answer says `Agent đã chọn hình cho 25/28 đoạn.`). It first says what each line does
+(`kinds`): a line about a person, a place, an object, an event or a custom that is not in the painting asks for a picture of the thing itself, and when none is found the line shows the part of the painting its plan named (its fallback) and
+lists what was not found in `missing` (in the result and in the line's `missing`), so nothing is lost silently; a line of an older plan with nothing found is left as it was and listed in `lines_without`. Name lines with `--set beats='["b0003","b0004"]'` to work on those only. It works on the lines that have no pictures; once every line has pictures, or the picks are approved, it needs `--set redo=true`
 (refused as `picks_nothing_to_do` or `picks_approved` otherwise: the approval is dropped when it changes anything, so approve again after). It never approves.
 
 Then correct with `picks.edit` (the request box): one model call, about half a minute, `bti do <project> picks.edit --yes-cost --wait --set instruction="the first line shows only the face" --set scope='{"beats":["b0001"]}'`. It rearranges, adds and removes
 pictures and regions the project already has, in one batch you can undo. It cannot import or look: when the job's result says `escalate` the request needs a picture the project does not have, so choose it with `picks.auto` for those lines, or search by hand (`picks.search`, `picks.import`).
 The page's card does this in one click (the button "Để agent chọn hình" on the turn). A voice, a draft, a prompt-box turn and the agent's choice of pictures run one at a time on a project: while one runs the other is refused (exit 5, `agent_job_running` or `no_running_job` in `bti status`): wait for it
 (`bti job <id> --wait`), then send yours. Both cost a model call: `--yes-cost` only when the owner asked for this work, and exit 3 (`spend_not_allowed`) when the owner did not allow model spending for the project.
-An automatic run (`bti run`) takes `picks.auto` by itself as one of its steps, and at the picks gate it lets flagged pictures pass and stops only when more than a quarter of the narration lines have no picture (it says how many have none at its end); while it goes on, a hand-started `picks.auto`, `picks.edit` and `draft.edit` are refused (`agent_job_running`, exit 5): wait for it (`bti job <id> --wait`).
+An automatic run (`bti run`) takes `picks.auto` by itself as one of its steps, and at the picks gate it lets flagged pictures pass and stops only when more than a quarter of the narration lines have no picture, or when more than 34% of the lines about something
+outside the painting (`outside_no_picture`: the picture of the thing itself was not found, the line shows only the main painting) are in that state (it says how many have none at its end, and the stop lists the lines); while it goes on, a hand-started `picks.auto`, `picks.edit` and `draft.edit` are refused (`agent_job_running`, exit 5): wait for it (`bti job <id> --wait`).
 
 ## A worked session
 
@@ -119,7 +122,7 @@ a person is needed: gate_needs_human (HTTP 403)
 
 - **The main painting first.** Choose it before anything else (a picture of the whole work, as large as the source gives: the app keeps Wikimedia pictures at up to 3840 pixels wide). A licence flag ("restricted", "unknown", "small") never refuses a picture; the source and licence are kept for the video description.
 - **Regions where the narration names a detail.** A line that points at the mirror, the hands or a signature shows the main painting with that region (`set_region`, then `role: detail` and `region` in the item). Place a region on what its name says: look at the picture.
-- **Context lines need other pictures.** A line about a person, a place, a document, another work or a technique outside the painting needs a picture other than the main painting (`context`, `document`, `map`, `compare`), with its `role` set. A picture of the right kind of thing is better than the painting held for the whole line.
+- **Context lines need other pictures.** A line about a person, a place, a document, another work or a technique outside the painting needs a picture other than the main painting (`context`, `document`, `map`, `compare`), with its `role` set. A picture of the right kind of thing is better than the painting held for the whole line. `GET .../picks` warns `outside_no_picture` for each line whose `kinds` hold `outside` or `compare` and that shows only the main painting, and says `outside: {lines, with_picture, without: [beats]}`; a place that is merely mentioned wants a view of the place, a map is for a journey between two or more places. `set_picks` and `skip_beat` take `kinds` and `missing` too (an edit of the pictures keeps them unless it sends new ones; `[]` takes them away).
 - **No pictures is a choice.** A line with no pictures shows the main painting again and the draft moves the camera over it; that suits lines that talk about the work in general. A line you do not want counted as missing is `skip_beat`.
 - **Clips are rare.** At most one clip per chapter, 4 to 10 seconds, only for a context line, cut from a link with `picks.import_clip`; a video can never be the main painting.
 - **Never invent.** A picture, a place or a name you cannot source is left out; the line stays on the main painting.

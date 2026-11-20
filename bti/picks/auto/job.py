@@ -34,6 +34,12 @@ KIND = "picks"
 ACTION = "auto"
 ROLE = "picks"
 EST_SECONDS = {"plan": 600, "search": 120, "choose": 480, "write": 120}
+# The limits of the two sessions of a run. What the real 61-line run of the first test video (project eligius, 2026-11-19) took: the plan 36 steps and 210 s
+# (20 boxes, a crop looked at for each), the choice of 21 pictures and 20 boxes 51 steps and 120 s (a little over one step for each sheet or crop it looked at).
+# A plan now asks for a picture on every line about something outside the painting, up to `shapes.MAX_WANTS` = 60 (it was 30): the choosing session looks at a
+# sheet for each of up to 60 pictures and each of up to 20 boxes, and a second choice of the pictures the first answered null may follow it, so the limits grow with the cap.
+PLAN_LIMITS = session.Limits(minutes=30, steps=120, repairs=1)
+CHOOSE_LIMITS = session.Limits(minutes=40, steps=220, repairs=1)
 
 
 def _manager():
@@ -325,7 +331,7 @@ def _finish_run(r: _Run, result: dict, reasons: dict, ctx) -> None:
 
 # ---------------------------------------------------------------------------------------------------------------- start
 def _limits(kw: dict) -> dict:
-    return {"plan": kw.get("plan_limits") or session.PLAN_LIMITS, "choose": kw.get("choose_limits") or session.CHOOSE_LIMITS}
+    return {"plan": kw.get("plan_limits") or PLAN_LIMITS, "choose": kw.get("choose_limits") or CHOOSE_LIMITS}
 
 
 def start(pid: str, pdir: Path, *, beats: list | None = None, redo: bool = False, base_rev: str | None = None, model: str | None = None,
@@ -389,5 +395,5 @@ def overview(pid: str, pdir: Path) -> dict:
     res = draft_run._resolve(pdir, ROLE, None)
     return {"running": active_job(pid), "last": {k: last.get(k) for k in ("finished", "job_id", "result", "model", "agent")} if last else None,
             "reasons": last.get("reasons") or {}, "agent": res.public(),
-            "limits": {"plan": session.PLAN_LIMITS.public(), "choose": session.CHOOSE_LIMITS.public(),
+            "limits": {"plan": PLAN_LIMITS.public(), "choose": CHOOSE_LIMITS.public(),
                        "search_seconds": asearch.SEARCH_SECONDS, "write_seconds": awrite.WRITE_SECONDS}}
