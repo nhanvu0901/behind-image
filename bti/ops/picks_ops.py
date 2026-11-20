@@ -42,7 +42,9 @@ ITEM = S.plain_object({
     "region": S.string("A region of that asset to show, or null for the whole picture.", pattern=REGION["pattern"], nullable=True,
                        hint=REGION["x-hint"]),
     "role": S.string("What the picture is for.", enum=ROLES),
-    "note": NOTE}, required=["asset"], title="a picture item {asset, region?, role?, note?}")
+    "note": NOTE,
+    "step": S.integer("The step of the wider net (2 or 3) that found this picture.", enum=[2, 3])},
+    required=["asset"], title="a picture item {asset, region?, role?, note?}")
 
 
 # ---------------------------------------------------------------- helpers
@@ -78,7 +80,10 @@ def _item(ctx, it: dict, base: str) -> dict:
         if region not in regs:
             ctx.bad(base + "region", "no region %r on asset %r" % (region, key), allowed=sorted(regs), code="unknown_region")
     role = it.get("role") or ("video" if a.get("kind") == "video" else "detail")
-    return {"asset": key, "region": region, "role": role, "note": it.get("note") or ""}
+    out = {"asset": key, "region": region, "role": role, "note": it.get("note") or ""}
+    if it.get("step") in (2, 3):
+        out["step"] = int(it["step"])
+    return out
 
 
 def _keep_what_is_known(ctx, b: dict, o: dict) -> None:

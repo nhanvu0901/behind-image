@@ -19,6 +19,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Callable
 
+from bti.picks import service as psvc
+
 from . import search as asearch
 
 PART_TITLES_WEB = {
@@ -77,7 +79,8 @@ def searched(st: dict) -> bool:
 
 # ---------------------------------------------------------------------------------------------------------------- the search
 def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | None, *, main_key: str, web: asearch.Web, fetch_thumb, clock: Callable[[], float],
-                     cancelled: Callable[[], bool], progress: Callable[[float, str], None], save: Callable[[dict], None]) -> dict:
+                     cancelled: Callable[[], bool], progress: Callable[[float, str], None], save: Callable[[dict], None],
+                     search=None, wiki_search=None) -> dict:
     """The web search of round two. Updates `st` (new candidates on the wants, `st["round2"]`, `st["web"]`) and saves it after every want; a cancel
     leaves `round2.searched` false so that a resumed run goes on (the queries already made are not made again). Returns `st`."""
     r2 = st.setdefault("round2", {"searched": False, "wants": [], "map": {}, "budget": []})
@@ -85,6 +88,8 @@ def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | Non
         return st
     todo = wants_for_round_two(wants, st, choice)
     cap = asearch.PER_WANT_WEB
+    search_fn = search or psvc.search
+    wiki_fn = wiki_search or psvc.search
     for i, want in enumerate(todo):
         if cancelled():
             return st
@@ -93,23 +98,75 @@ def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | Non
         if wid in r2["wants"] or wid in r2["budget"]:
             continue                                                                   # done by the attempt this run resumes
         progress(i / max(1, len(todo)), "Đang tìm thêm trên web %d/%d: %s" % (i + 1, len(todo), (w.get("what") or "")[:60]))
-        done_q = set((w.get("web") or {}).get("queries") or [])
-        alt = (want.get("alt") or [None])[0]
-        queue = [q for q in dict.fromkeys([want.get("search"), alt]) if q and q not in done_q]
         existing = {(c["source"], c["source_id"]) for c in w.get("candidates") or []}
         kept: list[dict] = []
         w.pop("web_short", None)
+        wider = want.get("wider")
+
+        # 1. The web search of the thing itself (its 'search', then its first 'alt')
+        done_q = set((w.get("web") or {}).get("queries") or [])
+        alt = (want.get("alt") or [None])[0]
+        queue = [q for q in dict.fromkeys([want.get("search"), alt]) if q and q not in done_q]
+        step1_cap = 4 if wider else cap
         for q in queue:
-            ask, by_source, _seen, skipped, _failed = asearch.make_asker(pdir, want, st, main_key=main_key, search=None, clock=clock, cancelled=cancelled,
-                                                                       round_no=2, seen=set(existing))
+            ask, by_source, _seen, skipped, _failed = asearch.make_asker(
+                pdir, want, st, main_key=main_key, search=search_fn, clock=clock, cancelled=cancelled,
+                round_no=2, seen=set(existing)
+            )
             if web_search_for(pdir, w, st, web, q, ask, clock, skipped) < 0:
                 break                                                                  # the web is not usable, the budget is spent or it asked us to wait
-            pool = asearch._interleave(by_source, cap + asearch.SPARE_WEB)
-            kept, _no_thumb = asearch.pick_with_thumbs(pdir, want, pool, cap, fetch_thumb=fetch_thumb, limited=st["limited"], clock=clock, cancelled=cancelled)
+            pool = asearch._interleave(by_source, step1_cap + asearch.SPARE_WEB)
+            step1_kept, _no_thumb = asearch.pick_with_thumbs(
+                pdir, want, pool, step1_cap, fetch_thumb=fetch_thumb, limited=st["limited"], clock=clock, cancelled=cancelled
+            )
             if cancelled():
                 return st
-            if kept:
+            if step1_kept:
+                kept.extend(step1_kept)
+                existing.update((c["source"], c["source_id"]) for c in step1_kept)
                 break                                                                  # something new: the alternative is not needed
+
+        # 2. Then step 2 and step 3 (if wider is present and budget/slots remain)
+        if wider:
+            remaining = max(0, 8 - len(kept))
+            for step_info in wider:
+                if remaining <= 0:
+                    break
+                step_cap = min(4, remaining)
+                step_no = int(step_info.get("step") or 2)
+                step_q = step_info.get("search") or ""
+                step_kind = step_info.get("kind") or "other"
+                if not step_q:
+                    continue
+                step_want = {**want, "type": "context", "kind": step_kind, "search": step_q, "step": step_no}
+                step_sources = asearch.sources_for(step_want)
+                ask, by_source, _seen, skipped, _failed = asearch.make_asker(
+                    pdir, step_want, st, main_key=main_key, search=search_fn, wiki_search=wiki_fn,
+                    clock=clock, cancelled=cancelled, round_no=2, seen=set(existing), step=step_no
+                )
+                if not cancelled():
+                    ask("wikipedia", step_q, asearch.WIKI_LIMIT)
+                for src in step_sources:
+                    if cancelled():
+                        return st
+                    ask(src, step_q, asearch.FIRST_LIMIT)
+                if web is not None and web.usable() and sum(len(v) for v in by_source.values()) < asearch.ENOUGH:
+                    if not cancelled():
+                        web_search_for(pdir, w, st, web, step_q, ask, clock, skipped)
+                by_source = asearch._order(by_source)
+                extra = any(k in by_source for k in ("wikipedia", "web"))
+                pool = asearch._interleave(by_source, step_cap + (asearch.SPARE_WEB if extra else 0))
+                step_kept, _no_thumb = asearch.pick_with_thumbs(
+                    pdir, step_want, pool, step_cap, fetch_thumb=fetch_thumb, limited=st["limited"], clock=clock, cancelled=cancelled
+                )
+                if cancelled():
+                    return st
+                if step_kept:
+                    for c in step_kept:
+                        c["step"] = step_no
+                    kept.extend(step_kept)
+                    existing.update((c["source"], c["source_id"]) for c in step_kept)
+                    remaining = max(0, remaining - len(step_kept))
         if kept:
             first = max([int(c.get("n") or 0) for c in w.get("candidates") or []] or [0])
             for k, c in enumerate(kept, 1):
@@ -118,21 +175,28 @@ def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | Non
             w.update({"status": "found", "code": None, "source": None, "seconds": None})
             r2["wants"].append(wid)
             r2["map"][wid] = [c["n"] for c in kept]
-        elif w.get("web_short"):
-            r2["budget"].append(wid)
-            w["code"] = "web_budget"
+        else:
+            if w.get("web_short"):
+                r2["budget"].append(wid)
+                w["code"] = "web_budget"
+            else:
+                w["code"] = "no_candidates"
             if not w.get("candidates"):
                 w.update({"status": "none"})
-        st["web"] = web.public()
+        if web is not None:
+            st["web"] = web.public()
         save(st)
     r2["searched"] = True
-    st["web"] = web.public()
+    if web is not None:
+        st["web"] = web.public()
     save(st)
     return st
 
 
-def web_search_for(pdir: Path, w: dict, st: dict, web: asearch.Web, query: str, ask, clock, skipped: dict) -> int:
+def web_search_for(pdir: Path, w: dict, st: dict, web: asearch.Web | None, query: str, ask, clock, skipped: dict) -> int:
     """One counted web search for the want state `w`; the candidates go to `ask`'s sheet. -1: no search was made."""
+    if web is None or not web.usable():
+        return -1
     return asearch.web_ask(pdir, w, st, web, query, ask_take=ask.take, clock=clock, skipped=skipped)
 
 

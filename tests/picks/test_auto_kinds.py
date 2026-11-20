@@ -252,6 +252,7 @@ def test_the_codes_of_the_kind_rules_are_all_in_the_list_and_nothing_else_is_nam
     said = set()
     for kinds, show, extra in [(["outside"], [DETAIL], {}), (["journey"], [WHOLE], {}), (["compare"], [CTX], {}), (["figure"], [WHOLE], {}), (["detail"], [WHOLE, CTX], {}),
                                (["detail"], [MAP2], {}), (["journey"], [{"type": "map", "places": ["Oslo, Norway"]}], {}), (["outside"], [CTX], {"fallback": 3}),
+                               (["outside"], [{"type": "context", "search": "medieval guild charter", "kind": "document", "period": "then", "what": "Điều lệ"}], {"fallback": WHOLE}),
                                ("x", [WHOLE], {}), ([], [WHOLE], {}), (["a"], [WHOLE], {}), (["detail", "whole", "idea"], [WHOLE], {}), (["detail", "detail"], [DETAIL], {}),
                                (None, [WHOLE], {})]:
         said |= set(codes(check([(kinds, show, extra)])))
@@ -309,8 +310,8 @@ def example_lines():
 
 def test_the_template_has_the_worked_examples_of_the_brief_and_each_one_passes_the_check():
     ex = example_lines()
-    assert sorted(ex) == ["b0006", "b0007", "b0008", "b0022", "b0028", "b0043", "b0045", "b0048", "b0049"]
-    assert {b: ex[b]["kinds"] for b in ex} == {"b0006": ["detail"], "b0007": ["outside"], "b0008": ["outside", "journey"], "b0028": ["outside", "figure"],
+    assert sorted(ex) == ["b0006", "b0007", "b0008", "b0022", "b0028", "b0030", "b0043", "b0045", "b0048", "b0049"]
+    assert {b: ex[b]["kinds"] for b in ex} == {"b0006": ["detail"], "b0007": ["outside"], "b0008": ["outside", "journey"], "b0028": ["outside", "figure"], "b0030": ["outside"],
                                               "b0045": ["compare"], "b0049": ["dates"], "b0048": ["inscription"], "b0043": ["construction"], "b0022": ["idea"]}
     ids = sorted(ex)
     ctx = shapes.PlanCtx(beats=[{"id": b, "chapter": "c01", "words": 40} for b in ids], targets=ids, existing_regions=dict(EXISTING))
@@ -322,7 +323,7 @@ def test_the_template_has_the_worked_examples_of_the_brief_and_each_one_passes_t
     for quote in ("Look at the counter along the front edge, open to the street.", "even forbade goldsmiths to attract custom by sneezing or sniffling.",
                   "set up in Bruges.", "42 British caravels and three Venetian galleys.", "Jan van Eyck painted such a mirror in his Arnolfini portrait",
                   "He became a citizen of Bruges on 6 July 1444.", "Petrus Christus made me in the year 1449.", "did not know the new laws of perspective from Florence.",
-                  "One reading sees the saint".replace("One", "So one")):
+                  "One reading sees the saint".replace("One", "So one"), "stands a gold salt cellar in the shape of a pelican in her piety"):
         assert quote in text, quote
 
 

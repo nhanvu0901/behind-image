@@ -106,7 +106,8 @@ def entity_of(want: dict) -> str:
 def _new_want(w: dict) -> dict:
     return {"id": w["id"], "beat": w["beat"], "n": w["n"], "type": w["type"], "kind": w.get("kind"), "what": w.get("what") or place_of(w),
             "queries": queries_for(w), "entity": entity_of(w), "period": w.get("period") or "then", "kinds": list(w.get("kinds") or []),
-            "places": list(w.get("places") or []), "status": "pending", "code": None, "source": None, "seconds": None, "detail": "", "candidates": []}
+            "places": list(w.get("places") or []), "wider": list(w.get("wider") or []),
+            "status": "pending", "code": None, "source": None, "seconds": None, "detail": "", "candidates": []}
 
 
 class Web:
@@ -206,7 +207,7 @@ def default_fetch_thumb(pdir: Path, cand: dict, limited: dict | None = None, clo
 
 
 # ---------------------------------------------------------------------------------------------------------------- one wanted picture
-def _card(item: dict, query: str, round_no: int = 1) -> dict:
+def _card(item: dict, query: str, round_no: int = 1, step: int | None = None) -> dict:
     mime = str(item.get("mime") or "")
     card = {"source": item.get("source"), "source_id": item.get("source_id"), "title": str(item.get("title") or "")[:160],
             "author": str(item.get("author") or "")[:80], "licence": str(item.get("licence") or "")[:60], "flag": item.get("flag"),
@@ -218,6 +219,9 @@ def _card(item: dict, query: str, round_no: int = 1) -> dict:
             card[k] = str(item[k])[:n]
     if round_no != 1:
         card["round"] = round_no
+    step_val = step if step in (2, 3) else item.get("step")
+    if step_val in (2, 3):
+        card["step"] = int(step_val)
     return card
 
 
@@ -249,7 +253,7 @@ def _order(by_source: dict) -> dict:
     return {k: by_source[k] for k in first + [k for k in by_source if k not in first]}
 
 
-def make_asker(pdir: Path, want: dict, state: dict, *, main_key: str, search, clock, cancelled, round_no: int = 1, seen: set | None = None, wiki_search=None):
+def make_asker(pdir: Path, want: dict, state: dict, *, main_key: str, search, clock, cancelled, round_no: int = 1, seen: set | None = None, wiki_search=None, step: int | None = None):
     """`ask(src, query, limit)` for one wanted picture: one search of one free source, its candidates added to `by_source`. Returns
     `(ask, by_source, seen, skipped, failed)`; `skipped` and `failed` say why a source gave nothing (a wait it asked for, a failure)."""
     limited = state["limited"]
@@ -282,7 +286,7 @@ def make_asker(pdir: Path, want: dict, state: dict, *, main_key: str, search, cl
             seen.add(ident)
             if it.get("imported") and it.get("imported") == main_key:
                 continue                                    # the main painting itself is never a context picture
-            by_source.setdefault(src, []).append(_card(it, q, round_no))
+            by_source.setdefault(src, []).append(_card(it, q, round_no, step=step))
     ask.take = take
     return ask, by_source, seen, skipped, failed
 

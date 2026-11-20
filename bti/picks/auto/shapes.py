@@ -195,18 +195,21 @@ class PlanCtx:
     targets: list[str]                                  # the lines the plan must cover
     existing_regions: dict = field(default_factory=dict)   # NAME -> [x0, y0, x1, y1] of the regions the main painting already has
     chapters: dict = field(default_factory=dict)        # beat id -> chapter id (same as `beats`, kept for quick lookups)
+    painting_title: str = ""
 
     def __post_init__(self):
         self.chapters = {b["id"]: b.get("chapter") for b in self.beats}
         self.words = {b["id"]: int(b.get("words") or 0) for b in self.beats}
 
     def to_json(self) -> dict:
-        return {"beats": self.beats, "targets": self.targets, "existing_regions": self.existing_regions}
+        return {"beats": self.beats, "targets": self.targets, "existing_regions": self.existing_regions,
+                "painting_title": self.painting_title}
 
     @classmethod
     def from_json(cls, d: dict) -> "PlanCtx":
         return cls(beats=list(d.get("beats") or []), targets=list(d.get("targets") or []),
-                   existing_regions={k: list(v) for k, v in (d.get("existing_regions") or {}).items()})
+                   existing_regions={k: list(v) for k, v in (d.get("existing_regions") or {}).items()},
+                   painting_title=str(d.get("painting_title") or ""))
 
 
 def _text(v: Any, lo: int, hi: int) -> str | None:
@@ -226,7 +229,45 @@ def _short(s: str, n: int) -> str:
     return s if len(s) <= n else s[: n - 1].rstrip() + "…"
 
 
-def _item(it: Any, where: str, regions: dict, errors: list, notes: list) -> dict | None:
+def _clean_wider(raw: Any, where: str, painting_title: str, errors: list) -> list[dict] | None:
+    """Check and normalise `wider`: at most two wider searches (step 2, then step 3 with kind 'object')."""
+    if raw is None:
+        return None
+    if not isinstance(raw, list) or not (1 <= len(raw) <= 2):
+        errors.append("%s: `wider` must be a list of 1 or 2 wider searches [wider_shape]" % where)
+        return None
+    out = []
+    pt = painting_title.strip().lower() if len(painting_title.strip()) >= 3 else ""
+    for idx, step_item in enumerate(raw):
+        swhere = "%s.wider[%d]" % (where, idx)
+        if not isinstance(step_item, dict):
+            errors.append("%s must be an object with step, search, kind and what [wider_shape]" % swhere)
+            continue
+        expected_step = idx + 2
+        step_val = step_item.get("step")
+        if step_val != expected_step:
+            errors.append("%s: wider step must have \"step\": %d [wider_step]" % (swhere, expected_step))
+        skind = step_item.get("kind")
+        if expected_step == 3:
+            if skind != "object":
+                errors.append("%s: step 3 must have kind \"object\" (a real surviving object of the same kind in a museum) [wider_kind]" % swhere)
+        else:
+            if skind not in CONTEXT_KINDS:
+                errors.append("%s: kind %r is not one of %s [wider_kind]" % (swhere, str(skind)[:30], ", ".join(CONTEXT_KINDS)))
+        ssearch = _text(step_item.get("search"), 3, 120)
+        if ssearch is None:
+            errors.append("%s: `search` must be 3 to 120 characters of search words [wider_search]" % swhere)
+        elif pt and pt in ssearch.lower():
+            errors.append("%s: search words must not contain the main painting's title (%r) [wider_painting_title]" % (swhere, painting_title))
+        swhat = _text(step_item.get("what"), 3, WHAT_MAX + 80)
+        if swhat is None:
+            errors.append("%s: `what` must say in a few words what the picture should show (3 to %d characters) [wider_what]" % (swhere, WHAT_MAX))
+        if step_val == expected_step and ssearch and swhat and (skind == "object" if expected_step == 3 else skind in CONTEXT_KINDS):
+            out.append({"step": expected_step, "search": ssearch, "kind": skind, "what": _short(swhat, WHAT_MAX)})
+    return out if len(out) == len(raw) else None
+
+
+def _item(it: Any, where: str, regions: dict, errors: list, notes: list, painting_title: str = "") -> dict | None:
     if not isinstance(it, dict):
         errors.append("%s must be an object like {\"type\": \"whole\"}" % where)
         return None
@@ -248,6 +289,10 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list) -> dict
         what = _text(it.get("what"), 3, WHAT_MAX + 80)
         if search is None:
             errors.append("%s: `search` must be 3 to 120 characters of search words (English words work best on Wikimedia Commons)" % where)
+        else:
+            pt = painting_title.strip().lower() if len(painting_title.strip()) >= 3 else ""
+            if pt and pt in search.lower():
+                errors.append("%s: search words must not contain the main painting's title (%r)" % (where, painting_title))
         if what is None:
             errors.append("%s: `what` must say, in a few words, what the picture should show (3 to %d characters)" % (where, WHAT_MAX))
         kind_of = it.get("kind", "other")
@@ -275,11 +320,15 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list) -> dict
         period = it.get("period", DEFAULT_PERIOD)
         if period not in PERIODS:
             errors.append("%s: `period` must be \"then\" (a picture made in the time the line speaks of) or \"now\" (a photograph of today is right), not %r" % (where, str(period)[:30]))
-        if search is None or what is None or kind_of not in CONTEXT_KINDS or period not in PERIODS or (it.get("entity") is not None and entity is None):
+        wider_raw = it.get("wider")
+        wider = _clean_wider(wider_raw, where, painting_title, errors) if wider_raw is not None else None
+        if search is None or what is None or kind_of not in CONTEXT_KINDS or period not in PERIODS or (it.get("entity") is not None and entity is None) or (wider_raw is not None and wider is None):
             return None
         out = {"type": "context", "search": search, "alt": alts, "kind": kind_of, "what": _short(what, WHAT_MAX), "period": period}
         if entity:
             out["entity"] = entity
+        if wider:
+            out["wider"] = wider
         return out
     if kind == "map":
         raw_places = it.get("places")
@@ -340,7 +389,7 @@ DETAIL_ITEM = '{"type": "detail", "region": "<NAME>"}'
 FALLBACK_ITEM = '"fallback": {"type": "whole"} (or {"type": "detail", "region": "<NAME>"} for the part of the painting nearest to what the line says)'
 CODES_OF_KINDS = ("kinds_missing", "kinds_shape", "kinds_unknown", "kinds_too_many", "kinds_repeated", "outside_only_painting", "outside_no_fallback",
                   "map_without_journey", "journey_no_map", "journey_one_place", "compare_no_work", "compare_no_painting", "kind_needs_painting",
-                  "figure_no_picture", "context_without_kind", "fallback_bad")
+                  "figure_no_picture", "context_without_kind", "fallback_bad", "wider_missing")
 
 
 def kind_words() -> str:
@@ -385,6 +434,14 @@ def kind_problems(kinds: list[str], show: list[dict], fallback: dict | None, whe
         if fallback is None:
             out.append("%s: an \"outside\" line needs a line-level `fallback`, the picture of the painting that is shown when nothing is found for the line. Add %s [outside_no_fallback]"
                        % (where, FALLBACK_ITEM))
+        for n, c in enumerate(contexts):
+            period = c.get("period", DEFAULT_PERIOD)
+            ckind = c.get("kind", "other")
+            needs_wider = (period == "then" and ckind in ("document", "object"))
+            if needs_wider and not c.get("wider"):
+                out.append("%s.show[%d]: a line about %s from that period needs `wider` (two steps to search before falling back to the painting: "
+                           "step 2 for the same kind of thing from the period, step 3 for a surviving object in a museum) [wider_missing]"
+                           % (where, n, ckind))
     if "journey" in kinds:
         if not maps:
             out.append("%s: kinds says \"journey\" but the line asks for no map. Add {\"type\": \"map\", \"places\": [\"<place A, country>\", \"<place B, country>\"], "
@@ -428,7 +485,7 @@ def kind_problems(kinds: list[str], show: list[dict], fallback: dict | None, whe
     return out
 
 
-def _fallback(raw: Any, where: str, regions: dict, errors: list) -> dict | None:
+def _fallback(raw: Any, where: str, regions: dict, errors: list, painting_title: str = "") -> dict | None:
     """The line-level `fallback`: one item, `whole` or `detail`, shown when the picture asked for is not found. None when it is not given or not usable."""
     if raw is None:
         return None
@@ -439,7 +496,7 @@ def _fallback(raw: Any, where: str, regions: dict, errors: list) -> dict | None:
                       "found for the line [fallback_bad]" % where)
         return None
     n = len(errors)
-    got = _item(raw, where + ".fallback", regions, errors, [])
+    got = _item(raw, where + ".fallback", regions, errors, [], painting_title=painting_title)
     return got if len(errors) == n else None
 
 
@@ -592,14 +649,14 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
         n_before = len(err)
         items: list[dict] = []
         for n, it in enumerate(show_raw):
-            got = _item(it, "%s.show[%d]" % (where, n), known, err, notes)
+            got = _item(it, "%s.show[%d]" % (where, n), known, err, notes, painting_title=ctx.painting_title)
             if got is None:
                 continue
             if got in items:
                 notes.append("%s.show[%d]: the same picture twice in a line; the second one is dropped" % (where, n))
                 continue
             items.append(got)
-        fallback = _fallback(ln.get("fallback"), where, known, err) if "fallback" in ln else None
+        fallback = _fallback(ln.get("fallback"), where, known, err, painting_title=ctx.painting_title) if "fallback" in ln else None
         kinds = None
         if ln.get("kinds") is None:
             no_kinds.append(bid)
@@ -656,6 +713,8 @@ def wants_of(plan: dict) -> list[dict]:
                 row = {"id": "%s.%d" % (ln["beat"], n), "beat": ln["beat"], "n": n, **it, "kinds": list(ln.get("kinds") or [])}
                 if it["type"] == "context":
                     row["period"] = it.get("period") or DEFAULT_PERIOD           # `entity` comes with the item when the plan gave it
+                    if it.get("wider"):
+                        row["wider"] = list(it["wider"])
                 if it["type"] == "map" and "places" not in it:
                     row["places"] = [it["place"]]                                # a plan saved before `places` existed
                 out.append(row)

@@ -52,6 +52,10 @@ For each wanted picture, open its contact sheet, read the candidates' details an
 8. **A picture of the owner's books (B1 ...)** is the owner's own: very often exactly right for a detail, an X-ray, a related work or a portrait that the book prints. Use one when it is exactly right. **Never use the main painting itself** (a full view of it) for a context line: a context line shows something *other than* the main painting.
 9. **When two candidates are right**, take the better reproduction. **When you are not sure**, answer `null`: say what you saw and why it is not enough.
 10. **Say in the reason what the picture is and from when**, in Vietnamese and in one short sentence: "Chân dung Philip the Good do Rogier van der Weyden vẽ khoảng năm 1450." or "Ảnh chụp hôm nay của nhà thờ Noyon, vì không có hình nào thời đó." The owner reads it to see at once why this picture is on screen.
+11. **Candidates from step 2 and step 3 (second session).** Each candidate of round two shows its `step`:
+    - A **step 2** picture is right when it shows the same kind of thing as the line, made in the period (or near it), and is said for what it is in the reason ("Xưởng thợ vàng trong một tiểu họa thế kỷ 15, không phải xưởng của bức tranh.").
+    - A **step 3** picture is right when it is a real surviving object of the kind the line names, from the period (a balance scale, a coin, a salt cellar in a museum).
+    - A modern photograph of people, a reconstruction, a film still or a stock picture is still never right. When nothing fits, `null` remains the right answer.
 
 For each **box**, open its crop and read the lines it is for:
 

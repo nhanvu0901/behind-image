@@ -196,13 +196,16 @@ def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, 
             images.contact_sheet([(str(c["n"]), (Path(inp.pdir) / c["thumb"]) if c.get("thumb") else None) for c in w["candidates"]], root / sheet)
         row = {"id": wid, "line": w["beat"], "line_no": b["no"], "line_text": b["text"], "line_reason": by_line.get(w["beat"], {}).get("reason", ""),
                "type": w["type"], "kind": w.get("kind"), "what": w["what"], "searched": w.get("queries", []), "sheet": sheet,
-               "candidates": [{**{k: c.get(k) for k in CANDIDATE_KEYS}, **{k: c[k] for k in CANDIDATE_MORE if c.get(k)}} for c in w["candidates"]]}
+               "candidates": [{**{k: c.get(k) for k in CANDIDATE_KEYS}, **{k: c[k] for k in CANDIDATE_MORE if c.get(k)},
+                               **({"step": c["step"]} if c.get("step") in (2, 3) else {})} for c in w["candidates"]]}
         if w.get("entity"):
             row["entity"] = w["entity"]
         if w.get("period") and w["type"] == "context":
             row["period"] = w["period"]
         if w.get("kinds"):                              # what the line does (the plan's `kinds`): an `outside` line wants the thing itself
             row["kinds"] = list(w["kinds"])
+        if w.get("wider"):
+            row["wider"] = list(w["wider"])
         if w.get("places"):
             row["places"] = list(w["places"])
         if second:

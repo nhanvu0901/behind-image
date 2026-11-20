@@ -34,8 +34,9 @@ def string(description: str | None = None, *, pattern: str | None = None, max_le
                  minLength=min_length, enum=enum, **{"x-hint": hint})
 
 
-def integer(description: str | None = None, *, minimum: int | None = None, maximum: int | None = None) -> dict:
-    return _with({"type": "integer"}, description, minimum=minimum, maximum=maximum)
+def integer(description: str | None = None, *, minimum: int | None = None, maximum: int | None = None,
+            enum: list | None = None) -> dict:
+    return _with({"type": "integer"}, description, minimum=minimum, maximum=maximum, enum=enum)
 
 
 def number(description: str | None = None, *, minimum: float | None = None, maximum: float | None = None,
