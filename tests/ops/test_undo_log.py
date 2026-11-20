@@ -7,6 +7,7 @@ import pytest
 from ops_helpers import PD_ID, PID, paths, pk, pk_rev, picks, read_json, sb, sb_rev, shot, shots, snapshot
 
 from bti.ops import log as oplog
+from bti.ops import undo as U
 from bti.picks import doc as pdoc
 from bti.picks import service
 
@@ -193,6 +194,43 @@ def test_undo_after_a_save_of_the_page_in_between_keeps_the_page_edit(client):
     r = undo(client, "sb", b1)
     assert r.status_code == 200, r.text
     assert shot(client, "s0004")["technique"] == "CAM-01" and shot(client, "s0005")["note"] == "written by the page"
+
+
+def test_the_undo_of_a_batch_of_typed_operations_still_gives_back_only_its_shots(client):
+    """fixes3: only a whole-document batch (a retime) gives back the end of the video and the identity; a batch of typed operations is undone as before, whatever the
+    page changed in those parts since."""
+    b1 = sb(client, [{"op": "set_technique", "shot": "s0004", "technique": "CAM-03"}]).json()["batch"]
+    rec = [r for r in changes(client) if r["batch"] == b1][0]
+    assert not U.is_whole(rec)
+    put_page(client, lambda d: d.update({"identity": {"style": "dim", "video_title": "Written by the page"}, "end": {"t": d["end"]["t"] + 1.0}}))
+    page_end = sbdoc(client)["end"]
+    r = undo(client, "sb", b1)
+    assert r.status_code == 200, r.text
+    assert shot(client, "s0004")["technique"] == "CAM-01"
+    assert sbdoc(client)["end"] == page_end and sbdoc(client)["identity"] == {"style": "dim", "video_title": "Written by the page"}
+
+
+def test_a_record_is_a_whole_document_batch_only_when_every_operation_it_names_is_one():
+    assert U.is_whole({"ops": [{"op": "retime"}]}) and U.is_whole({"ops": [{"op": "identity"}]})
+    for rec in ({"ops": []}, {"ops": [{"op": "lock", "shot": "s1"}]}, {"ops": [{"op": "retime"}, {"op": "lock"}]}, {"ops": [{"op": "undo", "batch": "batch_0001"}]},
+                {"ops": "retime"}, {}, None):
+        assert not U.is_whole(rec), rec
+
+
+def test_the_parts_a_whole_document_batch_changed_are_the_top_level_keys_that_differ_except_shots_approvals_and_derived_ones():
+    before = {"shots": [{"id": "a"}], "end": {"t": 5}, "identity": {"style": "raking"}, "approvals": {"storyboard": None}, "_rev": "x", "style": "gae"}
+    after = {"shots": [{"id": "b"}], "end": {"t": 6}, "identity": {"style": "raking", "video_title": "T"}, "approvals": {"storyboard": {"rev": "r"}}, "_rev": "y", "style": "gae", "extra": 1}
+    assert U.changed_parts(before, after) == ["end", "extra", "identity"]
+    assert U.changed_parts(before, before) == []
+    cur = {"shots": [{"id": "b"}], "end": {"t": 6}, "identity": {"style": "raking", "video_title": "T"}, "approvals": {"storyboard": None}, "extra": 1, "kept": 2}
+    new = U.restore_parts(cur, before, after)
+    assert new["end"] == {"t": 5} and new["identity"] == {"style": "raking"} and "extra" not in new and new["kept"] == 2 and new["shots"] == [{"id": "b"}]
+    assert new["approvals"] == {"storyboard": None}                              # the server's record is never touched
+    assert cur["end"] == {"t": 6}                                                # the input is not changed
+    assert U.find_conflicts("storyboard", cur, before, after, [], whole=True)[1] == []
+    cur["end"] = {"t": 9}
+    assert U.find_conflicts("storyboard", cur, before, after, [], whole=True)[1] == [{"thing": {"part": "end"}, "key": "part:end", "batches": []}]
+    assert U.find_conflicts("storyboard", cur, before, after, [])[1] == []                 # a batch of typed operations never looks at the parts
 
 
 def test_undo_after_the_page_changed_what_the_batch_touched_is_a_conflict_with_no_batch_named(client):

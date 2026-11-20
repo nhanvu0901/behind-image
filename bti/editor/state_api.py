@@ -119,7 +119,8 @@ SPECS: list[Spec] = [
     Spec("title.set", "script", "Đặt tựa video", "PUT", P + "/title",
          when="A project made from a book. Always ready; the caller supplies `text` (`--set text=...`: one line of at most 60 characters; the banned phrases are not looked for), or sends `option` "
               "(the number, from 1, of a candidate of GET .../title) in a body of its own. Never stale afterwards. When the project has a storyboard the channel identity is applied again with the title "
-              "in the same call: its revision changes and its approval stops standing (the answer says so)."),
+              "in the same call: its revision changes and its approval stops standing (the answer says so). While the storyboard does not fit the voice (`storyboard_off_voice`) the title is stored all the same, "
+              "the storyboard is left as it is and the answer says it takes the title when `storyboard.retime` has fitted it to the voice."),
     Spec("title.cancel", "script", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a title job of the project runs."),
     # ---- voice
     Spec("voice.generate", "voice", "Tạo giọng đọc", "POST", P + "/voice/generate", long_job=True, follow=LONGJOBS,
@@ -165,8 +166,8 @@ SPECS: list[Spec] = [
     Spec("storyboard.retime", "edit", "Khớp lại với giọng đọc", "POST", P + "/storyboard/retime",
          when="While the storyboard is readable, the voice is done and the storyboard does not fit it (a card, the channel-name beat or the end of the video sits where an earlier "
               "voice put it; the opening shot is missing or no longer needed): listed only then. No model and no cost. Moves them to where the voice puts them, puts the opening "
-              "shot in or takes it out, and applies the identity style again; no shot of the model or the owner is changed except the start of the shot after the opening shot. "
-              "One batch in the change log (undoable). Advances when something can be moved; approving the storyboard and the export are refused (`storyboard_off_voice`) until it is done."),
+              "shot in or takes it out, and applies the identity style again with the project's title (`title.json`) on the channel-name beat; no shot of the model or the owner is changed except the start of the shot after the opening shot. "
+              "One batch in the change log (undoable: `bti undo` gives back the whole document the batch changed, the shots, the end of the video and the identity). Advances when something can be moved; approving the storyboard and the export are refused (`storyboard_off_voice`) until it is done."),
     Spec("storyboard.approve", "edit", "Duyệt storyboard", "POST", P + "/approve", gate=True,
          when="While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first, and while the storyboard "
               "does not fit the voice (`storyboard_off_voice`: call storyboard.retime). Advances."),
@@ -184,7 +185,7 @@ SPECS: list[Spec] = [
          cost=("model", "from about 30 seconds to about 20 minutes"),
          when="While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`)."),
     Spec("identity.set", "edit", "Chọn kiểu mở đầu", "PUT", P + "/identity",
-         when="While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. Optional body field `video_title` (`--set video_title=...`): the video's title shown under the channel name, one line of at most 90 characters (an empty text takes it away); with a title the style may also be left out of a direct call to the route."),
+         when="While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. Optional body field `video_title` (`--set video_title=...`): the video's title shown under the channel name, one line of at most 90 characters (an empty text takes it away); with a title the style may also be left out of a direct call to the route. Refused with `storyboard_off_voice` while the storyboard does not fit the voice (call storyboard.retime first; title.set stores a title in that case all the same)."),
     Spec("draft.cancel", "edit", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a draft job of the project runs."),
     # ---- export
     Spec("export.start", "export", "Xuất video", "POST", P + "/export/start", long_job=True, follow=LONGJOBS,
@@ -514,7 +515,7 @@ def _load_changes(c: Ctx) -> None:
         else:
             continue
         later = [x for x in log.records(kind) if number(x["batch"]) > number(r["batch"])]
-        if not U.find_conflicts(kind, cur, both[0], both[1], later)[1]:
+        if not U.find_conflicts(kind, cur, both[0], both[1], later, whole=kind == "storyboard" and U.is_whole(r))[1]:
             c.undo_target = {"batch": r["batch"], "doc": kind, "rev": rev}
             return
 

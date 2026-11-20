@@ -32,6 +32,19 @@ def test_every_technique_as_a_base_and_as_an_overlay_gives_the_page_sentence_and
         assert not W.looks_raw(base) and not W.looks_raw(over) and t["id"] not in base and t["id"] not in over
 
 
+def test_the_program_opening_shot_reads_the_same_in_both_twins():
+    """fixes3: the page's twin (shotsentence.js) now says it too: the shot with the reserved id s0000 is "Mở đầu: cả bức tranh", whatever its technique says; the shared file
+    holds two such cases (`opening/CAM-01`, `opening/CAM-03`) and this side gives their sentence."""
+    named = {c["name"]: c for c in CASES["cases"] if c["name"].startswith("opening/")}
+    assert set(named) == {"opening/CAM-01", "opening/CAM-03"}
+    for name, c in named.items():
+        assert c["shot"]["id"] == "s0000" and c["expected"] == "Mở đầu: cả bức tranh · mở đầu vệt sáng · nhãn tác phẩm", name
+        assert W.shot_sentence(c["shot"], W.env_of(REG, c["assets"], c["mainKey"])) == c["expected"], name
+    env = W.env_of(REG, {}, None)
+    assert W.shot_sentence({"id": "s0000", "technique": "ZZ-99", "overlays": []}, env) == "Mở đầu: cả bức tranh"
+    assert W.shot_sentence({"id": "s0001", "technique": "CAM-01", "slots": {}}, env) == "Zoom vào bức tranh"
+
+
 @pytest.mark.parametrize("shot,expected", [
     ({"technique": "ZZ-99", "overlays": []}, "Một cảnh"), ({}, "Một cảnh"), (None, "Một cảnh"),
     ({"technique": "ZZ-99", "overlays": [{"technique": "HI-01"}]}, "Một cảnh · vòng sáng"),

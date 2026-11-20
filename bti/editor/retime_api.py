@@ -4,10 +4,14 @@
 
 Why: the cards, the channel-name beat and the end of the video are anchored by absolute time, so a voice assembled again (another lead or title
 silence, a sentence read again) leaves them where the old voice put them. `report` is `retime`'s own (inserted, removed, moved, end, left,
-identity). It commits the way the identity route does (the storyboard lock, validation, the page's save with its `history/` copy), adds ONE
-batch to the change log (`bti changes`, `bti undo`: the shots come back as they were; the end of the video and the `identity` object stay) and
-leaves the storyboard's approval to go stale by the existing rule (its revision changed). When nothing changes it writes nothing and the
-answer's `rev` is the one the caller sent, `changed` empty.
+identity, video_title). It commits the way the identity route does (the storyboard lock, validation, the page's save with its `history/` copy), adds ONE
+batch to the change log (`bti changes`, `bti undo`: the whole document the batch changed comes back, the shots, the end of the video and the `identity`
+object, see `bti.ops.undo`) and leaves the storyboard's approval to go stale by the existing rule (its revision changed). When nothing changes it writes
+nothing and the answer's `rev` is the one the caller sent, `changed` empty.
+
+The video's title is written onto the channel-name beat here too: the title document of the project (`title.json`, `bti.title.chosen_text`) wins over the
+`identity.video_title` the storyboard carries, as it does in a full compile. A title set while the storyboard was off the voice (`title.set` and
+`title.generate` store it and say the storyboard takes it later; `PUT .../identity` refuses with `storyboard_off_voice`) reaches the beat by this call.
 """
 from __future__ import annotations
 
@@ -23,6 +27,7 @@ from bti.ops import things
 from bti.ops.batch import ACTOR_FORMS, _ACTOR
 from bti.ops.log import ChangeLog
 from bti.script.store import now_iso
+from bti.title import chosen_text
 
 from .common import ApiError, compute_rev, read_json, strip_derived
 from .engine_adapter import ENGINE_LOCK
@@ -85,7 +90,8 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
             except Exception:                           # noqa: BLE001 - no registry, no defaults
                 bundle = None
             try:
-                new, report = RT.retime(saved, timing, style if isinstance(style, dict) else {}, meta, defaults=bundle.param_defaults if bundle else None)
+                new, report = RT.retime(saved, timing, style if isinstance(style, dict) else {}, meta, defaults=bundle.param_defaults if bundle else None,
+                                        video_title=chosen_text(d))
             except DraftError as e:
                 raise ApiError(422, e.message, code="timing_unusable")
             if things.canon(new) == things.canon(saved):

@@ -36,8 +36,8 @@ class Limits:
         return {"minutes": self.minutes, "steps": self.steps, "repairs": self.repairs}
 
 
-PLAN_LIMITS = Limits(minutes=20, steps=80, repairs=1)
-CHOOSE_LIMITS = Limits(minutes=20, steps=80, repairs=1)
+# The limits of a session belong to the job that runs it (the pictures job: `bti.picks.auto.job.PLAN_LIMITS` and `CHOOSE_LIMITS`; the title job: `bti.title.job.LIMITS`):
+# this module holds none, so that there is one place for each number.
 
 
 @dataclass
@@ -65,17 +65,22 @@ def check_installed(model_id: str | None) -> None:
     draft_run._check_agent_installed(model_id)
 
 
-def allow_rules(windows: bool | None = None) -> list[str]:
-    """The permission rules of a `claude` session of this job: write under out/, run `./check` and `./crop` in the shapes TASK.md shows,
+HELPERS = ("check", "crop")        # the helper commands of the pictures job's work folder; another job names its own (the title job has `check` only)
+
+
+def allow_rules(windows: bool | None = None, helpers: tuple = HELPERS) -> list[str]:
+    """The permission rules of a `claude` session: write under out/, run the `helpers` (`./check`, and `./crop` for the pictures job) in the shapes TASK.md shows,
     and nothing else. (The deny rules are the draft's: no path that leaves the folder, no command substitution, no web.)"""
     from bti.draft.providers import claudecode as dcc
     win = IS_WINDOWS if windows is None else windows
     out = ["Edit(./out/**)"]
-    for f in dcc._forms("check", win):
-        out += [f"Bash({f})", f"Bash({f} --help)"]
-    for f in dcc._forms("crop", win):
-        out += [f"Bash({f} --help)", f"Bash({f} --box * -o look/*)", f"Bash({f} --box * -o look/* --width *)",
-                f"Bash({f} --box * --width * -o look/*)", f"Bash({f} --grid -o look/*)"]
+    if "check" in helpers:
+        for f in dcc._forms("check", win):
+            out += [f"Bash({f})", f"Bash({f} --help)"]
+    if "crop" in helpers:
+        for f in dcc._forms("crop", win):
+            out += [f"Bash({f} --help)", f"Bash({f} --box * -o look/*)", f"Bash({f} --box * -o look/* --width *)",
+                    f"Bash({f} --box * --width * -o look/*)", f"Bash({f} --grid -o look/*)"]
     return out
 
 
@@ -86,10 +91,11 @@ def _guard(project_dir: Path):
 
 # ---------------------------------------------------------------------------------------------------------------- the session
 def run_session(ws_root: Path, *, model: str, project_dir: Path, ctx=None, label: str, limits: Limits, check_fn, transcript: Path | None = None,
-                python: str | None = None, guard_factory=None, on_note=None) -> Outcome:
+                python: str | None = None, guard_factory=None, on_note=None, allow: list[str] | None = None) -> Outcome:
     """Run the agent in `ws_root` until it is done, the limits stop it, the job is cancelled or it fails. `check_fn()` returns the text of
     the problems of the output file (None when it is valid): it is the check after each turn and so the repair message. `ctx` is the long
-    job's context (cancel, progress, the runner that kills the process tree). Raises `DraftError` before the program starts (not installed ...)."""
+    job's context (cancel, progress, the runner that kills the process tree). `allow`: the permission rules of a `claude` session (`allow_rules(helpers=...)`:
+    the helper commands of THIS job's work folder); None is the pictures job's (`./check` and `./crop`). Raises `DraftError` before the program starts (not installed ...)."""
     mod = agent_module(model)
     guard = guard_factory(project_dir) if guard_factory else _guard(project_dir)
     hit = threading.Event()                                           # the step limit was reached
@@ -135,7 +141,7 @@ def run_session(ws_root: Path, *, model: str, project_dir: Path, ctx=None, label
 
     kw = {}
     if getattr(mod, "SUPPORTS_ALLOW", False):
-        kw["allow"] = allow_rules()
+        kw["allow"] = allow_rules() if allow is None else list(allow)
     a = mod.run(Path(ws_root), model=model, timeout=limits.minutes * 60.0, max_repairs=limits.repairs, check=check,
                 cancel=lambda: cancelled() or hit.is_set(), on_progress=on_progress, transcript_path=transcript, guard=guard, python=python,
                 runner=runner, **kw)

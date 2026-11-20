@@ -968,3 +968,11 @@ export const TITLE_LABELS = {
   jobFail: 'Agent chưa viết xong tựa: ',
   cancelFail: 'Không dừng được: ',
 };
+
+// ---- worker fixes3 (2026-11-20): the second line of the result of the agent's choice of pictures names the web searches of the run (views/picks_logic.js `autoDetailText`; the
+// Python twin of the closing sentence is bti/picks/auto/webround.py `web_sentence`: "Đã tìm trên web 12/80 lần.")
+PICKS_AUTO_LABELS.detail.web = (n, max) => (max > 0 ? `tìm trên web ${n}/${max} lần` : `tìm trên web ${n} lần`);
+// ---- worker fixes3 (2026-11-20): the same title strip on the storyboard page (views/storyboard.js mounts titlepanel.js there); it says so while the storyboard is off the voice
+TITLE_LABELS.offVoice = 'Storyboard đang lệch với giọng đọc nên chưa nhận tựa này. Bấm "Khớp lại với giọng đọc" trước: storyboard sẽ lấy tựa ngay khi khớp xong.';
+TITLE_LABELS.tookInMerged = 'Đã cập nhật tựa video và ghép với các sửa chưa lưu của bạn.';
+TITLE_LABELS.tookInFail = 'Không tải được storyboard mới: ';

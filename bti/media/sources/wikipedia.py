@@ -14,7 +14,7 @@ Commons and are therefore never offered. Four extra fields tell the choosing ses
 What is not offered: icons, flags, coats of arms, logos, locator maps, audio stand-ins and everything that is not a bitmap (SVG, audio, video),
 anything under 600 px on its long side and strips that are more than four times longer than they are high.
 
-The service's rules are kept: a generic User-Agent (never a person's name, an e-mail address or this project's name), at most one request a
+The service's rules are kept: the generic User-Agent of `bti.media.http` (never a person's name, an e-mail address or this project's name), at most one request a
 second (this source paces itself, also across calls), and a "too many requests" answer is honoured by `bti.media.http` (a short wait once,
 else a refusal that carries the wait and a pause for that host).
 """
@@ -31,7 +31,6 @@ from .. import http
 from ..errors import NotFound
 from . import commons
 
-USER_AGENT = "ImageResearch/1.0 (art documentary research; generic client)"
 API_URL = "https://{lang}.wikipedia.org/w/api.php"
 MIN_INTERVAL = 1.0                  # seconds between two requests of this source
 PAGES = 3                           # the best pages of a search
@@ -111,7 +110,7 @@ class WikipediaSource:
         self._pace()
         self.requests += 1
         full = url + "?" + urlencode(params)
-        with http.open_url(full, opener=self._opener or real_open, sleep=self._sleep, headers={"User-Agent": USER_AGENT, "Accept": "application/json"}) as r:
+        with http.open_url(full, opener=self._opener or real_open, sleep=self._sleep, headers={"Accept": "application/json"}) as r:
             body = r.read()
         try:
             return json.loads(body.decode("utf-8"))

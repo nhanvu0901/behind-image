@@ -9,7 +9,7 @@ import { h, toast, errorToast, modal, debounce, fmtTime, setStatus, ask, confirm
 import { stripDerived } from '../logic.js';
 import { mergeStoryboard, mergedNote } from '../sbmerge.js';
 import { jobFailText } from '../errmsg.js';
-import { EDIT_LABELS, IDENTITY_LABELS, RETIME_LABELS } from '../labels.js';
+import { EDIT_LABELS, IDENTITY_LABELS, RETIME_LABELS, TITLE_LABELS } from '../labels.js';
 import { initPreview, requestFrame } from '../preview.js';
 import { initTimeline, seek, ensureVisible, fitView, zoomToShowWords } from '../timeline.js';
 import { initInspector, setTab } from '../inspector.js';
@@ -19,6 +19,7 @@ import { mountDraftPanel } from '../draftpanel.js';
 import { mountPromptEdit } from '../promptedit.js';
 import { mountIdentityPick } from '../identitypick.js';
 import { mountRetimeLine } from '../retimeline.js';      // introflow: "Khớp lại với giọng đọc"
+import { mountTitlePanel } from '../titlepanel.js';      // fixes3: the video's title, the same strip as the script page (one module)
 import * as A from '../actions.js';
 import { shotIndexAt, wordIndexAt, clone } from '../logic.js';
 import * as E from '../edit.js';
@@ -97,6 +98,10 @@ const HTML = `
     <span class="grow"></span>
     <button id="btn-next" class="primary" hidden></button>
   </div>
+  <div class="tbar" id="tbar">
+    <span id="title-host" class="title-host"></span>
+    <span id="retime-container"></span>
+  </div>
   <main id="main">
     <section id="preview-pane">
       <div id="preview-tools">
@@ -105,7 +110,6 @@ const HTML = `
         <span class="muted" id="map-note"></span>
         <span class="grow"></span>
         <span id="identity-container"></span>
-        <span id="retime-container"></span>
         <span class="muted" id="frame-state"></span>
       </div>
       <div id="stage"><div id="stage-box"><canvas id="frame"></canvas><svg id="handles"></svg></div></div>
@@ -206,6 +210,8 @@ export async function mount(host, mctx) {
   }
   const identityBox = $('#identity-container');          // "Kiểu mở đầu và mốc chương": changes the saved storyboard on the server, then it is taken in like a turn of the prompt box
   if (identityBox) mountIdentityPick(identityBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: IDENTITY_LABELS.tookInMerged, fail: IDENTITY_LABELS.tookInFail }) });
+  const titleBox = $('#title-host');                     // fixes3: the video's title (see it, change it, ask the agent again); a title that changed the saved storyboard is taken in like a turn of the box
+  if (titleBox) mountTitlePanel(titleBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: TITLE_LABELS.tookInMerged, fail: TITLE_LABELS.tookInFail }) });
   const retimeBox = $('#retime-container');             // introflow: shown only while the voice was made again and the storyboard no longer fits it
   if (retimeBox) mountRetimeLine(retimeBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: RETIME_LABELS.tookInMerged, fail: RETIME_LABELS.tookInFail }) });
   applyUrlParams();

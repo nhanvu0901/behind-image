@@ -169,10 +169,12 @@ test('the check of the picks names a line by its number and a picture by its tit
   assert.equal(S({ code: 'beat_unknown', level: 'warning', beat: 'b9999' }), 'Có hình cho một đoạn không còn trong lời dẫn.');
   assert.equal(S({ code: 'asset_file_missing', level: 'error', asset: 'DIARY' }), 'Thiếu tệp ảnh của hình “Trang nhật ký”.');
   assert.equal(S({ code: 'asset_flag', level: 'warning', asset: 'DIARY', flag: 'unknown' }), 'Hình “Trang nhật ký”: Chưa rõ giấy phép.');
+  assert.equal(S({ code: 'outside_no_picture', level: 'warning', beat: 'b0004' }), 'Đoạn 4 nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.');
+  assert.equal(S({ code: 'outside_no_picture', level: 'warning', beat: 'zzz' }), 'Một đoạn nói về thứ ngoài bức tranh nhưng chỉ có tranh chính: chưa tìm được hình của chính thứ đó.');
   assert.equal(S({ code: 'something_new', level: 'error' }), 'Có một lỗi trong chọn hình.');
   assert.equal(S({ code: 'something_new', level: 'warning' }), 'Có một điều cần xem trong chọn hình.');
   assert.equal(S({ code: 'beat_no_pick', level: 'warning', beat: 'zzz' }), 'Một đoạn chưa có hình: bản nháp sẽ dùng tranh chính ở đó.');
-  for (const code of ['no_main', 'beat_no_pick', 'unknown_asset', 'unknown_region', 'beat_unknown', 'asset_file_missing', 'asset_flag', 'new_one']) {
+  for (const code of ['no_main', 'beat_no_pick', 'outside_no_picture', 'unknown_asset', 'unknown_region', 'beat_unknown', 'asset_file_missing', 'asset_flag', 'new_one']) {
     const t = S({ code, level: 'error', beat: 'b0004', asset: 'MAIN', flag: 'small' });
     assert.doesNotMatch(t, /\bb\d{4}\b|MAIN|_/, t);
   }

@@ -27,7 +27,7 @@ test('one row per shot with its number, its start and its length in the words of
   assert.equal(L.rows.length, 12);
   assert.deepEqual(L.rows.slice(0, 3).map((r) => [r.number, r.time]), [[1, '0:00'], [2, '0:02'], [3, '0:22']]);
   assert.equal(L.rows[1].length, '20,1 giây');
-  assert.equal(L.rows[0].sentence, 'Thẻ tiêu đề: The Arnolfini Portrait');
+  assert.equal(L.rows[0].sentence, 'Mở đầu: cả bức tranh');                  // fixes3: the mock's first shot (a title card) carries the reserved id s0000, which reads as the program's opening, as in shotwords.py
   assert.equal(L.rows[9].locked, true);
   assert.deepEqual(L.order, sb.shots.map((s) => s.id));
   for (const r of L.rows) assert.ok(!looksRaw(r.sentence), r.sentence);

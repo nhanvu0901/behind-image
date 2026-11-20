@@ -161,6 +161,7 @@ export function issueSentence(issue, { numberOf = () => null, assets = {} } = {}
   switch (issue?.code) {
     case 'no_main': return W.issue.noMain;
     case 'beat_no_pick': return W.issue.noPick(line);
+    case 'outside_no_picture': return W.issue.outsideNoPicture(line);          // a line about something outside the painting that shows only the main painting
     case 'unknown_asset': return W.issue.unknownAsset(line);
     case 'unknown_region': return W.issue.unknownRegion(line);
     case 'beat_unknown': return W.issue.beatUnknown;

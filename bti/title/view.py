@@ -4,13 +4,14 @@
     summary(pdir)        -> {state, text, by, at, source, candidates, stale}     (the state answer; never raises)
 
 `state`: `none` (no title yet), `done`, `stale` (an agent's title written from a narration that has changed since). `title` is the title in use ({text, by, at, source,
-option}), `candidates` what the agent returned (the first was its choice), `storyboard` what the saved storyboard shows now ({exists, title, same})."""
+option}), `candidates` what the agent returned (the first was its choice), `storyboard` what the saved storyboard shows now ({exists, title, same, off_voice}): `off_voice` is
+true while the storyboard does not sit where the voice puts its cards (`bti.draft.retime.project_off_voice`): it cannot take a title until `storyboard.retime` has fitted it."""
 from __future__ import annotations
 
 import json
 from pathlib import Path
 
-from bti.draft import run as draft_run
+from bti.draft import retime as draft_retime, run as draft_run
 
 from . import job, rules as R, store
 
@@ -35,6 +36,7 @@ def overview(pid: str, pdir: Path) -> dict:
     st = store.state_of(doc, cur)
     res = draft_run._resolve(pdir, job.ROLE, None)
     sb = _storyboard_title(pdir)
+    sb["off_voice"] = bool(sb["exists"] and draft_retime.project_off_voice(pdir))          # never raises: a storyboard that cannot be read says nothing here
     chosen = doc["chosen"]
     problems = [{"code": "document_corrupt", "detail": problem}] if problem else []
     return {"rev": store.revision(doc), "state": st, "title": chosen, "candidates": doc["candidates"], "narration_rev": doc["narration_rev"], "current_narration_rev": cur,

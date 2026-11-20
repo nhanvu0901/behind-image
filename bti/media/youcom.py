@@ -15,6 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from . import http                # `http.USER_AGENT`: the one generic client string of every outside request
 from .safety import refuse_if_real_models_off
 
 RESEARCH_API = "https://api.you.com/v1/research"
@@ -117,7 +118,7 @@ class YouComClient:
     def _headers(self, *, content_type: bool = False) -> dict[str, str]:
         headers = {
             "X-API-Key": self.api_key,
-            "User-Agent": "ImageResearch/1.0 (art documentary research; generic client)",
+            "User-Agent": http.USER_AGENT,
             "Accept": "application/json",
         }
         if content_type:

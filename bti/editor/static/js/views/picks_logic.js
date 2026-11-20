@@ -144,7 +144,8 @@ export function autoResultText(result) {
   return `Agent đã chọn hình cho ${result.lines_done}/${result.lines_total} đoạn.` + (without > 0 ? ` ${without} đoạn chưa có hình phù hợp.` : '');
 }
 
-/** The second line of a result: what was made ("9 hình mới, 6 vùng chi tiết, 2 clip."), '' when nothing. */
+/** The second line of a result: what was made ("9 hình mới, 6 vùng chi tiết, 2 clip."), and how many web searches the run used when the owner's web search was on
+ *  (`result.web` = {on, max, searches, stopped}: "..., tìm trên web 12/80 lần."); '' when nothing. */
 export function autoDetailText(result) {
   if (!result) return '';
   const parts = [];
@@ -153,6 +154,7 @@ export function autoDetailText(result) {
   if (result.clips > 0) parts.push(AL.detail.clips(result.clips));
   if (result.lines_kept > 0) parts.push(AL.detail.kept(result.lines_kept));
   if (result.lines_by_others > 0) parts.push(AL.detail.others(result.lines_by_others));
+  if (result.web?.on) parts.push(AL.detail.web(Math.max(0, Number(result.web.searches) || 0), Math.max(0, Number(result.web.max) || 0)));      // the web search was on: how many searches the run used
   return parts.length ? parts.join(', ') + '.' : '';
 }
 

@@ -257,7 +257,7 @@ def test_a_picture_is_downloaded_under_the_extension_of_its_real_format_with_a_g
     assert got == tmp_path / "x.png" and got.read_bytes()[:4] == b"\x89PNG" and not (tmp_path / "x.jpg").exists() and not list(tmp_path.glob("*.part"))
     url, headers, timeout = net.reqs[0]
     assert timeout == W.TIMEOUT and "behind-the-image" not in headers["user-agent"] and "nhanvu" not in headers["user-agent"].lower() and "@" not in headers["user-agent"]
-    assert headers["user-agent"] == W.GENERIC_UA and "image" in headers["accept"]
+    assert headers["user-agent"] == http.USER_AGENT and "image" in headers["accept"]
 
 
 @pytest.mark.parametrize("body,ctype,exc", [

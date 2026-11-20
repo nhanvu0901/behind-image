@@ -3,9 +3,10 @@
 // It is made from the registry's Vietnamese names (`label_vi`), the picture and the region the shot shows, and the overlays on it. A short phrase table
 // (labels.js SHOT_WORDS) only makes a name read as "what happens"; when nothing is known the answer is "Một cảnh", never an id, a file name or a parameter name.
 // env: { tech(id) -> registry entry | null, assets: {key: asset}, mainKey: key of the main painting | null }
-import { SHOT_WORDS as W } from './labels.js';
+import { SHOT_WORDS as W, OPENING_WORDS } from './labels.js';
 import { isVietnamese } from './errmsg.js';
 
+const OPENING_ID = 's0000';                                      // the program's opening shot (bti/draft/zones.py OPENING_ID; the Python twin is bti/output/shotwords.py)
 const ID_LOOKING = /^[A-Z0-9_]{2,}$/;                         // "MIRROR", "R1", "HEAD_2": a name for a program, not for the owner
 const MAX = 96;
 
@@ -154,7 +155,8 @@ export function overlayPhrases(shot, env) {
 export function shotSentence(shot, env = {}) {
   const tech = env.tech?.(shot?.technique) || null;
   let base = '';
-  if (tech && text(tech.label_vi)) { try { base = baseSentence(shot || {}, tech, env); } catch { base = text(tech.label_vi); } }
+  if (shot?.id === OPENING_ID) base = OPENING_WORDS.opening;                              // the opening shot of the program: "Mở đầu: cả bức tranh", whatever its technique says
+  else if (tech && text(tech.label_vi)) { try { base = baseSentence(shot || {}, tech, env); } catch { base = text(tech.label_vi); } }
   const ov = overlayPhrases(shot || {}, env);
   const shown = ov.length > 3 ? [...ov.slice(0, 3), W.andMore(ov.length - 3)] : ov;
   const sentence = [base || W.unknown, ...shown].join(W.joiner);

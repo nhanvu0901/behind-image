@@ -147,3 +147,15 @@ test('the main painting: the one with the painting\'s title, else the one the sh
   assert.equal(mainAssetKey(sb, ''), 'A', 'by use');
   assert.equal(mainAssetKey({ assets: {}, shots: [] }, 'x'), null);
 });
+
+test('the program\'s opening shot (id s0000) reads "Mở đầu: cả bức tranh", whatever its technique says, with its overlays after it', () => {
+  const assets = { MAIN: { title: 'The Arnolfini Portrait', kind: 'image' } };
+  const env = { tech, assets, mainKey: 'MAIN' };
+  const open = (technique, overlays = []) => ({ id: 's0000', start: { t: 0 }, technique, slots: { image: { asset: 'MAIN' } }, params: {}, overlays });
+  assert.equal(shotSentence(open('CAM-01'), env), 'Mở đầu: cả bức tranh');
+  assert.equal(shotSentence(open('CAM-03'), env), 'Mở đầu: cả bức tranh');
+  assert.equal(shotSentence(open('CAM-01', [{ id: 'o1', technique: 'ID-OPEN-01' }, { id: 'o2', technique: 'ID-LABEL-01' }]), env), 'Mở đầu: cả bức tranh · mở đầu vệt sáng · nhãn tác phẩm');
+  assert.equal(shotSentence({ ...open('CAM-01'), id: 's0001' }, env), 'Zoom vào cả bức tranh');                     // the same shot under another id is an ordinary shot
+  assert.equal(shotSentence(open('ZZ-99'), env), 'Mở đầu: cả bức tranh');                                           // also when the registry does not know the technique
+  assert.ok(!looksRaw(shotSentence(open('CAM-01', [{ technique: 'ID-OPEN-01' }]), env)));
+});

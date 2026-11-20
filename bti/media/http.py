@@ -1,7 +1,11 @@
-"""Tiny stdlib HTTP layer: a plain User-Agent, a polite client when a source says "too many requests".
+"""Tiny stdlib HTTP layer: one generic User-Agent, a polite client when a source says "too many requests".
 
 Adapted in spirit from comic-book-pipeline art_pipeline/hunt.py (UA and 429 lessons).
-No personal details in any header or URL.
+
+Privacy rule of the owner: NO request of the app to an outside service carries this project's name, a repository address, a person's name, an
+e-mail address or an account name, in a header, in a query or in a body. `USER_AGENT` is the one client string of every request the app makes
+itself (Wikimedia Commons, Wikipedia, the Met, Pexels, Pixabay, OpenStreetMap, You.com, the download of a picture from the web, thumbnails); a
+source that builds its own headers takes it from here and never writes a string of its own (`tests/media/test_privacy.py` pins both).
 
 HTTP 429 (and 503 that carries `Retry-After`) means "stop asking": this layer waits and tries once more only when the source
 asks for a few seconds (`SHORT_RETRY_AFTER`); otherwise it fails at once with a `MediaHTTPError` that has `rate_limited` and
@@ -24,7 +28,9 @@ from typing import Any, Callable
 from bti.fsio import atomic_replace
 from .safety import refuse_if_real_models_off
 
-USER_AGENT = "behind-the-image-media/0.1 (art documentary research tool)"
+# What the sources' own rules ask for at the least: a descriptive client name (the default of the standard library is refused by some of them)
+# and nothing that names the owner or the project.
+USER_AGENT = "ImageResearch/1.0 (art documentary research; generic client)"
 MAX_TRIES = 4
 BASE_DELAY = 2.0
 MAX_WAIT = 60.0

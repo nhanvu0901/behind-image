@@ -36,6 +36,13 @@ function build() {
       cases.push({ name: `${p}/${shot.id}`, shot, assets, mainKey, expected });
     }
   }
+  // the program's own opening shot (the reserved id s0000, from the voice's first word minus 0.35 s) with the overlays the identity puts on it: the words are the
+  // opening's, not the technique's ("Zoom vào cả bức tranh"); the Python twin says the same (bti/output/shotwords.py)
+  for (const id of ['CAM-01', 'CAM-03']) {
+    const shot = { id: 's0000', start: { t: 0 }, technique: id, slots: { image: { asset: 'MAIN' } }, params: {}, overlays: [{ id: 'o1', technique: 'ID-OPEN-01' }, { id: 'o2', technique: 'ID-LABEL-01' }] };
+    const assets = { MAIN: { title: TITLE, kind: 'image' } };
+    cases.push({ name: `opening/${id}`, shot, assets, mainKey: 'MAIN', expected: shotSentence(shot, { tech, assets, mainKey: 'MAIN' }) });
+  }
   const techniques = {};
   for (const t of REG) {
     techniques[t.id] = {

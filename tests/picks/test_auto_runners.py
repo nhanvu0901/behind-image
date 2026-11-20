@@ -14,7 +14,7 @@ from auto_helpers import CHOICE, PLAN, FakeAgent, Env, fake_book_thumb, fake_thu
 
 from bti.draft.guard import Guard
 from bti.draft.providers import agy, claudecode as dcc
-from bti.picks.auto import helper, inputs as ainputs, session, workspace
+from bti.picks.auto import helper, inputs as ainputs, job, session, workspace
 from bti.script import models as models_mod
 from bti.script.providers import claudecode as cc
 
@@ -87,7 +87,7 @@ def pdir(tmp_path):
 
 @pytest.fixture
 def ws(pdir, tmp_path):
-    return workspace.build_plan(ainputs.load(pdir), session.PLAN_LIMITS, root=tmp_path / "ws")
+    return workspace.build_plan(ainputs.load(pdir), job.PLAN_LIMITS, root=tmp_path / "ws")
 
 
 def specs_for(ws_root):
@@ -189,6 +189,30 @@ def test_claude_command_line_names_the_two_helpers_and_nothing_else(fakeclaude, 
         assert never not in a
     assert a[a.index("--append-system-prompt") + 1] == dcc.CONFINEMENT and Path(c["cwd"]).resolve() == ws.root.resolve()
     assert "TASK.md" in fakeclaude.prompts()[0] and (ws.root / "out" / "plan.json").is_file()
+
+
+def test_a_job_can_name_its_own_rules_and_the_default_stays_the_pictures_jobs(fakeclaude, ws, pdir):
+    """fixes3: `run_session` takes `allow`; without it the rules are the pictures job's (`./check` and `./crop`), with it exactly the rules the caller names."""
+    only_check = session.allow_rules(helpers=("check",))
+    assert "Edit(./out/**)" in only_check and not [r for r in only_check if "crop" in r]
+    assert "Bash(./check)" in session.allow_rules(windows=False, helpers=("check",)) and "Bash(.\\check.cmd)" in session.allow_rules(windows=True, helpers=("check",))
+    assert session.allow_rules(helpers=("check", "crop")) == session.allow_rules() and session.HELPERS == ("check", "crop")
+    assert session.allow_rules(helpers=()) == ["Edit(./out/**)"]
+    out = session.run_session(ws.root, model=MODEL_CLAUDE, project_dir=pdir, label="x", limits=session.Limits(2, 80, 1),
+                              check_fn=lambda: helper.run_check(ws.root).problems(), python=sys.executable, guard_factory=guard, allow=only_check)
+    assert out.status == "ok"
+    (c,) = fakeclaude.calls("run")
+    a = c["argv"]
+    assert a[a.index("--allowedTools") + 1:a.index("--disallowedTools")] == only_check
+    assert a == dcc.build_command(fakeclaude.exe_path, MODEL_CLAUDE, allow=only_check)[1:]
+
+
+def test_the_limits_of_the_two_sessions_are_written_once_in_the_job(ws):
+    """fixes3: `session.py` used to carry the old numbers under the same names as `job.py`; now only the job has them, and the work folder's task says the job's numbers."""
+    assert not hasattr(session, "PLAN_LIMITS") and not hasattr(session, "CHOOSE_LIMITS")
+    assert (job.PLAN_LIMITS.minutes, job.PLAN_LIMITS.steps) == (30, 120) and (job.CHOOSE_LIMITS.minutes, job.CHOOSE_LIMITS.steps) == (40, 220)
+    task = (ws.root / "TASK.md").read_text(encoding="utf-8")
+    assert "**120 steps**" in task and "**30 minutes**" in task
 
 
 def test_the_drafts_own_command_line_is_unchanged(fakeclaude):
@@ -307,7 +331,7 @@ def whole_job(tmp_path, monkeypatch, pdir_root, fake, model):
     monkeypatch.delenv("BTI_NO_REAL_MODELS", raising=False)                                         # the fake executable is the "real" program here
     e = Env(pd.parent, pd, None, sources, manager)
     # one file of specs for both sessions: the plan (fitted to the lines) and the choice (the wanted pictures and boxes of this fixture)
-    plan_ws = workspace.build_plan(ainputs.load(pd), session.PLAN_LIMITS, root=tmp_path / "probe")
+    plan_ws = workspace.build_plan(ainputs.load(pd), job.PLAN_LIMITS, root=tmp_path / "probe")
     fake.mode("ok", specs={"plan": FakeAgent.fit(PLAN, plan_ws.root, "plan"), "choice": CHOICE})
     return e, e.run(model=model, timeout=120)
 

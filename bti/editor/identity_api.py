@@ -11,7 +11,9 @@ revision and save path, so that a choice is saved exactly the way a storyboard s
         after trimming; "" takes it away) is the title shown under the channel name (`identity.video_title` of the storyboard); `style` may be
         left out when `video_title` is given: the storyboard's present style is kept (the default one when it has none). 409 when `base_rev`
         is not the saved revision (nothing is written), 422 for a style that is not in `options`, a title that is not one line of at most 90
-        characters, or a result the engine refuses.
+        characters, or a result the engine refuses; 409 `storyboard_off_voice` (`problems`) while the saved storyboard does not sit where the
+        voice puts its cards, its channel-name beat and its end (the voice was made again): nothing is written; call `storyboard.retime` first
+        (it also writes the project's title onto the beat), then ask again.
 
 An agent that wants another look for the video calls PUT; it never writes title cards or chapter cards by hand.
 """
@@ -24,6 +26,7 @@ from typing import Any, Callable
 from fastapi import APIRouter, Body
 
 from bti import identity as ID
+from bti.draft import retime as RT
 from bti.engine import registry as R
 
 from bti.identity import titles as T
@@ -102,6 +105,11 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
             cur = compute_rev(saved)
             if base != cur:
                 raise ApiError(409, "base_rev does not match the saved revision", rev=cur, code="stale_revision")
+            # the cards, the channel-name beat and the end must sit where the voice puts them before the identity is applied (the engine would refuse the
+            # result with its raw "shots must be in time order" errors): the same guard as the approval and the export; `storyboard.retime` fixes it
+            off_voice = RT.project_off_voice(d, saved)
+            if off_voice:
+                raise ApiError(409, RT.off_voice_message(off_voice), code="storyboard_off_voice", problems=off_voice[:20])
             with ENGINE_LOCK:
                 timing = p.timing()
             meta = {}

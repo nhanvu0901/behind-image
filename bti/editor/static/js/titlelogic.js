@@ -63,18 +63,20 @@ export function progressText(job) {
 
 /** What the strip shows and which buttons it has.
  *  `ctx`: {narrationApproved: bool, busy: bool (a request of this box is going), job: the running job or null}
- *  -> {has, text, state, stale, by, when, source, running, write: {visible, disabled, label, title}, open: {visible}, note: the line under the title} */
+ *  -> {has, text, state, stale, offVoice, by, when, source, running, write: {visible, disabled, label, title}, open: {visible}, note: the line under the title} */
 export function stripView(data, ctx = {}) {
   const t = data?.title && typeof data.title.text === 'string' && data.title.text ? data.title : null;
   const running = jobRunning(ctx.job) || jobRunning(data?.running) || !!ctx.busy;
   const approved = ctx.narrationApproved !== false;
   const state = data?.state === 'stale' || data?.stale ? 'stale' : t ? 'done' : 'none';
+  const offVoice = !!data?.storyboard?.off_voice;                   // the storyboard sits where an earlier voice put its cards: it cannot take the title until it is fitted again
   let note = '';
   if (running) note = L.working;
   else if (!t) note = approved ? L.noneHint : L.needNarration;
   else if (state === 'stale') note = L.stale;
+  if (offVoice && !running) note = [note, L.offVoice].filter(Boolean).join(' ');
   return {
-    has: !!t, text: t ? t.text : L.none, state, stale: state === 'stale', by: t ? whoWords(t.by, data) : '', when: t ? whenWords(t.at) : '', source: t ? t.source : null, running, note,
+    has: !!t, text: t ? t.text : L.none, state, stale: state === 'stale', offVoice, by: t ? whoWords(t.by, data) : '', when: t ? whenWords(t.at) : '', source: t ? t.source : null, running, note,
     write: { visible: !running, disabled: !approved, label: t ? L.writeAgain : L.write, title: approved ? L.writeHint : L.needNarration },
     open: { visible: !!data },
   };
@@ -110,10 +112,10 @@ export function generateBody(note) {
 /** Does asking the agent again replace a title the owner chose or typed (then the page asks first)? */
 export const replacesPersonsTitle = (data) => data?.title?.source === 'person';
 
-/** What the toast says after a title was set: the storyboard's own sentence when the answer has one. -> [text, kind] */
+/** What the toast says after a title was set: the storyboard's own sentence when the answer has one (a warning when the storyboard could not take the title, or is off the voice). -> [text, kind] */
 export function savedToast(res) {
   const sb = res?.storyboard;
-  if (sb && typeof sb.sentence === 'string' && sb.sentence) return [`${L.saved} ${sb.sentence}`, sb.error ? 'warn' : 'ok'];
+  if (sb && typeof sb.sentence === 'string' && sb.sentence) return [`${L.saved} ${sb.sentence}`, sb.error || sb.off_voice ? 'warn' : 'ok'];
   return [L.saved, 'ok'];
 }
 
@@ -122,5 +124,9 @@ export function doneToast(job) {
   const r = job?.result || {};
   const base = r.title ? L.generated(r.title) : L.saved;
   const sb = r.storyboard;
-  return sb && typeof sb.sentence === 'string' && sb.sentence ? [`${base} ${sb.sentence}`, sb.error ? 'warn' : 'ok'] : [base, 'ok'];
+  return sb && typeof sb.sentence === 'string' && sb.sentence ? [`${base} ${sb.sentence}`, sb.error || sb.off_voice ? 'warn' : 'ok'] : [base, 'ok'];
 }
+
+/** Did the answer of a PUT .../title (or the result of the title job) change the saved storyboard? Then a page that holds the storyboard takes the new one in. */
+export const storyboardChanged = (res) => Array.isArray(res?.storyboard?.changed) && res.storyboard.changed.length > 0;
+

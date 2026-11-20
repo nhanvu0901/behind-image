@@ -106,10 +106,13 @@ def run_undo(adapters: dict, batch: str, body: Any, log: ChangeLog) -> dict:
             raise OpError("undo_unavailable", "The copies of batch %s were removed when the change log was pruned." % batch)
         before, after = both
         later = [r for r in log.records(kind) if number(r["batch"]) > number(batch)]
-        keys, conflicts = U.find_conflicts(kind, cur, before, after, later)
+        whole = kind == "storyboard" and U.is_whole(rec)         # a retime: besides the shots it changed `end` and `identity`, which come back too
+        keys, conflicts = U.find_conflicts(kind, cur, before, after, later, whole=whole)
         if conflicts:
             raise U.conflict_error(conflicts, batch)
         new = U.restore_shots(cur, before, keys) if kind == "storyboard" else U.restore_picks(cur, before, keys)
+        if whole:
+            new = U.restore_parts(new, before, after)
         new = adapter.finish_undo(new, before)
         facts = adapter.facts(cur)
         problem = facts.document_problem(new)
@@ -120,7 +123,7 @@ def run_undo(adapters: dict, batch: str, body: Any, log: ChangeLog) -> dict:
         if bad:
             raise OpError("undo_conflict", "Batch %s cannot be undone: it would leave a new error in the document (%s)."
                           % (batch, str(bad[0].get("message"))[:200]), conflicts=[], issues=bad[:20])
-        changes = U.undo_changes(kind, new, before, after, keys, facts)
+        changes = U.undo_changes(kind, new, before, after, keys, facts, whole=whole)
         if adapter.rev_of(new) == rev:
             return _answer(rev, 1, None, False, [], after_issues, {"shots": [], "overlays": [], "assets": [], "refs": {}}, undo_of=batch)
         new_rev, written = adapter.write(new, after_issues)

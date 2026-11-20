@@ -8,7 +8,9 @@
     PUT  /api/projects/{pid}/title            {base_rev, text | option, actor?}  -> {rev, state, title, candidates, storyboard}
         A person or an operator sets the title: `text` (one line of at most 60 characters; the banned phrases are not looked for) or `option` (the number, from 1, of a
         candidate). Never stale afterwards. When the project has a storyboard the channel identity is applied again with the new title in the same request: its
-        revision changes, its approval stops standing, and `storyboard.sentence` says so. 409 `stale_revision` (`rev`), 422 `title_invalid` / `title_not_one_line` /
+        revision changes, its approval stops standing, and `storyboard.sentence` says so. While the storyboard does not sit where the voice puts its cards (the voice was made
+        again) the title is stored all the same, nothing is written to the storyboard and `storyboard` is `{code: "storyboard_off_voice", off_voice: true, sentence}`: the
+        storyboard takes the title when `storyboard.retime` has fitted it to the voice. 409 `stale_revision` (`rev`), 422 `title_invalid` / `title_not_one_line` /
         `title_too_long` / `title_option_unknown` / `title_choice_needed`.
 
 Mounted by `create_app` (it needs the app's own storyboard lock, revision and save path, as the identity route does); `create_app` also registers the function that applies a
@@ -22,6 +24,7 @@ from fastapi import APIRouter, Body
 
 from bti import auto as rule
 from bti import identity as ID
+from bti.draft import retime as RT
 from bti.engine import registry as R
 from bti.ops import things
 from bti.title import apply as tapply, job as tjob, store, texts, view
@@ -69,6 +72,10 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
             want = ID.chosen_style(saved, style) or cfg.default_style
             if not want or cfg.style(want) is None:
                 return None
+            off_voice = RT.project_off_voice(d, saved)          # the cards, the beat and the end are where an earlier voice put them: the engine would refuse the result
+            if off_voice:
+                return {"rev": compute_rev(saved), "changed": [], "approval_was_fresh": False, "off_voice": True, "code": "storyboard_off_voice",
+                        "problems": len(off_voice), "sentence": texts.storyboard_off_voice_sentence()}
             with ENGINE_LOCK:
                 timing = p.timing()
             meta: dict[str, Any] = {}

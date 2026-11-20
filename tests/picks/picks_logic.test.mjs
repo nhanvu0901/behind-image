@@ -184,3 +184,17 @@ test('what a written line is still missing is listed apart from the lines left w
   assert.deepEqual(L.autoMissing(result), ['Đã chọn được hình cho "Kênh đào" nhưng không tải về được.']);
   assert.deepEqual(L.autoMissing(null), []);
 });
+
+test('the second line of a result says how many web searches the run used, when the web search was on (fixes3)', () => {
+  const web = (w, more = {}) => L.autoDetailText({ pictures_imported: 9, regions_made: 6, clips: 2, ...more, web: w });
+  assert.equal(web({ on: true, max: 80, searches: 12, stopped: null }), '9 hình mới, 6 vùng chi tiết, 2 clip, tìm trên web 12/80 lần.');
+  assert.equal(web({ on: true, max: 80, searches: 0, stopped: null }, { pictures_imported: 0, regions_made: 0, clips: 0 }), 'tìm trên web 0/80 lần.');          // on, and nothing needed it: still said
+  assert.equal(web({ on: true, max: 80, searches: 80, stopped: null }), '9 hình mới, 6 vùng chi tiết, 2 clip, tìm trên web 80/80 lần.');
+  assert.equal(web({ on: true, searches: 3 }), '9 hình mới, 6 vùng chi tiết, 2 clip, tìm trên web 3 lần.');                                                    // no maximum known
+  assert.equal(web({ on: true, max: 80, searches: 'x' }), '9 hình mới, 6 vùng chi tiết, 2 clip, tìm trên web 0/80 lần.');                                      // junk counts as none
+  assert.equal(web({ on: false, max: 80, searches: 0 }), '9 hình mới, 6 vùng chi tiết, 2 clip.');                                                             // switch off: not a word
+  assert.equal(web(null), '9 hình mới, 6 vùng chi tiết, 2 clip.');
+  assert.equal(web(undefined), '9 hình mới, 6 vùng chi tiết, 2 clip.');
+  assert.equal(L.autoDetailText({ web: { on: false } }), '');
+  assert.equal(L.autoDetailText({ lines_kept: 3, web: { on: true, max: 20, searches: 4 } }), '3 đoạn dùng lại hình trước, tìm trên web 4/20 lần.');
+});

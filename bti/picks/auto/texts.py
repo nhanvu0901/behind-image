@@ -54,6 +54,10 @@ def why(code: str, *, what: str = "", source: str = "", seconds: float | None = 
         return "Nguồn %s đang giới hạn lượt tải, nên chưa tải được hình đã chọn cho %s. Thử lại sau %s." % (source or "ảnh", w, minutes_words(seconds))
     if code == "time_up":
         return "Hết thời gian của lần chạy này nên chưa tìm được %s. Chạy lại để làm tiếp." % w
+    if code == "web_budget":
+        return "Đã hết lượt tìm trên web của lần chạy này nên chưa tìm lại được %s. Chạy lại để tìm tiếp." % w
+    if code == "web_no_key":
+        return "Chưa có khóa để tìm trên web nên chưa tìm được %s ngoài các nguồn miễn phí. Thêm khóa You.com vào máy chủ rồi chạy lại." % w
     if code == "write_refused":
         return "Không ghi được hình cho %s%s." % (w, (": " + detail) if detail else "")
     if code == "box_dropped":

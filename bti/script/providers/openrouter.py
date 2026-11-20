@@ -22,8 +22,8 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 300, on_pro
     body = {"model": spec["model"], "messages": msgs, "temperature": float(spec.get("temperature", 1.0))}
     try:
         with http_client(timeout) as c:
-            r = c.post(URL, json=body, headers={"Authorization": f"Bearer {key}", "content-type": "application/json",
-                                                "X-Title": "behind-the-image"})
+            # no `X-Title` / `HTTP-Referer` (they name the calling app): the owner's rule is that a request names neither the project nor a person
+            r = c.post(URL, json=body, headers={"Authorization": f"Bearer {key}", "content-type": "application/json"})
     except httpx.TimeoutException:
         raise ProviderError("timeout", f"no answer within {int(timeout)} seconds")
     except httpx.HTTPError as e:

@@ -70,25 +70,30 @@ def make_plan(ws, first_run):
     out = []
     for i, bid in enumerate(p["targets"]):
         n = lines[bid]["no"]
+        extra = {}                                           # fixes3: every line says its `kinds`, and an `outside` line a `fallback` (the plan check refuses a plan without them)
         if n == 1:
-            show, why = [{"type": "whole"}], "Mở bằng cả bức tranh để người xem thấy cả căn phòng."
+            show, why, kinds = [{"type": "whole"}], "Mở bằng cả bức tranh để người xem thấy cả căn phòng.", ["whole"]
         elif n == 2:
-            show, why = [{"type": "detail", "region": "MIRROR"}], "Lời dẫn nói về tấm gương: đi vào đúng chi tiết đó."
+            show, why, kinds = [{"type": "detail", "region": "MIRROR"}], "Lời dẫn nói về tấm gương: đi vào đúng chi tiết đó.", ["detail"]
         elif n == 3:
+            kinds, extra = ["outside"], {"fallback": {"type": "whole"}}
             if first_run:                                    # nothing can fill this one: it stays without a picture and the owner is told why
-                show = [{"type": "context", "search": "Krakatoa 1883 ash cloud", "alt": ["Krakatoa eruption painting"], "kind": "work", "what": "Tro núi lửa Krakatoa"}]
+                show = [{"type": "context", "search": "Krakatoa 1883 ash cloud", "alt": ["Krakatoa eruption painting"], "kind": "work", "entity": "Krakatoa", "period": "then",
+                         "what": "Tro núi lửa Krakatoa"}]
                 why = "Nói về tro núi lửa: cần một hình về vụ phun trào Krakatoa."
             else:
-                show = [{"type": "context", "search": "Jan van Eyck portrait", "alt": [], "kind": "portrait", "what": "Chân dung họa sĩ"}]
+                show = [{"type": "context", "search": "Jan van Eyck portrait", "alt": [], "kind": "portrait", "entity": "Jan van Eyck", "period": "then", "what": "Chân dung họa sĩ"}]
                 why = "Nói về họa sĩ, không phải về bức tranh: cần chân dung của ông."
         elif n == 4:
-            show, why = [{"type": "map", "place": "Bruges, Belgium", "what": "Bản đồ Bruges"}, {"type": "clip", "search": "canal boat", "what": "Kênh đào", "seconds": 6}], \
+            show, why = [{"type": "map", "places": ["Bruges, Belgium", "Antwerp, Belgium"], "what": "Bản đồ Bruges và Antwerp"},
+                         {"type": "clip", "search": "canal boat", "what": "Kênh đào", "seconds": 6}], \
                 "Câu này nói bức tranh được vẽ ở đâu: một bản đồ cho thấy vị trí, rồi một đoạn phim kênh đào."
+            kinds, extra = ["outside", "journey"], {"fallback": {"type": "whole"}}
         elif n == 5:
-            show, why = [{"type": "detail", "region": "HEAD"}, {"type": "whole"}], "Khuôn mặt người đàn ông, rồi lùi ra cả bức tranh."
+            show, why, kinds = [{"type": "detail", "region": "HEAD"}, {"type": "whole"}], "Khuôn mặt người đàn ông, rồi lùi ra cả bức tranh.", ["detail", "whole"]
         else:
-            show, why = [], "Vẫn cùng ý với đoạn trước, không cần hình mới."
-        out.append({"beat": bid, "reason": why, "show": show})
+            show, why, kinds = [], "Vẫn cùng ý với đoạn trước, không cần hình mới.", ["idea"]
+        out.append({"beat": bid, "reason": why, "kinds": kinds, "show": show, **extra})
     return {"schema": shapes.PLAN_SCHEMA, "regions": regions, "lines": out}
 
 

@@ -1,6 +1,9 @@
-// The video's title on the script page ("Kịch bản"): one line under the toolbar with the title in use, who chose it and two buttons, and a dialog with the candidates the agent
-// proposed (click one to choose it), a field to type your own title and a box to ask the agent again with a note. Mounted by views/script.js into #title-host:
-//   const box = mountTitlePanel(host, { pid, scope, narrationApproved: () => bool });
+// The video's title on the script page ("Kịch bản") and on the storyboard page ("Dựng hình"): one line under the toolbar with the title in use, who chose it and two buttons, and a
+// dialog with the candidates the agent proposed (click one to choose it), a field to type your own title and a box to ask the agent again with a note. Mounted by views/script.js into
+// #title-host and by views/storyboard.js into the host of its title row (one module, no copy):
+//   const box = mountTitlePanel(host, { pid, scope, narrationApproved: () => bool, takeIn: async () => {} });
+//   `takeIn` (the storyboard page): called after a title was set or written and the answer says the saved storyboard changed (it took the title), so that the page loads the new one.
+//   While the storyboard is off the voice the answer says so (`storyboard.off_voice`): the title is stored, the strip says the storyboard takes it after "Khớp lại với giọng đọc".
 //   box.refresh()   read the title again (the page calls it when the narration was approved)      box.repaint()   draw again from what is known (the page's chrome changed)
 // The routes are GET/PUT /api/projects/{pid}/title and POST .../title/generate (a long job of kind `title`, followed at GET /api/longjobs/{id}); the decisions are in
 // titlelogic.js (pure, tested); the words are in labels.js (TITLE_LABELS) and errmsg.js (STAGE_CODES.title). Nothing the owner reads comes from the server as it is.
@@ -13,12 +16,12 @@ import * as TL from './titlelogic.js';
 const STYLE_ID = 'title-panel-style';
 const CSS = `
 .v-scr .title-host { flex: 1 0 100%; }
-.v-scr .title-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 3px 0 1px; }
-.v-scr .title-strip .name { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
-.v-scr .title-strip .text { font-weight: 600; }
-.v-scr .title-strip .text.none { font-weight: 400; color: var(--muted); }
-.v-scr .title-strip .meta { color: var(--muted); font-size: 12px; }
-.v-scr .title-strip progress { width: 120px; }
+.title-strip { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 3px 0 1px; min-width: 0; }
+.title-strip .name { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
+.title-strip .text { font-weight: 600; }
+.title-strip .text.none { font-weight: 400; color: var(--muted); }
+.title-strip .meta { color: var(--muted); font-size: 12px; }
+.title-strip progress { width: 120px; }
 .title-dlg .body { max-width: 720px; }
 .title-dlg h4 { margin: 14px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
 .title-dlg .current { font-size: 16px; font-weight: 600; margin: 2px 0; }
@@ -44,7 +47,7 @@ function ensureStyle() {
   document.head.append(st);
 }
 
-export function mountTitlePanel(host, { pid, scope, narrationApproved = () => true }) {
+export function mountTitlePanel(host, { pid, scope, narrationApproved = () => true, takeIn = null }) {
   ensureStyle();
   const P = `/api/projects/${encodeURIComponent(pid)}`;
   let dead = false, data = null, job = null, jobId = null, busy = false, polling = false, dlg = null, draft = '', note = '';
@@ -78,6 +81,11 @@ export function mountTitlePanel(host, { pid, scope, narrationApproved = () => tr
   }
 
   // ---------------------------------------------------------------- the actions
+  /** The server applied the title to the saved storyboard: a page that holds the storyboard (the storyboard page) takes the new one in. */
+  async function takeStoryboard(res) {
+    if (!takeIn || !TL.storyboardChanged(res)) return;
+    try { await takeIn(); } catch { /* takeIn reports its own errors */ }
+  }
   async function pick(n) {
     if (busy) return;
     busy = true; paint();
@@ -87,6 +95,7 @@ export function mountTitlePanel(host, { pid, scope, narrationApproved = () => tr
       toast(text, kind, 6500);
       draft = '';
       await load();
+      await takeStoryboard(res);
     } catch (e) { errorToast(e, L.saveFail); if (e?.status === 409) await load(); }
     busy = false; paint();
   }
@@ -101,6 +110,7 @@ export function mountTitlePanel(host, { pid, scope, narrationApproved = () => tr
       toast(text, kind, 6500);
       draft = '';
       await load();
+      await takeStoryboard(res);
     } catch (e) { errorToast(e, L.saveFail); if (e?.status === 409) await load(); }
     busy = false; paint();
   }
@@ -130,7 +140,7 @@ export function mountTitlePanel(host, { pid, scope, narrationApproved = () => tr
     job = j;
     if (TL.jobRunning(j)) { paint(); return; }
     jobId = null; job = null;
-    if (j.state === 'done') { const [text, kind] = TL.doneToast(j); toast(text, kind, 7000); }
+    if (j.state === 'done') { const [text, kind] = TL.doneToast(j); toast(text, kind, 7000); await takeStoryboard(j.result); }
     else if (j.state === 'cancelled') toast(L.cancelled, '', 4000);
     else toast(L.jobFail + stageJobErrorText('title', j).text, 'err', 9000);
     await load();
