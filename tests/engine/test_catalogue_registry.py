@@ -173,8 +173,8 @@ def test_the_index_by_kind_names_every_kind_and_lists_a_technique_under_each_kin
     assert "Choosing by intent" not in md and "SHORTS ONLY" not in md
 
 
-def test_the_document_says_a_hidden_technique_is_an_error_and_that_none_is_a_fine_number_of_devices(md):
-    assert "technique_not_offered" in md and "none is fine" in md and "Every beat of `inputs/beats.json` has `kinds`" in md
+def test_the_document_says_hidden_techniques_are_errors_and_devices_follow_kinds(md):
+    assert "technique_not_offered" in md and "Use a device on every beat whose kinds call for it" in md and "Every beat of `inputs/beats.json` has `kinds`" in md
 
 
 def test_the_program_section_is_short_and_marks_every_entry_program_only(md):

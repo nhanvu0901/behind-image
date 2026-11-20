@@ -22,6 +22,8 @@ A problem is `{code, shot, chapter, message, repair}`: `repair` says whether `re
     card_count        the number of chapter cards is not the number of chapters that have one (reported, never repaired)
     retime_blocked    (only in the report of `retime`) the moves would put two shots out of order: nothing was moved
     end_off           the document's `end` is not what the compiler writes for this timing (the duration of the voice)
+    overlay_off_shot  a explicitly timed overlay extends past its shot
+    shot_too_short    a shot is shorter than the engine minimum (reported, never repaired)
 
 The LENGTH of the beat inside its silence is not a problem: every video made before the beat grew has one of 2.9 s. A timing that was not written by the voice
 code (no chapter has a `lead`: the reference and lab projects) says nothing about where the voice puts anything: `off_voice` is empty for it.
@@ -30,7 +32,7 @@ code (no chapter has a `lead`: the reference and lab projects) says nothing abou
 is off, sets `end`, then applies the storyboard's identity style again (`bti.identity.apply_identity`: the opening overlays on the opening shot, the
 beat's texts and camera, the chapter marks). The video's title (`video_title`: what the project's title document holds, which wins over the storyboard's own
 `identity.video_title`, as it does in a full compile) is written into `identity` first, so that the beat shows it as soon as the storyboard fits the voice (a
-title that was set while the storyboard was off the voice could not be written then). It touches no shot the model or the owner wrote, except the start of the shot after an inserted or
+title that was set while the storyboard was off the voice could not be written then). It fits explicitly timed overlays that extend past the shot, and touches the start of the shot after an inserted or
 removed opening shot; a locked shot is left and reported; what it cannot decide (the number of cards) is reported and left. The same call twice
 changes nothing the second time.
 """
@@ -161,12 +163,42 @@ def _fmt(t) -> str:
     return "%.2f s" % t if _num(t) else "?"
 
 
+def _overlay_times(f: _Fit, overlay: dict) -> tuple[float, float] | None:
+    try:
+        start = f.tm.resolve(overlay["start"])
+        if isinstance(overlay.get("end"), dict):
+            end = f.tm.resolve(overlay["end"])
+        elif _num(overlay.get("dur")):
+            end = start + overlay["dur"]
+        else:
+            return None
+        return start, end
+    except (AnchorError, KeyError, TypeError):
+        return None
+
+
 def _check(f: _Fit) -> list:
     out: list = []
     shots = f.shots
-    if not shots or not f.judges:
+    if not shots:
         return out
     sid = lambda i: shots[i].get("id") if isinstance(shots[i], dict) else None          # noqa: E731
+    from bti.engine.storyboard import MIN_SHOT_S
+    for i, shot in enumerate(shots):
+        if f.t0[i] is not None and f.t1[i] is not None and f.t1[i] - f.t0[i] < MIN_SHOT_S - 1e-6:
+            out.append(_problem("shot_too_short", sid(i), None, "shot lasts %.2f s, less than %.2f s" % (f.t1[i] - f.t0[i], MIN_SHOT_S), repair=False))
+        if not isinstance(shot, dict) or f.t0[i] is None or f.t1[i] is None:
+            continue
+        for overlay in shot.get("overlays") or []:
+            times = _overlay_times(f, overlay) if isinstance(overlay, dict) else None
+            if times is None:
+                continue
+            start, end = times
+            if end > f.t1[i] + 1e-6:
+                out.append(_problem("overlay_off_shot", sid(i), None,
+                                    "overlay %s ends outside its shot" % overlay.get("id"), locked=bool(shot.get("locked"))))
+    if not f.judges:
+        return out
     # the first shot starts at 0; the opening shot is there exactly when the first word starts at 3.3 s or later
     first_ok = f.t0[0] is not None and abs(f.t0[0]) <= TOL
     if not first_ok and f.t0[0] is not None:
@@ -232,8 +264,8 @@ def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defa
     leaves the title the storyboard has."""
     sb = copy.deepcopy(storyboard)
     if not isinstance(sb.get("shots"), list):
-        return sb, {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": [], "video_title": None}
-    report: dict = {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": [], "video_title": None}
+        return sb, {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": [], "video_title": None, "overlays": []}
+    report: dict = {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": [], "video_title": None, "overlays": []}
     f = _Fit(sb, timing, style, meta)
     report["before"] = [p["code"] for p in _check(f)]
 
@@ -307,7 +339,7 @@ def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defa
     if any(b <= a + 1e-6 for a, b in zip(starts, starts[1:])):
         orig = copy.deepcopy(storyboard)
         left = _check(_Fit(orig, timing, style, meta)) + [_problem("retime_blocked", None, None, "moving the cards and the beat would put two shots out of order: nothing was moved", repair=False)]
-        return orig, {"inserted": [], "removed": [], "moved": [], "end": None, "left": left, "identity": None, "before": report["before"], "video_title": None}
+        return orig, {"inserted": [], "removed": [], "moved": [], "end": None, "left": left, "identity": None, "before": report["before"], "video_title": None, "overlays": []}
     # 5. the identity style again: the opening overlays on the opening shot, the beat's texts and camera, the marks (and the video's title, which the beat shows)
     if f.style_id:
         if video_title and ID.video_title_of(sb) != video_title:
@@ -318,6 +350,54 @@ def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defa
             meta2["main_asset"] = f.main
         sb, rep = ID.apply_identity(sb, f.style_id, style, normalized(timing), meta2, defaults=defaults)
         report["identity"] = rep
+    # Fit timed overlays only after all structural and identity changes have settled.
+    f = _Fit(sb, timing, style, meta)
+    from bti.engine import registry as R
+    try:
+        bundle = R.load_bundle(sb.get("style") or "gae")
+    except Exception:
+        bundle = None
+    for i, shot in enumerate(f.shots):
+        if not isinstance(shot, dict) or shot.get("locked") or f.t0[i] is None or f.t1[i] is None:
+            continue
+        overlays = shot.get("overlays")
+        if not isinstance(overlays, list):
+            continue
+        kept = []
+        for overlay in overlays:
+            times = _overlay_times(f, overlay) if isinstance(overlay, dict) else None
+            if times is None:
+                kept.append(overlay)
+                continue
+            start, end = times
+            if end <= f.t1[i] + 1e-6:
+                kept.append(overlay)
+                continue
+            old = copy.deepcopy(overlay)
+            spec = bundle.spec(overlay.get("technique")) if bundle else None
+            minimum = (spec or {}).get("timing", {}).get("min_s", 1.0)
+            minimum = min(1.0, minimum) if _num(minimum) and minimum > 0 else 1.0
+            duration = f.t1[i] - start
+            if duration >= minimum - 1e-6:
+                if isinstance(overlay.get("end"), dict):
+                    overlay["end"] = {"t": round(f.t1[i], 6)}
+                else:
+                    overlay["dur"] = round(duration, 6)
+                what = "shortened"
+            elif f.t1[i] - f.t0[i] >= minimum - 1e-6:
+                overlay["start"] = {"t": round(f.t1[i] - minimum, 6)}
+                if isinstance(overlay.get("end"), dict):
+                    overlay["end"] = {"t": round(f.t1[i], 6)}
+                else:
+                    overlay["dur"] = round(minimum, 6)
+                what = "moved"
+            else:
+                what = "removed"
+            if what != "removed":
+                kept.append(overlay)
+            report["overlays"].append({"shot": shot.get("id"), "overlay": old.get("id"), "what": what,
+                                       "from": old, "to": copy.deepcopy(overlay) if what != "removed" else None})
+        shot["overlays"] = kept
     f = _Fit(sb, timing, style, meta)
     report["left"] = _check(f)
     return sb, report

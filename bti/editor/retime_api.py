@@ -54,6 +54,8 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
             return "Cảnh %s: thêm cảnh mở đầu cho cả bức tranh" % sid
         if sid in report["removed"]:
             return "Cảnh %s: bỏ cảnh mở đầu (giọng đọc bắt đầu sớm)" % sid
+        if any(o["shot"] == sid for o in report["overlays"]):
+            return "Cảnh %s: điều chỉnh lớp phủ cho khớp thời lượng" % sid
         if any(m["shot"] == sid for m in report["moved"]):
             return "Cảnh %s: dời cho khớp với giọng đọc" % sid
         return "Cảnh %s: làm lại phần mở đầu và tên kênh cho khớp" % sid
@@ -103,7 +105,10 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
             changed = RT.changed_ids(saved, after)
             try:                                        # one batch in the change log, like a batch of typed operations
                 record = {"doc": "storyboard", "time": now_iso(), "actor": actor, "note": NOTE, "ops": [{"op": "retime"}], "applied": 1,
-                          "changes": [{"target": {"shot": sid}, "time": None, "what": what_of(sid, report)} for sid in changed],
+                          "changes": ([{"target": {"shot": sid}, "time": None, "what": what_of(sid, report)} for sid in changed]
+                                      + [{"target": {"shot": o["shot"], "overlay": o["overlay"]}, "time": None,
+                                          "what": "Cảnh %s, lớp phủ %s: %s" % (o["shot"], o["overlay"], {"shortened": "rút ngắn", "moved": "dời sớm", "removed": "đã bỏ"}[o["what"]]),
+                                          "from": o["from"], "to": o["to"]} for o in report["overlays"]]),
                           "created": {"shots": list(report["inserted"]), "overlays": [], "assets": [], "refs": {}},
                           "rev_before": cur, "rev_after": done["rev"], "touched": things.changed_keys("storyboard", saved, after),
                           "undo_of": None, "scope": None}

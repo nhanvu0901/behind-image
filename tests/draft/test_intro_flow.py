@@ -237,7 +237,7 @@ def test_an_old_layout_storyboard_is_clean_and_retime_after_a_lead_of_5_s_insert
     first = sb["shots"][0]
     for o in first["overlays"]:
         o["dur"] = 9.0 if o["technique"] == "ID-OPEN-01" else 4.5
-    assert RT.off_voice(sb, old_t, style_doc()) == []                      # the length of the beat inside its silence is not a problem
+    assert {p["code"] for p in RT.off_voice(sb, old_t, style_doc())} <= {"overlay_off_shot"}  # the old identity overlays exceed the first shot
     assert not [x for x in SB.validate(sb, tm, brand03) if x["code"] == "identity_technique_mismatch"]      # ID-BRAND-01 under raking is the earlier form of the style
     new_t = intro_timing(5.0, 10.2)                                        # the voice is assembled again with the new silences
     codes = [p["code"] for p in RT.off_voice(sb, new_t, style_doc())]

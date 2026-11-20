@@ -170,7 +170,7 @@ def generate(bundle: R.StyleBundle) -> str:
            "Every beat of `inputs/beats.json` has `kinds`: one or two words that say what its sentence does. The pictures step decided them: read them, do not guess them "
            "(for a beat without `kinds`, decide the kind yourself with the table of TASK.md). Take the techniques of the kinds of the beat from the list below. "
            "Each technique says when to use it, what it needs and when never: use one only where its text fits the sentence, never as decoration. "
-           "The right number of devices in a video is the number of sentences that call for one, and none is fine; a camera move serves most sentences. "
+           "Use a device on every beat whose kinds call for it and whose needs can be met; never use one when its kinds do not call for it. A camera move serves all other beats. "
            "These are all the techniques you are offered: the registry holds more, hidden from you, and writing one is the error `technique_not_offered` "
            "(its message says what to use instead).", "",
            "## Choosing by the kind of line", ""]
