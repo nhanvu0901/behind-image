@@ -32,3 +32,13 @@ def storyboard_sentence(changed: int, approval_was_fresh: bool) -> str:
     if changed and approval_was_fresh:
         s += " Storyboard đã đổi nên cần được duyệt lại."
     return s
+
+
+STORYBOARD_OFF_VOICE = ("Storyboard đang lệch với giọng đọc (giọng đọc đã được làm lại) nên chưa nhận tựa này. Bấm \"Khớp lại với giọng đọc\" ở bước Dựng hình: "
+                        "storyboard sẽ lấy tựa này ngay khi khớp xong.")
+
+
+def storyboard_off_voice_sentence() -> str:
+    """What the answer says when a title is set or written while the storyboard does not sit where the voice puts its cards (`storyboard_off_voice`): the title is stored
+    (the title document; the page's own sentence "Đã lưu tựa video." comes before this one), the storyboard takes it when `storyboard.retime` has fitted it to the voice."""
+    return STORYBOARD_OFF_VOICE

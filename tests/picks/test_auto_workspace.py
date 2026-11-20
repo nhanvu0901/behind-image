@@ -10,7 +10,7 @@ import pytest
 from auto_helpers import CHOICE, PLAN, FakeAgent, default_sources, fake_thumb, install_sources, make_auto_project, plan
 
 from bti.picks import doc
-from bti.picks.auto import images, inputs as ainputs, search as asearch, session, shapes, store, workspace
+from bti.picks.auto import images, inputs as ainputs, job, search as asearch, shapes, store, workspace
 
 REPO = Path(__file__).resolve().parents[2]
 
@@ -28,7 +28,7 @@ def load(pdir, **kw):
 
 def build(pdir, tmp_path, name="ws", **kw):
     inp = load(pdir, **kw)
-    return inp, workspace.build_plan(inp, session.PLAN_LIMITS, root=tmp_path / name)
+    return inp, workspace.build_plan(inp, job.PLAN_LIMITS, root=tmp_path / name)
 
 
 def helper(ws, *args):
@@ -91,7 +91,7 @@ def test_the_briefing_is_filled_in_and_says_what_a_good_choice_is(pdir, tmp_path
     assert "The owner's request" not in task                                                          # no note: the block is gone
     ext = ".cmd" if os.name == "nt" else ""
     check = ".\\check.cmd" if os.name == "nt" else "./check"
-    assert check in task and "The Test Painting" in task and "A. Painter" in task and "**80 steps**" in task and "**20 minutes**" in task
+    assert check in task and "The Test Painting" in task and "A. Painter" in task and "**120 steps**" in task and "**30 minutes**" in task
     for rule in ("A line about the painting shows the part it speaks of", "A line about something outside the painting shows something other than the main painting",
                  "The same framing does not stay on screen for more than about half a minute", "Ask for the work itself, not for pictures about it",
                  "A map only when the line is about *where*", "Nothing invented", "at most one clip per chapter", "4 to 10 seconds"):
@@ -102,7 +102,7 @@ def test_the_choose_briefing_says_what_a_good_choice_is(pdir, tmp_path):
     inp = load(pdir)
     search = {"wants": {}, "books": []}
     p = shapes.check_plan(plan(), inp.plan_ctx()).value
-    ws, ctx = workspace.build_choose(inp, p, search, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    ws, ctx = workspace.build_choose(inp, p, search, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in task
     for rule in ("Does it show the thing itself?", "Prefer a public-domain reproduction of the named work", "over illustrations or pictures about it",
@@ -185,7 +185,7 @@ def test_the_choose_folder_has_a_numbered_sheet_per_want_a_crop_per_box_and_the_
                       b0004_1=[{**cand(pdir, 1, "m"), "thumb": None, "media": "image", "title": "Bản đồ Bruges"}])
     books = [{"n": 1, "label": "Payne, ảnh trang 23", "source_id": "payne_gae/img/850", "thumb": pdir / fake_thumb(pdir, {"source": "book", "source_id": "payne_gae/img/850"})},
              {"n": 2, "label": "Payne, ảnh trang 24", "source_id": "payne_gae/img/851", "thumb": None}]
-    ws, cctx = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=books, root=tmp_path / "c")
+    ws, cctx = workspace.build_choose(inp, p, st, job.CHOOSE_LIMITS, books=books, root=tmp_path / "c")
     root = ws.root
     assert cctx.wants == {"b0003.1": 3, "b0004.1": 1} and cctx.books == 2 and cctx.regions == ["MIRROR", "HEAD"]
     w = json.loads((root / "inputs" / "wants.json").read_text(encoding="utf-8"))
@@ -233,7 +233,7 @@ def test_the_main_painting_must_be_readable(pdir, tmp_path, monkeypatch):
         raise images.ImageError("cannot be read")
     monkeypatch.setattr(images, "save_scaled", broken)
     with pytest.raises(workspace.WorkspaceError) as e:
-        workspace.build_plan(inp, session.PLAN_LIMITS, root=tmp_path / "ws")
+        workspace.build_plan(inp, job.PLAN_LIMITS, root=tmp_path / "ws")
     assert e.value.code == "main_asset_unreadable"
     (pdir / "media" / "main.png").unlink()
     with pytest.raises(ainputs.AutoError) as e:
@@ -265,7 +265,7 @@ def test_each_candidate_shows_its_page_title_its_site_and_its_snippet_and_the_se
              cand(pdir, 9, "tooMany"), cand(pdir, 10, "tooMany2")]
     st = search_state(pdir, wants, b0003_1=many)
     st["wants"]["b0003.1"].update({"entity": "Philip the Good", "period": "then"})
-    ws, cctx = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    ws, cctx = workspace.build_choose(inp, p, st, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
     assert cctx.wants == {"b0003.1": 8}                                                         # the numbers the session may answer are 1..8
     row = json.loads((ws.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
     assert [c["n"] for c in row["candidates"]] == list(range(1, 9))
@@ -274,7 +274,7 @@ def test_each_candidate_shows_its_page_title_its_site_and_its_snippet_and_the_se
     assert row["entity"] == "Philip the Good" and row["period"] == "then" and "first_look" not in row and isinstance(row.get("kinds", []), list) and not row.get("places")      # the plan's kinds travel with the want
     plain = cand(pdir, 1, "plain")
     st2 = search_state(pdir, wants, b0003_1=[plain])
-    ws2, _ = workspace.build_choose(inp, p, st2, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c2")
+    ws2, _ = workspace.build_choose(inp, p, st2, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c2")
     r2 = json.loads((ws2.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
     assert set(r2["candidates"][0]) == {"n", "title", "source", "author", "licence", "flag", "width", "height", "page_url", "media"}          # a candidate without the page's words is shown as before
 
@@ -282,7 +282,7 @@ def test_each_candidate_shows_its_page_title_its_site_and_its_snippet_and_the_se
 def test_the_choosing_briefing_has_the_new_rules_and_every_old_one(pdir, tmp_path):
     inp = load(pdir)
     p = shapes.check_plan(plan(), inp.plan_ctx()).value
-    ws, _ = workspace.build_choose(inp, p, {"wants": {}, "books": []}, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    ws, _ = workspace.build_choose(inp, p, {"wants": {}, "books": []}, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in task and "second look" not in task
     for rule in ("A line about the past wants a picture made in that period", "a painting, a drawing, a print, a manuscript page, a coin, a seal, an object in a museum",
@@ -298,7 +298,7 @@ def test_the_second_look_folder_holds_only_the_new_candidates_no_boxes_and_what_
     wants = shapes.wants_of(p)
     st = search_state(pdir, wants, b0003_1=[cand(pdir, 1, "new1", source="web", page_title="P", site="s.example.org"), cand(pdir, 2, "new2")])
     st["wants"]["b0003.1"]["earlier"] = "Cả sáu hình đều là người khác."
-    ws, cctx = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c", second=True)
+    ws, cctx = workspace.build_choose(inp, p, st, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c", second=True)
     assert cctx.wants == {"b0003.1": 2} and cctx.regions == [] and cctx.books == 0
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in task and "This is a second look" in task and "ONLY the new candidates" in task and "`first_look`" in task
@@ -315,6 +315,6 @@ def test_the_row_of_a_want_carries_what_the_line_does_and_the_places_of_a_journe
     p = shapes.check_plan(PLAN, inp.plan_ctx()).value
     st = search_state(pdir, shapes.wants_of(p), b0003_1=[cand(pdir, 1, "a")])
     st["wants"]["b0003.1"].update({"kinds": ["outside"], "places": ["Lyon, France", "Lübeck, Germany"]})
-    ws, _ = workspace.build_choose(inp, p, st, session.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
+    ws, _ = workspace.build_choose(inp, p, st, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
     row = json.loads((ws.root / "inputs" / "wants.json").read_text(encoding="utf-8"))["wants"][0]
     assert row["kinds"] == ["outside"] and row["places"] == ["Lyon, France", "Lübeck, Germany"]

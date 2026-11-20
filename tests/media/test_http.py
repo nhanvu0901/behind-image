@@ -225,9 +225,10 @@ def test_the_user_agent_names_the_client_and_nothing_personal():
 
     open_url("https://example.org/a", opener=opener)
     ua = seen["user-agent"]
-    assert ua == http.USER_AGENT and ua.startswith("behind-the-image-media/")
+    assert ua == http.USER_AGENT and ua.startswith("ImageResearch/")
     low = ua.lower()
     assert "@" not in ua and "http" not in low and "nhanvu" not in low and "mailto" not in low
+    assert "behind" not in low and "bti" not in low and "github" not in low                      # nothing that names the project or its repository
 
 
 def test_error_messages_never_carry_a_key_from_the_query():

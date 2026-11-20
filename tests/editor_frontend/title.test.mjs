@@ -172,3 +172,52 @@ test('the title files exist and the page script mounts the box', () => {
   assert.match(js('views/script.js'), /mountTitlePanel/); assert.match(js('views/script.js'), /id="title-host"/);
   assert.match(js('titlepanel.js'), /\/title\/generate/); assert.match(js('titlepanel.js'), /TL\.pickBody/);
 });
+
+// ---------------------------------------------------------------- fixes3: the same strip on the storyboard page, and what it says while the storyboard is off the voice
+const offVoice = (over = {}) => answer({ storyboard: { exists: true, title: null, same: false, off_voice: true }, ...over });
+
+test('while the storyboard is off the voice the strip says so (and what to press) instead of failing, whatever else it says', () => {
+  const v = TL.stripView(offVoice(), { narrationApproved: true });
+  assert.equal(v.offVoice, true);
+  assert.equal(v.note, L.offVoice);
+  assert.match(L.offVoice, /Khớp lại với giọng đọc/); assert.ok(isVietnamese(L.offVoice));
+  assert.equal(TL.stripView(offVoice({ state: 'stale', stale: true }), { narrationApproved: true }).note, `${L.stale} ${L.offVoice}`);          // both reasons, one after the other
+  assert.equal(TL.stripView(offVoice({ state: 'none', title: null }), { narrationApproved: true }).note, `${L.noneHint} ${L.offVoice}`);
+  assert.equal(TL.stripView(offVoice(), { narrationApproved: true, busy: true }).note, L.working);                                             // a running job: its own line only
+  const ok = TL.stripView(answer({ storyboard: { exists: true, title: TITLE, same: true, off_voice: false } }), { narrationApproved: true });
+  assert.equal(ok.offVoice, false); assert.equal(ok.note, '');
+  assert.equal(TL.stripView(answer(), { narrationApproved: true }).offVoice, false);                                                           // an older answer without the key: not off
+  assert.equal(TL.stripView(null, {}).offVoice, false);
+});
+
+test('a title stored while the storyboard is off the voice is a warning with the server\'s sentence, and a changed storyboard is taken in', () => {
+  const sentence = 'Storyboard đang lệch với giọng đọc (giọng đọc đã được làm lại) nên chưa nhận tựa này. Bấm "Khớp lại với giọng đọc" ở bước Dựng hình: storyboard sẽ lấy tựa này ngay khi khớp xong.';
+  const sb = { rev: 'r', changed: [], approval_was_fresh: false, off_voice: true, code: 'storyboard_off_voice', sentence };
+  assert.deepEqual(TL.savedToast({ storyboard: sb }), [`${L.saved} ${sentence}`, 'warn']);
+  assert.deepEqual(TL.doneToast({ result: { title: TITLE, storyboard: sb } }), [`${L.generated(TITLE)} ${sentence}`, 'warn']);
+  assert.equal(TL.savedToast({ storyboard: { sentence: 'S.' } })[1], 'ok');
+  assert.equal(TL.storyboardChanged({ storyboard: sb }), false);                                    // nothing was written: no reason to load the storyboard again
+  assert.equal(TL.storyboardChanged({ storyboard: { changed: ['s0007'] } }), true);                 // the answer of PUT .../title
+  assert.equal(TL.storyboardChanged({ title: TITLE, storyboard: { changed: ['s0007'] } }), true);   // the result of the title job has the same shape
+  for (const none of [null, {}, { storyboard: null }, { storyboard: { changed: [] } }, { storyboard: { changed: 'x' } }]) assert.equal(TL.storyboardChanged(none), false);
+  assert.ok(isVietnamese(L.tookInMerged) && L.tookInFail.length > 0);
+});
+
+test('the storyboard page mounts the very module of the script page (no second implementation), in a row both faces of the page show', () => {
+  const js = (f) => fs.readFileSync(path.join(ROOT, 'bti/editor/static/js', f), 'utf8');
+  const sbp = js('views/storyboard.js');
+  assert.match(sbp, /import \{ mountTitlePanel \} from '\.\.\/titlepanel\.js'/);
+  assert.match(sbp, /id="title-host"/); assert.match(sbp, /mountTitlePanel\(titleBox, \{ pid: ctx\.pid, scope, takeIn:/);
+  assert.match(sbp, /<div class="tbar" id="tbar">/);
+  const files = [];
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { if (f.isDirectory()) { if (f.name !== 'vendor') walk(path.join(d, f.name)); } else if (f.name.endsWith('.js')) files.push(path.join(d, f.name)); } };
+  walk(path.join(ROOT, 'bti/editor/static/js'));
+  const holders = files.filter((f) => /class: 'title-strip'|api\.(get|put|post)\([^)]*\/title/.test(fs.readFileSync(f, 'utf8'))).map((f) => path.relative(path.join(ROOT, 'bti/editor/static/js'), f));
+  assert.deepEqual(holders.sort(), ['titlepanel.js']);                                                // the strip, and the calls to the title routes, are written once
+  const css = fs.readFileSync(path.join(ROOT, 'bti/editor/static/css/edit.css'), 'utf8');
+  assert.match(css, /#tbar \{ grid-row: 2; \}/);                                                      // its own row, so that the rows of the others do not move
+  assert.match(css, /\.edit-root \{ display: grid; grid-template-rows: 44px auto minmax\(0, 1fr\) 300px;/);
+  assert.match(css, /\.edit-root\[data-mode="simple"\] \{ grid-template-rows: auto auto minmax\(0, 1fr\); \}/);
+  assert.doesNotMatch(css.split('@media (max-height: 800px)')[1].split('}')[0], /44px minmax\(0, 1fr\) 160px/);          // the short-screen rule has the row too
+  assert.equal(TL.stripView(answer(), { narrationApproved: true }).open.visible, true);
+});

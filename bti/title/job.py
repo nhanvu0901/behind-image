@@ -30,6 +30,7 @@ KIND = "title"
 ACTION = "generate"
 ROLE = "script.title"
 LIMITS = session.Limits(minutes=10, steps=40, repairs=1)
+HELPERS = ("check",)                           # the work folder has the `check` helper and no `crop` (that one is the pictures job's)
 EST_SECONDS = 90
 KEEP_RUNS = 5
 
@@ -103,7 +104,8 @@ def make_parts(pdir: Path, inp: tinputs.Inputs, res, *, actor: str | None, note:
         try:
             out = session.run_session(ws.root, model=res.model, project_dir=pdir, ctx=ctx, label=texts.LABEL, limits=LIMITS,
                                       check_fn=lambda: helper.run_check(ws.root).problems(), transcript=_transcript(pdir, started),
-                                      python=seams.get("python"), guard_factory=seams.get("guard_factory"))
+                                      python=seams.get("python"), guard_factory=seams.get("guard_factory"),
+                                      allow=session.allow_rules(helpers=HELPERS))
         except DraftError as e:
             shutil.rmtree(ws.root, ignore_errors=True)
             raise PartError(e.code, session.refuse_text(e))
@@ -123,6 +125,8 @@ def make_parts(pdir: Path, inp: tinputs.Inputs, res, *, actor: str | None, note:
         _prune(pdir)
         sb = tapply.apply_to_storyboard(pdir, doc["chosen"]["text"])
         sentence = texts.result_sentence(len(doc["candidates"]), doc["chosen"]["text"])
+        if sb is not None and sb.get("off_voice"):           # the title is stored; the storyboard takes it when it has been fitted to the voice
+            sentence += " " + sb["sentence"]
         ctx.progress(1.0, sentence)
         result = {"title": doc["chosen"]["text"], "candidates": len(doc["candidates"]), "warnings": rep.warnings, "sentence": sentence, "agent": res.public(),
                   "limits": LIMITS.public(), "session": written["session"]}

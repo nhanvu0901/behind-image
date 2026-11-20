@@ -346,6 +346,18 @@ def test_a_line_of_an_older_plan_has_no_fallback_and_nothing_found_leaves_it_as_
     assert texts.why("no_candidates", what="x")
 
 
+def test_the_two_codes_of_the_web_search_have_a_sentence_of_their_own_and_do_not_fall_to_the_general_one():
+    """fixes3: `web_budget` (the run's count of web searches was used up) and `web_no_key` (the web search has no key) used to say "Chưa có hình cho ..."."""
+    from bti.picks.auto import texts
+    general = texts.why("never_heard_of_it", what="Eligius")
+    assert general == "Chưa có hình cho \"Eligius\"."
+    budget, no_key = texts.why("web_budget", what="Eligius"), texts.why("web_no_key", what="Eligius")
+    assert budget.startswith("Đã hết lượt tìm trên web của lần chạy này nên chưa tìm lại được \"Eligius\".") and "chạy lại" in budget.lower()
+    assert "khóa" in no_key and "\"Eligius\"" in no_key and "web" in no_key
+    assert len({general, budget, no_key}) == 3
+    assert "hình này" in texts.why("web_budget") and "hình này" in texts.why("web_no_key")          # no `what`: the same words the other codes use
+
+
 def test_a_source_that_is_rate_limited_is_left_alone_and_its_wants_are_listed_without_waiting(env):
     slow = mhttp.MediaHTTPError("HTTP 429", 429, retry_after=120)
     env.sources["commons"].fail, env.sources["met"].fail = slow, slow

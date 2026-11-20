@@ -6,7 +6,7 @@ moves and the word anchors follow by themselves; the absolute times do not. This
 parts belong, from the same computation the compiler uses (`bti.draft.zones.place`), so that a full compile and a retime agree.
 
     off_voice(storyboard, timing, style) -> [problem]                     (tolerance 0.05 s; empty = the storyboard fits the voice)
-    retime(storyboard, timing, style, meta=None, defaults=None) -> (storyboard, report)
+    retime(storyboard, timing, style, meta=None, defaults=None, video_title=None) -> (storyboard, report)
 
 Pure: no model, no clock, no file. `timing` is `timing.json` (or its normalized form), `style` the style.json document (its `identity` block is
 read), `meta` the project's facts for the opening shot (`main_asset`), `defaults(id)` the registry defaults of a technique
@@ -28,7 +28,9 @@ code (no chapter has a `lead`: the reference and lab projects) says nothing abou
 
 `retime` puts the opening shot in (or removes it and lets the next shot start at 0), sets the start of the beat and of every chapter card that
 is off, sets `end`, then applies the storyboard's identity style again (`bti.identity.apply_identity`: the opening overlays on the opening shot, the
-beat's texts and camera, the chapter marks). It touches no shot the model or the owner wrote, except the start of the shot after an inserted or
+beat's texts and camera, the chapter marks). The video's title (`video_title`: what the project's title document holds, which wins over the storyboard's own
+`identity.video_title`, as it does in a full compile) is written into `identity` first, so that the beat shows it as soon as the storyboard fits the voice (a
+title that was set while the storyboard was off the voice could not be written then). It touches no shot the model or the owner wrote, except the start of the shot after an inserted or
 removed opening shot; a locked shot is left and reported; what it cannot decide (the number of cards) is reported and left. The same call twice
 changes nothing the second time.
 """
@@ -223,13 +225,15 @@ def _anchor_at(f: _Fit, shot: dict, t: float) -> dict:
     return {"t": round(t, 3)}
 
 
-def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defaults=None) -> tuple[dict, dict]:
+def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defaults=None, video_title: str | None = None) -> tuple[dict, dict]:
     """See the module docstring. The input is never changed. `report` is `{"inserted": [ids], "removed": [ids], "moved": [{"shot", "what", "from", "to"}],
-    "end": {"from", "to"} | None, "left": [problems that are still there], "identity": {"style", "changed", "skipped"} | None, "before": [codes]}`."""
+    "end": {"from", "to"} | None, "left": [problems that are still there], "identity": {"style", "changed", "skipped"} | None, "before": [codes],
+    "video_title": {"from", "to"} | None}` (`video_title`: the title the beat now shows when this call wrote another one, else None). `video_title` None or ""
+    leaves the title the storyboard has."""
     sb = copy.deepcopy(storyboard)
     if not isinstance(sb.get("shots"), list):
-        return sb, {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": []}
-    report: dict = {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": []}
+        return sb, {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": [], "video_title": None}
+    report: dict = {"inserted": [], "removed": [], "moved": [], "end": None, "left": [], "identity": None, "before": [], "video_title": None}
     f = _Fit(sb, timing, style, meta)
     report["before"] = [p["code"] for p in _check(f)]
 
@@ -303,9 +307,12 @@ def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defa
     if any(b <= a + 1e-6 for a, b in zip(starts, starts[1:])):
         orig = copy.deepcopy(storyboard)
         left = _check(_Fit(orig, timing, style, meta)) + [_problem("retime_blocked", None, None, "moving the cards and the beat would put two shots out of order: nothing was moved", repair=False)]
-        return orig, {"inserted": [], "removed": [], "moved": [], "end": None, "left": left, "identity": None, "before": report["before"]}
-    # 5. the identity style again: the opening overlays on the opening shot, the beat's texts and camera, the marks
+        return orig, {"inserted": [], "removed": [], "moved": [], "end": None, "left": left, "identity": None, "before": report["before"], "video_title": None}
+    # 5. the identity style again: the opening overlays on the opening shot, the beat's texts and camera, the marks (and the video's title, which the beat shows)
     if f.style_id:
+        if video_title and ID.video_title_of(sb) != video_title:
+            report["video_title"] = {"from": ID.video_title_of(sb), "to": video_title}
+            sb = ID.with_video_title(sb, video_title)
         meta2 = dict(meta or {})
         if f.main and not meta2.get("main_asset"):
             meta2["main_asset"] = f.main

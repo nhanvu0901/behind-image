@@ -48,8 +48,10 @@ def test_a_good_answer_writes_the_document_with_the_first_candidate_as_the_title
     assert '"The Hidden Meaning"' in c["task"] and "{{" not in c["task"]
     from bti.picks.auto import session
     rules = c["allow"]
-    assert rules == session.allow_rules() and "Edit(./out/**)" in rules                           # write under out/, run ./check: the draft's confinement, nothing more
-    assert "Bash(./check)" in session.allow_rules(windows=False) and "Bash(.\\check.cmd)" in session.allow_rules(windows=True)
+    assert rules == session.allow_rules(helpers=("check",)) and "Edit(./out/**)" in rules          # write under out/, run ./check: the draft's confinement, nothing more
+    assert "Bash(./check)" in session.allow_rules(helpers=("check",), windows=False) and "Bash(.\\check.cmd)" in session.allow_rules(helpers=("check",), windows=True)
+    assert not [r for r in rules if "crop" in r] and rules != session.allow_rules()               # fixes3: the pictures job's `./crop` forms are not handed to this session
+    assert tjob.HELPERS == ("check",)
     assert doc["history"] == []
 
 
@@ -252,6 +254,29 @@ def test_the_storyboard_takes_the_title_through_the_hook_and_a_failure_of_the_ho
         tapply.register(root, lambda pid, title: None)                              # no storyboard: the answer has no `storyboard` key
         job = run(pdir, monkeypatch, FakeTitleAgent())
         assert "storyboard" not in job["result"]
+    finally:
+        tapply.register(root, None)
+
+
+def test_a_title_written_while_the_storyboard_is_off_the_voice_is_stored_and_the_sentence_says_the_storyboard_takes_it_later(pdir, monkeypatch, root):
+    """fixes3: the hook answers `off_voice` (nothing written to the storyboard): the job still stores the title and its result sentence ends with the sentence of the hook."""
+    from bti.title import texts
+
+    def off(pid, title):
+        return {"rev": "r1", "changed": [], "approval_was_fresh": False, "off_voice": True, "code": "storyboard_off_voice", "problems": 3,
+                "sentence": texts.storyboard_off_voice_sentence()}
+    tapply.register(root, off)
+    try:
+        job = run(pdir, monkeypatch, FakeTitleAgent())
+        assert job["state"] == "done"
+        res = job["result"]
+        assert T.chosen_text(pdir) == "The Saint Who Was Also an Advertisement" and res["title"] == T.chosen_text(pdir)                # stored
+        assert res["sentence"].startswith('Agent đã viết 6 tựa và chọn: "The Saint Who Was Also an Advertisement".')
+        assert res["sentence"].endswith(texts.storyboard_off_voice_sentence()) and "Khớp lại với giọng đọc" in res["sentence"]
+        assert res["storyboard"]["off_voice"] is True and res["storyboard"]["changed"] == []
+        tapply.register(root, lambda pid, title: {"rev": "r2", "changed": ["s1"], "approval_was_fresh": False, "sentence": "S"})
+        job = run(pdir, monkeypatch, FakeTitleAgent())
+        assert "Khớp lại" not in job["result"]["sentence"]                                       # a storyboard that took the title adds nothing to the sentence
     finally:
         tapply.register(root, None)
 

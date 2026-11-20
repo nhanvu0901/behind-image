@@ -19,7 +19,7 @@ by the search (`bti.picks.auto.search`).
 Safety: the search is PAID, so it runs only inside `ticket()` (the automatic picks job takes one while its owner's switch `auto_web_search` is on) and
 a call outside it is refused (`web_off`); without a key it is refused (`web_no_key`); with `BTI_NO_REAL_MODELS=1` the client refuses itself. The
 download of a picture takes only a public address (no address that names a private or local machine, also after a redirect), an image content type
-(not SVG), at most 25 MB, a generic User-Agent and a time-out.
+(not SVG), at most 25 MB, the generic User-Agent of `bti.media.http` and a time-out.
 """
 from __future__ import annotations
 
@@ -40,7 +40,6 @@ from .. import http
 from ..errors import MediaError, NotFound, RealModelsOff
 from ..imageinfo import image_size
 
-GENERIC_UA = "ImageResearch/1.0 (art documentary research; generic client)"
 MAX_BYTES = 25 * 1024 * 1024
 TIMEOUT = 30
 PAGES = 5                           # the best pages of an answer
@@ -277,7 +276,7 @@ def fetch_image(url: str, dest: Path, *, max_bytes: int = MAX_BYTES, opener: Cal
     total = 0
     try:
         with http.open_url(url, timeout=timeout, tries=2, sleep=sleep, opener=opener or _real_open,
-                           headers={"User-Agent": GENERIC_UA, "Accept": "image/jpeg,image/png,image/webp,image/*;q=0.5"}) as r, open(tmp, "wb") as fh:
+                           headers={"Accept": "image/jpeg,image/png,image/webp,image/*;q=0.5"}) as r, open(tmp, "wb") as fh:
             headers = getattr(r, "headers", None) or {}
             ctype = str(headers.get("Content-Type") or "").split(";")[0].strip().lower()
             if not ctype.startswith("image/") or "svg" in ctype:

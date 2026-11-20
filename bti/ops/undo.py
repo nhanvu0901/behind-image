@@ -7,6 +7,12 @@ then each is put back to its value before the batch and everything else stays. W
 undone and `undo_conflict` names it, with the later batches that touched it when the log knows them. A save of the page is not
 in the log, so a thing it changed is named with no batch.
 
+A batch that rewrote more than shots (a `retime`: besides the shots it sets the end of the video and the `identity` of the storyboard, with the project's title; an
+`identity` application would be the same) is a WHOLE-DOCUMENT batch (`is_whole`, from the operations its record names): its undo gives back every part of the
+document the batch changed, by the same rule: the shots as above and each other top-level part (`end`, `identity`, ...) whose value differs between the two copies.
+A part that was changed since (a later save of the page, say) is a conflict named `{"part": ...}`, exactly like a shot. Batches of typed operations are not whole-document
+batches: their undo is what it always was.
+
 This is the same meaning as the three-way undo of the instruction box (`bti.draft.merge.undo_turn`: compare the shots the turn
 touched with the version the turn left, restore the version before it), except that shots a batch removed come back in their
 place in the order they had (the instruction box's version of that step depends on the order of a set).
@@ -20,6 +26,14 @@ from . import things
 from .errors import OpError
 from .ctx import pic_name
 from .timeline import fmt_time
+
+WHOLE_DOCUMENT_OPS = ("retime", "identity")       # the operations a batch record can name that change parts of the storyboard besides its shots
+SERVER_OWNED = ("shots", "approvals")             # `shots` go by the shot, the approvals record is the server's (an undo never touches it)
+PART_SENTENCES = {
+    "end": "Điểm cuối của video: trở lại như trước khi sửa",
+    "identity": "Kiểu mở đầu và tựa video: trở lại như trước khi sửa",
+}
+PART_SENTENCE_OTHER = "Phần {part} của storyboard: trở lại như trước khi sửa"
 
 UNDO_SENTENCES = {
     "storyboard": {
@@ -48,15 +62,34 @@ def thing_ref(doc_kind: str, key: str) -> dict:
     return {"asset": ident} if kind == "asset" else {"asset": ident, "part": "regions"}
 
 
-def find_conflicts(doc_kind: str, current: dict, before: dict, after: dict, later: list[dict]) -> tuple[list[str], list[dict]]:
+def is_whole(record: Any) -> bool:
+    """Whether a batch record is a whole-document batch: every operation it names is one of `WHOLE_DOCUMENT_OPS` (a `retime`)."""
+    ops = record.get("ops") if isinstance(record, dict) else None
+    return isinstance(ops, list) and bool(ops) and all(isinstance(o, dict) and o.get("op") in WHOLE_DOCUMENT_OPS for o in ops)
+
+
+def changed_parts(before: dict, after: dict) -> list[str]:
+    """The top-level parts of a storyboard, other than the shots and the server's approvals, whose value differs between two versions (`end`, `identity`, ...), sorted."""
+    a, b = things.strip_derived(before), things.strip_derived(after)
+    names = (set(a) | set(b)) - set(SERVER_OWNED)
+    return sorted(k for k in names if not things.same(a.get(k), b.get(k)))
+
+
+def find_conflicts(doc_kind: str, current: dict, before: dict, after: dict, later: list[dict], *, whole: bool = False) -> tuple[list[str], list[dict]]:
     """`(keys, conflicts)`: the things the batch changed, and those of them that are not as the batch left them any more.
-    `later` are the records newer than the batch, to name who changed a conflicting thing."""
+    `later` are the records newer than the batch, to name who changed a conflicting thing. With `whole` (a whole-document batch of a storyboard, see `is_whole`) the parts
+    the batch changed besides the shots are checked too: a part that is not as the batch left it is a conflict `{"thing": {"part": name}, "key": "part:name"}` (no
+    batch is named: the log keeps the touched shots only); `keys` stays the shots."""
     keys = things.changed_keys(doc_kind, before, after)
     conflicts = []
     for key in keys:
         if not things.same(things.get(doc_kind, current, key), things.get(doc_kind, after, key)):
             by = [r["batch"] for r in later if key in (r.get("touched") or [])]
             conflicts.append({"thing": thing_ref(doc_kind, key), "key": key, "batches": by})
+    if whole and doc_kind == "storyboard":
+        for part in changed_parts(before, after):
+            if not things.same(current.get(part), after.get(part)):
+                conflicts.append({"thing": {"part": part}, "key": "part:" + part, "batches": []})
     return keys, conflicts
 
 
@@ -105,8 +138,21 @@ def restore_shots(current: dict, before: dict, keys: list[str]) -> dict:
     return doc
 
 
-def undo_changes(doc_kind: str, new_doc: dict, before: dict, after: dict, keys: list[str], facts: Any) -> list[dict]:
-    """The `changes` entries of an undo: one Vietnamese sentence for each thing that was put back."""
+def restore_parts(current: dict, before: dict, after: dict) -> dict:
+    """The current storyboard with each top-level part the batch changed (`changed_parts(before, after)`) put back to its value in `before` (a part the batch added is removed).
+    The shots are `restore_shots`' business."""
+    doc = copy.deepcopy(current)
+    b = things.strip_derived(before)
+    for part in changed_parts(before, after):
+        if part in b:
+            doc[part] = copy.deepcopy(b[part])
+        else:
+            doc.pop(part, None)
+    return doc
+
+
+def undo_changes(doc_kind: str, new_doc: dict, before: dict, after: dict, keys: list[str], facts: Any, *, whole: bool = False) -> list[dict]:
+    """The `changes` entries of an undo: one Vietnamese sentence for each thing that was put back (each part too, for a whole-document batch)."""
     t = UNDO_SENTENCES[doc_kind]
     out = []
     if doc_kind == "storyboard":
@@ -120,6 +166,9 @@ def undo_changes(doc_kind: str, new_doc: dict, before: dict, after: dict, keys: 
             n = order.index(sid) + 1 if sid in order else sid
             when = fmt_time(facts.timeline.resolve(b.get("start")))
             out.append({"target": {"shot": sid}, "time": when, "what": t["restore" if a is not None else "restore_removed"].format(n=n)})
+        if whole:
+            for part in changed_parts(before, after):
+                out.append({"target": {"part": part}, "time": None, "what": PART_SENTENCES.get(part) or PART_SENTENCE_OTHER.format(part=part)})
         return out
     for key in keys:
         kind, _, ident = key.partition(":")

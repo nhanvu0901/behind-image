@@ -21,7 +21,7 @@ person want the answer by naming, in words anyone can picture, the most surprisi
   written from another narration than the one approved now. A title SET by a person or an operator is never stale, and the automatic run never writes over it; only a generation asked for by hand does (the old one goes to
   the history).
 - Used by: the storyboard (a full draft writes it into the storyboard's own `video_title` field; setting or writing a title while a storyboard exists applies the identity again with it, so the storyboard's revision changes and its approval stops
-  standing), the export's description (its first line), the output folder (`README.md`, `state.json`, `2_script/title.md` with every candidate and its reason) and the page of step 2.
+  standing; while the storyboard does not fit the voice (`storyboard_off_voice`) the title is stored all the same, the storyboard is left alone and the sentence says so: `storyboard.retime` then writes the title onto the beat), the export's description (its first line), the output folder (`README.md`, `state.json`, `2_script/title.md` with every candidate and its reason) and the page of step 2.
 - The draft waits for it: `draft.start` says `title_done` in its `needs` while the title is `none` or `stale` and an agent could write it (without a title the beat shows the painting's title, and `bti status` warns once).
 - The automatic run takes `title.generate` by itself, before the voice. Nobody approves a title: there is no gate.
 

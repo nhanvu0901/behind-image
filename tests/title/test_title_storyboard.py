@@ -81,7 +81,7 @@ def test_a_title_set_while_a_storyboard_exists_is_applied_in_the_same_request_an
     assert beat(sb)["params"]["title"] == TITLE and beat(sb)["params"]["text"] == STYLE["identity"]["channel_name"]
     assert storyboard_approval(sb) == "stale"                                                    # the existing rule: the approved bytes are not the saved ones any more
     g = rc.get(P + "/title").json()
-    assert g["storyboard"] == {"exists": True, "title": TITLE, "same": True}
+    assert g["storyboard"] == {"exists": True, "title": TITLE, "same": True, "off_voice": False}
     assert rc.get(P + "/identity").json()["video_title"] == TITLE
 
 

@@ -4,6 +4,10 @@ existing rule). The job that writes a title and the route that sets one both cal
 
     apply_to_storyboard(pdir, title) -> {"rev", "changed": [shot ids], "approval_was_fresh": bool, "sentence": str} | None     (None: no storyboard, or none registered)
 
+When the storyboard does not sit where the voice puts its cards (the voice was made again and `storyboard.retime` was not called yet) the function writes nothing and the answer
+carries `"code": "storyboard_off_voice"` and `"off_voice": true` with a sentence that says so: the title is in the title document, and `storyboard.retime` writes it onto the beat
+(`bti/editor/retime_api.py`).
+
 It never raises: a title is written whether or not the storyboard could take it (the compiler writes it at the next draft, and the answer says what happened)."""
 from __future__ import annotations
 

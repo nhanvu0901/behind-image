@@ -24,8 +24,7 @@ from bti.media.sources import wikipedia as W                    # noqa: E402
 from bti.picks import service                                   # noqa: E402
 from bti.picks.auto import images, search as asearch            # noqa: E402
 
-GENERIC = "ImageResearch/1.0 (art documentary research; generic client)"
-http.USER_AGENT = GENERIC                                        # the Commons and thumbnail requests of this process say the same generic thing
+assert http.USER_AGENT.startswith("ImageResearch/") and "behind" not in http.USER_AGENT.lower()      # every request of this process says the one generic thing
 MAX_REQUESTS = 80
 PER_SHEET = 6
 OUT = REPO / "proof_out"

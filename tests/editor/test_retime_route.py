@@ -93,11 +93,14 @@ def test_after_the_voice_is_made_again_retime_puts_it_right_in_one_logged_batch_
     # the same call twice: nothing changes, no new revision, no new batch
     again = retime(rc)
     assert again.status_code == 200 and again.json()["changed"] == [] and again.json()["rev"] == body["rev"] and len(rc.get("%s/changes" % P).json()["changes"]) == 1
-    # undo: the shots come back as they were (the end of the video and the `identity` object stay as the retime left them)
+    # undo: the whole document the batch changed comes back: the shots, and also the end of the video (fixes3: they used to stay as the retime left them)
     u = rc.post("%s/changes/batch_0001/undo" % P, json={"base_rev": body["rev"], "actor": "cli:test"})
     assert u.status_code == 200, u.text
     restored = saved(rc)
-    assert restored["shots"] == before["shots"]
+    assert restored["shots"] == before["shots"] and restored["end"] == before["end"] and restored.get("identity") == before.get("identity")
+    assert {k: v for k, v in restored.items() if k != "approvals"} == {k: v for k, v in before.items() if k != "approvals"}
+    parts = [c["target"] for c in u.json()["changes"] if "part" in c["target"]]
+    assert parts == [{"part": "end"}]                                                 # the identity did not change here: the document had its style already
 
 
 def test_a_stale_base_rev_is_409_and_nothing_is_written(rc):
@@ -209,3 +212,83 @@ def test_a_full_recompile_keeps_the_video_title(rc):
     put_identity(rc, {"video_title": "The Mirror That Remembers"})
     again = compiled(rc.proj).storyboard
     assert again["identity"] == {"style": "raking", "video_title": "The Mirror That Remembers"}
+
+
+# ------------------------------------------------------------------------------------------------------------ fixes3: a title on a storyboard that is off the voice, and the undo of a retime
+def title_put(c, text="The Mirror That Remembers", **kw):
+    return c.put("%s/title" % P, json={"base_rev": c.get("%s/title" % P).json()["rev"], "text": text, "actor": "cli:test", **kw})
+
+
+def test_the_identity_route_answers_storyboard_off_voice_instead_of_the_validators_raw_errors(rc):
+    voice_again(rc)                                                              # the voice was made again: the cards and the beat sit where the old voice put them
+    raw, n = saved(rc), len(history(rc))
+    for body in ({"video_title": "The Mirror That Remembers"}, {"style": "dim"}, {"video_title": "x", "style": "raking"}):
+        r = put_identity(rc, body)
+        assert r.status_code == 409, r.text
+        j = r.json()
+        assert j["code"] == "storyboard_off_voice" and j["retry"] == "after_fix" and "storyboard.retime" in j["fix"], j
+        assert {p["code"] for p in j["problems"]} >= {"title_off", "card_off", "end_off"} and "does not fit the voice" in j["detail"]
+    assert saved(rc) == raw and len(history(rc)) == n                              # nothing was written
+    assert put_identity(rc, {"video_title": "x"}, "0" * 64).status_code == 409 and put_identity(rc, {"video_title": "x"}, "0" * 64).json()["code"] == "stale_revision"
+    assert retime(rc).status_code == 200
+    ok = put_identity(rc, {"video_title": "The Mirror That Remembers"})             # fitted to the voice: the same call works
+    assert ok.status_code == 200, ok.text
+    assert beat(rc)["params"]["title"] == "The Mirror That Remembers"
+
+
+def test_a_title_set_while_the_storyboard_is_off_the_voice_is_stored_and_retime_writes_it_onto_the_beat_and_undo_takes_it_back(rc):
+    before = saved(rc)
+    voice_again(rc)
+    off_raw = saved(rc)
+    r = title_put(rc)
+    assert r.status_code == 200, r.text
+    sb = r.json()["storyboard"]
+    assert sb["off_voice"] is True and sb["code"] == "storyboard_off_voice" and sb["changed"] == [] and sb["approval_was_fresh"] is False
+    assert sb["sentence"].startswith("Storyboard đang lệch với giọng đọc") and "Khớp lại với giọng đọc" in sb["sentence"] and "ngay khi khớp xong" in sb["sentence"]
+    g = rc.get("%s/title" % P).json()["storyboard"]                               # the strip of the page reads this: it says so instead of failing
+    assert g == {"exists": True, "title": None, "same": False, "off_voice": True}
+    assert r.json()["title"]["text"] == "The Mirror That Remembers" and saved(rc) == off_raw                # stored in the title document, the storyboard untouched
+    assert rc.get("%s/title" % P).json()["title"]["text"] == "The Mirror That Remembers"
+    # the same title again says the same thing and still stores it
+    assert title_put(rc, "Another One Entirely").json()["storyboard"]["off_voice"] is True
+    assert title_put(rc, "The Mirror That Remembers").status_code == 200
+    # retime reads the title document: the beat shows the title as soon as it is fitted to the voice
+    rt = retime(rc, actor="cli:test")
+    assert rt.status_code == 200, rt.text
+    after = saved(rc)
+    assert RT.project_off_voice(rc.proj) == [] and after["identity"]["video_title"] == "The Mirror That Remembers"
+    assert beat(rc)["params"]["title"] == "The Mirror That Remembers" and rt.json()["report"]["video_title"] == {"from": None, "to": "The Mirror That Remembers"}
+    assert rc.get("%s/title" % P).json()["storyboard"] == {"exists": True, "title": "The Mirror That Remembers", "same": True, "off_voice": False}
+    # the title is in the batch, so the undo takes it back with the rest of the document
+    u = rc.post("%s/changes/batch_0001/undo" % P, json={"base_rev": rt.json()["rev"], "actor": "cli:test"})
+    assert u.status_code == 200, u.text
+    restored = saved(rc)
+    assert restored.get("identity") == before.get("identity") and "video_title" not in (restored.get("identity") or {})
+    assert {k: v for k, v in restored.items() if k != "approvals"} == {k: v for k, v in off_raw.items() if k != "approvals"}
+    assert {"part": "end"} in [c["target"] for c in u.json()["changes"]] and {"part": "identity"} in [c["target"] for c in u.json()["changes"]]
+    assert all(c["what"] for c in u.json()["changes"])
+
+
+def test_the_title_document_wins_over_the_title_the_storyboard_carries_and_a_fitted_storyboard_is_left_alone(rc):
+    assert put_identity(rc, {"video_title": "Written Through The Identity Route"}).status_code == 200
+    r0, raw = rev(rc), saved(rc)
+    again = retime(rc)                                                           # no title document: the storyboard's own title stays, nothing to move
+    assert again.status_code == 200 and again.json()["changed"] == [] and again.json()["rev"] == r0 and saved(rc) == raw
+    assert title_put(rc, "The Title Document Says This").json()["storyboard"]["changed"]    # on the voice: applied in the same call
+    assert saved(rc)["identity"]["video_title"] == "The Title Document Says This"
+    again = retime(rc)
+    assert again.json()["changed"] == [] and again.json()["report"]["video_title"] is None
+
+
+def test_the_undo_of_a_retime_names_a_part_that_was_changed_since_and_writes_nothing(rc):
+    voice_again(rc)
+    rt = retime(rc, actor="cli:test")
+    assert rt.status_code == 200 and rt.json()["batch"] == "batch_0001"
+    doc = saved(rc)
+    doc["end"] = {"t": doc["end"]["t"] + 3.0}                                    # the page saved another end after the retime
+    (rc.proj / "storyboard.json").write_text(json.dumps(doc), encoding="utf-8")
+    raw = saved(rc)
+    u = rc.post("%s/changes/batch_0001/undo" % P, json={"base_rev": rev(rc), "actor": "cli:test"})
+    assert u.status_code == 409 and u.json()["code"] == "undo_conflict", u.text
+    assert {"thing": {"part": "end"}, "key": "part:end", "batches": []} in u.json()["conflicts"] and "part end" in u.json()["detail"]
+    assert saved(rc) == raw
