@@ -168,7 +168,7 @@ def _rewrite_assets(assets: dict, copies: dict, video_copies: dict | None = None
 # ------------------------------------------------------------------------------------------- build
 def _wrappers(root: Path, python: str, repo: Path) -> dict:
     cmds = {}
-    for name, mod in (("check", "bti.draft.check"), ("defaults", "bti.draft.defaults"), ("still", "bti.draft.still")):
+    for name, mod in (("check", "bti.draft.check"), ("defaults", "bti.draft.defaults"), ("still", "bti.draft.still"), ("crop", "bti.draft.crop")):
         if IS_WINDOWS:
             f = root / (name + ".cmd")
             _write(f, '@echo off\r\nset "PYTHONPATH=%s"\r\nset PYTHONUTF8=1\r\n"%s" -m %s %%*\r\n' % (repo, python, mod))

@@ -292,3 +292,21 @@ def test_the_undo_of_a_retime_names_a_part_that_was_changed_since_and_writes_not
     assert u.status_code == 409 and u.json()["code"] == "undo_conflict", u.text
     assert {"thing": {"part": "end"}, "key": "part:end", "batches": []} in u.json()["conflicts"] and "part end" in u.json()["detail"]
     assert saved(rc) == raw
+
+
+def test_overlay_fitting_is_in_the_same_change_log_batch(rc):
+    sb = saved(rc)
+    timing = intro_timing(5.0, 10.2)
+    f = RT._Fit(sb, timing, style_doc())
+    i = next(i for i, s in enumerate(sb['shots']) if 'w' in s.get('start', {}) and f.t1[i] - f.t0[i] > 2)
+    shot = sb['shots'][i]
+    shot.setdefault('overlays', []).append({'id': 'fit-test', 'technique': 'X-ANN-01', 'intent': 'point_at',
+                                             'start': dict(shot['start']), 'dur': f.t1[i] - f.t0[i] + 1,
+                                             'params': {'text': 'Example'}, 'slots': {}})
+    (rc.proj / 'storyboard.json').write_text(json.dumps(sb), encoding='utf-8')
+    response = retime(rc, actor='cli:test')
+    assert response.status_code == 200, response.text
+    item = next(o for o in response.json()['report']['overlays'] if o['overlay'] == 'fit-test')
+    log = rc.get('%s/changes' % P).json()['changes']
+    change = next(c for c in log[0]['changes'] if c['target'].get('overlay') == 'fit-test')
+    assert len(log) == 1 and change['from'] == item['from'] and change['to'] == item['to']

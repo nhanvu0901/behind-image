@@ -245,3 +245,24 @@ def test_without_kinds_in_the_picks_those_checks_stay_silent_in_the_workspace_as
         (ws.root / "out" / (cid + ".json")).write_text(json.dumps(sp), encoding="utf-8")
     res, _ = W.workspace_compile(ws.root, draw=False)
     assert not [i for i in res.warnings if i["code"] in ("device_wrong_kind", "device_too_little", "outside_on_painting", "outside_picture_small", "figure_on_wrong_picture")]
+
+
+def test_crop_helper_draws_source_pixel_grid(proj, tmp_path):
+    import subprocess
+    import cv2
+    import sys
+    from bti.draft.inputs import load_inputs
+    ws = W.build(load_inputs(proj), root=tmp_path / 'measure')
+    command = [str(ws.root / 'crop')] if sys.platform != 'win32' else [str(ws.root / 'crop.cmd')]
+    result = subprocess.run(command + ['--grid', '-o', 'look/grid.jpg'], cwd=ws.root, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    grid = cv2.imread(str(ws.root / 'look/grid.jpg'))
+    import json
+    info = json.loads((ws.root / 'inputs/assets.json').read_text(encoding='utf-8'))
+    source = cv2.imread(str(ws.root / info['assets'][info['main_asset']]['file']))
+    assert grid is not None and grid.shape == source.shape and (grid != source).any()
+    width, height = info['assets'][info['main_asset']]['source_size']
+    result = subprocess.run(command + ['--box', '0,0,%d,%d' % (width // 2, height // 2), '-o', 'look/box.jpg'], cwd=ws.root, capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+    crop = cv2.imread(str(ws.root / 'look/box.jpg'))
+    assert crop is not None and 0 < crop.shape[0] < grid.shape[0] and 0 < crop.shape[1] < grid.shape[1]

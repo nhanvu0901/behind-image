@@ -191,3 +191,5 @@ The owner has never edited video and reads Vietnamese. `summary` and every `what
 {{/EDIT}}
 
 When the check says `0 error(s)` and required output files exist, reply with the single word `done`.
+
+For AN-03 and AN-06, read the picture points with `./crop --grid -o look/grid.jpg`, then inspect the region with `./crop --box x0,y0,x1,y1 -o look/region.jpg` (box coordinates are source pixels). Write the coordinates you read.
