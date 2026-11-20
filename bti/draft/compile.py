@@ -30,6 +30,7 @@ from pathlib import Path
 from bti import identity as ID
 from bti.engine import registry as R
 from bti.engine import storyboard as SB
+from bti.engine import viewchecks as VC
 from bti.engine.timing import AnchorError, Timing, norm
 from bti.media.assets import scale_regions
 
@@ -97,6 +98,23 @@ def _strings(obj, path=""):
             yield from _strings(v, "%s[%d]" % (path, i))
 
 
+PANEL_CAMERAS = {"LAY-01": (("left", "camera_left"), ("right", "camera_right")), "X-CMP-01": (("anchor", "camera_anchor"),)}      # catalogue pass: the slot whose region frames a panel
+
+
+def panel_region_camera(info: dict, region_name: str, panel_w: float, panel_h: float) -> list | None:
+    """The camera of a panel of LAY-01 or X-CMP-01 that shows a region of the picture (a detail beside another work), static: the region fills about 80% of the panel.
+    None when the picture's size or the region is unknown. Without it the panel shows the whole painting small and the detail is not what the viewer sees."""
+    r = (info.get("regions") or {}).get(region_name) if info else None
+    if not (r and info.get("w") and info.get("h") and panel_w and panel_h):
+        return None
+    w, h = float(info["w"]), float(info["h"])
+    rx = float(r.get("rx") or 0.08 * w)
+    ry = float(r.get("ry") or rx)
+    z = min(0.8 * panel_w / (2 * rx), 0.8 * panel_h / (2 * ry), 6.0)
+    z = max(z, 0.94 * panel_h / h)
+    return [_key(0.0, float(r["x"]), float(r["y"]), z), _key(1.0, float(r["x"]), float(r["y"]), z)]
+
+
 class _Compiler:
     def __init__(self, inp: DraftInputs, specs: dict, regions: dict | None, engine, spec_problems: list, identity: bool = True):
         self.inp = inp
@@ -119,6 +137,7 @@ class _Compiler:
         self.cur = self._resolve_current()
         self.cur_by_id = {c["shot"].get("id"): c for c in self.cur}
         self.edit = inp.edit_shots is not None
+        self.outside = VC.outside_asset_keys(inp.picks)           # catalogue pass: the pictures that are not the painting (rule 17 holds them to their default fit)
         self.identity_cfg = ID.read(self.bundle.style) if identity else None        # None: the old cards stay as they are
         self._counter = max([_num_tail(x) for x in inp.reserved_ids] + [_num_tail(c["shot"].get("id")) for c in self.cur] + [0])
         self.fallback_specs = None
@@ -344,6 +363,42 @@ class _Compiler:
             for v in obj:
                 self._fill_anchors(v)
 
+    # ---------------------------------------------------------------- catalogue pass: hidden techniques and outside pictures
+    def carried_over(self, ss: dict, tid: str, overlay: bool = False, transition: bool = False) -> bool:
+        """True when the saved storyboard already has `tid` on the shot of the same id: a stored shot that uses a hidden technique is never judged (the two finished videos do)."""
+        old = self.cur_by_id.get(ss.get("id")) if ss.get("id") else None
+        if old is None:
+            return False
+        shot = old["shot"]
+        if transition:
+            return (shot.get("transition_in") or {}).get("technique") == tid
+        if overlay:
+            return any(isinstance(o, dict) and o.get("technique") == tid for o in shot.get("overlays") or [])
+        return shot.get("technique") == tid
+
+    def refit_outside(self, tid: str, key, info, params: dict, mine: dict, default_cam, zone, n) -> None:
+        """Rule 17: a picture that is not the painting is shown at its default fit. A camera of the model that shows it under 80% of its fit, or a small picture (long side
+        under 1000 px) past twice its size, is replaced by the technique's default camera (and the compiler says so); the default itself is held to twice the size of a small
+        picture. Only a technique that has a `camera`."""
+        spec = self.bundle.spec(tid)
+        if key not in self.outside or not info or not (info.get("w") and info.get("h")) or not any(p.get("name") == "camera" for p in (spec or {}).get("params") or []):
+            return
+        w, h = float(info["w"]), float(info["h"])
+        cam = params.get("camera")
+        problem = VC.outside_camera_problem([k.get("zoom") for k in cam if isinstance(k, dict)], w, h) if isinstance(cam, list) else None
+        if problem and "camera" in mine and default_cam:
+            fit = VC.default_fit_zoom(w, h)
+            self.base_issues.append(S.problem("outside_camera_refit", zone["id"], n,
+                                              "the camera of this shot showed the picture %r %s (rule 17: a picture that is not the painting is shown at its default fit, zoom %.2f); "
+                                              "the compiler put the default camera back" % (info.get("title") or key, "under 80% of that fit" if problem == "small" else "enlarged past twice its size",
+                                                                                           fit), field="params.camera", level="warn"))
+            params["camera"] = copy.deepcopy(default_cam)
+            cam = params["camera"]
+        if isinstance(cam, list) and VC.is_small_picture(w, h):           # a small picture is never enlarged beyond twice its size
+            for k in cam:
+                if isinstance(k, dict) and isinstance(k.get("zoom"), (int, float)) and k["zoom"] > VC.SMALL_PICTURE_MAX_ZOOM:
+                    k["zoom"] = VC.SMALL_PICTURE_MAX_ZOOM
+
     # ---------------------------------------------------------------- one spec shot
     def build_shot(self, zone, ss, beat_picks_) -> dict:
         n, tid = ss["_n"], ss["technique"]
@@ -383,11 +438,20 @@ class _Compiler:
                 cam = self.region_camera(tid, info, region)
                 if cam:
                     params["camera"] = cam
+            for slot_name, cam_param in PANEL_CAMERAS.get(tid, ()):          # catalogue pass: a detail of the painting beside another work is framed in its panel
+                pr = regs.get(slot_name)
+                if pr and slot_name in slots and cam_param not in (ss.get("params") or {}):
+                    pcam = panel_region_camera(self.info(slots[slot_name]["asset"]), pr, params.get("panel_w_px") or 900, params.get("panel_h_px") or 740)
+                    if pcam:
+                        params[cam_param] = pcam
         mine = copy.deepcopy(ss.get("params") or {})
         for p in self.screen_text_check(tid, mine, zone["id"], n):
             self.base_issues.append(p)
         self._fill_anchors(mine)
+        default_cam = copy.deepcopy(params.get("camera"))
         params.update(mine)
+        if spec is not None:
+            self.refit_outside(tid, akey, info, params, mine, default_cam, zone, n)
         shot = {"technique": tid, "slots": slots, "params": params,
                 "intent": ss.get("intent") or (spec["intents"][0] if spec and spec.get("intents") else None),
                 "transition_in": copy.deepcopy(ss.get("transition_in")), "overlays": [], "locked": False, "source": "agent",
@@ -395,11 +459,23 @@ class _Compiler:
         if spec is not None and (spec.get("channel_usage") == "shorts_only"):
             self.base_issues.append(S.problem("shorts_only_technique", zone["id"], n, "%s is reserved for Shorts; choose another technique" % tid, field="technique"))
             shot["_banned"] = True
+        elif spec is not None and not self.bundle.offered(tid) and not self.carried_over(ss, tid):
+            ban = self.bundle.not_offered_text(tid)         # catalogue pass: a technique hidden from the models is an error a model can repair
+            self.base_issues.append(S.problem("technique_not_offered", zone["id"], n, ban, field="technique"))
+            shot["_banned"], shot["_ban"] = True, ("technique_not_offered", ban)
+        tr = (ss.get("transition_in") or {}).get("technique") if isinstance(ss.get("transition_in"), dict) else None
+        if isinstance(tr, str) and self.bundle.spec(tr) is not None and not self.bundle.offered(tr) and not self.carried_over(ss, tr, transition=True):
+            ban = self.bundle.not_offered_text(tr)
+            self.base_issues.append(S.problem("technique_not_offered", zone["id"], n, ban, field="transition_in.technique"))
+            shot["_banned"], shot["_ban"] = True, ("technique_not_offered", ban)
         return shot
 
-    def build_overlay(self, zone, n, j, os_, shot) -> dict | None:
+    def build_overlay(self, zone, n, j, os_, shot, carried: bool = False) -> dict | None:
         tid = os_["technique"]
         spec = self.bundle.spec(tid)
+        if spec is not None and not self.bundle.offered(tid) and not carried:
+            self.base_issues.append(S.problem("technique_not_offered", zone["id"], n, self.bundle.not_offered_text(tid), overlay=j, field="technique"))
+            return None                                       # catalogue pass: the overlay is dropped and the model is told
         pslot, akey = SB.primary_slot(shot)
         info = self.info(akey) if akey else None
         mine = copy.deepcopy(os_.get("params") or {})
@@ -650,6 +726,7 @@ class _Compiler:
             t1 = recs[i + 1]["t0"] if i + 1 < len(recs) else end_t
             shot = copy.deepcopy(r["shot"])
             shot.pop("_banned", None)
+            shot.pop("_ban", None)
             shot.pop("overlays", None)
             ovs, omap = [], []
             used_o = {o.get("id") for o in (r.get("old_shot") or {}).get("overlays") or []}
@@ -660,7 +737,8 @@ class _Compiler:
             for j, os_ in enumerate(r["ov_specs"], 1):
                 if os_.get("_drop"):
                     continue
-                o = self.build_overlay(r["zone"], r["n"], j, os_, shot)
+                o = self.build_overlay(r["zone"], r["n"], j, os_, shot,           # catalogue pass: an overlay the saved shot already has is never judged
+                                       carried=any(isinstance(x, dict) and x.get("technique") == os_["technique"] for x in (r.get("old_shot") or {}).get("overlays") or []))
                 if o is None:
                     os_["_drop"] = True
                     continue
@@ -720,7 +798,7 @@ class _Compiler:
                 ordered.setdefault(k, v)
             shots.append(ordered)
             origin.append({"chapter": r["chapter"], "n": r["n"], "beat": r["beat"], "kind": r["kind"], "technique": shot.get("technique"),
-                           "id": shot["id"], "ov_map": omap, "t0": r["t0"], "t1": t1, "banned": bool(r["shot"].get("_banned"))})
+                           "id": shot["id"], "ov_map": omap, "t0": r["t0"], "t1": t1, "banned": bool(r["shot"].get("_banned")), "ban": r["shot"].get("_ban")})
         doc = {"schema": SB.SCHEMA, "project": Path(self.inp.project_dir).name, "title": self.inp.title, "style": self.inp.style,
                "canvas": {"w": 1920, "h": 1080, "fps": 30}, "timing": self.inp.timing_file,
                "audio": self.inp.audio, "assets": copy.deepcopy(self.assets), "shots": shots, "end": {"t": round(end_t, 4)},
@@ -863,8 +941,11 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
             mapped += [c.map_issue(i, origin) for i in c.eng.draw_check(doc)]
             drawn = True
         extra, stats = c.advice(origin)
-        banned = [S.problem("shorts_only_technique", o["chapter"], o["n"], "%s is reserved for Shorts; choose another technique" % o["technique"], field="technique")
-                  for o in origin if o.get("banned")]
+        banned = []
+        for o in origin:
+            if o.get("banned"):
+                code, msg = o["ban"] or ("shorts_only_technique", "%s is reserved for Shorts; choose another technique" % o["technique"])
+                banned.append(S.problem(code, o["chapter"], o["n"], msg, field="technique"))
         issues = _dedupe(c.base_issues + build_issues + banned + mapped + extra)
         result = CompileResult(doc, issues, origin, degraded, stats, drawn, identity=identity_report)
         if not degrade or p == max_passes:
@@ -876,7 +957,7 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
                 by_rec.setdefault(i["rec"], []).append(i)
         for o in origin:
             if o.get("banned"):
-                by_rec.setdefault(origin.index(o), [{"level": "error", "code": "shorts_only_technique", "message": "reserved for Shorts"}])
+                by_rec.setdefault(origin.index(o), [{"level": "error", "code": (o.get("ban") or ("shorts_only_technique", ""))[0], "message": (o.get("ban") or (None, "reserved for Shorts"))[1]}])
         # recs in doc order = recs sorted by t0 (build_doc sorts)
         ordered = sorted(recs, key=lambda r: r["t0"])
         for idx, lst in by_rec.items():

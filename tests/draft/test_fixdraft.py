@@ -39,8 +39,13 @@ TASK_RULES = {
                    "5% in from every edge", "`floor` / `surround_floor` 0.6 or more"],
     "text on the screen": ["**Text on the screen is true and tidy.**", "comes from the narration", "never a placeholder (\"Unknown author\")", "the word \"narration\"",
                            "the same words twice", "`region_label` `\"\"`", "`region_iso` `[]`", "`sea_names` `false`"],
-    "the first half minute": ["**The first half minute is the painting.**", "before second 30", "STATIC-09", "street-map tiles"],
-    "only listed pictures": ["**Only the pictures of `inputs/assets.json`**", "long side under 1000 px", "`zoom` 2 at most", "never full screen"],
+    "the first half minute": ["**The first half minute is the painting.**", "before second 30", "STATIC-09"],
+    "only listed pictures": ["**Only the pictures of `inputs/assets.json`**", "long side is under 1000 px", "`zoom` 2 at most", "twice its size", "default fit", "under 80% of that fit", "sits on the matte"],
+    "the catalogue pass": ["**A device is used only on a beat whose `kinds` call for it.**", "we apply all the animation we have", "wrong places most of the time", "`device_wrong_kind`",
+                           "`device_too_little`", "**A beat of kind `outside` that has an outside picture shows that picture for most of the beat, not the painting.**",
+                           "Don't just show the painting too much", "`outside_on_painting`", "**A beat whose outside picture is `missing` stays on the detail the picks give**",
+                           "**The picture under a large figure is the thing counted**", "42 ships were laid over the saint", "`figure_on_wrong_picture`", "`technique_not_offered`",
+                           "`outside_picture_small`"],
     "the checks": ["`upright_whole_share`", "`highlight_off_frame`", "`highlight_too_dark`", "`caption_placeholder`", "`caption_repeats`", "`text_not_in_narration`",
                    "`asset_not_in_lines`", "`explainer_early`", "`shot_short`"],
     "the note of an edited shot": ["rewrite its `note` (or leave it empty): never keep the old reason"],
@@ -50,7 +55,8 @@ FAST_RULES = {
     "the frame stays full": ["**the frame stays full**", "`zoom = 1920 / W`", "under 0.6 of that", "5% of the video at most", "`cx` = `W / 2`", "does not end where the next begins"],
     "highlights after a camera move": ["**after you move a camera, look at its highlights**", "5% in from every edge", "`remove_overlay` it", "under 0.6"],
     "text on the screen": ["**text on the screen**", "no placeholder", "no word \"narration\"", "`region_label` `\"\"`", "`sea_names` `false`", "Before second 30", "`STATIC-09`"],
-    "pictures": ["**pictures**", "each is chosen for some line", "long side under 1000 px", "`zoom` 2 at most"],
+    "pictures": ["**pictures**", "each is chosen for some line", "long side is under 1000 px", "`zoom` 2 at most", "default fit", "twice its size"],
+    "the catalogue pass": ["`unknown_technique`", "never for one place that is merely mentioned", "never over the painting's face"],
 }
 
 
@@ -70,8 +76,8 @@ def test_the_briefings_are_not_much_bigger_than_before():
     """Before this worker: 23,600 characters (23,693 bytes) for the draft task and 7,714 (7,868 bytes) for the fast briefing. The rules cost 3,130 and 1,309.
     Worker introflow added what the program writes at the start of the video (the opening shot `s0000`: the model's first shot is never a still view of the whole
     painting): about 450 and 180 more characters."""
-    assert len(TASK) < 27_500 and len(TASK) - 23_600 < 3_800
-    assert len(FAST) < 9_500 and len(FAST) - 7_714 < 1_800
+    assert len(TASK) < 32_000 and len(TASK) - 23_600 < 8_400          # catalogue pass: the table by kinds and the rules 18 to 21 (+3,950)
+    assert len(FAST) < 10_200 and len(FAST) - 7_714 < 2_500
 
 
 def test_the_rendered_task_has_the_rules_and_no_open_braces(proj, tmp_path):

@@ -132,3 +132,32 @@ digits, a draggable before-and-after, a plan of a room, a chain of owners.
 2. Worker `compbuild`: `KEY-01`, `TIME-01`, `NUM-01`, `TREE-01`, `STATE-01`, `DOC-01`, and the catalogue and briefing text
    for all seven.
 Each ends with stills for the coordinator to compare with the mock-up, tests, previews and a report.
+
+## 10. The use case of each device (catalogue pass, 2026-11-20)
+
+The owner watched the first test video and wrote: "we apply all the animation we have, the map, the timeline, etc., but we apply it in the wrong places most of the time ...
+If the animation we choose is wrong for the narrative, it might confuse the viewer as well ... we must keep a very specific use case to enable the animation". Three of the six
+maps of that video were a dot for a town that was merely mentioned (2:26 "born at Limoges", 5:36 Bruges, 11:04 Switzerland), and 42 ships were laid over a picture of the saint.
+The decision: a model is offered 26 of the 86 techniques (`offered` in `style/gae/techniques.json`), each with the exact case it serves (`use_when`, `needs`, `never_when`, and
+one real `example`); the others stay in the file, hidden (`hidden_reason`), so that stored storyboards keep drawing.
+
+What each device serves is the kind of the line, the field `kinds` of a beat that the pictures step writes (one or two of `detail whole outside compare journey dates figure
+inscription construction relations idea`):
+
+| device | serves a line of kind | needs | never |
+|---|---|---|---|
+| `MAP-01` | `journey`: a movement or a tie between two or more places | two or more places named in the narration (or a route) | one place (show that place's picture); a place that is merely mentioned; a spot inside a city |
+| `TIME-01` | `dates`: three or more dated events of one story | the dates and a few words each, from the narration | one or two dates (`STATIC-09` for one year) |
+| `NUM-01` | `figure`: a quantity is the point | the figure and its unit, and a picture of the THING COUNTED | a picture that has nothing to do with the thing counted; a year |
+| `KEY-01` | `detail`: three or more parts named one after another | each part's region and its word | one or two parts (`X-ANN-01`); parts out of the frame |
+| `DOC-01` | `inscription`: words written in the picture are read | the region of the words, the reading | words that are not visible in the picture |
+| `TREE-01` | `relations`: three or more people tied together | the names and ties from the narration | two people |
+| `STATE-01` | `compare` or `construction`: the same picture in a second state | the second state, in the picks | no second state |
+| `AN-03`, `AN-06` | `construction`: perspective, lines, a shape or a division | the edges or the points of the shape, from the picture | a sentence that makes no claim about space or shape |
+| `LAY-01`, `X-CMP-01` | `compare`: another work beside the painting | the other picture(s) in the picks | the picture was not found; pictures that are not compared |
+| `X-LAY-01`, `FOOT-01` | `outside`: something that is not in the painting | the picture (or clip) of the thing itself, in the picks | a picture of something near it; no picture found (stay on the detail the picks give) |
+
+The checks that keep a model to it (`bti/engine/viewchecks.py`, only on lines that carry `kinds`): `device_wrong_kind`, `device_too_little`, `figure_on_wrong_picture`,
+`outside_on_painting`, `outside_picture_small`; a hidden technique is the error `technique_not_offered`. An outside picture is shown at its default fit (the frame's height or
+width; a picture whose long side is under 1000 px is never enlarged beyond twice its size), and the compiler puts the default camera back when a model wrote one that shows it
+under 80% of that fit.

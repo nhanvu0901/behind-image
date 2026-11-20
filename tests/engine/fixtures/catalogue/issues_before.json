@@ -1,0 +1,34 @@
+{
+ "arnolfini": [
+  {
+   "args": {
+    "folder": "arnolfini",
+    "project": "arnolfini-opus"
+   },
+   "code": "project_name_differs",
+   "level": "warn",
+   "message": "project 'arnolfini-opus' differs from the folder name 'arnolfini'",
+   "path": "project"
+  },
+  {
+   "args": {
+    "file": "audio/mix.m4a"
+   },
+   "code": "audio_missing",
+   "level": "warn",
+   "message": "audio file 'audio/mix.m4a' does not exist",
+   "path": "audio"
+  }
+ ],
+ "eligius": [
+  {
+   "args": {
+    "file": "audio/mix.m4a"
+   },
+   "code": "audio_missing",
+   "level": "warn",
+   "message": "audio file 'audio/mix.m4a' does not exist",
+   "path": "audio"
+  }
+ ]
+}

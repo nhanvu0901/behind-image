@@ -1,0 +1,1148 @@
+{
+ "schema": "bti.picks/1",
+ "main_asset": "goldsmith_his_shop_3bc1",
+ "assets": {
+  "goldsmith_his_shop": {
+   "file": "media/goldsmith_his_shop.jpg",
+   "kind": "image",
+   "title": "A Goldsmith in his Shop MET DT711",
+   "artist": "Petrus Christus",
+   "year": "1449",
+   "width": 1920,
+   "height": 2206,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_Goldsmith_in_his_Shop_MET_DT711.jpg",
+    "author": "Petrus Christus",
+    "licence": "CC0",
+    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3219,
+   "original_height": 3699
+  },
+  "goldsmith_his_shop_3bc1": {
+   "file": "media/goldsmith_his_shop_3bc1.jpg",
+   "kind": "image",
+   "title": "A Goldsmith in his Shop",
+   "artist": "Petrus Christus",
+   "year": "1449",
+   "width": 3469,
+   "height": 4000,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/459052",
+    "author": "Petrus Christus",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {
+    "SCALES": {
+     "x": 2012,
+     "y": 2940,
+     "rx": 347,
+     "ry": 460,
+     "label": "Bàn tay cầm cân tiểu ly và chiếc nhẫn trong đĩa cân"
+    },
+    "SAINT_FACE": {
+     "x": 1995,
+     "y": 1700,
+     "rx": 364,
+     "ry": 420,
+     "label": "Khuôn mặt thánh Eligius, mắt ngước lên"
+    },
+    "SAINT": {
+     "x": 2047,
+     "y": 2240,
+     "rx": 902,
+     "ry": 960,
+     "label": "Thánh Eligius sau quầy trong áo thị dân màu đỏ"
+    },
+    "COUPLE": {
+     "x": 1093,
+     "y": 1720,
+     "rx": 989,
+     "ry": 1320,
+     "label": "Đôi vợ chồng trẻ ăn mặc sang trọng"
+    },
+    "WOMAN": {
+     "x": 763,
+     "y": 1480,
+     "rx": 659,
+     "ry": 1000,
+     "label": "Người phụ nữ với áo gấm vàng và mũ đính ngọc trai"
+    },
+    "MAN_CHAIN": {
+     "x": 1405,
+     "y": 1040,
+     "rx": 503,
+     "ry": 640,
+     "label": "Chàng trai với dây chuyền vàng và trâm cài trên mũ"
+    },
+    "MIRROR": {
+     "x": 3018,
+     "y": 2800,
+     "rx": 243,
+     "ry": 520,
+     "label": "Tấm gương lồi phản chiếu phố và hai người đàn ông"
+    },
+    "MIRROR_MEN": {
+     "x": 3018,
+     "y": 2940,
+     "rx": 173,
+     "ry": 220,
+     "label": "Hai người đàn ông trong gương, một người cầm chim ưng"
+    },
+    "COUNTER": {
+     "x": 1717,
+     "y": 3320,
+     "rx": 1648,
+     "ry": 400,
+     "label": "Quầy hàng mở ra phía đường"
+    },
+    "WEIGHT_BOX": {
+     "x": 2342,
+     "y": 3300,
+     "rx": 399,
+     "ry": 220,
+     "label": "Hộp tròn đựng quả cân, nắp mở"
+    },
+    "COINS": {
+     "x": 2845,
+     "y": 3260,
+     "rx": 208,
+     "ry": 220,
+     "label": "Những đồng tiền vàng trên quầy"
+    },
+    "GIRDLE": {
+     "x": 954,
+     "y": 3320,
+     "rx": 538,
+     "ry": 400,
+     "label": "Dải thắt lưng cưới trên quầy"
+    },
+    "SHELF_BEADS": {
+     "x": 2741,
+     "y": 1140,
+     "rx": 520,
+     "ry": 220,
+     "label": "Khóa vàng và chuỗi hạt san hô, hổ phách trên kệ"
+    },
+    "PITCHERS": {
+     "x": 2775,
+     "y": 560,
+     "rx": 520,
+     "ry": 440,
+     "label": "Các bình bạc và pha lê trên kệ trên cùng"
+    },
+    "SHELVES": {
+     "x": 2758,
+     "y": 1240,
+     "rx": 538,
+     "ry": 1080,
+     "label": "Toàn bộ các kệ đồ quý phía sau thánh"
+    },
+    "TONGUES": {
+     "x": 2862,
+     "y": 1480,
+     "rx": 191,
+     "ry": 240,
+     "label": "Lưỡi rắn treo trên dây vàng và hai thỏi đá dựng vào tường"
+    },
+    "COCONUT": {
+     "x": 2359,
+     "y": 1640,
+     "rx": 173,
+     "ry": 320,
+     "label": "Chén vỏ dừa khuất sau tấm rèm"
+    },
+    "CORAL_VESSEL": {
+     "x": 2949,
+     "y": 1540,
+     "rx": 312,
+     "ry": 460,
+     "label": "Cành san hô và bình vàng thủy tinh bên cạnh"
+    },
+    "INSCRIPTION": {
+     "x": 1769,
+     "y": 3720,
+     "rx": 590,
+     "ry": 120,
+     "label": "Dòng chữ ký tiếng Latinh ở mép dưới"
+    },
+    "HEART_SIGN": {
+     "x": 2238,
+     "y": 3700,
+     "rx": 156,
+     "ry": 120,
+     "label": "Dấu hình trái tim cạnh chữ ký"
+    }
+   }
+  },
+  "ban_do_lubeck": {
+   "file": "media/ban_do_lubeck.jpg",
+   "kind": "image",
+   "title": "Bản đồ Lübeck",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=12/53.8664/10.6847",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "ban_do_limoges": {
+   "file": "media/ban_do_limoges.jpg",
+   "kind": "image",
+   "title": "Bản đồ Limoges",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=13/45.8354/1.2645",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "portret_van_dagobert": {
+   "file": "media/portret_van_dagobert.jpg",
+   "kind": "image",
+   "title": "Portret van Dagobert I, koning van Frankrijk, RP-P-1920-1178",
+   "artist": "Rijksmuseum",
+   "year": "1610",
+   "width": 1920,
+   "height": 2444,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Portret_van_Dagobert_I,_koning_van_Frankrijk,_RP-P-1920-1178.jpg",
+    "author": "Rijksmuseum",
+    "licence": "CC0",
+    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3458,
+   "original_height": 4402
+  },
+  "ban_do_noyon": {
+   "file": "media/ban_do_noyon.jpg",
+   "kind": "image",
+   "title": "Bản đồ Noyon",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=14/49.5806/3.0000",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "ban_do_brugge": {
+   "file": "media/ban_do_brugge.jpg",
+   "kind": "image",
+   "title": "Bản đồ Brugge",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=13/51.2086/3.2268",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "assorted_fossilized_shar": {
+   "file": "media/assorted_fossilized_shar.jpeg",
+   "kind": "image",
+   "title": "Assorted fossilized shark teeth displayed on a dark background, emphasizing prehistoric marine life.",
+   "artist": "Stephen Carroll",
+   "year": "",
+   "width": 3000,
+   "height": 4000,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/close-up-of-ancient-tools-17038605/",
+    "author": "Stephen Carroll",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3000,
+   "original_height": 4000
+  },
+  "decorative_mirror_reflec": {
+   "file": "media/decorative_mirror_reflec.jpeg",
+   "kind": "image",
+   "title": "A decorative mirror reflects a hallway with striped walls and doors, creating a unique convex effect.",
+   "artist": "cottonbro studio",
+   "year": "",
+   "width": 3773,
+   "height": 5660,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/convex-mirror-mounted-on-the-wall-5138199/",
+    "author": "cottonbro studio",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3773,
+   "original_height": 5660
+  },
+  "head_christ_ecce": {
+   "file": "media/head_christ_ecce.jpg",
+   "kind": "image",
+   "title": "Head of Christ (Ecce Homo)",
+   "artist": "Petrus Christus",
+   "year": "1445",
+   "width": 2743,
+   "height": 3722,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/435897",
+    "author": "Petrus Christus",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "ban_do_antwerpen": {
+   "file": "media/ban_do_antwerpen.jpg",
+   "kind": "image",
+   "title": "Bản đồ Antwerpen",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=12/51.2211/4.3997",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "metropolitan_museum_art": {
+   "file": "media/metropolitan_museum_art.jpg",
+   "kind": "image",
+   "title": "metropolitan museum of art, nyc, new york, city, manhattan, architecture, building, architectural, attraction, main, museum, neoclassical, place, tourism",
+   "artist": "anielbaez0",
+   "year": "",
+   "width": 1280,
+   "height": 857,
+   "credit": {
+    "source": "pixabay",
+    "source_url": "https://pixabay.com/photos/metropolitan-museum-of-art-nyc-754843/",
+    "author": "anielbaez0",
+    "licence": "Pixabay Content License",
+    "licence_url": "https://pixabay.com/service/license-summary/",
+    "flag": "small"
+   },
+   "regions": {},
+   "original_width": 3872,
+   "original_height": 2592
+  }
+ },
+ "beats": {
+  "b0001": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COUPLE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn bàn tay cầm cân rồi đến đôi trẻ đang xem: đi theo đúng thứ tự đó."
+  },
+  "b0002": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT_FACE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về đôi mắt ngước lên của người thợ."
+  },
+  "b0003": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu tả cả căn phòng rồi nói đến tấm gương tròn: toàn cảnh rồi gương."
+  },
+  "b0004": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu giới thiệu thánh Eligius trong áo thị dân: cho thấy cả người ông."
+  },
+  "b0005": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu hỏi về cả bức tranh: lời cầu nguyện hay biển hiệu, nên xem toàn cảnh."
+  },
+  "b0006": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COUNTER",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào quầy hàng mở ra phía đường."
+  },
+  "b0007": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói chung về luật phường hội, không có hình cụ thể: lùi ra toàn cảnh cửa hàng."
+  },
+  "b0008": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "ban_do_lubeck",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ OpenStreetMap đúng thành phố Lübeck ở Đức, nơi làm chiếc cân."
+    }
+   ],
+   "status": "picked",
+   "note": "Nói về việc cân cẩn thận rồi về chiếc cân làm ở Lübeck: cái cân, rồi bản đồ Lübeck."
+  },
+  "b0009": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói việc thánh đang cân là có chủ ý: quay lại cái cân."
+  },
+  "b0010": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "WEIGHT_BOX",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT_FACE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ hộp đựng quả cân, rồi nói đến người cầm cân."
+  },
+  "b0011": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "ban_do_limoges",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ đúng thành phố Limoges ở Pháp, nơi Eligius sinh ra."
+    }
+   ],
+   "status": "picked",
+   "note": "Nhìn lại người thợ trong áo thị dân, rồi nơi ông sinh ra là Limoges."
+  },
+  "b0012": {
+   "items": [
+    {
+     "asset": "portret_van_dagobert",
+     "region": null,
+     "role": "context",
+     "note": "Bản khắc chân dung vua Dagobert I của Rijksmuseum, có tên nhà vua ghi bên dưới, thuộc phạm vi công cộng."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về vua Dagobert: cần hình nhà vua."
+  },
+  "b0013": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COINS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Ông được làm chủ xưởng đúc tiền: cho thấy những đồng tiền vàng trên quầy."
+  },
+  "b0014": {
+   "items": [
+    {
+     "asset": "ban_do_noyon",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ đúng thị trấn Noyon ở miền bắc nước Pháp."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói ông làm giám mục Noyon: bản đồ cho thấy Noyon ở đâu."
+  },
+  "b0016": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Ông là thánh bảo hộ thợ rèn, thợ kim hoàn: quay về bàn tay cầm cân của ông."
+  },
+  "b0017": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COUPLE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Vị thánh mặc áo thị dân trông như người dân ông bảo hộ: thánh rồi đôi trẻ."
+  },
+  "b0018": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về dịp ra đời của cả bức tranh: xem toàn cảnh."
+  },
+  "b0019": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn lại chiếc nhẫn trong đĩa cân."
+  },
+  "b0021": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu chuyện xoay quanh chiếc nhẫn vàng: quay lại chiếc nhẫn trên cân."
+  },
+  "b0022": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT_FACE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Hai cách hiểu về vị thánh: nhìn vào khuôn mặt ông."
+  },
+  "b0023": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "GIRDLE",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELF_BEADS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ dải thắt lưng cưới trên quầy rồi chiếc khóa vàng trên kệ."
+  },
+  "b0024": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "WOMAN",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MAN_CHAIN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu tả trang phục của cô gái rồi của chàng trai, lần lượt từng người."
+  },
+  "b0025": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COUPLE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về đôi trẻ là ai: cho thấy cả hai người."
+  },
+  "b0026": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COINS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ những đồng tiền trên quầy và nhắc đồng tiền kỵ sĩ của công tước Philip. Chưa tìm được: Đồng tiền vàng hình kỵ sĩ của Philip the Good."
+  },
+  "b0027": {
+   "items": [
+    {
+     "asset": "ban_do_brugge",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ đúng thành phố Brugge (Bruges) ở Bỉ."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói Bruges là thủ phủ thương mại: bản đồ cho thấy Bruges ở đâu."
+  },
+  "b0029": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "PITCHERS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về công tước, khách hàng lớn nhất: chân dung ông rồi kệ đồ quý. Chưa tìm được: Chân dung công tước Philip the Good."
+  },
+  "b0030": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "PITCHERS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về đồ dùng bàn tiệc đắt giá: nhìn kỹ các bình trên kệ."
+  },
+  "b0031": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELVES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MAN_CHAIN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn lại kệ đồ quý rồi dây chuyền vàng của chàng trai."
+  },
+  "b0032": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "TONGUES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ những vật nhỏ sẫm màu treo trên dây vàng."
+  },
+  "b0033": {
+   "items": [
+    {
+     "asset": "assorted_fossilized_shar",
+     "region": null,
+     "role": "context",
+     "note": "Ảnh chụp rõ nhiều chiếc răng cá mập hóa thạch, đúng vật được nói tới."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu giải thích đó là răng cá mập hóa thạch: cho thấy vật thật."
+  },
+  "b0034": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COCONUT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ chén vỏ dừa khuất sau rèm."
+  },
+  "b0036": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELVES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu về nỗi sợ thuốc độc: quay lại kệ đồ phòng độc phía sau thánh."
+  },
+  "b0037": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "CORAL_VESSEL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về san hô và đá quý: đi vào cành san hô."
+  },
+  "b0038": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELF_BEADS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "CORAL_VESSEL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói chuỗi hạt san hô, hổ phách rồi bình vàng thủy tinh bên san hô."
+  },
+  "b0039": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELVES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói chung về nghề kim hoàn và đồ vẽ kỹ: lướt qua toàn bộ kệ."
+  },
+  "b0040": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ tấm gương tròn với nhà gạch đỏ và hai người đàn ông."
+  },
+  "b0041": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR_MEN",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Hai người trong gương đứng chỗ người xem: hai người, rồi lùi ra toàn cảnh."
+  },
+  "b0042": {
+   "items": [
+    {
+     "asset": "decorative_mirror_reflec",
+     "region": null,
+     "role": "context",
+     "note": "Ảnh một chiếc gương lồi khung trang trí treo tường trong nhà, đúng loại gương câu nói tới."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói gương lồi phổ biến trong nhà: cho thấy một chiếc gương lồi thật."
+  },
+  "b0043": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELVES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn góc của các kệ phía sau thánh."
+  },
+  "b0044": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR_MEN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ người cầm chim ưng trong gương."
+  },
+  "b0045": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR_MEN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nhắc tấm gương trong tranh Arnolfini của Van Eyck: cho thấy tác phẩm đó. Chưa tìm được: Bức Chân dung Arnolfini của Jan van Eyck."
+  },
+  "b0047": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu chuyển từ người trong gương sang tên họa sĩ: gương rồi dòng chữ ký."
+  },
+  "b0048": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn đọc dòng chữ Latinh ở mép dưới tranh."
+  },
+  "b0049": {
+   "items": [
+    {
+     "asset": "head_christ_ecce",
+     "region": null,
+     "role": "context",
+     "note": "Bản chụp rõ nét bức Đầu Chúa Kitô của chính Petrus Christus ở bảo tàng Met, không có khung che."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kể đời họa sĩ: cho thấy một tác phẩm khác của Petrus Christus."
+  },
+  "b0050": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "HEART_SIGN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ dấu hình trái tim cạnh chữ ký."
+  },
+  "b0052": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "CORAL_VESSEL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói đồ trên kệ được vẽ rất chính xác: nhìn kỹ một chi tiết trên kệ."
+  },
+  "b0053": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELVES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn lại kệ bình bạc, dây chuyền và trâm."
+  },
+  "b0054": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "PITCHERS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói đồ vàng bạc bị nấu chảy: nhìn kỹ các bình quý."
+  },
+  "b0055": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SHELF_BEADS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kể kho báu của Charles the Bold bị phá: chân dung ông rồi chuỗi hạt quý trên kệ. Chưa tìm được: Chân dung Charles the Bold."
+  },
+  "b0056": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "COUNTER",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về phường hội giữ quầy hàng mở: quay lại quầy hàng."
+  },
+  "b0057": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "ban_do_antwerpen",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ đúng thành phố Antwerpen (Antwerp) ở Bỉ."
+    }
+   ],
+   "status": "picked",
+   "note": "Bruges suy tàn, thương nhân chuyển sang Antwerp: phố Bruges trong gương rồi bản đồ Antwerp."
+  },
+  "b0058": {
+   "items": [
+    {
+     "asset": "metropolitan_museum_art",
+     "region": null,
+     "role": "context",
+     "note": "Ảnh mặt tiền bảo tàng Metropolitan ở New York, rõ và dễ nhận ra."
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Bức tranh nay ở bảo tàng Metropolitan New York: bảo tàng rồi toàn cảnh tranh."
+  },
+  "b0059": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SAINT_FACE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn quay lại bàn tay, cái cân, rồi đôi mắt ngước lên."
+  },
+  "b0060": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kết luận về cả bức tranh: xem toàn cảnh."
+  },
+  "b0061": {
+   "items": [
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": "SCALES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "goldsmith_his_shop_3bc1",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu trích Karol Wojtyla nói về cái cân: chân dung ông, cái cân, rồi lùi ra toàn cảnh. Chưa tìm được: Chân dung Karol Wojtyla."
+  }
+ },
+ "approval": {
+  "approved": true,
+  "sha1": "be586b9c1057109941adb81d01d959942ed58b1d",
+  "approved_at": "2026-11-19T16:50:37-0800",
+  "narration_sha1": "3066c91c4adee05606d25c6905aa651fc3de8c7d",
+  "by": "cli:coordinator"
+ }
+}

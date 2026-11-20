@@ -248,6 +248,8 @@ class _Ctx:
         first = next((sp[0] for sp in self.spans if sp), None)
         self.total = (end_t - first) if _num(end_t) and first is not None and end_t > first else 0.0
         self._narr = None
+        self._picks = None          # catalogue pass: the project's picks.json and the beats of the timing with their kinds, read when a check of the kinds needs them
+        self._beats = None
 
     # --- shots and pictures
     def sid(self, i: int) -> str:
@@ -726,6 +728,239 @@ def _early_explainer(c: _Ctx) -> list[dict]:
     return out
 
 
+# ----------------------------------------------------------------------------------------------------------- catalogue pass: what the kinds of a beat call for
+# Worker catalogue, 2026-11-20. The pictures step stores per beat `kinds` (one or two of KINDS) in picks.json; these checks judge a device (and an outside picture) only on beats
+# that carry them, so a project made before has none of these warnings. A device that overlaps several beats is judged on all of them: it is wrong only when NONE of them calls for it.
+KINDS = ("detail", "whole", "outside", "compare", "journey", "dates", "figure", "inscription", "construction", "relations", "idea")
+DEVICE_KINDS = {"MAP-01": ("journey",), "TIME-01": ("dates",), "NUM-01": ("figure",), "DOC-01": ("inscription",), "AN-03": ("construction",), "AN-06": ("construction",),
+                "TREE-01": ("relations",), "LAY-01": ("compare",), "X-CMP-01": ("compare",)}
+OUTSIDE_ROLES = ("context", "document", "video")            # an outside picture of a beat (a `map` is drawn by MAP-01; a `compare` picture is another work, not the thing the line is about)
+NOT_THE_PAINTING_ROLES = OUTSIDE_ROLES + ("compare", "map")  # every picture that is not (a detail of) the main painting
+OUTSIDE_ON_PAINTING_SHARE = 0.5         # an outside picture must be on screen for at least this share of its beat
+OUTSIDE_SMALL_SHARE = 0.8               # ... and drawn at no less than this share of its default fit
+SMALL_PICTURE_PX = 1000                 # a picture whose long side is under this is never enlarged beyond SMALL_PICTURE_MAX_ZOOM
+SMALL_PICTURE_MAX_ZOOM = 2.0
+OVERLAP_MIN_S = 1.0                     # a device belongs to a beat when they share at least this long (or half of the device, when it is shorter)
+MIN_ITEMS = {"MAP-01": ("places", 2), "TIME-01": ("items", 3), "KEY-01": ("labels", 3), "TREE-01": ("nodes", 3)}
+
+HINTS.update({
+    "device_wrong_kind": ("Use a device only on a line whose kinds call for it (MAP-01: journey; TIME-01: dates; NUM-01: figure; DOC-01: inscription; AN-03 and AN-06: construction; TREE-01: relations; "
+                          "LAY-01 and X-CMP-01: compare). On this line remove it and keep the picture the picks give, with a camera move."),
+    "device_too_little": ("Remove the device or give it what it needs: a map needs two places or a route (for one place show the picture of the place), a time axis three dated events (for one year "
+                          "use STATIC-09), a key three labels (for one or two use X-ANN-01), a tree three people."),
+    "outside_on_painting": ("Show the outside picture of this line for most of the line (X-LAY-01 for a picture, FOOT-01 for a clip), starting with the first shot of the line, instead of the painting."),
+    "figure_on_wrong_picture": ("Put the large figure over the picture of the thing counted (the outside picture of this line, as a shot of its own or the base of the figure), not over the painting; "
+                                "if the picture was not found, leave the figure out and say the number with the camera move."),
+    "outside_picture_small": ("Show the outside picture at its default fit: leave `camera` out (X-LAY-01 fills the frame's height) and write no zoom that leaves it small between black bars; "
+                              "a picture whose long side is under 1000 px is never enlarged beyond twice its size."),
+})
+
+
+def _picks_doc(project_dir) -> dict:
+    """The project's picks.json as a dict, {} when there is none."""
+    if project_dir is None:
+        return {}
+    import json
+    try:
+        doc = json.loads((Path(project_dir) / "picks.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return doc if isinstance(doc, dict) else {}
+
+
+def outside_asset_keys(picks) -> set:
+    """The pictures of a picks document that are not the main painting: those that some line shows as a `context`, `document`, `video`, `compare` or `map` item and
+    none shows as `main` or `detail`, and that are not the main asset. The compiler and `outside_picture_small` use it."""
+    if not isinstance(picks, dict) or not isinstance(picks.get("beats"), dict):
+        return set()
+    out, own = set(), set()
+    for entry in picks["beats"].values():
+        for it in (entry.get("items") if isinstance(entry, dict) else None) or []:
+            if isinstance(it, dict) and isinstance(it.get("asset"), str):
+                (out if it.get("role") in NOT_THE_PAINTING_ROLES else own).add(it["asset"])
+    if isinstance(picks.get("main_asset"), str):
+        own.add(picks["main_asset"])
+    return out - own
+
+
+def is_small_picture(w: float, h: float) -> bool:
+    return max(w, h) < SMALL_PICTURE_PX
+
+
+def default_fit_zoom(w: float, h: float) -> float:
+    """The zoom at which a w x h picture fills the frame's height or width (whichever it reaches first); a picture whose long side is under 1000 px is held to twice its size."""
+    z = min(L.CANVAS_W / float(w), L.CANVAS_H / float(h))
+    return min(z, SMALL_PICTURE_MAX_ZOOM) if is_small_picture(w, h) else z
+
+
+def outside_camera_problem(zooms, w: float, h: float):
+    """'small' when the smallest zoom of a camera shows an outside picture under 80% of its default fit, 'large' when it enlarges a small picture beyond twice its size, else None."""
+    zs = [float(z) for z in zooms if _num(z) and z > 0]
+    if not zs:
+        return None
+    if min(zs) < OUTSIDE_SMALL_SHARE * default_fit_zoom(w, h) - 1e-9:
+        return "small"
+    if is_small_picture(w, h) and max(zs) > SMALL_PICTURE_MAX_ZOOM + 1e-9:
+        return "large"
+    return None
+
+
+def _beat_rows(c: _Ctx) -> list:
+    """[{id, t0, t1, kinds (a list, or None when the beat has none), entry}] for the beats of the timing; [] when no beat has kinds."""
+    if c._beats is None:
+        c._picks = _picks_doc(c.project_dir)
+        pb = c._picks.get("beats") if isinstance(c._picks.get("beats"), dict) else {}
+        rows = []
+        for b in getattr(c.tm, "beats", None) or []:
+            if not (isinstance(b, dict) and isinstance(b.get("id"), str) and _num(b.get("start")) and _num(b.get("end")) and b["end"] > b["start"]):
+                continue
+            entry = pb.get(b["id"]) if isinstance(pb.get(b["id"]), dict) else {}
+            kinds = [k for k in entry.get("kinds") if k in KINDS] if isinstance(entry.get("kinds"), list) else []
+            rows.append({"id": b["id"], "t0": float(b["start"]), "t1": float(b["end"]), "kinds": kinds or None, "entry": entry})
+        c._beats = rows if any(r["kinds"] for r in rows) else []
+    return c._beats
+
+
+def _judged_beats(c: _Ctx, t0: float, t1: float) -> list:
+    """The beats a stretch [t0, t1] belongs to, when every one of them carries kinds; [] (nothing is judged) when one has none or there is no beat."""
+    rows = [r for r in _beat_rows(c) if min(t1, r["t1"]) - max(t0, r["t0"]) >= min(OVERLAP_MIN_S, 0.5 * (t1 - t0)) - 1e-9]
+    return rows if rows and all(r["kinds"] for r in rows) else []
+
+
+def _overlay_span(c: _Ctx, o: dict, sp):
+    """(start, end) in seconds of an overlay of a shot that spans `sp`, clipped to the shot; None when it cannot be resolved."""
+    try:
+        t0 = c.tm.resolve(o["start"])
+        if isinstance(o.get("end"), dict):
+            t1 = c.tm.resolve(o["end"])
+        elif _num(o.get("dur")) and o["dur"] > 0:
+            t1 = t0 + float(o["dur"])
+        else:
+            t1 = sp[1]
+    except Exception:       # noqa: BLE001
+        return None
+    t0, t1 = max(t0, sp[0]), min(t1, sp[1])
+    return (t0, t1) if t1 > t0 else None
+
+
+def _device_elements(c: _Ctx):
+    """Every shot and overlay that is a device of DEVICE_KINDS or MIN_ITEMS: (path, shot index, element, technique, span)."""
+    wanted = set(DEVICE_KINDS) | set(MIN_ITEMS)
+    for i, shot in enumerate(c.shots):
+        sp = c.spans[i]
+        if sp is None:
+            continue
+        if shot.get("technique") in wanted:
+            yield "shots[%d]" % i, i, shot, shot["technique"], sp
+        for j, o in enumerate(shot.get("overlays") or []):
+            if isinstance(o, dict) and o.get("technique") in wanted and isinstance(o.get("start"), dict):
+                osp = _overlay_span(c, o, sp)
+                if osp is not None:
+                    yield "shots[%d].overlays[%d]" % (i, j), i, o, o["technique"], osp
+
+
+def _device_kinds(c: _Ctx) -> list[dict]:
+    out = []
+    for path, i, el, tid, span in _device_elements(c):
+        rows = _judged_beats(c, span[0], span[1])
+        if not rows:
+            continue
+        have = sorted({k for r in rows for k in r["kinds"]})
+        if tid in DEVICE_KINDS and not any(set(r["kinds"]) & set(DEVICE_KINDS[tid]) for r in rows):
+            out.append(_issue("device_wrong_kind", path,
+                              "%s in shot %s is drawn on line %s, whose kinds are %s, but it serves only a line of kind %s."
+                              % (tid, c.sid(i), ", ".join(r["id"] for r in rows), ", ".join(have), " or ".join(DEVICE_KINDS[tid])),
+                              shot=c.sid(i), overlay=el.get("id") if el is not c.shots[i] else None, technique=tid, beats=[r["id"] for r in rows], kinds=have, needs=list(DEVICE_KINDS[tid])))
+        if tid in MIN_ITEMS and isinstance(el.get("params"), dict):
+            name, need = MIN_ITEMS[tid]
+            items = el["params"].get(name)
+            n = len([x for x in items if x]) if isinstance(items, list) else None
+            if n is not None and n < need and not (tid == "MAP-01" and isinstance(el["params"].get("route"), list) and len(el["params"]["route"]) > 0):
+                out.append(_issue("device_too_little", path,
+                                  "%s in shot %s has %d %s but needs at least %d%s." % (tid, c.sid(i), n, name, need, " (or a route)" if tid == "MAP-01" else ""),
+                                  shot=c.sid(i), overlay=el.get("id") if el is not c.shots[i] else None, technique=tid, count=n, min=need, items=name, beats=[r["id"] for r in rows]))
+    return out
+
+
+def _figure_on_wrong_picture(c: _Ctx) -> list[dict]:
+    """A large figure (NUM-01) on a line of kind `figure` whose picks hold the picture of the thing counted (an outside picture), laid over another picture: the owner's first video laid 42 ships over the saint."""
+    out = []
+    for path, i, el, tid, span in _device_elements(c):
+        if tid != "NUM-01":
+            continue
+        rows = _judged_beats(c, span[0], span[1])
+        assets = {it["asset"] for r in rows if "figure" in r["kinds"] and r["entry"].get("status") != "skip" for it in r["entry"].get("items") or []
+                  if isinstance(it, dict) and it.get("role") in OUTSIDE_ROLES and isinstance(it.get("asset"), str)}
+        key = c.primary(i)
+        if assets and key is not None and key not in assets:
+            title = (c.assets.get(key) or {}).get("title") or key
+            out.append(_issue("figure_on_wrong_picture", path,
+                              "The large figure of shot %s is laid over %r, but the picks of line %s hold the picture of the thing counted (%s)."
+                              % (c.sid(i), str(title)[:50], ", ".join(r["id"] for r in rows), ", ".join(sorted(assets))),
+                              shot=c.sid(i), overlay=el.get("id") if el is not c.shots[i] else None, asset=key, assets=sorted(assets), beats=[r["id"] for r in rows]))
+    return out
+
+
+def _outside_on_painting(c: _Ctx) -> list[dict]:
+    out = []
+    for r in _beat_rows(c):
+        if not r["kinds"] or "outside" not in r["kinds"] or r["entry"].get("status") == "skip":
+            continue
+        assets = {it["asset"] for it in r["entry"].get("items") or [] if isinstance(it, dict) and it.get("role") in OUTSIDE_ROLES and isinstance(it.get("asset"), str)}
+        if not assets:
+            continue                                    # the picture was not found (`missing`): the line stays on the detail the picks give
+        secs, first = 0.0, None
+        for i, shot in enumerate(c.shots):
+            sp = c.spans[i]
+            if sp is None or max(0.0, min(sp[1], r["t1"]) - max(sp[0], r["t0"])) <= 0:
+                continue
+            first = i if first is None or sp[0] <= r["t0"] + 1e-6 else first
+            slots = shot.get("slots") if isinstance(shot.get("slots"), dict) else {}
+            if any(isinstance(v, dict) and v.get("asset") in assets for v in slots.values()):
+                secs += min(sp[1], r["t1"]) - max(sp[0], r["t0"])
+        dur = r["t1"] - r["t0"]
+        if first is not None and secs < OUTSIDE_ON_PAINTING_SHARE * dur - 1e-9:
+            out.append(_issue("outside_on_painting", "shots[%d]" % first,
+                              "Line %s is about something outside the painting and the picks hold a picture of it, but that picture is on screen for only %.1f of the line's %.1f seconds (%.0f%%)."
+                              % (r["id"], secs, dur, secs / dur * 100), beat=r["id"], shot=c.sid(first), assets=sorted(assets), seconds=_r(secs), beat_seconds=_r(dur),
+                              share=_r(secs / dur, 2), limit=OUTSIDE_ON_PAINTING_SHARE))
+    return out
+
+
+def _outside_small(c: _Ctx) -> list[dict]:
+    out = []
+    if not _beat_rows(c):
+        return out
+    keys_out = outside_asset_keys(c._picks)
+    for i, shot in enumerate(c.shots):
+        sp = c.spans[i]
+        key = c.primary(i)
+        if sp is None or key not in keys_out or not c.has_camera(i) or not _judged_beats(c, sp[0], sp[1]):
+            continue
+        size = c.size(key)
+        raw = (shot.get("params") or {}).get("camera") if isinstance(shot.get("params"), dict) else None
+        if size is None or not isinstance(raw, list):
+            continue
+        zooms = [k.get("zoom") for k in raw if isinstance(k, dict)]
+        if outside_camera_problem(zooms, *size) == "small":
+            fit = default_fit_zoom(*size)
+            lo = min(float(z) for z in zooms if _num(z) and z > 0)
+            title = (c.assets.get(key) or {}).get("title") or key
+            out.append(_issue("outside_picture_small", "shots[%d]" % i,
+                              "Shot %s shows the outside picture %r at a zoom of %.2f, %.0f%% of its default fit (%.2f): it sits small between black bars."
+                              % (c.sid(i), str(title)[:50], lo, lo / fit * 100, fit), shot=c.sid(i), asset=key, zoom=round(lo, 3), fit=round(fit, 3), share=_r(lo / fit, 2), limit=OUTSIDE_SMALL_SHARE))
+    return out
+
+
+CATALOGUE_ISSUES = {
+    "device_wrong_kind": "A device (MAP-01, TIME-01, NUM-01, DOC-01, AN-03, AN-06, TREE-01, LAY-01, X-CMP-01) on a line whose `kinds` (picks.json) do not call for it (warning). Judged only on lines that carry kinds. args: shot, overlay, technique, beats, kinds, needs.",
+    "device_too_little": "A device with too little to show: MAP-01 with fewer than two places and no route, TIME-01 with fewer than three items, KEY-01 with fewer than three labels, TREE-01 with fewer than three people (warning). Judged only on lines that carry kinds. args: shot, overlay, technique, count, min, items, beats.",
+    "outside_on_painting": "A line of kind `outside` whose outside picture (a `context`, `document` or `video` item of its picks) is on screen for less than half of the line (warning). args: beat, shot, assets, seconds, beat_seconds, share, limit.",
+    "figure_on_wrong_picture": "A large figure (NUM-01) on a line of kind `figure` whose picks hold the picture of the thing counted, laid over another picture (warning). Judged only on lines that carry kinds. args: shot, overlay, asset, assets, beats.",
+    "outside_picture_small": "An outside picture drawn smaller than 80% of its default fit (the frame's height or width; a picture under 1000 px is held to twice its size) (warning). Judged only on lines that carry kinds. args: shot, asset, zoom, fit, share, limit.",
+}
+
+
 # ----------------------------------------------------------------------------------------------------------- entry
 def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> list[dict]:
     """The viewer checks of a storyboard whose shots start at `starts` (seconds, None when unresolvable) and end at `end_t`. Never raises."""
@@ -734,7 +969,8 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
     except Exception:       # noqa: BLE001
         return []
     out: list[dict] = []
-    for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer):
+    for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer,
+               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small):         # the last four: catalogue pass, silent on beats without kinds
         try:
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
@@ -753,3 +989,4 @@ CODES = {
     "asset_not_in_lines": "A shot shows a picture that no line of the narration has (picks.json) and that is not the main painting (warning). args: asset, title, count, shots.",
     "explainer_early": "A base explanatory component (MAP-01, TIME-01, TREE-01, STATE-01) starts in the first 30 seconds (warning). args: shot, technique, start, end, limit.",
 }
+CODES.update(CATALOGUE_ISSUES)       # catalogue pass: the four checks of what the kinds of a beat call for (their sentences: `CATALOGUE_SENTENCES` of errmsg.js)

@@ -188,7 +188,7 @@ def catalogue(bundle: R.StyleBundle, used: set[str], instruction: str) -> str:
     occasional overlays and the core base techniques (one line each: what, slots, parameter names; the defaults of their parameters apply), and
     the explanatory devices the request is about (full, with the filled example). Identity techniques, rare, other-series and shorts-only ones
     are left out."""
-    techs = [t for t in bundle.techniques if t.get("engine", {}).get("available") is True]
+    techs = [t for t in bundle.techniques if t.get("engine", {}).get("available") is True and (bundle.offered(t["id"]) or t["id"] in used)]      # catalogue pass: what is hidden from the models stays out, unless a shot of the scope already has it
     cfg = read_identity(bundle.style)
     ident = (lambda tid: bool(cfg) and cfg.is_identity_technique(tid))
     asked = {tid for tid, pat in DEVICE_WORDS.items() if re.search(pat, instruction or "", re.I)}
@@ -211,6 +211,7 @@ def catalogue(bundle: R.StyleBundle, used: set[str], instruction: str) -> str:
                  "- what: %s" % (t.get("description") or ""),
                  "- slots: %s" % (", ".join(T._slot(s) for s in t.get("slots") or []) or "none"),
                  "- params: %s" % (", ".join(T._p(p) for p in t.get("params") or []) or "none")]
+        lines[2:2] = T.use_lines(t, ("use_when", "never_when"))                       # catalogue pass: when to use it, when never (the four texts of the registry)
         if T._example(t):
             lines.append("- example (the defaults; replace ALL of its data): %s" % T._example(t))
         return lines

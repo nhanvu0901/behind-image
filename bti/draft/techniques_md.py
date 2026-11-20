@@ -1,5 +1,7 @@
-"""`inputs/techniques.md`: a compact description of every technique of the registry, generated (never hand written) so that it
-cannot drift from `style/gae/techniques.json`. It tells the agent WHEN to use a technique, what it needs and what it may change."""
+"""`inputs/techniques.md`: a description of the techniques a model is OFFERED (`offered` of `style/gae/techniques.json`), generated (never hand written) so that it
+cannot drift from the registry. For every technique it says in which case to use it (`use_when`), what must exist (`needs`), when never (`never_when`) and one real
+sentence (`example`), grouped by the kind of line it serves (the `kinds` of a beat, decided at the pictures step); then its slots and parameters. The hidden techniques
+are not listed (using one is the error `technique_not_offered`); the ones the program writes stay in their own short section."""
 from __future__ import annotations
 
 import json
@@ -96,37 +98,108 @@ def _identity_section(cfg) -> list:
     return out
 
 
+# --- catalogue pass (worker catalogue, 2026-11-20): the techniques a model is offered, grouped by the kind of line they serve
+KIND_ORDER = ("detail", "whole", "idea", "outside", "compare", "journey", "dates", "figure", "inscription", "construction", "relations")
+# kind -> (what the line does, the `intent` to write on its shots)
+KIND_HELP = {
+    "detail": ("it points at a thing that IS in the painting: names it, describes it, looks at it", "point_at"),
+    "whole": ("it speaks of the painting as one object (its date, size, where it hangs, who owned it, its fate), sums up, or recalls details in the closing", "establish"),
+    "idea": ("it gives a reading or an opinion that no picture can show: stay on the thing it is about", "explore"),
+    "outside": ("it is about a person, place, object, event or custom that is NOT in the painting: show a picture of that thing", "context"),
+    "compare": ("it sets the painting or one detail beside another work, or beside another state of the same picture", "compare"),
+    "journey": ("it is about a movement or a tie between two or more places", "context"),
+    "dates": ("it gives three or more dated events of one story, or turns on one year", "quantify"),
+    "figure": ("a quantity is its point (a count, a price, a size)", "quantify"),
+    "inscription": ("it reads words that are written in the picture", "quote"),
+    "construction": ("it explains how the picture is built (perspective, a shape, a visible technique)", "explain_mechanism"),
+    "relations": ("it ties three or more people together (a family, patrons)", "context"),
+}
+PROGRAM_OTHER = "PROGRAM ONLY: written by the compiler, never by you"
+
+
+def listed(bundle: R.StyleBundle) -> list:
+    """The techniques a model is offered: the engine can draw them and the catalogue offers them (`offered`)."""
+    return [t for t in bundle.techniques if t.get("engine", {}).get("available") is True and bundle.offered(t["id"])]
+
+
+def use_lines(t: dict, which=("use_when", "needs", "never_when", "example")) -> list:
+    """The four texts of an offered technique as the lines of its entry (nothing for a technique that has none)."""
+    label = {"use_when": "use when", "needs": "needs", "never_when": "never when", "example": "real sentence"}
+    return ["- %s: %s" % (label[k], " ".join(str(t[k]).split())) for k in which if t.get(k)]
+
+
+def _plain_first(t: dict) -> tuple:
+    """Order inside a group: the shots before the overlays (camera moves first), then by id."""
+    return ({"base": 0, "card": 1, "overlay": 2, "transition": 3}.get(t.get("kind"), 9), t["id"])
+
+
+def _primary_kind(t: dict) -> str:
+    serves = [k for k in t.get("serves") or [] if k in KIND_ORDER]
+    return serves[0] if serves else KIND_ORDER[0]
+
+
+def _program_section(bundle: R.StyleBundle, cfg) -> list:
+    """The techniques the program writes (`hidden_reason.code` program), one short entry each: a model recognises them on the first shot and never writes one."""
+    out = ["## Written by the program (never by you)", "",
+           "The registry also holds the techniques below. The compiler writes them (the opening, the channel-name beat, the chapter marks, the cuts); "
+           "you never write one, and a shot or an overlay of yours that names one is dropped or refused.", ""]
+    for t in bundle.techniques:
+        hr = t.get("hidden_reason") or {}
+        if hr.get("code") != "program" or t.get("engine", {}).get("available") is not True:
+            continue
+        mark = PROGRAM_ONLY if (cfg and cfg.is_identity_technique(t["id"])) else PROGRAM_OTHER
+        out.append("### %s %s  [%s, %s]" % (t["id"], t["name"], t["kind"], mark))
+        out.append("- what: %s" % (t.get("description") or ""))
+        out.append("- %s" % hr.get("note", ""))
+        out.append("")
+    return out
+
+
 def generate(bundle: R.StyleBundle) -> str:
-    techs = [t for t in bundle.techniques if t.get("engine", {}).get("available") is True]
+    techs = listed(bundle)
     cfg = read_identity(bundle.style)
-    mine = (lambda tid: bool(cfg) and cfg.is_identity_technique(tid))            # a technique of the channel identity: listed, but not a choice
+    by_kind: dict = {k: [] for k in KIND_ORDER}
+    for t in techs:
+        by_kind[_primary_kind(t)].append(t)
     out = ["# Techniques", "",
            "Generated from the registry. `*` = required. `[a..b]` = allowed range. `=x` = default. Parameters you do not write keep their default;",
            "the compiler also fills the camera keys, label texts and region sizes for you. Slots hold pictures: `{\"asset\": \"A\", \"region\": \"MIRROR\"}`.",
            "A camera is a list of keys `{\"at\": {\"rel\": 0..1}, \"cx\": x, \"cy\": y, \"zoom\": z, \"ease\": \"linear\"}` with cx, cy in SOURCE pixels and zoom = screen pixels per source pixel (the frame shows 1920/zoom by 1080/zoom source pixels).",
            "Write `camera` yourself only when the default move is wrong; `at` may also be a spoken word `{\"w\": index, \"off\": 0.0}`.", "",
-           "## Choosing by intent (core first)", ""]
-    for intent, hint in INTENT_HELP.items():
-        ids = sorted((t for t in techs if intent in (t.get("intents") or []) and t.get("channel_usage") != "shorts_only" and not mine(t["id"])),
-                     key=lambda t: (USAGE_ORDER.get(t.get("channel_usage"), 9), t["id"]))
-        out.append("- **%s** (%s): %s" % (intent, hint, ", ".join("%s%s" % (t["id"], "" if t.get("channel_usage") == "core" else " (%s)" % t.get("channel_usage")) for t in ids)))
+           "## How to choose", "",
+           "Every beat of `inputs/beats.json` has `kinds`: one or two words that say what its sentence does. The pictures step decided them: read them, do not guess them "
+           "(for a beat without `kinds`, decide the kind yourself with the table of TASK.md). Take the techniques of the kinds of the beat from the list below. "
+           "Each technique says when to use it, what it needs and when never: use one only where its text fits the sentence, never as decoration. "
+           "The right number of devices in a video is the number of sentences that call for one, and none is fine; a camera move serves most sentences. "
+           "These are all the techniques you are offered: the registry holds more, hidden from you, and writing one is the error `technique_not_offered` "
+           "(its message says what to use instead).", "",
+           "## Choosing by the kind of line", ""]
+    for kind in KIND_ORDER:
+        ids = [t for t in techs if kind in (t.get("serves") or [])]
+        ids.sort(key=lambda t: (0 if _primary_kind(t) == kind else 1,) + _plain_first(t))
+        what, intent = KIND_HELP[kind]
+        out.append("- **%s** (%s; write intent `%s`): %s" % (kind, what, intent, ", ".join(t["id"] for t in ids) or "(no technique of its own: the camera techniques of `detail` and `whole` serve it)"))
     out.append("")
     if cfg:
         out += _identity_section(cfg)
-    out += ["## The techniques", ""]
-    order = {"base": 0, "card": 1, "overlay": 2, "transition": 3}
-    for t in sorted(techs, key=lambda t: (order.get(t["kind"], 9), t.get("category") or "", USAGE_ORDER.get(t.get("channel_usage"), 9), t["id"])):
-        out.append("### %s %s  [%s, %s]" % (t["id"], t["name"], t["kind"], PROGRAM_ONLY if mine(t["id"]) else USAGE_HELP.get(t.get("channel_usage"), t.get("channel_usage"))))
-        out.append("- used as: %s; intents: %s" % (KIND_WHERE.get(t["kind"], t["kind"]), ", ".join(t.get("intents") or [])))
-        out.append("- what: %s" % (t.get("description") or ""))
-        if t.get("usage_rule"):
-            out.append("- when: %s" % t["usage_rule"])
-        out.append("- slots: %s" % (", ".join(_slot(s) for s in t.get("slots") or []) or "none"))
-        out.append("- params: %s" % (", ".join(_p(p) for p in t.get("params") or []) or "none"))
-        if _example(t):
-            out.append("- example (the defaults; replace ALL of its data): %s" % _example(t))
-        tm = t.get("timing") or {}
-        if tm.get("default_s"):
-            out.append("- length: usually %ss (min %s, max %s)" % (tm["default_s"], tm.get("min_s"), tm.get("max_s")))
-        out.append("")
+    for kind in KIND_ORDER:
+        group = sorted(by_kind[kind], key=_plain_first)
+        if not group:
+            continue
+        out += ["## The techniques for lines of kind `%s`" % kind, "", "A line where %s." % KIND_HELP[kind][0], ""]
+        for t in group:
+            out.append("### %s %s  [%s]" % (t["id"], t["name"], t["kind"]))
+            out.append("- used as: %s; intents: %s" % (KIND_WHERE.get(t["kind"], t["kind"]), ", ".join(t.get("intents") or [])))
+            out.append("- serves: %s" % ", ".join(t.get("serves") or [kind]))
+            out += use_lines(t)
+            out.append("- what: %s" % (t.get("description") or ""))
+            out.append("- slots: %s" % (", ".join(_slot(s) for s in t.get("slots") or []) or "none"))
+            out.append("- params: %s" % (", ".join(_p(p) for p in t.get("params") or []) or "none"))
+            if _example(t):
+                out.append("- example (the defaults; replace ALL of its data): %s" % _example(t))
+            tm = t.get("timing") or {}
+            if tm.get("default_s"):
+                out.append("- length: usually %ss (min %s, max %s)" % (tm["default_s"], tm.get("min_s"), tm.get("max_s")))
+            out.append("")
+    out += _program_section(bundle, cfg)
     return "\n".join(out)

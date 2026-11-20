@@ -24,6 +24,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable
 
+from bti.engine import registry as R
 from bti.ops import registry
 from bti.ops import runner as ops_runner
 from bti.ops.adapters import PicksAdapter, StoryboardAdapter
@@ -342,6 +343,41 @@ def _feedback_body(e: OpError) -> dict:
     return out
 
 
+# --- catalogue pass (worker catalogue, 2026-11-20): a technique that is hidden from the models is refused, with what to use instead (`hidden_reason` of the registry)
+def hidden_technique_error(kind: str, doc: dict | None, ops: list) -> OpError | None:
+    """The `unknown_technique` refusal for the first operation that names a technique the registry hides from models (`offered` false); None when there is none.
+    A technique the shot already has (itself or in an overlay) is never refused: the stored storyboards use hidden ones."""
+    if kind != "storyboard":
+        return None
+    try:
+        bundle = R.load_bundle(str((doc or {}).get("style") or "gae"))
+    except Exception:       # noqa: BLE001 - an unreadable style is the operations' own refusal
+        return None
+    shots = {s.get("id"): s for s in (doc or {}).get("shots") or [] if isinstance(s, dict)}
+
+    def has(shot_id, tid) -> bool:
+        s = shots.get(shot_id) or {}
+        return s.get("technique") == tid or any(isinstance(o, dict) and o.get("technique") == tid for o in s.get("overlays") or [])
+
+    def names(x):
+        if isinstance(x, dict):
+            for k, v in x.items():
+                if k == "technique" and isinstance(v, str):
+                    yield v
+                else:
+                    yield from names(v)
+        elif isinstance(x, list):
+            for v in x:
+                yield from names(v)
+
+    for i, o in enumerate(ops):
+        for tid in names(o):
+            if bundle.spec(tid) is not None and not bundle.offered(tid) and not has(o.get("shot") if isinstance(o, dict) else None, tid):
+                return OpError("unknown_technique", bundle.not_offered_text(tid), op_index=i,
+                               fields=[{"path": "ops[%d].technique" % i, "problem": "is not one of the techniques you are offered", "allowed": bundle.offered_ids()}])
+    return None
+
+
 def repair_text(feedback: dict) -> str:
     if feedback.get("error"):
         return ("\n\n[REPAIR TURN]\nThe server did not accept your answer. This is the server's own error body:\n"
@@ -414,6 +450,10 @@ def run_turn(kind: str, backend: Backend, *, instruction: str, scope: Scope, doc
             e = OpError("unknown_op", "ops[%d].op: %r is not an operation this box offers" % (i, str(ops[i].get("op"))[:40]), op_index=i,
                         fields=[{"path": "ops[%d].op" % i, "problem": "is not an operation this box offers", "allowed": names}])
             feedback, last_error = {"error": _feedback_body(e)}, e
+            continue
+        hidden = hidden_technique_error(kind, doc0, ops)
+        if hidden is not None:                                   # catalogue pass: refused before the dry run, with what to use instead
+            feedback, last_error = {"error": _feedback_body(hidden)}, hidden
             continue
         try:
             dry, rev_d, doc_d = _dry_run(kind, backend, scope, doc0, ops, actor, instruction)

@@ -38,20 +38,23 @@ def test_the_family_is_the_seven_techniques_of_the_block_and_the_earlier_form_of
 
 
 def test_every_identity_technique_is_listed_and_marked_program_only(bundle):
+    """Catalogue pass: they are in the short section `Written by the program`, after the offered techniques, each marked PROGRAM ONLY."""
     md = techniques_md.generate(bundle)
+    body, program = md.split("## Written by the program")
     for tid in family(bundle):
-        line = next(l for l in md.split("\n") if l.startswith("### %s " % tid))
+        line = next(l for l in program.split("\n") if l.startswith("### %s " % tid))
         assert "PROGRAM ONLY" in line and "never by you" in line, line
-    other = [l for l in md.split("\n") if l.startswith("### ") and not any(l.startswith("### %s " % t) for t in family(bundle))]
-    assert other and not [l for l in other if "PROGRAM ONLY" in l]
+        assert "### %s " % tid not in body
+    other = [l for l in body.split("\n") if l.startswith("### ")]
+    assert other and not [l for l in other if "PROGRAM ONLY" in l], "an offered technique is never marked as the program's"
 
 
-def test_they_are_not_offered_in_the_index_by_intent(bundle):
+def test_they_are_not_offered_in_the_index_by_kind(bundle):
     md = techniques_md.generate(bundle)
-    index = md[md.index("## Choosing by intent"):md.index("## The channel identity")]
-    for tid in family(bundle):
-        assert tid not in index
-    assert "CAM-01" in index and "X-CARD-01" in index                       # the old cards and everything else are still offered
+    index = md[md.index("## Choosing by the kind of line"):md.index("## The channel identity")]
+    for tid in family(bundle) + ["X-CARD-01", "X-CARD-02", "TXT-01"]:
+        assert tid not in index, tid                                        # the old cards are the program's too
+    assert "CAM-01" in index and "MAP-01" in index
 
 
 def test_the_identity_section_is_generated_from_the_block(bundle):
@@ -70,8 +73,9 @@ def test_a_style_without_an_identity_block_gets_no_such_marks(bundle):
     b = R.StyleBundle("gae")
     b.style = {k: v for k, v in b.style.items() if k != "identity"}
     md = techniques_md.generate(b)
-    assert "PROGRAM ONLY" not in md and "## The channel identity" not in md
-    assert "### ID-MARK-01 " in md                                          # still a technique of the registry
+    assert "## The channel identity" not in md
+    assert "PROGRAM ONLY: the channel identity" not in md                   # no identity block: nothing is the identity's
+    assert "### ID-MARK-01 " in md                                          # still a technique of the registry, listed among the ones the program writes
 
 
 def test_the_workspace_file_and_the_briefings_say_the_same(bundle, proj, tmp_path):
