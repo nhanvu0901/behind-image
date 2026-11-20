@@ -80,6 +80,29 @@ The numbers below are defaults; names may be adapted to the registry's conventio
 - Preview clips: today `*.mp4` is ignored by git and the old deploy sent the previews separately. The server now gets its code
   by `git pull`, so the preview clips must be tracked: un-ignore `style/gae/previews/*.mp4` and add the existing ones.
 
+## 4b. The channel-name beat that also writes the video's title (`ID-BRAND-03`, added 2026-11-20)
+
+The owner watched the first test video and asked for the channel-name beat to be held a little longer and to show the video's title too: "first the
+light sweep will show our channel name and then it sweeps again to show the video title. And then you hold it a bit." Asked how the title should
+appear, they chose: the channel name STAYS, the second sweep writes the title on a line BELOW it, and under the title a small line names the painting
+and the painter. `ID-BRAND-01` and every storyboard that uses it are not touched; this is a new technique, `ID-BRAND-03`, next to it.
+
+Nominal timeline (seconds from the start of the shot, defaults; a shot shorter than the nominal length scales every time, a longer one holds the end):
+
+| from | for | what |
+|---|---|---|
+| 0 | `dim_s` 0.6 | the picture dims from 100 % to `floor` 0.12 |
+| `sweep_delay_s` 0.5 | `sweep_s` 1.6 | the band crosses (left to right, 16 % wide, tilted 10 degrees); the name is written along its path (capitals, tracked +25 %, cap height 8 %, centred at 36 % of the height); behind the band the picture is at `wake` 0.26 |
+| 2.1 | `name_hold_s` 2.4 | nothing moves except the camera's slow push; the name is fully written |
+| 4.5 | `title_sweep_s` 1.6 | the band crosses a second time, same direction; the title (italic, as given, cap height 4.6 %, centred at 54 %) and under it the small line (capitals, tracked +14 %, cap height 2.2 %, centred at 62.5 %) are written along its path; the name stays and does not move; the picture is at `wake` before and behind this band (the band is the only light that moves) |
+| 6.1 | `title_hold_s` 3.0 | everything is held until the shot ends (nominal length 9.1 s) |
+
+Without a title and without a small line there is no second sweep: nominal length 4.5 s and the name sits at 42 % (`y_alone_pct`), as in `ID-BRAND-01`.
+With one of the two lines, the second sweep writes that line at its own place. The two lines are never wider than 84 % of the frame: a longer one is
+made smaller until it fits (one line, never wrapped; a title of 70 characters comes out at about three quarters of the size of a short one, a 57 px font instead of 76 px at 1080p, and still
+reads on a phone). The title is kerned (pair adjustments read from the face's GPOS table; without them "Wa" in the italic face has a visible gap).
+Params and defaults: the registry entry `ID-BRAND-03` in `style/gae/techniques.json`; code: `BrandTitle` in `bti/engine/techniques/identity.py`.
+
 ## 5. Style settings and the storyboard
 - `style/gae/style.json` gets a block `identity`: `channel_name` "RAKING LIGHT", `default_style` "raking", and for each style
   the technique of each role (`open`, `label`, `brand`, `mark`) plus, for `dim`, the mark's entry transition (`TR-01`, 0.75 s).

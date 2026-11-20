@@ -1,6 +1,6 @@
-"""Technique sweep: every one of the 85 registry techniques through the API, as the editing page uses it.
+"""Technique sweep: every one of the 86 registry techniques through the API, as the editing page uses it.
 Defaults -> draft -> validate -> three stills across the span; plus a 3 s preview for 22 of them (all transitions and
-cards included). Uses a copy of technique_lab as the reference configuration of each technique; the seven techniques of the channel
+cards included). Uses a copy of technique_lab as the reference configuration of each technique; the eight techniques of the channel
 identity (`ID-*`), `TIME-01`, `TREE-01`, `STATE-01`, `MAP-01` and the overlays `KEY-01`, `NUM-01` and `DOC-01` have no reference in technique_lab, so the fixture adds one for each to the COPY (never to the tracked project)."""
 from __future__ import annotations
 
@@ -22,13 +22,14 @@ FIRST_SAMPLE_DARK = {"ID-OPEN-01"}
 
 
 def _identity_references(sb: dict) -> dict:
-    """A reference configuration for each `ID-*` technique, after the last shot of the lab: four cards of 3 s (the two channel-name beats
+    """A reference configuration for each `ID-*` technique, after the last shot of the lab: five cards of 3 s (the three channel-name beats
     and the two chapter marks) and one 12 s host shot that carries the three overlays (the two openings and the label)."""
     sb = strip(sb)
     asset = "arn_A"
     t = float(sb["end"]["t"])
-    for k, tid in enumerate(("ID-BRAND-01", "ID-BRAND-02", "ID-MARK-01", "ID-MARK-02")):
-        sb["shots"].append({"id": "s9%03d" % k, "start": {"t": round(t, 3)}, "technique": tid, "slots": {"image": {"asset": asset}}, "params": {},
+    for k, tid in enumerate(("ID-BRAND-01", "ID-BRAND-02", "ID-MARK-01", "ID-MARK-02", "ID-BRAND-03")):
+        sb["shots"].append({"id": "s9%03d" % k, "start": {"t": round(t, 3)}, "technique": tid, "slots": {"image": {"asset": asset}},
+                            "params": {"title": "The Mirror in the Arnolfini Portrait", "subtitle": "The Arnolfini Portrait \u00b7 Jan van Eyck, 1434"} if tid == "ID-BRAND-03" else {},
                             "intent": "structure", "transition_in": None, "overlays": [], "locked": False, "source": "import", "note": tid + " reference"})
         t += 3.0
     ov = [("ID-OPEN-01", 0.0, 9.0), ("ID-OPEN-02", 1.0, 5.0), ("ID-LABEL-01", 5.0, 4.5)]
@@ -68,11 +69,11 @@ def lab_state(client, projects_root, data_root):
     shutil.rmtree(projects_root / "sweep_lab", ignore_errors=True)
 
 
-def test_registry_has_85_techniques(lab_state):
+def test_registry_has_86_techniques(lab_state):
     reg = lab_state[2]
-    assert len(reg) == len(_ids()) == 85                 # 71 of the channel's look, the seven `ID-*` of the identity, `TIME-01`, `TREE-01`, `STATE-01`, `MAP-01` and the overlays `KEY-01`, `NUM-01`, `DOC-01`
+    assert len(reg) == len(_ids()) == 86                 # 71 of the channel's look, the eight `ID-*` of the identity, `TIME-01`, `TREE-01`, `STATE-01`, `MAP-01` and the overlays `KEY-01`, `NUM-01`, `DOC-01`
     assert {t["kind"] for t in reg} == {"base", "overlay", "transition", "card"}
-    assert len([t for t in reg if t["id"].startswith("ID-")]) == 7
+    assert len([t for t in reg if t["id"].startswith("ID-")]) == 8
 
 
 def test_the_lab_has_a_reference_for_every_technique(lab_state):

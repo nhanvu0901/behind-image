@@ -9,7 +9,7 @@ from conftest import REPO
 
 def test_all_techniques_available_and_have_previews_on_disk():
     b = R.load_bundle("gae")
-    assert len(b.techniques) == 85 and all(b.available(t["id"]) for t in b.techniques)
+    assert len(b.techniques) == 86 and all(b.available(t["id"]) for t in b.techniques)
     for t in b.techniques:
         pv = t.get("preview")
         assert pv, t["id"]

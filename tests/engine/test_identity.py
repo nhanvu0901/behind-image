@@ -495,7 +495,7 @@ def test_the_sample_project_draws_every_technique(arnolfini, tmp_path):
     arnolfini.use_draft(sb)
     try:
         rs = arnolfini.resolve(sb)
-        for s in rs["shots"][-6:]:
+        for s in rs["shots"][-7:]:
             assert arnolfini.frame_at(s["_t0"] + 0.5 * (s["_t1"] - s["_t0"]), 320).shape == (180, 320, 3), s["technique"]
     finally:
         arnolfini.use_draft(None)

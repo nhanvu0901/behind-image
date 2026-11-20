@@ -13087,6 +13087,333 @@
    ]
   },
   {
+   "id": "ID-BRAND-03",
+   "key": "brand_raking_title",
+   "name": "Channel name and video title written by light",
+   "label_vi": "Tên kênh và tựa video: vệt sáng quét",
+   "category": "card",
+   "kind": "base",
+   "intents": [
+    "structure"
+   ],
+   "description": "The picture dims and a band of light sweeps across it, writing the channel name in wide-tracked capitals; after a pause the band sweeps a second time, in the same direction, and writes the video's title in italic with a small line (painting and painter) under it. The channel name stays where it is.",
+   "usage_rule": "Its own shot after the hook (nominal 9.1 s, or 4.5 s when the title and the small line are empty: then there is no second sweep), then a hard cut. The picture is the one that was on screen. Style `raking`.",
+   "channel_usage": "core",
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text",
+     "type": "string",
+     "default": "RAKING LIGHT",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "subtitle",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "dim_s",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": 5,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "floor",
+     "type": "number",
+     "default": 0.12,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "wake",
+     "type": "number",
+     "default": 0.26,
+     "min": 0,
+     "max": 1,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_delay_s",
+     "type": "number",
+     "default": 0.5,
+     "min": 0,
+     "max": 10,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sweep_s",
+     "type": "number",
+     "default": 1.6,
+     "min": 0.2,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "name_hold_s",
+     "type": "number",
+     "default": 2.4,
+     "min": 0,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_sweep_s",
+     "type": "number",
+     "default": 1.6,
+     "min": 0.2,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_hold_s",
+     "type": "number",
+     "default": 3.0,
+     "min": 0,
+     "max": 20,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "direction",
+     "type": "enum",
+     "default": "left_to_right",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "right_to_left",
+      "left_to_right"
+     ],
+     "measured": null
+    },
+    {
+     "name": "band_width_pct",
+     "type": "number",
+     "default": 16,
+     "min": 2,
+     "max": 60,
+     "unit": "% W",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "feather",
+     "type": "number",
+     "default": 0.4,
+     "min": 0.05,
+     "max": 1,
+     "unit": "ratio",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "angle_deg",
+     "type": "number",
+     "default": 10,
+     "min": -45,
+     "max": 45,
+     "unit": "deg",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "warm",
+     "type": "number",
+     "default": 0.14,
+     "min": 0,
+     "max": 1,
+     "unit": "alpha",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 8.0,
+     "min": 1,
+     "max": 20,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "tracking_pct",
+     "type": "number",
+     "default": 25,
+     "min": 0,
+     "max": 100,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "y_pct",
+     "type": "number",
+     "default": 36,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "y_alone_pct",
+     "type": "number",
+     "default": 42,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_cap_pct",
+     "type": "number",
+     "default": 4.6,
+     "min": 1,
+     "max": 20,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_y_pct",
+     "type": "number",
+     "default": 54,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_cap_pct",
+     "type": "number",
+     "default": 2.2,
+     "min": 1,
+     "max": 20,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_tracking_pct",
+     "type": "number",
+     "default": 14,
+     "min": 0,
+     "max": 100,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_y_pct",
+     "type": "number",
+     "default": 62.5,
+     "min": 5,
+     "max": 95,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 9.1,
+    "min_s": 1.5,
+    "max_s": 30.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.BrandTitle",
+    "reason": null,
+    "notes": "The picture is drawn exactly as CAM-01 draws it (same camera keys); `text` comes from identity.channel_name of style.json and is drawn in capitals, `title` is drawn in the italic face as given, `subtitle` in capitals; a line wider than 84 % of the frame (the title and the small line) or 88 % (the name) is made smaller until it fits. The nominal length is sweep_delay_s + sweep_s + name_hold_s + title_sweep_s + title_hold_s (9.1 s), or the first three only when title and subtitle are both empty. Times are nominal seconds from the start of the element; a shorter element scales them (actual / nominal length), a longer one keeps them."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 9.1,
+    "clip": "previews/ID-BRAND-03.mp4",
+    "thumb": "previews/ID-BRAND-03.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4 and 4b",
+    "docs/design/research/R9_titles_in_real_videos.md section 3",
+    "docs/design/2026-11-18-d13-identity-mock.html"
+   ]
+  },
+  {
    "id": "ID-MARK-01",
    "key": "mark_raking_light",
    "name": "Chapter mark written by light",

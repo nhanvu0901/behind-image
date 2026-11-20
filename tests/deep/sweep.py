@@ -1,4 +1,4 @@
-"""Technique sweep helpers: drives the 85 registry techniques through an HTTP client, as the editing page would.
+"""Technique sweep helpers: drives the 86 registry techniques through an HTTP client, as the editing page would.
 
 `client` is anything with .get/.post/.put returning an object with .status_code, .json(), .content (httpx.Client or
 starlette TestClient). `project` is a copy of technique_lab (reference configuration for every technique).

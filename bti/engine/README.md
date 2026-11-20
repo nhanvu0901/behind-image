@@ -28,7 +28,7 @@ codes). The rule behind the registry is: whatever `validate` accepts without an 
 `min_items`/`max_items` (points/lines/items), `fields` (items, below) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
 frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
 `RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
-four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 85 techniques and all fourteen param types.
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 86 techniques and all fourteen param types.
 
 ## Layout
 
@@ -199,6 +199,7 @@ Contract and numbers: `docs/design/2026-11-18-identity-raking-light.md` (section
 | `ID-OPEN-01` | overlay | raking | the opening: black, the picture rises to `floor`, a band of light sweeps across and leaves it at `wake`, then 100 % (nominal 9.0 s) |
 | `ID-LABEL-01` | overlay | raking | two-line artwork label bottom left, no strip, soft shadow (4.5 s) |
 | `ID-BRAND-01` | base | raking | the channel name written by a band over the dimmed picture (5.0 s) |
+| `ID-BRAND-03` | base | raking | the channel name written by a band, then a second sweep writes the video's title (italic) and a small line under it; the name stays (9.1 s, 4.5 s with no lines) |
 | `ID-MARK-01` | base | raking | one chapter-mark line written by a band, then the picture is released (3.2 s) |
 | `ID-OPEN-02` | overlay | dim | the frame dims, the title (italic) and a small "ARTIST · YEAR" line fade in, then out (5.0 s) |
 | `ID-BRAND-02` | base | dim | the channel name fades in over the dimmed picture, then out (4.0 s) |
@@ -207,13 +208,13 @@ Contract and numbers: `docs/design/2026-11-18-identity-raking-light.md` (section
 `style/gae/style.json` has a block `identity` (`channel_name`, `default_style`, and per style the technique of each role `open`, `label`,
 `brand`, `mark`, the `mark_transition` and the `nominal` start and length of each role); the applier reads it, never constants of its own.
 
-Rules that hold for all seven (and that a new technique of the family must keep):
+Rules that hold for all eight (and that a new technique of the family must keep):
 
 - **Nominal timeline, scaled.** Times in the params are nominal seconds from the start of the element (the overlay; the shot for a base
   technique). An element shorter than its nominal length (`nominal_s`, or the sum of its own times for `ID-OPEN-01`, `ID-MARK-*`) scales every
   time by actual / nominal; a longer one keeps the nominal times (the brand beats hold their last state and fade out at the real end; opening and
   marks end plain). An element is meant to be >= 1.5 s (`timing.min_s`, `style.identity.min_element_s`).
-- **The picture is CAM-01's.** The four base techniques derive from `camera.MatteShot`: same `camera` keys, slot `image` and `shadow`, same `view()`,
+- **The picture is CAM-01's.** The five base techniques derive from `camera.MatteShot`: same `camera` keys, slot `image` and `shadow`, same `view()`,
   so overlays work on them. Light and text come after the picture. With neutral light (`floor`/`wake`/`dim` = 1, no text) the frame equals CAM-01's.
 - **Light is a gain on brightness**, never a box or strip: `vfx.Band` (below) for the raking style, a smoothstep dim for the dim style.
 - **Text** is one line, EB Garamond, with a soft shadow, placed by cap height in percent of the frame height (the font size comes from the real
@@ -222,6 +223,20 @@ Rules that hold for all seven (and that a new technique of the family must keep)
 - **Revealed by the band** means: the opacity of the text at a pixel is the largest value the band's mask has had there so far. For a band that
   moves in one direction at constant speed that is `Band.reveal(s)`: 1 behind the band's centre line, the band's own shoulder ahead of it. No
   accumulation over frames, so a frame is a pure function of time.
+
+### `ID-BRAND-03`: the channel name, then the video's title (class `BrandTitle`)
+
+A base technique on CAM-01's picture, its own shot, hard cut at the end. Nominal timeline (s): the picture dims to `floor` over `dim_s` (0.6); from
+`sweep_delay_s` (0.5) a band crosses the frame for `sweep_s` (1.6) and writes the channel name, the picture behind it at `wake`; `name_hold_s` (2.4) of
+stillness; a second band crosses in the same direction for `title_sweep_s` (1.6) and writes the title (italic, as given) and under it a small line
+(capitals, tracked); the name does not move and the picture stays at `wake` on both sides of the second band; `title_hold_s` (3.0) of hold. Nominal
+length 9.1 s; with `title` and `subtitle` both empty there is no second sweep (4.5 s) and the name sits at `y_alone_pct` (42) instead of `y_pct` (36).
+With one line only, the second sweep writes that line at its own place (`title_y_pct` 54, `sub_y_pct` 62.5). A shorter shot scales every time; a longer
+one holds the last state. The title and the small line are set at most 84 % of the frame wide and are made smaller until they fit (a 70-character
+title is set at about three quarters of the size of a short one: a 57 px font instead of 76 px at 1080p); the title is kerned from the GPOS table of the face (Pillow's basic layout does not read it;
+`identity._Kerning`), the other lines are not. `state(t)` returns the `BeatState` (nominal time, the two sweep progresses, the band that lights
+the picture and the brightness ahead of and behind it). `ID-BRAND-01` is untouched; the section "ID-BRAND-03" of the design document has the
+reasoning.
 
 ### The band primitive (`vfx.Band`)
 
@@ -246,6 +261,9 @@ file and the folder. There is no fallback to another face and `fonts.map` of sty
 
 `tests/engine/test_identity.py` draws frames of a flat grey (or black) picture that fills the canvas and measures: band position, the three zones,
 text only behind the band, the dim levels, end state = plain picture, time scaling, cap heights, fonts, every param at min and max.
+`tests/engine/test_identity_brand_title.py` does the same for `ID-BRAND-03` (the state at the times that matter, both sweeps, the scaled timeline, long titles, kerning) and holds
+the SHA-256 of frames of the older identity techniques as they were before it existed. `tests/engine/intro_stills.py` draws the contact sheet, the stills and the
+preview clip of `ID-BRAND-03` on real paintings (run it with `tools/deploy/snapshot_py.sh`).
 `tests/engine/identity_lab.py` adds one item per ID technique to a copy of `projects/technique_lab` for the registry sweeps. Preview clips of the
 family are 640x360, 30 fps, as long as the nominal timeline; since the server gets its code by `git pull`, `style/gae/previews/*.mp4` is tracked
 (`.gitignore` no longer ignores it).

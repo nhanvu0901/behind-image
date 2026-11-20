@@ -69,7 +69,7 @@ The catalogue of techniques, under its headings (a shot takes a `base` or `card`
 |---|---|
 | annotation | `AN-01` Circle draw; `AN-02` Object outline; `AN-03` Perspective rays; `AN-04` Map circle and arrow; `AN-05` Dimension ruler; `AN-06` Grid and geometric regions; `AN-07` Dot field densifying; `KEY-01` Labels as a key to parts of a picture; `NUM-01` Big number with a comparison; `X-ANN-01` Detail label strip (one line); `X-ANN-02` Artwork label (two lines); `X-ANN-03` Recap labels at closing; `X-ANN-04` Sequential group outlines; `X-ANN-05` Map point markers one by one |
 | camera | `CAM-01` Push-in; `CAM-02` Layered relative motion; `CAM-03` Pull-back; `CAM-04` Pan up; `CAM-05` Zoom and shift; `CAM-06` Hold and label reveal |
-| card | `ID-BRAND-01` Channel name written by light; `ID-BRAND-02` Channel name on a dimmed picture; `ID-MARK-01` Chapter mark written by light; `ID-MARK-02` Chapter mark on a dimmed picture; `X-CARD-01` Chapter card on black; `X-CARD-02` Main title card; `X-CARD-03` End credit; `X-CARD-04` Question card on white |
+| card | `ID-BRAND-01` Channel name written by light; `ID-BRAND-02` Channel name on a dimmed picture; `ID-BRAND-03` Channel name and video title written by light; `ID-MARK-01` Chapter mark written by light; `ID-MARK-02` Chapter mark on a dimmed picture; `X-CARD-01` Chapter card on black; `X-CARD-02` Main title card; `X-CARD-03` End credit; `X-CARD-04` Question card on white |
 | compare | `CMP-01` Grey and colour scan side by side; `CMP-02` Stages versus finished; `CMP-03` White and colour versions; `CMP-04` Colour blocks beside detail; `CMP-05` Two colour states; `STATE-01` The same picture in two states; `X-CMP-01` Swap one side of a split; `X-CMP-02` Wipe compare |
 | diagram | `DIA-01` Grid and projection rays; `DIA-02` Two views of one object; `DIA-03` Cross-section and light rays; `DIA-04` Figure and separated pieces; `DIA-05` Process silhouette; `DIA-06` Room model and UV image; `DIA-07` Eye and vision diagram; `TIME-01` Time axis with dates; `TREE-01` Relations: family and patrons |
 | footage | `FOOT-01` Material footage and palette |
@@ -80,7 +80,7 @@ The catalogue of techniques, under its headings (a shot takes a `base` or `card`
 | text | `ID-LABEL-01` Artwork label without a strip; `ID-OPEN-02` Opening: dim and name; `TXT-01` Chapter title on blurred image; `TXT-02` Sliding italic text |
 | transition | `TR-01` Dissolve; `TR-02` Image slide in/out; `TR-03` Panel opening; `TR-04` Full-to-crop hard cut; `X-TR-01` Hard cut; `X-TR-02` Strip slides in, then splits |
 
-85 techniques in 12 headings; `bti` does not list their parameters: GET /api/styles/{style} does, and `bti schema ops storyboard` shows how `set_technique` and `set_params` take them.
+86 techniques in 12 headings; `bti` does not list their parameters: GET /api/styles/{style} does, and `bti schema ops storyboard` shows how `set_technique` and `set_params` take them.
 <!-- END GENERATED: techniques -->
 
 ## A worked session
