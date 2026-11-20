@@ -751,3 +751,29 @@ STAGE_CODES.title = { ...TITLESTEP_SENTENCES, agent_job_running: AGENT_JOB_RUNNI
 for (const k of Object.keys(TITLESTEP_SENTENCES)) if (k !== 'narration_not_approved' && k !== 'stale_revision') BY_CODE_HTTP[k] = () => TITLESTEP_SENTENCES[k];
 for (const k of ['agy_missing', 'agy_config', 'agy_auth', 'agy_rate_limit', 'agy_model', 'agy_error', 'agy_no_result', 'agy_timeout', 'claude_missing', 'claude_auth', 'claude_rate_limit', 'claude_model',
   'claude_config', 'claude_outdated', 'claude_error', 'claude_no_result', 'claude_timeout', 'real_models_off']) if (STAGE_CODES.draft[k]) STAGE_CODES.title[k] = STAGE_CODES.draft[k];      // the agent's own failures: the draft's sentences
+
+// ---- worker catalogue (2026-11-20): the sentences of the four checks of what the `kinds` of a line call for (bti/engine/viewchecks.py `CATALOGUE_ISSUES`). A check is silent on a
+// line that has no `kinds`. The sentences use the plain names of the devices, never a technique id. They are added to BUILD like the fixdraft ones; `CATALOGUE_CODES` lists them.
+const catDevice = { 'MAP-01': 'bản đồ', 'TIME-01': 'trục thời gian', 'NUM-01': 'con số lớn', 'DOC-01': 'dòng chữ được rọi sáng', 'AN-03': 'các đường phối cảnh', 'AN-06': 'lưới và hình khối',
+  'TREE-01': 'sơ đồ quan hệ', 'LAY-01': 'hai khung cạnh nhau', 'X-CMP-01': 'khung so sánh', 'KEY-01': 'bảng nhãn' };
+const catNeeds = { journey: 'nói về một chuyến đi hoặc mối liên hệ giữa hai nơi trở lên', dates: 'kể từ ba mốc thời gian trở lên', figure: 'lấy một con số làm ý chính',
+  inscription: 'đọc dòng chữ viết trên tranh', construction: 'giải thích cách bức tranh được dựng', relations: 'nối từ ba người trở lên với nhau',
+  compare: 'so sánh bức tranh với một tác phẩm khác' };
+const catItems = { places: 'địa điểm', items: 'mốc', labels: 'nhãn', nodes: 'người' };
+const catAdvice = { 'MAP-01': 'Chỉ có một nơi thì hãy cho xem hình của nơi đó thay vì bản đồ.', 'TIME-01': 'Một hai mốc thì nói bằng chữ số lớn đặt trên tranh, hoặc bỏ.',
+  'KEY-01': 'Một hai bộ phận thì dùng nhãn một dòng cho từng bộ phận.', 'TREE-01': 'Chỉ hai người thì để lời dẫn tự nói.' };
+const catName = (t) => catDevice[t] || 'hiệu ứng này';
+export const CATALOGUE_SENTENCES = {
+  device_wrong_kind: (i) => { const a = i.args || {}; const need = (a.needs || []).map((k) => catNeeds[k]).filter(Boolean).join(' hoặc ');
+    return `${fdShot(a)}: ${catName(a.technique)} không hợp với câu này (dòng ${(a.beats || []).slice(0, 3).join(', ')}). Nó chỉ dành cho câu ${need || 'thuộc đúng loại của nó'}. Bỏ nó đi, giữ hình mà bước Chọn hình đã chọn và cho máy quay chuyển động.`; },
+  device_too_little: (i) => { const a = i.args || {};
+    return `${fdShot(a)}: ${catName(a.technique)} chỉ có ${a.count ?? '?'} ${catItems[a.items] || 'mục'}, cần ít nhất ${a.min ?? '?'}. ${catAdvice[a.technique] || 'Bỏ nó đi.'}`; },
+  figure_on_wrong_picture: (i) => { const a = i.args || {};
+    return `${fdShot(a)}: con số lớn đang nằm trên hình "${a.asset ?? ''}", trong khi dòng ${(a.beats || []).slice(0, 3).join(', ')} đã có hình của chính thứ được đếm. Đặt con số lên hình đó, không đặt lên bức tranh.`; },
+  outside_on_painting: (i) => { const a = i.args || {};
+    return `Dòng ${a.beat ?? '?'} nói về thứ không có trong tranh và đã có hình của nó, nhưng hình ấy chỉ hiện ${fdVn(a.seconds)} trong ${fdVn(a.beat_seconds)} giây của dòng (${fdVn(Number(a.share) * 100, 0)}%). Cho hình ấy hiện suốt phần lớn dòng, từ cảnh đầu của dòng, thay vì bức tranh.`; },
+  outside_picture_small: (i) => { const a = i.args || {};
+    return `${fdShot(a)}: hình "${a.asset ?? ''}" đang hiện nhỏ, chỉ ${fdVn(Number(a.share) * 100, 0)}% cỡ vừa khung, nên nằm lọt thỏm giữa hai dải đen. Cho hình hiện đúng cỡ vừa khung (bỏ cách chỉnh máy quay); hình nhỏ dưới 1000 px thì không phóng quá gấp đôi.`; },
+};
+export const CATALOGUE_CODES = Object.keys(CATALOGUE_SENTENCES);
+Object.assign(BUILD, CATALOGUE_SENTENCES);

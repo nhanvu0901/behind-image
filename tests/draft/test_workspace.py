@@ -69,9 +69,11 @@ def test_techniques_md_lists_every_available_technique(proj, tmp_path):
     md = (ws.root / "inputs" / "techniques.md").read_text(encoding="utf-8")
     from bti.engine import registry as R
     for t in R.load_bundle("gae").techniques:
-        if t["engine"]["available"]:
+        if t["engine"]["available"] and (t["offered"] or t["hidden_reason"]["code"] == "program"):         # catalogue pass: what is hidden from the models is not listed
             assert "### %s " % t["id"] in md
-    assert "SHORTS ONLY" in md and "## Choosing by intent" in md
+        elif t["engine"]["available"]:
+            assert "### %s " % t["id"] not in md
+    assert "SHORTS ONLY" not in md and "## Choosing by the kind of line" in md
 
 
 def test_task_md_is_rendered_for_the_mode(proj, tmp_path):

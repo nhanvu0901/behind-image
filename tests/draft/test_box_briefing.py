@@ -84,7 +84,10 @@ def test_the_catalogue_is_reduced_to_what_a_small_edit_needs(box):
     assert "### CAM-01" in cat and "### STATIC-02" in cat and "### HI-01" in cat and "### AN-01" in cat      # on the scope's shot, and the usual overlays
     assert "- CAM-03 " in cat                                                                                  # a core treatment, in one line
     for gone in ("ID-OPEN-01", "ID-BRAND-01", "ID-BRAND-03", "SHORT-01", "MAP-01", "TIME-01", "KEY-01", "NUM-01", "DOC-01", "STATE-01", "TREE-01"):
-        assert gone not in cat, gone                                                                          # identity, shorts-only, devices nobody asked for
+        assert "### %s " % gone not in cat and "- %s " % gone not in cat, gone                               # identity, shorts-only, devices nobody asked for (a use text may name them: "use KEY-01 instead")
+    assert "- use when:" in cat and "- never when:" in cat                                                     # catalogue pass: the full entries say when to use a technique and when never
+    for hidden in ("### X-HI-01", "### CAM-06", "- CAM-06 ", "### STATIC-04"):
+        assert hidden not in cat, hidden                                                                       # hidden from the models: not listed unless a shot of the scope has it
 
 
 @pytest.mark.parametrize("ask,device", [("thêm bản đồ cho nơi nói đến ở cảnh này", "MAP-01"), ("hiện mốc năm 1434 trên dòng thời gian", "TIME-01"),
@@ -117,8 +120,8 @@ def test_the_last_turns_of_the_thread_are_in_it(box):
     assert "lần một" in text and "Đã đổi lần một." in text and "chọn hình" not in text.split("## The last turns")[1].split("## The answer")[0]
 
 
-@pytest.mark.parametrize("payload,limit", [({"shots": ["s0004"]}, 26_000), ({"shots": ["s0002", "s0004"]}, 28_000), ({"chapter": "c02"}, 32_000),
-                                           ({"all": True}, 36_000)])
+@pytest.mark.parametrize("payload,limit", [({"shots": ["s0004"]}, 27_500), ({"shots": ["s0002", "s0004"]}, 29_500), ({"chapter": "c02"}, 33_500),
+                                           ({"all": True}, 38_000)])           # catalogue pass: +1,500 for `use when` and `never when` of the techniques of the scope
 def test_the_briefing_stays_under_its_size(box, payload, limit):
     """Measured on the fixture project (tests/draft/measure_briefing.py prints the parts): about 22 000 characters for one shot."""
     text, scope = briefing(box, payload)

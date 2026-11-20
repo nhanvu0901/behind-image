@@ -56,7 +56,10 @@ def test_the_catalogue_prints_the_fields_and_one_filled_example_that_the_registr
                         assert f["name"] in it, (tid, f["name"])
                 assert all(k in {f["name"] for f in p["fields"]} for k in it)
     assert len(json.dumps(ex)) < 2600, "an example stays short: it is read on every call"
-    assert "- when:" in sec and sp["usage_rule"][:40] in sec
+    # catalogue pass: the old `usage_rule` (a note on where the reference channel used the device) is replaced by the four texts of the registry
+    for label, key in (("use when", "use_when"), ("needs", "needs"), ("never when", "never_when"), ("real sentence", "example")):
+        assert "- %s: %s" % (label, " ".join(sp[key].split())) in sec, (tid, label)
+    assert "- when:" not in sec and sp["usage_rule"][:40] not in sec
 
 
 def test_the_examples_are_the_registry_defaults_with_the_filled_in_fields_left_out(md):
@@ -82,14 +85,13 @@ def test_no_other_technique_gets_an_example_line(md):
     assert "- example" not in section(md, "CAM-01")
 
 
-def test_the_intent_index_serves_the_new_techniques(md):
-    idx = md.split("## The techniques")[0]
-    assert "TIME-01" in next(l for l in idx.splitlines() if l.startswith("- **quantify**"))
-    assert "TREE-01" in next(l for l in idx.splitlines() if l.startswith("- **context**")) and "TIME-01" in next(l for l in idx.splitlines() if l.startswith("- **context**"))
-    assert "STATE-01" in next(l for l in idx.splitlines() if l.startswith("- **compare**")) and "STATE-01" in next(l for l in idx.splitlines() if l.startswith("- **reveal**"))
-    line = lambda intent: next(l for l in idx.splitlines() if l.startswith("- **%s**" % intent))
-    assert "KEY-01" in line("point_at") and "KEY-01" in line("context") and "DOC-01" in line("point_at") and "DOC-01" in line("isolate") and "DOC-01" in line("context")
-    assert "NUM-01" in line("quantify") and "NUM-01" in line("context")
+def test_the_index_by_kind_serves_the_devices(md):
+    """Catalogue pass: the index is by the kind of line (the `kinds` of a beat), not by intent."""
+    idx = md.split("## The channel identity")[0]
+    line = lambda kind: next(l for l in idx.splitlines() if l.startswith("- **%s**" % kind))
+    assert "MAP-01" in line("journey") and "TIME-01" in line("dates") and "TREE-01" in line("relations") and "STATE-01" in line("compare") and "STATE-01" in line("construction")
+    assert "KEY-01" in line("detail") and "DOC-01" in line("inscription") and "NUM-01" in line("figure") and "AN-03" in line("construction") and "AN-06" in line("construction")
+    assert "MAP-01" not in line("outside"), "a map is not the picture of a place that is merely mentioned"
 
 
 def part(text: str) -> str:
@@ -103,18 +105,21 @@ def test_the_briefings_carry_the_part_on_explanatory_devices(text, name):
     p = part(text)
     for tid in SEVEN:
         assert "`%s`" % tid in p, (name, tid)
-    for need in ("decoration", "ANY place", "STATIC-06", "AN-04", "X-ANN-05", "the word that names it", "never guess", "6 to 12"):
+    for need in ("decoration", "the word that names it", "never guess", "none is fine", "a journey or a tie between two or more places", "never one place that is merely mentioned"):
         assert need in p, (name, need)
+    for gone in ("ANY place", "STATIC-06", "AN-04", "X-ANN-05", "6 to 12", "street-map"):
+        assert gone not in p and gone not in TASK, (name, gone)      # catalogue pass: the sentences that made three one-place maps and "6 to 12 devices" are deleted
     assert "`at`" in p and '"w"' in p, "each item is tied to the word that names it"
     assert "only from the narration and the project's sources" in p
 
 
 def test_the_task_part_says_which_kind_of_sentence_each_device_serves_and_that_an_example_is_only_a_template():
     p = part(TASK)
-    for kind in ("a place, a journey or a territory", "events with dates", "who is related to whom", "names for parts of the picture", "a figure", "the same picture in two states", "one line of a document"):
+    for kind in ("a journey or a tie between two or more places", "three or more dated events", "who is related to whom", "names for three or more parts of the picture", "a figure",
+                 "the same picture in two states", "one line of a document"):
         assert kind in p, kind
     assert "replace all of its data" in p and "inputs/techniques.md" in p
-    assert "never two in a row" in p and "general talk" in p
+    assert "Never two in a row" in p and "general talk" in p and "the beat's kinds call for it" in p
 
 
 def test_the_fast_briefing_carries_the_rules_on_explanatory_devices():
@@ -141,9 +146,11 @@ def test_the_briefings_stay_short():
     Worker fixdraft added the rules 13 to 17 (the full frame, the highlights, the text on the screen, the first half minute, the pictures of the lines):
     the draft task went from 23,693 to 26,823 bytes, so its bound went from 22,250 + 1,700 to 27,000 bytes; the fast briefing from 7,868 to 9,177 bytes.
     Worker introflow added the opening shot the program writes (the model's first shot starts on the first word and is never a still view of the whole
-    painting): the draft task went from 26,827 to 27,252 bytes and the fast briefing from 9,177 to 9,355, so the bound of the draft task is 27,500."""
-    assert len(part(TASK).encode("utf-8")) < 1900
-    assert len(TASK.encode("utf-8")) < 27_500 and len(FAST.encode("utf-8")) < 10_000
+    painting): the draft task went from 26,827 to 27,252 bytes and the fast briefing from 9,177 to 9,355, so the bound of the draft task is 27,500.
+    Worker catalogue (2026-11-20) rewrote the table around the kinds of a beat and added the rules 18 to 21 (a device only on a beat whose kinds call for it, the outside picture
+    on screen, a missing picture, the picture under a figure) and the exact rule 17: the draft task went from 27,252 to 31,200 bytes and the fast briefing from 9,355 to 9,950."""
+    assert len(part(TASK).encode("utf-8")) < 2400
+    assert len(TASK.encode("utf-8")) < 32_000 and len(FAST.encode("utf-8")) < 10_500
 
 
 def test_the_rendered_task_of_a_draft_and_of_an_edit_holds_the_part(proj, tmp_path):

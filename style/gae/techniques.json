@@ -17,6 +17,15 @@
    "description": "A slow 2D crop that enlarges on the artwork, drifting toward a detail.",
    "usage_rule": "Used while the narration dwells on a region, so the eye moves in as the point is made; crops lead from whole or group toward face, hands or texture (Sargent portrait push to the face, Goya Saturn push on black).",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "detail",
+    "idea"
+   ],
+   "use_when": "The sentence stays on ONE thing that is already in the frame and says something about it: it describes the thing, tells its history or gives a reading of it. The camera moves in slowly while the sentence is spoken, so that the eye settles on the thing. This is the usual treatment of a beat of kind `detail`, and of kind `idea` (a reading or an opinion that no picture can show: stay on the thing the opinion is about). The `region` of the shot is the thing; the compiler builds the move toward it.",
+   "needs": "A region of the picture that IS the thing the sentence is about (see `inputs/assets.json`). If the narration names a thing that has no region, measure the picture and add the region in `out/regions.json` first.",
+   "never_when": "The sentence moves from one thing to another (CAM-05), steps back to the whole (CAM-03), or is about something that is not in the painting (kind `outside`: show the outside picture, do not push in on the painting). Do not write the camera yourself unless the default is wrong, and never one that leaves the picture small between black bars (rule 13). Not four times in a row.",
+   "example": "St. Eligius b0002: \"But now look at his eyes. They are not on the scales at all. They have turned upward, away from the work in his hand.\" (push in on the saint's face)",
    "slots": [
     {
      "name": "image",
@@ -86,6 +95,12 @@
    "description": "Foreground figures and the background plate move and scale at different rates, giving a sense of depth.",
    "usage_rule": "Great Wave 45-80 s keeps one composition while foreground wave, boat and Fuji shift relative to each other as narration moves from observation to interpretation.",
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs cut-out figures, a plate of the background behind them and their masks; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "foreground",
@@ -228,6 +243,15 @@
    "description": "The crop shrinks and widens until the whole painting and its matte edge are revealed.",
    "usage_rule": "Opens an episode (decelerating pull-back to the full painting on the matte) and closes it (very slow pull-out of about 40 s); also used to return to the whole work after a detail.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "whole",
+    "idea"
+   ],
+   "use_when": "The sentence steps back from details to the whole picture or to a wider group: a summing-up, the question the video asks, the end of a chapter (\"so, a prayer or a shop sign?\"), or a return to the whole after a run of details. The crop widens until the picture, or a wide band of it, fills the frame.",
+   "needs": "Nothing beyond the picture. The move starts on the last thing looked at (a region) and ends on the wide view.",
+   "never_when": "Twice in one chapter. It never ends on the tiny whole between black bars except in the three places rule 13 allows (the pull back that ends the cold open, ONE chapter opening, the last shot); everywhere else it ends on a wide band that fills the width of the screen.",
+   "example": "Arnolfini b0141: \"Centuries of close study have not settled what this small, crowded panel is for. Is it a wedding picture, a memorial to a wife already gone, or a merchant's showroom?\" (the pull back that ends the cold open)",
    "slots": [
     {
      "name": "image",
@@ -296,6 +320,14 @@
    "description": "The frame glides upward over a tall image, revealing forehead and eyes while the chin leaves the bottom edge.",
    "usage_rule": "Slow reveal along a vertical figure or garment (dress pan down in the Arnolfini episode, portrait pan up).",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "detail"
+   ],
+   "use_when": "The sentence follows something tall or long from one end to the other, in the order it names the parts: a garment from the hem to the collar, a shelf of objects named one after another, a line of writing along an edge. The frame glides along the thing. The default glides up; a glide down is the same move with the two camera keys swapped.",
+   "needs": "A picture where the thing is longer than the frame at the zoom of the move: the thing must run past the edge of the frame. The region at the start of the thing.",
+   "never_when": "The thing fits in the frame (the glide has nothing to uncover), or the parts the sentence names do not lie in a line.",
+   "example": "St. Eligius b0024: \"She wears gold brocade with a pomegranate pattern, probably from Italy, and a gold bonnet embroidered with pearls.\" (the finished video glides up the woman from the brocade to the bonnet)",
    "slots": [
     {
      "name": "image",
@@ -365,6 +397,14 @@
    "description": "The crop enlarges while its centre travels toward a region, so zoom and drift happen together.",
    "usage_rule": "Used to travel from a pair or group to a specific detail (mirror push, chandelier push, hands push).",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "detail"
+   ],
+   "use_when": "The sentence moves the eye from one thing to another, or from a group to one member of it: \"follow his hand to hers\", \"from the couple to the mirror\", \"up the dress to the fur\". The shot starts on the wider view (or on the first thing) and arrives on the second thing as it is named. Use it as the first shot of a `detail` beat whose thing is not in the frame yet.",
+   "needs": "The region of the second thing (where the move ends). The start is the frame the shot before ended on, or the whole picture.",
+   "never_when": "The sentence stays on one thing (CAM-01), or the two things lie so close together that nothing travels. Never to add movement to a sentence that does not travel, and never a move that ends with the picture small between black bars (rule 13).",
+   "example": "Arnolfini b0140: \"Follow his hand to hers, at the very centre of the panel.\" (from his hand to hers)",
    "slots": [
     {
      "name": "image",
@@ -434,6 +474,15 @@
    "description": "The painting rests centred on the matte and a white label appears over it.",
    "usage_rule": "Opening or return-to-whole shot: hold the full work on the matte, then pop the title label.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "STATIC-01",
+     "X-ANN-01"
+    ],
+    "note": "STATIC-01 holds the whole painting and X-ANN-01 names it; the program writes the title label of the opening."
+   },
    "slots": [
     {
      "name": "image",
@@ -652,6 +701,15 @@
    "description": "Two images overlap and one fades into the other in the same frame area.",
    "usage_rule": "Used for footage-to-painting change inside a panel; no dissolves were found in the Arnolfini episode, whose cuts are hard.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "compare",
+    "outside"
+   ],
+   "use_when": "The change from one shot to the next is a change of STATE, not of subject: the same view in its second state, or a detail of the painting and the real object it shows (the painted mirror and a photograph of a real convex mirror). The first picture melts into the second over about a second.",
+   "needs": "Both pictures, in the two shots; the dissolve is written as the `transition_in` of the second shot.",
+   "never_when": "As a general softener between shots (the hard cut is the channel's habit and the default); at the start of a chapter; on every change of picture.",
+   "example": "St. Eligius b0042: \"Mirrors like this were common in Netherlandish homes, where one hung opposite a window brightened the room.\" (from the painted mirror to a picture of a real one)",
    "slots": [
     {
      "name": "from",
@@ -706,6 +764,14 @@
    "description": "An image enters from the edge into a cell beside the current image, then leaves the same way.",
    "usage_rule": "Brings a comparison work in next to the anchor painting and removes it again (Great Wave comparison, Sargent/Scream, Guernica strip).",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "LAY-01"
+    ],
+    "note": "LAY-01 shows another work beside the painting; a slide-in is not needed."
+   },
    "slots": [
     {
      "name": "anchor",
@@ -794,6 +860,12 @@
    "description": "Two side panels narrow in perspective and open to uncover the central picture.",
    "usage_rule": "Triptych reveal (Bosch): the closed wings open on the narration about opening them, then the inner scene is shown.",
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs the closed and the open wings of a triptych as pictures; the pictures step supplies none."
+   },
    "slots": [],
    "params": [
     {
@@ -901,6 +973,12 @@
    "description": "The whole painting is replaced instantly by a crop of a detail.",
    "usage_rule": "Default way to go from the whole work to a detail; the label appears just after the cut.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The hard cut is what happens between two shots when no transition is written: leave `transition_in` out."
+   },
    "slots": [
     {
      "name": "whole",
@@ -955,6 +1033,14 @@
    "description": "Two images or crops sit side by side on the matte with a gap, each with a caption.",
    "usage_rule": "Anchor painting stays in one cell while the other cell shows a comparison work, drawing or photo.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "compare"
+   ],
+   "use_when": "The sentence compares a detail of the painting with another work: \"Jan van Eyck painted such a mirror in his Arnolfini portrait\". The two pictures sit side by side on the matte, each with a caption.",
+   "needs": "Both pictures: the other work in the picks of the beat, and the DETAIL of the painting that is compared, written as the `region` of the `left` slot (the compiler frames that region in its panel; with no region the panel shows the whole painting small and the detail is lost).",
+   "never_when": "The other picture was not found (stay on the detail of the painting); two pictures that are not being compared; the comparison is with several works one after another (X-CMP-01).",
+   "example": "St. Eligius b0045: \"Jan van Eyck painted such a mirror in his Arnolfini portrait, and it is presumed to hold his own reflection.\"",
    "slots": [
     {
      "name": "left",
@@ -1140,6 +1226,14 @@
    "description": "Four images in one frame, optionally joined by thin white lines.",
    "usage_rule": "Starry Night 637-643 s: four landscapes in a grid with thin diagonal lines linking the hill line; also four-footage grids for mood.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "X-CMP-01"
+    ],
+    "note": "X-CMP-01 shows several pictures one after another beside the painting; a four-tile grid is not needed."
+   },
    "slots": [
     {
      "name": "tile_1",
@@ -1400,6 +1494,14 @@
    "description": "Five variants placed in five tall columns.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "X-CMP-01"
+    ],
+    "note": "X-CMP-01 shows several pictures one after another beside the painting; five columns are not needed."
+   },
    "slots": [
     {
      "name": "tile_1",
@@ -1674,6 +1776,15 @@
    "description": "A small image or footage window over a crop of the painting.",
    "usage_rule": "Hand, brush or footage inset shown over a surface detail (Starry impasto: surface crop left, hand painting right).",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "FOOT-01",
+     "LAY-01"
+    ],
+    "note": "FOOT-01 shows a clip full frame and LAY-01 shows two pictures side by side; an inset over the painting is not needed."
+   },
    "slots": [
     {
      "name": "image",
@@ -1883,6 +1994,12 @@
    "description": "A cut-out object stays centred while the background behind it changes.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a cut-out object with its mask and several background pictures; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "image",
@@ -2040,6 +2157,12 @@
    "description": "Tall portrait strips overlap and swap, semi-transparent.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "An effect of one episode of the reference channel (overlapping translucent strips); no kind of line in this pipeline calls for it."
+   },
    "slots": [
     {
      "name": "image",
@@ -2238,6 +2361,12 @@
    "description": "A grid of footage tiles with a semi-transparent object over it.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a cut-out object and a grid of footage clips; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "tile_1",
@@ -2481,6 +2610,12 @@
    "description": "A motif tiled with mirror symmetry.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "An effect of one episode of the reference channel (a motif tiled with mirror symmetry); no kind of line in this pipeline calls for it."
+   },
    "slots": [
     {
      "name": "image",
@@ -2581,6 +2716,14 @@
    "description": "The painting darkens and a soft ellipse around the subject stays bright.",
    "usage_rule": "Isolates a figure, table or statue while the narration discusses it, then restores the whole (Goya white-shirted figure, Last Supper table, Raphael statues).",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "detail"
+   ],
+   "use_when": "The sentence singles out one part while the frame must stay wide, because the part's place among the others is the point: the one lit candle in a chandelier, the box of weights among the objects on the counter, the tiny falconer in the mirror. The picture darkens a little around the part, the part stays bright, then the whole returns.",
+   "needs": "The point (a region of the picture) and its size (`rx`, `ry`), and a wide frame. The centre of the region stays inside the frame, 5% in from every edge, from the start of the layer to its end (look at both camera keys); `floor` is 0.6 or more.",
+   "never_when": "A close-up (the camera already frames the part); two shots in a row; the first minute; more than one in two minutes; together with AN-01 on the same thing.",
+   "example": "Arnolfini b0165: \"High in the brass chandelier, only one candle is lit, and it has been read as the seeing eye of God.\"",
    "slots": [
     {
      "name": "image",
@@ -2707,6 +2850,12 @@
    "description": "Figures fade or slide in group by group over an empty room.",
    "usage_rule": "Room first, then central figure, then groups (Last Supper, School of Athens): builds the reading order from space to people.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a plate of the empty room and a cut-out mask of every group of figures; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "room_plate",
@@ -2908,6 +3057,12 @@
    "description": "The subject keeps its colour while the rest turns monochrome.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a mask of the subject that keeps its colour; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "image",
@@ -3001,6 +3156,14 @@
    "description": "One or two rings are drawn around a small detail, held, then fade.",
    "usage_rule": "Marks small objects named in the narration (candles, roundels, lines in a document); two rings appear one after the other.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "detail"
+   ],
+   "use_when": "The sentence names a thing that stays small, or sits among similar things, even in the close view, so that the eye cannot find it alone: one coin among many, a small mark beside a signature, one candle among six. A thin ring is drawn around it on the word that names it, held for about two seconds, then it fades.",
+   "needs": "The point (a region of the picture that is the thing) and its size: the radius fits the thing, not the frame.",
+   "never_when": "The thing fills a third of the frame or more (the camera already shows it); together with HI-01 on the same thing; two rings at once for things the narration does not name together; the thing is not on screen.",
+   "example": "St. Eligius b0050: \"Beside the signature sits a small heart-shaped sign.\" (a ring around the sign)",
    "slots": [
     {
      "name": "image",
@@ -3151,6 +3314,12 @@
    "description": "A white line traces the edge of a figure group.",
    "usage_rule": "Goya 1058-1129: outlines on soldiers and the two sides make the anonymity and opposition claims visible; Last Supper outlines four groups one at a time and then removes them.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs the outline of a figure (a mask or a list of points); the regions of the pictures step are ellipses."
+   },
    "slots": [
     {
      "name": "image",
@@ -3324,6 +3493,14 @@
    "description": "White lines converge on a vanishing point, appear one by one, then vanish.",
    "usage_rule": "Raphael 670-695 s: horizontal and converging lines build one-point perspective that leads to the two central figures.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "construction"
+   ],
+   "use_when": "The sentence makes a claim about depth, perspective or lines that do or do not meet: \"their angles suggest the painter did not know the new laws of perspective\", \"every line leads to the two central figures\". White lines are drawn one by one from the edges the claim is about toward the point where they meet, or fail to meet, then they vanish.",
+   "needs": "The edges the lines follow, taken from the picture itself (the edges of the shelves, the floor tiles, a window frame) and the vanishing point as a point of the picture. The picture must show those edges.",
+   "never_when": "The narration makes no claim about space; the lines would be drawn across things the narration does not name; a sentence that only says the room is narrow or deep.",
+   "example": "St. Eligius b0043: \"Look at the shelves behind the saint. Their angles suggest the painter did not know the new laws of perspective from Florence. He was still experimenting with space.\" (the finished video used only a camera move here)",
    "slots": [
     {
      "name": "image",
@@ -3535,6 +3712,14 @@
    "description": "A ring and an arrowed route appear on a satellite map, with a place label.",
    "usage_rule": "Starry Night 699-710 s: moves from painting/drawing comparison to a map explaining where the village lies.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "MAP-01"
+    ],
+    "note": "MAP-01 draws real geography with the places and the route; a ring and an arrow on a satellite picture is the old way."
+   },
    "slots": [
     {
      "name": "map",
@@ -3855,6 +4040,14 @@
    "description": "White measuring lines with numbers (60 cm, 82 cm) and a medium caption pop onto a picture.",
    "usage_rule": "Appears when the narration states a size or the thickness of a layer; all pieces appear within 0.2 s and stay at least 3.2 s.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "figure"
+   ],
+   "use_when": "The sentence states a real size with its number and unit: \"the panel is sixty by eighty-two centimetres\", \"the layer is forty micrometres thick\". Two measuring lines with the numbers pop onto the picture, with a caption for the medium.",
+   "needs": "The number and its unit from the narration. The whole picture is in the frame with a margin above it: the width line and its number sit just above the picture, so on a frame that fills the screen's height (the default fit) the width number is cut off at the top edge; give the shot a camera about 15% wider than the fit.",
+   "never_when": "A size that is not in the narration (never measure a size yourself); a count or a price (NUM-01); a date (STATIC-09).",
+   "example": "No sentence in the two narrations calls for it.",
    "slots": [
     {
      "name": "image",
@@ -3987,6 +4180,14 @@
    "description": "A thirds grid and translucent triangles laid over the painting.",
    "usage_rule": null,
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "construction"
+   ],
+   "use_when": "The sentence says that the picture is built on a shape or a division: a triangle of figures, two halves, a diagonal, the rule of thirds. A faint grid and a translucent shape (a triangle, a circle or a rectangle) are laid over the picture.",
+   "needs": "The points of the shape in the picture (for a triangle its three corners, as fractions of the picture's width and height), and a picture that really has that shape.",
+   "never_when": "Anything else: a sentence about the composition in general (\"a crowded panel\"), about colour or about meaning; a shape the narration does not state.",
+   "example": "No sentence in the two narrations calls for it.",
    "slots": [
     {
      "name": "image",
@@ -4227,6 +4428,12 @@
    "description": "Faint coloured dots multiply into a dense dot field.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "An effect of one episode of the reference channel (dots that multiply into a dot field); no kind of line in this pipeline calls for it."
+   },
    "slots": [
     {
      "name": "image",
@@ -4452,6 +4659,12 @@
    "description": "White small-caps chapter title centred over a blurred, darkened picture.",
    "usage_rule": "Opens a new section; the picture behind is the work's own image blurred (Techniques card over two blurred images).",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the chapter marks (the old chapter title card is replaced by them); you never write a card."
+   },
    "slots": [
     {
      "name": "background",
@@ -4728,6 +4941,12 @@
    "description": "Large white italic lines move horizontally across a background image.",
    "usage_rule": "Review text priority over context image (Sargent critics 1096.8-1102 s).",
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "Reviews and critics sliding over a picture is an effect of one episode of the reference channel; the narration is never written on the screen."
+   },
    "slots": [],
    "params": [
     {
@@ -4932,6 +5151,14 @@
    "description": "A vertical painting is shown at full height, centred on a black matte; detail crops are full-bleed 16:9.",
    "usage_rule": "Whole works sit on the matte; details fill the frame with no matte.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "whole"
+   ],
+   "use_when": "The sentence speaks of the painting as an object: its date, its size, where it hangs, who owned it, how it came to be made, what became of it (a beat of kind `whole`), or the shot is a rest on the whole between two moves. The painting is held on the black matte and drifts very slowly.",
+   "needs": "Nothing beyond the picture itself: no region and no other picture.",
+   "never_when": "More than rule 13 allows: with the default camera the whole painting sits small between black bars, and that frame may total 5% of the running time (the end of the cold open, ONE chapter opening and the last shot). A camera that fills the width of the screen (a wide band of the picture) does not count against it. Not for a sentence about a thing in the painting (kind `detail`).",
+   "example": "St. Eligius b0058: \"Today it hangs in New York, a rare survivor of what it shows.\"",
    "slots": [
     {
      "name": "image",
@@ -5000,6 +5227,14 @@
    "description": "Small white text at the lower corner of an image or cell.",
    "usage_rule": null,
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "X-ANN-02"
+    ],
+    "note": "A source note on the screen is not wanted (the credits go in the description); X-ANN-02 gives the title, maker and date of another work."
+   },
    "slots": [],
    "params": [
     {
@@ -5100,6 +5335,14 @@
    "description": "White quotation text over a dimmed image or document.",
    "usage_rule": null,
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "DOC-01"
+    ],
+    "note": "A line that is written in the picture is lit and read by DOC-01; any other quotation is read by the narrator, never written on the screen."
+   },
    "slots": [],
    "params": [
     {
@@ -5362,6 +5605,12 @@
    "description": "A white caption line near a person on screen.",
    "usage_rule": null,
    "channel_usage": "other_series",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "A name tag for a person speaking on camera, which belongs to a series with interviews; this channel has no one on camera."
+   },
    "slots": [],
    "params": [
     {
@@ -5526,6 +5775,14 @@
    "description": "A grey map with a red route or dotted line.",
    "usage_rule": null,
    "channel_usage": "other_series",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "MAP-01"
+    ],
+    "note": "MAP-01 draws real geography with the places and the route; this grey map is the old way."
+   },
    "slots": [],
    "params": [
     {
@@ -5689,6 +5946,12 @@
    "description": "A circular diagram split into sectors holding text or images.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "An effect of one episode of the reference channel (a circular diagram of cells); no kind of line in this pipeline calls for it."
+   },
    "slots": [
     {
      "name": "image",
@@ -5930,6 +6193,14 @@
    "description": "Small caps names placed beside figures in the painting.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "KEY-01"
+    ],
+    "note": "KEY-01 places a name beside each named part and keeps the names from touching; this is the old way."
+   },
    "slots": [
     {
      "name": "image",
@@ -6049,6 +6320,15 @@
    "description": "A large white year centred over a blurred or dark image.",
    "usage_rule": "Date captions on the matte (1433 / 1434 in the Arnolfini build).",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "dates",
+    "whole"
+   ],
+   "use_when": "The sentence turns on one year: the year of the work, or a turning point that the narration names as one (\"in 1476 Charles the Bold was defeated\"). The year shows large in the middle of the picture for about three seconds.",
+   "needs": "The year, as the narration says it, and a calm, dark place in the picture to put it (`x_pct`, `y_pct`): the year is drawn straight over the picture with no dimming, so over a busy part (faces, brocade) it is hard to read.",
+   "never_when": "Every year that is mentioned in passing; in the same passage as TIME-01 (the axis shows the years); two years in one sentence.",
+   "example": "St. Eligius b0055: \"In 1476 Charles the Bold, the last duke, was defeated in Switzerland.\"",
    "slots": [],
    "params": [
     {
@@ -6179,6 +6459,12 @@
    "description": "A grid next to a skewed smear, with rays built up from a point at left.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a grid and the projection points measured on one particular picture (a distorted shape); the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "image",
@@ -6444,6 +6730,12 @@
    "description": "Two states or viewing angles show a distorted shape resolving into a skull.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs the corners of a distorted shape and of its true view measured on one particular picture; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "image",
@@ -6635,6 +6927,12 @@
    "description": "A layered cross-section with names; gold rays go down and bounce up in a V.",
    "usage_rule": "Mona Lisa 483-533 s: reference section shown, layer names pointed out, gold V rays drawn, layers appear, then a measuring arrow with the thickness (about 40 micrometres).",
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a scan of a paint cross-section with its layers named; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "cross_section",
@@ -6936,6 +7234,12 @@
    "description": "A statue beside its separate fragments on black.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a cut-out figure and the separate pieces of it; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "figure",
@@ -7072,6 +7376,12 @@
    "description": "A silhouette changes colour and outline beside process footage.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a mask of a silhouette and footage of the process; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "image",
@@ -7178,6 +7488,12 @@
    "description": "A room illustration with the painting and a labelled UV detail photo.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs a drawing of the room, a photograph of a detail and an ultraviolet photograph of it; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "room",
@@ -7449,6 +7765,12 @@
    "description": "Three images with a labelled eye diagram.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs the images of an eye diagram; the pictures step supplies none."
+   },
    "slots": [],
    "params": [
     {
@@ -7539,6 +7861,14 @@
    "description": "A grey scan and a colour image of the same region are placed side by side.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "STATE-01"
+    ],
+    "note": "STATE-01 shows the same picture in two states (grey scan and colour, for example); this is the old way."
+   },
    "slots": [
     {
      "name": "colour",
@@ -7703,6 +8033,12 @@
    "description": "Stages on the left, the finished picture on the right.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs pictures of the stages of the work (scans of the underpainting and drafts); the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "finished",
@@ -7947,6 +8283,12 @@
    "description": "Several colour versions of one work side by side.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs several colour versions of one work; the pictures step supplies none."
+   },
    "slots": [
     {
      "name": "image",
@@ -8127,6 +8469,12 @@
    "description": "A picture reduced to colour blocks beside a detail.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "An effect of one episode of the reference channel (a picture reduced to colour blocks); no kind of line in this pipeline calls for it."
+   },
    "slots": [
     {
      "name": "image",
@@ -8274,6 +8622,14 @@
    "description": "The same scene shown in two colour states, revealed by a wipe in the benchmark.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "STATE-01"
+    ],
+    "note": "STATE-01 shows the same picture in two states; this is the old way."
+   },
    "slots": [
     {
      "name": "state_a",
@@ -8397,6 +8753,14 @@
    "description": "Footage of paint, process, real book pages or palettes with name labels.",
    "usage_rule": "Source footage interleaved with the painting; its own motion is not an editing effect.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "outside"
+   ],
+   "use_when": "The sentence is about a place or a thing as it is TODAY, and a short clip of it is in the picks of the beat: \"today it hangs in New York\", \"the tower still stands\". The clip plays full frame with its own motion.",
+   "needs": "A clip (a picture of kind video) in the picks of the beat.",
+   "never_when": "A sentence about the past (use a picture made in that time); no clip in the picks (never invent one); a clip that shows something else.",
+   "example": "St. Eligius b0058: \"Today it hangs in New York, a rare survivor of what it shows.\" (only when the picks hold a clip of the museum; the finished video had a still photograph)",
    "slots": [
     {
      "name": "footage",
@@ -8754,6 +9118,12 @@
    "description": "Three stacked image or footage strips in a vertical frame; the content of the strips changes over time.",
    "usage_rule": null,
    "channel_usage": "shorts_only",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "Made for a vertical Short; this channel makes one long video about one painting."
+   },
    "slots": [
     {
      "name": "strip_1",
@@ -8902,6 +9272,12 @@
    "description": "A crop shows the skull smear changing shape and angle across frames until the skull is clear.",
    "usage_rule": null,
    "channel_usage": "shorts_only",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "Made for a vertical Short; this channel makes one long video about one painting."
+   },
    "slots": [
     {
      "name": "image",
@@ -9041,6 +9417,12 @@
    "description": "Large white text over a Pop Art image changes content and layout.",
    "usage_rule": null,
    "channel_usage": "shorts_only",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "Made for a vertical Short; this channel makes one long video about one painting."
+   },
    "slots": [
     {
      "name": "background",
@@ -9212,6 +9594,12 @@
    "description": "Small text on a yellow box near the bottom of the frame.",
    "usage_rule": "Seen in an announcement/promo short, not the main films.",
    "channel_usage": "other_series",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "A caption box of a promo Short of the reference channel, not of its long films."
+   },
    "slots": [],
    "params": [
     {
@@ -9373,6 +9761,12 @@
    "description": "A circle split into colour sectors in an archive image.",
    "usage_rule": "Only a still was seen; no animation is established.",
    "channel_usage": "shorts_only",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "Made for a vertical Short; this channel makes one long video about one painting."
+   },
    "slots": [
     {
      "name": "palette",
@@ -9535,6 +9929,12 @@
    "description": "The picture changes instantly between two shots with no fade, dissolve or wipe.",
    "usage_rule": "Default between every pair of base shots; all sampled cuts in the Arnolfini episode are hard (no dissolve at card-to-image or black-to-card).",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The hard cut is what happens between two shots when no transition is written: leave `transition_in` out."
+   },
    "slots": [
     {
      "name": "from",
@@ -9588,6 +9988,12 @@
    "description": "A black frame with a small centred caps chapter title low in the frame, then a hard cut.",
    "usage_rule": "Marks a chapter boundary; text pops in over 0.1 s shortly after the card starts and leaves before the hard cut.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the chapter marks (the old chapter card is replaced by them); you never write a card."
+   },
    "slots": [],
    "params": [
     {
@@ -9750,6 +10156,12 @@
    "description": "Title of the work, artist and year centred over a blurred, darkened image of the painting.",
    "usage_rule": "The channel opens cold on the image and puts the title card after the hook, not at frame 0.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the channel-name beat with the video's title (it replaced the title card); you never write a card."
+   },
    "slots": [
     {
      "name": "background",
@@ -9858,6 +10270,12 @@
    "description": "A credit line centred at the bottom over the closing matte.",
    "usage_rule": "Closing of the episode, after the recap labels.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "An end-credit card: the credits of the pictures go in the video's description, not on the screen."
+   },
    "slots": [
     {
      "name": "image",
@@ -10090,6 +10508,12 @@
    "description": "A brown serif question or title on a white background.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "other_format",
+    "use": [],
+    "note": "A question on a white card is not this channel's look (a black ground); the narrator asks the question over the painting."
+   },
    "slots": [
     {
      "name": "text",
@@ -10307,6 +10731,14 @@
    "description": "A dark translucent strip across the lower frame with one white caps line naming the detail; the right end of the strip fades out.",
    "usage_rule": "Appears just after a cut to a detail crop, names the object, stays about 3.2 s, then disappears.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "detail"
+   ],
+   "use_when": "The sentence names, for the first time, a thing that is on the screen now and whose name a stranger to the painting would not know: \"adder's tongues\", \"touchstones\", \"a master's mark\". A dark strip with the name in capitals shows for about three seconds, starting on the word that names the thing.",
+   "needs": "The name in the narration's own words (one to five words, never a sentence). The thing is already in the frame when the label appears.",
+   "never_when": "The thing was labelled before; the text is an opinion, a date or a whole sentence; the thing is not on screen; the picture is another artwork (X-ANN-02 gives its title, maker and date); the sentence names three or more parts one after another (KEY-01); the thing needs no name (a face, a hand).",
+   "example": "St. Eligius b0033: \"They are probably adder's tongues, fossilized shark teeth believed to change colour when they touched poison.\" (label ADDER'S TONGUES)",
    "slots": [
     {
      "name": "text",
@@ -10480,6 +10912,15 @@
    "description": "The same strip with two lines: the work title in caps, then ARTIST, YEAR in a smaller line beneath.",
    "usage_rule": "Used when a different artwork is shown as context; one-line label is kept for the main painting.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "outside",
+    "compare"
+   ],
+   "use_when": "A shot shows another artwork or a museum object for the first time: the title in capitals and, in a smaller line, the maker and the date. It shows in the first seconds of that picture.",
+   "needs": "The title, the maker and the date from the picture's own record in `inputs/assets.json` (`title`, `artist`, `year`).",
+   "never_when": "Data that is not in the picture's record (never write a maker or a date from memory); the main painting; the same picture a second time; a picture that is not an artwork or an object (a street view, a portrait photograph of a person).",
+   "example": "St. Eligius b0049: \"He was born at Baerle, probably in 1415.\" (the label of the painter's own Head of Christ, which the owner picked for the line)",
    "slots": [
     {
      "name": "title",
@@ -10679,6 +11120,14 @@
    "description": "Plain white words (for example CANDLE, ROUNDELS, MOURNING DRESS, DOG) placed near their details over the black matte, with no strip.",
    "usage_rule": "In the closing pull-out the details are named again, one at a time, as the narration recalls them.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "whole"
+   ],
+   "use_when": "The beat is in the closing and recalls details seen earlier, by name, over the last wide view: \"come back to the hands and the scales\". Plain white words appear beside their details, one after another, as the narration names them.",
+   "needs": "The names, in the narration's words, and the place of each detail in the picture (regions).",
+   "never_when": "Anywhere but the closing; details the video never showed; more than five names; names that are not in the narration.",
+   "example": "Arnolfini b0194: \"Come back to the hands at the centre, and to the line above the mirror, Jan van Eyck was here, 1434.\"",
    "slots": [
     {
      "name": "image",
@@ -10798,6 +11247,12 @@
    "description": "White outlines are drawn around groups one after another, then all disappear while the whole painting stays.",
    "usage_rule": "Last Supper 21:11-21:25: the four groups of three are outlined in turn; Goya: outline soldiers, then both sides.",
    "channel_usage": "occasional",
+   "offered": false,
+   "hidden_reason": {
+    "code": "no_material",
+    "use": [],
+    "note": "Needs the outline (a mask or a list of points) of each group of figures; the regions of the pictures step are ellipses."
+   },
    "slots": [
     {
      "name": "image",
@@ -11094,6 +11549,14 @@
    "description": "Red dots appear one by one on a map.",
    "usage_rule": null,
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "MAP-01"
+    ],
+    "note": "MAP-01 marks the places one by one on a real map; this is the old way."
+   },
    "slots": [
     {
      "name": "map",
@@ -11372,6 +11835,14 @@
    "description": "Several context stills follow each other, each held a fixed 4.0 s with a hard cut between them.",
    "usage_rule": "Stock or reference stills in a sequence are held exactly 4.0 s each (cuts at 181.3, 185.3, 189.3, 193.3 s).",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "outside"
+   ],
+   "use_when": "The sentence is about a person, a place, an object, an event or a custom that is NOT in the painting, and the picks of the beat hold a picture of that thing: a portrait of the king, a view of the cathedral, a coin, an old print of the harbour. The picture fills the frame for most of the beat at its default fit (the whole picture as large as the frame allows, drifting very slowly), then the painting returns.",
+   "needs": "The picture of the thing itself (or one made in its time) in the picks of the beat, role `context`.",
+   "never_when": "The picture is not of the thing the sentence is about (a stock picture of something near it, a street map of a town that is only mentioned); the beat has no outside picture (stay on the detail the picks give and use no device to fill the gap); a camera that shows the picture small: it is shown at its default fit and the compiler puts it back, and a picture whose long side is under 1000 px is never enlarged beyond twice its size and then sits on the matte.",
+   "example": "St. Eligius b0012: \"He became personal adviser to the Merovingian King Dagobert.\" (the portrait of King Dagobert)",
    "slots": [
     {
      "name": "image",
@@ -11440,6 +11911,14 @@
    "description": "The anchor painting stays in one cell while the other cell's image or video is replaced by another comparison.",
    "usage_rule": "Starry Night 643-741 s: the painting stays left while the photo, Japanese print, map, village photo and church change on the right; Supper hand drawings swap while the left one stays.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "compare"
+   ],
+   "use_when": "The sentence compares the same detail with two or more other pictures one after another: the painting stays in one half and the other half changes from picture to picture, one for each work named.",
+   "needs": "Two or more other pictures in the picks, in the order the narration names them, and the region of the painting that is being compared, written as the `region` of the `anchor` slot (the compiler frames it in its panel; with no region the whole painting sits small in the panel).",
+   "never_when": "One other picture only (LAY-01); pictures that are not being compared with the same thing.",
+   "example": "Arnolfini b0193: \"His work was studied, copied and sought abroad, and his influence has been traced to Durer, and to Velazquez in Las Meninas.\" (the panel stays left while Dürer, then Las Meninas, take the right)",
    "slots": [
     {
      "name": "anchor",
@@ -11746,6 +12225,14 @@
    "description": "A monochrome version enters from the right edge, a vertical border sweeps left, the two versions sit side by side, then dissolve to the colour image.",
    "usage_rule": "Mona Lisa about 554 s (dense-0554): shows two states of the same picture and returns to colour.",
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "replaced",
+    "use": [
+     "STATE-01"
+    ],
+    "note": "STATE-01 shows the same picture in two states with a dissolve; this wipe is the old way."
+   },
    "slots": [
     {
      "name": "state_a",
@@ -11911,6 +12398,14 @@
    "description": "A strip from a second work slides up from the bottom into a full-frame image, then moves right so it sits beside the first painting.",
    "usage_rule": "Goya 1119-1129: a Guernica strip slides up, fills the frame, then separates to the right to compare with Goya.",
    "channel_usage": "rare",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "X-CMP-01"
+    ],
+    "note": "X-CMP-01 shows other works beside the painting one after another."
+   },
    "slots": [],
    "params": [
     {
@@ -12055,6 +12550,14 @@
    "description": "The whole frame darkens around a figure or object that stays bright, then brightness returns and the frame widens back.",
    "usage_rule": "Goya 1088-1109 and 1139-1155, Raphael statues 721-747, Supper table 21:25: dim, dwell, restore to the whole.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "redundant",
+    "use": [
+     "HI-01"
+    ],
+    "note": "HI-01 singles out one part with the same dimming."
+   },
    "slots": [
     {
      "name": "image",
@@ -12202,6 +12705,12 @@
    "description": "The picture starts black, rises to a dark frame, a soft band of light travels across it and leaves the picture half lit behind it, then the whole picture rises to full brightness.",
    "usage_rule": "Overlay on the first shot of a video, from its start (nominal 9.0 s). The camera of the shot is not changed. Style `raking` of the channel identity.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the opening of the video as an overlay on its first shot; you never choose it."
+   },
    "slots": [],
    "params": [
     {
@@ -12366,6 +12875,12 @@
    "description": "Two lines at the bottom left, directly on the picture: the title in italic, then the artist and year. No strip or box; a soft shadow keeps it readable.",
    "usage_rule": "Overlay on the opening shot, about 6 s into the video, 4.5 s long. Style `raking` of the channel identity.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the artwork label of the opening shot; you never choose it."
+   },
    "slots": [],
    "params": [
     {
@@ -12511,6 +13026,12 @@
    "description": "The frame dims, the title of the painting fades in low in the frame in italic, then a small line with the artist and the year; at the end the text fades and the light returns.",
    "usage_rule": "Overlay on the opening shot, about 7 s into the video, 5.0 s long. Style `dim` of the channel identity.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the opening of the video as an overlay on its first shot; you never choose it."
+   },
    "slots": [],
    "params": [
     {
@@ -12706,6 +13227,12 @@
    "description": "The picture dims and a band of light sweeps across it; the channel name in wide-tracked capitals is revealed along the band's path and stays.",
    "usage_rule": "Its own shot after the hook (nominal 5.0 s), then a hard cut. The picture is the one that was on screen. Style `raking`.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the channel-name beat after the cold open; you never choose it."
+   },
    "slots": [
     {
      "name": "image",
@@ -12929,6 +13456,12 @@
    "description": "The picture dims and the channel name in wide-tracked capitals fades in over it, holds and fades out before the hard cut.",
    "usage_rule": "Its own shot after the hook (nominal 4.0 s), then a hard cut. Style `dim`.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the channel-name beat after the cold open; you never choose it."
+   },
    "slots": [
     {
      "name": "image",
@@ -13099,6 +13632,12 @@
    "description": "The picture dims and a band of light sweeps across it, writing the channel name in wide-tracked capitals; after a pause the band sweeps a second time, in the same direction, and writes the video's title in italic with a small line (painting and painter) under it. The channel name stays where it is.",
    "usage_rule": "Its own shot after the hook (nominal 9.1 s, or 4.5 s when the title and the small line are empty: then there is no second sweep), then a hard cut. The picture is the one that was on screen. Style `raking`.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the channel-name beat and the video's title after the cold open; you never choose it."
+   },
    "slots": [
     {
      "name": "image",
@@ -13426,6 +13965,12 @@
    "description": "The first picture of the chapter appears dark; a band of light sweeps across it and writes one line, number then title, which stays until the picture is released to full brightness.",
    "usage_rule": "Its own shot at the start of a chapter (nominal 3.2 s); hard cut in. The picture flows into the next shot. Style `raking`.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the chapter marks; you never choose one."
+   },
    "slots": [
     {
      "name": "image",
@@ -13649,6 +14194,12 @@
    "description": "The picture of the new chapter is shown dimmed and one line, number then title, fades in over it, then fades out while the light returns.",
    "usage_rule": "Its own shot at the start of a chapter (nominal 3.0 s), usually entered by a 0.75 s dissolve (TR-01). Style `dim`.",
    "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the chapter marks; you never choose one."
+   },
    "slots": [
     {
      "name": "image",
@@ -13820,6 +14371,14 @@
    "description": "A time axis with dates on the dark ground of the channel: a hairline axis grows from the left, ticks fade in, and each dated item grows a stalk from the axis and fades in its year and a short label at its own time. The technique chooses, for every item, the side of the axis, the length of the stalk and the place of the label so that no label touches another label or another stalk and every label stays inside the frame (two items or twelve, two in the same year, BC and AD together). At `focus_s` the accented item brightens, gets a dot on the axis, and the others dim.",
    "usage_rule": "Use it when the narration places events in time: a run of dated events (\"in 1425 ... in 1431 ... in 1434\"), a span, the order of things. It is a dark shot of its own (no picture). Give `items`, one per dated moment the narration names: `date` (a whole year, negative for BC), `label` (a few words of your own, at most 48 characters, never a sentence of the narration), `at` (seconds from the start of the shot, or the word that names the event so that its stalk grows on that word), `side` (leave `auto`: the technique picks the side, the stalk length and the label's place) and `accent` true on the one moment the sentence is about (it brightens at `focus_s`, the others dim). Leave `from`, `to` empty and `tick_every` 0 unless the axis must run wider than the items (empty `from`/`to` = the items' range with one year of margin; a date outside the axis is an error). One to 12 items; items too close together to be laid out are refused. The default data is an example (Van Eyck, 1425 to 1434): ALWAYS replace all of `items`. Dates come from the narration and the project's sources: leave an item out rather than guess a year. Let the shot last about one second per item plus three.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "dates"
+   ],
+   "use_when": "One passage gives three or more dated events of one story, in order: \"born in 1415 ... a citizen of Bruges in 1444 ... joined a brotherhood in 1462\". A dark shot of its own draws an axis, and each date grows out of it on the word that says it.",
+   "needs": "The dates (whole years) and a few words for each event, all from the narration. At least three events.",
+   "never_when": "One or two dates (use STATIC-09 for one, or nothing); a year mentioned in passing; before second 30 (say the date as a large figure on the picture).",
+   "example": "St. Eligius b0049: \"He was born at Baerle, probably in 1415. He became a citizen of Bruges on 6 July 1444. Seven years after joining a brotherhood in 1462, he was named a distinguished member of the painters' guild.\"",
    "slots": [],
    "params": [
     {
@@ -14038,6 +14597,14 @@
    "description": "Relations between people on the dark ground of the channel: names with a smaller second line (dates or role), hairline connectors drawn one after another, a marriage as a short horizontal line between two names of one row, descent running down in right angles, relations such as patron or painter drawn the same way, and small italic edge labels. When `row` and `col` are left out the technique lays the tree out itself: generations by descent, spouses side by side, crossings reduced, everything inside the frame (the text is made smaller when the tree is wide).",
    "usage_rule": "Use it when the narration explains who is related to whom or who worked for whom: a family, a patron and the painters he hired, a workshop, who married whom, who painted or bought which work. It is a dark shot of its own (no picture). `nodes`: `id` (short, no spaces), `name`, `sub` (a smaller second line: dates or a role), `strong` true for the one or two names the sentence is about, `at` (seconds from the start of the shot, or the word that names the person so that the name appears on it). `edges`: `from`, `to` (ids), `kind` (`descent` from parent to child, `marriage` between two names, `link` for any other relation such as patron to painter or painter to work), `label` (two or three words in small italic, for example 'married 1426'), `at` (when the line is drawn, from `from` to `to`). Leave `row` and `col` at -1: the technique lays the tree out itself (parents above children, spouses side by side); give both for every name only to place them by hand. Two to 14 names, at most five generations, a person has at most two marriages; a tree that cannot fit is refused. The default data is an example (Philip the Good, Van Eyck, the Arnolfini): ALWAYS replace `nodes` and `edges` together. Names, dates and relations come from the narration and the project's sources: leave out anything you are unsure of rather than guess. Let the shot last about one second per name plus three.",
    "channel_usage": "occasional",
+   "offered": true,
+   "serves": [
+    "relations"
+   ],
+   "use_when": "One passage ties three or more people together: a family, a patron and the painters he hired, who married whom. A dark shot of its own draws the names with a line between them as the narration says each tie.",
+   "needs": "The names and the ties between them, all from the narration. At least three people.",
+   "never_when": "Two people only (say it, or label it); a tie the narration does not state; before second 30.",
+   "example": "No sentence in the two narrations calls for it (Arnolfini b0138 ties only two people).",
    "slots": [],
    "params": [
     {
@@ -14345,6 +14912,15 @@
    "description": "The same picture in two states (colour and infrared, before and after a restoration): two image slots of the same crop framed by one camera that does not move during a change, a dissolve from one to the other and back, holds given as text, and the name of the state in small capitals at the bottom left with a soft shadow.",
    "usage_rule": "Use it when the narration shows one picture in two states: before and after a restoration, colour and infrared, the underdrawing, a reconstruction of the original colours. It needs two images of the SAME crop (slot `a` and slot `b`; the owner chose them): if the project has no second image of the picture, do not use it. `label_a` and `label_b` name the two states in a word or two (\"Colour\", \"Infrared\", \"Before\", \"After\"); `first` says which is seen first; `holds` is how long each state is held, in seconds, written \"1.5; 2.5; 1.5\" (the first state, then the other, then the first again; two to six numbers); `dissolve_s` is the length of each change. The shot's `camera` frames both pictures and does not move during a change. Let the shot last the holds plus one dissolve between each pair (7.5 s for the default). The change is the point: start the shot so that the dissolve falls on the word that names the new state.",
    "channel_usage": "rare",
+   "offered": true,
+   "serves": [
+    "compare",
+    "construction"
+   ],
+   "use_when": "The sentence is about what lies under the paint or about how the picture changed: the underdrawing, an infrared or X-ray view, the picture before and after a restoration, the colours as they first were. The same crop is shown in two states and dissolves from one to the other on the word that names the new state.",
+   "needs": "The same picture in a second state (the same crop), in the picks of the beat.",
+   "never_when": "There is no second state of the picture (never use two different pictures); the sentence compares the painting with another work (LAY-01).",
+   "example": "No sentence in the two narrations calls for it.",
    "slots": [
     {
      "name": "a",
@@ -14489,6 +15065,14 @@
    "description": "A map of real geography (Natural Earth, bundled, no network) drawn like an atlas plate: paper land, a blue-grey or sepia sea that is darker toward the coast with two water lines, an ink coastline, small place marks with italic labels that appear on the word that names them, a dotted route drawn with a travelling head, an optional tinted country, sea names, and a slow push from a wide view to a view fitted to the places.",
    "usage_rule": "Use it for a country, a region or a journey that a sentence names (where a painter lived or travelled, where a work was made, shipped or kept, a country's extent): views 300 km wide and wider. It replaces STATIC-06, AN-04 and X-ANN-05 for new work (they stay valid for old storyboards). Do NOT use it for a spot inside a city (a street, a house, a quarter): Natural Earth has no coastline detail closer than about 300 km, so show such a spot with a street-map picture from the picks (step Chọn hình); a narrower view only gets the warning `map_view_coarse`. Give: `places` (id, name, lonlat [longitude, latitude], `at` = seconds from the start of the shot or a word anchor so the mark lands on the word that names the place), `route` (from/to place ids, `via` points that bend it; pass [] for no route; a sea route needs `via` points in open water, or the dotted line is drawn across land), `region_iso` (ISO codes of today's countries to tint; [] for none) and `region_label`. The default data is an example (Bruges to Lucca with Belgium): ALWAYS set places, route and region_iso together, or the example's route and region remain. Coordinates are yours to supply; leave a place out rather than guess it. The view runs from `view_start_width_km` to the end view (`fit` of all places with `view_end_margin_pct`, or `manual` with a centre and width). Let the shot last 6 to 10 s.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "journey"
+   ],
+   "use_when": "The sentence is about a journey or a tie between two or more places (a beat of kind `journey`): where something travelled from and to, where a painter moved, a trade route, money that moved from one city to another. A map of real geography marks the places as the narration names them and draws a dotted route between them.",
+   "needs": "Two or more places named in the narration, in the order of the journey, with their coordinates; a route or a country tint only when the narration states it. The view is at least 300 km wide (the map has no coastline detail finer than that), so a map can join two towns but cannot show a street or a house.",
+   "never_when": "One place only: show a picture of that place instead (kind `outside`). Never as the picture of a town that is merely mentioned (\"born at Limoges\", \"the harbour of Bruges\", \"defeated in Switzerland\"), never for a spot inside a city, and never before second 30.",
+   "example": "St. Eligius b0008: \"In 1282 the Hanse merchants even had their own scales, built in Lübeck, set up in Bruges.\" (from Lübeck to Bruges). The map the finished video put on b0011, \"born at Limoges\", is NOT a case: it is a picture of the place.",
    "slots": [],
    "params": [
     {
@@ -14954,6 +15538,14 @@
    "description": "Small text labels beside the parts of a picture a sentence names, one after another: no box, no line, each label fades in on the word that names its detail, sits outside the detail's region on the chosen side, follows the base shot's camera and keeps its size. The picture dims a little so the letters stand out. The technique places the labels: they never touch each other or leave the frame, they prefer the darker ground under the text, and a label that had to be pushed away from its detail gets a hairline to it.",
    "usage_rule": "Use it when a sentence NAMES parts of the picture one after another (the candle, the mirror, the inscription, the dog): a key to the picture, the way a good art channel writes 'Theology', 'Medicine' on the panels of a ceiling. Overlay on any shot that shows one picture through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots); validation refuses it on cards, diagrams and maps. Give `labels`: a list (1 to 12) of {`text` (what is written, up to 60 characters), `ref` (a region name of the shot's picture, or [x, y] in source pixels), `side` (auto, n, ne, e, se, s, sw, w, nw: the side of the detail the text sits on; auto lets the technique choose), `at` (seconds from the start of the overlay, or a word anchor so the label lands on the word that names it), `style` (italic, regular, caps)}. The default labels are an example for the Arnolfini Portrait: ALWAYS set `labels` yourself, with regions that exist on the picture. Placement, spacing and keeping inside the frame are the technique's job, not yours. Put at most five labels on screen at a time; details that lie close together are better shown in two shots. Let the overlay last 4 to 10 s (at least 2.5 s) and start the last label at least 1.5 s before it ends.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "detail"
+   ],
+   "use_when": "The sentence names three or more parts of the picture that are all in one frame, one after another (\"the shelf of rings, silver pitchers, brooches and pearls, and the heavy chain\"). A small label fades in beside each part on the word that names it, like the key of a map.",
+   "needs": "For every label: the region (or the [x, y] point) of the part in the picture, and its word in the narration. All the parts are inside the frame of the shot.",
+   "never_when": "One or two parts (X-ANN-01, or a ring); parts that are out of the frame; more than five labels on screen at once (split the sentence over two shots); words that are not names of things (opinions, dates).",
+   "example": "St. Eligius b0031: \"So look again at the shelf of rings, silver pitchers, brooches and pearls, and at the heavy chain on the young man.\"",
    "slots": [
     {
      "name": "image",
@@ -15183,6 +15775,14 @@
    "description": "A figure stated large over the dimmed picture, alone or against others: up to four rows, each a small italic label, the figure in big numerals with its units, and a count of small round marks that run out one after another so that a ratio can be seen at a glance; a caption says what one mark stands for and a small line gives the source.",
    "usage_rule": "Use it when a sentence STATES a figure or compares figures (a price, a count, a size, 600 pelts against 2,000, a record): one to four rows. Overlay on any shot, with or without a picture. Give `rows`: a list (1 to 4) of {`label` (a few words, shown small above the figure), `value` (the figure as written, e.g. \"2,000\" or \"$450.3M\"; text, up to 16 characters), `units` (e.g. pelts), `count` (how many marks to run out, 0 for none; one mark should stand for a round quantity and the caption should say which), `at` (seconds from the start of the overlay, or a word anchor on the word that states the figure)}; `caption` (one short line, e.g. \"each dot is fifty squirrel pelts\") and `source` (a small line, e.g. \"Source: Christie's\"; empty for none). Rows run in order; give each about 2 s more than the one before. The default data is an example (600 against 2,000 squirrel pelts): ALWAYS set rows, caption and source together. Let the overlay last 5 to 9 s, long enough for the last row's marks (1.1 s) and the caption to appear.",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "figure"
+   ],
+   "use_when": "The sentence has a quantity as its point: a count, a price, a size, a ratio (\"600 pieces of belly fur against 2,000\"). The figure shows large over the picture of the thing counted, with a row of small marks when a ratio helps.",
+   "needs": "The figure and its unit from the narration, and a picture of the THING COUNTED (squirrel fur for pelts, caravels for ships): an outside picture in the picks of the beat, or a detail of the painting when the thing is in it. One to four rows.",
+   "never_when": "The picture under the figure has nothing to do with the thing counted (a figure about ships over the saint's face); a year (STATIC-09); a number that is only a date or a name; a figure that is not in the narration.",
+   "example": "Arnolfini b0153: \"An ordinary gown took about 600 pieces of belly fur, and this one may have used 2,000.\" (the finished video put the two figures over the squirrel picture). St. Eligius b0028, \"its harbour held 42 British caravels\", needs a picture of caravels, not the saint.",
    "slots": [],
    "params": [
     {
@@ -15388,6 +15988,14 @@
    "description": "One line of a document, an inscription or a signature stays lit while everything else dims; the lit window follows the base shot's camera, has a soft edge and no outline. Below it the line's meaning appears in today's words (italic) and the line as written (small capitals). Several lines can be lit one after another.",
    "usage_rule": "Use it when a sentence READS or QUOTES a line that is visible in the picture: an inscription, a signature, a letter, a ledger, an inventory. Overlay on any shot that shows one picture or document through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots; let the camera move in on the line); validation refuses it on cards, diagrams and maps. Give `lit`: a list (1 to 6) of {`ref` (a region name of the picture; its ellipse gives the window) or `box` (\"x0, y0, x1, y1\" in source pixels, which wins over `ref`), `at` (seconds from the start of the overlay, or a word anchor), `hold_s` (how long it stays lit; 0 = until the next line is lit, or to the end)}; `reading` (the line in today's words), `original` (the line as written; it is shown in capitals), `reading_at` (seconds from the start of the overlay when the reading appears; the original follows 0.4 s later, so say it after the narrator starts the line). The default data is an example (Jan van Eyck's signature on the Arnolfini Portrait): ALWAYS set lit, reading, original and reading_at together. Let the overlay last 5 to 9 s (at least 3 s).",
    "channel_usage": "core",
+   "offered": true,
+   "serves": [
+    "inscription"
+   ],
+   "use_when": "The sentence reads or translates words that are WRITTEN IN THE PICTURE: an inscription, a signature, a motto, a letter, a ledger. The words stay lit while everything else dims; then the reading appears below them in today's words and the original line under it.",
+   "needs": "The region of the words (they are visible in the picture, and the camera moves in close enough to see them), the reading as the narration says it, and the original line only when the narration or the picture gives it (leave `original` empty rather than guess).",
+   "never_when": "The words are not visible in the picture (a quotation from a book: the narrator says it and nothing is written); no region covers the words.",
+   "example": "St. Eligius b0048: \"Drop your eye to the bottom edge of the panel, where a line of Latin runs along it. Translated, it reads, Petrus Christus made me in the year 1449.\"",
    "slots": [
     {
      "name": "image",

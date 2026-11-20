@@ -1,0 +1,1290 @@
+{
+ "schema": "bti.picks/1",
+ "main_asset": "van_eyck_arnolfini",
+ "assets": {
+  "van_eyck_arnolfini": {
+   "file": "media/van_eyck_arnolfini.jpg",
+   "kind": "image",
+   "title": "Van Eyck - Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 3840,
+   "height": 5253,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {
+    "SIGNATURE": {
+     "x": 1920,
+     "y": 1156,
+     "rx": 461,
+     "ry": 210,
+     "label": "Dòng chữ ký Latinh phía trên gương"
+    },
+    "MIRROR": {
+     "x": 1920,
+     "y": 1576,
+     "rx": 461,
+     "ry": 420,
+     "label": "Tấm gương lồi với mười ô tròn quanh khung"
+    },
+    "MIRROR_FIGURES": {
+     "x": 1939,
+     "y": 1576,
+     "rx": 173,
+     "ry": 210,
+     "label": "Mặt kính gương: lưng hai vợ chồng và hai người khách ở cửa"
+    },
+    "ROUNDELS_RIGHT": {
+     "x": 2112,
+     "y": 1576,
+     "rx": 230,
+     "ry": 368,
+     "label": "Các ô tròn ở nửa gương bên phía người vợ"
+    },
+    "HANDS": {
+     "x": 2131,
+     "y": 2127,
+     "rx": 403,
+     "ry": 341,
+     "label": "Hai bàn tay nắm nhau và tượng thú chạm trên ghế"
+    },
+    "BEADS": {
+     "x": 1613,
+     "y": 1550,
+     "rx": 154,
+     "ry": 341,
+     "label": "Chuỗi hạt hổ phách treo cạnh gương"
+    },
+    "MAN_HEAD": {
+     "x": 1094,
+     "y": 998,
+     "rx": 518,
+     "ry": 473,
+     "label": "Gương mặt Giovanni và chiếc mũ rộng vành"
+    },
+    "WOMAN_HEAD": {
+     "x": 2995,
+     "y": 1287,
+     "rx": 461,
+     "ry": 447,
+     "label": "Gương mặt người vợ và khăn trùm trắng viền diềm"
+    },
+    "MAN_FULL": {
+     "x": 1075,
+     "y": 2705,
+     "rx": 960,
+     "ry": 2180,
+     "label": "Giovanni đứng toàn thân trong áo choàng viền lông"
+    },
+    "WOMAN_FULL": {
+     "x": 2880,
+     "y": 2994,
+     "rx": 960,
+     "ry": 2206,
+     "label": "Người vợ toàn thân trong chiếc váy xanh lục"
+    },
+    "SKIRT_HAND": {
+     "x": 2918,
+     "y": 2206,
+     "rx": 614,
+     "ry": 735,
+     "label": "Tay nàng nâng vạt váy xanh, viền lông trắng ở tay áo"
+    },
+    "HEM_CARPET": {
+     "x": 2304,
+     "y": 3835,
+     "rx": 461,
+     "ry": 683,
+     "label": "Tấm thảm phương Đông và gấu váy lót xanh lam"
+    },
+    "TABARD_LOWER": {
+     "x": 1056,
+     "y": 4071,
+     "rx": 864,
+     "ry": 814,
+     "label": "Viền lông ở gấu áo choàng và đôi ủng mềm"
+    },
+    "BED": {
+     "x": 3200,
+     "y": 1400,
+     "rx": 640,
+     "ry": 1400,
+     "label": "Màn đỏ trên cao, rèm cuộn và mép giường ở góc trên bên phải"
+    },
+    "ORANGES": {
+     "x": 346,
+     "y": 2574,
+     "rx": 346,
+     "ry": 473,
+     "label": "Quả cam trên bậu cửa sổ và trên rương"
+    },
+    "CHANDELIER": {
+     "x": 1978,
+     "y": 552,
+     "rx": 634,
+     "ry": 552,
+     "label": "Chiếc đèn chùm bằng đồng với một ngọn nến cháy"
+    },
+    "WINDOW": {
+     "x": 346,
+     "y": 1392,
+     "rx": 269,
+     "ry": 604,
+     "label": "Ô cửa sổ và cây anh đào bên ngoài"
+    },
+    "CHAIR_CARVING": {
+     "x": 2458,
+     "y": 1234,
+     "rx": 230,
+     "ry": 394,
+     "label": "Tượng thánh nữ chạm trên lưng ghế và cây chổi treo"
+    },
+    "OVERSHOES": {
+     "x": 346,
+     "y": 4806,
+     "rx": 346,
+     "ry": 447,
+     "label": "Đôi guốc gỗ ở góc dưới bên trái"
+    },
+    "DOG": {
+     "x": 1843,
+     "y": 4728,
+     "rx": 538,
+     "ry": 525,
+     "label": "Chú chó nhỏ dưới chân hai người"
+    }
+   },
+   "original_width": 4386,
+   "original_height": 6000
+  },
+  "ban_do_lucca": {
+   "file": "media/ban_do_lucca.jpg",
+   "kind": "image",
+   "title": "Bản đồ Lucca",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=11/44.0178/10.4544",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "ban_do_brugge": {
+   "file": "media/ban_do_brugge.jpg",
+   "kind": "image",
+   "title": "Bản đồ Brugge",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=13/51.2086/3.2268",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "portrait_man_turban": {
+   "file": "media/portrait_man_turban.jpg",
+   "kind": "image",
+   "title": "Portrait of a Man in a Turban (Jan van Eyck)",
+   "artist": "Jan van Eyck",
+   "year": "1433",
+   "width": 1920,
+   "height": 2605,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Portrait_of_a_Man_in_a_Turban_(Jan_van_Eyck).jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2024,
+   "original_height": 2746
+  },
+  "portrait_philip_good": {
+   "file": "media/portrait_philip_good.jpg",
+   "kind": "image",
+   "title": "Portrait of Philip the Good (1396-1467), Duke of Burgundy",
+   "artist": "Unknown author Unknown author",
+   "year": "2020",
+   "width": 500,
+   "height": 714,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Portrait_of_Philip_the_Good_(1396-1467),_Duke_of_Burgundy.jpg",
+    "author": "Unknown author Unknown author",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": "small"
+   },
+   "regions": {},
+   "original_width": 700,
+   "original_height": 1000
+  },
+  "squirrel_perched_snowy": {
+   "file": "media/squirrel_perched_snowy.jpeg",
+   "kind": "image",
+   "title": "A squirrel perched on a snowy branch in Kremenchuk, Poltava, Ukraine.",
+   "artist": "Елена Климович",
+   "year": "",
+   "width": 4320,
+   "height": 3240,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/winter-squirrel-in-ukrainian-snowy-landscape-28717870/",
+    "author": "Елена Климович",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 4320,
+   "original_height": 3240
+  },
+  "european_pine_marten": {
+   "file": "media/european_pine_marten.jpg",
+   "kind": "image",
+   "title": "European pine marten (Martes martes) Drenthe",
+   "artist": "Charles J. Sharp",
+   "year": "2026",
+   "width": 3840,
+   "height": 2560,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:European_pine_marten_(Martes_martes)_Drenthe.jpg",
+    "author": "Charles J. Sharp",
+    "licence": "CC BY-SA 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 6069,
+   "original_height": 4046
+  },
+  "erwin_panofsky_oberlin": {
+   "file": "media/erwin_panofsky_oberlin.jpg",
+   "kind": "image",
+   "title": "Erwin Panofsky at Oberlin College (1950) (cropped)",
+   "artist": "Unknown author Unknown author",
+   "year": "1950",
+   "width": 250,
+   "height": 334,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Erwin_Panofsky_at_Oberlin_College_(1950)_(cropped).jpg",
+    "author": "Unknown author Unknown author",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": "small"
+   },
+   "regions": {},
+   "original_width": 262,
+   "original_height": 350
+  },
+  "mulling_dry_pigment": {
+   "file": "media/mulling_dry_pigment.png",
+   "kind": "image",
+   "title": "Mulling dry pigment and linseed oil",
+   "artist": "Staff videographer",
+   "year": "2013",
+   "width": 960,
+   "height": 698,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Preparing_pigment_5_grinding_pigment_with_muller_on_granite_slab.png",
+    "author": "Staff videographer",
+    "licence": "CC BY-SA 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/3.0",
+    "flag": "small"
+   },
+   "regions": {},
+   "original_width": 972,
+   "original_height": 707
+  },
+  "albrecht_durer_1500": {
+   "file": "media/albrecht_durer_1500.jpg",
+   "kind": "image",
+   "title": "Albrecht Dürer - 1500 self-portrait (High resolution and detail)",
+   "artist": "Albrecht Dürer",
+   "year": "1500",
+   "width": 3840,
+   "height": 5309,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Albrecht_D%C3%BCrer_-_1500_self-portrait_(High_resolution_and_detail).jpg",
+    "author": "Albrecht Dürer",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 4130,
+   "original_height": 5710
+  },
+  "las_meninas_diego": {
+   "file": "media/las_meninas_diego.jpg",
+   "kind": "image",
+   "title": "Las Meninas, by Diego Velázquez, from Prado in Google Earth",
+   "artist": "Diego Velázquez",
+   "year": "1656",
+   "width": 3840,
+   "height": 4420,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Las_Meninas,_by_Diego_Vel%C3%A1zquez,_from_Prado_in_Google_Earth.jpg",
+    "author": "Diego Velázquez",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 26065,
+   "original_height": 30000
+  },
+  "jacopo_della_quercia": {
+   "file": "media/jacopo_della_quercia.jpg",
+   "kind": "image",
+   "title": "Jacopo della quercia, tomba di ilaria del carretto, 1408, 12 cagnolino",
+   "artist": "Sailko",
+   "year": "2015",
+   "width": 1920,
+   "height": 1280,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jacopo_della_quercia,_tomba_di_ilaria_del_carretto,_1408,_12_cagnolino.JPG",
+    "author": "Sailko",
+    "licence": "CC BY 3.0",
+    "licence_url": "https://creativecommons.org/licenses/by/3.0",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3456,
+   "original_height": 2304
+  }
+ },
+ "beats": {
+  "b0137": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SIGNATURE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn mở bằng dòng chữ ký trên gương: đi thẳng vào chi tiết đó."
+  },
+  "b0138": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn giới thiệu hai người đứng nắm tay: cho thấy cả bức tranh."
+  },
+  "b0139": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu hỏi người phụ nữ là ai: lại gần gương mặt nàng."
+  },
+  "b0140": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn theo tay chàng đến tay nàng: cận cảnh hai bàn tay."
+  },
+  "b0141": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về ý nghĩa của cả tấm tranh: lùi ra toàn cảnh."
+  },
+  "b0142": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn tả gương mặt và chiếc mũ của người đàn ông: cận đúng chỗ đó."
+  },
+  "b0143": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_FULL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn gọi tên người đàn ông: cho thấy ông toàn thân."
+  },
+  "b0144": {
+   "items": [
+    {
+     "asset": "ban_do_lucca",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ đúng thành Lucca ở Ý, tọa độ khớp với thành phố này."
+    },
+    {
+     "asset": "ban_do_brugge",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ Brugge chính là Bruges ở Bỉ, tọa độ khớp với thành phố này."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói ông từ Lucca đến buôn bán ở Bruges: hai bản đồ cho thấy hành trình."
+  },
+  "b0145": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói bức chân dung là biểu tượng địa vị: cho thấy cả bức tranh."
+  },
+  "b0146": {
+   "items": [
+    {
+     "asset": "portrait_man_turban",
+     "region": null,
+     "role": "context",
+     "note": "Bản chụp sạch, không khung của bức Người đàn ông đội khăn xếp đỏ, bức tranh thường được coi là tự họa của Van Eyck."
+    },
+    {
+     "asset": "portrait_philip_good",
+     "region": null,
+     "role": "context",
+     "note": "Chân dung Philip the Good có ghi tên ông trên tranh, lớn nhất trong các bản đúng nhưng bị đánh dấu ảnh nhỏ vì không có bản nào lớn hơn."
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về họa sĩ và ông chủ của ông: cần chân dung hai người."
+  },
+  "b0199": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói đôi vợ chồng được vẽ ở nhà: toàn cảnh căn phòng."
+  },
+  "b0148": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_FULL",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SIGNATURE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu chuyển sang người vợ rồi đến năm ghi trên gương: hai chi tiết nối nhau."
+  },
+  "b0149": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu bàn nàng là vợ trước hay vợ sau: nhìn lại hai người cạnh nhau."
+  },
+  "b0150": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo quay lại gương mặt và khăn trùm của nàng: cận đúng chỗ đó."
+  },
+  "b0151": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_FULL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về chiếc váy xanh xếp nếp: cho thấy nàng toàn thân."
+  },
+  "b0152": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SKIRT_HAND",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về cử chỉ nâng váy: cận bàn tay giữ vạt váy."
+  },
+  "b0153": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_FULL",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SKIRT_HAND",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu đi từ màu xanh sang viền lông sóc ở tay áo: chiếc váy, viền lông, rồi con sóc."
+  },
+  "b0154": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HEM_CARPET",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào chút xanh lam ở gấu váy: cận gấu váy."
+  },
+  "b0155": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về chiếc khăn trùm trắng: cận đầu người vợ."
+  },
+  "b0156": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_FULL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chuyển sang áo choàng của Giovanni: cho thấy ông toàn thân."
+  },
+  "b0157": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD_LOWER",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về lông chồn thông lót áo: cận viền lông, rồi con chồn thật."
+  },
+  "b0158": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_HEAD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD_LOWER",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về chiếc mũ rơm rồi đôi ủng: đi từ mũ xuống chân."
+  },
+  "b0159": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói hai người mặc cả món hàng của ông: nhìn lại cả đôi."
+  },
+  "b0160": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_FULL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nhắc lại màu xanh của váy: quay về người vợ."
+  },
+  "b0161": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BED",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào chiếc giường màn đỏ: đi vào chi tiết đó."
+  },
+  "b0162": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_FIGURES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nhắc đến những người khách trong gương rồi bàn về căn phòng: gương rồi toàn cảnh."
+  },
+  "b0163": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HEM_CARPET",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ORANGES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kể tấm thảm rồi đến những quả cam: hai chi tiết theo đúng thứ tự."
+  },
+  "b0164": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HANDS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BEADS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về tượng thú trên tay nắm rồi chuỗi hạt cạnh gương: hai chi tiết nối nhau."
+  },
+  "b0165": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHANDELIER",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về ngọn nến duy nhất trên đèn chùm: cận đèn chùm."
+  },
+  "b0166": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WINDOW",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về cây anh đào ngoài cửa sổ: cận ô cửa sổ."
+  },
+  "b0167": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHAIR_CARVING",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về tượng thánh nữ trên ghế và cây chổi: cận đúng chỗ đó."
+  },
+  "b0168": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu dẫn mắt về vật ở giữa tường sau: lùi ra toàn cảnh căn phòng."
+  },
+  "b0169": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo lại gần tấm gương lồi: gương lấp đầy khung hình."
+  },
+  "b0170": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói gương được phóng to để làm tâm điểm: cho thấy gương giữa cả căn phòng."
+  },
+  "b0171": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_FIGURES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_FULL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu tả hình phản chiếu trong gương rồi bàn tay giơ lên của Giovanni: hai chi tiết nối nhau."
+  },
+  "b0172": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_FIGURES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu bàn về hai người khách trong gương: cận lại hình phản chiếu."
+  },
+  "b0173": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SIGNATURE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn quay lại dòng chữ ký trên gương: cận chữ ký."
+  },
+  "b0174": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về mười ô tròn quanh khung gương: cho thấy cả tấm gương."
+  },
+  "b0175": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_FIGURES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về mặt kính trong suốt: cận mặt kính."
+  },
+  "b0176": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ROUNDELS_RIGHT",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_FULL",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói các cảnh sau cái chết nằm bên phía nàng: nửa gương đó rồi đến nàng."
+  },
+  "b0177": {
+   "items": [
+    {
+     "asset": "erwin_panofsky_oberlin",
+     "region": null,
+     "role": "context",
+     "note": "Chỉ hình này là ảnh chân dung Panofsky, các hình khác là biển tưởng niệm; ảnh bị đánh dấu nhỏ nên chủ kênh cần lưu ý."
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nhắc tên nhà sử học Panofsky: chân dung ông, rồi bức tranh ông bàn đến."
+  },
+  "b0178": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HANDS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SIGNATURE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói đôi tay thề nguyện và chữ ký như người làm chứng: hai chi tiết nối nhau."
+  },
+  "b0179": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "OVERSHOES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn xuống góc dưới bên trái: cận đôi guốc gỗ."
+  },
+  "b0180": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_FULL",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ORANGES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nhắc chiếc váy xanh rồi những quả cam: hai chi tiết theo thứ tự."
+  },
+  "b0181": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SIGNATURE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói điểm yếu là người phụ nữ và năm 1434: gương mặt nàng rồi chữ ký."
+  },
+  "b0182": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "DOG",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "jacopo_della_quercia",
+     "region": null,
+     "role": "context",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về chú chó và những con chó trên mộ phụ nữ: chú chó rồi một tượng mộ. Chưa tìm được: Tượng nằm trên mộ phụ nữ thời Trung cổ có con chó dưới chân."
+  },
+  "b0183": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ROUNDELS_RIGHT",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_FULL",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kể ba dấu hiệu tang: các ô tròn, áo tối của Giovanni, bàn tay lỏng."
+  },
+  "b0184": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BED",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHAIR_CARVING",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về chiếc giường đỏ rồi tượng thánh trên ghế: hai chi tiết theo thứ tự."
+  },
+  "b0185": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "DOG",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu xét lại từng manh mối: toàn cảnh có giường và ghế, rồi đến chú chó."
+  },
+  "b0186": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kết luận về địa vị của đôi vợ chồng: cả hai trong căn phòng."
+  },
+  "b0187": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về sơn dầu pha bột màu với dầu lanh: hình chất liệu, rồi bức tranh."
+  },
+  "b0188": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SKIRT_HAND",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về lớp màu trong và kỹ thuật cọ: cận nếp váy xanh và viền lông."
+  },
+  "b0189": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHANDELIER",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kể ánh sáng trên đèn chùm và khăn trùm: hai chỗ ánh sáng chạm tới."
+  },
+  "b0190": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ORANGES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về quả cam trên bậu cửa và bóng của nó: cận quả cam."
+  },
+  "b0191": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BEADS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về từng hạt hổ phách và sợi chỉ xanh: cận chuỗi hạt."
+  },
+  "b0192": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói về họa sĩ của cảnh đời thường: lùi ra toàn cảnh căn phòng."
+  },
+  "b0194": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HANDS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "SIGNATURE",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo quay về đôi tay và dòng chữ ký: hai chi tiết theo thứ tự."
+  },
+  "b0195": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_HEAD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói người đàn ông là Giovanni và căn phòng giàu có: ông rồi cả bức tranh."
+  },
+  "b0196": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu nói chưa biết nàng là ai và cái nắm tay nghĩa gì: gương mặt nàng rồi đôi tay."
+  },
+  "b0197": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "DOG",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ROUNDELS_RIGHT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kể chú chó và các cảnh bên phía nàng: hai chi tiết theo thứ tự."
+  },
+  "b0198": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu kết của cả phim: lùi ra toàn cảnh bức tranh."
+  },
+  "b0193": {
+   "items": [
+    {
+     "asset": "albrecht_durer_1500",
+     "region": null,
+     "role": "context",
+     "note": "Bản chụp độ phân giải cao chính bức Chân dung tự họa năm 1500 của Dürer, rõ nét, thuộc phạm vi công cộng."
+    },
+    {
+     "asset": "las_meninas_diego",
+     "region": null,
+     "role": "context",
+     "note": "Bản chụp Google Art Project của chính bức Las Meninas tại Prado, trọn vẹn, lớn và thuộc phạm vi công cộng."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói ảnh hưởng của Van Eyck tới Dürer và Velázquez: cho thấy chính hai tác phẩm đó, lần lượt theo lời nói."
+  }
+ },
+ "approval": {
+  "approved": true,
+  "sha1": "36322357cf285dd5bd79c7a0edc5cfbc8397c2c4",
+  "approved_at": "2026-11-19T09:27:03-0800",
+  "narration_sha1": "20fc7a75f28e6bab3ff4d111c81030401bebef61",
+  "by": "cli:arnrun"
+ }
+}

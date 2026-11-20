@@ -104,6 +104,29 @@ class StyleBundle:
         s = self.by_id.get(tid) if isinstance(tid, str) else None
         return bool(s and s.get("engine", {}).get("available") is True and tid in RENDERERS)
 
+    # --- catalogue pass (worker catalogue, 2026-11-20): which techniques a MODEL is shown. Hidden ones are never deleted: stored storyboards use them.
+    def offered(self, tid: str) -> bool:
+        """True when a model that writes a storyboard may use `tid` (`offered` of the registry entry; an entry without the field, or a registry that has none, is offered)."""
+        s = self.by_id.get(tid) if isinstance(tid, str) else None
+        return bool(s) and s.get("offered", True) is not False
+
+    def offered_ids(self) -> list:
+        return [t["id"] for t in self.techniques if t.get("offered", True) is not False]
+
+    def not_offered_text(self, tid: str) -> str:
+        """What a model reads when it wrote a technique that is hidden from it: why, and what to use instead (from the entry's `hidden_reason`)."""
+        s = self.by_id.get(tid) or {}
+        hr = s.get("hidden_reason") or {}
+        use = [u for u in hr.get("use") or [] if self.offered(u)]
+        text = "%s%s is not one of the techniques you are offered (inputs/techniques.md lists them)." % (tid, (" (%s)" % s["name"]) if s.get("name") else "")
+        if hr.get("note"):
+            text += " " + str(hr["note"]).strip()
+        if use:
+            text += " Use %s instead." % " or ".join(use)
+        elif hr.get("code") == "program":
+            text += " Leave it out."
+        return text
+
     def sv(self, section: str, key: str, default=None):
         """A style.json constant: style[section][key]['value'] (or the raw value)."""
         v = (self.style.get(section) or {}).get(key)

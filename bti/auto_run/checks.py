@@ -87,6 +87,16 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "asset_not_in_lines": ("a shot shows a picture that no line of the narration has: the owner took it out of every line", "có cảnh dùng hình mà không dòng lời dẫn nào chọn"),
         "explainer_early": ("a diagram on its own background (map, time axis, tree, two-state picture) fills part of the first half minute: the painting leaves the screen as the viewer arrives",
                             "có sơ đồ nền riêng che mất bức tranh trong nửa phút đầu"),
+        # --- catalogue (worker catalogue, 2026-11-20): what the kinds of a line call for (bti/engine/viewchecks.py); silent on a line without `kinds`
+        "device_wrong_kind": ("a device (map, time axis, large figure, lit line, perspective lines, tree, two panels) is used on a line whose kind does not call for it: the owner's first video put "
+                              "maps on towns that were only mentioned and a figure over the wrong picture", "có hiệu ứng (bản đồ, trục thời gian, con số lớn...) đặt vào câu không thuộc loại cần đến nó"),
+        "device_too_little": ("a device has too little to show (a map with one place, a time axis with one or two dates, a key or a tree with fewer than three entries)",
+                              "có hiệu ứng chỉ có một hai mục để hiện nên không có ý nghĩa"),
+        "figure_on_wrong_picture": ("a large figure is laid over another picture although the picks of its line hold the picture of the thing counted (the first video laid 42 ships over the saint)",
+                                    "có con số lớn nằm trên hình không phải thứ được đếm"),
+        "outside_on_painting": ("a line about something outside the painting has its picture but shows the painting for most of the line: the viewer never sees what the narrator speaks of",
+                                "có dòng nói về thứ ngoài tranh, đã có hình, nhưng vẫn chỉ hiện bức tranh"),
+        "outside_picture_small": ("a picture that is not the painting is drawn smaller than 80% of its default fit: it sits small between black bars", "có hình ngoài tranh hiện nhỏ lọt thỏm giữa hai dải đen"),
     },
 }
 # gate -> codes that never stop the run (they stay in the log)
