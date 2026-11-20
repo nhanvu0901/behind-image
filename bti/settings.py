@@ -20,16 +20,18 @@ DEFAULT_MODEL = "agy:gemini-3.8-flash-high"
 ROLES = (
     "script.outline",
     "script.narration",
+    "script.title",
     "draft",
     "edit.fast",
     "edit.deep",
     "picks",
 )
-AGENTIC_ROLES = {"draft", "edit.deep"}
+AGENTIC_ROLES = {"draft", "edit.deep", "script.title"}
 
 ROLE_LABELS = {
     "script.outline": "Dàn ý kịch bản",
     "script.narration": "Lời dẫn kịch bản",
+    "script.title": "Tựa video",
     "draft": "Dựng storyboard",
     "edit.fast": "Sửa storyboard nhanh (1 lượt)",
     "edit.deep": "Sửa storyboard sâu (agent)",

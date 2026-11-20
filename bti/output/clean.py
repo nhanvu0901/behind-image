@@ -10,6 +10,7 @@ Every entry is a cache: the app makes it again when it needs it, and the documen
     cache/uploads/          the scratch of an upload in progress (bti/editor/picks_api.py).
     cache/picks_auto/runs/  the transcripts of the pictures agent's runs (`*-events.jsonl`, the largest part of cache/picks_auto): nothing reads them back. The rest of cache/picks_auto
                             (its plan, search, choice, `last.json` with the reason of every line that the page shows, the candidates' thumbnails) is small and stays.
+    cache/title/runs/       the transcripts of the title writer's runs (titlestep): nothing reads them back; the title itself is `title.json`, outside `cache/`.
     cache/voice/            the voice stage's scratch folder (bti/voice/files.py `workdir`): the mix is made again from `voice/chunks`.
     cache/wave_*.json       the waveform of the mix for the page (bti/editor/audio.py): made again on demand.
     cache/longjobs/work/    the work folders of the long jobs (the voice's alignment scratch, the aligner's heard words): `Part.is_done` decides by the files the part writes, not by these.
@@ -31,7 +32,7 @@ from . import fsutil
 
 log = logging.getLogger("bti.output")
 
-CACHE_DIRS = ("export", "frames", "thumbs", "previews", "uploads", "picks_auto/runs", "voice", "longjobs/work")
+CACHE_DIRS = ("export", "frames", "thumbs", "previews", "uploads", "picks_auto/runs", "title/runs", "voice", "longjobs/work")      # titlestep: the title writer's transcripts
 CACHE_GLOBS = ("wave_*.json", "longjobs/*.log")
 
 

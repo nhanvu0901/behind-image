@@ -971,6 +971,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     from .retime_api import make_router as _retime_router
     app.include_router(_retime_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
                                       load_style=lambda sid: engine.load_style(sid).get("style") or {}))
+    # titlestep: the video's title (GET/PUT .../title, POST .../title/generate; the package is bti/title/); it also registers how a new title reaches an existing storyboard
+    from .title_api import make_router as _title_router
+    app.include_router(_title_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
+                                     load_style=lambda sid: engine.load_style(sid).get("style") or {}))
     from .auto_api import make_router as _auto_router               # c5cli: automatic running (which gates an agent may approve)
     app.include_router(_auto_router(pdir=pdir))
     from .state_api import make_router as _state_router              # where a project stands and what may be called next (agents)

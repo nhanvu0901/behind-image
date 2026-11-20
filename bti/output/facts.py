@@ -50,6 +50,9 @@ class Facts:
     narration_ok: bool = False
     outline_rev: str | None = None
     narration_rev: str | None = None
+    title_doc: dict | None = None        # titlestep: the title document when it holds a title (bti.title.store), else None
+    title_rev: str | None = None
+    title_state: str = "none"            # none | done | stale
     picks: dict | None = None
     picks_ok: bool = False
     picks_rev: str | None = None
@@ -71,6 +74,15 @@ class Facts:
     auto_runs: list = field(default_factory=list)
     agents: dict = field(default_factory=dict)
     problems: list = field(default_factory=list)
+
+
+def title_public(f: "Facts") -> dict | None:
+    """The title as `state.json` and the README name it: {text, by, at, source, state, candidates}; None when the project has none."""
+    d = f.title_doc
+    ch = (d or {}).get("chosen")
+    if not ch:
+        return None
+    return {"text": ch["text"], "by": ch.get("by"), "at": ch.get("at"), "source": ch.get("source"), "state": f.title_state, "candidates": len((d or {}).get("candidates") or [])}
 
 
 def sha_file(path: Path) -> str | None:
@@ -143,6 +155,8 @@ def _job_row(path: Path, script: bool) -> dict | None:
         res = r.get("result") if isinstance(r.get("result"), dict) else {}
         if kind == "draft" and meta.get("mode") == "edit":
             kind, detail = "edit", words.one_line(meta.get("instruction") or "", 240)
+        elif kind == "title":
+            detail = words.one_line(res.get("title") or "", 120)          # titlestep
         elif kind == "draft":
             detail = ("%s cảnh" % res["n_shots"]) if res.get("n_shots") else ""
         elif kind == "picks" and meta.get("action") == "edit":
@@ -257,6 +271,17 @@ def collect(pdir: Path, *, jobs: bool = True) -> Facts:
             f.narration_ok = bool(sstore.narration_approval(f.narration, f.outline)["approved"])
     except Exception as e:      # noqa: BLE001
         prob("the script cannot be read: %s" % str(e)[:150])
+
+    # the title (titlestep)
+    try:
+        from bti.title import store as tstore
+        tdoc, tproblem = tstore.read(pdir)
+        if tdoc.get("chosen"):
+            f.title_doc, f.title_rev, f.title_state = tdoc, tstore.revision(tdoc), tstore.state_of(tdoc, f.narration_rev)
+        if tproblem:
+            prob("title.json cannot be read: %s" % tproblem[:150])
+    except Exception as e:      # noqa: BLE001
+        prob("the title cannot be read: %s" % str(e)[:150])
 
     # the picks
     try:

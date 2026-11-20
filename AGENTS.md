@@ -13,13 +13,13 @@ the command's own words are English.
 | # | step (`bti status`) | what it makes | gate before the next | skill |
 |---|---|---|---|---|
 | 1 | `artwork` | the painting and the book sources of the project (chosen in the library by the owner) | | |
-| 2 | `script` | the outline, then the narration (a model writes, you check) | `outline`, then `narration` | `skills/script/SKILL.md` |
+| 2 | `script` | the outline, then the narration (a model writes, you check), then the video's title (an agent writes it from the narration) | `outline`, then `narration` | `skills/script/SKILL.md`, `skills/title/SKILL.md` |
 | 3 | `voice` | the narration read aloud and timed word by word (about an hour of machine time) | | `skills/voice/SKILL.md` |
 | 4 | `picks` | the main painting, its regions, and the pictures for each line of the narration | `picks` | `skills/picks/SKILL.md` |
 | 5 | `edit` | the storyboard: a draft by a model, then typed operations | `storyboard` | `skills/storyboard/SKILL.md` |
 | 6 | `export` | the finished video, its description and chapters (about 25 minutes of machine time) | | `skills/export/SKILL.md` |
 
-Steps 3 and 4 open together once the narration is approved. `bti doc <step>` prints a step's skill document (`bti doc` alone prints this file).
+Steps 3 and 4 open together once the narration is approved. `bti doc <step>` prints a step's skill document (`bti doc` alone prints this file). The title is not a gate: nobody approves it (`title.generate` writes it, `title.set` sets your own, at any time).
 
 ## Start here
 
@@ -38,7 +38,7 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
    automatic running on for a project and allowed a gate, `bti approve <project> <gate>` works for that gate; otherwise it exits 3. Never send the actor `human` and never look for another way to approve: stop and tell the owner which gate waits. `bti status` shows `automatic running` and who approved each gate.
 3. **Costs are marked, and you confirm only what the owner allowed.** An action with a cost (machine time, a model call or money) runs only with `--yes-cost`, and only if the owner allowed
    that kind of spending. Money (`paid`) is never yours: the owner starts it on the page. Add `--yes-cost` only when the owner asked for this work.
-4. **Never start a second long job on a project.** A voice, a draft, an export, a picture search or the agent's choice of pictures is one job; wait for it (`bti job <id> --wait`, or `--wait` on the action) before anything of the same kind. The agent's choice of pictures (`picks.auto`), a request-box turn (`picks.edit`, `draft.edit`) and a draft (`draft.start`) hold the one agent run of the project and also run one at a time.
+4. **Never start a second long job on a project.** A voice, a draft, an export, a picture search or the agent's choice of pictures is one job; wait for it (`bti job <id> --wait`, or `--wait` on the action) before anything of the same kind. The agent's choice of pictures (`picks.auto`), a request-box turn (`picks.edit`, `draft.edit`), a draft (`draft.start`) and the video's title (`title.generate`) hold the one agent run of the project and also run one at a time.
    An action that waits only for a running job is not an error: exit 5.
 5. **Read the refusal.** Every error says `code`, `detail`, `fix` and `retry`; do what `fix` says. A refused batch of operations wrote nothing. A stale revision means someone changed the
    document: run the command again (the command reads the current revision itself).
@@ -59,7 +59,7 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
 | `bti undo <project> <batch>` | Undo one batch of operations. |
 | `bti changes <project> [picks\|storyboard]` | The change log of the project, newest batch first. |
 | `bti schema ops picks\|storyboard` | The operations of a document with their schemas and examples. |
-| `bti doc [step]` | Print the skill document of a step (script, voice, picks, storyboard, export); without a step, AGENTS.md. |
+| `bti doc [step]` | Print the skill document of a step (script, title, voice, picks, storyboard, export); without a step, AGENTS.md. |
 
 Options of every command (before or after the sub-command):
 
@@ -117,5 +117,5 @@ When the owner asks for the whole run and has turned automatic running on, `bti 
 ## Where to go on
 
 One document per step, with its goal, what it needs and gives, every action and operation it uses (the action ids are listed there, generated from the code), a worked session with real output, what a good result is and the refusals you will meet:
-`skills/script/SKILL.md`, `skills/voice/SKILL.md`, `skills/picks/SKILL.md`, `skills/storyboard/SKILL.md`, `skills/export/SKILL.md` (or `bti doc <step>`). The lists in this file and in those
+`skills/script/SKILL.md`, `skills/title/SKILL.md`, `skills/voice/SKILL.md`, `skills/picks/SKILL.md`, `skills/storyboard/SKILL.md`, `skills/export/SKILL.md` (or `bti doc <step>`). The lists in this file and in those
 documents are generated from the code and tested: when the app changes they change with it (`python -m bti.cli.docgen`).

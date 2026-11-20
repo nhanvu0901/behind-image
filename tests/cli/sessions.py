@@ -123,20 +123,47 @@ def quick_job(kind: str):
     return start
 
 
+def quick_title_job():
+    """titlestep: a starter that stands in for the title agent: a REAL long job (kind `title`) that ends at once and writes the title document the way the real one does (the real
+    agent takes about a minute and its candidates differ)."""
+    from bti.longjob import Part, manager as mgr
+    from bti.title import store as T
+    cands = [{"text": "The Saint Who Was Also an Advertisement", "form": "contradiction", "lines": ["b0001"], "why": "Một vị thánh và một tấm biển quảng cáo: hai thứ trái ngược mà đều đúng.",
+              "scores": {"curiosity": 5, "concrete": 5, "central": 5, "clear": 4}},
+             {"text": "Why Is a Saint Weighing a Ring?", "form": "question", "lines": ["b0001"], "why": "Câu hỏi mà người lạ chưa thể trả lời.",
+              "scores": {"curiosity": 4, "concrete": 5, "central": 5, "clear": 5}}]
+
+    def start(pid, pdir, *, note=None, model=None, actor=None, by_run=False, **kw):
+        def run(ctx):
+            ctx.progress(0.5, "đang chạy")
+            doc = T.write_generated(pdir, cands, by="agent:mock", narration_rev_=T.narration_rev(pdir), written={"model": "mock", "note": note, "requested_by": actor})
+            return {"title": doc["chosen"]["text"], "candidates": len(cands), "sentence": "Agent đã viết %d tựa và chọn: \"%s\"." % (len(cands), doc["chosen"]["text"])}
+        return mgr.start("title", pid, pdir, [Part(key="title", title="Viết tựa video", run=run)], {"action": "generate", "model": "mock", "agent": None, "requested_by": actor})
+    return start
+
+
 def make_fixture(name: str, root: Path, make_client, monkeypatch):
     """-> (client, project id) for a fixture named in a session."""
     import bti.draft.run as draft_run
     import bti.export.run as export_run
+    import bti.title.job as title_job
     import bti.voice.run as voice_run
     from state_helpers import build, make_book_project
     monkeypatch.setattr(voice_run, "start", quick_job("voice"))
     monkeypatch.setattr(draft_run, "start", quick_job("draft"))
     monkeypatch.setattr(export_run, "start", quick_job("export"))
+    monkeypatch.setattr(title_job, "start", quick_title_job())                       # titlestep
     kind, _, arg = name.partition(" ")
     if kind == "book":
+        stage, *flags = arg.split()
         c = make_client()
         make_book_project(root)
-        build(arg, c, monkeypatch)
+        build(stage, c, monkeypatch)
+        if "title" in flags:                                                           # titlestep: the title agent (a test double) is switched on for this session
+            import json as _json
+            import os
+            f = Path(os.environ["BTI_AGENTS_FILE"])
+            f.write_text(_json.dumps({**_json.loads(f.read_text(encoding="utf-8")), "script.title": "mock"}), encoding="utf-8")
         return c, "arn"
     if kind == "ops":
         import pytest

@@ -304,6 +304,18 @@ Giai đoạn hiện ở trang chủ và ở thanh trên cùng: "Đã duyệt dà
 - Hộp thoại: Tab xoay vòng trong hộp, Esc đóng hộp trên cùng, Enter trong ô chữ bấm nút chính (nút xanh). Trang phía sau bị khóa khi có hộp. Hộp có chữ bạn dán không đóng khi bấm ra ngoài.
 - Tìm kiếm (thư viện, trong sách) không phân biệt dấu và chữ hoa: "duc" khớp "Đức", "Durer" khớp "Dürer". Bộ đếm từ tính chữ của mọi bảng chữ cái, khớp với máy chủ.
 
+### 5.9 Tựa video (viết sau khi duyệt lời dẫn)
+
+Tựa video là một dòng mà người lạ đọc trước khi quyết định xem, và cũng là dòng hiện dưới tên kênh sau đoạn mở đầu. Ngay sau khi bạn **duyệt lời dẫn**, một agent đọc lời dẫn và viết tựa theo một bản hướng dẫn viết sẵn (`skills/title/TASK.template.md`): nó nghĩ ra ít nhất mười hai tựa, loại những tựa không đạt, chấm điểm và đưa lại từ năm đến tám tựa tốt nhất, tựa đầu tiên là lựa chọn của nó. Mỗi tựa có một câu giải thích bằng tiếng Việt và những dòng lời dẫn làm cho tựa đó đúng. Mất khoảng một phút máy, tính vào lượt dùng mô hình (như viết lời dẫn). Khi bạn cho agent tự chạy cả dự án, bước này tự làm, trước giọng đọc; không có cổng duyệt cho tựa.
+
+Trên trang Kịch bản có khung **Tựa video** (dưới thanh nút):
+- **Tựa đang dùng**, ai chọn (agent nào, hay bạn) và lúc nào. Nếu lời dẫn đã đổi sau khi agent viết tựa, khung ghi "lời dẫn đã đổi, nên viết lại" và nút **Viết lại tựa** nổi lên.
+- **Các tựa agent đề xuất**: bấm vào một tựa để chọn nó. Mỗi tựa hiện số ký tự, dạng của nó, các điểm và câu giải thích.
+- **Ô gõ tựa riêng**: một dòng, tối đa 60 ký tự (dài hơn bị cắt trên điện thoại và không vừa một dòng trên hình). Tựa bạn gõ hoặc chọn không bao giờ bị coi là cũ, và chạy tự động không bao giờ ghi đè lên nó; chỉ khi bạn bấm **Viết lại tựa** thì agent mới viết lại (tựa cũ được giữ trong lịch sử).
+- **Viết lại tựa** (kèm ô "Điều bạn muốn", tối đa 600 ký tự): nhờ agent viết lại, ví dụ "nói về tấm gương, không phải chiếc nhẫn". Lời nhắn của bạn được đưa vào bản hướng dẫn của agent.
+
+Đổi tựa khi dự án đã có storyboard thì storyboard được áp lại ngay với tựa mới (đoạn tên kênh đổi chữ): storyboard đổi nên **duyệt storyboard cũ không còn hiệu lực**, bạn duyệt lại. Chưa có tựa thì đoạn tên kênh hiện tên bức tranh và trang báo một lần. Bản dựng nháp (bước Dựng hình) chờ tựa nếu agent có thể viết nó. Tựa còn là dòng đầu tiên của mô tả video (`description.txt`) và nằm trong thư mục output ở `2_script/title.md` (cùng các tựa khác và lý do của từng tựa). Tệp của dự án: `projects/<dự-án>/title.json`.
+
 ## 6. Bước 3 và 4: Giọng đọc và Chọn hình
 
 ### Giọng đọc

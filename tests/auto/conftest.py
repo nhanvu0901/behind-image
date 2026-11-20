@@ -40,7 +40,8 @@ def _isolation(tmp_path, monkeypatch):
     run.mkdir()
     monkeypatch.setenv("BTI_SETTINGS_FILE", str(run / "settings.json"))
     monkeypatch.setenv("BTI_AGENTS_FILE", str(tmp_path / "agents.json"))
-    (tmp_path / "agents.json").write_text(json.dumps({r: "mock" for r in S.ROLES}), encoding="utf-8")
+    # titlestep: the title agent is an unknown model here (not usable), so the actions of the title never advance in these worlds; tests/title switches it on
+    (tmp_path / "agents.json").write_text(json.dumps({**{r: "mock" for r in S.ROLES}, "script.title": "no-title-agent"}), encoding="utf-8")
     choices = tmp_path / "choices.json"
     choices.write_text(json.dumps(MOCK_AGENTS), encoding="utf-8")
     monkeypatch.setenv("BTI_AGENT_CHOICES_FILE", str(choices))

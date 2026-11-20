@@ -128,6 +128,18 @@ def approvals_line(st: dict) -> str:
     return "approvals: " + "; ".join(parts)
 
 
+def title_line(st: dict) -> str | None:
+    """titlestep: the video's title as `bti status` shows it (None when the answer carries no `title`, an app of an earlier version)."""
+    t = st.get("title")
+    if not isinstance(t, dict):
+        return None
+    if not t.get("text"):
+        return "title: none yet (title.generate has an agent write one once the narration is approved; title.set sets your own)"
+    who = t.get("by") or "(not recorded)"
+    more = "; the narration changed since an agent wrote it: title.generate writes it again" if t.get("stale") else ""
+    return 'title: "%s" (%s, %s%s)' % (t["text"], who, t.get("state"), more)
+
+
 def auto_line(st: dict) -> list[str]:
     auto = st.get("auto") or {}
     if not auto.get("enabled"):
@@ -142,6 +154,9 @@ def status_text(st: dict) -> list[str]:
     out = ["project: %s   stage: %s   current step: %s" % (st["project"], st.get("stage"), ("%s (%s)" % (cur["step"], cur.get("label"))) if cur else "none")]
     out += auto_line(st)
     out.append(approvals_line(st))
+    tl = title_line(st)
+    if tl:
+        out.append(tl)
     out.append("steps:")
     for s in st.get("steps") or []:
         extra = " (blocked by %s)" % s["blocked_by"] if s.get("blocked_by") else ""

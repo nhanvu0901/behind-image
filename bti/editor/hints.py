@@ -262,6 +262,18 @@ HINTS: dict[str, dict] = {
     "storyboard_off_voice": _t("after_fix", "The cards, the channel-name beat or the end of the video sit where an earlier voice put them (`problems` lists them): call the action storyboard.retime "
                                             "(POST /api/projects/{pid}/storyboard/retime with {\"base_rev\": <storyboard rev>}), then call this again."),
 
+    # --- titlestep: the video's title (bti/title/)
+    "title_invalid": _t("after_fix", "Send `text` as the title: text that is not empty (or `option`: the number, from 1, of a candidate of GET /api/projects/{pid}/title)."),
+    "title_not_one_line": _t("after_fix", "Send `text` as one line: no line breaks."),
+    "title_too_long": _t("after_fix", "Shorten `text` to at most 60 characters (GET /api/projects/{pid}/title `limits.person_max_chars`)."),
+    "title_option_unknown": _t("after_fix", "Send `option` as the number, from 1, of a candidate listed by GET /api/projects/{pid}/title, or send `text` instead."),
+    "title_choice_needed": _t("after_fix", "Send exactly one of `text` (a title) and `option` (the number of a candidate)."),
+    "title_note_too_long": _t("after_fix", "Shorten `note` to at most 600 characters, or leave it out."),
+    "title_note_invalid": _t("after_fix", "Send `note` as text, or leave it out."),
+    "title_no_output": _t("later", "The agent wrote no usable title file even after one repair message: call POST /api/projects/{pid}/title/generate again, or choose the other agent."),
+    "title_limit": _t("later", "The agent used up the limits of one run without a usable title: call POST /api/projects/{pid}/title/generate again."),
+    "title_tampered": _t("after_fix", "The agent changed files outside its work folder and its answer was thrown away: check the project, then call POST /api/projects/{pid}/title/generate again."),
+
     # --- export step
     "no_storyboard": _t("after_fix", "There is no storyboard yet: run the draft and apply its proposal first."),
     "storyboard_unreadable": _t("after_fix", "Call POST /api/projects/{pid}/storyboard/restore to bring back the newest good copy: storyboard.json cannot be read."),

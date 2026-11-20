@@ -22,6 +22,7 @@ import { issueText, jobErrorText, parseFailText } from '../errmsg.js';
 import { mountAgentPick, quotaNode } from '../agentpick.js';
 import { sourceWords, usedAgent, isQuota, STEP_SCRIPT } from '../agentlogic.js';
 import { AGENT_LABELS as AL } from '../labels.js';
+import { mountTitlePanel } from '../titlepanel.js';      // titlestep: the video's title (one line under the toolbar, a dialog for the candidates)
 
 let root = null, scope = null, shell = null;     // the view root, its lifecycle scope and the shell (set by mount)
 const $ = (s) => root?.querySelector(s);
@@ -36,7 +37,7 @@ const hist = { outline: { past: [], future: [], key: '', at: 0 }, narr: { past: 
 const PASTE = { outline: '', narration: '' };                  // text typed in the paste dialog survives closing the dialog
 let jobPoll = null, currentJob = null, lastRun = null, Q = createQueue();
 function resetState() {
-  Object.assign(S, { pid: null, brief: null, pick: null, tab: null, search: '', hl: [], focus: 'narr' });
+  Object.assign(S, { pid: null, brief: null, pick: null, tab: null, search: '', hl: [], focus: 'narr', title: null });
   D.outline = D.narr = null; R.outline = R.narr = null; B.outline = B.narr = null; ST.outline = {}; ST.narr = {};
   dirty.outline = dirty.narr = false;
   for (const k of ['outline', 'narr']) hist[k] = { past: [], future: [], key: '', at: 0 };
@@ -287,6 +288,7 @@ function refreshChrome() {
   const nx = shell?.pipeline && nextOpenable(shell.pipeline.steps, 'script'), bn = $('#btn-next');
   bn.hidden = !(approvedFlag('narr') && nx);
   if (nx) { bn.textContent = `Tiếp tục: ${nx.label}`; bn.title = nx.state === 'not_built' ? 'Bước kế tiếp chưa được xây dựng' : ''; bn.onclick = () => shell.go(projectHash(S.pid, nx.id)); }
+  S.title?.repaint?.();                                  // titlestep: the strip's buttons follow the narration's approval
 }
 
 // ------------------------------------------------------------------ number fields: whole numbers in a sensible range, or the old value comes back
@@ -832,6 +834,7 @@ function approve() {
       if (kk === 'outline') { await refreshNarrStatus(); redraw(false); }
       toast(kind === 'outline' ? 'Đã duyệt dàn ý' : 'Đã duyệt lời dẫn', 'ok');
       pipeChanged();
+      if (kk === 'narr') S.title?.refresh?.();           // titlestep: an automatic run may write the title now; the strip reads it again
     } catch (e) {
       if (e.status === 409 && !e.body?.issues && /changed|rev/i.test(String(e.body?.detail || ''))) return void (await recoverStale(kk, false));
       if (e.body?.chapter_diff) {                          // refused because the chapters differ: list them
@@ -870,6 +873,7 @@ const BAR = `
     <span id="approve-state" class="badge" title="Trạng thái duyệt"></span>
     <span class="grow"></span>
     <button id="btn-next" class="primary" hidden></button>
+    <div id="title-host" class="title-host"></div>
   </div>
   <main id="smain">
     <section class="col" id="col-src"><div class="col-h"><h2>Nguồn</h2><span class="muted" id="src-note"></span></div><div class="col-b" id="src-body"></div></section>
@@ -893,6 +897,7 @@ export async function mount(host, ctx) {
   // GET /api/agents arriving) redraws the source lines, which name the agent by its label.
   S.pick = mountAgentPick($('#agent-pick-host'), { pid: S.pid, step: STEP_SCRIPT, scope, onChange: () => { if (root) { outBody(); narBody(); } } });
   S.pick.ready.then(() => { if (root) { outBody(); narBody(); } });
+  S.title = mountTitlePanel($('#title-host'), { pid: S.pid, scope, narrationApproved: () => approvedFlag('narr') });      // titlestep
   $('#btn-outline').onclick = () => runDialog('outline');
   $('#btn-write').onclick = () => { if (!approvedFlag('outline')) return toast('Cần duyệt dàn ý trước khi viết lời dẫn.', 'warn'); runDialog('narration'); };
   $('#btn-copy').onclick = () => copyDialog(approvedFlag('outline') && D.outline ? 'script' : 'outline');

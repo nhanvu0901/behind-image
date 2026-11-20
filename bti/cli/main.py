@@ -28,7 +28,7 @@ ID_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
 ACTOR_RE = re.compile(r"^(agent:[A-Za-z0-9][A-Za-z0-9._:@/+-]{0,79}|cli:[A-Za-z0-9][A-Za-z0-9._-]{0,39})$")     # the forms `bti.ops` and `bti.auto` take, minus `human`
 DEFAULT_ACTOR = "cli:bti"
 GATES = R.GATES
-DOC_STEPS = ("script", "voice", "picks", "storyboard", "export")
+DOC_STEPS = ("script", "title", "voice", "picks", "storyboard", "export")      # titlestep: `bti doc title`
 DOC_ALIAS = {"edit": "storyboard"}
 OPS_DOCS = ("picks", "storyboard")
 FINAL_STATES = ("done", "error", "cancelled", "interrupted")
@@ -50,7 +50,7 @@ COMMANDS: list[tuple[str, str, str]] = [
     ("undo", "bti undo <project> <batch>", "Undo one batch of operations."),
     ("changes", "bti changes <project> [picks|storyboard]", "The change log of the project, newest batch first."),
     ("schema", "bti schema ops picks|storyboard", "The operations of a document with their schemas and examples."),
-    ("doc", "bti doc [step]", "Print the skill document of a step (script, voice, picks, storyboard, export); without a step, AGENTS.md."),
+    ("doc", "bti doc [step]", "Print the skill document of a step (script, title, voice, picks, storyboard, export); without a step, AGENTS.md."),
 ]
 COMMON_OPTIONS = [("--json", "Print the server's JSON (or one JSON object of the command's own on an error) instead of text; the progress lines of `--wait` then go to stderr."),
                   ("--actor NAME", "Who is calling, sent wherever the API takes an actor: `cli:NAME` (default `cli:bti`, or `BTI_ACTOR`); `agent:<model id>` is kept as it is; `human` is refused."),

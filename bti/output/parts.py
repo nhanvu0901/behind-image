@@ -135,6 +135,13 @@ def write_narration(f, folder: Path) -> dict:
                        "words": sum(words.count_words(b.text) for c in n.chapters for b in c.beats)}}
 
 
+def write_title(f, folder: Path) -> dict:
+    """titlestep: `2_script/title.md`: the video's title, who chose it, the other candidates with their reasons, the titles that were in use before."""
+    d = folder / PARTS["script"]
+    fsutil.write_text(d / "title.md", render.title_md(f))
+    return {"rev": f.title_rev, "files": [rel(folder, d / "title.md")], "counts": {"candidates": len((f.title_doc or {}).get("candidates") or [])}}
+
+
 # ------------------------------------------------------------------------------------------------ 3_voice
 def voice_rev(f) -> str | None:
     from .facts import sig_file

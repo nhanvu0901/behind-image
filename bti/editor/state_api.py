@@ -61,6 +61,9 @@ NEEDS: dict[str, tuple[str, str]] = {
     "draft_proposal": ("There is no draft proposal to apply.", "Call draft.start and wait for its job."),
     "storyboard_fits_voice": ("The storyboard does not fit the voice: the cards, the channel-name beat or the end of the video sit where an earlier voice put them.",
                               "Call storyboard.retime (it moves them, and puts the opening shot in or takes it out), then ask for the state again."),
+    # titlestep
+    "title_done": ("The video's title is not written yet (or the narration changed after it was written), and an agent can write it.",
+                   "Call title.generate and wait for its job, or set a title yourself with title.set."),
 }
 
 
@@ -106,6 +109,18 @@ SPECS: list[Spec] = [
          when="While the narration is not approved. Needs a narration and the approved outline. Advances."),
     Spec("outline.cancel", "script", "Dừng", "POST", "/api/jobs/{job_id}/cancel", when="While an outline job of the project runs."),
     Spec("narration.cancel", "script", "Dừng", "POST", "/api/jobs/{job_id}/cancel", when="While a narration job of the project runs."),
+    # ---- titlestep: the video's title (bti/title/, skills/title/SKILL.md)
+    Spec("title.generate", "script", "Viết tựa video", "POST", P + "/title/generate", long_job=True, follow=LONGJOBS, role="script.title",
+         cost=("model", "about 1 minute"),
+         when="A project made from a book. Needs the approved narration, no other agent job running on the project (the pictures agent, a prompt-box turn, a draft, a title job) and a usable agent. "
+              "An agent reads the narration and writes the title by the skill; the first of its candidates becomes the title in use (the storyboard, the export's description and the output folder use it). "
+              "Advances while the title is not written (`none`) or the narration changed after it was written (`stale`) and the project has no storyboard yet (a title written later changes the storyboard and so its approval: that is for the owner to ask); a title a person or an operator set is never stale and is replaced only by this call made by hand. "
+              "The automatic run takes it by itself (nobody approves a title), before the voice. Optional body field `note` (text, at most 600 characters, `--set note=...`): the owner's wish for this title in their words."),
+    Spec("title.set", "script", "Đặt tựa video", "PUT", P + "/title",
+         when="A project made from a book. Always ready; the caller supplies `text` (`--set text=...`: one line of at most 60 characters; the banned phrases are not looked for), or sends `option` "
+              "(the number, from 1, of a candidate of GET .../title) in a body of its own. Never stale afterwards. When the project has a storyboard the channel identity is applied again with the title "
+              "in the same call: its revision changes and its approval stops standing (the answer says so)."),
+    Spec("title.cancel", "script", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a title job of the project runs."),
     # ---- voice
     Spec("voice.generate", "voice", "Tạo giọng đọc", "POST", P + "/voice/generate", long_job=True, follow=LONGJOBS,
          cost=("machine_time", "about 1 hour"),
@@ -200,9 +215,9 @@ OPEN = ("done", "current", "available", "waiting")        # page states of a ste
 BLOCKER_NEED = {"script": "narration_approved", "voice": "voice_done", "picks": "picks_approved", "edit": "storyboard_approved"}
 ACTIVE_JOB = ("queued", "waiting", "running")
 # what a running job of a kind blocks: the jobs kinds of one family run one at a time
-FAMILY = {"outline": "script", "narration": "script", "voice": "voice", "draft": "draft", "export": "export", "picks": "picks", "auto": "auto"}
+FAMILY = {"outline": "script", "narration": "script", "voice": "voice", "draft": "draft", "export": "export", "picks": "picks", "auto": "auto", "title": "title"}      # titlestep: `title`
 CANCEL_ID = {"outline": "outline.cancel", "narration": "narration.cancel", "voice": "voice.cancel", "draft": "draft.cancel",
-             "export": "export.cancel", "picks": "picks.cancel", "auto": "auto.cancel"}
+             "export": "export.cancel", "picks": "picks.cancel", "auto": "auto.cancel", "title": "title.cancel"}
 SCRIPT_JOB_KINDS = ("outline", "narration")
 
 
@@ -262,6 +277,8 @@ class Ctx:
         self.picks_agent_running = False                  # join2: the job of picks.auto runs (kind `picks`, meta.action `auto`): it holds the agent like a `draft` job does
         self.run_going = False                            # join2: an automatic run goes on (a job of kind `auto`): the request boxes are not started meanwhile
         self.output_root = None                           # outfolder: the app's output folder (None: this app has none)
+        self.title_state, self.title_rev = "none", None   # titlestep: none | done | stale of the project's title, and the revision of title.json
+        self.sb_title: str | None = None                  # titlestep: the video's title the saved storyboard already carries (`identity.video_title`), if any
 
     # -- steps
     def page_state(self, sid: str) -> str:
@@ -293,7 +310,7 @@ class Ctx:
     def agent_busy(self, family: str) -> bool:
         """join2: may the agent's work of `family` (`draft` or `picks`) not start now? A job of the same family runs, or an agent job of the other
         family does: a prompt-box turn or a draft (kind `draft`) and the agent's choice of pictures (kind `picks`) run one at a time per project."""
-        return self.busy(family) or self.busy("draft") or self.picks_agent_running
+        return self.busy(family) or self.busy("draft") or self.picks_agent_running or self.busy("title")      # titlestep: the title writer holds the agent too
 
     # -- agent
     def agent(self, role: str) -> dict:
@@ -312,6 +329,11 @@ class Ctx:
             out = {"id": None, "label": None, "usable": False, "reason": "Chưa kiểm tra được agent này."}
         self._agents[role] = out
         return out
+
+    def title_waits(self) -> bool:
+        """titlestep: does the storyboard draft wait for the video's title? The narration is approved, no title stands (or it is stale, or only the storyboard carries one) and an agent could
+        write it now."""
+        return bool(self.narration_ok and self.title_state in ("none", "stale") and not (self.title_state == "none" and self.sb_title) and self.agent("script.title")["usable"])
 
     def actor(self, role: str) -> str:
         """The `actor` of an example batch: `agent:<model id>` of the agent that works on this project for `role` (no availability check)."""
@@ -339,6 +361,17 @@ def _load_script(c: Ctx) -> None:
     c.narration_rev = n.rev() if n is not None else None
     c.narration_ok = bool(sstore.narration_approval(n, o)["approved"])
     c.locked_beats = bool(n is not None and any(b.locked for ch in n.chapters for b in ch.beats))
+
+
+def _load_title(c: Ctx) -> None:
+    """titlestep: the state and the revision of title.json (a file that cannot be read counts as no title; the next `title.set` or generation replaces it)."""
+    from bti.title import store as tstore
+    doc, problem = tstore.read(c.d)
+    c.title_rev = tstore.revision(doc)
+    c.title_state = tstore.state_of(doc, c.narration_rev)
+    if problem:
+        c.problem("document_corrupt", "script", "title.json cannot be read: " + problem[:160], fix="Set the title again with title.set (it writes a new file), or write it with title.generate.",
+                  vi="Tệp tựa video không đọc được: hãy đặt lại tựa để ghi tệp mới.")
 
 
 def _load_picks(c: Ctx) -> None:
@@ -403,6 +436,8 @@ def _load_storyboard(c: Ctx) -> None:
                   vi="Storyboard không đọc được.")
         return
     c.sb_rev, c.sb_approval = compute_rev(sb), storyboard_approval(sb)
+    ident = sb.get("identity") if isinstance(sb.get("identity"), dict) else {}      # titlestep
+    c.sb_title = ident["video_title"].strip() or None if isinstance(ident.get("video_title"), str) else None
     c.sb_record = (sb.get("approvals") or {}).get("storyboard") if isinstance(sb.get("approvals"), dict) else None      # c5cli
     c.has_audio = _file_named(c.d, sb, "audio", "audio/mix.m4a")
     c.has_timing = _file_named(c.d, sb, "timing", "timing.json")
@@ -592,6 +627,24 @@ def b_narration_approve(c: Ctx):
     return E(needs, {"rev": c.narration_rev} if c.narration is not None else None, advances=True)
 
 
+def b_title_generate(c: Ctx):
+    """titlestep: the agent writes the video's title from the approved narration. It advances while there is no title or the narration changed after it was written."""
+    if not _script_open(c):
+        return None
+    needs = ["documents_readable"] if c.script_error else ([] if c.narration_ok else ["narration_approved"])
+    if c.agent_busy("title"):
+        needs.append("no_running_job")
+    needs += _model_needs(c, "script.title")
+    return E(list(dict.fromkeys(needs)), {"note": None, "actor": c.actor("script.title")}, advances=c.title_state in ("none", "stale") and not c.sb_exists)
+
+
+def b_title_set(c: Ctx):
+    """titlestep: a person or an operator sets the title (text, or the number of a candidate in a body of its own)."""
+    if not _script_open(c):
+        return None
+    return E(["documents_readable"] if c.script_error else [], fill=["text"], template={"base_rev": c.title_rev, "text": None, "actor": "cli:title"})
+
+
 def b_voice_generate(c: Ctx):
     if not c.open("voice") or c.imported:
         return None
@@ -719,6 +772,8 @@ def b_draft_start(c: Ctx):
     if not _edit_open(c):
         return None
     needs = c.blocker_need("edit")
+    if c.title_waits():                                                     # titlestep: the channel-name beat shows the video's title: wait for it while an agent can write it
+        needs.append("title_done")
     if not c.draft_ready["voice"]:
         needs.append("voice_done")
     if not c.draft_ready["picks"]:
@@ -876,7 +931,7 @@ def b_output_build(c: Ctx):
 BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "outline.generate": b_outline_generate, "outline.import": b_outline_import, "outline.approve": b_outline_approve,
     "narration.generate": b_narration_generate, "narration.import": b_narration_import, "narration.ops": b_narration_ops,
-    "narration.approve": b_narration_approve, "voice.generate": b_voice_generate,
+    "narration.approve": b_narration_approve, "title.generate": b_title_generate, "title.set": b_title_set, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
     "picks.auto": b_picks_auto, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
@@ -977,6 +1032,7 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
     c.output_root = output_root                                      # outfolder
     if not c.imported:
         _try(lambda: _load_script(c))
+        _try(lambda: _load_title(c))                                 # titlestep
         _try(lambda: _load_picks(c))
     _try(lambda: _load_storyboard(c))
     _try(lambda: _load_changes(c))
@@ -994,11 +1050,18 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
     answer = {"project": pid, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
               "next_actions": build_actions(c), "jobs": jobs, "problems": problems,
               "auto": auto_mod.public(c.auto), "approvals": _try(lambda: approvals_of(c), {g: None for g in auto_mod.GATES})}      # c5cli
+    if not c.imported:                                               # titlestep: the video's title (state none | done | stale, the text, who chose it, how many candidates)
+        from bti.title import view as title_view
+        answer["title"] = title_view.summary(d)
     if output_root is not None:                                      # outfolder: a problem with the output folder is a warning with its sentence (the key is there only then)
         from bti.output import hooks as output_hooks
         w = _try(lambda: output_hooks.warnings_for(output_root, d), [])
         if w:
             answer["warnings"] = w
+    if not c.imported and c.title_state == "none" and c.sb_exists and not c.sb_corrupt and not c.sb_title:      # titlestep: a storyboard with no video title: the channel-name beat falls back to the painting's title
+        answer["warnings"] = [*answer.get("warnings", []), {
+            "code": "title_missing", "detail": "The project has no video title: the channel-name beat shows the painting's title. Write one with title.generate or set one with title.set.",
+            "sentence": "Dự án chưa có tựa video nên đoạn tên kênh đang hiện tên bức tranh. Nhờ agent viết tựa hoặc tự đặt tựa ở bước Kịch bản."}]
     return answer
 
 

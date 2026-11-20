@@ -32,7 +32,7 @@ def test_the_state_answer_lists_output_build_only_for_an_app_with_an_output_fold
         a = build_action(st)
         assert a and a["method"] == "POST" and a["path"] == "/api/projects/%s/output/build" % PID and a["body"] == {} and a["step"] == "export"
         assert a["ready"] is True and a["needs"] == [] and a["advances"] is False and a["gate"] is False and a["long_job"] is False and a["cost"] is None and a["auto_ok"] is True
-        assert "warnings" not in st
+        assert not [w for w in st.get("warnings", []) if w["code"] != "title_missing"]          # titlestep: a storyboard with no video title has its own warning; the output folder has none
     with TestClient(create_app(projects_root=proj.root, engine_module=None, media_module=None)) as c:
         assert build_action(c.get("/api/projects/%s/state" % PID).json()) is None
     assert "output.build" in state_api.SPEC and state_api.SPEC["output.build"].label == "Ghi thư mục output"
