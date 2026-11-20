@@ -19,6 +19,11 @@ An asset's `width` and `height` are the pixels of its stored file, and its regio
 documents written before it existed (`bti.media.assets.reconcile_sizes`): a declared size that differs from the stored file is
 corrected, the regions of that asset are scaled with it, and the correction reaches the disk with the next `save`.
 
+An image asset may carry `content_box` (`{x0, y0, x1, y1, how, note?}`, pixels of the stored picture): the painted area, found by the program when
+the picture is imported and when it is the main painting (`bti.media.contentbox`; a museum photograph of a panel often has a black ground round the
+painting), or set by `set_content_box`. The camera of the video never leaves the box of the main painting. A document without it is read and saved exactly
+as before; `save` gives the main painting the finding of its file when it has none.
+
 Revision = sha1 of the canonical JSON without the `approval` block (the same rule as the script documents). An approval
 stores that revision and the revision of the narration it was given against; it stands only while both still match and the
 narration itself is approved. Saving a changed document drops the approval. Writes are atomic, take the picks lock, and
@@ -34,6 +39,7 @@ from pathlib import Path
 from typing import Any
 
 from bti.media import assets as _mediaassets
+from bti.media import contentbox as _contentbox          # panelbox: the painted area of a picture
 from bti.script import store as sstore
 from bti.script.store import DocumentCorrupt, ProjectGone, StaleRevision  # noqa: F401  (re-exported)
 
@@ -115,6 +121,16 @@ def _region(r: Any) -> dict | None:
     return out
 
 
+def _content_box(v: Any) -> dict | None:
+    """The `content_box` object of an asset in its stored form (whole pixels, `how` one of `bti.media.contentbox.HOW`, `note` only when there is one), or None
+    when `v` is not four finite numbers with x0 < x1 and y0 < y1."""
+    box = _contentbox.clean(v)
+    if box is None:
+        return None
+    note = v.get("note") if isinstance(v.get("note"), str) and v["note"].strip() else None
+    return _contentbox.record(box, v.get("how") if v.get("how") in _contentbox.HOW else "set", note)
+
+
 def _asset(a: Any) -> dict | None:
     if not isinstance(a, dict) or not _s(a.get("file")):
         return None
@@ -137,6 +153,9 @@ def _asset(a: Any) -> dict | None:
     dur = _num(a.get("duration"), 0.0)
     if out["kind"] == "video" and dur > 0:
         out["duration"] = round(float(dur), 2)
+    box = _content_box(a.get("content_box")) if out["kind"] == "image" else None
+    if box is not None:                                      # absent when there is none: a document made before the painted area existed keeps its revision
+        out["content_box"] = box
     return out
 
 
@@ -207,6 +226,8 @@ def doc_problem(d: Any) -> str | None:
         for f in ("title", "artist", "year"):
             if f in a and a[f] is not None and not isinstance(a[f], str):
                 return f"picks.assets.{k}.{f} must be a string"
+        if a.get("content_box") is not None and _content_box(a["content_box"]) is None:
+            return f"picks.assets.{k}.content_box must be an object with numbers x0 < x1 and y0 < y1"
         regions = a.get("regions", {})
         if not isinstance(regions, dict):
             return f"picks.assets.{k}.regions must be an object"
@@ -292,6 +313,7 @@ def save(pdir: Path, d: dict, base_rev: str | None = None) -> str:
         if cur is not None and cur != base_rev:
             raise StaleRevision(cur)
     d = normalize(d)
+    _ensure_main_box(pdir, d)
     rev = revision(d)
     if d["approval"].get("sha1") != rev:
         d["approval"] = _approval({})
@@ -302,6 +324,15 @@ def save(pdir: Path, d: dict, base_rev: str | None = None) -> str:
             pass
     sstore.write_json_atomic(p, d)
     return rev
+
+
+def _ensure_main_box(pdir: Path, d: dict) -> None:
+    """The main painting gets the program's finding of its painted area when it has none (a picture made the main one, or a project made before the box
+    existed). In place, only an image whose file reads; the box that is there is never replaced."""
+    main = d.get("main_asset")
+    a = d["assets"].get(main) if isinstance(main, str) else None
+    if a is not None and a.get("kind") == "image":
+        _contentbox.ensure(a, pdir)
 
 
 class Held:
@@ -364,6 +395,10 @@ def issues(d: dict | None, pdir: Path | None = None, beat_ids: list[str] | None 
     main = d.get("main_asset")
     if not main or main not in assets:
         out.append({"level": "error", "code": "no_main", "message": "no main painting is chosen"})
+    cb = (assets.get(main) or {}).get("content_box") if main else None
+    if isinstance(cb, dict) and cb.get("how") == "unsure":      # panelbox: the program found a dark or light band it did not believe: it uses the whole picture, and says so
+        out.append({"level": "warning", "code": "content_box_unsure", "asset": main,
+                    "message": "the painted area of the main painting is not sure: " + _contentbox.NOTES.get(cb.get("note"), "the whole picture is used")})
     for key, a in assets.items():
         if pdir is not None and not (Path(pdir) / a["file"]).is_file():
             out.append({"level": "error", "code": "asset_file_missing", "asset": key,

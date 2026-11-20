@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import copy
 
+from bti.media import contentbox as CB          # panelbox: the painted area of a picture
+
 CARD_S = 2.8                     # a chapter card
 TITLE_CARD_S = 2.9               # the beat of a style that has no nominal length of its own (and the old title card)
 MIN_CARD_S = 1.0
@@ -77,19 +79,26 @@ def opening_span(chapters: list, words: list) -> dict | None:
     return {"start": 0.0, "dur": first - OPENING_LEAD_S}
 
 
-def whole_camera(w, h, canvas: dict | None, fit_pct: float = DEFAULT_FIT_PCT) -> list | None:
+def whole_camera(w, h, canvas: dict | None, fit_pct: float = DEFAULT_FIT_PCT, box=None) -> list | None:
     """The two camera keys of the opening shot: the ENTIRE painting inside the frame, centred, a push of at most 3 % that never puts an edge
     of the painting outside the frame. zoom = the smaller of fit-by-height and fit-by-width at `fit_pct` (the style's
-    `matte.painting_height_pct`) of the canvas; None when the painting's size is not known."""
+    `matte.painting_height_pct`) of the canvas; None when the painting's size is not known.
+    `box` (panelbox): the painted area `(x0, y0, x1, y1)` of the picture, in its pixels (`bti.media.contentbox`): the painting that is fitted and centred is
+    the box, not the file (a museum photograph has a black ground round the painting); without one, or one that is not inside the picture, the whole picture."""
     if not (_num(w) and _num(h) and w > 0 and h > 0):
         return None
     c = canvas if isinstance(canvas, dict) else {}
     cw = float(c["w"]) if _num(c.get("w")) and c["w"] > 0 else 1920.0
     ch = float(c["h"]) if _num(c.get("h")) and c["h"] > 0 else 1080.0
-    z = min(fit_pct / 100.0 * ch / float(h), fit_pct / 100.0 * cw / float(w))
-    edge = min(ch / float(h), cw / float(w))              # the painting exactly touching the frame
+    b = CB.clean(dict(zip(CB.FIELDS, box)), w, h) if isinstance(box, (list, tuple)) and len(box) == 4 else None
+    if b is not None:
+        cx, cy, z, edge = CB.whole_frame(b, fit_pct, cw, ch)
+        cx, cy = round(cx, 2), round(cy, 2)
+    else:
+        z = min(fit_pct / 100.0 * ch / float(h), fit_pct / 100.0 * cw / float(w))
+        edge = min(ch / float(h), cw / float(w))          # the painting exactly touching the frame
+        cx, cy = round(float(w) / 2, 2), round(float(h) / 2, 2)
     z_end = min(z * OPENING_PUSH, edge)
-    cx, cy = round(float(w) / 2, 2), round(float(h) / 2, 2)
 
     def key(rel, zoom):
         return {"at": {"rel": rel}, "cx": cx, "cy": cy, "zoom": round(zoom, 5), "ease": "linear"}
@@ -100,7 +109,8 @@ def opening_shot(asset_key: str, asset: dict | None, canvas: dict | None, fit_pc
     """The opening shot as the compiler writes it (without `start`, which is `{"t": 0.0}`). `base_params` are the registry defaults of the
     technique (`shadow` and the rest); the camera is the whole painting."""
     params = copy.deepcopy(base_params) if isinstance(base_params, dict) else {}
-    cam = whole_camera((asset or {}).get("width"), (asset or {}).get("height"), canvas, fit_pct)
+    a = asset if isinstance(asset, dict) else {}
+    cam = whole_camera(a.get("width"), a.get("height"), canvas, fit_pct, CB.box_of(a))          # panelbox: the box the asset carries, not the file
     if cam is not None:
         params["camera"] = cam
     return {"id": OPENING_ID, "start": {"t": 0.0}, "technique": OPENING_TECHNIQUE, "slots": {"image": {"asset": asset_key}}, "params": params,

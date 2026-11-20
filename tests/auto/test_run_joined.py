@@ -335,7 +335,7 @@ def test_the_lists_and_the_share_rule_are_the_ones_the_documents_say():
     assert checks.SHARE_LIMITS == {"picks": {"beat_no_pick": 0.25, "outside_no_picture": 0.34}} and checks.SHARE_OF == {"outside_no_picture": "outside"}
     assert "beat_no_pick" in checks.STOPS["picks"] and checks.STOPS["picks"]["beat_no_pick"][1].startswith("hơn một phần tư")
     assert checks.STOPS["picks"]["outside_no_picture"][1].startswith("hơn 34% số dòng nói về thứ ngoài bức tranh")
-    assert set(checks.STOPS["picks"]) == {"beat_no_pick", "beat_unknown", "outside_no_picture"} and checks.TOLERATED["picks"] == frozenset({"asset_flag"})
+    assert set(checks.STOPS["picks"]) == {"beat_no_pick", "beat_unknown", "outside_no_picture"} and checks.TOLERATED["picks"] == frozenset({"asset_flag", "content_box_unsure"})
     text = (REPO / "docs" / "AGENT_API.md").read_text(encoding="utf-8")
     assert "`beat_no_pick` (only when more than 25% of the lines have it)" in text
     assert "`outside_no_picture` (only when more than 34% of the lines about something outside the painting have it)" in text

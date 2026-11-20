@@ -6,6 +6,7 @@ Every operation checks its own fields against the document as the earlier operat
 """
 from __future__ import annotations
 
+from bti.media import contentbox as pcb          # panelbox: the painted area of a picture
 from bti.picks import doc as pdoc
 from bti.picks import service as psvc
 
@@ -285,3 +286,45 @@ def import_(ctx, o):
         ctx.created["assets"].append(key)
     ctx.define_ref(o.get("ref"), "asset", key)
     ctx.say({"asset": None if ctx.dry_run else key}, variant="main" if as_main else "default", source=SOURCE_VI[o["source"]])
+
+
+# ---------------------------------------------------------------- panelbox (2026-11-20): the painted area of a picture
+@op("picks", "set_content_box",
+    summary="Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph "
+            "round a panel. The camera of the video never leaves the box of the main painting; the program finds one by itself when a picture is imported or made the main "
+            "one, and this replaces what it found.",
+    schema=S.obj("set_content_box", ["asset", "x0", "y0", "x1", "y1"], {
+        "asset": ASSET,
+        "x0": S.number("Left edge of the painted area, pixels from the left edge of the picture.", minimum=0),
+        "y0": S.number("Top edge of the painted area, pixels from the top edge of the picture.", minimum=0),
+        "x1": S.number("Right edge of the painted area, pixels from the left edge of the picture (more than x0).", minimum=0),
+        "y1": S.number("Bottom edge of the painted area, pixels from the top edge of the picture (more than y0).", minimum=0)}),
+    example={"op": "set_content_box", "asset": "A", "x0": 40, "y0": 50, "x1": 1160, "y1": 1550},
+    sentences="Vùng tranh của {pic}: đã đặt")
+def set_content_box(ctx, o):
+    ctx.whole_document("set_content_box")
+    key = _asset(ctx, o["asset"], "asset")
+    a = ctx.doc["assets"][key]
+    if a.get("kind") == "video":
+        ctx.bad("asset", "a video has no painted area: only a picture can have one")
+    w, h = int(a.get("width") or 0), int(a.get("height") or 0)
+    box = (o["x0"], o["y0"], o["x1"], o["y1"])
+    problem = None if key in ctx.placeholders else pcb.box_problem(box, w, h)          # the stand-in of a dry run's import has no size
+    if problem:
+        ctx.bad("x0", problem)
+    ctx.touch("asset:" + key)
+    a["content_box"] = pcb.record(box, "set")
+    ctx.say({"asset": key}, pic=_pic(ctx, key))
+
+
+@op("picks", "clear_content_box",
+    summary="Take away the painted area of a picture, so that the program finds it again from the picture (the main painting gets the new finding when the picks are saved).",
+    schema=S.obj("clear_content_box", ["asset"], {"asset": ASSET}),
+    example={"op": "clear_content_box", "asset": "D"},
+    sentences="Vùng tranh của {pic}: để chương trình tự tìm lại")
+def clear_content_box(ctx, o):
+    ctx.whole_document("clear_content_box")
+    key = _asset(ctx, o["asset"], "asset")
+    ctx.touch("asset:" + key)
+    ctx.doc["assets"][key].pop("content_box", None)
+    ctx.say({"asset": key}, pic=_pic(ctx, key))

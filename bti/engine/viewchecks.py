@@ -990,6 +990,10 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
             continue
+    try:                                                          # panelbox: the camera stays inside the painted area of the main painting
+        out.extend(_frame_off_painting(c))
+    except Exception:       # noqa: BLE001
+        pass
     return out
 
 
@@ -1005,3 +1009,56 @@ CODES = {
     "explainer_early": "A base explanatory component (MAP-01, TIME-01, TREE-01, STATE-01) starts in the first 30 seconds (warning). args: shot, technique, start, end, limit.",
 }
 CODES.update(CATALOGUE_ISSUES)       # catalogue pass: the four checks of what the kinds of a beat call for (their sentences: `CATALOGUE_SENTENCES` of errmsg.js)
+
+
+# ----------------------------------------------------------------------------------------------------------- panelbox: the camera stays on the painted surface
+# Worker panelbox, 2026-11-20. A museum photograph of a panel has a black ground round the painting (`content_box` of the asset, bti/media/contentbox.py); the first test video
+# let the camera of about a dozen shots go past the edge of the painting and a black band stood at one side of the frame. A camera KEY of a shot on the main painting must show at
+# most OFF_LIMIT (1%) of its frame outside the painted area (`contentbox.outside_share`), unless the frame holds the whole painting (a pull-back: the matte round the painting is by
+# design) or is, along an axis, a quarter wider than the painting or more and holds it there (a narrow painting in a wide frame: bars at both sides are the look). Between two keys
+# that are inside the box the camera is inside it too (the corners of the frame move on a concave and a convex curve), so the keys are the whole check.
+HINTS["frame_off_painting"] = ("Keep every camera key inside the painted area of the main painting (`content_box` of the asset): move the centre away from the edge, or zoom in; "
+                               "a frame that shows the whole painting is the only one that may show the ground round it.")
+
+
+def _main_painting(c: _Ctx):
+    """The key of the main painting: the project's (`main_asset` of picks.json) when the storyboard has it, else the picture on screen the longest."""
+    key = _picks_doc(c.project_dir).get("main_asset") if c.project_dir is not None else None
+    return key if isinstance(key, str) and isinstance(c.assets.get(key), dict) else c.main_asset()
+
+
+def _frame_off_painting(c: _Ctx) -> list[dict]:
+    from bti.media import contentbox as CB
+    main = _main_painting(c)
+    asset = c.assets.get(main) if main else None
+    box = CB.box_of(asset, c.project_dir) if isinstance(asset, dict) else None
+    if box is None:
+        return []
+    out = []
+    for i, shot in enumerate(c.shots):
+        if c.spans[i] is None or not c.has_camera(i) or c.primary(i) != main:
+            continue
+        raw = (shot.get("params") or {}).get("camera") if isinstance(shot.get("params"), dict) else None
+        worst = None
+        for n, k in enumerate(raw if isinstance(raw, list) else []):
+            if not (isinstance(k, dict) and all(_num(k.get(f)) for f in ("cx", "cy", "zoom")) and k["zoom"] > 0):
+                continue
+            share = CB.outside_share(box, float(k["cx"]), float(k["cy"]), float(k["zoom"]))
+            if share > CB.OFF_LIMIT and (worst is None or share > worst[0]):
+                worst = (share, n, k)
+        if worst is None:
+            continue
+        share, n, k = worst
+        title = (asset.get("title") or main)
+        out.append(_issue("frame_off_painting", "shots[%d].params.camera[%d]" % (i, n),
+                          "Camera key %d of shot %s (centre %.0f, %.0f at zoom %.3g) shows %.0f%% of the frame outside the painted area of the main painting (%s: x %d to %d, y %d to %d): "
+                          "a band of the photograph's ground or of the matte stands at a side of the frame."
+                          % (n + 1, c.sid(i), k["cx"], k["cy"], k["zoom"], share * 100, str(title)[:40], box[0], box[2], box[1], box[3]),
+                          shot=c.sid(i), asset=main, key=n, share=_r(share, 3), limit=CB.OFF_LIMIT, box=[int(round(v)) for v in box],
+                          cx=_r(k["cx"], 0), cy=_r(k["cy"], 0), zoom=round(float(k["zoom"]), 4)))
+    return out
+
+
+# panelbox (2026-11-20): the camera stays inside the painted area of the main painting (`_frame_off_painting`)
+CODES["frame_off_painting"] = ("A camera key of a shot on the main painting shows more than 1% of its frame outside the painted area of the main painting (`content_box` of the asset, "
+                               "bti/media/contentbox.py), judged along the axes where the frame is not a pull-back round the painting, and does not hold the whole painting (warning). args: shot, asset, key (0-based), share, limit, box [x0, y0, x1, y1], cx, cy, zoom.")

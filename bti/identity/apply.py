@@ -29,6 +29,7 @@ import math
 
 from bti.engine.limits import CAMERA_ZOOM_MAX
 from bti.engine.timing import AnchorError, Timing
+from bti.media import contentbox as CB          # panelbox: the painted area of the main painting
 
 from . import config as C
 from . import titles as T
@@ -222,14 +223,36 @@ class _Applier:
                     return a
         return next((k for k in self.assets if self.image_asset(k)), None)
 
+    def box_of(self, key) -> tuple | None:
+        """panelbox: the painted area `(x0, y0, x1, y1)` of the main painting (`content_box` of its asset) when `key` is the main painting and carries a usable one."""
+        a = self.image_asset(key)
+        return CB.box_of(a) if a is not None and key == self.main_asset() else None
+
+    def in_box(self, key, keys):
+        """panelbox: camera keys written for the picture `key`, each moved or tightened (`bti.media.contentbox.fit_frame`) when it shows more than 1% of its frame outside
+        the painted area of the main painting and does not hold the whole of it; the keys of any other picture, and keys that are inside, come back as they are."""
+        box = self.box_of(key) if keys else None
+        if box is None:
+            return keys
+        out = []
+        for k in keys:
+            if isinstance(k, dict) and _num(k.get("cx")) and _num(k.get("cy")) and _num(k.get("zoom")) and k["zoom"] > 0:
+                fit = CB.fit_frame(box, k["cx"], k["cy"], k["zoom"])
+                if fit != (k["cx"], k["cy"], k["zoom"]):
+                    k = {**k, "cx": fit[0], "cy": fit[1], "zoom": _clamp_zoom(fit[2])}
+            out.append(k)
+        return out
+
     def whole_keys(self, key) -> list | None:
-        """The whole picture, fitted the way the matte shots fit it (painting height = `fit_pct` of the frame), with a 3 % push."""
+        """The whole picture, fitted the way the matte shots fit it (painting height = `fit_pct` of the frame), with a 3 % push. The painting is the painted area of the
+        picture (`content_box`) when it has one: the box is fitted and centred, not the black ground round it."""
         a = self.image_asset(key)
         if not a or not (_num(a.get("width")) and _num(a.get("height")) and a["width"] > 0 and a["height"] > 0):
             return None
         w, h = float(a["width"]), float(a["height"])
-        z = self.cfg.fit_pct / 100.0 * 1080.0 / h
-        cx, cy = round(w / 2, 2), round(h / 2, 2)
+        box = self.box_of(key) or (0.0, 0.0, w, h)
+        z = self.cfg.fit_pct / 100.0 * 1080.0 / (box[3] - box[1])
+        cx, cy = round((box[0] + box[2]) / 2, 2), round((box[1] + box[3]) / 2, 2)
         return [_key(0.0, cx, cy, round(_clamp_zoom(z), 5)), _key(1.0, cx, cy, round(_clamp_zoom(z * WHOLE_PUSH), 5))]
 
     def camera_of(self, s) -> tuple | None:
@@ -419,7 +442,7 @@ class _Applier:
             else:
                 key = self.main_asset()
                 keys = self.whole_keys(key) if key else None
-            wanted = {"camera": keys, "text": self.cfg.channel_name}
+            wanted = {"camera": self.in_box(key, keys), "text": self.cfg.channel_name}
             wanted.update(self.brand_texts())
             self.rewrite(s, self.sd.brand, key, wanted, None)
 
@@ -480,7 +503,7 @@ class _Applier:
             tr = None
             if self.sd.transition:
                 tr = {"technique": self.sd.transition["technique"], "dur": round(min(self.sd.transition["dur"], max(0.0, ln - 0.05)), 3), "params": {}}
-            self.rewrite(s, self.sd.mark, key, {"camera": keys, "title": T.mark_title(number, raw)}, tr, set_transition=True)
+            self.rewrite(s, self.sd.mark, key, {"camera": self.in_box(key, keys), "title": T.mark_title(number, raw)}, tr, set_transition=True)
 
     # ------------------------------------------------------------------------------------------------------- rewriting a shot
     def rewrite(self, s, tech, key, wanted: dict, transition, set_transition=False):
