@@ -128,15 +128,27 @@ def render_template(template: str, values: dict) -> str:
     return "\n\n".join(out).strip() + "\n"
 
 
-def build_description(storyboard: dict, timing: dict, project_meta: dict, *, duration: float, template: str | None = None, titles=None) -> dict:
-    """`{description, chapters, credits, notes}`: the two texts and the lists they were made from."""
+def video_title_of(storyboard: dict, video_title: str | None = None) -> str:
+    """titlestep: the first line of the description. The video's own title (`video_title`: the project's title document; else `identity.video_title` of the storyboard, the one the
+    channel-name beat shows), else what it was before: the storyboard's title (the painting's)."""
+    t = str(video_title or "").strip()
+    if not t:
+        ident = storyboard.get("identity") if isinstance(storyboard.get("identity"), dict) else {}
+        v = ident.get("video_title")
+        t = re.sub(r"\s+", " ", v).strip() if isinstance(v, str) else ""
+    return t
+
+
+def build_description(storyboard: dict, timing: dict, project_meta: dict, *, duration: float, template: str | None = None, titles=None, video_title: str | None = None) -> dict:
+    """`{description, chapters, credits, notes}`: the two texts and the lists they were made from. The first line is the video's title (`video_title_of`), then the painting,
+    painter and year as before."""
     template = template if template is not None else TEMPLATE.read_text(encoding="utf-8")
     marks, merged = merge_short(chapter_marks(timing.get("chapters"), duration))
     assets = storyboard.get("assets") or {}
     keys = used_assets(storyboard)
     credits = [credit_line(assets[k]) for k in keys]
     notes = [n for n in (flag_note(assets[k]) for k in keys) if n]
-    title = str(storyboard.get("title") or project_meta.get("title") or "").strip()
+    title = video_title_of(storyboard, video_title) or str(storyboard.get("title") or project_meta.get("title") or "").strip()
     values = {
         "title": title,
         "artwork": artwork_line(storyboard, project_meta),

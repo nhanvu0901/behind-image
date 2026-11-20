@@ -270,7 +270,7 @@ def other_agent_job(pid: str, own_kind: str, manager=None, *, run_ok: bool = Fal
     m = manager or _manager()
     if m is None:
         return None
-    for kind in (KIND, "picks", "auto"):
+    for kind in (KIND, "picks", "auto", "title"):          # titlestep: the title writer (kind `title`) is an agent run too
         if kind == own_kind or (kind == "auto" and run_ok):
             continue
         try:
@@ -282,7 +282,7 @@ def other_agent_job(pid: str, own_kind: str, manager=None, *, run_ok: bool = Fal
     return None
 
 
-AGENT_JOB_WHO = {"auto": "an automatic run", "picks": "the pictures agent", "draft": "a prompt-box turn or a draft"}
+AGENT_JOB_WHO = {"auto": "an automatic run", "picks": "the pictures agent", "draft": "a prompt-box turn or a draft", "title": "the title writer"}
 
 
 def refuse_while_agent_busy(pid: str, manager=None, *, run_ok: bool = False) -> None:

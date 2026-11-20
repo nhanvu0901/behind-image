@@ -738,6 +738,13 @@ class _Compiler:
                 if k == "style":
                     placed["identity"] = copy.deepcopy(keep)
             doc = placed
+        # titlestep: the title the project's title document holds (written by an agent or set by a person) is the video's title on the channel-name beat; it wins over an
+        # `identity.video_title` carried over from an earlier storyboard. No document: the field is left as it is (the beat then falls back to the painting's title).
+        if self.identity_cfg is not None and not self.edit:
+            from bti.title import chosen_text
+            vt = chosen_text(self.inp.project_dir) if self.inp.project_dir else None
+            if vt:
+                doc = ID.with_video_title(doc, vt)
         return doc, origin, issues
 
     # ---------------------------------------------------------------- the channel identity

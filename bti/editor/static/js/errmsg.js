@@ -721,3 +721,25 @@ Object.assign(STAGE_CODES.draft, { video_title_invalid: INTROFLOW_SENTENCES.vide
   storyboard_off_voice: INTROFLOW_SENTENCES.storyboard_off_voice });
 Object.assign(STAGE_CODES.export, { storyboard_off_voice: INTROFLOW_SENTENCES.storyboard_off_voice });
 for (const [k, v] of Object.entries(INTROFLOW_SENTENCES)) BY_CODE_HTTP[k] = () => v;
+
+// ---- worker titlestep (2026-11-20): the video's title (bti/title/, bti/editor/title_api.py). The sentences are a stage table the title box reads and are added to the
+// table `describeHttp` reads, so that every page that shows an error shows these in plain words. The failures of the agent itself (not installed, not signed in, a quota)
+// are the other stages' own sentences (STAGE_CODES.draft / LONGJOB_CODES).
+export const TITLESTEP_SENTENCES = {
+  title_invalid: 'Tựa video không được để trống.',
+  title_not_one_line: 'Tựa video chỉ có một dòng: bỏ chỗ xuống dòng.',
+  title_too_long: 'Tựa video dài quá 60 ký tự (dài hơn bị cắt trên điện thoại và không vừa một dòng trên hình). Hãy rút gọn.',
+  title_option_unknown: 'Không có tựa số này trong danh sách agent đề xuất.',
+  title_choice_needed: 'Hãy chọn một tựa trong danh sách, hoặc gõ tựa của bạn.',
+  title_note_too_long: 'Lời nhắn cho tựa video quá dài (tối đa 600 ký tự). Hãy rút gọn rồi thử lại.',
+  title_note_invalid: 'Lời nhắn cho tựa video phải là chữ. Hãy gõ lại rồi thử lại.',
+  title_no_output: 'Agent không viết được tệp tựa video dùng được, kể cả sau một lần nhắc sửa. Chạy lại, hoặc chọn agent khác.',
+  title_limit: 'Agent đã dùng hết giới hạn của một lần chạy mà chưa có tựa video dùng được. Chạy lại để làm tiếp.',
+  title_tampered: 'Agent đã thay đổi tệp ngoài thư mục làm việc của nó. Kết quả bị bỏ; hãy kiểm tra dự án rồi chạy lại.',
+  narration_not_approved: 'Lời dẫn chưa được duyệt (hoặc đã đổi sau khi duyệt). Duyệt lời dẫn ở bước Kịch bản trước.',
+  stale_revision: 'Tựa video đã đổi ở nơi khác (tab khác hoặc việc nền). Hãy tải lại phần này rồi làm lại.',
+};
+STAGE_CODES.title = { ...TITLESTEP_SENTENCES, agent_job_running: AGENT_JOB_RUNNING, longjob_running: 'Agent đang viết tựa cho dự án này rồi. Chờ nó xong hoặc bấm "Dừng".' };
+for (const k of Object.keys(TITLESTEP_SENTENCES)) if (k !== 'narration_not_approved' && k !== 'stale_revision') BY_CODE_HTTP[k] = () => TITLESTEP_SENTENCES[k];
+for (const k of ['agy_missing', 'agy_config', 'agy_auth', 'agy_rate_limit', 'agy_model', 'agy_error', 'agy_no_result', 'agy_timeout', 'claude_missing', 'claude_auth', 'claude_rate_limit', 'claude_model',
+  'claude_config', 'claude_outdated', 'claude_error', 'claude_no_result', 'claude_timeout', 'real_models_off']) if (STAGE_CODES.draft[k]) STAGE_CODES.title[k] = STAGE_CODES.draft[k];      // the agent's own failures: the draft's sentences

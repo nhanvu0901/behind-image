@@ -12,10 +12,10 @@ STEP_NUMBER = {s: i + 1 for i, s in enumerate(STEP_ORDER)}
 STATE_WORD = {"done": "xong", "current": "đang làm", "available": "đang làm", "waiting": "chờ duyệt lại", "locked": "chưa tới", "no_data": "không áp dụng", "none": "chưa có"}
 
 KIND_LABEL = {"outline": "Lập dàn ý", "narration": "Viết lời dẫn", "voice": "Tạo giọng đọc", "draft": "Dựng bản nháp", "edit": "Sửa storyboard bằng lời", "picks": "Agent chọn hình",
-              "picks_edit": "Sửa chọn hình bằng lời", "export": "Xuất video", "auto": "Chạy tự động", "preview": "Xem thử"}
+              "picks_edit": "Sửa chọn hình bằng lời", "export": "Xuất video", "auto": "Chạy tự động", "preview": "Xem thử", "title": "Viết tựa video"}
 JOB_END = {"done": "xong", "error": "lỗi", "cancelled": "đã dừng", "interrupted": "bị ngắt (máy chủ khởi động lại)", "running": "đang chạy", "queued": "đang chờ", "waiting": "đang chờ máy"}
 GATE_LABEL = {"outline": "Dàn ý", "narration": "Lời dẫn", "picks": "Chọn hình", "storyboard": "Storyboard"}
-PART_LABEL = {"sources": "Nguồn sách", "outline": "Dàn ý", "narration": "Lời dẫn", "voice": "Giọng đọc", "pictures": "Hình ảnh", "storyboard": "Storyboard", "export": "Video"}
+PART_LABEL = {"sources": "Nguồn sách", "outline": "Dàn ý", "narration": "Lời dẫn", "title": "Tựa video", "voice": "Giọng đọc", "pictures": "Hình ảnh", "storyboard": "Storyboard", "export": "Video"}
 REASON_WORD = {"changed": "tài liệu đã đổi sau khi lưu vào đây", "approval_withdrawn": "việc duyệt đã bị rút lại", "not_approved": "chưa được duyệt lại"}
 
 _RAW_ID = re.compile(r"\b[A-Z]{1,6}-[A-Z0-9]{1,3}(?:-\d+)?\b")

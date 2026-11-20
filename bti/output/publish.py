@@ -27,8 +27,8 @@ from .paths import FINAL_VIDEO, LOG_DIR, PARTS, README_FILE, STATE_FILE, folder_
 log = logging.getLogger("bti.output")
 SCHEMA = "bti.output/1"
 CLEAN_MOMENTS = ("export", "export done")           # the moments at which a successful export is followed by the cleaning (unless the switch is off)
-PART_IDS = ("sources", "outline", "narration", "voice", "pictures", "storyboard", "export")
-PART_FOLDER = {"sources": "sources", "outline": "script", "narration": "script", "voice": "voice", "pictures": "pictures", "storyboard": "storyboard", "export": "export"}
+PART_IDS = ("sources", "outline", "narration", "title", "voice", "pictures", "storyboard", "export")      # titlestep: `title`, 2_script/title.md
+PART_FOLDER = {"sources": "sources", "outline": "script", "narration": "script", "title": "script", "voice": "voice", "pictures": "pictures", "storyboard": "storyboard", "export": "export"}
 
 _LOCKS: dict[str, threading.RLock] = {}
 _GUARD = threading.Lock()
@@ -53,18 +53,18 @@ def now_iso() -> str:
 
 # ------------------------------------------------------------------------------------------------ what each part needs
 def _settled(f, part: str) -> bool:
-    return {"sources": True, "outline": f.outline_ok, "narration": f.narration_ok, "voice": f.voice_ok, "pictures": f.picks_ok, "storyboard": f.sb_approval == "fresh",
+    return {"sources": True, "outline": f.outline_ok, "narration": f.narration_ok, "title": f.title_doc is not None, "voice": f.voice_ok, "pictures": f.picks_ok, "storyboard": f.sb_approval == "fresh",
             "export": f.export_ok}[part]
 
 
 def _rev_now(f, part: str) -> str | None:
     if part == "sources":
         return None            # decided by the writer (the files of source/ are read there)
-    return {"outline": f.outline_rev, "narration": f.narration_rev, "voice": P.voice_rev(f), "pictures": f.picks_rev, "storyboard": f.sb_rev, "export": P.export_rev(f)}[part]
+    return {"outline": f.outline_rev, "narration": f.narration_rev, "title": f.title_rev, "voice": P.voice_rev(f), "pictures": f.picks_rev, "storyboard": f.sb_rev, "export": P.export_rev(f)}[part]
 
 
 def _writer(part: str) -> Callable:
-    return {"sources": P.write_sources, "outline": P.write_outline, "narration": P.write_narration, "voice": P.write_voice, "storyboard": P.write_storyboard,
+    return {"sources": P.write_sources, "outline": P.write_outline, "narration": P.write_narration, "title": P.write_title, "voice": P.write_voice, "storyboard": P.write_storyboard,
             "export": P.write_export}.get(part)
 
 
@@ -87,7 +87,7 @@ def fingerprint(f) -> str:
     """A short text that changes when anything the folder is made from changes."""
     return P.sha(json.dumps({
         "k": f.key, "pid": f.pid, "meta": [f.title, f.artist, f.year, f.created], "src": _sources_rev(f),
-        "rev": [f.outline_rev, f.narration_rev, f.picks_rev, f.sb_rev, f.timing_sha, P.voice_rev(f), P.export_rev(f)],
+        "rev": [f.outline_rev, f.narration_rev, f.title_rev, f.picks_rev, f.sb_rev, f.timing_sha, P.voice_rev(f), P.export_rev(f)],
         "ok": [f.outline_ok, f.narration_ok, f.picks_ok, f.sb_approval, f.voice_ok, f.export_ok], "appr": f.approvals,
         "jobs": [(j["id"], j["state"], j["finished"]) for j in f.jobs], "changes": [(c.get("batch"), c.get("undone_by")) for c in f.changes],
         "auto": [(r.get("id"), r.get("ended")) for r in f.auto_runs], "agents": f.agents, "problems": f.problems}, sort_keys=True, default=str))
@@ -162,7 +162,7 @@ def sync(project_dir: Path, output_root: Path, *, moment: str = "rebuild", expli
         plan = _plan(f, folder, st_parts, rewrite)
         blocking = [w for w in (prev or {}).get("warnings") or [] if w.get("code") != "output_sheets_failed"]       # a video that cannot be cut into frames is not tried again at every change
         if (not force and not explicit and not want_clean and prev and not takeover and prev.get("fingerprint") == fp and not blocking
-                and all(action == "keep" or (action == "mark" and _marked(st_parts[part], why)) for part, (action, why, _rev) in plan.items())):
+                and all(action == "keep" or (action == "mark" and _marked(st_parts[part], why)) or (part == "title" and action == "none") for part, (action, why, _rev) in plan.items())):      # titlestep: a project with no title has nothing to write for that part
             return {"key": f.key, "folder": str(folder), "skipped": "unchanged", "written": [], "warnings": []}
         written: list[str] = []
         warnings: list[dict] = []
@@ -310,7 +310,7 @@ def _default_busy(pid: str, own_job: str | None) -> Callable[[], dict | None]:
     def busy():
         try:
             from bti.longjob import manager
-            for kind in ("voice", "draft", "picks", "export"):
+            for kind in ("voice", "draft", "picks", "export", "title"):
                 j = manager.active(pid, kind)
                 if j and j.get("id") != own_job:
                     return j
@@ -351,4 +351,7 @@ def _build_state(f, st_parts: dict, prev: dict | None, takeover: bool, stamp: st
                       "picks": (st_parts.get("pictures") or {}).get("rev"), "storyboard": (st_parts.get("storyboard") or {}).get("rev"), "export": exp.get("rev")},
         "clean": clean_rec, "log": st_log, "warnings": warnings, "last_sync": {"moment": moment, "at": stamp}, "fingerprint": fp, "runs": runs,
     }
+    if f.title_doc is not None:                      # titlestep: the video's title (only a project that has one: state.json of an older project reads as before)
+        out["title"] = F.title_public(f)
+        out["revisions"]["title"] = (st_parts.get("title") or {}).get("rev")
     return out

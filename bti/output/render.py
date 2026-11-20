@@ -115,6 +115,39 @@ def narration_md(f, details: dict[str, str]) -> str:
     return "\n".join(L).rstrip() + "\n"
 
 
+STATE_TITLE = {"done": "đang dùng", "stale": "đang dùng, nhưng lời dẫn đã đổi sau khi tựa này được viết: nên nhờ agent viết lại"}
+
+
+def title_md(f) -> str:
+    """titlestep: `2_script/title.md`. The chosen title first, then every candidate the agent returned (with the line numbers that make it true and its reason), then the earlier titles."""
+    d = f.title_doc or {}
+    ch = d.get("chosen") or {}
+    L = ["# Tựa video — %s" % (f.title or f.pid), "", "**%s**" % words.md_cell(ch.get("text")), ""]
+    L += ["- Tình trạng: %s" % STATE_TITLE.get(f.title_state, f.title_state),
+          "- Ai chọn: %s%s" % (words.actor_words(ch.get("by")), (" · " + words.when(ch.get("at"))) if ch.get("at") else ""),
+          "- Phiên bản: `%s`" % (f.title_rev or "")[:12], ""]
+    cands = d.get("candidates") or []
+    if cands:
+        w = d.get("written") or {}
+        L += ["## Các tựa agent đề xuất", ""]
+        if w.get("agent"):
+            L += ["Do %s viết%s." % ((w["agent"] or {}).get("label") or w.get("model") or "agent", (" theo lời nhắn của bạn: \"%s\"" % words.md_cell(w["note"])) if w.get("note") else ""), ""]
+        L += ["| # | Tựa | Dạng | Điểm (tò mò / cụ thể / trọng tâm / rõ) | Dòng lời dẫn | Lý do |", "|---|---|---|---|---|---|"]
+        for i, c in enumerate(cands, 1):
+            s = c.get("scores") or {}
+            mark = " **(đang dùng)**" if c.get("text") == ch.get("text") else ""
+            L.append("| %d | %s%s | %s | %s | %s | %s |" % (i, words.md_cell(c.get("text")), mark, c.get("form") or "", " / ".join(str(s.get(k, "?")) for k in ("curiosity", "concrete", "central", "clear")),
+                                                          words.md_cell(", ".join(c.get("lines") or [])), words.md_cell(c.get("why"))))
+        L.append("")
+    hist = d.get("history") or []
+    if hist:
+        L += ["## Các tựa đã dùng trước đó", ""]
+        for h in reversed(hist):
+            L.append("- %s — %s%s" % (words.md_cell(h.get("text")), words.actor_words(h.get("by")), (" · " + words.when(h.get("at"))) if h.get("at") else ""))
+        L.append("")
+    return "\n".join(L).rstrip() + "\n"
+
+
 def shots_md(f, rows: list[dict], chapters: list[dict]) -> str:
     """`rows`: one per shot {n, id, t0, t1, sentence, spoken, locked}; `chapters`: [{id, title, t0, t1}] by time."""
     total = len(rows)

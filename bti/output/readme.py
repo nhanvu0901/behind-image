@@ -8,7 +8,7 @@ from .paths import FINAL_VIDEO, PARTS
 STATE_TEXT = {"done": "xong", "current": "đang làm", "stale": "cần làm lại", "locked": "chưa tới"}
 STEP_FOLDER = {"artwork": PARTS["sources"] + "/", "script": PARTS["script"] + "/", "voice": PARTS["voice"] + "/", "picks": PARTS["pictures"] + "/",
                "edit": PARTS["storyboard"] + "/", "export": "%s, %s/" % (FINAL_VIDEO, PARTS["export"])}
-STEP_PARTS = {"artwork": ("sources",), "script": ("outline", "narration"), "voice": ("voice",), "picks": ("pictures",), "edit": ("storyboard",), "export": ("export",)}
+STEP_PARTS = {"artwork": ("sources",), "script": ("outline", "narration", "title"), "voice": ("voice",), "picks": ("pictures",), "edit": ("storyboard",), "export": ("export",)}
 CHECK_LABEL = {"video": "Mã hóa hình", "duration": "Độ dài", "frames": "Số khung hình", "audio": "Âm thanh", "audio_length": "Độ dài âm thanh", "loudness": "Độ lớn tiếng",
                "true_peak": "Đỉnh âm", "chapters": "Mục lục chương", "chapters_merged": "Chương bị gộp", "size": "Dung lượng"}
 CHECK_STATUS = {"ok": "đạt", "warn": "cần xem", "warning": "cần xem", "error": "lỗi", "fail": "lỗi"}
@@ -48,6 +48,9 @@ def readme_md(f, st: dict) -> str:
     sub = " · ".join(x for x in (f.artist, f.year) if x)
     if sub:
         L += [sub, ""]
+    tt = st.get("title")                                       # titlestep: the video's title, when the project has one
+    if tt and tt.get("text"):
+        L += ["Tựa video: **%s** (%s)" % (words.md_cell(tt["text"]), words.actor_words(tt.get("by")) + ("; lời dẫn đã đổi sau khi tựa này được viết" if tt.get("state") == "stale" else "")), ""]
     L += [_status_sentence(f, st), "",
           "- Dự án: `%s` · Thư mục này: `output/%s/`" % (f.pid, st.get("key")),
           "- Cập nhật lần cuối (theo dự án): %s" % words.when(st.get("updated")), ""]
@@ -164,6 +167,8 @@ def _contents(st: dict) -> list[str]:
     add("`%s/outline.md`: dàn ý (%s chương, %s dữ kiện)." % (PARTS["script"], (o.get("counts") or {}).get("chapters"), (o.get("counts") or {}).get("facts")), "outline")
     add("`%s/narration.md`: lời dẫn (%s chương, %s dòng, %s từ). Cùng thư mục có hai tệp JSON." % (PARTS["script"], (n.get("counts") or {}).get("chapters"),
                                                                                                     (n.get("counts") or {}).get("lines"), (n.get("counts") or {}).get("words")), "narration")
+    ti = parts.get("title") or {}
+    add("`%s/title.md`: tựa video và %s tựa khác agent đề xuất, mỗi tựa có lý do." % (PARTS["script"], max(0, (ti.get("counts") or {}).get("candidates", 0) - 1)), "title")      # titlestep
     vo = parts.get("voice") or {}
     add("`%s/`: giọng đọc (`narration.wav`), bản trộn (`mix.m4a`), thời gian từng từ (`timing.json`, %s từ)." % (PARTS["voice"], vo.get("words")), "voice")
     pi = parts.get("pictures") or {}

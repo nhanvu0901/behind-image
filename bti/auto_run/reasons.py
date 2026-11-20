@@ -33,7 +33,7 @@ GATE_STEP = {"outline": "script", "narration": "script", "picks": "picks", "stor
 GATE_NAME = {"outline": "dàn ý", "narration": "lời dẫn", "picks": "chọn hình", "storyboard": "storyboard"}
 KIND_VI = {"model": "để agent làm việc (gọi mô hình)", "machine_time": "chiếm máy chủ rất lâu", "paid": "tốn tiền"}
 JOB_KIND_VI = {"outline": "dàn ý", "narration": "lời dẫn", "voice": "giọng đọc", "draft": "dựng hình hoặc sửa bằng lời", "export": "xuất video", "picks": "chọn hình",
-               "preview": "xem thử"}
+               "preview": "xem thử", "title": "viết tựa video"}      # titlestep: `title`
 
 # what a gate refusal means for the owner (the codes of the four approval routes that report a problem with the document)
 REFUSAL_VI = {
@@ -76,6 +76,7 @@ NEED_VI = {
     "draft_proposal": "bản nháp dựng xong",
     "storyboard_fits_voice": "bạn bấm \"Khớp lại với giọng đọc\" (thẻ chương, tên kênh và điểm cuối đang lệch so với giọng đọc mới)",
     "auto_enabled": "bạn bật \"Cho agent tự chạy dự án này\"",
+    "title_done": "tựa video được viết xong (hoặc bạn đặt tựa video)",      # titlestep
 }
 
 

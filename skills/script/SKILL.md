@@ -22,7 +22,7 @@ project's book sources. A model writes both; you start the job, read the result,
 - The voice: the narration is told by a narrator to a viewer who has never heard of the books. It names no author of a source and never says "the
   books" or "the sources"; a disagreement is told as two readings of one object. The fact table keeps who said what. Do not ask for this in a note: it
   is in the prompt, and a note such as "fewer author names" is weaker than the rule (none).
-- Unlocks: steps 3 (`voice`) and 4 (`picks`), once the narration is approved.
+- Unlocks: steps 3 (`voice`) and 4 (`picks`), once the narration is approved. Also once it is approved: the video's title, written by an agent from the narration (`title.generate`) or set by hand (`title.set`); it is not a gate, and it has its own document, `skills/title/SKILL.md`.
 
 ## The actions and operations it uses
 
@@ -38,6 +38,9 @@ project's book sources. A model writes both; you start the job, read the result,
 | `narration.approve` | script | Duyệt lời dẫn | yes |  |  |
 | `outline.cancel` | script | Dừng |  |  |  |
 | `narration.cancel` | script | Dừng |  |  |  |
+| `title.generate` | script | Viết tựa video |  | model: about 1 minute | yes |
+| `title.set` | script | Đặt tựa video |  |  |  |
+| `title.cancel` | script | Dừng |  |  |  |
 <!-- END GENERATED: actions -->
 
 The narration has its own small operations (`narration.ops`, body `{"base_rev": <rev of GET /api/projects/{pid}/narration>, "ops": [...]}`): `split` (a line at a word),

@@ -11,21 +11,23 @@ SCRIPT_REDO = ["outline.generate", "outline.import", "narration.generate", "narr
 PICKS_OPEN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.edit", "picks.ops"]
 PICKS_OPEN_MAIN = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put", "picks.auto", "picks.edit", "picks.ops"]    # c3picks: with a main painting the agent's choice of pictures is ready too, before the request box
 EDIT_OPEN = ["draft.start", "storyboard.validate", "storyboard.preview", "storyboard.put", "storyboard.ops", "draft.edit", "identity.set"]
+EDIT_OPEN_NO_DRAFT = EDIT_OPEN[1:]       # titlestep: with no title written and an agent that could write it, `draft.start` waits (need `title_done`) and comes last, after the other gated calls
 
 # The exact list of action ids at each stage, in the order the answer gives them: the repair of a damaged project, then what
 # moves the project forward, then the other calls that are ready, then the ones gated ahead (each group in the order of the steps).
 EXPECTED = {
-    "new": ["outline.generate", "outline.import", "outline.approve", "narration.generate", "narration.import", "narration.ops",
-            "narration.approve"],
-    "outline_waiting": ["outline.approve", "outline.generate", "outline.import", "narration.import", "narration.generate",
-                        "narration.ops", "narration.approve"],
-    "narration_approved": ["voice.generate", *SCRIPT_REDO, *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],       # no main painting yet: picks.auto is gated (needs main_asset)
-    "voiced": [*SCRIPT_REDO, "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],
-    "picks_approved": ["draft.start", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest"],
-    "proposal_waiting": ["proposal.apply", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, "draft.start", "picks.suggest"],
-    "drafted": ["storyboard.approve", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN, "picks.suggest"],
-    "storyboard_approved": ["export.start", *SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN, "picks.suggest"],
-    "exported": [*SCRIPT_REDO, "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN, "export.start", "picks.suggest"],
+    "new": ["outline.generate", "outline.import", "title.set", "outline.approve", "narration.generate", "narration.import", "narration.ops",
+            "narration.approve", "title.generate"],
+    "outline_waiting": ["outline.approve", "outline.generate", "outline.import", "narration.import", "title.set", "narration.generate",
+                        "narration.ops", "narration.approve", "title.generate"],
+    # titlestep: once the narration is approved the title is the first thing that advances (the step `script` comes before the voice); with a storyboard it is ready but does not advance
+    "narration_approved": ["title.generate", "voice.generate", *SCRIPT_REDO, "title.set", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],       # no main painting yet: picks.auto is gated (needs main_asset)
+    "voiced": ["title.generate", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],
+    "picks_approved": ["title.generate", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
+    "proposal_waiting": ["title.generate", "proposal.apply", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
+    "drafted": ["storyboard.approve", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
+    "storyboard_approved": ["export.start", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
+    "exported": [*SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "export.start", "picks.suggest", "draft.start"],
 }
 STAGE_OF = {"new": "selected", "outline_waiting": "selected", "narration_approved": "script", "voiced": "voiced",
             "picks_approved": "picked", "proposal_waiting": "picked", "drafted": "storyboard", "storyboard_approved": "approved",
@@ -49,6 +51,8 @@ def fakes(monkeypatch):
     monkeypatch.setattr(draft_run, "start", lambda *a, **k: {"id": "fakedraftjob", "meta": {}})
     from bti.picks import auto as picks_auto                                          # c3picks: the agent's choice of pictures starts no model either
     monkeypatch.setattr(picks_auto, "start", lambda *a, **k: {"id": "fakepicksjob", "meta": {}})
+    from bti.title import job as title_job                                              # titlestep: the title writer starts no agent either
+    monkeypatch.setattr(title_job, "start", lambda *a, **k: {"id": "faketitlejob", "meta": {}})
     monkeypatch.setattr(export_run, "start", lambda *a, **k: {"id": "fakeexportjob"})
     monkeypatch.setattr(jobs_mod, "render_preview", lambda *a, **k: "/api/projects/x/files/cache/previews/p.mp4")
     monkeypatch.setattr(service, "search", lambda *a, **k: {"items": [], "errors": []})

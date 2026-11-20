@@ -241,7 +241,8 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
 
     def prepare(ctx):
         ctx.progress(0.1)
-        d = describe.build_description(inp.storyboard, inp.timing, inp.project_meta, duration=end, titles=describe.library_titles())
+        from bti.title import chosen_text                  # titlestep: the first line of the description is the video's title
+        d = describe.build_description(inp.storyboard, inp.timing, inp.project_meta, duration=end, titles=describe.library_titles(), video_title=chosen_text(project_dir))
         st["desc"] = d
         st["marks"] = mux.chapter_marks(inp.timing.get("chapters"), end)      # the marks inside the file stay as they are
         st["merged"] = d["merged_chapters"]

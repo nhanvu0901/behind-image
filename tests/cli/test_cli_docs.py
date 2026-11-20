@@ -13,7 +13,7 @@ from cli_helpers import AppTransport, run_bti
 
 REPO = docgen.REPO
 STEPS = ("script", "voice", "picks", "storyboard", "export")
-DOCS = ["AGENTS.md"] + ["skills/%s/SKILL.md" % s for s in STEPS]
+DOCS = ["AGENTS.md"] + ["skills/%s/SKILL.md" % s for s in STEPS] + ["skills/title/SKILL.md"]      # titlestep: the title has a skill of its own
 SPAN = re.compile(r"`([^`\n]+)`")
 
 

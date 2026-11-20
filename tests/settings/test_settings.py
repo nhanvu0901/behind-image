@@ -52,7 +52,7 @@ def test_get_settings_api(client):
     assert "roles" in data
     assert "models" in data
     roles = {r["role"]: r for r in data["roles"]}
-    assert len(roles) == 6
+    assert len(roles) == 7          # titlestep: `script.title` is the seventh role
     for r in ROLES:
         assert r in roles
         assert roles[r]["label"] == ROLE_LABELS[r]
