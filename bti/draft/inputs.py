@@ -167,8 +167,11 @@ def beat_picks(picks: dict, beat_id: str) -> list[dict]:
     out = []
     for it in entry.get("items") or []:
         if isinstance(it, dict) and isinstance(it.get("asset"), str) and it["asset"] in picks["assets"]:
-            out.append({"asset": it["asset"], "region": it.get("region") if isinstance(it.get("region"), str) else None,
-                        "role": it.get("role") or "detail", "note": str(it.get("note") or "")})
+            row = {"asset": it["asset"], "region": it.get("region") if isinstance(it.get("region"), str) else None,
+                   "role": it.get("role") or "detail", "note": str(it.get("note") or "")}
+            if it.get("step") in (2, 3):
+                row["step"] = int(it["step"])
+            out.append(row)
     return out
 
 

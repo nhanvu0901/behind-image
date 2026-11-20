@@ -87,6 +87,8 @@ def resolve_picks(plan: dict, search: dict, choice: dict, books: list[dict]) -> 
                     cand = next((c for c in w.get("candidates") or [] if c["n"] == k), None)
                     if cand:
                         row.update(pick={"source": cand["source"], "source_id": cand["source_id"], "media": cand.get("media")}, reason=ch["reason"])
+                        if cand.get("step") in (2, 3):
+                            row["step"] = cand["step"]
                 else:
                     b = by_book.get(k)
                     if b:
@@ -205,7 +207,10 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                         note = p["reason"]
                         if it["type"] == "clip":
                             note = "%s (clip khoảng %g giây)" % (p["reason"], it["seconds"])
-                        items.append({"src": key, "asset": None, "region": None, "role": _role(it), "note": _cut(note, NOTE_MAX)})
+                        item_dict = {"src": key, "asset": None, "region": None, "role": _role(it), "note": _cut(note, NOTE_MAX)}
+                        if p.get("step") in (2, 3):
+                            item_dict["step"] = p["step"]
+                        items.append(item_dict)
                         continue
                     code, detail, source, secs = failed.get(key, ("import_failed", "", None, None))
                     missing.append({"want": p["id"], "what": p["what"], "code": code,
@@ -275,7 +280,10 @@ def _ops_for(lines: list[dict], main_key: str) -> list[dict]:
         items = []
         for it in ln["items"]:
             asset = main_key if it["asset"] == "main" else "$" + refs[it["src"]]
-            items.append({"asset": asset, "region": it["region"], "role": it["role"], **({"note": it["note"]} if it["note"] else {})})
+            item_data = {"asset": asset, "region": it["region"], "role": it["role"], **({"note": it["note"]} if it["note"] else {})}
+            if it.get("step") in (2, 3):
+                item_data["step"] = it["step"]
+            items.append(item_data)
         ops.append({"op": "set_picks", "beat": ln["beat"], "items": items, "reason": line_note(ln), **kinds,
                     "missing": [{"what": _cut(m["what"], pdoc.MISSING_WHAT_MAX), "code": m["code"]} for m in ln["missing"][:pdoc.MAX_MISSING]]})
     return ops

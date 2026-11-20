@@ -144,8 +144,11 @@ def _item(i: Any) -> dict | None:
     if not isinstance(i, dict) or not _s(i.get("asset")):
         return None
     region = i.get("region")
-    return {"asset": _s(i["asset"]), "region": _s(region) if region else None,
+    out = {"asset": _s(i["asset"]), "region": _s(region) if region else None,
             "role": i.get("role") if i.get("role") in ROLES else "detail", "note": _s(i.get("note"))}
+    if i.get("step") in (2, 3):
+        out["step"] = int(i["step"])
+    return out
 
 
 def _kinds(v: Any) -> list[str]:

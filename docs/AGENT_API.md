@@ -618,6 +618,8 @@ them away; an undo gives them back); `PUT .../picks` keeps them for a beat that 
 whose pictures are all of the main painting (not for a beat the owner settled with `skip`; not for a document without `kinds`) and the summary `outside` (`{"lines": n, "with_picture": n, "without": [beat ids]}`, written out as the keys `lines`, `with_picture`, `without`; lines
 settled with `skip` are not counted). The storyboard draft's `inputs/beats.json` carries `kinds` and `missing` for each beat.
 
+**Three-step search for outside lines (`wider`).** A line of kind `outside` is searched in three steps before it falls back to the painting: (1) the exact thing itself; (2) the same kind of thing from the period (a miniature, print or painting of the 15th century showing a similar scene); (3) a real surviving object of that kind in a museum (`kind: "object"`). The plan names the two wider steps in `wider` (`[{"step": 2, "search", "kind", "what"}, {"step": 3, "search", "kind": "object", "what"}]`). Round two searches step 2 first, then step 3, through Wikipedia, the free sources, and the web if on, stopping at the first step with candidates; the candidates carry their `step` (2 or 3). An item chosen at step 2 or 3 carries `"step": 2` or `"step": 3` in `picks.json` and its beat's `missing` is empty; only when all three steps find nothing does the line fall back to the painting and record `missing`. The draft storyboard's beats document carries `step` for each pick item.
+
 ### The web search of the pictures agent (the owner's switch `auto_web_search`)
 
 The `search` part asks **Wikipedia first** for every context picture (free, no key: the thing is looked up by its `entity`, else by its `search` words, and the pictures of the best three articles are offered as
