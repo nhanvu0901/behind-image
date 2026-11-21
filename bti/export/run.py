@@ -13,7 +13,7 @@ from pathlib import Path
 from bti.editor.common import compute_rev, file_signature, read_json, storyboard_approval
 from bti.script import store
 
-from . import check, describe, mux, plan, render
+from . import check, describe, mux, partkey, plan, render
 from .errors import ExportError, part_error
 from .settings import Settings, load_settings
 from bti.fsio import atomic_replace
@@ -107,9 +107,17 @@ def load_inputs(project_dir: Path, *, need_approval: bool = True) -> Inputs:
 _TIMELINES: dict[tuple, tuple] = {}
 
 
+def _timing_sig(project_dir: Path) -> str:
+    p = Path(project_dir) / "timing.json"
+    try:
+        return file_signature(p) if p.is_file() else "none"
+    except OSError:
+        return "none"
+
+
 def engine_timeline(project_dir: Path, rev: str) -> tuple[list[float], float]:
-    """(shot start times, end of the video) from the engine, cached per storyboard revision."""
-    key = (str(Path(project_dir).resolve()), rev)
+    """(shot start times, end of the video) from the engine, cached per storyboard revision and timing signature."""
+    key = (str(Path(project_dir).resolve()), rev, _timing_sig(project_dir))
     if key not in _TIMELINES:
         from bti.engine.api import open_project
         r = open_project(Path(project_dir)).resolve()
@@ -117,6 +125,30 @@ def engine_timeline(project_dir: Path, rev: str) -> tuple[list[float], float]:
             _TIMELINES.pop(next(iter(_TIMELINES)))
         _TIMELINES[key] = ([float(s["_t0"]) for s in r["shots"]], float(r["end"]["_t"]))
     return _TIMELINES[key]
+
+
+def _part_ready(path: Path) -> bool:
+    return path.is_file() and path.stat().st_size > 0
+
+
+def part_keys_for(project_dir: Path, inp: Inputs, specs, settings: Settings) -> list[str]:
+    return partkey.part_keys(project_dir, inp.storyboard, inp.timing, specs, width=settings.width)
+
+
+def _plan_note_vi(to_render: int, reused: int, total: int) -> str:
+    if to_render == 0:
+        return "Dùng lại cả %d đoạn (không cần dựng lại)" % total
+    if reused == 0:
+        return "Sẽ dựng mới %d/%d đoạn" % (total, total)
+    return "Sẽ dựng mới %d đoạn, dùng lại %d đoạn đã có" % (to_render, reused)
+
+
+def _done_summary_vi(rendered: int, reused: int) -> str:
+    if rendered == 0:
+        return "Xong: dùng lại cả %d đoạn (không phải dựng lại)." % reused
+    if reused == 0:
+        return "Xong: đã dựng mới %d đoạn (dùng lại 0 đoạn)." % rendered
+    return "Xong: đã dựng mới %d đoạn, dùng lại %d đoạn." % (rendered, reused)
 
 
 def get_manager():
@@ -142,11 +174,13 @@ def plan_for(project_dir: Path, settings: Settings | None = None, timeline=None,
     starts, end = (timeline or engine_timeline)(project_dir, inp.rev)
     parts = plan.plan_parts(starts, end, settings.fps, settings.part_seconds)
     pdir = cache_dir(project_dir) / "parts"
-    have = [p for p in parts if (pdir / plan.part_filename(p, plan.part_key(inp.rev, p, settings.width))).is_file()]
+    keys = part_keys_for(project_dir, inp, parts, settings)
+    have = [p for p, k in zip(parts, keys) if _part_ready(pdir / plan.part_filename(p, k))]
     todo = sum(p.seconds for p in parts if p not in have)
     assets = inp.storyboard.get("assets") or {}
     used = describe.used_assets(inp.storyboard)
     return {"duration": round(end, 3), "frames": plan.total_frames(end, settings.fps), "parts": len(parts), "parts_done": len(have),
+            "parts_reused": len(have), "parts_to_render": len(parts) - len(have),
             "part_seconds": [round(p.seconds, 1) for p in parts], "estimate_seconds": plan.estimate_seconds(todo, settings.render_speed),
             "assets_used": len(used), "flagged": [k for k in used if isinstance(assets[k].get("credit"), dict) and assets[k]["credit"].get("flag") in describe.FLAGS],
             "storyboard_rev": inp.rev}
@@ -168,7 +202,7 @@ def state(project_dir, manager=None) -> dict:
         return {"state": "none", "detail": "Chưa xuất video."}
     reason = stale_reason(project_dir, m)
     if reason:
-        return {"state": "stale", "detail": {"storyboard": "Cần xuất lại: storyboard đã đổi sau lần xuất trước.",
+        return {"state": "stale", "detail": {"storyboard": "Cần xuất lại: storyboard đã đổi sau lần xuất trước (chỉ dựng lại các đoạn đã đổi).",
                                              "audio": "Cần xuất lại: giọng đọc đã đổi sau lần xuất trước.",
                                              "files": "Cần xuất lại: tệp đã xuất không còn đủ."}[reason], "reason": reason}
     return {"state": "done", "detail": "Đã xuất video."}
@@ -199,7 +233,7 @@ def stale_reason(project_dir: Path, m: dict) -> str | None:
 def start(project_dir: Path, *, manager=None, tools: render.Tools | None = None, settings: Settings | None = None,
           timeline=None, part_cls=None) -> dict:
     """Checks the inputs, plans the parts and starts the long job. Raises ExportError (409) when the project is not ready or
-    already exporting. Starting again after a stop or a restart is the resume: parts with a current file are not redone."""
+    already exporting. Starting again after a stop or a restart is the resume: parts whose content key already has a file are reused."""
     project_dir = Path(project_dir)
     pid = project_dir.name
     settings = settings or load_settings()
@@ -211,11 +245,15 @@ def start(project_dir: Path, *, manager=None, tools: render.Tools | None = None,
         raise ExportError("storyboard_off_voice", retime.off_voice_message(off), 409, problems=off[:20])
     starts, end = (timeline or engine_timeline)(project_dir, inp.rev)
     specs = plan.plan_parts(starts, end, settings.fps, settings.part_seconds)
-    job_parts = build_parts(project_dir, inp, specs, end, tools, settings, part_cls)
+    keys = part_keys_for(project_dir, inp, specs, settings)
+    pdir = cache_dir(project_dir) / "parts"
+    reused = sum(1 for s, k in zip(specs, keys) if _part_ready(pdir / plan.part_filename(s, k)))
+    job_parts = build_parts(project_dir, inp, specs, end, tools, settings, part_cls, keys=keys)
     mgr = manager or get_manager()
     try:
         return mgr.start(kind=KIND, pid=pid, project_dir=project_dir, parts=job_parts,
-                         meta={"storyboard_rev": inp.rev, "duration": end, "parts": len(specs)})
+                         meta={"storyboard_rev": inp.rev, "duration": end, "parts": len(specs),
+                               "parts_reused": reused, "parts_to_render": len(specs) - reused})
     except Exception as e:   # noqa: BLE001
         if type(e).__name__ == "Busy":
             raise ExportError("busy", "this project is already being exported", 409)
@@ -229,14 +267,17 @@ def _part_cls(part_cls):
     return Part
 
 
-def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render.Tools, settings: Settings, part_cls=None) -> list:
+def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render.Tools, settings: Settings, part_cls=None, *, keys: list[str] | None = None) -> list:
     """The parts of the job. They share `st`, a dict of what the earlier parts made."""
     Part = _part_cls(part_cls)
     pid = Path(project_dir).name
     cdir, pdir = cache_dir(project_dir), cache_dir(project_dir) / "parts"
     names = file_names(pid)
     frames = plan.total_frames(end, settings.fps)
-    st: dict = {"rendered": [], "t0": time.time()}
+    keys = list(keys) if keys is not None else part_keys_for(project_dir, inp, specs, settings)
+    initial_reused = sum(1 for s, k in zip(specs, keys) if _part_ready(pdir / plan.part_filename(s, k)))
+    initial_todo = len(specs) - initial_reused
+    st: dict = {"did_render": set(), "parts_info": [], "parts_reused": initial_reused, "parts_rendered": 0, "t0": time.time()}
     n = len(specs)
 
     def prepare(ctx):
@@ -246,29 +287,39 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
         st["desc"] = d
         st["marks"] = mux.chapter_marks(inp.timing.get("chapters"), end)      # the marks inside the file stay as they are
         st["merged"] = d["merged_chapters"]
-        ctx.log("%d chapters, %d credit lines" % (len(st["marks"]), len(d["credits"])))
-        ctx.progress(1.0)
-        return {"chapters": len(st["marks"])}
+        ctx.log("%d chapters, %d credit lines; parts: %d to render, %d reused (of %d)" % (len(st["marks"]), len(d["credits"]), initial_todo, initial_reused, n))
+        ctx.progress(1.0, _plan_note_vi(initial_todo, initial_reused, n))
+        return {"chapters": len(st["marks"]), "parts_total": n, "parts_to_render": initial_todo, "parts_reused": initial_reused}
 
-    def make_render(spec):
+    def make_render(spec, key):
         def run(ctx):
             if ctx.cancelled():
                 return None
-            key = plan.part_key(inp.rev, spec, settings.width)
             r = render.render_part(ctx, tools, settings, project_dir, spec, key, pdir)
             if r.get("cancelled"):
                 return None
-            st["rendered"].append({"index": spec.index + 1, "f0": spec.f0, "f1": spec.f1, "key": key, "file": r["file"], "skipped": r["skipped"]})
+            if not r["skipped"]:
+                st["did_render"].add(spec.index)
             return r
         return run
 
     def join(ctx):
         if ctx.cancelled():
             return None
-        files = [pdir / plan.part_filename(s, plan.part_key(inp.rev, s, settings.width)) for s in specs]
+        files = [pdir / plan.part_filename(s, k) for s, k in zip(specs, keys)]
         for f in files:
             if not f.is_file():
                 raise ExportError("part_missing", "a render part is missing: " + f.name, 500)
+        parts_info = []
+        for s, k in zip(specs, keys):
+            reused = s.index not in st["did_render"]
+            parts_info.append({"index": s.index + 1, "f0": s.f0, "f1": s.f1, "key": k, "file": plan.part_filename(s, k), "skipped": reused, "reused": reused})
+        reused_n = sum(1 for p in parts_info if p["reused"])
+        rendered_n = len(parts_info) - reused_n
+        st["parts_info"] = parts_info
+        st["parts_reused"] = reused_n
+        st["parts_rendered"] = rendered_n
+        ctx.progress(0.1, "Ghép %d đoạn (dựng mới %d, dùng lại %d)" % (n, rendered_n, reused_n))
         out = cdir / "video_all.mp4"
         r = render.join_parts(ctx, tools, files, out, frames, cdir)
         if r.get("cancelled"):
@@ -277,6 +328,8 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
         for old in pdir.glob("part_*.mp4"):
             if old.name not in keep and ".partial" not in old.name:
                 old.unlink(missing_ok=True)
+        ctx.log("joined %d parts (%d rendered, %d reused)" % (n, rendered_n, reused_n))
+        ctx.progress(1.0, "Đã ghép %d đoạn (dựng mới %d, dùng lại %d)" % (n, rendered_n, reused_n))
         st["video"] = out
         return r
 
@@ -322,10 +375,14 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
                                   audio_duration=st.get("audio_duration"), merged_chapters=st.get("merged", 0))
         ctx.progress(0.7, "Lưu tệp")
         d = st["desc"]
+        parts_info = st["parts_info"]
+        rendered_n = st["parts_rendered"]
+        reused_n = st["parts_reused"]
         manifest = {"schema": SCHEMA, "pid": pid, "slug": pid, "storyboard_rev": inp.rev, "audio_sig": inp.audio_sig,
                     "audio_file": inp.storyboard.get("audio") or "audio/mix.m4a", "duration": round(end, 3), "frames": frames, "fps": settings.fps,
                     "width": settings.width, "chapters": len(st["marks"]), "chapters_merged": st.get("merged", 0),
-                    "parts": st["rendered"], "files": names, "report": card, "report_status": check.worst(card), "loudness": loud,
+                    "parts": parts_info, "parts_total": len(parts_info), "parts_rendered": rendered_n, "parts_reused": reused_n,
+                    "files": names, "report": card, "report_status": check.worst(card), "loudness": loud,
                     "credits": d["credits"], "notes": d["notes"], "created": store.now_iso(), "seconds": round(time.time() - st["t0"], 1)}
         edir = export_dir(project_dir)
         with store.script_lock(project_dir):
@@ -337,8 +394,11 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
             store.write_text_atomic(edir / names["description"], d["description"], 1)
             store.write_text_atomic(edir / names["chapters"], d["chapters"], 1)
             store.write_json_atomic(manifest_path(project_dir), manifest, 1)
-        ctx.progress(1.0)
-        return {"report_status": manifest["report_status"], "frames": frames, "duration": manifest["duration"]}
+        sentence = _done_summary_vi(rendered_n, reused_n)
+        ctx.log(sentence)
+        ctx.progress(1.0, sentence)
+        return {"report_status": manifest["report_status"], "frames": frames, "duration": manifest["duration"],
+                "parts_total": len(parts_info), "parts_rendered": rendered_n, "parts_reused": reused_n, "sentence": sentence}
 
     def guard(fn):
         def wrapped(ctx):
@@ -348,15 +408,14 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
                 raise part_error(e) from e
         return wrapped
 
-    def render_done(spec):
+    def render_done(spec, key):
         def is_done(ctx):             # asked before the heavy slot is taken: a current file means no waiting for the machine
-            f = pdir / plan.part_filename(spec, plan.part_key(inp.rev, spec, settings.width))
-            return f.is_file() and f.stat().st_size > 0
+            return _part_ready(pdir / plan.part_filename(spec, key))
         return is_done
 
     est = lambda s: max(1, int(plan.estimate_seconds(s.seconds, settings.render_speed)))   # noqa: E731
     parts = [Part(key="prepare", title="Làm mô tả và mục lục", run=guard(prepare), heavy=False, est_seconds=5)]
-    parts += [Part(key="render-%d" % (s.index + 1), title="Dựng đoạn %d/%d" % (s.index + 1, n), run=guard(make_render(s)), heavy=True, est_seconds=est(s), is_done=render_done(s)) for s in specs]
+    parts += [Part(key="render-%d" % (s.index + 1), title="Dựng đoạn %d/%d" % (s.index + 1, n), run=guard(make_render(s, k)), heavy=True, est_seconds=est(s), is_done=render_done(s, k)) for s, k in zip(specs, keys)]
     parts += [Part(key="join", title="Ghép các đoạn", run=guard(join), heavy=False, est_seconds=30),
               Part(key="mux", title="Ghép tiếng và mục lục", run=guard(do_mux), heavy=False, est_seconds=60),
               Part(key="finish", title="Kiểm tra và lưu tệp", run=guard(finish), heavy=False, est_seconds=60)]

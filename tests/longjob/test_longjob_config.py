@@ -12,7 +12,7 @@ def test_windows_block_of_the_shipped_file():
     assert c.voice.reference_voice.endswith("machiavelli_ref.wav")
     assert (c.voice.exaggeration, c.voice.cfg_weight, c.voice.temperature, c.voice.seed) == (0.35, 0.5, 0.7, 42)
     assert c.aligner.python == "D:/code/behind-the-image/.venv-align/Scripts/python.exe" and c.aligner.model == "small.en"
-    assert c.render_threads == 4 and c.part_seconds == 240
+    assert c.render_threads == 4 and c.part_seconds == 60
 
 
 def test_default_block_has_no_server_programs():
@@ -34,4 +34,4 @@ def test_unknown_platform_and_broken_files_fall_back(tmp_path):
 def test_shipped_file_is_valid_json_with_both_blocks():
     doc = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     assert set(doc) >= {"windows", "default"}
-    assert parse_block("windows", doc["windows"]).part_seconds == 240
+    assert parse_block("windows", doc["windows"]).part_seconds == 60

@@ -76,7 +76,8 @@ class FakeManager:
                         continue
                     res = p.run(Ctx(job, rec))
                     rec["state"] = "done"
-                    job["result"] = res if res is not None else job["result"]
+                    if isinstance(res, dict) and res:
+                        job["result"] = {**(job["result"] or {}), **res}
                 except Exception as e:   # noqa: BLE001
                     rec["state"] = "error"
                     rec["error"] = str(e)

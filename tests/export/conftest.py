@@ -59,7 +59,7 @@ def fake_tools(tmp_path):
 
 @pytest.fixture()
 def settings():
-    return Settings(render_threads=2, part_seconds=240.0, render_speed=2.0)
+    return Settings(render_threads=2, part_seconds=60.0, render_speed=2.0)
 
 
 @pytest.fixture()

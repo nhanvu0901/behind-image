@@ -305,4 +305,4 @@ def export_world(proj, monkeypatch, fail_t0=None, real_timeline=False):
     (proj.d / "audio").mkdir(exist_ok=True)
     (proj.d / "audio" / "mix.m4a").write_text(json.dumps({"kind": "audio", "codec": "aac", "duration": getattr(proj, 'duration', 30.0)}), encoding="utf-8")
     hooks.register(proj.root, proj.out)
-    return run, Settings(render_threads=2, part_seconds=240.0, render_speed=2.0), tools
+    return run, Settings(render_threads=2, part_seconds=60.0, render_speed=2.0), tools

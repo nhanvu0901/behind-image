@@ -21,7 +21,7 @@
     },
     "comic_repo": "D:/code/comic-book-pipeline",
     "render_threads": 4,
-    "part_seconds": 240
+    "part_seconds": 60
   },
   "default": {
     "lock_dir": null,
@@ -31,6 +31,6 @@
     "aligner": null,
     "comic_repo": null,
     "render_threads": 4,
-    "part_seconds": 240
+    "part_seconds": 60
   }
 }

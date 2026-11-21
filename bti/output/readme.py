@@ -17,7 +17,7 @@ NEXT_TEXT = {
     "voice": "Tạo giọng đọc (bước Giọng đọc, khoảng một giờ máy).",
     "picks": "Chọn hình cho từng dòng lời dẫn rồi duyệt (bước Chọn hình).",
     "edit": "Dựng và duyệt storyboard (bước Dựng hình).",
-    "export": "Xuất video (bước Xuất video, khoảng 25 phút máy).",
+    "export": "Xuất video (bước Xuất video; lần đầu khoảng 25 phút máy, sửa nhỏ chỉ dựng lại các đoạn đã đổi).",
 }
 
 
@@ -72,6 +72,8 @@ def readme_md(f, st: dict) -> str:
         loud = v.get("loudness") or {}
         if loud.get("lufs") is not None:
             L.append("| Độ lớn tiếng | %s LUFS (đỉnh %s dB) |" % (words.num(loud.get("lufs")), words.num(loud.get("true_peak"))))
+        if v.get("parts_total") is not None:
+            L.append("| Các đoạn dựng | dựng mới %d, dùng lại %d (tổng %d đoạn) |" % (v.get("parts_rendered") or 0, v.get("parts_reused") or 0, v["parts_total"]))
         L.append("| Xuất xong lúc | %s (máy dựng mất %s) |" % (words.when(v.get("created")), words.minutes(v.get("render_seconds"))))
         checks = v.get("checks") or []
         bad = [c for c in checks if str(c.get("status")) != "ok"]
@@ -124,9 +126,12 @@ def readme_md(f, st: dict) -> str:
     if cl:
         L += ["## Dọn dẹp thư mục làm việc", ""]
         if cl.get("done"):
-            L.append("Sau khi xuất video xong, ứng dụng đã xóa các tệp tạm của dự án `%s` (bản dựng từng đoạn, ảnh xem thử, bản ghi từng lượt chạy của agent, nhật ký dài): giải phóng **%s** (%d tệp), lúc %s." %
+            L.append("Sau khi xuất video xong, ứng dụng đã xóa các tệp tạm của dự án `%s` (video ghép tạm, ảnh xem thử, bản ghi từng lượt chạy của agent, nhật ký dài và các đoạn dựng cũ không còn dùng): giải phóng **%s** (%d tệp), lúc %s." %
                      (f.pid, words.size(cl.get("freed_bytes")), cl.get("files") or 0, words.when(cl.get("at"))))
-            L.append("Tài liệu, lịch sử sửa, các bản lưu cũ, hình, giọng đọc và video **không** bị xóa. Xuất lại cùng một storyboard sẽ dựng lại từ đầu (khoảng 25 phút).")
+            if cl.get("kept_parts"):
+                L.append("Đã giữ lại **%d đoạn dựng** của lần xuất này (%s) để khi sửa nhỏ chỉ dựng lại các đoạn đã đổi." %
+                         (cl["kept_parts"], words.size(cl.get("kept_parts_bytes"))))
+            L.append("Tài liệu, lịch sử sửa, các bản lưu cũ, hình, giọng đọc và video **không** bị xóa.")
         else:
             L.append("Chưa dọn thư mục làm việc: %s." % CLEAN_REASON.get(cl.get("reason"), cl.get("reason") or "không rõ lý do"))
         L.append("Tắt việc tự dọn ở Cài đặt → \"Dọn thư mục làm việc sau khi xuất video\".")

@@ -38,7 +38,7 @@ def total_frames(end: float, fps: int = 30) -> int:
     return int(round(end * fps))
 
 
-def plan_parts(shot_starts, end: float, fps: int = 30, target: float = 240.0) -> list[PartSpec]:
+def plan_parts(shot_starts, end: float, fps: int = 30, target: float = 60.0) -> list[PartSpec]:
     """Parts of about `target` seconds, each cut at a shot start. A part is never shorter than half of `target` nor longer
     than one and a half times it, except the whole video when it is shorter: when no shot starts near the wanted cut (one
     very long shot) the cut is made at the wanted frame instead."""
@@ -59,9 +59,12 @@ def plan_parts(shot_starts, end: float, fps: int = 30, target: float = 240.0) ->
     return [PartSpec(i, a, b, fps) for i, (a, b) in enumerate(zip(edges, edges[1:]))]
 
 
-def part_key(storyboard_rev: str, spec: PartSpec, width: int = 1920, quality: str = "final") -> str:
-    """Identifies the file of one part: the same storyboard revision, range, size and quality give the same key."""
-    raw = json.dumps([storyboard_rev, spec.f0, spec.f1, spec.fps, width, quality], separators=(",", ":"))
+def part_key(source, spec: PartSpec, width: int = 1920, quality: str = "final", **kw) -> str:
+    """Identifies the file of one part. A storyboard dict hashes only what decides frames inside `spec`; a plain revision string hashes that string with range, size and quality."""
+    if isinstance(source, dict):
+        from . import partkey
+        return partkey.part_key(source, spec, width=width, quality=quality, **kw)
+    raw = json.dumps([source, spec.f0, spec.f1, spec.fps, width, quality], separators=(",", ":"))
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:10]
 
 

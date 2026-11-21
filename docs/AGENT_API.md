@@ -196,7 +196,7 @@ loop:
 | `draft.edit` | edit | `POST /api/projects/{pid}/draft/edit` |  | yes | edit.fast | model: from about 30 seconds to about 20 minutes | While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`). |
 | `identity.set` | edit | `PUT /api/projects/{pid}/identity` |  |  |  |  | While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. Optional body field `video_title` (`--set video_title=...`): the video's title shown under the channel name, one line of at most 90 characters (an empty text takes it away); with a title the style may also be left out of a direct call to the route. Refused with `storyboard_off_voice` while the storyboard does not fit the voice (call storyboard.retime first; title.set stores a title in that case all the same). |
 | `draft.cancel` | edit | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While a draft job of the project runs. |
-| `export.start` | export | `POST /api/projects/{pid}/export/start` |  | yes |  | machine_time: about 25 minutes | Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. |
+| `export.start` | export | `POST /api/projects/{pid}/export/start` |  | yes |  | machine_time: about 25 minutes | Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. Renders in ~60-second parts keyed by what each part shows; kept parts from the last export are reused, so a small edit costs only its changed parts. |
 | `export.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an export job of the project runs. |
 | `auto.run` | export | `POST /api/projects/{pid}/auto/run` |  | yes |  | machine_time: the sum of what it may start from where the project stands | Listed while automatic running is on for the project and no video is exported yet. Ready unless a job of the project runs (an automatic run included). Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops with a reason (see docs/AGENT_API.md, "Chạy tự động"). `cost` is the sum of what it may start: only the kinds the owner allowed. |
 | `auto.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an automatic run of the project goes on. |
@@ -290,7 +290,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `agy_rate_limit` | later | The agy quota is used up: call again after `retry_after_seconds`, or choose the other agent (PUT /api/projects/{pid}/agent). |
 | `agy_timeout` | later | The agent ran past its time limit and was stopped: call again, or work on fewer chapters. |
 | `already_undone` | no | This turn was already undone. |
-| `approval_stale` | after_fix | The storyboard changed after it was approved: approve it again (POST /api/projects/{pid}/approve), then export. |
+| `approval_stale` | after_fix | The storyboard changed after it was approved: approve it again (POST /api/projects/{pid}/approve), then export (unchanged ~60 s parts are reused; a small edit only re-renders its changed parts). |
 | `artwork_not_found` | no | Use an artwork key listed by GET /api/library/artworks. |
 | `asset_not_found` | no | Use an asset key that exists in the storyboard (GET /api/projects/{pid}/assets lists them). |
 | `at_least_one_source` | after_fix | Keep at least one book source included in the brief options. |
@@ -429,7 +429,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `output_not_applicable` | no | A reference or imported project has no output folder: use a project made from the library. |
 | `page_not_found` | no | Ask for a page that exists in the book. |
 | `page_not_in_work` | no | Ask for a page inside the page range of this work. |
-| `part_missing` | later | A rendered part is missing: call POST /api/projects/{pid}/export/start again; finished parts are kept. |
+| `part_missing` | later | A rendered part is missing: call POST /api/projects/{pid}/export/start again; unchanged ~60 s parts are kept. |
 | `picks_approved` | after_fix | The picks are approved: send redo true to let the agent choose again (the approval is dropped and the picks must be approved again). |
 | `picks_auto_limit` | later | The agent used up the limits of one session (time and steps): call POST /api/projects/{pid}/picks/auto again; the parts that finished are kept. |
 | `picks_auto_no_output` | later | The agent wrote no usable file even after one repair message: call POST /api/projects/{pid}/picks/auto again, or choose the other agent. |
@@ -782,7 +782,9 @@ and after every successful change of a project through the API (an approval, a s
 published, or whose approval was withdrawn, keeps its old files and is marked `out_of_date` in `state.json` and in the README until it is published again. A second project of the same artwork takes the folder
 over (its runs are added to `runs`); an older project never does by itself, only through `output.build`.
 
-The switch `PUT /api/settings/output {"clean_after_export": false}` (`GET` the same path) turns the cleaning after an export off. The cleaning removes exactly the paths listed in `bti/output/clean.py` and nothing else.
+The switch `PUT /api/settings/output {"clean_after_export": false}` (`GET` the same path) turns the cleaning after an export off. The cleaning removes the paths listed in `bti/output/clean.py` and nothing else, while keeping the current export's rendered parts under `cache/export/parts/` (~840 MB per ~11-minute video).
+
+The export splits the timeline into ~60-second parts (`part_seconds` in `config/server.json`) cut at shot starts (`bti/export/partkey.py`), keyed by what decides each part's frames (plus `RENDER_VERSION` in `bti/engine/__init__.py` and the style bundle signature), so a small storyboard edit re-renders only the parts whose frames changed and re-muxes the audio. The export manifest, job result, and `output/<key>/state.json` (`video`) report `parts_total`, `parts_rendered`, and `parts_reused`; the export plan also reports `parts_reused` and `parts_to_render`; and the cleaning record reports `kept_parts` and `kept_parts_bytes`.
 
 ## 11. The new opening, the video's title and fitting the storyboard to the voice (`storyboard.retime`)
 

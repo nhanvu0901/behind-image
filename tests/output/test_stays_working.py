@@ -36,7 +36,11 @@ def test_after_cleaning_the_project_opens_previews_edits_and_exports_again(tmp_p
         assert job["state"] == "done", job.get("error")
         st = json.loads((out / OPS / "state.json").read_text(encoding="utf-8"))
         assert st["clean"]["done"] and st["clean"]["freed_bytes"] > 0 and (out / OPS / "final.mp4").exists()
-        assert not (d / "cache" / "export").exists()
+        exp_m = json.loads((d / "export" / "export.json").read_text(encoding="utf-8"))
+        cur_files = [d / "cache" / "export" / "parts" / p["file"] for p in exp_m["parts"]]
+        assert cur_files and all(p.is_file() for p in cur_files)
+        assert st["clean"]["kept_parts"] == len(cur_files)
+        assert not (d / "cache" / "export" / "video_all.mp4").exists()
 
         # it opens
         assert c.get(P).status_code == 200 and c.get(P + "/state").status_code == 200 and c.get(P + "/export").status_code == 200

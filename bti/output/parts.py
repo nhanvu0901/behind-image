@@ -274,12 +274,28 @@ def export_rev(f) -> str | None:
     return sha(m.get("storyboard_rev"), m.get("audio_sig"), m.get("created")) if m else None
 
 
+def _part_counts(m: dict) -> dict | None:
+    if isinstance(m.get("parts_rendered"), int) and isinstance(m.get("parts_reused"), int):
+        total = m["parts_total"] if isinstance(m.get("parts_total"), int) else (m["parts_rendered"] + m["parts_reused"])
+        return {"parts_total": total, "parts_rendered": m["parts_rendered"], "parts_reused": m["parts_reused"]}
+    parts = m.get("parts")
+    if isinstance(parts, list) and parts:
+        reused = sum(1 for p in parts if isinstance(p, dict) and (p.get("reused") or p.get("skipped")))
+        total = len(parts)
+        return {"parts_total": total, "parts_rendered": total - reused, "parts_reused": reused}
+    return None
+
+
 def video_facts(m: dict, size_bytes: int | None) -> dict:
     width = int(m.get("width") or 1920)
-    return {"file": FINAL_VIDEO, "seconds": m.get("duration"), "size_bytes": size_bytes, "width": width, "height": int(round(width * 9 / 16)), "fps": m.get("fps"),
-            "frames": m.get("frames"), "chapters": m.get("chapters"), "loudness": m.get("loudness"), "report_status": m.get("report_status"),
-            "checks": [{"key": c.get("key"), "status": c.get("status"), "value": c.get("value"), "expected": c.get("expected"), "note": c.get("note")}
-                       for c in (m.get("report") or []) if isinstance(c, dict)], "created": m.get("created"), "render_seconds": m.get("seconds")}
+    out = {"file": FINAL_VIDEO, "seconds": m.get("duration"), "size_bytes": size_bytes, "width": width, "height": int(round(width * 9 / 16)), "fps": m.get("fps"),
+           "frames": m.get("frames"), "chapters": m.get("chapters"), "loudness": m.get("loudness"), "report_status": m.get("report_status"),
+           "checks": [{"key": c.get("key"), "status": c.get("status"), "value": c.get("value"), "expected": c.get("expected"), "note": c.get("note")}
+                      for c in (m.get("report") or []) if isinstance(c, dict)], "created": m.get("created"), "render_seconds": m.get("seconds")}
+    counts = _part_counts(m)
+    if counts:
+        out.update(counts)
+    return out
 
 
 def write_export(f, folder: Path) -> dict:
@@ -299,6 +315,9 @@ def write_export(f, folder: Path) -> dict:
             files.append(rel(folder, d / (key + ".txt")))
     report = {k: m.get(k) for k in ("schema", "pid", "storyboard_rev", "duration", "frames", "fps", "width", "chapters", "chapters_merged", "report_status", "report", "loudness",
                                     "credits", "notes", "created", "seconds")}
+    counts = _part_counts(m)
+    if counts:
+        report.update(counts)
     fsutil.write_json(d / "report.json", report)
     files.append(rel(folder, d / "report.json"))
     try:

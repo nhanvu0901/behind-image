@@ -92,3 +92,13 @@ def test_the_channel_name_is_written_as_a_person_reads_it():
 
 def test_the_numbers_a_person_may_type_are_the_agents_limits():
     assert R.PERSON_MAX_CHARS == R.MAX_CHARS == 60 and R.public()["max_chars"] == 60
+    assert R.BEST_MAX_WORDS == 7 and R.public()["best_max_words"] == 7
+
+
+def test_third_owner_verdict_and_plain_tone_guidance_are_in_rendered_prompt(rendered):
+    text, _ = rendered
+    assert "Was She Already Dead When He Signed the Wall?" in text
+    assert "Is This a Wedding or a Memory?" in text
+    assert "A Prayer or a Shop Sign?" in text
+    assert "BEST_MAX_WORDS" in R.template_values() and "BEST_MAX_WORDS_TEXT" in R.template_values()
+    assert "%d words or fewer is best" % R.BEST_MAX_WORDS in text

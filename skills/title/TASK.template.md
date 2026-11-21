@@ -43,8 +43,10 @@ get what the title promised leaves, and the channel pays for it.
 6. **It opens a gap and does not close it.** After reading it one must want to know how or why. Do not give the
    whole answer away; do not be so vague that the line could sit on any video ({{VAGUE_PHRASES}} are never titles here).
 7. **No borrowed excitement.** No {{BORROWED_WORDS}}, unless the narration itself says exactly that and gives its reason.
+   Do not reach for shock — death, secrets, crimes, "already dead" — when the narration's own question is calmer; let
+   the video's real open question carry the intrigue in plain words.
 8. **Short and plain.** {{BEST_MIN}} to {{BEST_MAX}} characters is best, {{MAX_CHARS}} is the limit (longer is cut off on a phone and does not fit one
-   line on screen); {{MAX_WORDS_TEXT}} words at most; Title Case; one line; no colon and second half, no brackets, no emoji, no word
+   line on screen); {{BEST_MAX_WORDS}} words or fewer is best (shorter is better; the owner's example below is {{BEST_MAX_WORDS}} words), {{MAX_WORDS_TEXT}} words at most; Title Case; one line; no colon and second half, no brackets, no emoji, no word
    in capitals, at most one question mark, no quotation marks unless the words are written in the painting itself.
 9. **The language of the narration.** The reasons you give (`why`) are Vietnamese, with all their accents, one short
    sentence each: the owner reads them.
@@ -53,6 +55,7 @@ get what the title promised leaves, and the channel pays for it.
 1. **Collect.** From the narration, note for yourself: the question the cold open asks; the answer the closing gives;
    the five facts a stranger would repeat to a friend, with their line ids; the oddest thing one can SEE in the picture.
 2. **Find the tension.** Good titles for this kind of video come from one of these:
+   - the video's real open question, where both sides are concrete human things a person can picture (a wedding, or a memory);
    - two things that should not go together and do (a saint, and an advertisement);
    - something in plain view that nobody notices (two strangers watching from a mirror);
    - a small thing with a large consequence (a ring on a pair of scales);
@@ -68,11 +71,13 @@ get what the title promised leaves, and the channel pays for it.
 5. **Score the survivors** from 1 to 5 on: `curiosity` (does a stranger want the answer), `concrete` (can one picture
    it), `central` (is this what the whole video is about, or one passing fact), `clear` (understood at first reading).
    A title that scores under {{FIRST_CENTRAL_MIN}} on `central` is not the first choice however curious it is: it would promise a
-   sentence, not the video.
+   sentence, not the video. A title that manufactures shock or clickbait where the narration is calmer scores low on
+   `clear` and `central`: it sells a stunt, not the video. Between two honest titles of equal intrigue, the shorter,
+   plainer one wins.
 6. **Choose.** The highest total is first. Between equals, take the one whose promise the cold open starts to keep
    within the first minute.
 
-## 4. Two real verdicts of the owner (learn from them)
+## 4. Three real verdicts of the owner (learn from them)
 For the video on Petrus Christus's panel of St. Eligius, whose narration asks whether the picture is a prayer or a
 shop sign and answers "both":
 - **Rejected: "A Prayer or a Shop Sign?"** The owner: "not intriguing or interesting or capture the essence of the
@@ -80,6 +85,21 @@ shop sign and answers "both":
 - **Accepted: "The Saint Who Was Also an Advertisement"**. Why it works: two concrete things that contradict each
   other; it is the video's own answer in one line; it is true to the narration (the saint, the advertisement for the
   goldsmiths, "it is both"); a stranger wants to know how a saint can be an advertisement.
+
+For the video on Jan van Eyck's Arnolfini Portrait, whose narration weighs whether the painting records a marriage or
+commemorates a wife who had already died, and closes with "So is this a wedding or a memory?":
+- **Rejected: "Was She Already Dead When He Signed the Wall?"** The owner: "I also don't like the name", and asked
+  for "clear concise like is this a wedding or a mourning of a memory ? dont click bait be concise but still intrigue
+  focus on the intriguing factor". Why it fails: it reaches for shock ("Already Dead") and packs two dramatic clauses
+  into nine words when the narration's own open question is calmer and cleaner (rules 7, 8).
+- **Preferred direction: "Is This a Wedding or a Memory?"** ({{BEST_MAX_WORDS}} words). Why it works: it is the
+  video's own real open question in plain words, short and clear, with no clickbait; both sides are concrete human
+  things a stranger can picture at once, and the contrast between them makes one want the answer.
+
+What separates **"A Prayer or a Shop Sign?"** (rejected) from **"Is This a Wedding or a Memory?"** (wanted): both
+have the same "A or B?" shape, but the first sets two dry categories against each other with no human stake, while
+the second puts two human moments — a wedding and mourning a lost life — in tension, so a stranger immediately feels
+why the answer matters.
 
 ## 5. The file you write
 ```json
@@ -99,6 +119,6 @@ words, a banned phrase of rules 6 and 7 (a word of rule 7 passes only when a lin
 colon or another second half, brackets, an emoji, a word in capitals, more than one question mark, a number in digits
 that none of the cited lines holds, an unknown line id, a reason that is not Vietnamese, fewer than {{MIN_CANDIDATES_TEXT}}
 candidates (or more than {{MAX_CANDIDATES_TEXT}}), two candidates of the same text, a score outside 1 to 5, and a file that
-is not shaped as above. It only warns about a length outside the best range, quotation marks, a title that is not in
+is not shaped as above. It only warns about a length outside the best range, more than {{BEST_MAX_WORDS}} words, quotation marks, a title that is not in
 Title Case, a first choice that is not the highest total or scores under {{FIRST_CENTRAL_MIN}} on `central`, and a
 title none of whose words is in the lines it cites.

@@ -146,17 +146,73 @@ def test_state_running_when_the_manager_has_an_active_job(project):
     assert run.state(project, M())["state"] == "running"
 
 
-def test_a_new_export_of_a_new_revision_removes_old_parts(patch_run, project, settings):
-    run.start(project, settings=settings)
+def test_a_new_export_of_a_new_revision_reuses_unchanged_parts_and_removes_stale_ones(patch_run, project, settings, fake_tools):
+    specs = specs_of(project, settings)
+    job1 = run.start(project, settings=settings)
+    assert job1["state"] == "done"
+    assert job1["result"]["parts_total"] == len(specs)
+    assert job1["result"]["parts_rendered"] == len(specs)
+    assert job1["result"]["parts_reused"] == 0
     parts = project / "cache" / "export" / "parts"
-    old = set(p.name for p in parts.glob("*.mp4"))
+    old_list = sorted(parts.glob("*.mp4"))
+    assert len(old_list) == len(specs)
+
+    # Pure non-visual edit (title): every part key matches and 0 parts re-render.
     sb = json.loads((project / "storyboard.json").read_text())
     sb["title"] = "Another"
     (project / "storyboard.json").write_text(json.dumps(sb))
     approve(project)
+    calls_before = len(fake_tools.calls("engine"))
+    job2 = run.start(project, settings=settings)
+    assert job2["state"] == "done"
+    assert len(fake_tools.calls("engine")) == calls_before
+    assert job2["result"]["parts_rendered"] == 0
+    assert job2["result"]["parts_reused"] == len(specs)
+    assert sorted(parts.glob("*.mp4")) == old_list
+
+    # Edit a single visual parameter in shot s0005: only its part (and any overlap) re-renders; all others are reused.
+    sb = json.loads((project / "storyboard.json").read_text())
+    target_shot = next(s for s in sb["shots"] if s["id"] == "s0005")
+    t_shot = float(target_shot["start"]["_t"] if isinstance(target_shot["start"], dict) and "_t" in target_shot["start"] else target_shot["start"].get("t", 0.0) if isinstance(target_shot["start"], dict) else 0.0)
+    if "w" in target_shot["start"]:
+        tm = json.loads((project / "timing.json").read_text())
+        t_shot = float(tm["words"][target_shot["start"]["w"]]["s"]) + float(target_shot["start"].get("off", 0.0) or 0.0)
+    target_shot["overlays"] = [{"id": "o_test", "technique": "X-ANN-01", "start": {"t": t_shot + 0.1}, "dur": 1.0, "params": {"text": "Changed annotation"}}]
+    (project / "storyboard.json").write_text(json.dumps(sb))
+    approve(project)
+
+    p_plan = run.plan_for(project, settings)
+    assert 1 <= p_plan["parts_to_render"] <= 2 and p_plan["parts_reused"] == len(specs) - p_plan["parts_to_render"]
+
+    calls_before = len(fake_tools.calls("engine"))
+    job3 = run.start(project, settings=settings)
+    assert job3["state"] == "done"
+    assert len(fake_tools.calls("engine")) - calls_before == p_plan["parts_to_render"]
+    assert job3["result"]["parts_rendered"] == p_plan["parts_to_render"]
+    assert job3["result"]["parts_reused"] == p_plan["parts_reused"]
+    new_list = sorted(parts.glob("*.mp4"))
+    assert len(new_list) == len(specs)
+    kept = set(p.name for p in old_list) & set(p.name for p in new_list)
+    replaced = set(p.name for p in old_list) - set(p.name for p in new_list)
+    assert len(kept) == len(specs) - p_plan["parts_to_render"]
+    assert len(replaced) == p_plan["parts_to_render"]
+
+
+def test_global_style_change_rerenders_all_parts(patch_run, project, settings, fake_tools, monkeypatch):
+    from bti.export import partkey
+    specs = specs_of(project, settings)
     run.start(project, settings=settings)
-    new = set(p.name for p in parts.glob("*.mp4"))
-    assert new and not (old & new)
+    parts = project / "cache" / "export" / "parts"
+    old_names = {p.name for p in parts.glob("*.mp4")}
+
+    monkeypatch.setattr(partkey, "style_signature", lambda sid, style_root=None: "v2-" + str(sid))
+    calls_before = len(fake_tools.calls("engine"))
+    job = run.start(project, settings=settings)
+    assert job["state"] == "done"
+    assert len(fake_tools.calls("engine")) - calls_before == len(specs)
+    assert job["result"]["parts_rendered"] == len(specs) and job["result"]["parts_reused"] == 0
+    new_names = {p.name for p in parts.glob("*.mp4")}
+    assert len(new_names) == len(specs) and not (old_names & new_names)
 
 
 def test_a_project_deleted_during_the_export_is_not_brought_back(patch_run, project, settings, monkeypatch):

@@ -159,7 +159,9 @@ def test_the_warnings_that_do_not_stop_a_file(lines):
     strangers = check(broken(lambda d: d["candidates"][2].update(text="Painted Goldfish Swimming Quietly", lines=["b0001"])), lines)
     assert strangers.ok and any("none of its words is in the lines it cites" in w for w in strangers.warnings)
     nine = check(broken(lambda d: d["candidates"][1].update(text="Why a Saint Weighs a Ring in a Shop?")), lines)
-    assert nine.ok and not any("Weighs a Ring" in w for w in nine.warnings)                  # nine words and 36 characters: inside both limits and the best range
+    assert nine.ok and any("9 words" in w and "7" in w for w in nine.warnings)                  # nine words passes limit with a soft >7 word warning
+    seven = check(broken(lambda d: d["candidates"][1].update(text="Why a Saint Weighs a Shop Ring?")), lines)
+    assert seven.ok and not any("words" in w for w in seven.warnings)                            # seven words: inside the best word count
 
 
 def test_a_person_may_type_what_they_want_up_to_the_limit():

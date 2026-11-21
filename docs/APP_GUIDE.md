@@ -645,7 +645,7 @@ Tab *Hình*: tìm trên Wikimedia Commons hoặc The Met. Nguồn và giấy ph�
 6. Bản xuất mới không tạo phụ đề lời đọc; nhãn và chú thích nghệ thuật trong storyboard vẫn được giữ. Bản xuất cũ không bị thay đổi.
 7. Nếu bạn sửa storyboard hoặc giọng đọc sau khi xuất, trang báo "Cần xuất lại". Bản cũ vẫn xem được cho đến khi xuất bản mới.
 8. Hình nào chưa rõ giấy phép sẽ có ghi chú trong mô tả để bạn kiểm tra trước khi đăng; việc xuất không bị chặn.
-9. Xuất xong, ứng dụng cũng chép video vào thư mục `output/<mã tác phẩm>/` và dọn các tệp tạm của dự án để nhẹ máy (mục 15). Nghĩa là xuất **lại cùng một storyboard** sẽ dựng lại từ đầu; sửa storyboard rồi xuất thì vốn đã dựng lại từ đầu.
+9. Xuất xong, ứng dụng cũng chép video vào thư mục `output/<mã tác phẩm>/` và dọn các tệp tạm không còn dùng của dự án (mục 15). Các đoạn dựng (~60 giây mỗi đoạn) của lần xuất hiện tại trong `cache/export/parts/` được **giữ lại** (khoảng 840 MB cho một video 11 phút) và đánh dấu theo đúng hình ảnh của từng đoạn: nếu bạn sửa nhỏ storyboard rồi xuất lại, máy chỉ dựng lại các đoạn có hình ảnh thay đổi và ghép lại âm thanh.
 
 ## 9. Dự án nhập từ bản dựng trước
 
@@ -732,7 +732,7 @@ output/<mã tác phẩm>/
 - **Phần cũ.** Nếu sau khi ghi bạn sửa tài liệu (sửa lời dẫn, rút lại một lần duyệt, sửa storyboard), phần ấy trong thư mục được **đánh dấu "bản cũ"** trong `README.md` và `state.json`, cho tới khi bạn duyệt lại hoặc xuất lại. Nó không bao giờ nằm đó trông như còn mới.
 - **Làm lại cùng một tác phẩm.** Dự án mới của cùng tác phẩm ghi đè thư mục này; mọi lần làm được giữ lại trong `state.json` (mục `runs`). Dự án cũ hơn không tự ghi đè lại.
 - **Không có trong thư mục:** tệp tạm, bản sao lịch sử, hình không dùng, đề xuất cũ, mọi cấu hình của máy.
-- **Dọn thư mục làm việc.** Sau khi xuất video **thành công**, ứng dụng xóa các tệp tạm của dự án: bản dựng từng đoạn (thường là phần nặng nhất, hơn một gigabyte), ảnh và đoạn xem thử, bản ghi từng lượt chạy của agent chọn hình, nhật ký dài của các việc. Tài liệu, lịch sử sửa, bản lưu cũ, hình, giọng đọc và video **không** bị xóa; dự án vẫn mở, xem thử, sửa và xuất lại được. Cái giá duy nhất: xuất lại **cùng một** storyboard sẽ dựng lại từ đầu. `README.md` ghi đã giải phóng bao nhiêu. Không dọn nếu lần xuất lỗi hay phiếu kiểm tra báo lỗi. Muốn tắt: **Cài đặt**, ô "Dọn thư mục làm việc sau khi xuất video".
+- **Dọn thư mục làm việc.** Sau khi xuất video **thành công**, ứng dụng xóa các tệp tạm của dự án: tệp ghép tạm `video_all.mp4`, các đoạn dựng cũ không còn khớp, ảnh và đoạn xem thử, bản ghi từng lượt chạy của agent chọn hình, nhật ký dài của các việc; đồng thời **giữ lại** các đoạn dựng (~60 giây/đoạn) của lần xuất này (khoảng 840 MB cho video 11 phút) để khi sửa nhỏ storyboard chỉ dựng lại các đoạn đã đổi. Tài liệu, lịch sử sửa, bản lưu cũ, hình, giọng đọc và video **không** bị xóa; dự án vẫn mở, xem thử, sửa và xuất lại được. `README.md` ghi đã giải phóng bao nhiêu và giữ lại bao nhiêu đoạn dựng. Không dọn nếu lần xuất lỗi hay phiếu kiểm tra báo lỗi. Muốn tắt: **Cài đặt**, ô "Dọn thư mục làm việc sau khi xuất video".
 - **Ghi lại từ một dự án có sẵn** (hoặc khi README báo không ghi được): `bti output <mã dự án>`; thêm `--clean` để dọn luôn các tệp tạm của dự án đã xuất xong.
 - **Chép video về máy Mac:** trên Mac chạy `tools/deploy/fetch_video.sh <mã tác phẩm>`; nó chỉ chép đúng `final.mp4` về `~/Desktop/Claude Render/<mã tác phẩm>.mp4`, không chép gì khác.
 - Đừng sửa tay trong thư mục `output/`: lần ghi sau sẽ ghi đè. Ứng dụng không bao giờ đọc ngược từ đó.

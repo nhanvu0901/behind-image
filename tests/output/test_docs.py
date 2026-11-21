@@ -122,6 +122,24 @@ def test_readme_says_where_the_video_stands(proj):
     assert not RAW_ID.search(md) and VI.search(md)
 
 
+def test_readme_and_state_show_rendered_and_reused_part_counts(proj):
+    proj.stage("export")
+    m = json.loads((proj.d / "export" / "export.json").read_text(encoding="utf-8"))
+    m["parts"] = [
+        {"index": 1, "key": "a", "file": "part_01_a.mp4", "did_render": False},
+        {"index": 2, "key": "b", "file": "part_02_b.mp4", "did_render": True},
+        {"index": 3, "key": "c", "file": "part_03_c.mp4", "did_render": False},
+    ]
+    m["parts_total"], m["parts_rendered"], m["parts_reused"] = 3, 1, 2
+    (proj.d / "export" / "export.json").write_text(json.dumps(m), encoding="utf-8")
+    publish.sync(proj.d, proj.out, moment="export done", sheets=False, force=True)
+    md = proj.text("README.md")
+    assert "Các đoạn dựng" in md and "dựng mới 1" in md and "dùng lại 2" in md and "tổng 3 đoạn" in md
+    assert not RAW_ID.search(md) and VI.search(md)
+    st = proj.state()
+    assert st["video"]["parts_total"] == 3 and st["video"]["parts_rendered"] == 1 and st["video"]["parts_reused"] == 2
+
+
 def test_readme_of_a_project_in_progress_says_what_to_do_next(proj):
     proj.stage("approve_narration")
     publish.sync(proj.d, proj.out, moment="narration approved", sheets=False)
