@@ -69,6 +69,7 @@ class StyleDef:
     start_s: dict = field(default_factory=dict)       # optional per-role nominal start (seconds into the video)
     dur_s: dict = field(default_factory=dict)         # optional per-role nominal length (seconds)
     earlier: dict = field(default_factory=dict)       # role -> techniques of an earlier form of this style (still its own, see the module docstring)
+    cross_cut: dict = field(default_factory=dict)     # role -> True when the opening overlay continues across cuts without blinking
 
     def technique(self, role: str) -> str | None:
         return self.label_role if role == "label" else getattr(self, role)
@@ -145,6 +146,18 @@ def _nominal(entry: dict, field_name: str) -> dict:
     return out
 
 
+def _cross_cut(entry: dict) -> dict:
+    """role -> True when `nominal[role].cross_cut` is true."""
+    nom = _plain(entry.get("nominal"))
+    out = {}
+    if isinstance(nom, dict):
+        for role, d in nom.items():
+            d = _plain(d)
+            if role in ROLES and isinstance(d, dict) and _plain(d.get("cross_cut")) is True:
+                out[role] = True
+    return out
+
+
 def _earlier(entry: dict) -> dict:
     """role -> tuple of technique ids, from `earlier: {role: [ids]}` (anything that is not a list of non-empty strings is left out)."""
     raw = _plain(entry.get("earlier"))
@@ -187,7 +200,8 @@ def read(style) -> IdentityConfig | None:
         label = g("label_vi") or g("name_vi") or g("title_vi") or FALLBACK_LABELS.get(sid) or sid
         # `label` is the role of the two-line label; a style that names a display text there instead is not supported
         styles[sid] = StyleDef(id=sid, label=label, open=g("open"), label_role=g("label"), brand=g("brand"), mark=g("mark"),
-                               transition=_transition(entry), start_s=_nominal(entry, "start_s"), dur_s=_nominal(entry, "dur_s"), earlier=_earlier(entry))
+                               transition=_transition(entry), start_s=_nominal(entry, "start_s"), dur_s=_nominal(entry, "dur_s"), earlier=_earlier(entry),
+                               cross_cut=_cross_cut(entry))
     if not styles:
         return None
     name = _plain(b.get("channel_name"))

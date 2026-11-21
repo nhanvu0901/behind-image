@@ -99,4 +99,5 @@ def test_the_applier_never_makes_an_element_the_engine_refuses(bundle, sb, timin
     for s in out["shots"]:
         for o in s["overlays"]:
             if o["technique"] in (read(bundle.style).style(style_id).open, read(bundle.style).style(style_id).label_role):
-                assert o["dur"] >= 3.0 - 1e-6
+                tech_floor = bundle.spec(o["technique"])["timing"]["min_s"]
+                assert o["dur"] >= tech_floor - 1e-6

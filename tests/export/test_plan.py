@@ -224,6 +224,48 @@ def test_part_key_is_purely_content_based_and_scoped_per_part(tmp_path):
     assert all(a != b for a, b in zip([k0, k1], partkey.part_keys(tmp_path, other_style, timing, [p0, p1])))
 
 
+def test_changing_cross_cut_opening_label_only_changes_opening_part(tmp_path):
+    from copy import deepcopy
+    from bti.export import partkey
+
+    (tmp_path / "media").mkdir(exist_ok=True)
+    (tmp_path / "media" / "p.jpg").write_bytes(b"PAINTING")
+    timing = {"duration": 120.0, "words": [{"s": 2.0, "e": 2.5, "w": "Look"}, {"s": 65.0, "e": 65.5, "w": "Later"}]}
+    sb = {
+        "schema": "bti.storyboard/1",
+        "style": "gae",
+        "identity": {"style": "raking"},
+        "canvas": {"w": 1920, "h": 1080, "fps": 30},
+        "assets": {"A": {"kind": "image", "file": "media/p.jpg", "width": 1000, "height": 1200, "regions": {}}},
+        "shots": [
+            {
+                "id": "s0000", "start": {"t": 0.0}, "technique": "CAM-01", "slots": {"image": {"asset": "A"}}, "params": {},
+                "overlays": [{"id": "o2", "technique": "ID-LABEL-01", "start": {"t": 0.3}, "dur": 1.35,
+                              "params": {"title": "Old Title", "artist_year": "Painter, 1434", "fade_in_s": 0.5, "fade_out_s": 0.0}}],
+            },
+            {
+                "id": "s0001", "start": {"w": 0, "off": -0.35}, "technique": "CAM-01", "slots": {"image": {"asset": "A"}}, "params": {},
+                "overlays": [{"id": "o1", "technique": "ID-LABEL-01", "start": {"w": 0, "off": -0.35}, "dur": 6.35,
+                              "params": {"title": "Old Title", "artist_year": "Painter, 1434", "fade_in_s": 0.0, "fade_out_s": 0.5}}],
+            },
+            {
+                "id": "s0002", "start": {"t": 65.0}, "technique": "CAM-01", "slots": {"image": {"asset": "A"}}, "params": {},
+                "overlays": [],
+            },
+        ],
+        "end": {"t": 120.0, "fade_s": 1.0},
+    }
+    p0 = PartSpec(0, 0, 1950, 30)      # [0, 65 s)
+    p1 = PartSpec(1, 1950, 3600, 30)   # [65, 120 s)
+    k0, k1 = partkey.part_keys(tmp_path, sb, timing, [p0, p1])
+
+    changed = deepcopy(sb)
+    for sh in changed["shots"][:2]:
+        sh["overlays"][0]["params"]["title"] = "Updated Title"
+    ck0, ck1 = partkey.part_keys(tmp_path, changed, timing, [p0, p1])
+    assert ck0 != k0 and ck1 == k1
+
+
 def test_estimate():
     assert plan.estimate_seconds(60, 2.0) == 120
     assert plan.estimate_seconds(-5) == 0

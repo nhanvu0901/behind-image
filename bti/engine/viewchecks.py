@@ -1224,13 +1224,55 @@ def _text_windows(c, tid, p, span, spec):
         yield text,max(0.0,dur-end_fade-start)
 
 
-def _text_too_brief(c):
-    from .techniques.explain_over import min_read_seconds
-    out=[]
+def _label_chains(c):
+    """Contiguous seamless `ID-LABEL-01` chains crossing shot boundaries without a fade between pieces."""
+    rows=[]
     for i, shot in enumerate(c.shots):
         sp=c.spans[i]
         if not sp: continue
         for j,ov in enumerate(shot.get("overlays") or []):
+            if ov.get("technique") != "ID-LABEL-01": continue
+            span=_overlay_span(c,ov,sp)
+            if span:
+                p={**c.bundle.param_defaults("ID-LABEL-01"),**(ov.get("params") or {})}
+                rows.append((i,j,ov,p,span,sp))
+    chains=[]; cur=[]
+    for row in rows:
+        if cur:
+            pi,_,_,pp,pspan,psp=cur[-1]; ni,_,_,np_,nspan,nsp=row
+            same=(pp.get("title"),pp.get("artist_year")) == (np_.get("title"),np_.get("artist_year"))
+            abut=(ni > pi and abs(pspan[1]-psp[1]) <= 0.01 and abs(nspan[0]-nsp[0]) <= 0.01 and abs(nspan[0]-pspan[1]) <= 0.01)
+            no_blink=float(pp.get("fade_out_s",0.5) or 0) <= 1e-6 and float(np_.get("fade_in_s",0.5) or 0) <= 1e-6
+            if same and abut and no_blink:
+                cur.append(row)
+                continue
+        if len(cur) >= 2: chains.append(cur)
+        cur=[row]
+    if len(cur) >= 2: chains.append(cur)
+    return chains
+
+
+def _text_too_brief(c):
+    from .techniques.explain_over import min_read_seconds
+    out=[]
+    handled=set()
+    for ch in _label_chains(c):
+        handled.update((r[0],r[1]) for r in ch)
+        i0,j0,ov0,p0,sp0,_=ch[0]; _,_,_,pm,spm,_=ch[-1]
+        d0=sp0[1]-sp0[0]; dm=spm[1]-spm[0]
+        fi=float(p0.get("fade_in_s",0) or 0)*min(1.0,d0/float(p0.get("nominal_s") or d0))
+        fo=float(pm.get("fade_out_s",0) or 0)*min(1.0,dm/float(pm.get("nominal_s") or dm))
+        got=max(0.0,(spm[1]-sp0[0])-fi-fo)
+        for text in (str(p0.get("title") or ""), str(p0.get("artist_year") or "")):
+            if not text.strip(): continue
+            need=min_read_seconds(text)
+            if got+1e-6 < need:
+                out.append(_issue("text_too_brief", "shots[%d].overlays[%d]" % (i0,j0), "Text %r is fully visible for %.2f s but needs %.2f s." % (text,got,need), shot=c.sid(i0),overlay=ov0.get("id"),text=text,seconds=_r(got,2),needed=_r(need,2)))
+    for i, shot in enumerate(c.shots):
+        sp=c.spans[i]
+        if not sp: continue
+        for j,ov in enumerate(shot.get("overlays") or []):
+            if (i,j) in handled: continue
             tid=ov.get("technique"); spec=c.bundle.spec(tid) if isinstance(tid,str) else None
             span=_overlay_span(c,ov,sp)
             if not spec or not span: continue

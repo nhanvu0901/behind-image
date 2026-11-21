@@ -50,6 +50,13 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                                 "có dòng nêu tên tác giả sách nguồn, giọng đọc sẽ đọc to tên đó"),
         "source_talk": ("a line speaks about the sources themselves (the books, a passage, a doubt about a source) or carries a remark meant for the owner, and the voice would read it aloud",
                         "có dòng nói về chính các sách nguồn hoặc mang lời nhắn dành cho chủ kênh"),
+        # worker introrules: cold-open hook and naming rules
+        "cold_open_missing_name": ("the cold open does not speak both the painting's name and the painter's name in ordinary speech outside quotations",
+                                   "mở đầu chưa đọc tên bức tranh hoặc tên họa sĩ ngoài ngoặc kép"),
+        "cold_open_no_closing_question": ("the cold open does not close on an open question",
+                                          "mở đầu chưa kết bằng một câu hỏi mở"),
+        "cold_open_roadmap": ("the cold open uses a plan-of-the-video phrase instead of opening inside the painting and puzzle",
+                              "mở đầu nói câu giới thiệu kế hoạch video thay vì đi thẳng vào tranh"),
     },
     "picks": {
         "beat_no_pick": ("more than a quarter of the lines of the narration have no picture (up to a quarter the run goes on: the draft shows the main painting there)",
@@ -118,7 +125,10 @@ TOLERATED: dict[str, frozenset[str]] = {
     # outline_note (worker fixscript): the model's own remark to the owner (a NOTE line, never part of a fact or of the narration). The page shows it among the checks and the
     # run log keeps it with its count; it does not stop the run, because the narration never sees it and the outline already handled the thing it talks about
     "outline": frozenset({"fact_unused", "no_hook_choice", "budget_sum", "outline_note"}),
-    "narration": frozenset({"spoken_chars", "beat_too_long", "long_sentence", "no_show", "chapter_off_budget"}),
+    "narration": frozenset({
+        "spoken_chars", "beat_too_long", "long_sentence", "no_show", "chapter_off_budget",
+        "cold_open_late_name", "cold_open_first_line_long", "cold_open_no_early_turn", "cold_open_word_count",
+    }),
     # a flagged picture (size, licence or the like) is not a reason to stop: the owner said copyright is not a blocker, and a picture from the owner's own books always carries
     # the flag "unknown". The run goes on and writes the count into its log.
     # panelbox: the painted area of the main painting was not sure (`content_box_unsure`): the whole picture is used, which is the old behaviour; the warning stays in the log

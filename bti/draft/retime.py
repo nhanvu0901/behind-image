@@ -15,8 +15,8 @@ read), `meta` the project's facts for the opening shot (`main_asset`), `defaults
 A problem is `{code, shot, chapter, message, repair}`: `repair` says whether `retime` can put it right. What is listed:
 
     first_shot_late   the first shot does not start at 0
-    opening_missing   the first word starts at 3.3 s or later and the video has no opening shot (the first shot does not start at 0 either)
-    opening_extra     the video has the opening shot although the first word starts earlier than 3.3 s (or the video starts with a card)
+    opening_missing   the first word starts at 1.2 s or later and the video has no opening shot (the first shot does not start at 0 either)
+    opening_extra     the video has the opening shot although the first word starts earlier than 1.2 s (or the video starts with a card)
     title_off         the channel-name beat does not end where the chapter card starts (or the silence ends) or starts before its silence
     card_off          a chapter card does not end where its chapter's silence ends, or does not start where the compiler puts it
     card_count        the number of chapter cards is not the number of chapters that have one (reported, never repaired)
@@ -199,7 +199,7 @@ def _check(f: _Fit) -> list:
                                     "overlay %s ends outside its shot" % overlay.get("id"), locked=bool(shot.get("locked"))))
     if not f.judges:
         return out
-    # the first shot starts at 0; the opening shot is there exactly when the first word starts at 3.3 s or later
+    # the first shot starts at 0; the opening shot is there exactly when the first word starts at 1.2 s or later
     first_ok = f.t0[0] is not None and abs(f.t0[0]) <= TOL
     if not first_ok and f.t0[0] is not None:
         out.append(_problem("first_shot_late", sid(0), None, "the first shot starts at %s, not at 0" % _fmt(f.t0[0]), locked=bool(shots[0].get("locked"))))

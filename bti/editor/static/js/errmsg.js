@@ -849,3 +849,40 @@ export const NAMEFIRST_SENTENCES = {
 };
 export const NAMEFIRST_CODES = Object.keys(NAMEFIRST_SENTENCES);
 Object.assign(BUILD, NAMEFIRST_SENTENCES);
+
+// ---- worker introrules (2026-11-21): cold-open script checks (bti/script/cold_open.py, bti/script/validate.py).
+export const INTRORULES_ISSUES = {
+  cold_open_missing_name: (i) => {
+    const a = i.args || {};
+    const m = Array.isArray(a.missing) ? a.missing : [];
+    const miss = m.map((k) => (k === 'title' ? 'tên bức tranh' : 'tên họa sĩ')).join(' và ') || 'tên tranh hoặc tên họa sĩ';
+    return `Phần mở đầu (${a.chapter ?? i.chapter ?? 'c01'}) chưa đọc ${miss} trong lời dẫn bình thường (không tính trong ngoặc kép hay câu dịch chữ khắc).`;
+  },
+  cold_open_late_name: (i) => {
+    const a = i.args || {};
+    const late = Array.isArray(a.late) ? a.late.map((k) => (k === 'title' ? 'tên bức tranh' : 'tên họa sĩ')).join(' và ') : 'tên tranh và họa sĩ';
+    return `Phần mở đầu đọc ${late} sau ${a.max_words ?? 72} từ đầu tiên. Hãy đưa cả hai vào khoảng 60 từ đầu.`;
+  },
+  cold_open_first_line_long: (i) => {
+    const a = i.args || {};
+    return `Câu mở đầu (${w(a.beat ?? i.beat)}) dài ${a.words ?? '?'} từ (nên tối đa ${a.max ?? 25} từ) để người xem kịp thấy ngay chi tiết đầu tiên.`;
+  },
+  cold_open_no_early_turn: (i) => {
+    const a = i.args || {};
+    return `Phần mở đầu (${a.chapter ?? i.chapter ?? 'c01'}) chưa có bước ngoặt mâu thuẫn ("but" hoặc "yet") trong ${a.max_words ?? 72} từ đầu tiên.`;
+  },
+  cold_open_no_closing_question: (i) => {
+    const a = i.args || {};
+    return `Phần mở đầu chưa kết thúc bằng một câu hỏi mở (thiếu dấu ? ở ${w(a.beat ?? i.beat)}).`;
+  },
+  cold_open_roadmap: (i) => {
+    const a = i.args || {};
+    const found = Array.isArray(a.found) && a.found.length ? ` ("${a.found.join('", "')}")` : '';
+    return `Dòng ${w(a.beat ?? i.beat)} có câu giới thiệu kế hoạch video${found}. Hãy đi thẳng vào bức tranh và câu hỏi mở.`;
+  },
+  cold_open_word_count: (i) => {
+    const a = i.args || {};
+    return `Phần mở đầu dài ${a.words ?? '?'} từ (nên giữ trong khoảng ${a.min ?? 60} đến ${a.max ?? 145} từ).`;
+  },
+};
+Object.assign(BUILD, INTRORULES_ISSUES);

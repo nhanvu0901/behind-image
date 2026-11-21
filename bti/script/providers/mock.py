@@ -84,7 +84,10 @@ def _mock_outline(user: str, retry: bool) -> str:
         if cert == "disputed":
             line += f" | conflict: the sources frame this differently ({sel[0][0]} against {sel[-1][0]})"
         facts.append(line)
-    budgets = [round(target * x) for x in (0.10, 0.17, 0.18, 0.20, 0.20, 0.15)]
+    b0 = min(130, max(70, round(target * 0.06))) if target >= 700 else round(target * 0.10)
+    rem = max(target - b0, 1)
+    weights = (0.19, 0.20, 0.22, 0.22, 0.17)
+    budgets = [b0] + [round(rem * w) for w in weights]
     L = ["Here is the outline.", "", "```", "OUTLINE", "", f"THESIS: What is {title} really showing, and how much of it can the sources prove?", "",
          "HOOKS", f"h1: Look at the mirror on the back wall of {title}, and ask who is standing in it.",
          "h2: Most people call this a wedding portrait, but almost nothing in the room says so.",
@@ -98,6 +101,39 @@ def _mock_outline(user: str, retry: bool) -> str:
               f"FACTS: {fs}", f"SHOW: {show}", ""]
     L += [f"TARGET WORDS: {target}", "```", "", "Word count: n/a"]
     return "\n".join(L)
+
+
+def _cold_open_beats(budget: int, claims: list[str], bad: bool, factor: float, title: str, artist: str) -> list[str]:
+    """Cold-open beats satisfying cold_open checks when not `bad`/`long`, respecting `budget * factor`."""
+    ceiling = budget * factor
+    b1 = "Look closely at the mirror hanging on the back wall of this quiet painted room."
+    b2 = f"In {title}, {artist} places every figure carefully, but one detail refuses to fit the record."
+    close = "Wait until you compare these objects side by side. What does this painting actually show?"
+    out = [b1, b2]
+    words = len(b1.split()) + len(b2.split()) + len(close.split())
+    pool = [
+        " ".join(p.split()[:22]).rstrip(" ,.") + "." if len(p.split()) > 22 else p
+        for p in (claims or ["Look closely at the surface of the painted wood."])
+    ]
+    i = 0
+    while (words < max(65, budget * 0.85) or factor > 1.0) and i < 20:
+        cand = f"Notice how the light falls across the panel. {pool[i % len(pool)]}"
+        cw = len(cand.split())
+        if words + cw > ceiling:
+            filler = "Look at that surface detail again before you decide what it means."
+            if words + len(filler.split()) <= ceiling and words < max(62, budget * 0.82):
+                out.append(filler)
+                words += len(filler.split())
+                i += 1
+                continue
+            break
+        out.append(cand)
+        words += cw
+        i += 1
+    out.append(close)
+    if bad and out:
+        out[0] = "[PAUSE] **" + out[0] + "** <b>"
+    return out
 
 
 def _chapter_beats(cid: str, title: str, budget: int, claims: list[str], bad: bool, factor: float = 1.0) -> list[str]:
@@ -130,6 +166,8 @@ def _mock_script(user: str, retry: bool, cut: bool = False) -> str:
     o = parse_outline(sec).outline
     m = re.search(r"Chapters to write now: ([\w, ]+)", user)
     want = [x.strip() for x in m.group(1).split(",")] if m else [c.id for c in (o.chapters if o else [])]
+    title = (re.search(r"^Title:\s*(.+)$", user, re.M) or [0, "The Test Painting"])[1].strip()
+    artist = (re.search(r"^Artist:\s*(.+)$", user, re.M) or [0, "A. Painter"])[1].strip()
     facts = {f.id: f for f in (o.facts if o else [])}
     out = ["Sure, here is the narration.", "", "HOOK OPTIONS", "1. Look at the mirror.", "2. A wedding?", "", "FINAL SCRIPT", ""]
     for c in (o.chapters if o else []):
@@ -139,7 +177,10 @@ def _mock_script(user: str, retry: bool, cut: bool = False) -> str:
         long_ = (f"[mock:alwayslong {c.id}]" in user) or (not cut and any(f"[mock:{k} {c.id}]" in user for k in ("long", "cutbad", "cutfail")))
         claims = [facts[f].claim for f in c.facts if f in facts]
         out.append(f"## {c.id} {c.title}")
-        for k, t in enumerate(_chapter_beats(c.id, c.title, c.word_budget, claims, bad, 1.5 if long_ else 1.0)):
+        beats = (_cold_open_beats(c.word_budget, claims, bad, 1.5 if long_ else 1.0, title, artist)
+                 if c.role == "cold_open"
+                 else _chapter_beats(c.id, c.title, c.word_budget, claims, bad, 1.5 if long_ else 1.0))
+        for k, t in enumerate(beats):
             fs = ", ".join(c.facts[k % max(1, len(c.facts)):][:2]) if c.facts else ""
             show = (c.show[k % len(c.show)] if c.show else "the whole painting")
             out += [t, f">> facts: {fs} | show: {show}", ""]

@@ -34,11 +34,16 @@ from bti.media import contentbox as CB          # panelbox: the painted area of 
 from . import config as C
 from . import titles as T
 
-MIN_OVERLAY_S = 3.0         # an opening overlay is never shorter (contract section 6, rule 1)
+MIN_OVERLAY_S = 3.0         # an opening overlay is never shorter unless the style's nominal length is itself shorter
+OPEN_MIN_S = 0.5            # shortest duration of a scaled short-opening sweep (style `raking`, `lead` >= 1.2 s)
+OPEN_HOLD_S = 0.30          # painting stays 100 % lit this long on s0000 after ID-OPEN-01 ends (+ 0.35 s before first word >= 0.65 s)
+LABEL_MIN_S = 0.5           # shortest duration of one piece of a cross-cut label
+LABEL_FIRST_NOMINAL_S = 1.5 # keeps the half-second fade-in smooth on a short opening shot
 MIN_ELEMENT_S = 1.5         # a channel-name beat or a chapter mark is never shorter (section 3); the block's `min_element_s` wins
 BRAND_PUSH = 1.03           # the picture under the channel name drifts in by 3 % over the beat
 WHOLE_PUSH = 1.03           # the same for a mark that has no picture of its own to flow into
 MARK_WIDER = 1.04           # a mark starts 4 % wider than the shot it flows into
+STRIP_TECHNIQUES = frozenset({"X-ANN-01", "X-ANN-02"})
 EPS = 1e-9
 
 # The nominal timeline of the opening (contract section 3): (start second in the video, length). The block's own `nominal` numbers
@@ -76,6 +81,10 @@ def _ceil4(x: float) -> float:
 
 def _floor3(x: float) -> float:
     return math.floor(x * 1e3 + 1e-7) / 1e3
+
+
+def _floor6(x: float) -> float:
+    return math.floor(max(0.0, x) * 1e6 + 1e-9) / 1e6
 
 
 def _strip(obj):
@@ -351,7 +360,10 @@ class _Applier:
             tech = self.sd.technique(role)
             if not tech:
                 continue
-            self.add_overlay(role, tech, text)
+            if role == "label" and self.sd.cross_cut.get("label"):
+                self.add_label_span(role, tech, text)
+            else:
+                self.add_overlay(role, tech, text)
 
     def overlay_params(self, role, text) -> dict:
         writes_text = role == "label" or (role == "open" and not self.sd.label_role)
@@ -360,6 +372,109 @@ class _Applier:
         if role == "label":
             return {"title": text["title"], "artist_year": text["artist_year"]}
         return {"title": text["title"], "sub": text["sub"]}
+
+    def _next_overlay_id(self, overlays: list) -> str:
+        n = max([_tail(o.get("id")) for o in overlays if isinstance(o, dict)] + [0]) + 1
+        return "o%d" % n
+
+    def _strip_cutoff(self, shot: dict, s0: float, s1: float, a: float, win_end: float) -> float:
+        """Earliest time in [a, win_end) where a name strip starts or already plays on `shot`."""
+        cut = win_end
+        for o in shot.get("overlays") or []:
+            if not isinstance(o, dict) or o.get("technique") not in STRIP_TECHNIQUES:
+                continue
+            try:
+                st0 = self.tm.resolve(o["start"]) if isinstance(o.get("start"), dict) else None
+            except (AnchorError, KeyError, TypeError):
+                st0 = None
+            if st0 is None:
+                continue
+            if isinstance(o.get("end"), dict):
+                try:
+                    st1 = self.tm.resolve(o["end"])
+                except (AnchorError, KeyError, TypeError):
+                    st1 = s1
+            elif _num(o.get("dur")):
+                st1 = st0 + float(o["dur"])
+            else:
+                st1 = s1
+            if st0 <= a + EPS < st1:
+                cut = min(cut, a)
+            elif a < st0 < cut:
+                cut = min(cut, st0)
+        return cut
+
+    def add_label_span(self, role: str, tech: str, text: dict):
+        """Place the opening label from its nominal start to nominal end, crossing shot cuts seamlessly without blinking and stopping when a strip arrives."""
+        start_nom, length_nom = self.nominal(role)
+        win_start, win_end = start_nom, start_nom + length_nom
+        idx = [i for i in range(len(self.shots)) if self.t0[i] is not None and self.t1[i] is not None and isinstance(self.shots[i], dict)]
+        if not idx:
+            self.skip(None, "no_time", role)
+            return
+        i0 = next((k for k in reversed(idx) if self.t0[k] <= win_start + EPS), idx[0])
+        if self.structure(self.shots[i0]):
+            earlier = [k for k in idx if k < i0 and not self.structure(self.shots[k])]
+            if earlier:
+                i0 = earlier[-1]
+                win_start = max(self.t0[i0], self.t1[i0] - length_nom)
+                win_end = min(self.t1[i0], win_start + length_nom)
+        if self.shots[i0].get("locked"):
+            self.skip(i0, "locked", role)
+            return
+        slices: list[tuple[int, float, float]] = []
+        for i in range(i0, len(self.shots)):
+            if self.t0[i] is None or self.t1[i] is None or not isinstance(self.shots[i], dict):
+                continue
+            s0, s1 = self.t0[i], self.t1[i]
+            if s0 >= win_end - EPS:
+                break
+            if self.structure(self.shots[i]):
+                break
+            if i > i0 and self.shots[i].get("locked"):
+                self.skip(i, "locked", role)
+                break
+            a = max(win_start, s0)
+            win_end = self._strip_cutoff(self.shots[i], s0, s1, a, win_end)
+            b = min(win_end, s1)
+            if b - a < LABEL_MIN_S - EPS:
+                if not slices:
+                    a = max(s0, b - LABEL_MIN_S)
+                if b - a < LABEL_MIN_S - 1e-6:
+                    if not slices:
+                        self.skip(i, "no_room", role)
+                        return
+                    break
+            slices.append((i, a, b))
+        if not slices:
+            self.skip(i0, "no_room", role)
+            return
+        base_params = {**self.defaults(tech), **self.overlay_params(role, text)}
+        base_nom = float(base_params.get("nominal_s") or 4.5)
+        for k, (i, a, b) in enumerate(slices):
+            s = self.shots[i]
+            s0, s1 = self.t0[i], self.t1[i]
+            if not isinstance(s.get("overlays"), list):
+                s["overlays"] = []
+            anchor, start_r = self.anchor_at(a, s0, s.get("start"))
+            # Fit inside s1 within < 1 us when abutting the next piece so Scene switches shots before the overlay ends.
+            raw_dur = min(b, s1) - start_r
+            dur = _floor6(raw_dur) if (k < len(slices) - 1 or abs(b - s1) < 1e-6) else _floor3(raw_dur)
+            while dur > 0 and start_r + dur > s1:
+                dur = round(dur - 1e-6, 6)
+            params = dict(base_params)
+            if len(slices) > 1:
+                if k == 0:
+                    params["fade_out_s"] = 0.0
+                    if dur < base_nom:
+                        params["nominal_s"] = LABEL_FIRST_NOMINAL_S
+                elif k < len(slices) - 1:
+                    params["fade_in_s"] = 0.0
+                    params["fade_out_s"] = 0.0
+                else:
+                    params["fade_in_s"] = 0.0
+            s["overlays"].append({"id": self._next_overlay_id(s["overlays"]), "technique": tech, "intent": "structure",
+                                  "start": anchor, "dur": dur, "params": params, "slots": {}, "locked": False, "source": "agent", "note": ""})
 
     def add_overlay(self, role, tech, text):
         start_nom, length_nom = self.nominal(role)
@@ -377,8 +492,12 @@ class _Applier:
         s = self.shots[i]
         s0, s1 = self.t0[i], self.t1[i]
         start = max(start_nom, s0)
-        end = min(start + length_nom, s1)
-        floor = max(MIN_OVERLAY_S, self.cfg.min_element_s)         # never below the engine's floor for an element of the identity
+        short_open = (role == "open" and length_nom < MIN_OVERLAY_S)
+        floor = OPEN_MIN_S if short_open else max(MIN_OVERLAY_S, self.cfg.min_element_s)
+        cap_end = s1
+        if short_open and s.get("id") == "s0000" and s1 - start >= floor + OPEN_HOLD_S - EPS:
+            cap_end = s1 - OPEN_HOLD_S
+        end = min(start + length_nom, cap_end)
         if end - start < floor - EPS:
             start = max(s0, end - floor)
         if end - start < floor - 1e-6:
@@ -391,10 +510,9 @@ class _Applier:
             s["overlays"] = []
         anchor, start_r = self.anchor_at(start, s0, s.get("start"))
         dur = _floor3(min(end, s1) - start_r)
-        n = max([_tail(o.get("id")) for o in s["overlays"] if isinstance(o, dict)] + [0]) + 1
         # `source` is the compiler's word for what a program wrote ("agent"): the draft compiler writes every overlay it builds that way,
         # so an edit that rebuilds this shot finds the overlay unchanged
-        s["overlays"].append({"id": "o%d" % n, "technique": tech, "intent": "structure", "start": anchor, "dur": dur,
+        s["overlays"].append({"id": self._next_overlay_id(s["overlays"]), "technique": tech, "intent": "structure", "start": anchor, "dur": dur,
                               "params": {**self.defaults(tech), **self.overlay_params(role, text)}, "slots": {}, "locked": False, "source": "agent", "note": ""})
 
     def anchor_at(self, t: float, shot_t0: float, shot_start) -> tuple:

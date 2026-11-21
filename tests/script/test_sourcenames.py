@@ -195,7 +195,8 @@ def test_validate_narration_warns_per_line(version, authors, talk):
     assert all(i["level"] == "warning" and i["chapter"] and i["beat"] and i["found"] for i in t)
     assert not validate.blocking(a + t)                          # a warning: it never blocks the approval by itself
     if version == 3:
-        assert [i for i in iss if i["level"] in ("warning", "error")] == []            # the accepted narration has no warning at all
+        non_cold_open = [i for i in iss if i["level"] in ("warning", "error") and not str(i.get("code") or "").startswith("cold_open_")]
+        assert non_cold_open == []                                  # no source/error warnings on v3 (v3 predates cold-open rules)
 
 
 def test_without_a_brief_the_names_are_not_known_but_the_phrases_are_checked():

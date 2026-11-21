@@ -1027,3 +1027,15 @@ Object.assign(EXPORT_LABELS, PARTEXPORT_LABELS);
 
 // ---- worker namefirst: first presentation of a named figure.
 CODE.name_not_shown = "Chưa hiện tên khi giới thiệu";
+
+// ---- worker introrules (2026-11-21): cold-open script checks.
+export const CODE_INTRORULES = {
+  cold_open_missing_name: 'Mở đầu thiếu tên tranh hoặc họa sĩ',
+  cold_open_late_name: 'Mở đầu đọc tên tranh hoặc họa sĩ muộn',
+  cold_open_first_line_long: 'Dòng mở đầu quá dài',
+  cold_open_no_early_turn: 'Mở đầu chưa đặt mâu thuẫn sớm',
+  cold_open_no_closing_question: 'Mở đầu chưa kết bằng câu hỏi mở',
+  cold_open_roadmap: 'Mở đầu có câu giới thiệu kế hoạch video',
+  cold_open_word_count: 'Độ dài phần mở đầu ngoài 60–145 từ',
+};
+Object.assign(CODE, CODE_INTRORULES);

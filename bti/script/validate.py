@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from . import sourcenames
+from . import cold_open, sourcenames
 from .stats import MAX_SENTENCE_WORDS, WPS_DEFAULT, count_words, minutes, narration_stats, sentences
 from .store import Narration, Outline, chapter_order_differs
 from .. import textfold
@@ -225,6 +225,40 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
     for ch in st["chapters"]:
         if ch["budget"] and ch["id"] in have and ch["words"] and abs(ch["words"] / ch["budget"] - 1) > 0.30:
             out.append(issue("warning", "chapter_off_budget", f"Chapter {ch['id']} {ch['title']} has {ch['words']} words; its budget is {ch['budget']} (more than 30% away).", chapter=ch["id"]))
+    co = cold_open.inspect(cold_open.find_cold_open(n, outline), brief)
+    if co["present"]:
+        cid = co["chapter"]
+        if co["missing_names"]:
+            what = " and ".join({"title": "the painting's name", "artist": "the painter's name"}[k] for k in co["missing_names"])
+            out.append(issue("warning", "cold_open_missing_name",
+                             f"Cold open {cid} does not speak {what} in ordinary speech outside quotations.",
+                             chapter=cid, args={"chapter": cid, "missing": co["missing_names"], "title": co["title"], "artist": co["artist"]}))
+        elif co["late_names"]:
+            what = " and ".join({"title": "the painting's name", "artist": "the painter's name"}[k] for k in co["late_names"])
+            out.append(issue("warning", "cold_open_late_name",
+                             f"Cold open {cid} speaks {what} after the first {cold_open.EARLY_WINDOW_WORDS} words; speak both within the first {cold_open.EARLY_WINDOW_WORDS} words.",
+                             chapter=cid, args={"chapter": cid, "late": co["late_names"], "title": co["title"], "artist": co["artist"], "max_words": cold_open.EARLY_WINDOW_WORDS}))
+        if co["first_beat_words"] > cold_open.MAX_FIRST_LINE_WORDS:
+            out.append(issue("warning", "cold_open_first_line_long",
+                             f"First line {co['first_beat_id']} in {cid} has {co['first_beat_words']} words (more than {cold_open.MAX_FIRST_LINE_WORDS}); keep the opening line brief and visual.",
+                             chapter=cid, beat=co["first_beat_id"],
+                             args={"chapter": cid, "beat": co["first_beat_id"], "words": co["first_beat_words"], "max": cold_open.MAX_FIRST_LINE_WORDS}))
+        if not co["has_early_turn"]:
+            out.append(issue("warning", "cold_open_no_early_turn",
+                             f"Cold open {cid} has no 'but' or 'yet' contradiction turn in its first {cold_open.EARLY_WINDOW_WORDS} words.",
+                             chapter=cid, args={"chapter": cid, "max_words": cold_open.EARLY_WINDOW_WORDS}))
+        if not co["has_closing_question"]:
+            out.append(issue("warning", "cold_open_no_closing_question",
+                             f"Cold open {cid} does not end on an open question (? in {co['last_beat_id']}).",
+                             chapter=cid, beat=co["last_beat_id"], args={"chapter": cid, "beat": co["last_beat_id"]}))
+        for bid, found in co["roadmap"]:
+            out.append(issue("warning", "cold_open_roadmap",
+                             f"Beat {bid} in {cid} uses a plan-of-the-video phrase ({'; '.join(repr(x) for x in found[:3])}); open on the painting and question instead.",
+                             chapter=cid, beat=bid, args={"chapter": cid, "beat": bid, "found": found[:3]}))
+        if co["total_words"] < cold_open.MIN_WORDS or co["total_words"] > cold_open.MAX_WORDS:
+            out.append(issue("warning", "cold_open_word_count",
+                             f"Cold open {cid} has {co['total_words']} words (keep it between {cold_open.MIN_WORDS} and {cold_open.MAX_WORDS}).",
+                             chapter=cid, args={"chapter": cid, "words": co["total_words"], "min": cold_open.MIN_WORDS, "max": cold_open.MAX_WORDS}))
     out.append(issue("info", "length", f"{st['words']} words, about {st['minutes']:.1f} minutes at {wps} words per second."))
     med = st["sentence_profile"]["median"]
     med_str = f"{med:.1f}".rstrip("0").rstrip(".") if isinstance(med, float) else f"{med}"

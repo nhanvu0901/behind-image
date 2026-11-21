@@ -12851,7 +12851,7 @@
    ],
    "timing": {
     "default_s": 9.0,
-    "min_s": 1.5,
+    "min_s": 0.5,
     "max_s": 30.0,
     "anchor": "shot_start"
    },
@@ -12885,7 +12885,7 @@
     "context"
    ],
    "description": "Two lines at the bottom left, directly on the picture: the title in italic, then the artist and year. No strip or box; a soft shadow keeps it readable.",
-   "usage_rule": "Overlay on the opening shot, about 6 s into the video, 4.5 s long. Style `raking` of the channel identity.",
+   "usage_rule": "Overlay starting at 0.3 s on the opening shot and continuing across the cut into the first narrated shot up to about 8 s (or until a name strip arrives). Style `raking` of the channel identity.",
    "channel_usage": "core",
    "offered": false,
    "hidden_reason": {
@@ -12942,7 +12942,7 @@
     {
      "name": "title_cap_pct",
      "type": "number",
-     "default": 3.0,
+     "default": 4.2,
      "min": 0.5,
      "max": 10,
      "unit": "% H",
@@ -12952,7 +12952,7 @@
     {
      "name": "second_cap_pct",
      "type": "number",
-     "default": 2.3,
+     "default": 3.0,
      "min": 0.5,
      "max": 8,
      "unit": "% H",
@@ -13002,7 +13002,7 @@
    ],
    "timing": {
     "default_s": 4.5,
-    "min_s": 1.5,
+    "min_s": 0.5,
     "max_s": 30.0,
     "anchor": "shot_start"
    },

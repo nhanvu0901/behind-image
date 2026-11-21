@@ -42,13 +42,13 @@ def word_anchored(sb):
 
 
 # ----------------------------------------------------------------------------------------------------------------- zones (pure)
-def test_the_opening_exists_when_the_first_word_starts_at_3_3_s_or_later_and_the_video_starts_with_a_cold_open():
-    t = normalize_timing(intro_timing(5.0))
-    assert Z.opening_span(t["chapters"], t["words"]) == {"start": 0.0, "dur": pytest.approx(4.65)}
-    for lead, has in ((0.35, False), (3.29, False), (3.3, True), (3.4, True), (15.0, True)):
+def test_the_opening_exists_when_the_first_word_starts_at_1_2_s_or_later_and_the_video_starts_with_a_cold_open():
+    t = normalize_timing(intro_timing(2.0))
+    assert Z.opening_span(t["chapters"], t["words"]) == {"start": 0.0, "dur": pytest.approx(1.65)}
+    for lead, has in ((0.35, False), (1.19, False), (1.2, True), (2.0, True), (15.0, True)):
         t = normalize_timing(intro_timing(lead))
         assert (Z.opening_span(t["chapters"], t["words"]) is not None) is has, lead
-    t = normalize_timing(intro_timing(5.0))
+    t = normalize_timing(intro_timing(2.0))
     t["chapters"][0]["lead"]["kind"] = "title"                      # a video with no cold open starts with the beat: no opening shot
     assert Z.opening_span(t["chapters"], t["words"]) is None
 
@@ -87,24 +87,31 @@ def test_a_painting_that_already_fills_the_frame_is_never_pushed_out_of_it():
 
 # --------------------------------------------------------------------------------------------------------- the compiler writes it
 def test_a_full_compile_writes_the_opening_shot_the_beat_and_the_cards(tmp_path, brand03):
-    timing = intro_timing(5.0, 10.2)
+    timing = intro_timing(2.0, 10.2, spacing=0.7)
     res = compiled(make_project(tmp_path, timing))
     sb = res.storyboard
     tm, t0, t1 = times(sb, timing)
     first = sb["shots"][0]
-    # the opening shot: from 0 to 0.35 s before the first word, the whole main painting, no overlays but the opening's own
+    # the opening shot: from 0 to 0.35 s before the first word, the whole main painting, with ID-OPEN-01 and Piece 0 of cross-cut ID-LABEL-01
     assert first["id"] == Z.OPENING_ID == "s0000" and first["technique"] == "CAM-01" and first["start"] == {"t": 0.0}
     assert first["slots"] == {"image": {"asset": "A"}} and first["intent"] == "establish" and first["locked"] is False and first["note"] == Z.OPENING_NOTE
-    assert (t0[0], t1[0]) == (0.0, pytest.approx(5.0 - 0.35))
+    assert (t0[0], t1[0]) == (0.0, pytest.approx(2.0 - 0.35))
     cam = first["params"]["camera"]
     for k in cam:
         assert 800 * k["zoom"] <= 1920 and 1200 * k["zoom"] <= 1080
     assert [o["technique"] for o in first["overlays"]] == ["ID-OPEN-01", "ID-LABEL-01"]
-    assert tm.resolve(first["overlays"][0]["start"]) == pytest.approx(0.0) and first["overlays"][0]["dur"] == pytest.approx(3.6)
-    assert tm.resolve(first["overlays"][1]["start"]) == pytest.approx(1.2, abs=1e-3) and first["overlays"][1]["dur"] == pytest.approx(5.0 - 0.35 - 1.2, abs=1e-3)
-    # the model's first shot starts 0.35 s before the first word
+    assert tm.resolve(first["overlays"][0]["start"]) == pytest.approx(0.0) and first["overlays"][0]["dur"] == pytest.approx(1.35)
+    assert tm.resolve(first["overlays"][1]["start"]) == pytest.approx(0.3, abs=1e-3)
+    assert tm.resolve(first["overlays"][1]["start"]) + first["overlays"][1]["dur"] == pytest.approx(t1[0], abs=1e-3)
+    assert first["overlays"][1]["params"]["fade_out_s"] == 0.0
+    # the model's first shot starts 0.35 s before the first word and carries the seamless ID-LABEL-01 continuation up to 8.0 s
     second = sb["shots"][1]
-    assert second["start"] == {"w": 0, "off": -0.35, "text": "w0"} and second["id"] != "s0000" and not [o for o in second["overlays"] if o["technique"].startswith("ID-")]
+    assert second["start"] == {"w": 0, "off": -0.35, "text": "w0"} and second["id"] != "s0000"
+    sec_id = [o for o in second["overlays"] if o["technique"].startswith("ID-")]
+    assert [o["technique"] for o in sec_id] == ["ID-LABEL-01"]
+    assert tm.resolve(sec_id[0]["start"]) == pytest.approx(t1[0], abs=1e-3)
+    assert tm.resolve(sec_id[0]["start"]) + sec_id[0]["dur"] == pytest.approx(8.0, abs=1e-3)
+    assert sec_id[0]["params"]["fade_in_s"] == 0.0 and sec_id[0]["params"]["fade_out_s"] == 0.5
     # the beat: 9.1 s, 1.5 s after the last word of the cold open, with the three texts; the card ends where the silence ends
     beat = by_technique(sb, "ID-BRAND")[0]
     i = sb["shots"].index(beat)
@@ -197,9 +204,12 @@ def test_a_storyboard_made_for_a_voice_is_off_after_the_voice_is_assembled_again
     assert all(p["repair"] for p in off)
     out, rep = RT.retime(sb, new_t, style_doc(), {"main_asset": "A"}, brand03.param_defaults)
     assert RT.off_voice(out, new_t, style_doc()) == [] and rep["left"] == []
-    # every shot anchored to a word is untouched, byte for byte (the opening shot only moves its overlays, which are the program's)
+    # every shot anchored to a word is untouched, except ID-LABEL-01 continuation on the first narrated shot whose window tracks 8.0 s
+    def _strip_id_label(s):
+        return {**s, "overlays": [o for o in s.get("overlays") or [] if o.get("technique") != "ID-LABEL-01"]}
     for sid, s in word_anchored(sb).items():
-        assert json.dumps(next(x for x in out["shots"] if x["id"] == sid), sort_keys=True) == json.dumps(s, sort_keys=True), sid
+        got = next(x for x in out["shots"] if x["id"] == sid)
+        assert json.dumps(_strip_id_label(got), sort_keys=True) == json.dumps(_strip_id_label(s), sort_keys=True), sid
     # the beat is 9.1 s again, 1.5 s after the last word; the marks end where their silence ends; the video ends with the voice
     tm, t0, t1 = times(out, new_t)
     i = out["shots"].index(by_technique(out, "ID-BRAND")[0])
@@ -247,7 +257,7 @@ def test_an_old_layout_storyboard_is_clean_and_retime_after_a_lead_of_5_s_insert
     assert RT.off_voice(out, new_t, style_doc()) == [] and rep["left"] == []
     ov = [o["technique"] for o in out["shots"][0]["overlays"]]
     assert ov == ["ID-OPEN-01", "ID-LABEL-01"]                             # the opening overlays moved onto the opening shot ...
-    assert not [o for o in out["shots"][1]["overlays"] if o["technique"].startswith("ID-")]       # ... and left the model's first shot
+    assert [o["technique"] for o in out["shots"][1]["overlays"] if o["technique"].startswith("ID-")] == ["ID-LABEL-01"]       # ... while label continuation stays on s0001 without ID-OPEN-01
     assert out["shots"][1]["start"] == {"w": 0, "off": -0.35, "text": "w0"}
     assert by_technique(out, "ID-BRAND")[0]["technique"] == "ID-BRAND-03" and by_technique(out, "ID-BRAND")[0]["params"]["subtitle"] == "Some Painter, 1434"
     tm2, a, b = times(out, new_t)

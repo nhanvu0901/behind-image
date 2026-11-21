@@ -141,14 +141,14 @@ def test_the_floor_is_read_from_the_registry_not_written_down(sb, tmg, bundle):
 
 def test_an_overlay_of_the_identity_shorter_than_the_floor_is_an_error(sb, tmg, bundle):
     first = sb["shots"][0]
-    for dur, expect in ((1.0, 1), (1.5, 0), (4.0, 0)):
+    for dur, expect in ((0.3, 1), (0.5, 0), (4.0, 0)):
         first["overlays"] = [o for o in first["overlays"] if not o["technique"].startswith("ID-")]
         first["overlays"].append({"id": "o9", "technique": "ID-OPEN-01", "intent": "structure", "start": {"t": 0.5}, "dur": dur, "params": {}, "slots": {},
                                   "locked": False, "source": "agent", "note": ""})
         got = issues(sb, tmg, bundle, "element_too_short")
         assert len(got) == expect, (dur, got)
         if expect:
-            assert got[0]["path"] == "shots[0].overlays[%d]" % (len(first["overlays"]) - 1) and got[0]["args"]["got"] == pytest.approx(1.0)
+            assert got[0]["path"] == "shots[0].overlays[%d]" % (len(first["overlays"]) - 1) and got[0]["args"]["got"] == pytest.approx(0.3)
 
 
 def test_other_techniques_have_no_such_floor(sb, tmg, bundle):

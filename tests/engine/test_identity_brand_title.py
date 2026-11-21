@@ -391,7 +391,7 @@ def golden_frames(root):
     grab("brand01_rtl", make_lab(root, [shot(1, 0.0, "ID-BRAND-01", {"text": "Light and Shadow", "direction": "right_to_left", "shadow": False, "y_pct": 55}, camera=cam)],
                                  image=img, name="g2", end=8.0), (1.7, 4.2))
     grab("mark01", make_lab(root, [shot(1, 0.0, "ID-MARK-01", {"title": "5. The Mirror"}, camera=cam)], image=img, name="g3", end=8.0), (0.8, 1.5, 2.2, 3.0))
-    grab("label01", make_lab(root, [shot(1, 0.0, "CAM-01", overlays=[ov(1, "ID-LABEL-01", 0.5, 4.5, {"title": "The Arnolfini Portrait", "artist_year": "Jan van Eyck, 1434"})],
+    grab("label01", make_lab(root, [shot(1, 0.0, "CAM-01", overlays=[ov(1, "ID-LABEL-01", 0.5, 4.5, {"title": "The Arnolfini Portrait", "artist_year": "Jan van Eyck, 1434", "title_cap_pct": 3.0, "second_cap_pct": 2.3})],
                                          camera=cam)], image=img, name="g4", end=8.0), (0.7, 2.0, 4.8))
     grab("open02", make_lab(root, [shot(1, 0.0, "CAM-01", overlays=[ov(1, "ID-OPEN-02", 0.5, 5.0, {"title": "Hands", "sub": "Jan van Eyck · 1434"})], camera=cam)],
                             image=img, name="g5", end=8.0), (1.2, 3.0, 5.2))

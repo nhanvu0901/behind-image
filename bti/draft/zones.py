@@ -8,7 +8,7 @@ The silences the voice leaves (`timing.json`, `chapters[].lead`):
     the first chapter after it:       [lead.start ... lead.end)           `lead.kind` "title": the beat, then (when the chapter has one) its card
     any later chapter with a card:    [lead.start ... lead.end)           `lead.kind` "card": the card sits at the end of it
 
-The opening shot (`opening_span`): when the first word starts at 3.3 s or later, the video starts with a shot of the ENTIRE painting from
+The opening shot (`opening_span`): when the first word starts at 1.2 s or later, the video starts with a shot of the ENTIRE painting from
 0 to 0.35 s before the first word; the model's first shot starts there. The shot is marked by its id, `OPENING_ID`: the compiler hands
 out `s0001`, `s0002`, ... and `bti.ops` the next number after the largest in use, so `s0000` is never anybody's but this shot's; an id
 survives every typed operation, an edit-mode compile (the id is read back from the saved storyboard), the fast edit and the identity
@@ -28,7 +28,7 @@ CARD_S = 2.8                     # a chapter card
 TITLE_CARD_S = 2.9               # the beat of a style that has no nominal length of its own (and the old title card)
 MIN_CARD_S = 1.0
 BREATH_S = 1.2                   # air after the last word of the cold open, before the beat starts
-OPENING_MIN_FIRST_WORD_S = 3.3   # the opening shot exists when the first word starts this late or later
+OPENING_MIN_FIRST_WORD_S = 1.2   # the opening shot exists when the first word starts this late or later
 OPENING_LEAD_S = 0.35            # the model's first shot starts this long before the first word
 OPENING_PUSH = 1.03              # the whole painting drifts in by at most 3 %
 OPENING_ID = "s0000"
@@ -64,7 +64,7 @@ def title_length(brand_s: float, gap: float, cd: float) -> float:
 
 # ---------------------------------------------------------------------------------------------------------- the opening
 def opening_span(chapters: list, words: list) -> dict | None:
-    """`{"start": 0.0, "dur": seconds}` of the opening shot, or None when there is none: the first word starts before 3.3 s, or the video
+    """`{"start": 0.0, "dur": seconds}` of the opening shot, or None when there is none: the first word starts before 1.2 s, or the video
     starts with a title or a card (no cold open: the first picture is the beat or the card)."""
     if not chapters or not words:
         return None

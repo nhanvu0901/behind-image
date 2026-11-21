@@ -34,7 +34,12 @@ Two examples of a long sentence split in two for the ear:
   Split in two (15 and 15 words): "Early scholars saw this as a private wedding ceremony taking place in a bedchamber. Newer archival research suggests a wealthy merchant granting legal authority to his wife."
 
 7. A STRUCTURE FOR THE WHOLE.
-Open on something specific that the viewer can look at, and a question the video will answer, not on a summary. Chapters turn on a new object, a new problem or a change of scale; each ends by handing the viewer a reason to read on. The close answers the opening question as far as the sources allow, or says honestly where they stop. Never end with a slogan, a call to action or a moral. Write fresh sentences: never copy a sentence from a source text, and never copy phrases from other channels.
+Open inside the picture on something specific that the viewer can see right away, never on a summary or a greeting.
+ - The program holds the whole painting briefly before your first word. Start with a short first line (at most 25 words) pointing at a visible detail.
+ - Speak both the painting's name and the painter's name in ordinary speech (outside quotations or translated inscriptions) within about the first 60 words, and give the year too when it is certain and matters.
+ - Set the contradiction, puzzle or question before about word 72 (second 30), with concrete evidence right after.
+ - Close the cold open (60 to 145 words total) on an open question that the rest of the video works on, paired with the pull back to the whole painting — never on a plan of the video ("in this video", "today we will", "let's find out").
+Chapters turn on a new object, a new problem or a change of scale; each ends by handing the viewer a reason to read on. The close answers the opening question as far as the sources allow, or says honestly where they stop. Never end with a slogan, a call to action or a moral. Write fresh sentences: never copy a sentence from a source text, and never copy phrases from other channels.
 
 8. THE VIEWER HAS NEVER HEARD OF YOUR SOURCES.
 This is a video essay for a general audience, not a review of books. The viewer must never hear the name of an author of a source book, and you never say "the books", "both books", "two of the books", "the sources", "this source", "that passage" or "the book says". The fact table keeps who said what, for the owner; you tell what is known and how it can be read, in your own voice.

@@ -41,12 +41,12 @@ def _old_assemble_sig(plan, cfg):
 
 # ------------------------------------------------------------------------------------------------------------- what is in force
 def test_the_config_has_the_new_opening_block_and_a_project_without_values_keeps_the_old_silences(cfg):
-    assert cfg["intro"] == {"lead": 5.0, "title": 10.2}
+    assert cfg["intro"] == {"lead": 2.0, "title": 10.2}
     s = silence_settings({}, cfg)
-    assert (s["lead"], s["title"], s["own"]) == (0.35, 6.2, {"lead": False, "title": False}) and s["intro"] == {"lead": 5.0, "title": 10.2}
+    assert (s["lead"], s["title"], s["own"]) == (0.35, 6.2, {"lead": False, "title": False}) and s["intro"] == {"lead": 2.0, "title": 10.2}
     assert silenced(cfg, {}) is cfg and silenced(cfg, {"tempo": 1.1}) is cfg              # nothing of its own: the very same config
-    own = silence_settings({"lead": 5.0, "title": 10.2}, cfg)
-    assert (own["lead"], own["title"], own["own"]) == (5.0, 10.2, {"lead": True, "title": True})
+    own = silence_settings({"lead": 2.0, "title": 10.2}, cfg)
+    assert (own["lead"], own["title"], own["own"]) == (2.0, 10.2, {"lead": True, "title": True})
     for bad in ({"lead": 0.1}, {"lead": 16}, {"lead": True}, {"lead": "5"}, {"title": 2.9}, {"title": 31}, {"title": float("nan")}):
         assert not any(silence_settings(bad, cfg)["own"].values()), bad                    # a value out of its range is ignored
 
@@ -88,13 +88,13 @@ def client(tmp_path, cfg):
 def test_get_shows_the_values_in_force_and_whether_they_are_the_projects_own(client):
     s = client.get("/api/projects/vtest/voice").json()["silence"]
     assert (s["lead"], s["title"], s["own"]) == (0.35, 6.2, {"lead": False, "title": False})
-    assert s["default"] == {"lead": 0.35, "title": 6.2} and s["intro"] == {"lead": 5.0, "title": 10.2} and s["range"] == {"lead": [0.2, 15.0], "title": [3.0, 30.0]}
-    r = client.put("/api/projects/vtest/voice/settings", json={"lead": 5, "title": 10.2})
+    assert s["default"] == {"lead": 0.35, "title": 6.2} and s["intro"] == {"lead": 2.0, "title": 10.2} and s["range"] == {"lead": [0.2, 15.0], "title": [3.0, 30.0]}
+    r = client.put("/api/projects/vtest/voice/settings", json={"lead": 2, "title": 10.2})
     assert r.status_code == 200
     s = r.json()["silence"]
-    assert (s["lead"], s["title"], s["own"]) == (5.0, 10.2, {"lead": True, "title": True})
+    assert (s["lead"], s["title"], s["own"]) == (2.0, 10.2, {"lead": True, "title": True})
     assert r.json()["settings"] == {"tempo": 1.0, "pad": True}             # tempo and pad are exactly what they were
-    assert files.read_settings(client.root / "vtest") == {"lead": 5.0, "title": 10.2}
+    assert files.read_settings(client.root / "vtest") == {"lead": 2.0, "title": 10.2}
 
 
 def test_one_value_alone_and_null_takes_it_away(client):
@@ -120,7 +120,15 @@ def test_a_project_the_app_creates_gets_the_intro_silences(tmp_path, monkeypatch
     d = tmp_path / "newproj"
     d.mkdir()
     P._write_intro_silences(d)
-    assert files.read_settings(d) == {"lead": 5.0, "title": 10.2, "tempo": 1.1}
+    assert files.read_settings(d) == {"lead": 2.0, "title": 10.2, "tempo": 1.1}
+
+
+def test_an_old_project_keeps_its_own_lead_until_changed_through_settings_route(client):
+    files.write_settings(client.root / "vtest", {"lead": 5.0, "title": 10.2})
+    assert client.get("/api/projects/vtest/voice").json()["silence"]["lead"] == 5.0
+    r = client.put("/api/projects/vtest/voice/settings", json={"lead": 2.0})
+    assert r.status_code == 200 and r.json()["silence"]["lead"] == 2.0
+    assert files.read_settings(client.root / "vtest") == {"lead": 2.0, "title": 10.2}
 
 
 def test_create_project_itself_writes_them(tmp_path):
@@ -131,7 +139,7 @@ def test_create_project_itself_writes_them(tmp_path):
     except projects.ProjectError as e:
         pytest.skip("no library data on this machine: %s" % e)
     d = tmp_path / p["id"]
-    assert files.read_settings(d) == {"lead": 5.0, "title": 10.2, "tempo": 1.1}
+    assert files.read_settings(d) == {"lead": 2.0, "title": 10.2, "tempo": 1.1}
     assert silence_settings(files.read_settings(d), load_voice_config())["own"] == {"lead": True, "title": True}
 
 

@@ -178,3 +178,19 @@ test('the new script checks: a sentence in Vietnamese that carries what was foun
   assert.ok(isVietnamese(n.text) && /HOD-04 seems to describe another painting/.test(n.text) && !/Note for the owner/.test(n.text));
   assert.match(issueText({ code: 'long_sentence', beat: 'b0147', message: 'Beat b0147 in c07 has a sentence with 26 words (more than 25); split it.' }).text, /26 từ.*trên 25 từ/);
 });
+
+test('cold-open check issues format clean Vietnamese sentences', () => {
+  const cases = [
+    ['cold_open_missing_name', { chapter: 'c01', missing: ['title', 'artist'] }],
+    ['cold_open_late_name', { chapter: 'c01', late: ['artist'], max_words: 72 }],
+    ['cold_open_first_line_long', { chapter: 'c01', beat: 'b0001', words: 36, max: 25 }],
+    ['cold_open_no_early_turn', { chapter: 'c01', max_words: 72 }],
+    ['cold_open_no_closing_question', { chapter: 'c01', beat: 'b0005' }],
+    ['cold_open_roadmap', { chapter: 'c01', beat: 'b0001', found: ['in this video'] }],
+    ['cold_open_word_count', { chapter: 'c01', words: 149, min: 60, max: 145 }],
+  ];
+  for (const [code, args] of cases) {
+    const res = issueText({ level: 'warning', code, chapter: args.chapter, beat: args.beat, args });
+    assert.ok(isVietnamese(res.text) && !res.generic, `${code} -> ${res.text}`);
+  }
+});

@@ -15,7 +15,11 @@ def codes(issues, level=None):
 
 
 def good():
-    return make_narration((100, 200, 100)), make_outline(approved=True)
+    n = make_narration((100, 200, 100))
+    # Keep test_validate's synthetic c01 (100 words across 4 beats of 25 words) satisfying the cold-open structure checks.
+    n.chapters[0].beats[1].text = "But " + n.chapters[0].beats[1].text[5:]
+    n.chapters[0].beats[-1].text = n.chapters[0].beats[-1].text[:-1] + "?"
+    return n, make_outline(approved=True)
 
 
 def test_a_clean_narration_has_no_errors_or_warnings():

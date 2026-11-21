@@ -123,7 +123,8 @@ Take the numbers from `docs/APP_GUIDE.md` (sections 5.1 to 5.5); the page shows 
 - **A fact is not a message.** A remark to the owner ("check this before it is used") does not belong in a fact or its conflict: the narration is written from it and may speak it. That is the warning
   `fact_for_owner` and it stops an automatic run before the outline gate. The model's own remarks to the owner are the `NOTE` lines of the outline, shown among the checks as `outline_note` (a warning that
   does not stop a run; read them before you approve the outline, and tell the owner what they say). The narration never sees them.
-- **A hook first.** The outline carries the main question and three candidate openings; the video opens with one of them (the cold open states the question) and the facts that answer it come before the biography.
+- **A hook first.** The outline carries the main question and three candidate openings; the cold open (`ROLE: cold_open`, 60 to 145 words) starts with a short visual first line (at most 25 words), speaks both the painting's name and the painter's name in ordinary speech within about 60 words, sets the contradiction ("but"/"yet") before about word 72, and ends on an open question (`?`) with no plan-of-the-video phrases.
+- **Cold-open warnings.** Narration checks report `cold_open_missing_name`, `cold_open_no_closing_question` and `cold_open_roadmap` (these stop an automatic run so the voice stage does not read an incomplete opening), plus `cold_open_late_name`, `cold_open_first_line_long`, `cold_open_no_early_turn` and `cold_open_word_count`.
 - **Each line says what to show.** The `show` hint of a line ("the mirror; the writing above it") is what the picture step works from; a line with none is a warning (`no_show`).
 - **Overlap with the books** is only information (the owner decided copyright is not a blocker), but a line that copies a sentence of a book is a poor line: write it again in your own words.
 
@@ -132,7 +133,7 @@ Take the numbers from `docs/APP_GUIDE.md` (sections 5.1 to 5.5); the page shows 
 | code | what to do |
 |---|---|
 | `outline_has_errors`, `narration_has_errors` | Read `issues` (and `chapter_diff` for the narration), fix them (regenerate with a note, or import corrected text), then approve again. |
-| a warning `source_author_named`, `source_talk`, `fact_for_owner` stops `bti run` (`quality_warning`) | Not an error: the run waits for you. Regenerate the chapter (or the outline) with a note that names the lines, or fix with `narration.ops`; then run again. |
+| a warning `source_author_named`, `source_talk`, `fact_for_owner`, `cold_open_missing_name`, `cold_open_no_closing_question`, `cold_open_roadmap` stops `bti run` (`quality_warning`) | Not an error: the run waits for you. Regenerate the chapter (or the outline) with a note that names the lines, or fix with `narration.ops`; then run again. |
 | `outline_not_approved`, `outline_stale`, `outline_missing` | The narration follows the approved outline: approve the outline (again) first. |
 | `locked_beats` | The owner locked lines the new text would replace: leave them, or `--set force=true` only when the owner said so. |
 | `model_job_busy`, `no_running_job` (exit 5) | A model job runs for this project: `bti job <id> --wait`, then go on. |

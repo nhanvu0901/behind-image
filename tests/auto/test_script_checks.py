@@ -58,6 +58,28 @@ def test_the_length_warnings_keep_their_place():
     assert "words_off_target" in checks.STOPS["narration"] and "chapter_off_budget" in checks.TOLERATED["narration"] and "long_sentence" in checks.TOLERATED["narration"]
 
 
+def test_the_new_codes_are_sorted_and_described_on_the_page():
+    codes_7 = {
+        "cold_open_missing_name",
+        "cold_open_late_name",
+        "cold_open_first_line_long",
+        "cold_open_no_early_turn",
+        "cold_open_no_closing_question",
+        "cold_open_roadmap",
+        "cold_open_word_count",
+    }
+    assert {"cold_open_missing_name", "cold_open_no_closing_question", "cold_open_roadmap"} <= set(checks.STOPS["narration"])
+    assert {"cold_open_late_name", "cold_open_first_line_long", "cold_open_no_early_turn", "cold_open_word_count"} <= set(checks.TOLERATED["narration"])
+    js = (JS / "errmsg.js").read_text(encoding="utf-8")
+    labels = (JS / "labels.js").read_text(encoding="utf-8")
+    for code in codes_7:
+        assert re.search(r"\b%s:" % code, js), code
+        assert re.search(r"\b%s:" % code, labels), code
+    assert "worker introrules" in js and "worker introrules" in labels
+    assert "Object.assign(BUILD, INTRORULES_ISSUES);" in js.splitlines() and "Object.assign(CODE, CODE_INTRORULES);" in labels.splitlines()
+    assert "words_off_target" in checks.STOPS["narration"] and "chapter_off_budget" in checks.TOLERATED["narration"] and "long_sentence" in checks.TOLERATED["narration"]
+
+
 def test_every_warning_of_the_script_step_has_a_sentence_for_the_page_and_the_new_ones_a_label():
     js = (JS / "errmsg.js").read_text(encoding="utf-8")
     labels = (JS / "labels.js").read_text(encoding="utf-8")

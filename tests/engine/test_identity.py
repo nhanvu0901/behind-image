@@ -83,7 +83,8 @@ def test_registry_entries_are_complete():
         s = b.spec(tid)
         assert s and b.available(tid) and s["label_vi"] and len(s["description"]) > 30, tid
         assert s["engine"]["impl"] == "bti.engine.techniques.identity." + R.RENDERERS[tid][0].__name__
-        assert s["timing"]["min_s"] == 1.5 and s["timing"]["default_s"] == NOMINAL[tid], tid           # an element is never shorter than 1.5 s
+        want_min = 0.5 if tid in ("ID-OPEN-01", "ID-LABEL-01") else 1.5
+        assert s["timing"]["min_s"] == want_min and s["timing"]["default_s"] == NOMINAL[tid], tid           # opening/label allow short 2 s openings; rest stay >= 1.5 s
         assert (R.RENDERERS[tid][1], bool(s["slots"])) == (("overlay", False) if tid in OVERLAYS else ("base", True)), tid
         for p in s["params"]:
             if p["type"] == "number":
@@ -103,7 +104,7 @@ def test_style_block_names_the_techniques_of_each_style():
     assert idn["channel_name"] == "RAKING LIGHT" and idn["default_style"] == "raking" and set(idn["styles"]) == {"raking", "dim"}
     assert b.spec(idn["styles"]["dim"]["mark_transition"]["technique"])["kind"] == "transition"
     assert idn["styles"]["dim"]["mark_transition"]["dur"] == 0.75 and idn["styles"]["raking"]["mark_transition"] is None
-    new_look = {"open": 3.6, "label": 3.8, "brand": 9.1, "mark": 3.2}              # the block's own nominal numbers of `raking`
+    new_look = {"open": 1.35, "label": 7.7, "brand": 9.1, "mark": 3.2}              # the block's own nominal numbers of `raking`
     used = []
     for name, st in idn["styles"].items():
         assert st["label_vi"]
@@ -120,7 +121,8 @@ def test_style_block_names_the_techniques_of_each_style():
     assert b.spec("ID-BRAND-03")["timing"]["default_s"] == 9.1 and idn["styles"]["raking"]["brand"] == "ID-BRAND-03"
     assert idn["styles"]["raking"]["earlier"] == {"brand": ["ID-BRAND-01"]} and b.available("ID-BRAND-01")       # still a registered technique of the family
     assert "earlier" not in idn["styles"]["dim"]
-    assert idn["styles"]["raking"]["nominal"]["open"]["start_s"] == 0.0 and idn["styles"]["raking"]["nominal"]["label"]["start_s"] == 1.2
+    assert idn["styles"]["raking"]["nominal"]["open"]["start_s"] == 0.0 and idn["styles"]["raking"]["nominal"]["label"]["start_s"] == 0.3
+    assert idn["styles"]["raking"]["nominal"]["label"]["cross_cut"] is True
     assert idn["styles"]["dim"]["nominal"]["open"]["start_s"] == 7.0
     assert idn["min_element_s"] == 1.5
 
