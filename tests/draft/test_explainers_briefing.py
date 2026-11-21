@@ -150,7 +150,7 @@ def test_the_briefings_stay_short():
     Worker catalogue (2026-11-20) rewrote the table around the kinds of a beat and added the rules 18 to 21 (a device only on a beat whose kinds call for it, the outside picture
     on screen, a missing picture, the picture under a figure) and the exact rule 17: the draft task went from 27,252 to 31,200 bytes and the fast briefing from 9,355 to 9,950."""
     assert len(part(TASK).encode("utf-8")) < 2400
-    assert len(TASK.encode("utf-8")) < 32_800 and len(FAST.encode("utf-8")) < 10_500
+    assert len(TASK.encode("utf-8")) < 35_500 and len(FAST.encode("utf-8")) < 11_500
 
 
 def test_the_rendered_task_of_a_draft_and_of_an_edit_holds_the_part(proj, tmp_path):

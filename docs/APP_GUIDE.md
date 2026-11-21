@@ -747,3 +747,5 @@ khung hình và chuyển động máy quay từ tên vùng của chi tiết (t�
 gọi tên, không phóng quá giới hạn độ nét của ảnh gốc và không chạy quá nhanh);
 tab kiểm tra cũng cảnh báo nếu đến cuối cảnh vùng được nhắc vẫn bị cắt mép
 (`camera_off_region`) hoặc máy quay tới chi tiết quá muộn (`thing_arrives_late`).
+
+Khi một người, vị thánh hoặc đồ vật được gọi tên lần đầu và đang hiện trên hình, bản dựng cần hiện tên ở dải dưới. Nếu danh tính còn chưa chắc, dòng nhỏ giữ cách nói thận trọng của lời dẫn; với hình mượn, dòng nhỏ có thể ghi thông tin tác phẩm có trong hồ sơ.

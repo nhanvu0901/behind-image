@@ -319,7 +319,7 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
     chapters = inp.in_scope()
     names = {c["id"]: c for c in inp.timing["chapters"]}
     values = {
-        "CHECK_CMD": cmds["check"], "DEFAULTS_CMD": cmds["defaults"], "STILL_CMD": cmds["still"],
+        "CHECK_CMD": cmds["check"], "DEFAULTS_CMD": cmds["defaults"], "STILL_CMD": cmds["still"], "CROP_CMD": cmds["crop"],
         "MAIN_ASSET": inp.picks["main_asset"], "N_WORDS": len(inp.timing["words"]), "DURATION": "%.0f" % inp.timing["duration"],
         "CHAPTER_LIST": "\n".join("- `%s` %s (words %d to %d, %.0f s to %.0f s)" % (c, names[c]["name"], names[c]["w0"], names[c]["w1"] - 1, names[c]["start"], names[c]["end"]) for c in chapters),
         "N_CHAPTERS": len(chapters), "REDRAFT": "yes" if inp.current else "no",

@@ -830,3 +830,5 @@ A `voice_assemble_failed` job retains the assembly failure detail in its `error`
 `bti job` shows a fix suited to the failure. True-peak failures list the
 measurements after up to five encodes. Each retry increases limiter margin by
 the measured overshoot plus 0.3 dB.
+
+For `X-ANN-01` overlays, `params.sub` is an optional smaller second line; leaving it empty retains the original strip. Names and any uncertainty must follow the narration, and picture metadata must follow the record.

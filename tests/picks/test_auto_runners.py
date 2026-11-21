@@ -215,11 +215,11 @@ def test_the_limits_of_the_two_sessions_are_written_once_in_the_job(ws):
     assert "**140 steps**" in task and "**30 minutes**" in task
 
 
-def test_the_drafts_own_command_line_is_unchanged(fakeclaude):
+def test_the_drafts_own_command_line_has_its_helper_permissions(fakeclaude):
     default = dcc.build_command(fakeclaude.exe_path, MODEL_CLAUDE)
     assert default == dcc.build_command(fakeclaude.exe_path, MODEL_CLAUDE, allow=None)
     allowed = default[default.index("--allowedTools") + 1:default.index("--disallowedTools")]
-    assert allowed == dcc.allow_rules() and any("still" in r for r in allowed) and any("defaults" in r for r in allowed) and not any("crop" in r for r in allowed)
+    assert allowed == dcc.allow_rules() and any("still" in r for r in allowed) and any("defaults" in r for r in allowed) and any("crop" in r for r in allowed)
     assert dcc.SUPPORTS_ALLOW is True and not getattr(agy, "SUPPORTS_ALLOW", False)
 
 
