@@ -16,7 +16,7 @@ VI = re.compile(r"[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹê
 CATALOGUE = {"device_wrong_kind", "device_too_little", "figure_on_wrong_picture", "outside_on_painting", "outside_picture_small"}       # worker catalogue: what the kinds of a line call for
 STOPPING = {"upright_whole_share", "highlight_off_frame", "highlight_too_dark", "caption_placeholder", "caption_repeats", "text_not_in_narration",
             "asset_not_in_lines", "explainer_early"} | CATALOGUE | {"frame_off_painting", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief",
-                                                                    "camera_off_region", "thing_arrives_late"}            # panelbox + boxcam
+                                                                    "camera_off_region", "thing_arrives_late", "name_not_shown"}            # panelbox + boxcam + namefirst
 
 
 def issue(code, **kw):

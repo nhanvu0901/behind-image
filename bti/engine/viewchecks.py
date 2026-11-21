@@ -45,6 +45,7 @@ BASE_EXPLAINERS = ("MAP-", "TIME-", "TREE-", "STATE-")
 HIGHLIGHTS = {"HI-01": "floor", "X-HI-01": "surround_floor"}        # technique -> the parameter that says how dark the rest goes
 
 HINTS = {
+    "name_not_shown": "Show the person’s name on its picture during this line.",
     "shot_short": "Merge this shot into the one before it or move its cut later so that it lasts at least %.1f seconds." % MIN_SHOT_S,
     "upright_whole_share": ("Keep the whole painting only for the pull back that ends the cold open, for one chapter opening and for the last shot; "
                             "give every other shot a framing that fills the screen (the painting at full width with a slow travel up or down, or a wide band of it)."),
@@ -1241,6 +1242,63 @@ def _text_too_brief(c):
                     out.append(_issue("text_too_brief", "shots[%d].overlays[%d]" % (i,j), "Text %r is fully visible for %.2f s but needs %.2f s." % (text,got,need), shot=c.sid(i),overlay=ov.get("id"),text=text,seconds=_r(got,2),needed=_r(need,2)))
     return out
 
+
+def _name_not_shown(c):
+    """Check the explicitly curated cast, never guessing names from capital letters."""
+    picks = _picks_doc(c.project_dir)
+    cast = picks.get("names")
+    if not isinstance(cast, list):
+        return []
+    beats = {b.get("id"): b for b in (getattr(c.tm, "beats", None) or []) if isinstance(b, dict)}
+    items_by_shot = {}
+    for item in _items_of(c):
+        items_by_shot.setdefault(item[1], []).append(item)
+    out = []
+    for entry in cast:
+        if not isinstance(entry, dict):
+            continue
+        name, bid, where = entry.get("name"), entry.get("line"), entry.get("where")
+        beat = beats.get(bid)
+        if not (isinstance(name, str) and name.strip() and isinstance(where, dict) and isinstance(beat, dict)
+                and _num(beat.get("start")) and _num(beat.get("end")) and beat["end"] > beat["start"]):
+            continue
+        asset = where.get("asset") or (picks.get("main_asset") if where.get("region") else None)
+        if not isinstance(asset, str):
+            continue
+        overlapping = [i for i, sp in enumerate(c.spans) if sp and min(sp[1], beat["end"]) > max(sp[0], beat["start"])]
+        matching = [i for i in overlapping if any(isinstance(slot, dict) and slot.get("asset") == asset
+                    for slot in ((c.shots[i].get("slots") or {}).values() if isinstance(c.shots[i].get("slots"), dict) else []))]
+        shown = False
+        for i in matching:
+            sp = c.spans[i]
+            for path, si, oid, spec, params, shot in items_by_shot.get(i, []):
+                match = re.search(r"\.overlays\[(\d+)\]$", path)
+                if match:
+                    overlays = shot.get("overlays") or []
+                    j = int(match.group(1))
+                    overlay = overlays[j] if j < len(overlays) else None
+                    window = _overlay_span(c, overlay, sp) if isinstance(overlay, dict) else None
+                else:
+                    window = sp
+                if not window or min(window[1], beat["end"]) <= max(window[0], beat["start"]):
+                    continue
+                wanted = tokens(name)
+                for _, _, _, text in _texts(spec, params):
+                    words = tokens(text)
+                    if wanted and any(words[k:k + len(wanted)] == wanted for k in range(len(words) - len(wanted) + 1)):
+                        shown = True
+                        break
+                if shown:
+                    break
+            if shown:
+                break
+        if not shown and overlapping:
+            i = (matching or overlapping)[0]
+            out.append(_issue("name_not_shown", "shots[%d]" % i,
+                              "Line %s first presents %s without showing that name on its picture in shot %s." % (bid, name, c.sid(i)),
+                              beat=bid, name=name, shot=c.sid(i)))
+    return out
+
 def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> list[dict]:
     """The viewer checks of a storyboard whose shots start at `starts` (seconds, None when unresolvable) and end at `end_t`. Never raises."""
     try:
@@ -1249,7 +1307,7 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         return []
     out: list[dict] = []
     for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer,
-               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief):         # the last four: catalogue pass, silent on beats without kinds
+               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown):         # the last four: catalogue pass, silent on beats without kinds
         try:
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
@@ -1277,6 +1335,7 @@ CODES = {
     "explainer_early": "A base explanatory component (MAP-01, TIME-01, TREE-01, STATE-01) starts in the first 30 seconds (warning). args: shot, technique, start, end, limit.",
 }
 CODES.update(CATALOGUE_ISSUES)       # catalogue pass: the four checks of what the kinds of a beat call for (their sentences: `CATALOGUE_SENTENCES` of errmsg.js)
+CODES.update({"name_not_shown": "A cast name is not shown on its picture during its first presentation (warning). args: beat, name, shot."})
 
 
 # ----------------------------------------------------------------------------------------------------------- panelbox: the camera stays on the painted surface

@@ -10720,25 +10720,27 @@
   {
    "id": "X-ANN-01",
    "key": "detail_label_strip",
-   "name": "Detail label strip (one line)",
-   "label_vi": "Dải nhãn chi tiết (một dòng)",
+   "name": "Name label strip",
+   "label_vi": "Dải nhãn tên",
    "category": "annotation",
    "kind": "overlay",
    "intents": [
     "point_at",
     "context"
    ],
-   "description": "A dark translucent strip across the lower frame with one white caps line naming the detail; the right end of the strip fades out.",
-   "usage_rule": "Name an unfamiliar object in a strip; if it is small on screen (including a narrow or flat thing in a wide frame), use HI-01 on that thing as well.",
+   "description": "A dark translucent strip across the lower frame with a white caps name and an optional smaller second line; the right end fades out.",
+   "usage_rule": "Show the first spoken name of an on-screen person, saint or thing. A person stands alone; a small thing also gets HI-01.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
-    "detail"
+    "detail",
+    "outside",
+    "compare"
    ],
-   "use_when": "The sentence names, for the first time, a thing that is on the screen now and whose name a stranger to the painting would not know: \"adder's tongues\", \"touchstones\", \"a master's mark\". A dark strip with the name in capitals shows for about three seconds, starting on the word that names the thing.",
-   "needs": "The name in the narration’s own words (one to five words, never a sentence). The thing is already in the frame when the label appears. Use the strip with HI-01 on the thing, never alone for a small thing (including a narrow or flat thing in a wide frame, such as a bench, a rug, a string of beads, or a candle).",
-   "never_when": "The thing was labelled before; the text is an opinion, a date or a whole sentence; the thing is not on screen; the picture is another artwork (X-ANN-02 gives its title, maker and date); the sentence names three or more parts one after another (KEY-01); the thing needs no name (a face, a hand).",
-   "example": "Arnolfini b0023: \"Behind the joined hands stands a bench called a settle, its red velvet cushion a sign of money.\" (label SETTLE with a spotlight on the bench)",
+   "use_when": "The first time the narration speaks the proper name of a person or thing, or the unfamiliar name of an object such as a settle, and its subject is on screen, show that name on the naming word, long enough to read. On another picture name the subject the narration speaks of, not the picture itself.",
+   "needs": "The name from the narration. Use sub for a shortened caution in the narration’s own words when identity is uncertain, or a plain fact from the same sentence. On a borrowed picture sub may give its record title, maker and date only when available, never the photographer or photograph year. A strip is never alone for a small thing: use HI-01; never light a person or face.",
+   "never_when": "The name has been presented before; the subject is not on screen; the label invents certainty or a fact; the shot already has X-ANN-02; three or more parts are named in sequence (KEY-01). A face needs no label saying FACE, but a person named by the narration gets their name.",
+   "example": "Arnolfini b0003: \"The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini\" (COSTANZA TRENTA / most often named as the wife); Arnolfini b0024: \"Some historians see Saint Martha, patron of housewives\" (SAINT MARTHA / some historians see Saint Martha; Hours of Henry VIII).",
    "slots": [
     {
      "name": "text",
@@ -10752,6 +10754,16 @@
      "name": "text",
      "type": "string",
      "default": "BLUE UNDERGARMENT",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub",
+     "type": "string",
+     "default": "",
      "min": null,
      "max": null,
      "unit": null,
@@ -10910,16 +10922,16 @@
     "structure"
    ],
    "description": "The same strip with two lines: the work title in caps, then ARTIST, YEAR in a smaller line beneath.",
-   "usage_rule": "Used when a different artwork is shown as context; one-line label is kept for the main painting.",
+   "usage_rule": "Use for another artwork when the shot does not already use X-ANN-01 to name its spoken subject.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "outside",
     "compare"
    ],
-   "use_when": "A shot shows another artwork or a museum object for the first time: the title in capitals and, in a smaller line, the maker and the date. It shows in the first seconds of that picture.",
+   "use_when": "A shot shows another artwork or a museum object for the first time and has no X-ANN-01 subject strip: the title in capitals and, in a smaller line, the maker and the date. It shows in the first seconds of that picture.",
    "needs": "The title, the maker and the date from the picture's own record in `inputs/assets.json` (`title`, `artist`, `year`).",
-   "never_when": "Data that is not in the picture's record (never write a maker or a date from memory); the main painting; the same picture a second time; a picture that is not an artwork or an object (a street view, a portrait photograph of a person).",
+   "never_when": "A shot with X-ANN-01; a photographer or year of a photograph as the artwork maker or date; data that is not in the picture's record (never write a maker or a date from memory); the main painting; the same picture a second time; a picture that is not an artwork or an object (a street view, a portrait photograph of a person).",
    "example": "St. Eligius b0049: \"He was born at Baerle, probably in 1415.\" (the label of the painter's own Head of Christ, which the owner picked for the line)",
    "slots": [
     {

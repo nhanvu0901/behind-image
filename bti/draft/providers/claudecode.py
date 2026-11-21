@@ -13,7 +13,7 @@
 
 It runs on the owner's production machine, so it is NOT run with its checks bypassed (that is what the agy runner does). The mode
 `dontAsk` refuses everything that would ask, and the permission rules name what is allowed: reading anywhere inside the workspace
-(always allowed without a rule), writing only under `./out/`, and running only the three helper commands of the briefing. Reading or
+(always allowed without a rule), writing only under `./out/`, and running only the four helper commands of the briefing. Reading or
 writing outside the workspace, any other command, the web, other tools: refused, and the agent is told so (`permission_denials`).
 
 Same contract as `agy.run` (`run(...)`, the `AgyResult`, the guard that lists the project before and after, one run at a time, a time
@@ -42,7 +42,7 @@ from .agy import AgyResult, DefaultRunner, _cancel_fn
 
 PROMPT = agy.PROMPT
 TOOLS = "Bash,Read,Write,Edit,Glob,Grep"
-HELPERS = ("check", "defaults", "still")           # the three commands the briefing names (skills/storyboard_draft/TASK.template.md, section 7)
+HELPERS = ("check", "defaults", "still", "crop")           # the four commands the briefing names (skills/storyboard_draft/TASK.template.md, section 7)
 REQUIRED_FLAGS = cc.REQUIRED_FLAGS + ("--input-format", "--verbose", "--allowedTools", "--disallowedTools", "--append-system-prompt")
 CONFINEMENT = ("You work unattended inside one folder, the current directory. Only the files inside it exist for you: read them, and write "
                "only under out/. The only commands you may run are the helper commands that TASK.md names. Everything else, such as other "
@@ -77,7 +77,7 @@ def _forms(name: str, windows: bool) -> list[str]:
 def helper_patterns(windows: bool | None = None) -> list[str]:
     """The Bash rules that allow exactly the shapes of command the briefing shows (TASK.template.md, section 7), and nothing else:
     `check [--no-draw] [--chapter ID]`, `defaults TECHNIQUE [--asset A] [--region R]`, `still --shot C:N [--at T] -o look/FILE`,
-    and `--help` of each. A `*` matches any text, so the deny rules below close the arguments that could name another folder."""
+    `crop --grid|--box|--region ... -o look/FILE`, and `--help` of each. A `*` matches any text, so the deny rules below close the arguments that could name another folder."""
     win = IS_WINDOWS if windows is None else windows
     out = []
     for f in _forms("check", win):
@@ -87,6 +87,8 @@ def helper_patterns(windows: bool | None = None) -> list[str]:
         out += [f"Bash({f} --help)", f"Bash({f} *)"]
     for f in _forms("still", win):
         out += [f"Bash({f} --help)", f"Bash({f} --shot * -o look/*)", f"Bash({f} --shot * --at * -o look/*)", f"Bash({f} --shot * -o look/* --at *)"]
+    for f in _forms("crop", win):
+        out += [f"Bash({f} --help)", f"Bash({f} --grid -o look/*)", f"Bash({f} --box * -o look/*)", f"Bash({f} --region * -o look/*)"]
     return out
 
 
@@ -110,7 +112,7 @@ SUPPORTS_ALLOW = True      # `build_command` and `run` take `allow=`: another wo
 
 
 def build_command(claude: str, model_id: str | None = None, *, windows: bool | None = None, allow: list[str] | None = None) -> list[str]:
-    """`allow`: the permission rules of the run (default: those of the storyboard draft's three helper commands, `allow_rules`)."""
+    """`allow`: the permission rules of the run (default: those of the storyboard draft's four helper commands, `allow_rules`)."""
     from bti.settings import model_for
     parsed = cc.parse_model_id(model_id or model_for("draft"))
     if parsed is None:

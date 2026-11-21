@@ -238,6 +238,7 @@ Replace all the pictures of one narration line (use skip_beat to show the main p
 | `reason` | text | no | Why these pictures; kept as the note of the line (up to 400 characters). |
 | `kinds` | list of one of `detail`, `whole`, `outside`, `compare`, `journey`, `dates`, `figure`, `inscription`, `construction`, `relations`, `idea` | no | What the line does: one or two of detail, whole, outside, compare, journey, dates, figure, inscription, construction, relations, idea, in the order the line speaks (the automatic choice of pictures writes them). Leave it out to keep what the line has; send [] to remove it. |
 | `missing` | list of a missing picture {what, code} | no | The pictures that were asked for the line and not found (at most 10). Leave it out to keep what the line has; send [] to remove it. |
+| `names` | list of one named figure | no | Replace the cast entries for this line; other lines are kept. |
 
 Example:
 
@@ -321,6 +322,7 @@ Make a narration line show the main picture again (it keeps no pictures of its o
 | `reason` | text | no | Why; kept as the note of the line (up to 400 characters). |
 | `kinds` | list of one of `detail`, `whole`, `outside`, `compare`, `journey`, `dates`, `figure`, `inscription`, `construction`, `relations`, `idea` | no | What the line does: one or two of detail, whole, outside, compare, journey, dates, figure, inscription, construction, relations, idea, in the order the line speaks (the automatic choice of pictures writes them). Leave it out to keep what the line has; send [] to remove it. |
 | `missing` | list of a missing picture {what, code} | no | The pictures that were asked for the line and not found (at most 10). Leave it out to keep what the line has; send [] to remove it. |
+| `names` | list of one named figure | no | Replace the cast entries for this line; other lines are kept. |
 
 Example:
 

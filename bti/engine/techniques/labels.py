@@ -21,13 +21,13 @@ def _strip_geometry(p, H):
 @technique("X-ANN-01", "overlay")
 @technique("X-ANN-02", "overlay")
 class LabelStrip(OverlayRenderer):
-    """Dark translucent strip with a white caps title (and a smaller second line for X-ANN-02)."""
+    """Dark translucent strip with a white caps title (and an optional smaller second line)."""
 
     def __init__(self, tid, ov, shot_r, ctx):
         super().__init__(tid, ov, shot_r, ctx)
         p = self.p
         title = p["text"] if tid == "X-ANN-01" else p["title"]
-        sub = p["artist_year"] if tid == "X-ANN-02" else None
+        sub = p["artist_year"] if tid == "X-ANN-02" else (p.get("sub") or None)
         if p["case"] == "upper":
             title, sub = title.upper(), (sub.upper() if sub else None)
         y0, h = _strip_geometry(p, ctx.h)

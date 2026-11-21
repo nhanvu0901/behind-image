@@ -75,8 +75,8 @@ def test_the_briefings_are_not_much_bigger_than_before():
     """Before this worker: 23,600 characters (23,693 bytes) for the draft task and 7,714 (7,868 bytes) for the fast briefing. The rules cost 3,130 and 1,309.
     Worker introflow added what the program writes at the start of the video (the opening shot `s0000`: the model's first shot is never a still view of the whole
     painting): about 450 and 180 more characters."""
-    assert len(TASK) < 32_600 and len(TASK) - 23_600 < 9_000          # catalogue pass: the table by kinds and the rules 18 to 21 (+3,950)
-    assert len(FAST) < 10_200 and len(FAST) - 7_714 < 2_500
+    assert len(TASK) < 35_500 and len(TASK) - 23_600 < 11_900          # catalogue pass: the table by kinds and the rules 18 to 21 (+3,950)
+    assert len(FAST) < 11_500 and len(FAST) - 7_714 < 3_800
 
 
 def test_the_rendered_task_has_the_rules_and_no_open_braces(proj, tmp_path):

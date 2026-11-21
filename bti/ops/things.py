@@ -43,6 +43,8 @@ def get(doc_kind: str, doc: dict, key: str) -> Any:
         raise KeyError(key)
     if key == "main":
         return doc.get("main_asset")
+    if key == "names":
+        return doc.get("names")
     if kind == "beat":
         return (doc.get("beats") or {}).get(ident)
     asset = (doc.get("assets") or {}).get(ident)
@@ -58,6 +60,8 @@ def keys(doc_kind: str, doc: dict) -> set[str]:
     if doc_kind == "storyboard":
         return {"shot:%s" % s["id"] for s in doc.get("shots") or [] if isinstance(s, dict) and isinstance(s.get("id"), str)}
     out = {"main"}
+    if "names" in doc:
+        out.add("names")
     out.update("beat:%s" % b for b in (doc.get("beats") or {}))
     for k in (doc.get("assets") or {}):
         out.add("asset:%s" % k)
@@ -80,6 +84,11 @@ def put_picks(doc: dict, key: str, value: Any) -> None:
     value = copy.deepcopy(value)
     if key == "main":
         doc["main_asset"] = value
+    elif key == "names":
+        if value is None:
+            doc.pop("names", None)
+        else:
+            doc["names"] = value
     elif kind == "beat":
         if value is None:
             doc["beats"].pop(ident, None)
@@ -104,4 +113,6 @@ def target_of(doc_kind: str, key: str) -> dict:
         return {"shot": ident}
     if key == "main":
         return {"asset": None}
+    if key == "names":
+        return {"part": "names"}
     return {"beat": ident} if kind == "beat" else {"asset": ident}

@@ -37,6 +37,15 @@ MISSING = S.array(S.plain_object({
     required=["what", "code"], title="a missing picture {what, code}"),
     "The pictures that were asked for the line and not found (at most %d). Leave it out to keep what the line has; send [] to remove it." % pdoc.MAX_MISSING,
     max_items=pdoc.MAX_MISSING)
+CAST_WHERE = S.plain_object({"region": REGION, "asset": ASSET}, title="the main painting region or chosen asset")
+CAST_ENTRY = S.plain_object({
+    "name": S.string("The figure's name.", min_length=1, max_length=160),
+    "also": S.array(S.string("An alias.", min_length=1, max_length=160), max_items=30),
+    "line": BEAT, "where": CAST_WHERE, "sure": S.boolean("Whether the identity is certain."),
+    "words": S.string("The narration's exact cautious words, or empty.", max_length=400)},
+    required=["name", "also", "line", "where", "sure", "words"], title="one named figure")
+CAST = S.array(CAST_ENTRY, "Replace the cast entries for this line; other lines are kept.", max_items=100)
+
 ITEM = S.plain_object({
     "asset": ASSET,
     "region": S.string("A region of that asset to show, or null for the whole picture.", pattern=REGION["pattern"], nullable=True,
@@ -85,6 +94,36 @@ def _item(ctx, it: dict, base: str) -> dict:
         out["step"] = int(it["step"])
     return out
 
+
+
+def _set_names(ctx, bid: str, o: dict, items: list[dict]) -> None:
+    if "names" not in o:
+        return
+    current = ctx.doc.get("names") or []
+    untouched = [n for n in current if n.get("line") != bid]
+    seen = {v.casefold() for n in untouched for v in [n.get("name", "")] + n.get("also", []) if isinstance(v, str)}
+    rows = []
+    for i, n in enumerate(o["names"]):
+        if n["line"] != bid:
+            ctx.bad("names[%d].line" % i, "the cast entry must belong to this line")
+        where = n["where"]
+        if set(where) == {"region"}:
+            if not any(it["asset"] == ctx.doc.get("main_asset") and it.get("region") == where["region"] for it in items):
+                ctx.bad("names[%d].where" % i, "the main painting region must be one of this line's pictures")
+        elif set(where) == {"asset"}:
+            key = _asset(ctx, where["asset"], "names[%d].where.asset" % i)
+            if not any(it["asset"] == key for it in items):
+                ctx.bad("names[%d].where" % i, "the asset must be one of this line's pictures")
+            where = {"asset": key}
+        else:
+            ctx.bad("names[%d].where" % i, "give exactly one region or asset")
+        aliases = {v.casefold() for v in [n["name"]] + n["also"]}
+        if seen & aliases:
+            ctx.bad("names[%d]" % i, "this figure or alias is already in the cast")
+        seen.update(aliases)
+        rows.append({**n, "where": dict(where)})
+    ctx.touch("names")
+    ctx.doc["names"] = untouched + rows
 
 def _keep_what_is_known(ctx, b: dict, o: dict) -> None:
     """`kinds` and `missing` of a line stay as they are unless the operation sends new ones (an empty list takes them away)."""
@@ -181,7 +220,7 @@ def remove_region(ctx, o):
         "items": S.array(ITEM, "The pictures of the line, in the order they are shown (1 to %d)." % pdoc.MAX_ITEMS, min_items=1,
                          max_items=pdoc.MAX_ITEMS),
         "reason": S.string("Why these pictures; kept as the note of the line (up to 400 characters).", max_length=400),
-        "kinds": KINDS, "missing": MISSING}),
+        "kinds": KINDS, "missing": MISSING, "names": CAST}),
     example={"op": "set_picks", "beat": "b0003", "items": [{"asset": "B"}, {"asset": "A", "region": "HEAD", "role": "detail"}],
              "reason": "Both pictures show the room."},
     sentences="Đoạn {n}: thay {k} hình")
@@ -194,6 +233,7 @@ def set_picks(ctx, o):
     if "reason" in o:
         b["note"] = o["reason"]
     _keep_what_is_known(ctx, b, o)
+    _set_names(ctx, bid, o, items)
     _say_beat(ctx, bid, k=len(items))
 
 
@@ -246,7 +286,7 @@ def remove_pick(ctx, o):
     summary="Make a narration line show the main picture again (it keeps no pictures of its own).",
     schema=S.obj("skip_beat", ["beat"], {
         "beat": BEAT, "reason": S.string("Why; kept as the note of the line (up to 400 characters).", max_length=400),
-        "kinds": KINDS, "missing": MISSING}),
+        "kinds": KINDS, "missing": MISSING, "names": CAST}),
     example={"op": "skip_beat", "beat": "b0003", "reason": "The main picture says it all."},
     sentences="Đoạn {n}: dùng lại tranh chính")
 def skip_beat(ctx, o):
@@ -257,6 +297,7 @@ def skip_beat(ctx, o):
     if "reason" in o:
         b["note"] = o["reason"]
     _keep_what_is_known(ctx, b, o)
+    _set_names(ctx, bid, o, [])
     _say_beat(ctx, bid)
 
 

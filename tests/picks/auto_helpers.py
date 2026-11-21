@@ -18,7 +18,7 @@ PNG = png_bytes(1300, 1250)
 SMALL_PNG = png_bytes(64, 48)
 
 PLAN = {
-    "schema": "bti.picks.plan/1",
+    "schema": "bti.picks.plan/1", "names": [],
     "regions": [
         {"name": "MIRROR", "box": [0.40, 0.30, 0.60, 0.55], "what": "Tấm gương lồi", "thing": "convex mirror on back wall"},
         {"name": "HEAD", "box": [0.10, 0.05, 0.30, 0.25], "what": "Khuôn mặt", "thing": "man's face"}],
@@ -206,6 +206,7 @@ class FakeAgent:
         ctx = json.loads((Path(ws_root) / "inputs" / "context.json").read_text(encoding="utf-8"))
         c = copy.deepcopy(content)
         if mode == "plan":
+            c.setdefault("names", [])
             p = ctx["plan"]
             c["lines"] = [ln if ln.get("kinds") else infer_kinds(ln) for ln in c.get("lines", []) if ln.get("beat") in p["targets"]]
             c["regions"] = [r for r in c.get("regions", []) if r.get("name") not in p["existing_regions"]]

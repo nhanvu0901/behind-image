@@ -315,3 +315,52 @@ def test_a_reason_the_owner_reads_must_be_vietnamese():
     bad_box = choice(regions=[CHOICE["regions"][0], {"name": "HEAD", "action": "drop", "reason": "The box misses the face."}])
     assert "must be written in Vietnamese" in only_errors(shapes.check_choice(bad_box, cctx(), state=_checked_state()))
     assert shapes.check_choice(choice(regions=[{"name": "MIRROR", "action": "tight", "box": [120, 130, 735, 890], "confirmed": True, "reason": ""}, CHOICE["regions"][1]]), cctx(), state=_checked_state()).ok
+
+
+def test_cast_plan_checks_spoken_name_caution_and_picture():
+    data = copy.deepcopy(PLAN)
+    data['names'] = [{'name': 'Costanza Trenta', 'also': ['Costanza'], 'line': 'b0002',
+                      'where': {'region': 'MIRROR'}, 'sure': False, 'words': 'most often named'}]
+    context = ctx()
+    context.line_texts = {'b0002': 'Costanza Trenta is most often named as the wife.'}
+    rep = shapes.check_plan(data, context)
+    assert rep.ok, rep.text()
+    assert rep.value['names'] == data['names']
+    for change in ({'words': 'certain wife'}, {'where': {'region': 'HEAD'}}, {'line': 'b0001'}):
+        bad = copy.deepcopy(data)
+        bad['names'][0].update(change)
+        assert not shapes.check_plan(bad, context).ok
+    duplicate = copy.deepcopy(data)
+    duplicate['names'].append({**data['names'][0], 'name': 'Costanza'})
+    assert not shapes.check_plan(duplicate, context).ok
+
+
+def test_cast_picture_want_must_belong_to_the_line():
+    data = copy.deepcopy(PLAN)
+    data['names'] = [{'name': 'Jan van Eyck', 'also': [], 'line': 'b0003',
+                      'where': {'want': 'b0003.1'}, 'sure': True, 'words': ''}]
+    context = ctx()
+    context.line_texts = {'b0003': 'Jan van Eyck painted the work.'}
+    assert shapes.check_plan(data, context).ok
+    data['names'][0]['where']['want'] = 'b0004.1'
+    assert not shapes.check_plan(data, context).ok
+
+
+def test_partial_cast_must_not_repeat_existing_other_line():
+    data = copy.deepcopy(PLAN)
+    data['names'] = [{'name': 'Costanza', 'also': [], 'line': 'b0002', 'where': {'region': 'MIRROR'}, 'sure': True, 'words': ''}]
+    context = ctx()
+    context.line_texts = {'b0002': 'Costanza appears.'}
+    context.existing_names = [{'name': 'Costanza Trenta', 'also': ['Costanza'], 'line': 'b0099'}]
+    assert not shapes.check_plan(data, context).ok
+
+
+def test_new_planning_session_requires_an_explicit_cast_list():
+    context = ctx()
+    context.require_names = True
+    missing = copy.deepcopy(PLAN)
+    missing.pop("names", None)
+    assert not shapes.check_plan(missing, context).ok
+    data = copy.deepcopy(PLAN)
+    data['names'] = []
+    assert shapes.check_plan(data, context).ok

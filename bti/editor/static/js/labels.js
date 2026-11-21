@@ -1025,3 +1025,5 @@ export const PARTEXPORT_LABELS = {
 };
 Object.assign(EXPORT_LABELS, PARTEXPORT_LABELS);
 
+// ---- worker namefirst: first presentation of a named figure.
+CODE.name_not_shown = "Chưa hiện tên khi giới thiệu";

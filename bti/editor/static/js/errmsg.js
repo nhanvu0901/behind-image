@@ -843,3 +843,9 @@ Object.assign(BUILD, BOXCAM_SENTENCES);
 // ---- worker partexport (2026-11-21): incremental ~60 s export parts are reused after small storyboard edits
 STAGE_CODES.export.approval_stale = 'Storyboard đã đổi sau khi duyệt. Mở bước "Dựng hình" và duyệt lại; khi xuất lại, chỉ các đoạn bị đổi mới phải dựng lại.';
 
+// ---- worker namefirst: first presentation of a named figure.
+export const NAMEFIRST_SENTENCES = {
+  name_not_shown: (i) => { const a = i.args || {}; return `Đoạn ${a.beat ?? "?"}, cảnh ${a.shot ?? "?"}: chưa hiện tên “${a.name ?? ""}” khi giới thiệu người này.`; },
+};
+export const NAMEFIRST_CODES = Object.keys(NAMEFIRST_SENTENCES);
+Object.assign(BUILD, NAMEFIRST_SENTENCES);

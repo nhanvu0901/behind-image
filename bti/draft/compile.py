@@ -1142,7 +1142,7 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
-    pointfix = {"small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late"}
+    pointfix = {"name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
         required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
         rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items

@@ -96,3 +96,9 @@ def test_the_result_names_what_a_reader_needs():
     assert r["step"] == "export" and r["link"] == "#/project/arn/export" and r["fix"] is None
     with pytest.raises(KeyError):
         reasons.make("no_such_reason")
+
+
+def test_missing_cast_name_stops_storyboard_auto_gate():
+    from bti.auto_run.checks import judge
+    result = judge('storyboard', [{'code': 'name_not_shown', 'level': 'warn', 'message': 'missing name'}])
+    assert len(result['stopping']) == 1

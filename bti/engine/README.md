@@ -504,3 +504,5 @@ additional word, capped at 4.0 s. A `KEY-01` label that would miss that window
 is planned earlier, with its earlier neighbours moved only as needed to keep
 0.25 s between labels and none moved before the overlay starts. If the overlay
 itself is too short, `text_too_brief` reports the remaining deficit.
+
+`X-ANN-01` accepts an optional `sub` string. It draws the same smaller second line as `X-ANN-02`; an absent or empty `sub` preserves the original one-line rendering.

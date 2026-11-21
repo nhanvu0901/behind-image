@@ -634,3 +634,25 @@ def test_the_write_part_has_the_limit_and_the_estimate_that_the_paced_downloads_
     assert awrite.WRITE_SECONDS == 25 * 60 and ajob.EST_SECONDS["write"] == 300
     patience = len(mhttp.PATIENT_WAITS) * mhttp.PATIENT_MAX_WAIT                                  # the longest wait of the one download that is under way at the deadline
     assert awrite.WRITE_SECONDS + patience + 120 < part_limit                                     # the manager stops a part at 35 minutes: the deadline is inside it
+
+
+def test_cast_is_written_with_pictures_and_partial_redo_preserves_other_lines(env):
+    import re
+    from bti.picks.auto import inputs
+    inp = inputs.load(env.pdir)
+    def spoken(bid):
+        return re.search(r'[A-Za-z]+', inp.beat(bid)['text']).group()
+    first = spoken('b0002')
+    second = next((w for w in re.findall(r'[A-Za-z]+', inp.beat('b0003')['text']) if w.casefold() != first.casefold()), None)
+    assert second
+    env.agent.plan = plan(names=[{'name': first, 'also': [], 'line': 'b0002', 'where': {'region': 'MIRROR'}, 'sure': True, 'words': ''}])
+    job = env.run(beats=['b0002'])
+    assert job['state'] == 'done', job
+    one = env.picks()['names']
+    assert len(one) == 1 and one[0]['line'] == 'b0002' and one[0]['where'] == {'region': 'MIRROR'}
+    env.agent.plan = plan(names=[{'name': second, 'also': [], 'line': 'b0003', 'where': {'want': 'b0003.1'}, 'sure': True, 'words': ''}])
+    job = env.run(beats=['b0003'])
+    assert job['state'] == 'done', job
+    names = env.picks()['names']
+    assert names[0] == one[0] and names[1]['line'] == 'b0003'
+    assert names[1]['where']['asset'] in env.picks()['assets']

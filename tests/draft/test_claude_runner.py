@@ -127,7 +127,7 @@ def test_the_permission_options_allow_only_the_workspace_and_the_three_helpers()
     for bare in ("Bash", "Edit", "Write", "Read", "Glob", "Grep", "WebFetch", "WebSearch", "Bash(*)", "Edit(*)", "Edit(**)", "Edit(./**)"):
         assert bare not in allow, bare                                                          # no tool is allowed everywhere
     cmds = {x.split("(", 1)[1].split(" ", 1)[0].rstrip(")") for x in allow if x.startswith("Bash(")}
-    assert cmds == {"./check", "./defaults", "./still"}                                         # the three helper commands of the briefing, nothing else
+    assert cmds == {"./check", "./defaults", "./still", "./crop"}                                         # the three helper commands of the briefing, nothing else
     assert "Bash(./still *)" not in allow and "Bash(./check *)" not in allow                    # no free-form arguments for check and still
     deny = dcc.deny_rules(False)
     assert {"WebFetch", "WebSearch", "Bash(*..*)", "Bash(* /*)", "Bash(* ~*)", "Bash(*$(*)", "Bash(*--workspace*)"} <= set(deny)
@@ -140,7 +140,7 @@ def test_helper_commands_of_the_briefing_are_the_ones_allowed():
     """skills/storyboard_draft/TASK.template.md section 7 names check, defaults and still; the workspace writes those wrappers."""
     tpl = (HERE.parents[1] / "skills" / "storyboard_draft" / "TASK.template.md").read_text(encoding="utf-8")
     assert "{{CHECK_CMD}}" in tpl and "{{DEFAULTS_CMD}}" in tpl and "{{STILL_CMD}}" in tpl
-    assert set(dcc.HELPERS) == {"check", "defaults", "still"}
+    assert set(dcc.HELPERS) == {"check", "defaults", "still", "crop"}
     src = (HERE.parents[1] / "bti" / "draft" / "workspace.py").read_text(encoding="utf-8")
     assert '("check", "bti.draft.check"), ("defaults", "bti.draft.defaults"), ("still", "bti.draft.still")' in src
 
@@ -635,3 +635,28 @@ def test_deep_edit_with_claude_missing_or_signed_out_is_refused_before_a_turn_ex
     r = env.post_edit("sửa", chapter="c01", mode="deep", model=MODEL)
     assert r.status_code in (409, 422) and r.json()["code"] == "claude_missing", r.text
     assert env.client.get(env.u("/draft/thread")).json()["turns"] == []
+
+
+def test_template_helper_examples_have_permissions_on_both_systems():
+    tpl = (HERE.parents[1] / "skills" / "storyboard_draft" / "TASK.template.md").read_text(encoding="utf-8")
+    assert "{{CROP_CMD}} --grid -o look/grid.jpg" in tpl
+    assert "{{CROP_CMD}} --box x0,y0,x1,y1 -o look/region.jpg" in tpl
+    for win in (False, True):
+        prefix = "./" if not win else "./"
+        suffix = "" if not win else ".cmd"
+        for command in ("check", "check --no-draw", "check --chapter c03", "defaults CAM-05 --asset A --region MIRROR", "still --shot c03:4 -o look/c03_4.jpg", "crop --grid -o look/grid.jpg", "crop --box 0,0,10,10 -o look/region.jpg", "crop --region MIRROR -o look/region.jpg"):
+            name, *rest = command.split(" ", 1)
+            cmd = prefix + name + suffix + ((" " + rest[0]) if rest else "")
+            assert decide(cmd, win) == "allow", cmd
+
+
+def test_every_complete_helper_example_in_template_is_permitted():
+    tpl = (HERE.parents[1] / "skills" / "storyboard_draft" / "TASK.template.md").read_text(encoding="utf-8")
+    examples = re.findall(r"`\{\{(CHECK|DEFAULTS|STILL|CROP)_CMD\}\}([^`]*)`", tpl)
+    complete = [(name.lower(), args) for name, args in examples if name == "CHECK" or (args.strip() and (name == "DEFAULTS" or " -o " in args))]
+    assert {name for name, _ in complete} == {"check", "defaults", "still", "crop"}
+    for name, args in complete:
+        args = args.replace("x0,y0,x1,y1", "0,0,10,10")
+        for win in (False, True):
+            for form in dcc._forms(name, win):
+                assert decide(form + args, win) == "allow", form + args

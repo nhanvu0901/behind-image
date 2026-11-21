@@ -206,3 +206,23 @@ def test_a_document_without_kinds_raises_nothing_new_and_says_zero_outside_lines
     d["beats"]["b0002"] = {"items": [{"asset": "A", "region": None, "role": "main", "note": ""}], "status": "picked", "note": ""}
     assert {i["code"] for i in doc.issues(d, None, ["b0001", "b0002", "b0003"])} == {"beat_no_pick"}
     assert doc.outside_summary(d, ["b0001", "b0002", "b0003"]) == {"lines": 0, "with_picture": 0, "without": []}
+
+
+def test_cast_names_survive_normalization_and_affect_revision():
+    from bti.picks import doc
+    raw = {'main_asset': 'A', 'assets': {'A': {'file': 'media/a.jpg'}}, 'beats': {},
+           'names': [{'name': 'Costanza Trenta', 'also': ['Costanza'], 'line': 'b0001',
+                      'where': {'region': 'HEAD'}, 'sure': False, 'words': 'most often named'}]}
+    saved = doc.normalize(raw)
+    assert saved['names'] == raw['names']
+    assert doc.revision(saved) != doc.revision(doc.normalize({k: v for k, v in raw.items() if k != 'names'}))
+    assert 'names' not in doc.normalize({})
+
+
+def test_cast_document_refuses_duplicate_aliases_and_empty_picture():
+    d = good()
+    one = {'name': 'Costanza Trenta', 'also': ['Costanza'], 'line': 'b0001', 'where': {'region': 'MIRROR'}, 'sure': False, 'words': 'most often named'}
+    d['names'] = [one, {**one, 'name': 'costanza', 'also': [], 'line': 'b0002'}]
+    assert 'repeats' in doc.doc_problem(d)
+    d['names'] = [{**one, 'where': {'asset': ''}}]
+    assert 'picks.names' in doc.doc_problem(d)
