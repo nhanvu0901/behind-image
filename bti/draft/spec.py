@@ -12,13 +12,14 @@ what to write instead, because the reader of these messages is a model.
 """
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 
 from .inputs import SPEC_SCHEMA, DraftError, _num
 
 # `id`, `locked`, `in_scope`, `start_s`, `end_s` appear in inputs/current/ (edit mode); the compiler ignores them except `id`
-SHOT_KEYS = ("beat", "start_word", "technique", "intent", "slots", "params", "overlays", "note", "off", "transition_in",
+SHOT_KEYS = ("beat", "start_word", "technique", "intent", "slots", "from", "params", "overlays", "note", "off", "transition_in",
              "id", "locked", "in_scope", "start_s", "end_s")
 OVERLAY_KEYS = ("technique", "start_word", "end_word", "dur", "off", "intent", "slots", "params", "note", "id", "locked")
 REGION_KEYS = ("x", "y", "rx", "ry", "label")
@@ -102,6 +103,9 @@ def shape_problems(spec, expected_chapter: str | None = None) -> tuple[dict, lis
             continue
         if s.get("intent") is not None and not isinstance(s["intent"], str):
             sp("shot_intent", '"intent" must be text', field="intent")
+            continue
+        if s.get("from") is not None and not (isinstance(s["from"], str) and s["from"].strip()):
+            sp("shot_from", '"from" must be "previous", "whole", or a region name (text)', field="from")
             continue
         if s.get("note") is not None and not isinstance(s["note"], str):
             sp("shot_note", '"note" must be text', field="note")
@@ -191,7 +195,8 @@ def regions_problems(data, assets: dict) -> tuple[dict, list[dict]]:
             if _num(w) and _num(h) and not (0 <= r["x"] <= w and 0 <= r["y"] <= h):
                 out.append(problem("region_outside", None, None, "regions.json: %s.%s centre (%s, %s) is outside the image (%sx%s source pixels); coordinates are in SOURCE pixels, not the downscaled copy" % (key, name, r["x"], r["y"], w, h)))
                 continue
-            reg = {"x": r["x"], "y": r["y"]}
+            reg = copy.deepcopy(r)
+            reg["x"], reg["y"] = r["x"], r["y"]
             for k in ("rx", "ry"):
                 if r.get(k) is not None:
                     if not (_num(r[k]) and r[k] > 0):

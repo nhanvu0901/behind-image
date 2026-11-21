@@ -588,6 +588,17 @@ def _anchor(a: Any) -> dict | None:
     return out or None
 
 
+def _clean_slots(slots: dict) -> dict:
+    """Keep only `asset` / `text` per slot when emitting typed ops (`bti/ops/sb_ops.py` forbids `region` in slots)."""
+    out = {}
+    for k, v in slots.items():
+        if isinstance(v, dict) and "asset" in v:
+            out[k] = {"asset": v["asset"]}
+        else:
+            out[k] = copy.deepcopy(v)
+    return out
+
+
 def _overlay_spec(o: dict) -> dict:
     d: dict[str, Any] = {"technique": o["technique"]}
     st = _anchor(o.get("start"))
@@ -597,9 +608,10 @@ def _overlay_spec(o: dict) -> dict:
         d["end"] = _anchor(o["end"])
     elif isinstance(o.get("dur"), (int, float)) and o["dur"] > 0:
         d["dur"] = o["dur"]
-    for k in ("params", "slots"):
-        if o.get(k):
-            d[k] = copy.deepcopy(o[k])
+    if o.get("params"):
+        d["params"] = copy.deepcopy(o["params"])
+    if o.get("slots"):
+        d["slots"] = _clean_slots(o["slots"])
     if o.get("intent"):
         d["intent"] = o["intent"]
     if o.get("note"):
@@ -618,9 +630,10 @@ def _shot_spec(ns: dict, first: bool) -> dict:
         d["intent"] = ns["intent"]
     if ns.get("note"):
         d["note"] = str(ns["note"])[:400]
-    for k in ("slots", "params"):
-        if ns.get(k):
-            d[k] = copy.deepcopy(ns[k])
+    if ns.get("slots"):
+        d["slots"] = _clean_slots(ns["slots"])
+    if ns.get("params"):
+        d["params"] = copy.deepcopy(ns["params"])
     ovs = [_overlay_spec(o) for o in ns.get("overlays") or [] if isinstance(o, dict) and o.get("technique")]
     if ovs:
         d["overlays"] = ovs

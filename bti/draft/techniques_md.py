@@ -164,8 +164,8 @@ def generate(bundle: R.StyleBundle) -> str:
     out = ["# Techniques", "",
            "Generated from the registry. `*` = required. `[a..b]` = allowed range. `=x` = default. Parameters you do not write keep their default;",
            "the compiler also fills the camera keys, label texts and region sizes for you. Slots hold pictures: `{\"asset\": \"A\", \"region\": \"MIRROR\"}`.",
-           "A camera is a list of keys `{\"at\": {\"rel\": 0..1}, \"cx\": x, \"cy\": y, \"zoom\": z, \"ease\": \"linear\"}` with cx, cy in SOURCE pixels and zoom = screen pixels per source pixel (the frame shows 1920/zoom by 1080/zoom source pixels).",
-           "Write `camera` yourself only when the default move is wrong; `at` may also be a spoken word `{\"w\": index, \"off\": 0.0}`.", "",
+           "For shots on the main painting you NEVER write `params.camera` (name `slots.image.region` — omitted means the whole painting — and optional `\"from\": \"previous\"|\"whole\"|\"<REGION>\"`, and the compiler builds the camera keys). For other pictures or explainers a `camera` (when needed) is a list of keys `{\"at\": {\"rel\": 0..1}, \"cx\": x, \"cy\": y, \"zoom\": z, \"ease\": \"linear\"}` with cx, cy in SOURCE pixels and zoom = screen pixels per source pixel (the frame shows 1920/zoom by 1080/zoom source pixels).",
+           "`at` in an explainer item or overlay may be a spoken word `{\"w\": index, \"off\": 0.0}`.", "",
            "## How to choose", "",
            "Every beat of `inputs/beats.json` has `kinds`: one or two words that say what its sentence does. The pictures step decided them: read them, do not guess them "
            "(for a beat without `kinds`, decide the kind yourself with the table of TASK.md). Take the techniques of the kinds of the beat from the list below. "

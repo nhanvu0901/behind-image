@@ -68,8 +68,11 @@ def test_a_picture_without_a_ground_band_gets_no_box_and_the_compile_is_as_it_wa
 
 
 def test_the_defaults_of_the_main_painting_are_made_for_the_painting_not_the_photograph(ringed, tmp_path):
-    """CAM-05 on the region MIRROR starts on the whole painting: centred on the box (400, 600) and fitted to its height (1040 px), not to the file's (1200)."""
-    inp, res = run(ringed)
+    """CAM-05 on the region MIRROR with from='whole' starts on the whole painting: centred on the box (400, 600) and fitted to its height (1040 px), not to the file's (1200)."""
+    sp = {c: clean_spec(s, c) for c, s in GOOD.items()}
+    sp["c01"]["shots"][1]["from"] = "whole"
+    sp["c01"]["shots"][1]["overlays"] = []
+    inp, res = run(ringed, sp)
     sid = next(s["id"] for s in res.storyboard["shots"] if s["technique"] == "CAM-05" and (s["slots"].get("image") or {}).get("asset") == "A")
     k0 = keys_of(res.storyboard, sid)[0]
     cb = res.storyboard["assets"]["A"]["content_box"]
@@ -77,7 +80,7 @@ def test_the_defaults_of_the_main_painting_are_made_for_the_painting_not_the_pho
     assert k0["zoom"] == pytest.approx(0.955 * 1080 / (cb["y1"] - cb["y0"]), abs=2e-5) and k0["zoom"] > 0.955 * 1080 / 1200
     from helpers import make_synth_project                                                     # the same project with no ground: file centre and the file's fit
     plain = make_synth_project(tmp_path / "plain")
-    k1 = keys_of(run(plain)[1].storyboard, sid)[0]
+    k1 = keys_of(run(plain, copy.deepcopy(sp))[1].storyboard, sid)[0]
     assert k1["zoom"] == pytest.approx(0.955 * 1080 / 1200, abs=2e-5)
 
 
@@ -92,16 +95,29 @@ def test_every_camera_key_of_every_shot_on_the_main_painting_is_inside_the_box_a
     assert not [i for i in res.issues if i["code"] == "frame_off_painting"], summary_text(res)
 
 
+def _edit_carried_camera(ringed, past):
+    inp, res = run(ringed)
+    sb = copy.deepcopy(res.storyboard)
+    cams = [s for s in sb["shots"] if s.get("source") == "agent" and s["params"].get("camera") and (s["slots"].get("image") or {}).get("asset") == "A"]
+    victim = cams[2]
+    victim["params"]["camera"] = copy.deepcopy(past)
+    inp2, saved = edit_inputs(ringed, sb, {victim["id"]})
+    # Edit note (leaving carried-over camera untouched so fit_to_box still clamps it on recompilation)
+    for d in saved.values():
+        for sh in d["shots"]:
+            if sh.get("id") == victim["id"]:
+                sh["note"] = "edited"
+    return victim["id"], compile_specs(inp2, saved, draw=False, identity=False)
+
+
 def test_a_camera_the_model_wrote_past_the_edge_is_moved_back_and_the_warning_says_what_was_done(ringed):
-    sp = {c: clean_spec(s, c) for c, s in GOOD.items()}
     past = [{"at": {"rel": 0.0}, "cx": 700, "cy": 600, "zoom": 3.0, "ease": "linear"}, {"at": {"rel": 1.0}, "cx": 790, "cy": 600, "zoom": 4.0, "ease": "linear"}]
-    sp["c01"]["shots"][2]["params"] = {"camera": past}            # the third shot of the first chapter: frames 640 and 480 px wide on a painting 676 px wide, past its right edge
-    inp, res = run(ringed, sp)
+    vid, res = _edit_carried_camera(ringed, past)
     (w,) = [i for i in res.issues if i["code"] == "frame_moved_into_painting"]
-    assert w["level"] == "warn" and w["chapter"] == "c01" and w["shot"] == 3 and w["field"] == "params.camera"
+    assert w["level"] == "warn" and w["field"] == "params.camera"
     assert "painted area of the main painting" in w["message"]
     assert "key 1 showed" in w["message"] and "key 2 showed" in w["message"] and "inside" in w["message"]
-    s = next(s for s in res.storyboard["shots"] if s.get("source") == "agent" and s["params"].get("camera") and s["params"]["camera"][0]["zoom"] == 3.0)
+    s = next(s for s in res.storyboard["shots"] if s["id"] == vid)
     k0, k1 = s["params"]["camera"]
     box = box_of(res.storyboard)
     assert k0["zoom"] == 3.0 and k1["zoom"] == 4.0, "the zoom is changed only when the frame is wider than the painting: here it is not"
@@ -112,22 +128,19 @@ def test_a_camera_the_model_wrote_past_the_edge_is_moved_back_and_the_warning_sa
 
 def test_a_frame_wider_than_the_painting_is_tightened_by_no_more_than_it_must(ringed):
     """The full width of the file (800 px, zoom 2.4) is 60 px of black at each side: the zoom goes to the width of the painting."""
-    sp = {c: clean_spec(s, c) for c, s in GOOD.items()}
-    sp["c01"]["shots"][2]["params"] = {"camera": [{"at": {"rel": 0.0}, "cx": 400, "cy": 300, "zoom": 2.4, "ease": "linear"}, {"at": {"rel": 1.0}, "cx": 400, "cy": 900, "zoom": 2.4, "ease": "linear"}]}
-    inp, res = run(ringed, sp)
+    past = [{"at": {"rel": 0.0}, "cx": 400, "cy": 300, "zoom": 2.4, "ease": "linear"}, {"at": {"rel": 1.0}, "cx": 400, "cy": 900, "zoom": 2.4, "ease": "linear"}]
+    vid, res = _edit_carried_camera(ringed, past)
     cb = res.storyboard["assets"]["A"]["content_box"]
     width = cb["x1"] - cb["x0"]
-    s = next(s for s in res.storyboard["shots"] if s.get("source") == "agent" and s["params"].get("camera") and abs(s["params"]["camera"][0]["zoom"] - 1920 / width) < 1e-3)
+    s = next(s for s in res.storyboard["shots"] if s["id"] == vid)
     assert s["params"]["camera"][0]["zoom"] == pytest.approx(1920 / width, abs=2e-5) and s["params"]["camera"][0]["cx"] == pytest.approx((cb["x0"] + cb["x1"]) / 2, abs=1.0)
 
 
 def test_a_key_that_holds_the_whole_painting_is_left_alone(ringed):
-    sp = {c: clean_spec(s, c) for c, s in GOOD.items()}
     whole = [{"at": {"rel": 0.0}, "cx": 400, "cy": 600, "zoom": 0.9, "ease": "linear"}, {"at": {"rel": 1.0}, "cx": 400, "cy": 600, "zoom": 0.95, "ease": "linear"}]
-    sp["c01"]["shots"][2]["params"] = {"camera": whole}
-    inp, res = run(ringed, sp)
+    vid, res = _edit_carried_camera(ringed, whole)
     assert not [i for i in res.issues if i["code"] == "frame_moved_into_painting"]
-    s = next(s for s in res.storyboard["shots"] if s.get("source") == "agent" and s["params"].get("camera") and s["params"]["camera"][0]["zoom"] == 0.9)
+    s = next(s for s in res.storyboard["shots"] if s["id"] == vid)
     assert [(k["cx"], k["cy"], k["zoom"]) for k in s["params"]["camera"]] == [(400, 600, 0.9), (400, 600, 0.95)]
 
 

@@ -105,6 +105,11 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "frame_off_painting": ("a camera key of a shot on the main painting shows more than 1% of the frame outside the painted area of the picture: a band of the museum photograph's black ground, "
                                "or of the matte past the picture's edge, stands at a side of the frame (the first test video had about a dozen such shots, the close-ups of the mirror)",
                                "có cảnh máy quay trượt ra ngoài mặt tranh: một dải đen của nền ảnh bảo tàng hiện ở mép khung hình"),
+        # --- boxcam (2026-11-21): a named region must stay wholly inside the frame and arrive early enough to be seen (bti/engine/viewchecks.py)
+        "camera_off_region": ("at the end of a main-painting shot pointing at a region, that region's box extends outside the frame so the viewer cannot see all of it",
+                              "cuối cảnh chỉ vào một vùng của tranh chính nhưng vùng đó bị cắt mép ra ngoài khung hình"),
+        "thing_arrives_late": ("a named region stays wholly inside the frame for less than 2 seconds and less than 55% of the shot, so the camera arrives too late",
+                               "chi tiết được gọi tên chỉ nằm gọn trong khung quá muộn và quá ngắn nên người xem không kịp thấy"),
     },
 }
 # gate -> codes that never stop the run (they stay in the log)

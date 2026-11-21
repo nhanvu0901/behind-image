@@ -745,6 +745,16 @@ SMALL_PICTURE_MAX_ZOOM = 2.0
 OVERLAP_MIN_S = 1.0                     # a device belongs to a beat when they share at least this long (or half of the device, when it is shorter)
 MIN_ITEMS = {"MAP-01": ("places", 2), "TIME-01": ("items", 3), "KEY-01": ("labels", 3), "TREE-01": ("nodes", 3)}
 
+# --- boxcam: one frame rule for a region of the main painting, and the two framing checks
+FRAME_FILL = 0.62                       # a region fills this share of the frame's width or height (whichever is reached first)
+SHARP_ZOOM = 2.0                        # never zoom a normal picture past 2.0 screen px per source px
+WHOLE_FIT_PCT = 95.5                    # whole-painting fit share when no style/identity override is given
+MATTE_HEADROOM = 1.04                   # a frame kept in the matte band (a small picture whose tight fit would pass the sharp limit) keeps this much room: a drift of up to 4 % that follows it (the channel-name beat's 3 % in the identity, the hold push) stays in the band
+REGION_IN_TOL_PX = 1.0                  # source-px tolerance so contentbox.fit_frame 0.01 px rounding never false-fires on edge regions
+ARRIVE_MIN_S = 2.0                      # a named region stays wholly inside the frame for at least 2.0 s ...
+ARRIVE_MIN_SHARE = 0.55                 # ... OR at least 55% of the shot (whichever is shorter)
+ARRIVE_STEP_S = 0.05                    # camera sampling step for checking region arrival time
+
 HINTS.update({
     "device_wrong_kind": ("Use a device only on a line whose kinds call for it (MAP-01: journey; TIME-01: dates; NUM-01: figure; DOC-01: inscription; AN-03 and AN-06: construction; TREE-01: relations; "
                           "LAY-01 and X-CMP-01: compare). On this line remove it and keep the picture the picks give, with a camera move."),
@@ -1219,6 +1229,10 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         out.extend(_frame_off_painting(c))
     except Exception:       # noqa: BLE001
         pass
+    try:                                                          # boxcam: the camera holds the region the shot points at and arrives early
+        out.extend(_region_framing(c))
+    except Exception:       # noqa: BLE001
+        pass
     return out
 
 
@@ -1292,4 +1306,224 @@ CODES.update({
     "small_detail_not_lit": "A small named painting detail has no pointer (warning). args: beat, region, shot, width_share, height_share, limit.",
     "highlight_nothing_to_dim": "A spotlight covers too much of the frame (warning). args: shot, overlay, share, limit.",
     "text_too_brief": "A text is fully visible for too little time (warning). args: shot, overlay, text, seconds, needed.",
+})
+
+
+# ----------------------------------------------------------------------------------------------------------- boxcam: one frame rule + region framing checks
+HINTS.update({
+    "camera_off_region": "Name the region on the shot (or enlarge/re-measure the region in out/regions.json) so the compiler frames all of it inside the shot.",
+    "thing_arrives_late": "Start the move closer (`from`), make the shot longer, or move on a single region so the detail is wholly inside the frame early.",
+})
+
+
+def _valid_box(box, w: float, h: float) -> tuple[float, float, float, float]:
+    if isinstance(box, (list, tuple)) and len(box) == 4 and all(_num(v) for v in box) and float(box[2]) > float(box[0]) and float(box[3]) > float(box[1]):
+        return (float(box[0]), float(box[1]), float(box[2]), float(box[3]))
+    return (0.0, 0.0, float(w), float(h))
+
+
+def region_box(reg: dict | None) -> tuple[float, float, float, float] | None:
+    """Source-pixel bounding box `(x0, y0, x1, y1)` of a region with positive radii, else None."""
+    if not isinstance(reg, dict):
+        return None
+    if not (_num(reg.get("x")) and _num(reg.get("y")) and _num(reg.get("rx")) and _num(reg.get("ry"))):
+        return None
+    x, y, rx, ry = float(reg["x"]), float(reg["y"]), float(reg["rx"]), float(reg["ry"])
+    if rx <= 0 or ry <= 0:
+        return None
+    return (x - rx, y - ry, x + rx, y + ry)
+
+
+def region_point_box(reg: dict | None) -> tuple[float, float, float, float] | None:
+    """Bounding box of a region, falling back to its `(x, y)` point when radii are absent."""
+    b = region_box(reg)
+    if b is not None:
+        return b
+    if isinstance(reg, dict) and _num(reg.get("x")) and _num(reg.get("y")):
+        x, y = float(reg["x"]), float(reg["y"])
+        return (x, y, x, y)
+    return None
+
+
+def sharp_limit(w: float, h: float, sharp_zoom: float | None = None) -> float:
+    """Maximum zoom allowed for a w x h stored picture (`SHARP_ZOOM`, or `SMALL_PICTURE_MAX_ZOOM` when < 1000 px long side)."""
+    sharp = SHARP_ZOOM if sharp_zoom is None else float(sharp_zoom)
+    return min(sharp, SMALL_PICTURE_MAX_ZOOM) if is_small_picture(float(w), float(h)) else sharp
+
+
+def whole_painting_frame(w: float, h: float, box=None, *, fit_pct: float = WHOLE_FIT_PCT) -> tuple[float, float, float]:
+    """`(cx, cy, zoom)` fitting the whole painted area cleanly inside 1920x1080."""
+    wf, hf = float(w), float(h)
+    if wf <= 0 or hf <= 0:
+        return (0.0, 0.0, 1.0)
+    bx0, by0, bx1, by1 = _valid_box(box, wf, hf)
+    cx = (bx0 + bx1) / 2.0
+    cy = (by0 + by1) / 2.0
+    z = (float(fit_pct) / 100.0) * min(L.CANVAS_W / (bx1 - bx0), L.CANVAS_H / (by1 - by0))
+    if is_small_picture(wf, hf):
+        z = min(z, SMALL_PICTURE_MAX_ZOOM)
+    return (round(cx, 2), round(cy, 2), round(z, 5))
+
+
+def fit_frame_to_box(cx: float, cy: float, z: float, w: float, h: float, box=None, *,
+                     fit_pct: float = WHOLE_FIT_PCT, z_cap: float | None = None) -> tuple[float, float, float]:
+    """Keep `(cx, cy, z)` inside the painted surface (`contentbox.fit_frame`) while centring wide axes and never exceeding `z_cap`."""
+    from bti.media import contentbox as CB
+    wf, hf = float(w), float(h)
+    pbox = _valid_box(box, wf, hf)
+    bw, bh = pbox[2] - pbox[0], pbox[3] - pbox[1]
+    cx_w, cy_w, z_whole = whole_painting_frame(wf, hf, pbox, fit_pct=fit_pct)
+    cap = sharp_limit(wf, hf) if z_cap is None else float(z_cap)
+    z = max(z_whole, min(cap, float(z)))
+    cx = cx_w if (L.CANVAS_W / z >= bw - 1e-6) else float(cx)
+    cy = cy_w if (L.CANVAS_H / z >= bh - 1e-6) else float(cy)
+    fcx, fcy, fz = CB.fit_frame(pbox, cx, cy, z)
+    # Prevent contentbox.fit_frame's MATTE_RATIO tighten step from pushing zoom above `cap` on small/medium upright works: the frame stays in the matte
+    # band with `MATTE_HEADROOM` to spare, so that a later drift in (the beat's 3 % push) does not leave the band and get tightened past the cap.
+    if fz > cap + 1e-6:
+        z2 = z
+        if L.CANVAS_W / bw > cap and bw - 1e-6 < L.CANVAS_W / z2 < CB.MATTE_RATIO * bw:
+            z2 = min(z2, L.CANVAS_W / (CB.MATTE_RATIO * bw * MATTE_HEADROOM))
+        if L.CANVAS_H / bh > cap and bh - 1e-6 < L.CANVAS_H / z2 < CB.MATTE_RATIO * bh:
+            z2 = min(z2, L.CANVAS_H / (CB.MATTE_RATIO * bh * MATTE_HEADROOM))
+        z2 = max(z_whole, z2)
+        cx2 = cx_w if (L.CANVAS_W / z2 >= bw - 1e-6) else cx
+        cy2 = cy_w if (L.CANVAS_H / z2 >= bh - 1e-6) else cy
+        fcx, fcy, fz = CB.fit_frame(pbox, cx2, cy2, z2)
+    return (round(float(fcx), 2), round(float(fcy), 2), round(float(fz), 5))
+
+
+def region_frame(region: dict | None, w: float, h: float, box=None, *, fit_pct: float = WHOLE_FIT_PCT,
+                 frame_fill: float | None = None, sharp_zoom: float | None = None) -> tuple[float, float, float]:
+    """One frame rule `(cx, cy, zoom)` for a region on an image of size `w x h` with painted area `box`:
+    centred on the region centre; zoom gives `FRAME_FILL` of frame width or height (whichever reached first),
+    capped at `SHARP_ZOOM` (`SMALL_PICTURE_MAX_ZOOM` for small stored pictures), never below whole-painting fit,
+    and kept inside the painted surface."""
+    wf, hf = float(w), float(h)
+    if wf <= 0 or hf <= 0:
+        return (0.0, 0.0, 1.0)
+    pbox = _valid_box(box, wf, hf)
+    bw = pbox[2] - pbox[0]
+    cx_w, cy_w, z_whole = whole_painting_frame(wf, hf, pbox, fit_pct=fit_pct)
+    if not isinstance(region, dict):
+        return (cx_w, cy_w, z_whole)
+    fill = FRAME_FILL if frame_fill is None else float(frame_fill)
+    cap = sharp_limit(wf, hf, sharp_zoom=sharp_zoom)
+    rbox = region_box(region)
+    if rbox is not None:
+        rw, rh = rbox[2] - rbox[0], rbox[3] - rbox[1]
+        z_raw = min(fill * L.CANVAS_W / rw, fill * L.CANVAS_H / rh)
+        z = max(z_whole, min(cap, z_raw))
+        cx, cy = float(region["x"]), float(region["y"])
+    elif _num(region.get("x")) and _num(region.get("y")):
+        cx, cy = float(region["x"]), float(region["y"])
+        z = max(z_whole, min(cap, L.CANVAS_W / bw))
+    else:
+        return (cx_w, cy_w, z_whole)
+    return fit_frame_to_box(cx, cy, z, wf, hf, pbox, fit_pct=fit_pct, z_cap=cap)
+
+
+def region_frame_info(region: dict | None, w: float, h: float, box=None, *, fit_pct: float = WHOLE_FIT_PCT,
+                      frame_fill: float | None = None, sharp_zoom: float | None = None) -> dict:
+    """Computed compiler end frame and screen fill metrics for a region (used by draft helpers)."""
+    cx, cy, z = region_frame(region, w, h, box, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom)
+    hw, hh = L.CANVAS_W / (2.0 * z), L.CANVAS_H / (2.0 * z)
+    fx0, fy0, fx1, fy1 = cx - hw, cy - hh, cx + hw, cy + hh
+    info: dict = {"cx": cx, "cy": cy, "zoom": z, "rect": [round(fx0, 1), round(fy0, 1), round(fx1, 1), round(fy1, 1)]}
+    rbox = region_box(region)
+    if rbox is not None:
+        ws = (rbox[2] - rbox[0]) * z / L.CANVAS_W
+        hs = (rbox[3] - rbox[1]) * z / L.CANVAS_H
+        info["width_share"] = round(ws, 4)
+        info["height_share"] = round(hs, 4)
+        info["needs_spotlight"] = (ws < SMALL_ON_SCREEN - 1e-9 and hs < SMALL_ON_SCREEN - 1e-9)
+    return info
+
+
+def box_inside_frame(box: tuple[float, float, float, float], cx: float, cy: float, zoom: float,
+                     tol: float = REGION_IN_TOL_PX) -> tuple[bool, float]:
+    """`(ok, miss_px)`: True when `box` (`x0, y0, x1, y1`) sits wholly inside the `(cx, cy, zoom)` frame (within `tol` source px)."""
+    if zoom <= 0:
+        return (False, float("inf"))
+    hw, hh = L.CANVAS_W / (2.0 * zoom), L.CANVAS_H / (2.0 * zoom)
+    miss = max(0.0, (cx - hw) - box[0], (cy - hh) - box[1], box[2] - (cx + hw), box[3] - (cy + hh))
+    return (miss <= tol, miss)
+
+
+def _region_framing(c: _Ctx) -> list[dict]:
+    """Viewer checks `camera_off_region` and `thing_arrives_late` on main-painting shots that point at a named region or a unique detail pick."""
+    main = _main_painting(c)
+    asset = c.assets.get(main) if main else None
+    regs = (asset.get("regions") if isinstance(asset, dict) else None) or {}
+    if not regs:
+        return []
+    rows = _beat_rows(c)
+    out: list[dict] = []
+    for i, shot in enumerate(c.shots):
+        sp = c.spans[i]
+        if sp is None or shot.get("intent") == "structure" or shot.get("id") == "s0000":
+            continue
+        if c.primary(i) != main or not c.has_camera(i):
+            continue
+        keys = c.keys_of(i, sp)
+        if not keys:
+            continue
+        t0, t1 = sp
+        dur = t1 - t0
+        if dur <= 0:
+            continue
+        bovs = [(min(t1, r["t1"]) - max(t0, r["t0"]), r) for r in rows]
+        bovs = [x for x in bovs if x[0] > 0.05]
+        bovs.sort(key=lambda x: -x[0])
+        dom = bovs[0][1] if bovs else None
+        bid = dom["id"] if dom else None
+
+        slot_reg = ((shot.get("slots") or {}).get("image") or {}).get("region") if isinstance(shot.get("slots"), dict) else None
+        rname = None
+        if isinstance(slot_reg, str) and slot_reg in regs:
+            rname = slot_reg
+        elif dom and "detail" in (dom["kinds"] or []):
+            dregs = []
+            for it in dom["entry"].get("items") or []:
+                rn = it.get("region") if isinstance(it, dict) and it.get("asset") == main else None
+                if isinstance(rn, str) and rn in regs and rn not in dregs:
+                    dregs.append(rn)
+            if len(dregs) == 1:
+                rname = dregs[0]
+        if rname is None:
+            continue
+        rbox = region_point_box(regs[rname])
+        if rbox is None:
+            continue
+
+        cx1, cy1, z1 = camera_at(keys, t1)
+        ok_end, miss_px = box_inside_frame(rbox, cx1, cy1, z1)
+        if not ok_end:
+            out.append(_issue("camera_off_region", "shots[%d]" % i,
+                              "At the end of shot %s (%.2f s), region %s extends %.0f px outside the frame (centre %.0f, %.0f at zoom %.3g)."
+                              % (c.sid(i), t1, rname, miss_px, cx1, cy1, z1),
+                              shot=c.sid(i), region=rname, beat=bid, miss_px=_r(miss_px, 1),
+                              cx=_r(cx1, 0), cy=_r(cy1, 0), zoom=round(float(z1), 4)))
+
+        n = max(20, int(math.ceil(dur / ARRIVE_STEP_S)))
+        dt = dur / n
+        in_s = 0.0
+        for k in range(n):
+            tk = t0 + (k + 0.5) * dt
+            cx, cy, z = camera_at(keys, tk)
+            if box_inside_frame(rbox, cx, cy, z)[0]:
+                in_s += dt
+        share = in_s / dur
+        if in_s < ARRIVE_MIN_S - 1e-6 and share < ARRIVE_MIN_SHARE - 1e-6:
+            out.append(_issue("thing_arrives_late", "shots[%d]" % i,
+                              "Region %s in shot %s is wholly inside the frame for only %.2f of %.2f s (%.0f%%; needs %.1f s or %.0f%%)."
+                              % (rname, c.sid(i), in_s, dur, 100.0 * share, ARRIVE_MIN_S, 100.0 * ARRIVE_MIN_SHARE),
+                              shot=c.sid(i), region=rname, beat=bid, seconds=_r(in_s, 2), shot_seconds=_r(dur, 2),
+                              share=_r(share, 3), min_seconds=ARRIVE_MIN_S, min_share=ARRIVE_MIN_SHARE))
+    return out
+
+
+CODES.update({
+    "camera_off_region": "At the end of a main-painting shot that points at a region, the region box is not wholly inside the frame (warning). args: shot, region, beat, miss_px, cx, cy, zoom.",
+    "thing_arrives_late": "A named region is wholly inside the frame for less than 2.0 s and less than 55% of the shot (warning). args: shot, region, beat, seconds, shot_seconds, share, min_seconds, min_share.",
 })

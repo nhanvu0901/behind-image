@@ -35,6 +35,7 @@ from bti.engine.timing import AnchorError, Timing, norm
 from bti.media.assets import scale_regions
 from bti.media import contentbox as CB          # panelbox: the painted area of the main painting
 
+from . import camera as CAM
 from . import spec as S
 from . import decompile as D
 from . import zones as Z
@@ -349,24 +350,21 @@ class _Compiler:
 
     def region_camera(self, tid, info, region_name) -> list | None:
         r = (info.get("regions") or {}).get(region_name) if info else None
-        z_fit = self.fit_zoom(info)
-        if not (r and z_fit and info.get("w") and info.get("h")):
+        if not (info and info.get("w") and info.get("h")):
             return None
         w, h = float(info["w"]), float(info["h"])
-        box = self.box_for(info)            # panelbox: the whole-painting end of the move is the painted area, centred and fitted
-        wcx, wcy = ((box[0] + box[2]) / 2, (box[1] + box[3]) / 2) if box is not None else (w / 2, h / 2)
-        rx = float(r.get("rx") or 0.08 * w)
-        ry = float(r.get("ry") or rx)
-        z_det = min(1920 * 0.5 / (2 * rx), 1080 * 0.5 / (2 * ry))
-        z_det = max(z_fit * 1.3, min(z_det, 6.0))
-        cx, cy = float(r["x"]), float(r["y"])
+        box = self.box_for(info)
+        end = VC.region_frame(r, w, h, box, fit_pct=self.fit_pct())
+        whole = VC.whole_painting_frame(w, h, box, fit_pct=self.fit_pct())
         if tid == "CAM-05":
-            return [_key(0.0, wcx, wcy, z_fit, "inout_cubic"), _key(1.0, cx, cy, z_det)]
+            return [_key(0.0, *whole, "inout_cubic"), _key(1.0, *end)]
         if tid == "CAM-01":
-            z1 = z_det * 0.85
-            return [_key(0.0, cx, cy, z1), _key(1.0, cx, cy, z1 * 1.142)]
+            z0 = max(whole[2], end[2] / 1.08)
+            start = VC.fit_frame_to_box(end[0], end[1], z0, w, h, box, fit_pct=self.fit_pct())
+            return [_key(0.0, *start, "inout_sine"), _key(1.0, *end)]
         if tid == "CAM-03":
-            return [_key(0.0, cx, cy, z_det, "in_quad"), _key(1.0, wcx, wcy, z_fit)]
+            start = VC.fit_frame_to_box(end[0], end[1], min(VC.sharp_limit(w, h), end[2] * 1.18), w, h, box, fit_pct=self.fit_pct())
+            return [_key(0.0, *start, "inout_cubic"), _key(1.0, *whole)]
         return None
 
     # ---------------------------------------------------------------- narration on screen
@@ -450,8 +448,10 @@ class _Compiler:
         n, tid = ss["_n"], ss["technique"]
         where = {"chapter": zone["id"], "n": n}
         spec = self.bundle.spec(tid)
-        slots = {k: {"asset": v["asset"]} for k, v in (ss.get("slots") or {}).items()}
-        regs = {k: v.get("region") for k, v in (ss.get("slots") or {}).items()}
+        in_slots = ss.get("slots") or {}
+        slots = {k: {"asset": v["asset"]} for k, v in in_slots.items()}
+        regs = {k: v.get("region") for k, v in in_slots.items()}
+        auto_filled_image = False
         pick0 = beat_picks_[0] if beat_picks_ else None
         if spec is not None and "footage" not in slots and any(sd["name"] == "footage" for sd in spec["slots"]):
             vpick = next((p for p in beat_picks_ if (self.assets.get(p.get("asset")) or {}).get("kind") == "video"), pick0)
@@ -460,16 +460,26 @@ class _Compiler:
         if spec is not None and "image" not in slots and any(sd["name"] == "image" and sd.get("type") == "image" for sd in spec["slots"]):
             ipick = next((p for p in beat_picks_ if self.is_image(p.get("asset"))), None)
             slots["image"] = {"asset": ipick["asset"] if ipick else self.main}
+            auto_filled_image = True
             if ipick and ipick.get("region"):
                 regs.setdefault("image", ipick["region"])
         pslot, akey = SB.primary_slot({"slots": slots})
         region = regs.get(pslot) if pslot else None
-        if region is None and akey and pick0 and pick0["asset"] == akey:
+        if region is None and akey and akey != self.main and pick0 and pick0["asset"] == akey:
             region = pick0.get("region")
         info = self.info(akey) if akey else None
         if region and info and region not in info["regions"]:
             self.base_issues.append(S.problem("region_unknown", zone["id"], n, "region %r does not exist on asset %r (regions: %s). Use one of them, or add it to out/regions.json" % (region, akey, ", ".join(sorted(info["regions"])) or "none"), field="slots.%s.region" % pslot))
             region = None
+        if pslot and pslot in slots and region:
+            if (pslot in in_slots and in_slots[pslot].get("region")) or (not self.edit and auto_filled_image):
+                slots[pslot]["region"] = region
+        from_ref = ss.get("from")
+        if akey == self.main and isinstance(from_ref, str) and from_ref not in ("previous", "whole") and info and from_ref not in info["regions"]:
+            self.base_issues.append(S.problem("from_unknown_region", zone["id"], n,
+                                              '"from" region %r does not exist on asset %r (regions: %s, or "previous"/"whole"). Add it to out/regions.json or use another name'
+                                              % (from_ref, akey, ", ".join(sorted(info["regions"])) or "none"), field="from"))
+            from_ref = None
         label = ((info or {}).get("regions", {}).get(region) or {}).get("label") if region else None
         params: dict = {}
         if spec is not None:
@@ -494,6 +504,16 @@ class _Compiler:
         for p in self.screen_text_check(tid, mine, zone["id"], n):
             self.base_issues.append(p)
         self._fill_anchors(mine)
+        camera_refused = False
+        carried_camera = False
+        if akey == self.main and "camera" in mine:
+            old_rec = self.cur_by_id.get(ss.get("id")) if ss.get("id") else None
+            old_cam = (((old_rec or {}).get("shot") or {}).get("params") or {}).get("camera")
+            old_reg = ((((old_rec or {}).get("shot") or {}).get("slots") or {}).get("image") or {}).get("region")
+            if old_rec is not None and old_cam is not None and D.clean(mine.get("camera")) == D.clean(old_cam) and regs.get(pslot) == old_reg and from_ref is None:
+                carried_camera = True
+            else:
+                camera_refused = True
         default_cam = copy.deepcopy(params.get("camera"))
         params.update(mine)
         if spec is not None:
@@ -502,6 +522,12 @@ class _Compiler:
                 "intent": ss.get("intent") or (spec["intents"][0] if spec and spec.get("intents") else None),
                 "transition_in": copy.deepcopy(ss.get("transition_in")), "overlays": [], "locked": False, "source": "agent",
                 "note": ss.get("note") or ""}
+        if camera_refused:
+            shot["_camera_refused"] = True
+        elif akey == self.main and tid in CAM.OFFERED_CAMERA_TECHNIQUES and not carried_camera:
+            shot["_boxcam"] = True
+            shot["_boxcam_region"] = region
+            shot["_boxcam_from"] = from_ref
         if spec is not None and (spec.get("channel_usage") == "shorts_only"):
             self.base_issues.append(S.problem("shorts_only_technique", zone["id"], n, "%s is reserved for Shorts; choose another technique" % tid, field="technique"))
             shot["_banned"] = True
@@ -770,11 +796,18 @@ class _Compiler:
         issues: list = []
         shots, origin = [], []
         end_t = self.t["duration"]
+        main_asset_doc = self.assets.get(self.main) or {}
+        main_box = CB.box_of(main_asset_doc, self.inp.project_dir) if isinstance(main_asset_doc, dict) else None
+        prev_main_frame: tuple[float, float, float] | None = None
         for i, r in enumerate(recs):
             t1 = recs[i + 1]["t0"] if i + 1 < len(recs) else end_t
             shot = copy.deepcopy(r["shot"])
             shot.pop("_banned", None)
             shot.pop("_ban", None)
+            cam_refused = shot.pop("_camera_refused", False)
+            boxcam = shot.pop("_boxcam", False)
+            boxcam_region = shot.pop("_boxcam_region", None)
+            boxcam_from = shot.pop("_boxcam_from", None)
             shot.pop("overlays", None)
             ovs, omap = [], []
             used_o = {o.get("id") for o in (r.get("old_shot") or {}).get("overlays") or []}
@@ -849,6 +882,27 @@ class _Compiler:
             shot["overlays"] = ovs
             shot["id"] = r["id"]
             shot["start"] = copy.deepcopy(r["anchor"])
+            if cam_refused:
+                err = S.problem("camera_not_allowed", r["chapter"], r["n"],
+                                'do not write params.camera for the main painting: name slots.image.region (and optional "from": "previous"|"whole"|"<REGION>") '
+                                'so the compiler computes the camera, or add a tight region measured with ./crop to out/regions.json',
+                                field="params.camera")
+                err["rec"] = len(shots)
+                issues.append(err)
+            elif boxcam:
+                shot.setdefault("params", {})["camera"] = CAM.build_main_camera(
+                    shot.get("technique"), boxcam_region, boxcam_from, main_asset_doc, main_box,
+                    prev_main_frame, r["t0"], t1, ovs, self.tm, fit_pct=self.fit_pct(),
+                )
+            if r["kind"] not in ("card", "title") and SB.primary_slot(shot)[1] == self.main:
+                cam_list = (shot.get("params") or {}).get("camera") if isinstance(shot.get("params"), dict) else None
+                last_k = cam_list[-1] if isinstance(cam_list, list) and cam_list else None
+                if isinstance(last_k, dict) and all(isinstance(last_k.get(f), (int, float)) and not isinstance(last_k.get(f), bool) for f in ("cx", "cy", "zoom")):
+                    prev_main_frame = (float(last_k["cx"]), float(last_k["cy"]), float(last_k["zoom"]))
+                else:
+                    prev_main_frame = None
+            else:
+                prev_main_frame = None
             ordered = {"id": shot["id"], "start": shot["start"]}
             for k in ("technique", "slots", "params", "intent", "transition_in", "overlays", "locked", "source", "note"):
                 if k in shot:
@@ -1110,7 +1164,7 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
-    pointfix = {"small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief"}
+    pointfix = {"small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
         required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
         rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items

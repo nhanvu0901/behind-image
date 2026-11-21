@@ -69,7 +69,22 @@ def main(argv=None) -> int:
         return 2
     dest.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(dest), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-    print("wrote %s (shot %s at %.2f s, technique %s)" % (dest, a.shot, t, o["technique"]))
+    from bti.engine import viewchecks as VC
+    from bti.engine.timing import Timing
+    sh = out.storyboard["shots"][idx]
+    cam = (sh.get("params") or {}).get("camera") if isinstance(sh.get("params"), dict) else None
+    pose = ""
+    if isinstance(cam, list) and cam:
+        try:
+            keys = VC._Ctx(out.storyboard, Timing(inp.timing), eng.bundle, root,
+                            [o["t0"] for o in out.origin], float(inp.timing["duration"]), lambda _d, _r: None).keys_of(idx, (o["t0"], o["t1"]))
+            if keys:
+                cx, cy, z = VC.camera_at(keys, t)
+                hw, hh = 1920.0 / (2.0 * z), 1080.0 / (2.0 * z)
+                pose = ", frame centre (%.1f, %.1f) zoom %.4f rect [%.0f, %.0f, %.0f, %.0f]" % (cx, cy, z, cx - hw, cy - hh, cx + hw, cy + hh)
+        except Exception:       # noqa: BLE001
+            pose = ""
+    print("wrote %s (shot %s at %.2f s, technique %s%s)" % (dest, a.shot, t, o["technique"], pose))
     return 0
 
 

@@ -308,6 +308,12 @@ Three base techniques, each the approved moving mock-up (`docs/design/mock/2026-
 second lines and edge labels at 72 percent, sizes as cap heights of the bundled EB Garamond. The agent gives data only; the technique solves the layout. Report with the numbers:
 `docs/qa/FIX_comp_base.md`. Stills, timings and the preview clips: `python tools/explain_base/render_examples.py stills OUTDIR | timing | preview`.
 
+## Main-painting frame rule and framing viewer checks (`bti/engine/viewchecks.py`)
+
+- `region_frame(region, w, h, box)` computes `(cx, cy, zoom)` for a named region on the main painting: centred on the region centre, making the region take `FRAME_FILL` (`0.62`) of the frame's width or height (whichever is reached first), capped at `SHARP_ZOOM` (`2.0`, or `SMALL_PICTURE_MAX_ZOOM` for images with long side `< 1000 px`), never below whole-painting fit, and clamped inside `content_box` (on a small stored picture whose tight fit would pass the sharp limit the frame stays in the matte band with `MATTE_HEADROOM` = 1.04 to spare, so a later 3 % drift does not leave the band).
+- `camera_off_region` warns when at shot end a main-painting shot pointing at a named region (`slots.image.region` or unique beat detail pick) leaves the region box outside the frame (tolerance `REGION_IN_TOL_PX = 1.0`).
+- `thing_arrives_late` warns when that region stays wholly inside the frame for less than `2.0 s` and less than `55%` of the shot duration.
+
 * **`TIME-01`** (`items`: `date` a whole year, negative for BC, `label`, `side` auto|up|down, `at`, `accent`; `from`, `to` as text, empty = the items' range with one year of margin; `tick_every`
   0 = automatic; `focus_s`, `dim_to`, `cap_pct`). The axis grows from the left over 0.8 s (ease in and out), ticks fade in (staggered), a stalk grows over 0.35 s from its `at` (ease out), the year fades in from
   +0.2 s and the label from +0.35 s; at `focus_s` (0.8 s ramp) the accented items brighten, get a dot on the axis, and the others dim to `dim_to`. **Layout** (`solve_time`): for every item a depth first search over

@@ -995,3 +995,10 @@ export const PICKS_TIGHTEN_LABELS = {
   working: 'Agent đang đo lại khung chi tiết...',
   tightTag: 'khít',
 };
+
+// ---- worker boxcam (2026-11-21): short names for region framing and arrival checks.
+export const BOXCAM_LABELS = {
+  camera_off_region: 'Vùng được nhắc bị cắt ngoài khung',
+  thing_arrives_late: 'Máy quay tới chi tiết quá muộn',
+};
+Object.assign(CODE, BOXCAM_LABELS);

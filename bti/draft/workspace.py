@@ -267,7 +267,7 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
         c = copies.get(k)
         vc = video_copies.get(k)
         rec = {"title": a.get("title"), "artist": a.get("artist"), "year": a.get("year"), "kind": a.get("kind"),
-               "credit": a.get("credit"), "regions": (a.get("regions") or {})}
+               "credit": a.get("credit"), "regions": copy.deepcopy(a.get("regions") or {})}
         if c:
             rec.update(file="images/%s.jpg" % k, source_size=[c[0], c[1]], image_size=[c[2], c[3]], scale=round(c[0] / float(c[2]), 4))
         elif vc:

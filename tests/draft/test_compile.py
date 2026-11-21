@@ -69,7 +69,7 @@ def test_defaults_are_filled_and_regions_aimed(proj):
     s = res.storyboard["shots"][1]
     assert s["technique"] == "CAM-05" and s["slots"]["image"]["asset"] == "A"
     cam = s["params"]["camera"]
-    assert len(cam) == 2 and (cam[-1]["cx"], cam[-1]["cy"]) == (400.0, 300.0) and cam[-1]["zoom"] > cam[0]["zoom"]
+    assert 2 <= len(cam) <= 3 and (cam[-1]["cx"], cam[-1]["cy"]) == (400.0, 300.0) and cam[-1]["zoom"] > cam[0]["zoom"]
     ov = s["overlays"][0]
     assert ov["id"] == "o1" and ov["params"]["at"] == "MIRROR" and ov["params"]["rx"] == 80 and ov["dur"] > 0
     assert ov["start"]["text"] == "w12"

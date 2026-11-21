@@ -20,7 +20,7 @@ from bti.engine.timing import AnchorError, Timing
 from . import spec as S
 from .inputs import SPEC_SCHEMA, DraftInputs
 
-COMPARE_SHOT = ("beat", "start_word", "off", "technique", "intent", "slots", "params", "overlays", "note", "transition_in")
+COMPARE_SHOT = ("beat", "start_word", "off", "technique", "intent", "slots", "from", "params", "overlays", "note", "transition_in")
 COMPARE_OVERLAY = ("technique", "start_word", "off", "dur", "intent", "slots", "params", "note")
 
 
@@ -60,6 +60,13 @@ def chapter_of(inp: DraftInputs, w: int) -> str | None:
     return before[-1]["id"] if before else (inp.timing["chapters"][0]["id"] if inp.timing["chapters"] else None)
 
 
+def _slot_spec(v: dict) -> dict:
+    d = {"asset": v.get("asset")}
+    if isinstance(v.get("region"), str) and v["region"]:
+        d["region"] = v["region"]
+    return d
+
+
 def shot_to_spec(inp: DraftInputs, tm: Timing, shot: dict, t0: float, t1: float) -> dict:
     """One saved shot as a spec shot (without `id`/flags, which `decompile` adds)."""
     w, off = _word_of(tm, shot.get("start") or {}, t0)
@@ -80,7 +87,7 @@ def shot_to_spec(inp: DraftInputs, tm: Timing, shot: dict, t0: float, t1: float)
                     "intent": o.get("intent"), "slots": copy.deepcopy(o.get("slots") or {}), "params": copy.deepcopy(o.get("params") or {}),
                     "note": o.get("note") or "", "id": o.get("id"), "locked": bool(o.get("locked"))})
     return {"beat": beat_of(inp, w), "start_word": w, "off": off, "technique": shot.get("technique"), "intent": shot.get("intent"),
-            "slots": {k: {"asset": v.get("asset")} for k, v in (shot.get("slots") or {}).items() if isinstance(v, dict) and v.get("asset")},
+            "slots": {k: _slot_spec(v) for k, v in (shot.get("slots") or {}).items() if isinstance(v, dict) and v.get("asset")},
             "params": copy.deepcopy(shot.get("params") or {}), "overlays": ovs, "note": shot.get("note") or "",
             "transition_in": copy.deepcopy(shot.get("transition_in"))}
 
@@ -88,8 +95,8 @@ def shot_to_spec(inp: DraftInputs, tm: Timing, shot: dict, t0: float, t1: float)
 def comparable(spec_shot: dict) -> dict:
     d = {k: spec_shot.get(k) for k in COMPARE_SHOT if k != "overlays"}
     d["overlays"] = [{k: o.get(k) for k in COMPARE_OVERLAY} for o in spec_shot.get("overlays") or []]
-    d["slots"] = {k: {"asset": v.get("asset")} for k, v in (spec_shot.get("slots") or {}).items()}
-    for k in ("intent", "note", "transition_in"):
+    d["slots"] = {k: _slot_spec(v) for k, v in (spec_shot.get("slots") or {}).items() if isinstance(v, dict)}
+    for k in ("from", "intent", "note", "transition_in"):
         d[k] = d.get(k) or None
     for o in d["overlays"]:
         o["intent"], o["note"] = o.get("intent") or None, o.get("note") or None

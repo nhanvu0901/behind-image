@@ -331,7 +331,7 @@ def test_default_spotlight_is_readable_and_explicit_dark_one_is_sent_back(proj, 
     finish(mgr, R.start(proj.name, proj, provider="agy", manager=mgr, guard_factory=gf, python="python"))
     assert len(fake.prompts()) == 1
     bad = json.loads(json.dumps(GOOD))
-    bad["c01"]["shots"][1]["overlays"][0]["params"]["floor"] = 0.2
+    bad["c01"]["shots"][1]["overlays"][0]["params"]["floor"] = 0.1
     (fake.dir / "cfg.json").write_text(json.dumps({"specs": bad, "victim": str(proj / "timing.json")}), encoding="utf-8")
     (fake.dir / "prompts.jsonl").unlink()
     finish(mgr, R.start(proj.name, proj, provider="agy", manager=mgr, guard_factory=gf, python="python"))

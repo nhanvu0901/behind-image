@@ -2721,7 +2721,7 @@
     "detail"
    ],
    "use_when": "Use EVERY time a detail sentence names a thing that is small on screen: an object, mark, carved figure, candle or beads. The surroundings darken and the thing stays bright, even in consecutive shots or a near view.",
-   "needs": "Start on the word naming the thing and continue to the shot end, at least 2.5 s. The region covers the thing itself and nothing else; if a stored region is loose, measure a tight region with ./crop and add it to out/regions.json. Leave room to darken: the thing occupies less than about 40% of both frame width and height; end a closer camera a little wider. Keep the centre inside the frame, 5% from each edge, throughout; floor is 0.6 or more.",
+   "needs": "Start on the word naming the thing and continue to the shot end, at least 2.5 s. The region covers the thing itself and nothing else; if a stored region is loose, measure a tight region with ./crop and add it to out/regions.json. Leave room to darken: the thing occupies less than about 40% of both frame width and height; the compiler caps camera zoom at the sharp limit so tight small regions stay under 40% automatically. Keep the centre inside the frame, 5% from each edge, throughout; floor is 0.6 or more.",
    "never_when": "The thing fills the frame; the sentence concerns the whole picture, a face or figure, or something outside the painting; the opening shot or channel-name beat; two spotlights at the same moment; together with AN-01 on the same thing.",
    "example": "Arnolfini b0044: \"Only one candle is lit, and it has been read as the seeing eye of God.\"",
    "slots": [

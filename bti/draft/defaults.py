@@ -56,6 +56,8 @@ def main(argv=None) -> int:
     ap.add_argument("technique")
     ap.add_argument("--asset")
     ap.add_argument("--region")
+    ap.add_argument("--from", dest="from_ref", default=None, help="previous | whole | <REGION>")
+    ap.add_argument("--dur", type=float, default=6.0, help="sample shot duration in seconds (default 6.0)")
     ap.add_argument("--workspace", default=".")
     a = ap.parse_args(argv)
     from .check import refuse_outside
@@ -63,6 +65,9 @@ def main(argv=None) -> int:
     if bad:
         return bad
     from bti.engine import registry as R
+    from bti.engine import viewchecks as VC
+    from bti.media import contentbox as CB
+    from . import camera as CAM
     from .techniques_md import _p, _slot
     bundle = R.load_bundle("gae")
     t = bundle.spec(a.technique)
@@ -77,7 +82,6 @@ def main(argv=None) -> int:
         return 0
     from .engine import DraftProject
     from .workspace import load_workspace
-    from .compile import _Compiler
     try:
         inp, _ = load_workspace(a.workspace)
     except Exception as e:      # noqa: BLE001
@@ -89,21 +93,43 @@ def main(argv=None) -> int:
     if rec is None:
         print("ERROR no asset %r (assets: %s)" % (a.asset, ", ".join(sorted(assets))))
         return 2
+    main_key = inp.picks.get("main_asset")
+    if a.region and a.region not in (rec.get("regions") or {}):
+        print("ERROR no region %r on %s (regions: %s)" % (a.region, a.asset, ", ".join(sorted(rec.get("regions") or {})) or "none"))
+        return 2
+    if a.from_ref and a.from_ref not in ("previous", "whole") and a.from_ref not in (rec.get("regions") or {}):
+        print("ERROR no --from region %r on %s" % (a.from_ref, a.asset))
+        return 2
     eng = DraftProject(inp.project_dir, {"schema": "bti.storyboard/1", "assets": assets, "shots": [], "end": {"t": 1.0}}, inp.timing)
     try:
         info = {"key": a.asset, "w": rec.get("width"), "h": rec.get("height"), "title": rec.get("title"), "artist": rec.get("artist"),
                 "year": rec.get("year"), "regions": rec.get("regions") or {}}
         ctx = {"asset": info}
         if a.region:
-            if a.region not in info["regions"]:
-                print("ERROR no region %r on %s (regions: %s)" % (a.region, a.asset, ", ".join(sorted(info["regions"])) or "none"))
-                return 2
             ctx.update(region=a.region, focus=a.region, text=info["regions"][a.region].get("label") or a.region)
         params = eng.default_params(a.technique, ctx)
     finally:
         eng.close()
+    is_main_cam = (a.asset == main_key and a.technique in CAM.OFFERED_CAMERA_TECHNIQUES)
+    if is_main_cam:
+        box = CB.box_of(rec, inp.project_dir)
+        params["camera"] = CAM.build_main_camera(
+            a.technique, a.region, a.from_ref, rec, box, None, 0.0, max(1.0, float(a.dur)),
+        )
     print("default params for asset %s%s:" % (a.asset, (" region " + a.region) if a.region else ""))
     print(json.dumps(params, indent=1, ensure_ascii=False))
+    if is_main_cam and rec.get("width") and rec.get("height"):
+        box = CB.box_of(rec, inp.project_dir)
+        reg = (rec.get("regions") or {}).get(a.region) if a.region else None
+        finfo = VC.region_frame_info(reg, float(rec["width"]), float(rec["height"]), box)
+        share_str = ""
+        if "width_share" in finfo:
+            share_str = "; region takes %.1f%% W x %.1f%% H%s" % (
+                100.0 * finfo["width_share"], 100.0 * finfo["height_share"],
+                " (under 40%% -> use HI-01)" if finfo.get("needs_spotlight") else "",
+            )
+        print("compiler end frame: centre (%.1f, %.1f) zoom %.4f rect %s%s" % (finfo["cx"], finfo["cy"], finfo["zoom"], finfo["rect"], share_str))
+        print("note: for main painting shots write slots.image.region (and optional \"from\") in out/<chapter>.json, never params.camera")
     return 0
 
 
