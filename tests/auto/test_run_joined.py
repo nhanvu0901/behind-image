@@ -372,3 +372,23 @@ def test_every_warning_code_the_picks_document_and_the_storyboard_can_give_is_in
         sorted_codes = set(checks.STOPS[gate]) | set(checks.TOLERATED[gate])
         missing = sorted(c for c in codes if c not in sorted_codes)
         assert not missing, "a warning the %s document can give is in neither list of bti/auto_run/checks.py (it stops the run until it is sorted): %s" % (gate, missing)
+
+
+def test_the_automatic_run_never_takes_picks_tighten_even_with_non_tight_regions(client, world):
+    world.build("picks_approved")
+    add_main_painting(client)
+    d = client.root / PID
+    pd = doc.load(d)
+    pd["assets"]["A"]["regions"]["MIRROR"] = {"x": 500, "y": 400, "rx": 120, "ry": 120, "label": "Tấm gương"}
+    with doc.Held(d):
+        doc.save(d, pd)
+    nrev = client.get(P + "/narration").json()["rev"]
+    with doc.Held(d):
+        doc.stamp_approval(d, doc.revision(doc.load(d)), nrev)
+    set_auto(client, enabled=True)
+    st = state(client)
+    t_act = act_of(st, "picks.tighten")
+    assert t_act["ready"] is True and t_act["advances"] is False
+    assert "picks" not in ((act_of(st, "auto.run").get("cost") or {}).get("about") or "")
+    _, run = run_to_end(client)
+    assert "picks.tighten" not in actions_of(run) and run["reason"] == "exported"

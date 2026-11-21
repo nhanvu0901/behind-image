@@ -126,8 +126,13 @@ def set_main(ctx, o):
         "y": S.number("Centre, pixels from the top edge of the picture."),
         "rx": S.number("Horizontal radius in pixels; leave out for a point.", exclusive_minimum=0),
         "ry": S.number("Vertical radius in pixels; leave out for a point.", exclusive_minimum=0),
-        "label": S.string("What the region shows, up to 80 characters.", max_length=80)}),
-    example={"op": "set_region", "asset": "A", "region": "MIRROR", "x": 700, "y": 420, "rx": 120, "ry": 120, "label": "The mirror"},
+        "label": S.string("What the region shows, up to 80 characters.", max_length=80),
+        "tight": S.boolean("True when the region box was tightened by the second look and confirmed on a check picture."),
+        "thing": S.string("What the region shows, 2 to 8 English words (up to %d characters)." % pdoc.THING_MAX, min_length=1, max_length=pdoc.THING_MAX),
+        "rough": S.array(S.integer("Pixel coordinate of the rough box on the stored picture.", minimum=0),
+                         "The rough box [x0, y0, x1, y1] in pixels of the stored picture before tightening (kept for the record).", min_items=4, max_items=4)}),
+    example={"op": "set_region", "asset": "A", "region": "MIRROR", "x": 700, "y": 420, "rx": 120, "ry": 120, "label": "The mirror",
+             "tight": True, "thing": "convex mirror on back wall", "rough": [540, 260, 860, 580]},
     sentences="Vùng {region} của {pic}: đã đặt")
 def set_region(ctx, o):
     ctx.whole_document("set_region")
@@ -138,10 +143,16 @@ def set_region(ctx, o):
         ctx.bad("x", "must be between 0 and %d (the width of the stored picture)" % w)
     if h and not 0 <= o["y"] <= h:
         ctx.bad("y", "must be between 0 and %d (the height of the stored picture)" % h)
+    if "rough" in o:
+        rb = pdoc._rough(o["rough"])
+        if rb is None:
+            ctx.bad("rough", "must be four integers [x0, y0, x1, y1] with x0 < x1 and y0 < y1")
+        elif key not in ctx.placeholders and ((w and rb[2] > w) or (h and rb[3] > h)):
+            ctx.bad("rough", "must lie inside %d x %d (the size of the stored picture)" % (w, h))
     regions = a.get("regions") or {}
     if o["region"] not in regions and len(regions) >= 60:
         ctx.bad("region", "an asset has at most 60 regions")
-    rr = pdoc._region({k: o[k] for k in ("x", "y", "rx", "ry", "label") if k in o})
+    rr = pdoc._region({k: o[k] for k in ("x", "y", "rx", "ry", "label", "tight", "thing", "rough") if k in o})
     ctx.touch("regions:" + key)
     a.setdefault("regions", {})[o["region"]] = rr
     ctx.say({"asset": key}, region=o["region"], pic=_pic(ctx, key))

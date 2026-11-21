@@ -155,6 +155,9 @@ SPECS: list[Spec] = [
               "Ready while such lines exist and the saved files are there (`picks_saved_files` otherwise), the picks are open, and no agent job runs. It advances once for the lines it has not looked at since the last run of picks.auto: "
               "the automatic run takes it once, before the pictures gate; a line still limited after that stays listed (call it again later by hand). Optional body field `beats` (a list of line ids) limits it to those lines. "
               "Writing drops the approval of the picks, as every edit does."),
+    Spec("picks.tighten", "picks", "Đo lại khung chi tiết", "POST", P + "/picks/tighten", long_job=True, follow=LONGJOBS, role="picks",       # tightbox
+         cost=("model", "about 5 minutes"),
+         when="Listed only while the main painting has non-tight regions (`tight` not true). Runs a second-look session on 1,024-px gridded full-resolution cut-outs of those regions (confirmed on clean 6-per-sheet check images) and updates ONLY the main painting's regions in one undoable batch; never changes any beat's chosen pictures. Optional body field `regions` (a list of region names, or null for all non-tight regions) limits which regions are measured. Needs the picks step open, a usable agent and no agent job running; writing drops the approval of the picks, as every edit does. Never advances (`advances` is false: manual action, not part of automatic running)."),
     Spec("picks.edit", "picks", "Nhờ agent sửa chọn hình", "POST", P + "/picks/edit", long_job=True, follow=LONGJOBS, role="picks",       # c2box
          cost=("model", "about 30 seconds"),
          when="Once the picks step is open. Ready unless the agent cannot run, another long job of the project runs (a prompt-box turn, a draft or the agent's choice of pictures: one at a time) or an automatic run goes on. The caller supplies the instruction and the scope (`fill`): {\"beats\": [ids]}, {\"chapter\": id} or {\"all\": true}. One call, typed picks operations (never an import), one batch in the change log; a request that needs a new picture ends as `escalate`, and then POST .../picks/auto with those lines does the work."),
@@ -269,6 +272,7 @@ class Ctx:
         self.picks_main = self.picks_ok = False
         self.picks_lines = (0, 0)             # c3picks: (lines of the narration, lines that are settled: pictures or skipped)
         self.picks_issues: list[dict] = []
+        self.non_tight_regions: list[str] = []            # tightbox: main-painting regions whose `tight` flag is not true
         self.retry_lines: list[str] = []                  # fixes4: the lines that say `import_limited` (picks.retry_missing)
         self.retry_files = False                          # ... whether the saved files of the last run of picks.auto are there
         self.retry_untried: list[str] = []                # ... and which of the lines it has not looked at yet
@@ -407,6 +411,7 @@ def _load_picks(c: Ctx) -> None:
     c.narration_ok = c.narration_ok or bool(nv["approved"])
     if pd is not None:
         c.picks_issues = [i for i in doc.blocking(doc.issues(pd, c.d, nv["beat_ids"] if nv["present"] else None)) if i.get("code") != "no_main"]
+        c.non_tight_regions = doc.non_tight_regions(pd)
         from bti.picks.auto import retry                                                # fixes4
         f = retry.facts(c.d, pd)
         c.retry_lines, c.retry_files, c.retry_untried = f["lines"], f["files"], f["untried"]
@@ -537,13 +542,13 @@ def _load_changes(c: Ctx) -> None:
 
 
 def _load_agent_jobs(c: Ctx, longjobs: Any) -> None:
-    """join2: whether the agent's choice of pictures (a `picks` job with `meta.action` `auto`) runs: the one `picks` job that holds the agent; and whether an
+    """join2/tightbox: whether the agent's choice or tightening of pictures (a `picks` job with `meta.action` in `("auto", "tighten")`) runs: the one `picks` job that holds the agent; and whether an
     automatic run (kind `auto`) goes on."""
     c.run_going = any(j.get("kind") == "auto" for j in c.jobs)
     if longjobs is None:
         return
     for j in longjobs.for_project(c.pid, c.d, kind="picks"):
-        if j.get("state") in ACTIVE_JOB and (j.get("meta") or {}).get("action") == "auto":
+        if j.get("state") in ACTIVE_JOB and (j.get("meta") or {}).get("action") in ("auto", "tighten"):
             c.picks_agent_running = True
             return
 
@@ -745,6 +750,21 @@ def b_picks_retry_missing(c: Ctx):                                          # fi
     return E(list(dict.fromkeys(needs)), {"beats": None, "actor": "cli:state"}, advances=bool(c.retry_untried))
 
 
+def b_picks_tighten(c: Ctx):                                                # tightbox
+    """Listed only while the main painting has non-tight regions; ready when a main asset and usable agent exist and no agent job runs."""
+    if not _picks_open(c) or not c.non_tight_regions:
+        return None
+    needs: list[str] = []
+    if c.picks_error:
+        needs.append("documents_readable")
+    elif not c.picks_main:
+        needs.append("main_asset")
+    if c.agent_busy("picks"):
+        needs.append("no_running_job")
+    needs += _model_needs(c, "picks")
+    return E(list(dict.fromkeys(needs)), {"regions": None, "base_rev": c.picks_ops_rev, "actor": c.actor("picks")}, advances=False)
+
+
 def b_picks_put(c: Ctx):
     if not _picks_open(c):
         return None
@@ -912,7 +932,7 @@ def b_export_start(c: Ctx):
 
 
 # c6auto: the actions of a person's own content or choice that are never taken by the automatic run (so they are not part of its cost)
-RUN_MANUAL = frozenset({"picks.import_clip", "draft.edit", "picks.edit"})
+RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit"})
 
 
 def cost_about(spec: Spec) -> str:
@@ -967,7 +987,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "narration.approve": b_narration_approve, "title.generate": b_title_generate, "title.set": b_title_set, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
-    "picks.auto": b_picks_auto, "picks.retry_missing": b_picks_retry_missing, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
+    "picks.auto": b_picks_auto, "picks.retry_missing": b_picks_retry_missing, "picks.tighten": b_picks_tighten, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,

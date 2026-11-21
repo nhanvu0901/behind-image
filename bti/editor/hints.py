@@ -192,6 +192,8 @@ HINTS: dict[str, dict] = {
     # --- fixes4: picks.retry_missing (POST /api/projects/{pid}/picks/retry-missing, bti/picks/auto/retry.py)
     "retry_nothing_to_do": _t("no", "No line of the picks says that a chosen picture could not be downloaded (`missing` with the code import_limited): there is nothing to retry."),
     "retry_no_files": _t("after_fix", "The saved files of the last run (cache/picks_auto: plan, search, choice) are not in the project: call POST /api/projects/{pid}/picks/auto with these lines and redo true; it chooses again."),
+    # --- tightbox (2026-11-21): picks.tighten (POST /api/projects/{pid}/picks/tighten, bti/picks/auto/tighten_job.py)
+    "tighten_nothing_to_do": _t("no", "Every region on the main painting is already tight (or there are no regions to tighten)."),
     # --- join2: the one agent run of a project (the pictures agent, a prompt-box turn and a draft run one at a time)
     "agent_job_running": _t("later", "Another agent job of this project is running (the agent's choice of pictures, a prompt-box turn or a draft): wait for it (GET /api/projects/{pid}/longjobs) or cancel it, then call again."),
     "turn_not_escalated": _t("after_fix", "That turn did not end as `escalate` (or an agent run of it that failed): only such a turn can be handed to the pictures agent; send POST /api/projects/{pid}/picks/auto with the lines instead."),

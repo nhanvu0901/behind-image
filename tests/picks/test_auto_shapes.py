@@ -93,18 +93,18 @@ def test_the_same_picture_twice_in_a_line_is_dropped_with_a_note():
     ([0.0, 0.0, 1.0, 1.0], "almost the whole painting"),
 ])
 def test_a_bad_box_is_an_error_that_says_what_to_change(box, part):
-    p = plan(regions=[{"name": "MIRROR", "box": box, "what": "Gương"}, PLAN["regions"][1]])
+    p = plan(regions=[{"name": "MIRROR", "box": box, "what": "Gương", "thing": "convex mirror"}, PLAN["regions"][1]])
     rep = check(p)
     assert not rep.ok and part in only_errors(rep) and "MIRROR" in only_errors(rep)
 
 
 def test_a_box_a_hair_outside_is_clamped():
-    rep = check(plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.004, 0.55], "what": "Gương"}, PLAN["regions"][1]]))
+    rep = check(plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.004, 0.55], "what": "Gương", "thing": "convex mirror"}, PLAN["regions"][1]]))
     assert rep.ok and rep.value["regions"]["MIRROR"]["box"] == [0.4, 0.3, 1.0, 0.55]
 
 
 def test_region_names_and_references():
-    p = plan(regions=[{"name": "mirror!", "box": [0.4, 0.3, 0.6, 0.5], "what": "x y"}, PLAN["regions"][1]])
+    p = plan(regions=[{"name": "mirror!", "box": [0.4, 0.3, 0.6, 0.5], "what": "x y", "thing": "convex mirror"}, PLAN["regions"][1]])
     assert "capital letters" in only_errors(check(p))
     p = plan(regions=[PLAN["regions"][0], PLAN["regions"][0], PLAN["regions"][1]])
     assert "used twice" in only_errors(check(p))
@@ -114,12 +114,12 @@ def test_region_names_and_references():
     mine = {"HAND": [0.2, 0.5, 0.3, 0.6]}
     p = plan(lines=[line("b0001", [{"type": "detail", "region": "HAND"}]), *PLAN["lines"][1:]])
     assert check(p, existing=mine).ok
-    p = plan(regions=PLAN["regions"] + [{"name": "HAND", "box": [0.2, 0.5, 0.3, 0.6], "what": "Bàn tay"}])
+    p = plan(regions=PLAN["regions"] + [{"name": "HAND", "box": [0.2, 0.5, 0.3, 0.6], "what": "Bàn tay", "thing": "man's left hand"}])
     assert "already has a region with this name" in only_errors(check(p, existing=mine))
 
 
 def test_a_region_no_line_uses_is_dropped_with_a_note():
-    rep = check(plan(regions=PLAN["regions"] + [{"name": "SKY", "box": [0.0, 0.0, 0.9, 0.2], "what": "Bầu trời"}]))
+    rep = check(plan(regions=PLAN["regions"] + [{"name": "SKY", "box": [0.0, 0.0, 0.9, 0.2], "what": "Bầu trời", "thing": "clear blue sky"}]))
     assert rep.ok and "SKY" not in rep.value["regions"] and any("SKY is not used" in n for n in rep.notes)
 
 
@@ -174,47 +174,83 @@ def test_the_same_framing_for_more_than_half_a_minute_is_a_warning_not_an_error(
 
 
 # ---------------------------------------------------------------------------------------------------------------- the choice
+def _cutouts():
+    from bti.picks.auto import tighten
+    size = (1300, 1250)
+    out = {}
+    for reg in PLAN["regions"]:
+        rpx = list(shapes.crop_pixels(reg["box"], *size))
+        geom = tighten.cutout_geom(rpx, size)
+        out[reg["name"]] = {**geom, "name": reg["name"], "existing": False, "what": reg["what"], "thing": reg["thing"]}
+    return out
+
+
+def _checked_state():
+    return {
+        "wider": {},
+        "checked": {
+            "MIRROR": {"box": [120, 130, 735, 890], "wider": False, "corrections": 0, "sheet": "look/check_1.jpg"},
+            "HEAD": {"box": [110, 110, 900, 860], "wider": False, "corrections": 0, "sheet": "look/check_1.jpg"},
+        },
+        "sheets": ["look/check_1.jpg"],
+    }
+
+
 def cctx(**kw):
-    d = {"wants": {"b0003.1": 3, "b0004.1": 1, "b0004.2": 2}, "books": 4, "regions": ["MIRROR", "HEAD"]}
+    d = {"wants": {"b0003.1": 3, "b0004.1": 1, "b0004.2": 2}, "books": 4, "regions": ["MIRROR", "HEAD"], "cutouts": _cutouts()}
     d.update(kw)
     return shapes.ChoiceCtx(**d)
 
 
 def test_the_example_choice_is_valid_and_normalised():
-    rep = shapes.check_choice(CHOICE, cctx())
-    assert rep.ok and rep.value["wants"]["b0003.1"]["pick"] == ("c", 1) and rep.value["regions"]["HEAD"]["box"] == [0.08, 0.04, 0.32, 0.28]
-    assert rep.value["regions"]["MIRROR"]["action"] == "keep"
+    st = {"wider": {}, "checked": {}, "sheets": []}
+    rep1 = shapes.check_choice(CHOICE, cctx(), state=st)
+    assert not rep1.ok and "check_sheet_ready" in only_errors(rep1)
+    rep = shapes.check_choice(CHOICE, cctx(), state=st)
+    assert rep.ok and rep.value["wants"]["b0003.1"]["pick"] == ("c", 1)
+    assert rep.value["regions"]["MIRROR"]["action"] == "tight" and rep.value["regions"]["MIRROR"]["confirmed"] is True
+    assert rep.value["regions"]["HEAD"]["box"] == [110, 110, 900, 860] and rep.value["regions"]["HEAD"]["stored_box"] == [127, 61, 388, 309]
 
 
 def test_a_pick_is_a_candidate_number_a_book_picture_or_null():
     wants = lambda pick: choice(wants=[{"id": "b0003.1", "pick": pick, "reason": "Lý do."}, *CHOICE["wants"][1:]])      # noqa: E731
     for pick, want in ((3, ("c", 3)), ("2", ("c", 2)), ("B4", ("b", 4)), ("b1", ("b", 1)), (None, None)):
-        rep = shapes.check_choice(wants(pick), cctx())
+        rep = shapes.check_choice(wants(pick), cctx(), state=_checked_state())
         assert rep.ok and rep.value["wants"]["b0003.1"]["pick"] == want, pick
     for pick, part in ((0, "not one of its candidates (1 to 3)"), (4, "not one of its candidates"), ("B5", "not one of the book pictures (B1 to B4)"),
                        (True, "must be a number"), ("x", "must be a number"), (2.5, "must be a number")):
-        assert part in only_errors(shapes.check_choice(wants(pick), cctx())), pick
+        assert part in only_errors(shapes.check_choice(wants(pick), cctx(), state=_checked_state())), pick
 
 
 def test_the_choice_must_decide_every_wanted_picture_and_every_box():
-    rep = shapes.check_choice(choice(wants=CHOICE["wants"][:1]), cctx())
+    rep = shapes.check_choice(choice(wants=CHOICE["wants"][:1]), cctx(), state=_checked_state())
     assert "b0004.1, b0004.2" in only_errors(rep) and "pick null when none" in only_errors(rep)
-    rep = shapes.check_choice(choice(regions=CHOICE["regions"][:1]), cctx())
-    assert "HEAD" in only_errors(rep) and "keep, adjust or drop" in only_errors(rep)
-    rep = shapes.check_choice(choice(wants=[{"id": "b9999.1", "pick": 1, "reason": "Lý do."}] + CHOICE["wants"]), cctx())
+    rep = shapes.check_choice(choice(regions=CHOICE["regions"][:1]), cctx(), state=_checked_state())
+    assert "HEAD" in only_errors(rep) and "tight, drop or wider" in only_errors(rep)
+    rep = shapes.check_choice(choice(wants=[{"id": "b9999.1", "pick": 1, "reason": "Lý do."}] + CHOICE["wants"]), cctx(), state=_checked_state())
     assert "no such wanted picture" in only_errors(rep)
-    rep = shapes.check_choice(choice(wants=[{"id": "b0003.1", "pick": 1}, *CHOICE["wants"][1:]]), cctx())
+    rep = shapes.check_choice(choice(wants=[{"id": "b0003.1", "pick": 1}, *CHOICE["wants"][1:]]), cctx(), state=_checked_state())
     assert "`reason` must say" in only_errors(rep)
 
 
-def test_an_adjusted_box_needs_a_valid_box_and_a_reason_and_a_dropped_one_a_reason():
+def test_a_tight_box_needs_valid_cutout_coords_and_a_dropped_one_a_reason():
     bad = lambda r: choice(regions=[CHOICE["regions"][0], r])                                       # noqa: E731
-    assert "box must be four numbers" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "adjust", "reason": "x y z"}), cctx()))
-    assert "outside the painting" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "adjust", "box": [0, 0, 2, 1], "reason": "x y z"}), cctx()))
-    assert "`reason` must say" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "drop"}), cctx()))
-    assert "action must be one of" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "move", "reason": "x y z"}), cctx()))
-    rep = shapes.check_choice(bad({"name": "HEAD", "action": "drop", "reason": "Khung lệch."}), cctx())
+    assert "four numbers" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "tight", "reason": "Khung thiếu số."}), cctx(), state=_checked_state()))
+    assert "outside the cut-out" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "tight", "box": [0, 0, 2000, 500], "reason": "Khung ngoài ảnh."}), cctx(), state=_checked_state()))
+    assert "`reason` must say" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "drop"}), cctx(), state=_checked_state()))
+    assert "action must be one of" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "move", "reason": "x y z"}), cctx(), state=_checked_state()))
+    st = {"wider": {}, "checked": {}, "sheets": []}
+    assert "check_sheet_ready" in only_errors(shapes.check_choice(bad({"name": "HEAD", "action": "drop", "reason": "Khung lệch."}), cctx(), state=st))
+    rep = shapes.check_choice(bad({"name": "HEAD", "action": "drop", "reason": "Khung lệch."}), cctx(), state=st)
     assert rep.ok and rep.value["regions"]["HEAD"]["action"] == "drop"
+
+
+def test_legacy_choice_without_cutouts_keeps_old_adjust_and_keep_path():
+    legacy_ctx = cctx(cutouts={})
+    legacy = choice(regions=[{"name": "MIRROR", "action": "keep", "reason": ""},
+                             {"name": "HEAD", "action": "adjust", "box": [0.08, 0.04, 0.32, 0.28], "reason": "Nới khung để thấy cả đầu."}])
+    rep = shapes.check_choice(legacy, legacy_ctx)
+    assert rep.ok and rep.value["regions"]["MIRROR"]["action"] == "keep" and rep.value["regions"]["HEAD"]["box"] == [0.08, 0.04, 0.32, 0.28]
 
 
 # ---------------------------------------------------------------------------------------------------------------- the pieces
@@ -275,7 +311,7 @@ def test_a_reason_the_owner_reads_must_be_vietnamese():
     assert "must be written in Vietnamese" in only_errors(check(english)) and "Opens with the whole painting." in only_errors(check(english))
     assert check(plan(lines=[line("b0001", [{"type": "whole"}], reason="Mở bằng cả bức tranh."), *PLAN["lines"][1:]])).ok
     bad_want = choice(wants=[{"id": "b0003.1", "pick": 1, "reason": "Clear photograph of the painter."}, *CHOICE["wants"][1:]])
-    assert "must be written in Vietnamese" in only_errors(shapes.check_choice(bad_want, cctx()))
+    assert "must be written in Vietnamese" in only_errors(shapes.check_choice(bad_want, cctx(), state=_checked_state()))
     bad_box = choice(regions=[CHOICE["regions"][0], {"name": "HEAD", "action": "drop", "reason": "The box misses the face."}])
-    assert "must be written in Vietnamese" in only_errors(shapes.check_choice(bad_box, cctx()))
-    assert shapes.check_choice(choice(regions=[{"name": "MIRROR", "action": "keep", "reason": ""}, CHOICE["regions"][1]]), cctx()).ok      # a keep needs no reason
+    assert "must be written in Vietnamese" in only_errors(shapes.check_choice(bad_box, cctx(), state=_checked_state()))
+    assert shapes.check_choice(choice(regions=[{"name": "MIRROR", "action": "tight", "box": [120, 130, 735, 890], "confirmed": True, "reason": ""}, CHOICE["regions"][1]]), cctx(), state=_checked_state()).ok

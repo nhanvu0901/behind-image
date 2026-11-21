@@ -988,3 +988,10 @@ export const POINTFIX_LABELS = {
   highlight_nothing_to_dim: 'Vùng sáng chiếm quá nhiều khung hình',
   text_too_brief: 'Chữ hiện quá nhanh',
 };
+
+// ---- worker tightbox (2026-11-21): labels for the second look (`picks.tighten` and tight detail regions on the main painting)
+export const PICKS_TIGHTEN_LABELS = {
+  button: 'Đo lại khung chi tiết',
+  working: 'Agent đang đo lại khung chi tiết...',
+  tightTag: 'khít',
+};

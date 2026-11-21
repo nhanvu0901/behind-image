@@ -512,3 +512,36 @@ def test_a_save_of_the_page_keeps_what_the_agent_knows_of_a_line_unless_it_sends
     page["picks"]["beats"]["b0004"]["kinds"] = ["nonsense"]
     r = client.put("/api/projects/%s/picks" % PID, json={"picks": page["picks"], "base_rev": page["rev"]})
     assert r.status_code == 422 and "kinds" in r.text
+
+
+def test_set_region_with_tight_thing_and_rough_roundtrips_and_undoes(client):
+    r = pk(client, [{
+        "op": "set_region", "asset": "A", "region": "MIRROR",
+        "x": 700, "y": 420, "rx": 90, "ry": 110, "label": "Tấm gương",
+        "tight": True, "thing": "convex mirror on back wall", "rough": [540, 260, 860, 580],
+    }])
+    assert r.status_code == 200, r.text
+    reg = picks(client)["assets"]["A"]["regions"]["MIRROR"]
+    assert reg == {
+        "x": 700, "y": 420, "rx": 90, "ry": 110, "label": "Tấm gương",
+        "tight": True, "thing": "convex mirror on back wall", "rough": [540, 260, 860, 580],
+    }
+    undo = client.post("/api/projects/%s/changes/%s/undo" % (PID, r.json()["batch"]), json={"base_rev": pk_rev(client), "actor": "human"})
+    assert undo.status_code == 200 and "MIRROR" not in picks(client)["assets"]["A"]["regions"]
+    # Without the new fields: unchanged legacy shape
+    r2 = pk(client, [{"op": "set_region", "asset": "A", "region": "LEGACY", "x": 200, "y": 200, "rx": 50, "ry": 50, "label": "Cũ"}])
+    assert r2.status_code == 200 and picks(client)["assets"]["A"]["regions"]["LEGACY"] == {"x": 200, "y": 200, "rx": 50, "ry": 50, "label": "Cũ"}
+
+
+@pytest.mark.parametrize("extra,where", [
+    ({"tight": "yes"}, ["ops[0].tight"]),
+    ({"thing": 123}, ["ops[0].thing"]),
+    ({"rough": [10, 20, 30]}, ["ops[0].rough"]),
+    ({"rough": [100, 100, 50, 200]}, ["ops[0].rough"]),
+    ({"rough": [0, 0, 5000, 200]}, ["ops[0].rough"]),
+])
+def test_set_region_rejects_bad_tight_thing_and_rough(client, extra, where):
+    before = snapshot(client.pdir)
+    r = pk(client, [{"op": "set_region", "asset": "A", "region": "BAD", "x": 200, "y": 200, "rx": 40, "ry": 40, **extra}])
+    assert r.status_code == 422 and paths(r) == where
+    untouched(client, r, before)

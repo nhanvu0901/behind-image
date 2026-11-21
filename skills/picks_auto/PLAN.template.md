@@ -10,7 +10,7 @@ You do not search for the pictures and you do not choose among them: a program s
 
 - The painting: **{{TITLE}}** by {{ARTIST}}, {{YEAR}}. It is the **main painting**; its picture is `images/main.jpg`.
 - The narration has {{N_LINES}} lines in {{N_CHAPTERS}} chapters; **your lines** ({{N_TARGETS}}): {{TARGET_LIST}}.
-- You have at most **{{MAX_STEPS}} steps** (every command you run and every file you open is a step) and **{{MAX_MINUTES}} minutes**. A session that goes over is stopped, and then only a file that already passes the check is kept. Plan your steps: read the inputs (about 4 steps), look at the painting and its grid (2), check each box you propose with one crop (one step each), write `out/plan.json` (1), run the check (1 or 2).
+- You have at most **{{MAX_STEPS}} steps** (every command you run and every file you open is a step) and **{{MAX_MINUTES}} minutes**. A session that goes over is stopped, and then only a file that already passes the check is kept. Plan your steps: read the inputs (about 4 steps), look at the painting and its grid (2), check a few rough boxes with a crop if unsure of where a detail sits, write `out/plan.json` (1), run the check (1 or 2).
 {{#OWNER_NOTE}}
 - **The owner's request for these lines**, in their own words (follow it, within the rules below): {{OWNER_NOTE}}
 {{/OWNER_NOTE}}
@@ -49,8 +49,8 @@ You do not search for the pictures and you do not choose among them: a program s
 ```json
 {"schema": "bti.picks.plan/1",
  "regions": [
-   {"name": "MIRROR", "box": [0.44, 0.38, 0.58, 0.58], "what": "Tấm gương lồi ở phía sau"},
-   {"name": "SIGNATURE", "box": [0.40, 0.30, 0.62, 0.37], "what": "Dòng chữ ký phía trên gương"}],
+   {"name": "MIRROR", "box": [0.43, 0.37, 0.59, 0.59], "what": "Tấm gương lồi ở phía sau", "thing": "convex mirror on back wall"},
+   {"name": "SIGNATURE", "box": [0.39, 0.29, 0.63, 0.38], "what": "Dòng chữ ký phía trên gương", "thing": "Latin signature above mirror"}],
  "lines": [
    {"beat": "b0001", "reason": "Mở bằng cả bức tranh để người xem thấy căn phòng.",
     "kinds": ["whole"], "show": [{"type": "whole"}]},
@@ -69,7 +69,11 @@ You do not search for the pictures and you do not choose among them: a program s
    {"beat": "b0006", "reason": "Vẫn cùng ý với đoạn trước, không cần hình mới.", "kinds": ["idea"], "show": []}]}
 ```
 
-- `regions` lists the boxes you add to the main painting (at most 20); each is used by at least one line (an unused one is dropped). `name`: capital letters, digits and `_` (`HEAD`, `LEFT_HAND`). `box`: `[x0, y0, x1, y1]`, fractions from 0 to 1 (0 = left or top edge); `x0 < x1`, `y0 < y1`; at least 0.02 on each side, and not nearly the whole painting. `what`: a few Vietnamese words on what the box shows. It must not use the name of a region the painting already has.
+- `regions` lists the boxes you add to the main painting (at most 30); each is used by at least one line (an unused one is dropped). **One region is one thing**: a line that names two distinct objects gets two regions, not one shared box. Fields:
+  - `name`: capital letters, digits and `_` (`HEAD`, `LEFT_HAND`, `CARVED_SAINT`). It must not use the name of a region the painting already has.
+  - `box`: `[x0, y0, x1, y1]`, a ROUGH location box in fractions from 0 to 1 (0 = left or top edge) with some air round the thing (`x0 < x1`, `y0 < y1`, at least 0.02 on each side, not nearly the whole painting). The second session will cut it out at full resolution and measure its tight pixel edges.
+  - `what`: a few Vietnamese words on what the box shows (shown to the owner).
+  - `thing`: two to eight English words using the narration's own words for that ONE thing (`"carved woman standing on a dragon"`, `"only lit candle in brass chandelier"`). Large parts of the painting (a face, a figure, the bed) are valid things too. The check refuses `"X and Y"` in `thing` unless the narration itself names them as one unit (such as a pair of pattens, joined hands, or `"Virgin and Child"`).
 - `lines`: one entry per line of yours. `beat` is the line's id; `reason` is **one short Vietnamese sentence saying why this is on screen for this line** (not a description of the picture); `kinds` is **one or two words, in the order the line speaks**, from the table of section 5, rule 1; `show` is a list of **0 to 3 pictures**, in the order they appear:
   - `{"type": "whole"}`: the whole main painting.
   - `{"type": "detail", "region": "NAME"}`: a box of the main painting (declared in `regions`, or an existing region of the painting).
@@ -123,11 +127,11 @@ The program applies two rules to your file by itself and tells you in a `NOTE` (
 8. **A line about the painting shows the part it speaks of.** If the sentence names a mirror, the line shows the mirror (a box on it); if it describes the whole scene, the whole painting; if it speaks of the painting in general, a slow look at the whole or at a part the eye wanders to. Never a detail the sentence does not mention.
 9. **The reason is for the owner.** One short sentence, Vietnamese, plain words: why this is on screen for this line ("Lời dẫn nói về tấm gương: đi vào đúng chi tiết đó."). Not "Hình ảnh minh họa".
 
-## 6. Boxes: look before you propose
+## 6. Boxes: rough location with air round the thing
 
-A box is the part of the painting that the camera will frame while the line is spoken. Leave a little air around what you mean: a face is the whole head and a bit of neck, not just the eyes; a hand is the hand and the wrist. A box thinner than 0.02 of the painting cannot show anything; one that covers almost the whole painting is not a detail.
+Your `box` here is a **rough location box**, not the final tight crop. Put generous air round the thing so it is not clipped (`[x0, y0, x1, y1]` in fractions of the painting), especially for tiny details where the 1,568-px view cannot resolve clean edges. The choosing session will cut each rough box out of the **full-resolution stored painting** with a 100-px coordinate grid and measure the tight box touching the thing itself.
 
-**Check every box you propose with a crop and look at the crop** before you write it into the plan: `{{CROP_CMD}} --box x0,y0,x1,y1 -o look/NAME.jpg`, then open `look/NAME.jpg`. Is the thing the sentence names in it, centred, with a little air? If not, move the box and crop again. A box you did not look at is a guess, and the second session will look at it and may drop it. A `fallback` that is a `detail` needs a box too.
+Use `{{CROP_CMD}} --grid -o look/grid.jpg` to read rough coordinates accurately; use `{{CROP_CMD}} --box x0,y0,x1,y1 -o look/NAME.jpg` only when a location is hard to spot on `images/main.jpg`. A box thinner than 0.02 of the painting cannot show anything; one over 0.90 is the whole painting. A `fallback` that is a `detail` needs a box too. Remember: **one region = one thing**, named in English in `thing`.
 
 ## 7. The two helper commands
 

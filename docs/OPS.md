@@ -175,6 +175,9 @@ Set (add or replace) a named region of an asset: a point, with an optional radiu
 | `rx` | number | no | Horizontal radius in pixels; leave out for a point. |
 | `ry` | number | no | Vertical radius in pixels; leave out for a point. |
 | `label` | text | no | What the region shows, up to 80 characters. |
+| `tight` | true or false | no | True when the region box was tightened by the second look and confirmed on a check picture. |
+| `thing` | text | no | What the region shows, 2 to 8 English words (up to 120 characters). |
+| `rough` | list of whole number | no | The rough box [x0, y0, x1, y1] in pixels of the stored picture before tightening (kept for the record). |
 
 Example:
 
@@ -187,7 +190,15 @@ Example:
   "y": 420,
   "rx": 120,
   "ry": 120,
-  "label": "The mirror"
+  "label": "The mirror",
+  "tight": true,
+  "thing": "convex mirror on back wall",
+  "rough": [
+    540,
+    260,
+    860,
+    580
+  ]
 }
 ```
 

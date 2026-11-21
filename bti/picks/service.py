@@ -471,6 +471,16 @@ def check_regions(regions, asset: dict) -> dict:
     for name, r in regions.items():
         if not isinstance(name, str) or not doc.REGION_RE.fullmatch(name):
             raise PicksError(422, f"region name {str(name)[:40]!r} is not valid", "region_name", region=str(name)[:40])
+        if isinstance(r, dict):
+            if "tight" in r and not isinstance(r["tight"], bool):
+                raise PicksError(422, f"region {name!r}.tight must be true or false", "region_shape", region=name)
+            if "thing" in r and r["thing"] is not None:
+                if not isinstance(r["thing"], str) or len(" ".join(r["thing"].split())) > doc.THING_MAX:
+                    raise PicksError(422, f"region {name!r}.thing must be a short English description", "region_shape", region=name)
+            if "rough" in r and r["rough"] is not None:
+                rb = doc._rough(r["rough"])
+                if rb is None or (w and rb[2] > w) or (h and rb[3] > h):
+                    raise PicksError(422, f"region {name!r}.rough must be four pixels [x0, y0, x1, y1] inside the picture", "region_shape", region=name)
         rr = doc._region(r)
         if rr is None:
             raise PicksError(422, f"region {name!r} needs numeric x and y", "region_shape", region=name)

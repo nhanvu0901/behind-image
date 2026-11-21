@@ -15,7 +15,7 @@ Three kinds of finding, kept apart on purpose:
 The plan (`bti.picks.plan/1`):
 
     {"schema": "bti.picks.plan/1",
-     "regions": [{"name": "HEAD", "box": [x0, y0, x1, y1], "what": "<a few words, Vietnamese>"}],
+     "regions": [{"name": "HEAD", "box": [x0, y0, x1, y1], "what": "<a few words, Vietnamese>", "thing": "<2-8 English words>"}],
      "lines": [{"beat": "b0001", "reason": "<one short sentence, Vietnamese>", "kinds": ["outside"],
                 "show": [{"type": "whole"},
                          {"type": "detail", "region": "HEAD"},
@@ -35,7 +35,7 @@ scaled. A line with `"show": []` needs nothing new. The choice (`bti.picks.choic
 
     {"schema": "bti.picks.choice/1",
      "wants": [{"id": "b0006.2", "pick": 3 | "B2" | null, "reason": "<one short sentence, Vietnamese>"}],
-     "regions": [{"name": "HEAD", "action": "keep" | "adjust" | "drop", "box": [x0, y0, x1, y1], "reason": "..."}]}
+     "regions": [{"name": "HEAD", "action": "tight" | "drop" | "wider", "box": [x0, y0, x1, y1], "confirmed": true, "reason": "..."}]}
 """
 from __future__ import annotations
 
@@ -62,7 +62,7 @@ MAX_PLACES = 6                   # names on the map of a journey
 ACTIONS = ("keep", "adjust", "drop")
 
 MAX_ITEMS = 3                    # pictures on one narration line
-MAX_REGIONS = 20                 # regions the plan may add to the main painting (the choosing session looks at each one)
+MAX_REGIONS = 30                 # regions the plan may add to the main painting (one thing each; tightened in the second look)
 MAX_WANTS = 60                   # pictures a plan may ask for from elsewhere (context, map, clip): the choosing session looks at a sheet for each
                                  # (30 until 2026-11-20: a line about something outside the painting now always asks for its picture, see KINDS)
 MAX_ALT = 2                      # alternative search words of a context picture
@@ -77,8 +77,24 @@ MAX_BOX_AREA = 0.9               # a box over 90% of the picture is the whole pa
 REASON_MAX = 300
 VIETNAMESE = re.compile("[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]", re.I)
 WHAT_MAX = 160
+THING_MIN_WORDS = 2
+THING_MAX_WORDS = 8
+THING_MAX = pdoc.THING_MAX
 NAME_RE = re.compile(r"[A-Z][A-Z0-9_]{0,23}")
 BOOK_PICK_RE = re.compile(r"[Bb](\d{1,3})")
+_THING_WORD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9'’.-]*")
+_AND_JOIN_RE = re.compile(r"\b(?:and|&)\b", re.I)
+_PAIR_MODIFIERS = frozenset({
+    "red", "blue", "green", "gold", "golden", "silver", "white", "black", "dark", "light", "brown",
+    "yellow", "crimson", "scarlet", "ivory", "velvet", "silk", "fur", "wood", "wooden", "carved",
+    "gilt", "brass", "iron", "stone", "marble", "left", "right", "upper", "lower", "front", "back",
+    "inner", "outer", "large", "small", "tiny", "tall", "wide",
+})
+_SINGLE_UNIT_PHRASES = (
+    "virgin and child", "madonna and child", "mother and child", "man and wife", "husband and wife",
+    "mortar and pestle", "cup and saucer", "bow and arrow", "hammer and anvil", "hammer and tongs",
+    "lock and key", "sword and scabbard", "needle and thread", "pen and ink", "light and shadow",
+)
 
 
 # ---------------------------------------------------------------------------------------------------------------- the report
@@ -196,20 +212,25 @@ class PlanCtx:
     existing_regions: dict = field(default_factory=dict)   # NAME -> [x0, y0, x1, y1] of the regions the main painting already has
     chapters: dict = field(default_factory=dict)        # beat id -> chapter id (same as `beats`, kept for quick lookups)
     painting_title: str = ""
+    line_texts: dict = field(default_factory=dict)      # beat id -> English/Vietnamese line text (used to verify "X and Y" in `thing`)
 
     def __post_init__(self):
         self.chapters = {b["id"]: b.get("chapter") for b in self.beats}
         self.words = {b["id"]: int(b.get("words") or 0) for b in self.beats}
 
     def to_json(self) -> dict:
-        return {"beats": self.beats, "targets": self.targets, "existing_regions": self.existing_regions,
-                "painting_title": self.painting_title}
+        out = {"beats": self.beats, "targets": self.targets, "existing_regions": self.existing_regions,
+               "painting_title": self.painting_title}
+        if self.line_texts:
+            out["line_texts"] = dict(self.line_texts)
+        return out
 
     @classmethod
     def from_json(cls, d: dict) -> "PlanCtx":
         return cls(beats=list(d.get("beats") or []), targets=list(d.get("targets") or []),
                    existing_regions={k: list(v) for k, v in (d.get("existing_regions") or {}).items()},
-                   painting_title=str(d.get("painting_title") or ""))
+                   painting_title=str(d.get("painting_title") or ""),
+                   line_texts={str(k): str(v) for k, v in (d.get("line_texts") or {}).items()})
 
 
 def _text(v: Any, lo: int, hi: int) -> str | None:
@@ -222,6 +243,56 @@ def _text(v: Any, lo: int, hi: int) -> str | None:
 def _vietnamese(s: str) -> bool:
     """Does a sentence the owner will read look like Vietnamese? (Every Vietnamese sentence of a few words has a letter with a mark.)"""
     return bool(VIETNAMESE.search(s))
+
+
+def _allows_and_in_thing(s: str, line_texts: list[str] | None) -> bool:
+    """Allow `X and Y` in `thing` only for colour/material adjectives, known single units, collective nouns, or singular phrases present in narration."""
+    low = " ".join(re.findall(r"[a-z0-9']+", s.lower()))
+    if any(p in low for p in _SINGLE_UNIT_PHRASES):
+        return True
+    if re.match(r"^(?:a |the )?(?:pair|set|group|cluster|row) of\b", low):
+        return True
+    toks = low.split()
+    all_mod_pairs = True
+    saw_join = False
+    for i, t in enumerate(toks):
+        if t in ("and", "&"):
+            saw_join = True
+            prev_w = toks[i - 1] if i > 0 else ""
+            next_w = toks[i + 1] if i + 1 < len(toks) else ""
+            if prev_w not in _PAIR_MODIFIERS or next_w not in _PAIR_MODIFIERS:
+                all_mod_pairs = False
+                break
+    if saw_join and all_mod_pairs:
+        return True
+    if line_texts:
+        core = re.sub(r"^(?:the|a|an|this|that|two|joined|clasped)\s+", "", low)
+        has_second_article = bool(re.search(r"\band\s+(?:the|a|an)\b", core))
+        if not has_second_article:
+            for lt in line_texts:
+                nl = " ".join(re.findall(r"[a-z0-9']+", str(lt).lower()))
+                for prefix in ("the ", "a ", "an ", "this ", "that ", "pair of ", "set of "):
+                    if prefix + core in nl:
+                        return True
+                if len(core.split()) >= 3 and core in nl and ("the " + core.split(" and ", 1)[-1]) not in nl:
+                    return True
+    return False
+
+
+def clean_thing(raw: Any, where: str, line_texts: list[str] | None = None, *, check_and: bool = True) -> tuple[str | None, str | None]:
+    """Check `thing` (2 to 8 English words naming the ONE thing a region points at)."""
+    s = _text(raw, 2, THING_MAX)
+    if s is None:
+        return None, "%s: `thing` must be 2 to 8 English words naming the one thing the region shows (for example \"convex mirror on back wall\") [thing_missing]" % where
+    if _vietnamese(s):
+        return None, "%s: `thing` (%r) must be written in English (use the narration's English words; keep Vietnamese in `what`) [thing_not_english]" % (where, s[:50])
+    words = _THING_WORD_RE.findall(s)
+    if not (THING_MIN_WORDS <= len(words) <= THING_MAX_WORDS):
+        return None, "%s: `thing` (%r) has %d word(s); write 2 to 8 English words naming the one thing [thing_words]" % (where, s[:60], len(words))
+    if check_and and _AND_JOIN_RE.search(s) and not _allows_and_in_thing(s, line_texts):
+        return None, ("%s: `thing` (%r) looks like two things (`X and Y`); one region is one thing — give each thing its own region unless the narration itself names them as one unit [thing_two_things]"
+                      % (where, s[:60]))
+    return s, None
 
 
 def _short(s: str, n: int) -> str:
@@ -577,16 +648,17 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
     if obj.get("schema") not in (None, PLAN_SCHEMA):
         err.append("schema must be %r (or left out)" % PLAN_SCHEMA)
     regions: dict[str, dict] = {}
+    region_where: dict[str, str] = {}
     raw_regions = obj.get("regions", [])
     if not isinstance(raw_regions, list):
-        err.append("`regions` must be a list of {name, box, what}")
+        err.append("`regions` must be a list of {name, box, what, thing}")
         raw_regions = []
     if len(raw_regions) > MAX_REGIONS:
         err.append("`regions` has %d entries; at most %d" % (len(raw_regions), MAX_REGIONS))
     for k, r in enumerate(raw_regions[:MAX_REGIONS]):
         where = "regions[%d]" % k
         if not isinstance(r, dict):
-            err.append("%s must be {name, box, what}" % where)
+            err.append("%s must be {name, box, what, thing}" % where)
             continue
         name = r.get("name")
         if not isinstance(name, str) or not NAME_RE.fullmatch(name):
@@ -601,16 +673,24 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
             continue
         box, problem = clean_box(r.get("box"), where)
         what = _text(r.get("what"), 2, WHAT_MAX + 80)
+        thing, t_err = clean_thing(r.get("thing"), where, check_and=False)
         if problem:
             err.append(problem)
         if what is None:
-            err.append("%s: `what` must say in a few words what the box shows" % where)
-        if box is not None and what is not None:
-            regions[name] = {"box": box, "what": _short(what, WHAT_MAX)}
+            err.append("%s: `what` must say in a few Vietnamese words what the box shows" % where)
+        if t_err:
+            err.append(t_err)
+        if box is not None and what is not None and thing is not None:
+            regions[name] = {"box": box, "what": _short(what, WHAT_MAX), "thing": thing}
+            region_where[name] = where
     known = {**{n: {"box": b, "what": ""} for n, b in ctx.existing_regions.items()}, **regions}
 
     raw_lines = obj.get("lines")
     if not isinstance(raw_lines, list):
+        for rname, reg in regions.items():
+            _, and_err = clean_thing(reg["thing"], region_where[rname], list(ctx.line_texts.values()) or None, check_and=True)
+            if and_err:
+                err.append(and_err)
         err.append("`lines` must be a list with one entry for every line you must cover")
         return rep
     target_set = set(ctx.targets)
@@ -683,6 +763,13 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
     if missing:
         more = " and %d more" % (len(missing) - 12) if len(missing) > 12 else ""
         err.append("these lines have no entry in `lines`: %s%s (give a line `\"show\": []` when it needs nothing new)" % (", ".join(missing[:12]), more))
+    for rname, reg in regions.items():
+        ref_beats = [ln["beat"] for ln in seen.values()
+                     if any(i["type"] == "detail" and i["region"] == rname for i in ln["show"] + ([ln["fallback"]] if ln.get("fallback") else []))]
+        ref_texts = [ctx.line_texts[b] for b in ref_beats if b in ctx.line_texts] if ref_beats else list(ctx.line_texts.values())
+        _, and_err = clean_thing(reg["thing"], region_where[rname], ref_texts or None, check_and=True)
+        if and_err:
+            err.append(and_err)
     if err:
         return rep
     lines = [seen[b] for b in ctx.targets]                # ctx.targets is in narration order
@@ -727,13 +814,18 @@ class ChoiceCtx:
     wants: dict                                       # want id -> number of candidates the agent was shown (its numbers are 1..n)
     books: int = 0                                    # how many book pictures were shown (B1..Bn)
     regions: list = field(default_factory=list)       # the names of the boxes it was shown
+    cutouts: dict = field(default_factory=dict)       # region name -> second-look cutout geometry metadata (empty in second webround)
 
     def to_json(self) -> dict:
-        return {"wants": self.wants, "books": self.books, "regions": self.regions}
+        out = {"wants": self.wants, "books": self.books, "regions": self.regions}
+        if self.cutouts:
+            out["cutouts"] = self.cutouts
+        return out
 
     @classmethod
     def from_json(cls, d: dict) -> "ChoiceCtx":
-        return cls(wants=dict(d.get("wants") or {}), books=int(d.get("books") or 0), regions=list(d.get("regions") or []))
+        return cls(wants=dict(d.get("wants") or {}), books=int(d.get("books") or 0),
+                   regions=list(d.get("regions") or []), cutouts=dict(d.get("cutouts") or {}))
 
 
 def parse_pick(v: Any, n: int, books: int) -> tuple[tuple | None, str | None]:
@@ -753,7 +845,7 @@ def parse_pick(v: Any, n: int, books: int) -> tuple[tuple | None, str | None]:
     return None, "must be a number, \"B<number>\" or null"
 
 
-def check_choice(obj: Any, ctx: ChoiceCtx) -> Report:
+def check_choice(obj: Any, ctx: ChoiceCtx, *, ws_root: Path | None = None, state: dict | None = None, allow_unconfirmed: bool = False) -> Report:
     rep = Report()
     err = rep.errors
     if not isinstance(obj, dict):
@@ -797,43 +889,50 @@ def check_choice(obj: Any, ctx: ChoiceCtx) -> Report:
         err.append("these wanted pictures have no entry in `wants`: %s%s (pick null when none of the candidates is sure to fit)" % (", ".join(left[:12]), more))
     regions: dict[str, dict] = {}
     raw_r = obj.get("regions", [])
-    if not isinstance(raw_r, list):
-        err.append("`regions` must be a list of {name, action, box?, reason}")
-        raw_r = []
-    for k, r in enumerate(raw_r):
-        where = "regions[%d]" % k
-        if not isinstance(r, dict) or not isinstance(r.get("name"), str):
-            err.append("%s must be {name, action, box?, reason}" % where)
-            continue
-        name = r["name"]
-        where = "regions[%d] (%s)" % (k, name)
-        if name not in ctx.regions:
-            err.append("%s: there is no such box among those you were shown (%s)" % (where, ", ".join(ctx.regions) or "none"))
-            continue
-        if name in regions:
-            err.append("%s: written twice" % where)
-            continue
-        action = r.get("action")
-        if action not in ACTIONS:
-            err.append("%s: action must be one of %s" % (where, ", ".join(ACTIONS)))
-            continue
-        box = None
-        if action == "adjust":
-            box, problem = clean_box(r.get("box"), where)
-            if problem:
-                err.append(problem)
+    if ctx.cutouts:
+        from . import tighten
+        regions, r_errs, r_notes = tighten.check_regions_response(raw_r, ctx.cutouts, ws_root=ws_root, state=state,
+                                                                  allow_unconfirmed=allow_unconfirmed)
+        err.extend(r_errs)
+        rep.notes.extend(r_notes)
+    else:
+        if not isinstance(raw_r, list):
+            err.append("`regions` must be a list of {name, action, box?, reason}")
+            raw_r = []
+        for k, r in enumerate(raw_r):
+            where = "regions[%d]" % k
+            if not isinstance(r, dict) or not isinstance(r.get("name"), str):
+                err.append("%s must be {name, action, box?, reason}" % where)
                 continue
-        reason = _text(r.get("reason"), 3, REASON_MAX * 2)
-        if reason is None and action != "keep":
-            err.append("%s: `reason` must say in one short sentence why the box is %s" % (where, "moved" if action == "adjust" else "dropped"))
-            continue
-        if reason is not None and not _vietnamese(reason):
-            err.append("%s: `reason` must be written in Vietnamese, with its accents (the owner reads it); it says %r" % (where, reason[:60]))
-            continue
-        regions[name] = {"action": action, "box": box, "reason": _short(reason or "", REASON_MAX)}
-    left_r = [n for n in ctx.regions if n not in regions]
-    if left_r and not any("regions[" in e for e in err):
-        err.append("these boxes have no entry in `regions`: %s (say keep, adjust or drop for each)" % ", ".join(left_r[:12]))
+            name = r["name"]
+            where = "regions[%d] (%s)" % (k, name)
+            if name not in ctx.regions:
+                err.append("%s: there is no such box among those you were shown (%s)" % (where, ", ".join(ctx.regions) or "none"))
+                continue
+            if name in regions:
+                err.append("%s: written twice" % where)
+                continue
+            action = r.get("action")
+            if action not in ACTIONS:
+                err.append("%s: action must be one of %s" % (where, ", ".join(ACTIONS)))
+                continue
+            box = None
+            if action == "adjust":
+                box, problem = clean_box(r.get("box"), where)
+                if problem:
+                    err.append(problem)
+                    continue
+            reason = _text(r.get("reason"), 3, REASON_MAX * 2)
+            if reason is None and action != "keep":
+                err.append("%s: `reason` must say in one short sentence why the box is %s" % (where, "moved" if action == "adjust" else "dropped"))
+                continue
+            if reason is not None and not _vietnamese(reason):
+                err.append("%s: `reason` must be written in Vietnamese, with its accents (the owner reads it); it says %r" % (where, reason[:60]))
+                continue
+            regions[name] = {"action": action, "box": box, "reason": _short(reason or "", REASON_MAX)}
+        left_r = [n for n in ctx.regions if n not in regions]
+        if left_r and not any("regions[" in e for e in err):
+            err.append("these boxes have no entry in `regions`: %s (say keep, adjust or drop for each)" % ", ".join(left_r[:12]))
     if not err:
         rep.value = {"schema": CHOICE_SCHEMA, "wants": wants, "regions": regions}
     return rep

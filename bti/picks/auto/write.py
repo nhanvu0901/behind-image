@@ -32,7 +32,7 @@ from bti.picks.errors import PicksError
 
 from . import inputs as ainputs
 from . import search as asearch
-from . import shapes, store, texts
+from . import shapes, store, texts, tighten
 
 # The write part's own deadline: 25 minutes, as before, and it still fits. It was set for a part that took about 2 minutes. Downloads are now polite
 # (`bti.media.http.polite`: a Commons picture is 3 requests, so 3 s apart at the least, then its transfer: up to 60 pictures is about 6 minutes) and patient
@@ -101,14 +101,48 @@ def resolve_picks(plan: dict, search: dict, choice: dict, books: list[dict]) -> 
 
 
 def final_regions(plan: dict, choice: dict) -> tuple[dict, list[str]]:
-    """The boxes to make: `name -> {"box", "what"}` (kept as planned, or the agent's adjusted box), and the names the agent dropped."""
+    """The boxes to make/update: `name -> {...}` (`tight` stored pixels when confirmed, else rough fractional box), and the names dropped."""
     keep, dropped = {}, []
-    for name, r in plan["regions"].items():
-        ch = (choice.get("regions") or {}).get(name) or {"action": "keep", "box": None}
-        if ch["action"] == "drop":
+    ch_regions = choice.get("regions") or {}
+    seen_names = list(plan.get("regions") or {})
+    for n in ch_regions:
+        if n not in plan.get("regions", {}):
+            seen_names.append(n)
+    for name in seen_names:
+        pr = (plan.get("regions") or {}).get(name)
+        ch = ch_regions.get(name)
+        if ch and ch.get("action") == "drop":
             dropped.append(name)
-        else:
-            keep[name] = {"box": ch["box"] if ch["action"] == "adjust" and ch.get("box") else r["box"], "what": r["what"]}
+            continue
+        if ch and ch.get("action") == "tight":
+            if ch.get("confirmed") is True and ch.get("stored_box"):
+                keep[name] = {
+                    "stored_box": list(ch["stored_box"]),
+                    "tight": True,
+                    "thing": ch.get("thing") or (pr or {}).get("thing") or "",
+                    "rough": list(ch["rough_px"]) if ch.get("rough_px") else None,
+                    "what": ch.get("what") or (pr or {}).get("what") or "",
+                    "existing": bool(ch.get("existing") and pr is None),
+                }
+            elif ch.get("existing") and pr is None:
+                # Existing region on the main painting was never confirmed on the check sheet: leave it unchanged (not tight).
+                continue
+            elif pr is not None:
+                # Newly planned region never confirmed on the check sheet: store rough box WITHOUT tight: true.
+                keep[name] = {
+                    "box": pr["box"],
+                    "what": pr["what"],
+                    **({"thing": pr["thing"]} if pr.get("thing") else {}),
+                    "tight": False,
+                }
+            continue
+        if pr is not None:
+            ch_or_keep = ch or {"action": "keep", "box": None}
+            keep[name] = {
+                "box": ch_or_keep["box"] if ch_or_keep.get("action") == "adjust" and ch_or_keep.get("box") else pr["box"],
+                "what": pr["what"],
+                **({"thing": pr["thing"]} if pr.get("thing") else {}),
+            }
     return keep, dropped
 
 
@@ -155,25 +189,42 @@ def download_all(pdir: Path, picks: dict, *, fetch_asset, cancelled, clock, dead
 # ---------------------------------------------------------------------------------------------------------------- the lines
 def region_ops(main_key: str, main_asset: dict, keep: dict, width: int, height: int) -> tuple[list[dict], dict, int]:
     """`set_region` operations for the kept boxes, the names to use in the lines (`plan name -> final name`) and how many are new.
-    A region the painting already has under that name with the same place is reused; under another place the new one gets NAME_2.
+    A region the painting already has under that name with the same place is reused; an existing non-tight region tightened by the second look is
+    updated in place; under another place a new region gets NAME_2.
 
-    panelbox: the boxes of the plan are fractions of the PICTURE the agent was shown (the whole file, with the black ground round a museum photograph), so the pixels
-    they come to are cut to the painted area of the main painting (`content_box` of the asset, `bti.media.contentbox`): a region keeps its centre and radii as far as
-    they stay inside the box and is made smaller where they do not. A box of which under half lies inside the painted area was drawn on the ground: no region is made
-    for it, its name maps to None in the answer, and the lines that use it show the whole painting."""
+    panelbox: fractional plan boxes are cut to `content_box` (`bti.media.contentbox`); boxes of which under half lies inside the painted area
+    map to None (lines show whole painting). Tight boxes come from cut-outs already clamped to `content_box` and store `tight`, `thing`, `rough`."""
     have = dict(main_asset.get("regions") or {})
     taken = set(have)
     ops, names, made = [], {}, 0
     box = pcb.box_of(main_asset)
     for name, r in keep.items():
-        want = shapes.box_to_region(r["box"], width, height)
+        extra: dict = {}
+        if r.get("tight") is True and r.get("stored_box"):
+            want = tighten.stored_box_to_region(r["stored_box"])
+            extra["tight"] = True
+            if r.get("thing"):
+                extra["thing"] = _cut(r["thing"], pdoc.THING_MAX)
+            if r.get("rough") and len(r["rough"]) == 4:
+                extra["rough"] = [int(v) for v in r["rough"]]
+        else:
+            want = shapes.box_to_region(r["box"], width, height)
+            if r.get("thing"):
+                extra["thing"] = _cut(r["thing"], pdoc.THING_MAX)
         if box is not None:
             fitted = pcb.clamp_region(want, box)
             if fitted is None:
                 names[name] = None
                 continue
             want = {k: fitted[k] for k in ("x", "y", "rx", "ry")}
+        if r.get("existing") and name in have:
+            names[name] = name
+            made += 1
+            lbl = _cut(r.get("what") or have[name].get("label") or "", 80)
+            ops.append({"op": "set_region", "asset": main_key, "region": name, **want, "label": lbl, **extra})
+            continue
         same = next((n for n, h in have.items() if re.fullmatch(re.escape(name) + r"(_\d+)?", n)
+                     and bool(h.get("tight")) == bool(extra.get("tight"))
                      and all(abs(int(h.get(k) or 0) - want[k]) <= 2 for k in ("x", "y", "rx", "ry"))), None)
         if same:
             names[name] = same
@@ -182,7 +233,7 @@ def region_ops(main_key: str, main_asset: dict, keep: dict, width: int, height: 
         taken.add(final)
         names[name] = final
         made += 1
-        ops.append({"op": "set_region", "asset": main_key, "region": final, **want, "label": _cut(r["what"], 80)})
+        ops.append({"op": "set_region", "asset": main_key, "region": final, **want, "label": _cut(r.get("what") or "", 80), **extra})
     return ops, names, made
 
 
@@ -334,6 +385,7 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
         try:
             w.send(ops, "Agent chọn hình: %d vùng chi tiết trên tranh chính" % len(ops))
             run_state["regions_made"] = int(run_state.get("regions_made") or 0) + made
+            run_state["regions_tight"] = int(run_state.get("regions_tight") or 0) + sum(1 for o in ops if o.get("tight") is True)
         except OpError as e:
             lost = set(keep)                                    # the lines that use these boxes show the whole painting instead
             problems.append({"want": "regions", "beat": None, "no": None, "what": "vùng chi tiết", "code": "write_refused",
@@ -386,7 +438,7 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
     # ---- the result
     result = {"lines_total": 0, "lines_done": 0, "lines_with_pictures": 0, "lines_kept": 0, "lines_without": [], "missing": list(problems),
               "pictures_imported": int(run_state.get("imported") or 0), "regions_made": int(run_state.get("regions_made") or 0),
-              "regions_dropped": list(dropped), "clips": 0, "batches": list(run_state.get("batches") or []), "stopped": stopped,
+              "regions_tight": int(run_state.get("regions_tight") or 0), "regions_dropped": list(dropped), "clips": 0, "batches": list(run_state.get("batches") or []), "stopped": stopped,
               "lines_by_others": 0, "reasons": {}, "outside_without": []}
     for ln in lines:
         st = ln["state"]

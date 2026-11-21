@@ -242,7 +242,7 @@ def test_the_refusal_is_one_vietnamese_sentence_everywhere():
 # ---------------------------------------------------------------------------------------------------------------- the state answer
 def test_the_state_lists_both_in_the_order_of_the_page_with_consistent_marks(api):
     from bti.editor import state_api
-    page = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.suggest", "picks.put", "picks.auto", "picks.retry_missing", "picks.edit", "picks.ops",
+    page = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.suggest", "picks.put", "picks.auto", "picks.retry_missing", "picks.tighten", "picks.edit", "picks.ops",
             "picks.approve", "picks.cancel"]
     assert [s.id for s in state_api.SPECS if s.step == "picks"] == page                                  # the catalogue: search and import, the agent, its retry of the downloads (fixes4), the box, the operations, approve
     st = api.get("/api/projects/%s/state" % api.pid).json()

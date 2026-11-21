@@ -91,7 +91,7 @@ def test_the_briefing_is_filled_in_and_says_what_a_good_choice_is(pdir, tmp_path
     assert "The owner's request" not in task                                                          # no note: the block is gone
     ext = ".cmd" if os.name == "nt" else ""
     check = ".\\check.cmd" if os.name == "nt" else "./check"
-    assert check in task and "The Test Painting" in task and "A. Painter" in task and "**120 steps**" in task and "**30 minutes**" in task
+    assert check in task and "The Test Painting" in task and "A. Painter" in task and "**140 steps**" in task and "**30 minutes**" in task
     for rule in ("A line about the painting shows the part it speaks of", "A line about something outside the painting shows something other than the main painting",
                  "The same framing does not stay on screen for more than about half a minute", "Ask for the work itself, not for pictures about it",
                  "A map only when the line is about *where*", "Nothing invented", "at most one clip per chapter", "4 to 10 seconds"):
@@ -106,7 +106,7 @@ def test_the_choose_briefing_says_what_a_good_choice_is(pdir, tmp_path):
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in task
     for rule in ("Does it show the thing itself?", "Prefer a public-domain reproduction of the named work", "over illustrations or pictures about it",
-                 "Never pick a picture you are not sure shows what the line says", "Never use the main painting itself", "keep", "adjust", "drop",
+                 "Never pick a picture you are not sure shows what the line says", "Never use the main painting itself", "tight", "wider", "drop",
                  "A flagged picture"):
         assert rule in task, rule
 
@@ -116,7 +116,7 @@ def test_check_says_what_is_wrong_in_plain_sentences_and_passes_a_good_plan(pdir
     inp, ws = build(pdir, tmp_path)
     r = helper(ws.root, "check")
     assert r.returncode == 1 and "ERROR out/plan.json is missing" in r.stdout and "1 error(s)" in r.stdout
-    (ws.root / "out" / "plan.json").write_text(json.dumps(plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.5, 0.6], "what": "Gương"}, PLAN["regions"][1]])), encoding="utf-8")
+    (ws.root / "out" / "plan.json").write_text(json.dumps(plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.5, 0.6], "what": "Gương", "thing": "convex mirror"}, PLAN["regions"][1]])), encoding="utf-8")
     r = helper(ws.root, "check")
     assert r.returncode == 1 and "ERROR regions[0] (MIRROR): box [0.4, 0.3, 1.5, 0.6] lies outside the painting" in r.stdout
     (ws.root / "out" / "plan.json").write_text(json.dumps(PLAN), encoding="utf-8")
@@ -200,18 +200,23 @@ def test_the_choose_folder_has_a_numbered_sheet_per_want_a_crop_per_box_and_the_
     with Image.open(root / "images" / "books_1.jpg") as sheet:
         assert sheet.size == (2 * 460 + 3 * 8, 340 + 2 * 8)
     regs = json.loads((root / "inputs" / "regions.json").read_text(encoding="utf-8"))["regions"]
-    assert [r["name"] for r in regs] == ["MIRROR", "HEAD"] and regs[0]["lines"] == ["b0002"] and regs[1]["lines"] == ["b0005"] and regs[0]["crop"] == "images/d_MIRROR.jpg"
+    assert [r["name"] for r in regs] == ["MIRROR", "HEAD"] and regs[0]["lines"] == ["b0002"] and regs[1]["lines"] == ["b0005"] and regs[0]["cutout"] == "images/d_MIRROR.jpg"
     im = images.read(root / "images" / "d_MIRROR.jpg")
-    assert (im.shape[1], im.shape[0]) == (260, 313)                              # 0.2 x 0.25 of 1300 x 1250 (the box is exactly what the camera shows)
+    assert max(im.shape[1], im.shape[0]) == 1024                                   # full-res cut-out (+15% margin), scaled to 1024 px long side with grid
     task = (root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in task and "b0003.1, b0004.1" in task and "**2**" in task
     context = json.loads((root / "inputs" / "context.json").read_text(encoding="utf-8"))
-    assert context["mode"] == "choose" and context["choice"] == {"wants": {"b0003.1": 3, "b0004.1": 1}, "books": 2, "regions": ["MIRROR", "HEAD"]}
-    # the same check the agent runs
+    assert context["mode"] == "choose" and context["choice"]["wants"] == {"b0003.1": 3, "b0004.1": 1} and context["choice"]["books"] == 2
+    assert context["choice"]["regions"] == ["MIRROR", "HEAD"] and set(context["choice"]["cutouts"]) == {"MIRROR", "HEAD"}
+    # the same check the agent runs: bad want fails first, then fitted choice writes 6-per-sheet check image and confirms on pass 2
     (root / "out" / "choice.json").write_text(json.dumps(CHOICE), encoding="utf-8")
     r = helper(root, "check")
     assert r.returncode == 1 and "no such wanted picture" in r.stdout                      # CHOICE answers b0004.2, which this folder does not have
+    for p_rm in (root / "look").glob("*"):
+        p_rm.unlink()
     (root / "out" / "choice.json").write_text(json.dumps(FakeAgent.fit(CHOICE, root, "choose")), encoding="utf-8")
+    r1 = helper(root, "check")
+    assert r1.returncode == 1 and "check_sheet_ready" in r1.stdout and (root / "look" / "check_1.jpg").is_file()
     assert helper(root, "check").returncode == 0
 
 
@@ -284,7 +289,7 @@ def test_the_choosing_briefing_has_the_new_rules_and_every_old_one(pdir, tmp_pat
     p = shapes.check_plan(plan(), inp.plan_ctx()).value
     ws, _ = workspace.build_choose(inp, p, {"wants": {}, "books": []}, job.CHOOSE_LIMITS, books=[], root=tmp_path / "c")
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
-    assert "{{" not in task and "second look" not in task
+    assert "{{" not in task and "This is a second look" not in task
     for rule in ("A line about the past wants a picture made in that period", "a painting, a drawing, a print, a manuscript page, a coin, a seal, an object in a museum",
                  "Prefer it to a modern photograph, a reconstruction, a film still", "A **photograph of today** is right when the want says `\"period\": \"now\"`",
                  "for a building or an object that survives", "or when nothing else shows the thing", "Never a watermarked picture", "Say in the reason what the picture is and from when",

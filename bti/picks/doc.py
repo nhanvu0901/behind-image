@@ -59,6 +59,7 @@ OUTSIDE_KINDS = ("outside", "compare")       # the kinds whose line needs a pict
 MAX_KINDS = 2
 MAX_MISSING = 10
 MISSING_WHAT_MAX = 160
+THING_MAX = 120
 CODE_RE = re.compile(r"[a-z][a-z0-9_]{0,39}")
 
 
@@ -109,15 +110,35 @@ def _approval(a: Any) -> dict:
     return out
 
 
+def _rough(v: Any) -> list[int] | None:
+    """Four finite integers `[x0, y0, x1, y1]` (rough box in stored pixels, `x0 < x1` and `y0 < y1`), or None."""
+    if not isinstance(v, (list, tuple)) or len(v) != 4:
+        return None
+    if not all(isinstance(n, (int, float)) and not isinstance(n, bool) and math.isfinite(n) and n >= 0 for n in v):
+        return None
+    x0, y0, x1, y1 = (int(round(float(n))) for n in v)
+    return [x0, y0, x1, y1] if x1 > x0 and y1 > y0 else None
+
+
 def _region(r: Any) -> dict | None:
     if not isinstance(r, dict) or not all(isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool)
                                           and math.isfinite(r[k]) for k in ("x", "y")):
         return None
-    out = {"x": r["x"], "y": r["y"]}
+    out: dict[str, Any] = {"x": r["x"], "y": r["y"]}
     for k in ("rx", "ry"):
         if isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool) and math.isfinite(r[k]) and r[k] > 0:
             out[k] = r[k]
     out["label"] = _s(r.get("label"))
+    if r.get("tight") is True:
+        out["tight"] = True
+    if isinstance(r.get("thing"), str):
+        thing = " ".join(r["thing"].split())[:THING_MAX]
+        if thing:
+            out["thing"] = thing
+    if r.get("rough") is not None:
+        rb = _rough(r.get("rough"))
+        if rb is not None:
+            out["rough"] = rb
     return out
 
 
@@ -239,6 +260,12 @@ def doc_problem(d: Any) -> str | None:
                 return f"region name {str(name)[:40]!r} is not valid"
             if _region(r) is None:
                 return f"region {name!r} needs numeric x and y"
+            if "tight" in r and not isinstance(r["tight"], bool):
+                return f"picks.assets.{k}.regions.{name}.tight must be true or false"
+            if "thing" in r and r["thing"] is not None and not isinstance(r["thing"], str):
+                return f"picks.assets.{k}.regions.{name}.thing must be a string"
+            if "rough" in r and r["rough"] is not None and _rough(r["rough"]) is None:
+                return f"picks.assets.{k}.regions.{name}.rough must be four numbers [x0, y0, x1, y1] with x0 < x1 and y0 < y1"
     beats = d.get("beats", {})
     if not isinstance(beats, dict):
         return "picks.beats must be an object"
@@ -283,6 +310,37 @@ def path(pdir: Path) -> Path:
     return Path(pdir) / FILE
 
 
+def _scale_rough_boxes(assets: dict, before: dict[str, tuple[int, int]]) -> None:
+    """Scale each region's recorded `rough` pixel box alongside `_mediaassets.reconcile_sizes` when a stored image size is repaired."""
+    for key, (ow, oh) in before.items():
+        a = assets.get(key)
+        if not isinstance(a, dict) or ow <= 0 or oh <= 0:
+            continue
+        nw, nh = int(a.get("width") or 0), int(a.get("height") or 0)
+        if nw <= 0 or nh <= 0 or (nw, nh) == (ow, oh):
+            continue
+        kx, ky = nw / float(ow), nh / float(oh)
+        for r in (a.get("regions") or {}).values():
+            if isinstance(r, dict) and isinstance(r.get("rough"), list) and len(r["rough"]) == 4:
+                x0, y0, x1, y1 = r["rough"]
+                nx0 = max(0, min(nw - 1, int(round(x0 * kx))))
+                ny0 = max(0, min(nh - 1, int(round(y0 * ky))))
+                nx1 = max(nx0 + 1, min(nw, int(round(x1 * kx))))
+                ny1 = max(ny0 + 1, min(nh, int(round(y1 * ky))))
+                r["rough"] = [nx0, ny0, nx1, ny1]
+
+
+def non_tight_regions(d: dict | None) -> list[str]:
+    """Names of the main painting's regions that do not have `tight: true` yet (in document order)."""
+    if not isinstance(d, dict):
+        return []
+    main = d.get("main_asset")
+    a = (d.get("assets") or {}).get(main) if isinstance(main, str) else None
+    if not isinstance(a, dict) or a.get("kind") == "video":
+        return []
+    return [name for name, r in (a.get("regions") or {}).items() if isinstance(r, dict) and r.get("tight") is not True]
+
+
 def load(pdir: Path) -> dict | None:
     """The saved document (normalised), None when there is none. DocumentCorrupt (409 `data_error: "picks"`) when the file
     is there but unreadable. An image asset whose declared size differs from its stored file comes back corrected (size and
@@ -291,7 +349,10 @@ def load(pdir: Path) -> dict | None:
     if raw is None:
         return None
     d = normalize(raw)
+    before = {k: (int(a.get("width") or 0), int(a.get("height") or 0))
+              for k, a in d["assets"].items() if isinstance(a, dict) and a.get("kind") != "video"}
     _mediaassets.reconcile_sizes(d["assets"], pdir)          # in memory only: the disk is rewritten by the next save
+    _scale_rough_boxes(d["assets"], before)
     return d
 
 

@@ -349,3 +349,26 @@ def test_the_answer_is_json_serialisable_and_stable(at):
     again = c.get(f"/api/projects/{pid}/state").json()
     strip = lambda s: json.dumps({k: v for k, v in s.items() if k != "jobs"}, sort_keys=True)
     assert strip(st) == strip(again)
+
+
+def test_picks_tighten_appears_only_when_main_has_non_tight_regions_and_never_advances(at):
+    from bti.picks import doc
+    c, pid, st = at("picks_approved")
+    # Fresh picks have no non-tight regions: picks.tighten is absent
+    assert "picks.tighten" not in ids(st)
+    # Add a legacy non-tight region on MAIN: picks.tighten appears with ready=True, advances=False, model cost
+    pd = doc.load(c.root / pid)
+    pd["assets"]["MAIN"]["regions"]["MIRROR"] = {"x": 50, "y": 60, "rx": 20, "ry": 20, "label": "Gương"}
+    with doc.Held(c.root / pid):
+        doc.save(c.root / pid, pd)
+    st2 = c.get(f"/api/projects/{pid}/state").json()
+    act = action(st2, "picks.tighten")
+    assert act["ready"] is True and act["advances"] is False and act["long_job"] is True and act["uses_model"] is True
+    assert act["cost"]["kind"] == "model" and act["body"]["regions"] is None
+    # Once every region is tight: true, picks.tighten disappears again
+    pd = doc.load(c.root / pid)
+    pd["assets"]["MAIN"]["regions"]["MIRROR"].update({"tight": True, "thing": "convex mirror on wall", "rough": [30, 40, 70, 80]})
+    with doc.Held(c.root / pid):
+        doc.save(c.root / pid, pd)
+    st3 = c.get(f"/api/projects/{pid}/state").json()
+    assert "picks.tighten" not in ids(st3)

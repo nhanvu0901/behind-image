@@ -152,7 +152,7 @@ def test_a_fallback_may_ask_for_a_region_and_the_region_is_made_even_when_only_t
     ctx = shapes.PlanCtx(beats=BEATS, targets=IDS)
     rows = [{"beat": "b0001", "reason": "Lý do ngắn.", "kinds": ["outside"], "show": [CTX], "fallback": {"type": "detail", "region": "COUNTER"}},
             {"beat": "b0002", "reason": "Lý do ngắn.", "kinds": ["whole"], "show": [WHOLE]}, {"beat": "b0003", "reason": "Lý do ngắn.", "kinds": ["idea"], "show": []}]
-    rep = shapes.check_plan({"regions": [{"name": "COUNTER", "box": [0.1, 0.5, 0.5, 0.7], "what": "Quầy"}], "lines": rows}, ctx)
+    rep = shapes.check_plan({"regions": [{"name": "COUNTER", "box": [0.1, 0.5, 0.5, 0.7], "what": "Quầy", "thing": "wooden shop counter"}], "lines": rows}, ctx)
     assert rep.ok and set(rep.value["regions"]) == {"COUNTER"} and not any("not used" in n for n in rep.notes)
     assert rep.value["lines"][0]["fallback"] == {"type": "detail", "region": "COUNTER"}
 

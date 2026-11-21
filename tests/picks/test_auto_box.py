@@ -6,7 +6,7 @@ import io
 import random
 
 from auto_fixtures import env, paid  # noqa: F401
-from auto_helpers import CHOICE, choice
+from auto_helpers import PLAN, plan
 from PIL import Image
 
 from bti.media import contentbox as CB
@@ -30,22 +30,21 @@ def inside(r, box, slack=1):
 
 def test_a_box_that_overlaps_the_ground_is_cut_to_the_painted_area_and_one_that_is_inside_is_as_it_was(env):
     photograph(env)
-    env.agent.choice = choice(regions=[CHOICE["regions"][0], {"name": "HEAD", "action": "adjust", "box": [0.08, 0.04, 0.32, 0.28], "reason": "Nới khung."}])
     job = env.run()
     assert job["state"] == "done", job.get("error")
     a = env.picks()["assets"]["A"]
     box = CB.box_of(a)
     assert a["content_box"]["how"] == "found" and box is not None
     assert set(a["regions"]) == {"MIRROR", "HEAD"}
-    assert a["regions"]["MIRROR"]["x"] == 650 and a["regions"]["MIRROR"]["rx"] == 130, "inside the painting: exactly the box of the plan"
+    assert a["regions"]["MIRROR"]["tight"] is True and a["regions"]["HEAD"]["tight"] is True
     assert all(inside(r, box) for r in a["regions"].values()), (box, a["regions"])
     head = a["regions"]["HEAD"]
-    assert head["x"] - head["rx"] >= box[0] - 1 and head["rx"] < 156, "the adjusted box (104 to 416 across) is cut at the edge of the painting"
+    assert head["x"] - head["rx"] >= box[0] - 1 and head["rough"][0] >= box[0], "HEAD cutout and tight box are clamped inside the painted area"
 
 
 def test_a_box_drawn_on_the_ground_makes_no_region_and_the_line_shows_the_whole_painting(env):
     photograph(env)
-    env.agent.choice = choice(regions=[CHOICE["regions"][0], {"name": "HEAD", "action": "adjust", "box": [0.0, 0.0, 0.08, 0.06], "reason": "Cạnh trên."}])
+    env.agent.plan = plan(regions=[PLAN["regions"][0], {"name": "HEAD", "box": [0.0, 0.0, 0.08, 0.06], "what": "Cạnh trên", "thing": "black museum border"}])
     job = env.run()
     assert job["state"] == "done", job.get("error")
     d = env.picks()
@@ -53,11 +52,11 @@ def test_a_box_drawn_on_the_ground_makes_no_region_and_the_line_shows_the_whole_
     assert [(i["asset"], i["region"], i["role"]) for i in d["beats"]["b0005"]["items"]] == [("A", None, "main")]
 
 
-def test_a_painting_with_no_ground_band_gets_the_regions_of_the_plan_exactly(env):
+def test_a_painting_with_no_ground_band_gets_tight_regions_without_content_box(env):
     job = env.run()
     assert job["state"] == "done", job.get("error")
     a = env.picks()["assets"]["A"]
-    assert "content_box" not in a and a["regions"]["HEAD"]["rx"] == 156 and a["regions"]["HEAD"]["ry"] == 150
+    assert "content_box" not in a and a["regions"]["HEAD"]["tight"] is True and a["regions"]["HEAD"]["rough"] == [130, 62, 390, 313]
 
 
 def test_region_ops_cuts_and_reports_what_it_dropped():

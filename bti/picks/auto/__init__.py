@@ -9,8 +9,8 @@ is the plain function for the instruction box of step 4; `overview(pid, pdir)` i
 """
 from __future__ import annotations
 
-from . import retry
+from . import retry, tighten_job
 from .inputs import AutoError
 from .job import ACTION, KIND, active_job, escalate, overview, start
 
-__all__ = ["start", "escalate", "overview", "active_job", "AutoError", "KIND", "ACTION", "retry"]
+__all__ = ["start", "escalate", "overview", "active_job", "AutoError", "KIND", "ACTION", "retry", "tighten_job"]

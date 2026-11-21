@@ -25,6 +25,10 @@ def make_plan(first_run):
 @pytest.mark.parametrize("first_run", [True, False])
 def test_the_fake_agents_plan_passes_the_check_of_the_program(first_run):
     plan = make_plan(first_run)
+    raw_rep = shapes.check_plan(plan, shapes.PlanCtx(beats=BEATS, targets=list(IDS), existing_regions={}))
+    assert not raw_rep.ok and sum("thing_missing" in e for e in raw_rep.errors) == len(plan["regions"])
+    for r in plan["regions"]:
+        r["thing"] = "convex mirror on wall" if "MIRROR" in r["name"] else "joined hands in center"
     rep = shapes.check_plan(plan, shapes.PlanCtx(beats=BEATS, targets=list(IDS), existing_regions={}))
     assert rep.ok, rep.errors
     assert all(ln.get("kinds") for ln in plan["lines"]) and [ln["kinds"] for ln in rep.value["lines"]][0] == ["whole"]
