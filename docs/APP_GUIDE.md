@@ -740,3 +740,9 @@ Khi xem storyboard, cảnh báo có thể báo chi tiết nhỏ chưa được r
 vùng sáng chiếm quá nhiều khung hình hoặc chữ hiện quá nhanh. Hãy chỉnh cảnh
 hay chữ theo gợi ý trước khi duyệt. Với dự án mới, giọng đọc mặc định ở tốc
 độ 1,1; dự án cũ giữ cài đặt riêng hoặc tốc độ cũ.
+
+Với các cảnh trên bức tranh chính do agent dựng bản nháp, chương trình tự tính
+khung hình và chuyển động máy quay từ tên vùng của chi tiết (tới sớm trước lúc
+gọi tên, không phóng quá giới hạn độ nét của ảnh gốc và không chạy quá nhanh);
+tab kiểm tra cũng cảnh báo nếu đến cuối cảnh vùng được nhắc vẫn bị cắt mép
+(`camera_off_region`) hoặc máy quay tới chi tiết quá muộn (`thing_arrives_late`).

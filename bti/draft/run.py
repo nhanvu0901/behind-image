@@ -263,10 +263,10 @@ def _manager():
 
 def other_agent_job(pid: str, own_kind: str, manager=None, *, run_ok: bool = False) -> dict | None:
     """join2: the long job of another kind that holds the one agent run of this project, else None. The jobs that run an agent are the `draft`
-    jobs (the storyboard draft and the prompt-box turns of both steps), the pictures agent (a `picks` job whose `meta.action` is `auto`) and an
-    automatic run (kind `auto`: it takes the other three over by itself, step by step): they run one at a time, so a job of one of those kinds does
-    not start while one of another kind runs (a job of its own kind is the long-job manager's `Busy`). `run_ok`: the caller IS the automatic run
-    (it starts the work of its own job), so its own job is not a reason to refuse."""
+    jobs (the storyboard draft and the prompt-box turns of both steps), the pictures agent (a `picks` job whose `meta.action` is `auto` or `tighten`)
+    and an automatic run (kind `auto`: it takes the other three over by itself, step by step): they run one at a time, so a job of one of those
+    kinds does not start while one of another kind runs (a job of its own kind is the long-job manager's `Busy`). `run_ok`: the caller IS the
+    automatic run (it starts the work of its own job), so its own job is not a reason to refuse."""
     m = manager or _manager()
     if m is None:
         return None
@@ -277,7 +277,7 @@ def other_agent_job(pid: str, own_kind: str, manager=None, *, run_ok: bool = Fal
             rec = m.active(pid, kind)
         except Exception:       # noqa: BLE001 - a registry that cannot answer never blocks a start
             continue
-        if rec and (kind != "picks" or (rec.get("meta") or {}).get("action") == "auto"):
+        if rec and (kind != "picks" or (rec.get("meta") or {}).get("action") in ("auto", "tighten")):
             return rec
     return None
 

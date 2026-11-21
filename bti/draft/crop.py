@@ -6,6 +6,8 @@ import json
 from pathlib import Path
 
 from bti.draft.check import refuse_outside
+from bti.engine import viewchecks as VC
+from bti.media import contentbox as CB
 from bti.picks.auto import images
 
 
@@ -15,6 +17,7 @@ def main(argv=None):
     group = p.add_mutually_exclusive_group(required=True)
     group.add_argument('--grid', action='store_true')
     group.add_argument('--box', help='x0,y0,x1,y1 in source pixels')
+    group.add_argument('--region', help='named region on the main painting')
     p.add_argument('-o', '--out', required=True)
     a = p.parse_args(argv)
     if refuse_outside(a.out, 'the output path') or not a.out.replace('\\', '/').startswith('look/'):
@@ -22,7 +25,8 @@ def main(argv=None):
         return 2
     root = Path.cwd()
     data = json.loads((root / 'inputs/assets.json').read_text(encoding='utf-8'))
-    asset = data['assets'][data['main_asset']]
+    main_key = data['main_asset']
+    asset = data['assets'][main_key]
     sw, sh = asset['source_size']
     try:
         im = images.read(root / asset['file'])
@@ -30,10 +34,26 @@ def main(argv=None):
         print('ERROR %s' % exc)
         return 1
     h, w = im.shape[:2]
+    reg_obj = None
     try:
-        x0, y0, x1, y1 = (0, 0, sw, sh) if a.grid else tuple(int(x.strip()) for x in a.box.split(','))
-        if not (0 <= x0 < x1 <= sw and 0 <= y0 < y1 <= sh):
-            raise ValueError()
+        if a.grid:
+            x0, y0, x1, y1 = (0, 0, sw, sh)
+        elif a.region:
+            r = (asset.get('regions') or {}).get(a.region)
+            if not isinstance(r, dict):
+                print('ERROR no region %r on %s (regions: %s)' % (a.region, main_key, ', '.join(sorted(asset.get('regions') or {})) or 'none'))
+                return 2
+            b = VC.region_box(r)
+            if b is None:
+                print('ERROR region %r has no bounding box (x, y, rx, ry)' % a.region)
+                return 2
+            x0, y0, x1, y1 = max(0, int(round(b[0]))), max(0, int(round(b[1]))), min(sw, int(round(b[2]))), min(sh, int(round(b[3])))
+            reg_obj = r
+        else:
+            x0, y0, x1, y1 = tuple(int(x.strip()) for x in a.box.split(','))
+            if not (0 <= x0 < x1 <= sw and 0 <= y0 < y1 <= sh):
+                raise ValueError()
+            reg_obj = {'x': (x0 + x1) / 2.0, 'y': (y0 + y1) / 2.0, 'rx': (x1 - x0) / 2.0, 'ry': (y1 - y0) / 2.0}
     except ValueError:
         print('ERROR --box needs x0,y0,x1,y1 in source pixels inside the painting')
         return 2
@@ -60,6 +80,19 @@ def main(argv=None):
         print('ERROR %s' % exc)
         return 1
     print('wrote %s; source pixels (%d,%d) to (%d,%d)' % (a.out, x0, y0, x1, y1))
+    if reg_obj is not None:
+        box = None
+        if (root / 'picks.json').is_file():
+            try:
+                pk = json.loads((root / 'picks.json').read_text(encoding='utf-8'))
+                box = CB.box_of((pk.get('assets') or {}).get(main_key), root)
+            except Exception:       # noqa: BLE001
+                box = None
+        finfo = VC.region_frame_info(reg_obj, sw, sh, box)
+        spot = ' (under 40%% -> use HI-01)' if finfo.get('needs_spotlight') else ''
+        print('compiler end frame: centre (%.1f, %.1f) zoom %.4f rect %s; fill %.1f%% W x %.1f%% H%s' % (
+            finfo['cx'], finfo['cy'], finfo['zoom'], finfo['rect'],
+            100.0 * finfo.get('width_share', 0.0), 100.0 * finfo.get('height_share', 0.0), spot))
     return 0
 
 

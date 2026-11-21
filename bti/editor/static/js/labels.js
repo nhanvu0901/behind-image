@@ -988,3 +988,10 @@ export const POINTFIX_LABELS = {
   highlight_nothing_to_dim: 'Vùng sáng chiếm quá nhiều khung hình',
   text_too_brief: 'Chữ hiện quá nhanh',
 };
+
+// ---- worker boxcam (2026-11-21): short names for region framing and arrival checks.
+export const BOXCAM_LABELS = {
+  camera_off_region: 'Vùng được nhắc bị cắt ngoài khung',
+  thing_arrives_late: 'Máy quay tới chi tiết quá muộn',
+};
+Object.assign(CODE, BOXCAM_LABELS);

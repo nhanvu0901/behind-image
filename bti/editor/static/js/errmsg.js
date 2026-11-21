@@ -824,3 +824,11 @@ Object.assign(BUILD, FIXDRAFT_SENTENCES);
 
 // ---- worker pointfix: a draft shot cannot fit the minimum spotlight window.
 BUILD.highlight_short_shot = () => 'Cảnh quá ngắn để rọi sáng ít nhất 2,5 giây rồi tắt dần. Hãy bắt đầu cảnh sớm hơn hoặc gộp với cảnh khác.';
+
+// ---- worker boxcam (2026-11-21): viewer checks for region framing and arrival timing.
+export const BOXCAM_SENTENCES = {
+  camera_off_region: (i) => { const a = i.args || {}; return `${fdShot(a)}: đến cuối cảnh, vùng "${a.region ?? ''}" vẫn bị cắt mép ngoài khung hình. Hãy gắn đúng tên vùng cho cảnh hoặc đo lại vùng cho sát vật thể.`; },
+  thing_arrives_late: (i) => { const a = i.args || {}; return `${fdShot(a)}: vùng "${a.region ?? ''}" chỉ nằm trọn trong khung ${fdVn(a.seconds, 1)} giây trong ${fdVn(a.shot_seconds, 1)} giây. Hãy xuất phát từ điểm gần hơn, kéo dài cảnh, hoặc tách bớt chuyển động.`; },
+};
+export const BOXCAM_CODES = Object.keys(BOXCAM_SENTENCES);
+Object.assign(BUILD, BOXCAM_SENTENCES);

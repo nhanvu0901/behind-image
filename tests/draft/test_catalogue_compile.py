@@ -236,8 +236,7 @@ def test_the_main_painting_is_never_refitted(proj):
     specs = {c: clean_spec(s, c) for c, s in GOOD.items()}
     specs["c01"]["shots"][0] = dict(shot("b0001", 0, "CAM-01", params={"camera": cam(0.2, 0.25, 400, 600)}), _n=1)
     res = run(inp, specs)
-    s = res.storyboard["shots"][0] if res.storyboard["shots"][0]["technique"] == "CAM-01" else next(x for x in res.storyboard["shots"] if x["technique"] == "CAM-01")
-    assert [k["zoom"] for k in s["params"]["camera"]] == [0.2, 0.25] and not codes(res, "outside_camera_refit")
+    assert codes(res, "camera_not_allowed") and not codes(res, "outside_camera_refit")
 
 
 def test_a_technique_without_a_camera_is_not_touched(proj):
