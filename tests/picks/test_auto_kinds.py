@@ -343,6 +343,13 @@ def test_the_template_says_the_rules_the_brief_asks_for():
     assert t.index("1. **Say what each line does.**") < t.index("2. **A line about something outside the painting shows something other than the main painting")
     for must in ("born at Limoges", "Bruges was the commercial capital", "at most 60 pictures from elsewhere", "Philip the Good portrait Rogier van der Weyden",
                  "different in kind", "Never put the main painting's own title in a search", "a picture made in that period comes first", "`period: \"now\"`",
-                 "never stays on the painting for lack of one", "one picture per line is the usual number", "A map only when the line is about *where*"):
+                 "never stays on the painting for lack of one", "one picture per line is the usual number", "A map only when the line is about *where*",
+                 "the short name under which the thing is known", "moneylender and his wife", "royal gold cup", "codex behem"):
         assert must.lower() in t.lower(), must
     assert "keep the ones that matter" not in t and "at most 30 pictures" not in t
+    choose_t = (REPO / "skills" / "picks_auto" / "CHOOSE.template.md").read_text(encoding="utf-8")
+    for must_choose in ("a photograph, taken in a museum, of a real object made in the period",
+                        "is not a modern photograph in the sense of the rule",
+                        "for a step-3 want it is the right answer",
+                        "what stays refused is a photograph of people, places or reconstructions of today"):
+        assert must_choose.lower() in choose_t.lower(), must_choose

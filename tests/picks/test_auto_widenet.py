@@ -404,15 +404,17 @@ def test_round_two_web_search_of_thing_itself_runs_first_with_wider(tmp_path):
 
     def fake_web_search(pdir, query, limit):
         web_queries.append(query)
-        return {
-            "items": [
-                {"source": "web", "source_id": f"web_{i}", "title": f"Van Eyck {i}",
-                 "thumb_url": f"tw_{i}.jpg", "mime": "image/jpeg", "width": 800, "height": 600,
-                 "page_url": f"https://example.com/item{i}"}
-                for i in range(1, 7)
-            ],
-            "errors": []
-        }
+        if query == "van Eyck painter":
+            return {
+                "items": [
+                    {"source": "web", "source_id": f"web_{i}", "title": f"Van Eyck {i}",
+                     "thumb_url": f"tw_{i}.jpg", "mime": "image/jpeg", "width": 800, "height": 600,
+                     "page_url": f"https://example.com/item{i}"}
+                    for i in range(1, 7)
+                ],
+                "errors": []
+            }
+        return {"items": [], "errors": []}
 
     web.search = fake_web_search
 
@@ -426,7 +428,8 @@ def test_round_two_web_search_of_thing_itself_runs_first_with_wider(tmp_path):
         clock=lambda: 1000.0, cancelled=lambda: False, progress=lambda p, s: None,
         save=lambda s: None, search=fake_search, wiki_search=fake_search
     )
-    assert "Jan van Eyck portrait" in web_queries
+    assert "van Eyck painter" in web_queries
+    assert "15th-century painter portrait miniature" in web_queries
     cands = res_st["wants"]["b0003.1"]["candidates"]
 
     # Total candidates capped at 8

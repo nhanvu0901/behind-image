@@ -17,8 +17,9 @@ The first query of a want (the plan's `search`) goes to every source of its kind
 than three candidates were found. The pictures in the owner's books are not searched (a book has no captions to search): the ones that
 have a size worth showing are given to the choosing step as one numbered set (B1, B2 ...) that any want may pick from.
 
-The web (the owner's switch `auto_web_search`, see `bti.picks.websettings`; PAID, the You.com search): when the switch is on, a context want that has
-fewer than three candidates after the free sources gets ONE web search with its `search` (round one). After the choosing session
+The web (the owner's switch `auto_web_search`, see `bti.picks.websettings`; PAID, the You.com search): when the switch is on,
+every context want of a line of kind outside or compare gets ONE web search of its `search` in round one, whatever the
+free sources brought, while the budget lasts (and any other context want with fewer than three candidates). After the choosing session
 `bti.picks.auto.webround` searches again, for the wants the session answered null and for those that had no candidate (round two). Every web
 search is counted against `auto_web_search_max`; a want that could not be searched because the count was used up gets the code `web_budget`.
 With the switch off nothing here calls the web, and a Wikipedia search is the only addition to what the free sources do.
@@ -71,13 +72,16 @@ SOURCE_VI = {"commons": "Wikimedia Commons", "met": "Bảo tàng Metropolitan", 
 
 
 def sources_for(want: dict) -> list[str]:
-    """The sources a wanted picture is asked of, keyless first; those that need a key are left out when the key is not set."""
+    """The sources a wanted picture is asked of, keyless first; those that need a key are left out when the key is not set.
+    Pexels and Pixabay are never searched for a want with period: "then"."""
     if want["type"] == "map":
         names: tuple = ("osm",)
     elif want["type"] == "clip":
         names = CLIP_SOURCES
     else:
         names = SOURCES_BY_KIND.get(want.get("kind") or "other", SOURCES_BY_KIND["other"])
+        if want.get("period") == "then":
+            names = tuple(s for s in names if s not in ("pexels", "pixabay"))
     return [s for s in names if s not in KEYED or env.has_key(KEYED[s])]
 
 
@@ -384,7 +388,10 @@ def search_want(pdir: Path, want: dict, state: dict, *, main_key: str, search, f
             if cancelled():
                 return
             ask(src, q, FIRST_LIMIT if qi == 0 else MORE_LIMIT)
-    if web is not None and want["type"] == "context" and sum(len(v) for v in by_source.values()) < ENOUGH and w["queries"]:
+    kinds = set(want.get("kinds") or w.get("kinds") or [])
+    is_outside_or_compare = bool(kinds & {"outside", "compare"})
+    needs_web = is_outside_or_compare or (sum(len(v) for v in by_source.values()) < ENOUGH)
+    if web is not None and want["type"] == "context" and needs_web and w["queries"]:
         if cancelled():
             return
         web_ask(pdir, w, state, web, w["queries"][0], ask_take=ask.take, clock=clock, skipped=skipped)

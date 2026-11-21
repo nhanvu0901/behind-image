@@ -100,13 +100,15 @@ def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | Non
         progress(i / max(1, len(todo)), "Đang tìm thêm trên web %d/%d: %s" % (i + 1, len(todo), (w.get("what") or "")[:60]))
         existing = {(c["source"], c["source_id"]) for c in w.get("candidates") or []}
         kept: list[dict] = []
+        was_budget = w.get("code") == "web_budget" or bool(w.get("web_short"))
         w.pop("web_short", None)
         wider = want.get("wider")
 
-        # 1. The web search of the thing itself (its 'search', then its first 'alt')
+        # 1. The web search of the thing itself (with its first alt; its search was done in round one)
         done_q = set((w.get("web") or {}).get("queries") or [])
         alt = (want.get("alt") or [None])[0]
-        queue = [q for q in dict.fromkeys([want.get("search"), alt]) if q and q not in done_q]
+        target_q = alt if alt else (want.get("search") if want.get("search") not in done_q else None)
+        queue = [target_q] if target_q and target_q not in done_q else []
         step1_cap = 4 if wider else cap
         for q in queue:
             ask, by_source, _seen, skipped, _failed = asearch.make_asker(
@@ -150,8 +152,8 @@ def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | Non
                     if cancelled():
                         return st
                     ask(src, step_q, asearch.FIRST_LIMIT)
-                if web is not None and web.usable() and sum(len(v) for v in by_source.values()) < asearch.ENOUGH:
-                    if not cancelled():
+                if web is not None and web.usable():
+                    if not cancelled() and step_q not in (w.get("web") or {}).get("queries", []):
                         web_search_for(pdir, w, st, web, step_q, ask, clock, skipped)
                 by_source = asearch._order(by_source)
                 extra = any(k in by_source for k in ("wikipedia", "web"))
@@ -176,7 +178,7 @@ def search_round_two(pdir: Path, wants: list[dict], st: dict, choice: dict | Non
             r2["wants"].append(wid)
             r2["map"][wid] = [c["n"] for c in kept]
         else:
-            if w.get("web_short"):
+            if w.get("web_short") or (was_budget and not kept):
                 r2["budget"].append(wid)
                 w["code"] = "web_budget"
             else:

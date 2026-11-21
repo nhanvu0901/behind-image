@@ -109,13 +109,13 @@ def test_the_default_is_the_owners_switch_which_is_off_in_code(env, monkeypatch)
 
 # ---------------------------------------------------------------------------------------------------------------- the switch is on: round two and the second session
 def test_a_want_the_first_session_answered_null_is_searched_on_the_web_and_a_second_session_sees_only_that(env, monkeypatch):
-    fake = setup(env, {"Jan van Eyck portrait": [wcard(1), wcard(2), wcard(3)]})
+    fake = setup(env, {"van Eyck self portrait": [wcard(1), wcard(2), wcard(3)]})
     seen = capture(env)
     job = env.run(web={"on": True, "max": 5, "search": fake})
     assert job["state"] == "done", job.get("error")
     assert [p["key"] for p in job["parts"]] == ["plan", "search", "choose", "web", "choose2", "write"]
     assert [p["title"] for p in job["parts"]][3:5] == ["Tìm thêm trên web (4/6)", "Chọn lại trong hình mới tìm (5/6)"] and job["parts"][0]["title"].endswith("(1/6)")
-    assert fake.calls == ["Madonna Rolin", "Jan van Eyck portrait", "Rolin Madonna Louvre"]            # b0005 had nothing: round one asked; b0003 was null: round two asked, and b0005's alternative
+    assert fake.calls == ["Jan van Eyck portrait", "Madonna Rolin", "van Eyck self portrait", "Rolin Madonna Louvre"]
     assert [c["mode"] for c in env.agent.calls] == ["plan", "choose", "choose"]
     first, second = seen
     assert {w["id"] for w in first["wants"]} == {"b0003.1", "b0004.1"} and first["ctx"]["choice"]["regions"]
@@ -135,29 +135,29 @@ def test_a_want_the_first_session_answered_null_is_searched_on_the_web_and_a_sec
     w = sd["wants"]["b0003.1"]
     assert [c["n"] for c in w["candidates"]] == [1, 2, 3, 4, 5, 6] and [c.get("round", 1) for c in w["candidates"]] == [1, 1, 1, 2, 2, 2]
     assert sd["round2"]["searched"] is True and sd["round2"]["wants"] == ["b0003.1"] and sd["round2"]["map"] == {"b0003.1": [4, 5, 6]}
-    assert sd["web"] == {"on": True, "max": 5, "searches": 3, "stopped": None}
+    assert sd["web"] == {"on": True, "max": 5, "searches": 4, "stopped": None}
     c2 = store.read(env.pdir, "choice2.json")
     assert c2["shown"] == ["b0003.1"] and c2["choice"]["wants"]["b0003.1"]["pick"] == ["c", 2]
 
 
 def test_the_count_is_kept_in_last_json_and_shown_in_the_closing_sentence(env):
-    fake = setup(env, {"Jan van Eyck portrait": [wcard(1), wcard(2), wcard(3)]})
+    fake = setup(env, {"van Eyck self portrait": [wcard(1), wcard(2), wcard(3)]})
     job = env.run(web={"on": True, "max": 5, "search": fake})
     r = job["result"]
-    assert r["web"] == {"on": True, "max": 5, "searches": 3, "stopped": None}
+    assert r["web"] == {"on": True, "max": 5, "searches": 4, "stopped": None}
     base = texts.result_sentence(r["lines_done"], r["lines_total"], len(r["lines_without"]))
-    assert r["sentence"] == base + " Đã tìm trên web 3/5 lần." and webround.web_sentence(r["web"]) == " Đã tìm trên web 3/5 lần."
-    assert store.read(env.pdir, "last.json")["result"]["web"]["searches"] == 3 and job["meta"]["web"] == {"on": True, "max": 5}
+    assert r["sentence"] == base + " Đã tìm trên web 4/5 lần." and webround.web_sentence(r["web"]) == " Đã tìm trên web 4/5 lần."
+    assert store.read(env.pdir, "last.json")["result"]["web"]["searches"] == 4 and job["meta"]["web"] == {"on": True, "max": 5}
     assert webround.web_sentence(None) == "" and webround.web_sentence({"on": False, "max": 3, "searches": 0}) == "" and webround.cost_line(80) == ", up to 80 web searches (You.com)"
 
 
 def test_a_want_that_could_not_be_searched_because_the_budget_was_spent_says_web_budget(env):
-    fake = setup(env, {"Jan van Eyck portrait": [wcard(1), wcard(2), wcard(3)]})
-    job = env.run(web={"on": True, "max": 2, "search": fake})
+    fake = setup(env, {"van Eyck self portrait": [wcard(1), wcard(2), wcard(3)]})
+    job = env.run(web={"on": True, "max": 3, "search": fake})
     assert job["state"] == "done", job.get("error")
     sd = store.read(env.pdir, "search.json")
-    assert sd["web"]["searches"] == 2 and sd["wants"]["b0005.1"]["code"] == "web_budget" and sd["round2"]["budget"] == ["b0005.1"]
-    assert fake.calls == ["Madonna Rolin", "Jan van Eyck portrait"]                      # round one: b0005; round two: b0003, then b0005's alternative had no search left
+    assert sd["web"]["searches"] == 3 and sd["wants"]["b0005.1"]["code"] == "web_budget" and sd["round2"]["budget"] == ["b0005.1"]
+    assert fake.calls == ["Jan van Eyck portrait", "Madonna Rolin", "van Eyck self portrait"]
     r = job["result"]
     # since the plan names a fallback for every line about something outside the painting, the line is written with it and the picture
     # that was not found is recorded as missing (in the result and on the beat), no longer as a line without a picture
@@ -222,10 +222,10 @@ def test_the_owners_switch_in_the_settings_turns_it_on_and_the_real_source_works
     env.agent.plan, env.agent.choice = PLAN2, first_null()
     job = env.run()
     assert job["state"] == "done", job.get("error")
-    assert asked == ["Madonna Rolin", "Jan van Eyck portrait", "Rolin Madonna Louvre"] and job["result"]["web"] == {"on": True, "max": 4, "searches": 3, "stopped": None}
+    assert asked == ["Jan van Eyck portrait", "Madonna Rolin", "van Eyck self portrait", "Rolin Madonna Louvre"] and job["result"]["web"] == {"on": True, "max": 4, "searches": 4, "stopped": None}
     asset = next(a for a in env.picks()["assets"].values() if a["credit"]["source"] == "web")
     assert asset["credit"]["flag"] == "unknown" and (env.pdir / asset["file"]).is_file()
-    assert job["result"]["sentence"].endswith("Đã tìm trên web 3/4 lần.")
+    assert job["result"]["sentence"].endswith("Đã tìm trên web 4/4 lần.")
 
 
 # ---------------------------------------------------------------------------------------------------------------- round two on its own: resume, merge
@@ -250,23 +250,23 @@ def round_two(tmp_path, st, wants, fake, *, max_=9, cancelled=lambda: False, web
 
 def test_a_cancelled_round_two_goes_on_where_it_stopped_without_repeating_a_search(tmp_path):
     st, wants = make_state(tmp_path)
-    fake = WebFake({"Alpha": [wcard(1)], "Beta": [wcard(2)]})
+    fake = WebFake({"Alpha two": [wcard(1)], "Beta": [wcard(2)]})
     calls = {"n": 0}
 
     def cancelled():
         calls["n"] += 1
         return calls["n"] > 3                                   # the first want is done and saved; the second is cancelled before it starts
     web, saved = round_two(tmp_path, st, wants, fake, cancelled=cancelled)
-    assert fake.calls == ["Alpha"] and st["round2"]["searched"] is False and st["round2"]["wants"] == ["b0003.1"] and saved and saved[-1]["web"]["searches"] == 1
+    assert fake.calls == ["Alpha two"] and st["round2"]["searched"] is False and st["round2"]["wants"] == ["b0003.1"] and saved and saved[-1]["web"]["searches"] == 1
     resumed = asearch.Web.from_state(saved[-1], True, 9, search=fake)
     web2, _ = round_two(tmp_path, saved[-1], wants, fake, web=resumed)
-    assert fake.calls == ["Alpha", "Beta"] and web2.spent == 2                                # Alpha was not asked again
+    assert fake.calls == ["Alpha two", "Beta"] and web2.spent == 2                                # Alpha two was not asked again
     assert saved[-1]["web"]["searches"] == 1 or True
 
 
 def test_the_merge_maps_the_second_sessions_numbers_to_the_wants_own_and_drops_the_budget_wants(tmp_path):
     st, wants = make_state(tmp_path)
-    web, _ = round_two(tmp_path, st, wants, WebFake({"Alpha": [wcard(1), wcard(2)]}), max_=1)
+    web, _ = round_two(tmp_path, st, wants, WebFake({"Alpha two": [wcard(1), wcard(2)]}), max_=1)
     assert st["round2"]["wants"] == ["b0003.1"] and st["round2"]["budget"] == ["b0005.1"] and st["wants"]["b0005.1"]["code"] == "web_budget"
     assert [c["n"] for c in st["wants"]["b0003.1"]["candidates"]] == [1, 2, 3] and st["round2"]["map"] == {"b0003.1": [2, 3]}
     first = {"schema": "x", "wants": {"b0003.1": {"pick": None, "reason": "a"}, "b0005.1": {"pick": None, "reason": "b"}, "b0004.1": {"pick": ("c", 1), "reason": "c"}}, "regions": {"MIRROR": {}}}
@@ -300,7 +300,7 @@ class ImgNet:
 
 
 def test_a_new_run_does_not_inherit_the_second_session_of_an_earlier_one(env):
-    fake = setup(env, {"Jan van Eyck portrait": [wcard(1), wcard(2), wcard(3)]})
+    fake = setup(env, {"van Eyck self portrait": [wcard(1), wcard(2), wcard(3)]})
     job = env.run(web={"on": True, "max": 5, "search": fake})
     assert job["state"] == "done" and (store.cache_dir(env.pdir) / "choice2.json").is_file()
     # the same request again (redo): a new run, so nothing of the earlier run's saved parts is taken for its own

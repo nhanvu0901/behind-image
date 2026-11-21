@@ -54,8 +54,8 @@ For each wanted picture, open its contact sheet, read the candidates' details an
 10. **Say in the reason what the picture is and from when**, in Vietnamese and in one short sentence: "Chân dung Philip the Good do Rogier van der Weyden vẽ khoảng năm 1450." or "Ảnh chụp hôm nay của nhà thờ Noyon, vì không có hình nào thời đó." The owner reads it to see at once why this picture is on screen.
 11. **Candidates from step 2 and step 3 (second session).** Each candidate of round two shows its `step`:
     - A **step 2** picture is right when it shows the same kind of thing as the line, made in the period (or near it), and is said for what it is in the reason ("Xưởng thợ vàng trong một tiểu họa thế kỷ 15, không phải xưởng của bức tranh.").
-    - A **step 3** picture is right when it is a real surviving object of the kind the line names, from the period (a balance scale, a coin, a salt cellar in a museum).
-    - A modern photograph of people, a reconstruction, a film still or a stock picture is still never right. When nothing fits, `null` remains the right answer.
+    - A **step 3** picture is right when it is a real surviving object of the kind the line names, from the period (a balance scale, a coin, a salt cellar in a museum). A photograph, taken in a museum, of a real object made in the period (a coin, a cup, a jewel, scales, a tapestry, a manuscript page) is NOT a modern photograph in the sense of the rule: for a step-3 want it is the right answer; what stays refused is a photograph of people, places or reconstructions of today, a film still, a stock picture.
+    - A modern photograph of people, places or reconstructions of today, a film still or a stock picture is still never right. When nothing fits, `null` remains the right answer.
 
 For each **box**, open its crop and read the lines it is for:
 

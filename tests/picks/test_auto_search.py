@@ -346,6 +346,35 @@ def test_enough_candidates_from_the_free_sources_mean_no_web_search_and_a_switch
     assert fake.calls == []
 
 
+def test_outside_or_compare_context_want_searches_web_in_round_one_even_with_three_or_more_free_candidates(env, monkeypatch):
+    commons = FakeSource("commons", [meta("commons", "File:c%d.jpg" % i, "C%d" % i, "noyon") for i in range(1, 5)])
+    install_sources(monkeypatch, {"commons": commons, "wikipedia": WikiFake()}, keys=())
+    fake = web_fake({"Noyon Cathedral facade": [wcard("https://img.example.org/a.jpg")]})
+    web = asearch.Web(on=True, max=5, search=fake)
+    # Line of kind "outside": web is searched in round one although free sources brought 4 candidates (>= 3)
+    run_search(env, [ctx_want(kind="work", kinds=["outside"])], web=web)
+    assert fake.calls == [("Noyon Cathedral facade", asearch.WEB_LIMIT)] and web.spent == 1
+    # Line of kind "compare": web is also searched in round one
+    fake.calls.clear()
+    web.spent = 0
+    run_search(env, [ctx_want(kind="work", kinds=["compare"])], web=web)
+    assert fake.calls == [("Noyon Cathedral facade", asearch.WEB_LIMIT)] and web.spent == 1
+
+
+def test_stock_sources_are_not_asked_for_then_want_and_still_are_for_now_want(monkeypatch):
+    install_sources(monkeypatch, {}, keys=("pexels", "pixabay"))
+    # period "then": stock sources are never asked
+    assert asearch.sources_for(want(kind="photo", period="then")) == ["commons"]
+    assert asearch.sources_for(want(kind="place", period="then")) == ["commons"]
+    assert asearch.sources_for(want(kind="event", period="then")) == ["commons"]
+    assert asearch.sources_for(want(kind="other", period="then")) == ["commons", "met"]
+    # period "now": stock sources are asked
+    assert asearch.sources_for(want(kind="photo", period="now")) == ["commons", "pexels", "pixabay"]
+    assert asearch.sources_for(want(kind="place", period="now")) == ["commons", "pexels", "pixabay"]
+    assert asearch.sources_for(want(kind="event", period="now")) == ["commons", "pexels", "pixabay"]
+    assert asearch.sources_for(want(kind="other", period="now")) == ["commons", "met", "pexels", "pixabay"]
+
+
 def test_only_context_pictures_are_searched_on_the_web(env, monkeypatch):
     install_sources(monkeypatch, {"commons": FakeSource("commons"), "osm": FakeSource("osm"), "wikipedia": WikiFake()}, keys=())
     fake = web_fake({})
