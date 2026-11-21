@@ -142,3 +142,107 @@ def test_a_project_without_a_storyboard_answers_none(client, root):
     make_title_project(root, "pk1")
     r = client.put("/api/projects/pk1/title", json={"base_rev": T.EMPTY_REV, "text": TITLE})
     assert r.status_code == 200 and r.json()["storyboard"] is None
+
+
+def test_full_draft_proposal_apply_carries_person_and_agent_video_title_while_edit_keeps_old(rc):
+    import copy
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import DraftInputs, normalize_timing
+    from bti.draft.spec import shape_problems
+
+    choose(rc)
+    d = rc.root / PID
+    sb = saved(rc)
+    sb["identity"] = {"style": "raking", "video_title": "Old Stale Title"}
+    (d / "storyboard.json").write_text(json.dumps(sb, indent=1), encoding="utf-8")
+
+    # Add a 15 s title+card gap before chapter 2 so compile places ID-BRAND-03, and keep `saved(rc)` off-voice beforehand.
+    tm = json.loads((d / "timing.json").read_text(encoding="utf-8"))
+    words = tm["words"]
+    split_w = next(i for i, w in enumerate(words) if w["s"] >= tm["chapters"][1]["start"] - 1e-6)
+    for w in words[split_w:]:
+        w["s"] = round(w["s"] + 15.0, 3)
+        w["e"] = round(w["e"] + 15.0, 3)
+    tm["duration"] = round(float(tm["duration"]) + 15.0, 3)
+    gap_start = round(words[split_w - 1]["e"] + 0.05, 3)
+    gap_end = round(words[split_w]["s"] - 0.05, 3)
+    tm["chapters"][0].update({"id": "c01", "role": "cold_open", "title": "INTRO", "end": gap_start, "card": False})
+    tm["chapters"][1].update({"id": "c02", "role": "chapter", "title": "DETAILS", "start": gap_end, "end": tm["duration"],
+                              "card": True, "lead": {"kind": "title", "start": gap_start, "end": gap_end}})
+    tm["beats"] = []
+    narration = {"schema": "bti.narration/1", "project": PID, "chapters": []}
+    picks = {"schema": "bti.picks/1", "main_asset": "A", "assets": copy.deepcopy(sb["assets"]), "beats": {}}
+    specs = {}
+    for idx, ch in enumerate(tm["chapters"]):
+        bid = f"b{idx + 1:04d}"
+        w0 = 0 if idx == 0 else split_w
+        w1 = split_w if idx == 0 else len(words)
+        tm["beats"].append({"id": bid, "chapter": ch["id"], "text": f"Sentence {idx + 1}.", "start": words[w0]["s"], "end": words[w1 - 1]["e"], "w0": w0, "w1": w1})
+        narration["chapters"].append({"id": ch["id"], "role": ch["role"], "title": ch["title"], "beats": [{"id": bid, "text": f"Sentence {idx + 1}."}]})
+        picks["beats"][bid] = {"items": [{"asset": "A", "role": "main"}], "kinds": ["detail"]}
+        raw = {"schema": "bti.draft/1", "chapter": ch["id"], "shots": [
+            {"beat": bid, "start_word": w0, "technique": "STATIC-01", "intent": "establish",
+             "slots": {"image": {"asset": "A"}}, "params": {}, "note": f"ch {ch['id']}"}
+        ]}
+        clean, errs = shape_problems(raw, ch["id"])
+        assert not errs, errs
+        specs[ch["id"]] = clean
+    tm_norm = normalize_timing(tm, narration)
+    (d / "timing.json").write_text(json.dumps(tm_norm), encoding="utf-8")
+    (d / "script").mkdir(exist_ok=True)
+    (d / "script" / "narration.json").write_text(json.dumps(narration), encoding="utf-8")
+    (d / "picks.json").write_text(json.dumps(picks), encoding="utf-8")
+
+    # Person-set title while off-voice (make storyboard off-voice first).
+    sb_off = copy.deepcopy(sb)
+    for s in sb_off["shots"]:
+        if s.get("intent") == "structure":
+            s["start"] = {"t": 0.5}
+    (d / "storyboard.json").write_text(json.dumps(sb_off, indent=1), encoding="utf-8")
+
+    tget = rc.get(P + "/title").json()
+    put = rc.put(P + "/title", json={"base_rev": tget["rev"], "text": "Person Chosen Title"})
+    assert put.status_code == 200 and put.json()["storyboard"]["off_voice"] is True
+    assert saved(rc)["identity"]["video_title"] == "Old Stale Title"
+
+    res = compile_specs(DraftInputs(timing=tm_norm, picks=picks, narration=narration, current=saved(rc), title="Test Painting", style="gae", project_dir=d), specs, draw=False)
+    assert res.storyboard["identity"]["video_title"] == "Person Chosen Title"
+
+    prop_dir = d / "proposals"
+    prop_dir.mkdir(exist_ok=True)
+    (prop_dir / "p_full_person.json").write_text(json.dumps({"id": "p_full_person", "schema": "bti.proposal/1", "summary": "Full draft", "storyboard": res.storyboard}), encoding="utf-8")
+    ar = rc.post(P + "/proposals/p_full_person/apply", json={"accept": "all"})
+    assert ar.status_code == 200, ar.text
+    after_person = saved(rc)
+    assert after_person["identity"]["video_title"] == "Person Chosen Title"
+    brand = next(s for s in after_person["shots"] if s.get("technique", "").startswith("ID-BRAND-"))
+    assert brand["params"]["title"] == "Person Chosen Title"
+
+    # Subsequent identity.set keeps the applied video_title.
+    cur_rev = rc.get(P).json()["rev"]
+    ir = rc.put(P + "/identity", json={"style": "dim", "base_rev": cur_rev})
+    assert ir.status_code == 200, ir.text
+    assert saved(rc)["identity"]["video_title"] == "Person Chosen Title"
+
+    # Agent-generated title in title.json also lands on the applied full draft.
+    T.write_generated(d, [{"text": "Agent Chosen Title", "form": "object", "lines": ["b0001"],
+                           "scores": {"curiosity": 4, "concrete": 5, "central": 4, "clear": 5}, "why": "Ngắn gọn."}],
+                      by="agent:mock", narration_rev_=T.narration_rev(d),
+                      written={"model": "mock", "agent": "gem", "job_id": "j1", "session": "s1"})
+    res_agent = compile_specs(DraftInputs(timing=tm_norm, picks=picks, narration=narration, current=saved(rc), title="Test Painting", style="gae", project_dir=d), specs, draw=False)
+    assert res_agent.storyboard["identity"]["video_title"] == "Agent Chosen Title"
+    (prop_dir / "p_full_agent.json").write_text(json.dumps({"id": "p_full_agent", "schema": "bti.proposal/1", "summary": "Full agent", "storyboard": res_agent.storyboard}), encoding="utf-8")
+    ar2 = rc.post(P + "/proposals/p_full_agent/apply", json={"accept": "all"})
+    assert ar2.status_code == 200, ar2.text
+    assert saved(rc)["identity"]["video_title"] == "Agent Chosen Title"
+
+    # Edit mode preserves what the storyboard already has (even when title.json changed afterward).
+    rc.put(P + "/title", json={"base_rev": rc.get(P + "/title").json()["rev"], "text": "Person Changed Later"})
+    cur_sb = saved(rc)
+    cur_sb["identity"]["video_title"] = "Kept By Edit Mode"
+    (d / "storyboard.json").write_text(json.dumps(cur_sb, indent=1), encoding="utf-8")
+    first_shot_id = cur_sb["shots"][0]["id"]
+    res_edit = compile_specs(DraftInputs(timing=tm_norm, picks=picks, narration=narration, current=cur_sb, title="Test Painting", style="gae", project_dir=d,
+                                         edit_shots={first_shot_id}), specs, draw=False)
+    assert res_edit.storyboard["identity"]["video_title"] == "Kept By Edit Mode"
+    assert not any(c["kind"] == "identity" for c in __import__("bti.editor.proposals", fromlist=["diff"]).diff(cur_sb, res_edit.storyboard))

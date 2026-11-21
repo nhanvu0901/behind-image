@@ -118,6 +118,9 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                               "cuối cảnh chỉ vào một vùng của tranh chính nhưng vùng đó bị cắt mép ra ngoài khung hình"),
         "thing_arrives_late": ("a named region stays wholly inside the frame for less than 2 seconds and less than 55% of the shot, so the camera arrives too late",
                                "chi tiết được gọi tên chỉ nằm gọn trong khung quá muộn và quá ngắn nên người xem không kịp thấy"),
+        # --- idfix (2026-11-21): a non-cast strip on the main painting needs a light unless its region covers > 60% of the frame (bti/engine/viewchecks.py)
+        "strip_without_light": ("an X-ANN-01 strip naming a non-cast thing on the main painting has no HI-01, X-HI-01, or AN-01 on screen during the strip",
+                                "nhãn gọi tên vật trên tranh chính chưa có đèn rọi hay vòng tròn cùng xuất hiện trong lúc hiện nhãn"),
     },
 }
 # gate -> codes that never stop the run (they stay in the log)

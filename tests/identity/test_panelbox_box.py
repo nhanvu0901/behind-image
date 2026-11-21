@@ -91,3 +91,30 @@ def test_a_storyboard_with_no_box_gets_keys_that_are_not_touched_the_numbers_of_
     app = _Applier(copy.deepcopy(sb), "raking", style, timing, {"main_asset": MAIN})
     wide = [{"at": {"rel": 0.0}, "cx": 0, "cy": 0, "zoom": 9.0, "ease": "linear"}]
     assert app.box_of(MAIN) is None and app.in_box(MAIN, wide) is wide
+
+
+def test_fit_camera_to_box_shared_helper_unit(sb, tmp_path):
+    from PIL import Image
+    from bti import identity as ID
+    from bti.media import contentbox as CB
+
+    sample = [{"at": {"rel": 0.0}, "cx": 1920, "cy": 2626.5, "zoom": 0.49},
+              {"at": {"rel": 1.0}, "cx": 1920, "cy": 2626.5, "zoom": 0.51}]
+    snap = json.loads(json.dumps(sample))
+    assert ID.fit_camera_to_box(None, sample) == (sample, [])
+    assert ID.fit_camera_to_box({}, None) == (None, [])
+    assert ID.fit_camera_to_box({"kind": "image", "width": 3840, "height": 5253}, sample) == (sample, [])
+
+    # Whole-file painting on disk without content_box: project_dir lets it find (0, 0, w, h) and clamp key 0 without mutating input.
+    p = tmp_path / "paint.jpg"
+    Image.new("RGB", (3840, 5253), (120, 95, 70)).save(p, quality=85)
+    asset = {"file": "paint.jpg", "kind": "image", "width": 3840, "height": 5253}
+    fitted, moved = ID.fit_camera_to_box(asset, sample, tmp_path)
+    assert len(moved) == 1 and moved[0]["index"] == 0 and moved[0]["share"] > 0.01
+    assert sample == snap
+    assert CB.outside_share((0, 0, 3840, 5253), fitted[0]["cx"], fitted[0]["cy"], fitted[0]["zoom"]) <= 0.01
+
+    # Stored content_box works without project_dir, and a full-painting pull-back stays untouched.
+    boxed = {**asset, "content_box": [0.1, 0.1, 0.9, 0.9]}
+    pullback = [{"at": {"rel": 0.0}, "cx": 1920, "cy": 2626.5, "zoom": 0.2}]
+    assert ID.fit_camera_to_box(boxed, pullback) == (pullback, [])

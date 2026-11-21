@@ -1362,6 +1362,10 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         out.extend(_region_framing(c))
     except Exception:       # noqa: BLE001
         pass
+    try:                                                          # idfix: a non-cast X-ANN-01 strip on the main painting needs a light unless its region takes > 60%
+        out.extend(_strip_without_light(c))
+    except Exception:       # noqa: BLE001
+        pass
     return out
 
 
@@ -1582,6 +1586,26 @@ def box_inside_frame(box: tuple[float, float, float, float], cx: float, cy: floa
     return (miss <= tol, miss)
 
 
+def _shot_target(shot: dict, t0: float, t1: float, main: str, regs: dict, rows: list) -> tuple[str | None, dict | None]:
+    """`(region_name, dominant_beat)` for a main-painting shot from its `slots.image.region` or unique detail-beat pick."""
+    bovs = [(min(t1, r["t1"]) - max(t0, r["t0"]), r) for r in rows]
+    bovs = [x for x in bovs if x[0] > 0.05]
+    bovs.sort(key=lambda x: -x[0])
+    dom = bovs[0][1] if bovs else None
+    slot_reg = ((shot.get("slots") or {}).get("image") or {}).get("region") if isinstance(shot.get("slots"), dict) else None
+    if isinstance(slot_reg, str) and slot_reg in regs:
+        return slot_reg, dom
+    if dom and "detail" in (dom["kinds"] or []):
+        dregs = []
+        for it in dom["entry"].get("items") or []:
+            rn = it.get("region") if isinstance(it, dict) and it.get("asset") == main else None
+            if isinstance(rn, str) and rn in regs and rn not in dregs:
+                dregs.append(rn)
+        if len(dregs) == 1:
+            return dregs[0], dom
+    return None, dom
+
+
 def _region_framing(c: _Ctx) -> list[dict]:
     """Viewer checks `camera_off_region` and `thing_arrives_late` on main-painting shots that point at a named region or a unique detail pick."""
     main = _main_painting(c)
@@ -1604,24 +1628,8 @@ def _region_framing(c: _Ctx) -> list[dict]:
         dur = t1 - t0
         if dur <= 0:
             continue
-        bovs = [(min(t1, r["t1"]) - max(t0, r["t0"]), r) for r in rows]
-        bovs = [x for x in bovs if x[0] > 0.05]
-        bovs.sort(key=lambda x: -x[0])
-        dom = bovs[0][1] if bovs else None
+        rname, dom = _shot_target(shot, t0, t1, main, regs, rows)
         bid = dom["id"] if dom else None
-
-        slot_reg = ((shot.get("slots") or {}).get("image") or {}).get("region") if isinstance(shot.get("slots"), dict) else None
-        rname = None
-        if isinstance(slot_reg, str) and slot_reg in regs:
-            rname = slot_reg
-        elif dom and "detail" in (dom["kinds"] or []):
-            dregs = []
-            for it in dom["entry"].get("items") or []:
-                rn = it.get("region") if isinstance(it, dict) and it.get("asset") == main else None
-                if isinstance(rn, str) and rn in regs and rn not in dregs:
-                    dregs.append(rn)
-            if len(dregs) == 1:
-                rname = dregs[0]
         if rname is None:
             continue
         rbox = region_point_box(regs[rname])
@@ -1655,7 +1663,106 @@ def _region_framing(c: _Ctx) -> list[dict]:
     return out
 
 
+# ----------------------------------------------------------------------------------------------------------- idfix: non-cast strip needs light
+STRIP_TECHNIQUE = "X-ANN-01"
+STRIP_LIGHTS = frozenset({"HI-01", "X-HI-01", "AN-01"})
+STRIP_FILL_SHARE = 0.60
+HINTS["strip_without_light"] = "Add HI-01 (or AN-01) on that detail during the strip, unless its region covers more than 60% of the frame width or height."
+
+
+def _cast_aliases(cast: list) -> list[list[str]]:
+    out: list[list[str]] = []
+    for entry in cast:
+        if not isinstance(entry, dict):
+            continue
+        names = [entry.get("name")] + (entry.get("also") if isinstance(entry.get("also"), list) else [])
+        for raw in names:
+            if isinstance(raw, str) and raw.strip():
+                toks = tokens(raw)
+                if toks:
+                    out.append(toks)
+    return out
+
+
+def _is_cast_text(text: str, aliases: list[list[str]]) -> bool:
+    words = tokens(text)
+    if not words:
+        return False
+    return any(len(words) >= len(a) and any(words[k:k + len(a)] == a for k in range(len(words) - len(a) + 1)) for a in aliases)
+
+
+def _strip_fill_at(rbox: tuple[float, float, float, float], cx: float, cy: float, z: float,
+                   pbox: tuple[float, float, float, float] | None) -> tuple[float, float, float, float]:
+    """`(w_share, h_share, w_vis, h_vis)` of `rbox` clipped inside the `(cx, cy, z)` frame (so regions larger than the frame clamp to 1.0)."""
+    vw, vh = L.CANVAS_W / z, L.CANVAS_H / z
+    fx0, fy0, fx1, fy1 = cx - vw / 2.0, cy - vh / 2.0, cx + vw / 2.0, cy + vh / 2.0
+    iw = max(0.0, min(rbox[2], fx1) - max(rbox[0], fx0))
+    ih = max(0.0, min(rbox[3], fy1) - max(rbox[1], fy0))
+    ws, hs = iw / vw, ih / vh
+    if pbox is None:
+        return ws, hs, ws, hs
+    ow = max(0.0, min(pbox[2], fx1) - max(pbox[0], fx0))
+    oh = max(0.0, min(pbox[3], fy1) - max(pbox[1], fy0))
+    return ws, hs, (iw / ow) if ow > 1e-6 else ws, (ih / oh) if oh > 1e-6 else hs
+
+
+def _strip_without_light(c: _Ctx) -> list[dict]:
+    """Warn when a main-painting shot carries an `X-ANN-01` strip for a non-cast thing without an overlapping `HI-01`, `X-HI-01`, or `AN-01` in that shot.
+    Projects without a `names` list in `picks.json` are skipped so stored legacy storyboards with unlit person strips are not misjudged."""
+    picks = _picks_doc(c.project_dir)
+    cast = picks.get("names")
+    if not isinstance(cast, list):
+        return []
+    main = _main_painting(c)
+    asset = c.assets.get(main) if main else None
+    if not isinstance(asset, dict):
+        return []
+    from bti.media import contentbox as CB
+    aliases = _cast_aliases(cast)
+    regs = asset.get("regions") or {}
+    size = c.size(main)
+    pbox = _valid_box(CB.box_of(asset, c.project_dir), float(size[0]), float(size[1])) if size else None
+    rows = _beat_rows(c)
+    out: list[dict] = []
+    for i, shot in enumerate(c.shots):
+        sp = c.spans[i]
+        if sp is None or shot.get("intent") == "structure" or shot.get("id") == "s0000" or c.primary(i) != main:
+            continue
+        ovs = shot.get("overlays") or []
+        strips = [(j, ov) for j, ov in enumerate(ovs) if isinstance(ov, dict) and ov.get("technique") == STRIP_TECHNIQUE]
+        if not strips:
+            continue
+        lights = [lsp for o in ovs if isinstance(o, dict) and o.get("technique") in STRIP_LIGHTS for lsp in (_overlay_span(c, o, sp),) if lsp is not None]
+        rname, dom = _shot_target(shot, sp[0], sp[1], main, regs, rows)
+        bid = dom["id"] if dom else None
+        rbox = region_box(regs[rname]) if rname is not None else None
+        keys = c.keys_of(i, sp) if c.has_camera(i) else None
+        for j, ov in strips:
+            osp = _overlay_span(c, ov, sp)
+            if osp is None:
+                continue
+            text = str((ov.get("params") or {}).get("text") or "").strip()
+            if not tokens(text) or _is_cast_text(text, aliases):
+                continue
+            if any(min(osp[1], lsp[1]) > max(osp[0], lsp[0]) + 1e-6 for lsp in lights):
+                continue
+            ws = hs = None
+            if keys and rbox is not None:
+                cx, cy, z = camera_at(keys, 0.5 * (osp[0] + osp[1]))
+                if z > 0:
+                    ws, hs, w_vis, h_vis = _strip_fill_at(rbox, cx, cy, z, pbox)
+                    if (ws > STRIP_FILL_SHARE + 1e-9 or hs > STRIP_FILL_SHARE + 1e-9) and min(w_vis, h_vis) >= THIN_ON_SCREEN - 1e-9:
+                        continue
+            detail = " (region %s takes %.0f%% x %.0f%% of the frame)" % (rname, 100.0 * ws, 100.0 * hs) if rname and ws is not None and hs is not None else ""
+            out.append(_issue("strip_without_light", "shots[%d].overlays[%d]" % (i, j),
+                              "Strip %r on shot %s names a non-cast thing on the main painting without HI-01, X-HI-01, or AN-01 on screen%s." % (text, c.sid(i), detail),
+                              shot=c.sid(i), overlay=ov.get("id") or "ov%d" % (j + 1), text=text, region=rname, beat=bid,
+                              width_share=_r(ws, 3) if ws is not None else None, height_share=_r(hs, 3) if hs is not None else None, min_share=STRIP_FILL_SHARE))
+    return out
+
+
 CODES.update({
     "camera_off_region": "At the end of a main-painting shot that points at a region, the region box is not wholly inside the frame (warning). args: shot, region, beat, miss_px, cx, cy, zoom.",
     "thing_arrives_late": "A named region is wholly inside the frame for less than 2.0 s and less than 55% of the shot (warning). args: shot, region, beat, seconds, shot_seconds, share, min_seconds, min_share.",
+    "strip_without_light": "An X-ANN-01 strip naming a non-cast thing on the main painting has no HI-01, X-HI-01, or AN-01 on screen during the strip, unless its region covers > 60% of frame width or height (and is not thin) at strip midpoint (warning). args: shot, overlay, text, region, beat, width_share, height_share, min_share.",
 })

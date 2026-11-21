@@ -42,6 +42,8 @@ def shape_problem(sb: Any) -> str | None:
         return "storyboard must be an object"
     if "assets" in sb and not (isinstance(sb["assets"], dict) and all(isinstance(a, dict) for a in sb["assets"].values())):
         return "assets must be an object of objects"
+    if "identity" in sb and sb["identity"] is not None and not isinstance(sb["identity"], dict):
+        return "identity must be an object"
     if "end" in sb and sb["end"] is not None and not isinstance(sb["end"], dict):
         return "end must be an object"
     shots = sb.get("shots", [])
@@ -102,6 +104,9 @@ def diff(saved: dict, proposed: dict) -> list[dict]:
             if onames:
                 add(f"overlay.{sid}.{oid}", "change", "overlay", opath, ob, oa, lk, item_id=oid, shot_id=sid,
                     fields=onames)
+    si, pi = saved.get("identity"), proposed.get("identity")
+    if isinstance(pi, dict) and pi != si:
+        add("identity", "change", "identity", "identity", si, pi, False)
     se, pe = saved.get("end"), proposed.get("end")
     if isinstance(pe, dict) and pe != se:
         add("end", "change", "end", "end", se, pe, False)
@@ -204,6 +209,17 @@ def apply(saved: dict, proposed: dict, accept: Any) -> tuple[dict, list[str], li
                     o.pop(k, None)
             o["source"] = "agent"
     for c in todo:
-        if c["kind"] == "end":
+        if c["kind"] == "identity":
+            val = copy.deepcopy(proposed["identity"])
+            if "identity" in doc or "style" not in doc:
+                doc["identity"] = val
+            else:
+                placed = {}
+                for k, v in doc.items():
+                    placed[k] = v
+                    if k == "style":
+                        placed["identity"] = val
+                doc = placed
+        elif c["kind"] == "end":
             doc["end"] = copy.deepcopy(proposed["end"])
     return doc, [c["id"] for c in todo], skipped

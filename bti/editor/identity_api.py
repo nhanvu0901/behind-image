@@ -122,7 +122,7 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
                 bundle = None
             try:
                 source = ID.with_video_title(saved, title) if has_title else saved
-                new, report = ID.apply_identity(source, want, style, timing, meta, defaults=bundle.param_defaults if bundle else None)
+                new, report = ID.apply_identity(source, want, style, timing, meta, defaults=bundle.param_defaults if bundle else None, project_dir=d)
             except ID.IdentityError as e:
                 raise ApiError(422, e.message, code=e.code)
             doc = strip_derived(new)

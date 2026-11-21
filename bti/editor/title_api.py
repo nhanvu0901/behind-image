@@ -87,7 +87,7 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
             except Exception:           # noqa: BLE001
                 bundle = None
             try:
-                new, report = ID.apply_identity(ID.with_video_title(saved, title), want, style, timing, meta, defaults=bundle.param_defaults if bundle else None)
+                new, report = ID.apply_identity(ID.with_video_title(saved, title), want, style, timing, meta, defaults=bundle.param_defaults if bundle else None, project_dir=d)
             except ID.IdentityError as e:
                 raise ApiError(422, e.message, code=e.code)
             fresh = storyboard_approval(saved) == "fresh"

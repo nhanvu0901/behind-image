@@ -168,3 +168,29 @@ def test_corrupt_proposal_quarantined(client, root):
 def test_listing_sorted_newest_first(client, root, state):
     write_proposal(root, "newer", editable(state), created_at="2027-01-01T00:00:00")
     assert [p["id"] for p in client.get(f"{P}/proposals").json()["items"]] == ["newer", "p_demo_001"]
+
+
+def test_proposal_diff_and_apply_identity_video_title():
+    from bti.editor import proposals as PR
+
+    assert PR.shape_problem({"shots": [], "identity": "bad"}) is not None
+    assert PR.shape_problem({"shots": [], "identity": {"style": "raking", "video_title": "New"}}) is None
+
+    base = {"schema": "bti.storyboard/1", "style": "gae", "assets": {}, "shots": [],
+            "identity": {"style": "raking", "video_title": "Old Title"}}
+    prop_new = {**base, "identity": {"style": "raking", "video_title": "Person Title"}}
+    changes = PR.diff(base, prop_new)
+    assert [(c["id"], c["kind"], c["op"]) for c in changes] == [("identity", "identity", "change")]
+    applied, ids, skipped = PR.apply(base, prop_new, "all")
+    assert ids == ["identity"] and skipped == []
+    assert applied["identity"] == {"style": "raking", "video_title": "Person Title"}
+
+    # Edit mode preserves existing identity, so diff emits no identity change.
+    assert PR.diff(base, copy.deepcopy(base)) == []
+
+    # When saved has no identity block yet, apply inserts it right after style.
+    no_ident = {"schema": "bti.storyboard/1", "style": "gae", "assets": {}, "shots": []}
+    with_ident = {**no_ident, "identity": {"style": "raking", "video_title": "Agent Title"}}
+    applied2, _, _ = PR.apply(no_ident, with_ident, "all")
+    assert list(applied2.keys())[:2] == ["schema", "style"] and list(applied2.keys())[2] == "identity"
+    assert applied2["identity"]["video_title"] == "Agent Title"

@@ -886,3 +886,14 @@ export const INTRORULES_ISSUES = {
   },
 };
 Object.assign(BUILD, INTRORULES_ISSUES);
+
+// ---- worker idfix (2026-11-21): strip naming a non-cast thing on the main painting needs a light unless its region covers > 60% of the frame.
+export const IDFIX_SENTENCES = {
+  strip_without_light: (i) => {
+    const a = i.args || {};
+    const what = a.text ? ` “${a.text}”` : '';
+    return `${fdShot(a)}: nhãn${what} gọi tên một vật (không phải nhân vật) trên tranh chính nhưng lúc nhãn hiện chưa có đèn rọi (HI-01/X-HI-01) hay vòng tròn (AN-01) cùng xuất hiện. Hãy thêm HI-01 vào vật đó (trừ khi vùng vật chiếm hơn 60% khung hình).`;
+  },
+};
+export const IDFIX_CODES = Object.keys(IDFIX_SENTENCES);
+Object.assign(BUILD, IDFIX_SENTENCES);

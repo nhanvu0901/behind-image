@@ -93,7 +93,7 @@ def make_router(root: Path, *, pdir: Callable, project: Callable, saved_storyboa
                 bundle = None
             try:
                 new, report = RT.retime(saved, timing, style if isinstance(style, dict) else {}, meta, defaults=bundle.param_defaults if bundle else None,
-                                        video_title=chosen_text(d))
+                                        video_title=chosen_text(d), project_dir=d)
             except DraftError as e:
                 raise ApiError(422, e.message, code="timing_unusable")
             if things.canon(new) == things.canon(saved):

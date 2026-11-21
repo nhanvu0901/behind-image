@@ -1,6 +1,6 @@
 """Apply a channel identity style to a storyboard: ONE deterministic function, no model, no network, no clock.
 
-    apply_identity(storyboard, style_id, style, timing, meta=None, *, defaults=None) -> (storyboard, report)
+    apply_identity(storyboard, style_id, style, timing, meta=None, *, defaults=None, project_dir=None) -> (storyboard, report)
 
 Contract: docs/design/2026-11-18-identity-raking-light.md section 6. In short, for the chosen style:
   1. the opening: the `ID-OPEN-*` and `ID-LABEL-*` overlays of every unlocked shot are removed and the style's own are put on the
@@ -140,7 +140,7 @@ def _after(doc: dict, anchor: str, key: str, value) -> dict:
 
 
 class _Applier:
-    def __init__(self, storyboard, style_id, style, timing, meta, defaults=None):
+    def __init__(self, storyboard, style_id, style, timing, meta, defaults=None, project_dir=None):
         self.cfg = C.need(style)
         self.sd = self.cfg.style(style_id)
         if self.sd is None:
@@ -150,6 +150,8 @@ class _Applier:
         self.tm = _timing(timing)
         self.meta = meta if isinstance(meta, dict) else {}
         self._defaults = defaults
+        self.project_dir = project_dir
+        self._boxes: dict[str, tuple | None] = {}
         self.sb = _strip(storyboard)
         shots = self.sb.get("shots")
         self.shots = shots if isinstance(shots, list) else []
@@ -233,24 +235,24 @@ class _Applier:
         return next((k for k in self.assets if self.image_asset(k)), None)
 
     def box_of(self, key) -> tuple | None:
-        """panelbox: the painted area `(x0, y0, x1, y1)` of the main painting (`content_box` of its asset) when `key` is the main painting and carries a usable one."""
-        a = self.image_asset(key)
-        return CB.box_of(a) if a is not None and key == self.main_asset() else None
+        """panelbox: the painted area `(x0, y0, x1, y1)` of the main painting (`CB.box_of(asset, project_dir)`) when `key` is the main painting."""
+        if not isinstance(key, str) or key != self.main_asset():
+            return None
+        if key not in self._boxes:
+            a = self.image_asset(key)
+            self._boxes[key] = CB.box_of(a, self.project_dir) if a is not None else None
+        return self._boxes[key]
 
     def in_box(self, key, keys):
-        """panelbox: camera keys written for the picture `key`, each moved or tightened (`bti.media.contentbox.fit_frame`) when it shows more than 1% of its frame outside
-        the painted area of the main painting and does not hold the whole of it; the keys of any other picture, and keys that are inside, come back as they are."""
-        box = self.box_of(key) if keys else None
+        """panelbox: camera keys written for the picture `key`, each moved or tightened (`fit_camera_to_box`) when it shows more than 1% of its frame
+        outside the painted area of the main painting and does not hold the whole of it; the keys of any other picture, and keys inside, come back unchanged."""
+        if not keys or key != self.main_asset():
+            return keys
+        box = self.box_of(key)
         if box is None:
             return keys
-        out = []
-        for k in keys:
-            if isinstance(k, dict) and _num(k.get("cx")) and _num(k.get("cy")) and _num(k.get("zoom")) and k["zoom"] > 0:
-                fit = CB.fit_frame(box, k["cx"], k["cy"], k["zoom"])
-                if fit != (k["cx"], k["cy"], k["zoom"]):
-                    k = {**k, "cx": fit[0], "cy": fit[1], "zoom": _clamp_zoom(fit[2])}
-            out.append(k)
-        return out
+        fitted, _ = fit_camera_to_box(self.image_asset(key), keys, self.project_dir, box=box)
+        return fitted
 
     def whole_keys(self, key) -> list | None:
         """The whole picture, fitted the way the matte shots fit it (painting height = `fit_pct` of the frame), with a 3 % push. The painting is the painted area of the
@@ -680,6 +682,30 @@ def with_video_title(storyboard: dict, title: str | None) -> dict:
     return _after(sb, "style", "identity", ident)
 
 
-def apply_identity(storyboard: dict, style_id: str, style: dict, timing, meta: dict | None = None, *, defaults=None) -> tuple[dict, dict]:
+def fit_camera_to_box(asset: dict | None, keys: list | None, project_dir=None, *, box: tuple | None = None) -> tuple[list | None, list[dict]]:
+    """Clamp camera `keys` onto the painted area of `asset` (`CB.box_of(asset, project_dir)` + `CB.fit_frame`).
+    Returns `(fitted_keys, moved)` without mutating `keys`; `keys` itself is returned when `asset` has no box, `keys` is empty,
+    or no key moved (`moved` is empty). Each entry in `moved` has `index`, `share`, `from`, `to`, and `box`."""
+    if not keys:
+        return keys, []
+    resolved = box if box is not None else (CB.box_of(asset, project_dir) if isinstance(asset, dict) else None)
+    if resolved is None:
+        return keys, []
+    out = []
+    moved = []
+    for n, k in enumerate(keys):
+        if isinstance(k, dict) and _num(k.get("cx")) and _num(k.get("cy")) and _num(k.get("zoom")) and k["zoom"] > 0:
+            cx0, cy0, z0 = k["cx"], k["cy"], k["zoom"]
+            cx, cy, z = CB.fit_frame(resolved, cx0, cy0, z0)
+            z_clamped = _clamp_zoom(z)
+            if (cx, cy, z) != (cx0, cy0, z0) and (cx, cy, z_clamped) != (cx0, cy0, z0):
+                moved.append({"index": n, "share": CB.outside_share(resolved, cx0, cy0, z0),
+                              "from": (cx0, cy0, z0), "to": (cx, cy, z_clamped), "box": resolved})
+                k = {**k, "cx": cx, "cy": cy, "zoom": z_clamped}
+        out.append(k)
+    return (out, moved) if moved else (keys, [])
+
+
+def apply_identity(storyboard: dict, style_id: str, style: dict, timing, meta: dict | None = None, *, defaults=None, project_dir=None) -> tuple[dict, dict]:
     """See the module docstring. Raises `IdentityError` for an unknown style or a style.json without an identity block."""
-    return _Applier(storyboard, style_id, style, timing, meta, defaults).run()
+    return _Applier(storyboard, style_id, style, timing, meta, defaults, project_dir).run()

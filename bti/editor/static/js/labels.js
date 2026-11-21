@@ -1039,3 +1039,9 @@ export const CODE_INTRORULES = {
   cold_open_word_count: 'Độ dài phần mở đầu ngoài 60–145 từ',
 };
 Object.assign(CODE, CODE_INTRORULES);
+
+// ---- worker idfix (2026-11-21): non-cast strip on main painting without light.
+export const CODE_IDFIX = {
+  strip_without_light: 'Nhãn vật chưa có đèn rọi',
+};
+Object.assign(CODE, CODE_IDFIX);

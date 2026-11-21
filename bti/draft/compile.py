@@ -925,7 +925,7 @@ class _Compiler:
             return doc, None
         style_id = ID.chosen_style(self.inp.current, self.bundle.style) or cfg.default_style
         new, report = ID.apply_identity(doc, style_id, self.bundle.style, self.tm, {"title": self.inp.title, "main_asset": self.main},
-                                        defaults=self.bundle.param_defaults)
+                                        defaults=self.bundle.param_defaults, project_dir=self.inp.project_dir)
         for o, a, b in zip(origin, doc["shots"], new["shots"]):
             o["technique"] = b.get("technique")
             before = {ov.get("id"): m for ov, m in zip(a.get("overlays") or [], o["ov_map"])}
@@ -935,7 +935,7 @@ class _Compiler:
     # ---------------------------------------------------------------- panelbox: the camera stays on the painted surface
     def fit_to_box(self, doc: dict, origin: list) -> list:
         """Move or tighten, IN PLACE, every camera key of a shot on the main painting that would show more than 1% of its frame outside the painted area of the
-        picture (`bti.media.contentbox.fit_frame`: the zoom is raised only as far as the frame needs to fit the box, the centre moved to the nearest point inside it;
+        picture (`bti.identity.fit_camera_to_box`: the zoom is raised only as far as the frame needs to fit the box, the centre moved to the nearest point inside it;
         a key that holds the whole painting is the pull-back and stays). A locked shot and a shot the compiler keeps (outside the scope of an edit) are never touched.
         -> one warning per shot that was changed, which says what the model wrote and what the compiler made of it."""
         a = (doc.get("assets") or {}).get(self.main)
@@ -950,19 +950,14 @@ class _Compiler:
             cam = (s.get("params") or {}).get("camera") if isinstance(s.get("params"), dict) else None
             if not isinstance(cam, list) or SB.primary_slot(s)[1] != self.main:
                 continue
-            moved = []
-            for n, k in enumerate(cam):
-                if not (isinstance(k, dict) and all(isinstance(k.get(f), (int, float)) and not isinstance(k.get(f), bool) for f in ("cx", "cy", "zoom")) and k["zoom"] > 0):
-                    continue
-                share = CB.outside_share(box, k["cx"], k["cy"], k["zoom"])
-                cx, cy, z = CB.fit_frame(box, k["cx"], k["cy"], k["zoom"])
-                if (cx, cy, z) != (k["cx"], k["cy"], k["zoom"]):
-                    moved.append("key %d showed %.0f%% outside (centre %.0f, %.0f, zoom %.3g) and is now centre %.0f, %.0f, zoom %.3g" % (n + 1, share * 100, k["cx"], k["cy"], k["zoom"], cx, cy, z))
-                    k["cx"], k["cy"], k["zoom"] = cx, cy, z
+            fitted, moved = ID.fit_camera_to_box(a, cam, self.inp.project_dir, box=box)
             if moved:
+                s["params"]["camera"] = fitted
+                desc = ["key %d showed %.0f%% outside (centre %.0f, %.0f, zoom %.3g) and is now centre %.0f, %.0f, zoom %.3g"
+                        % (m["index"] + 1, m["share"] * 100, *m["from"], *m["to"]) for m in moved]
                 out.append(S.problem("frame_moved_into_painting", o["chapter"], o["n"],
                                      "the camera of this shot (%s) went past the painted area of the main painting (x %d to %d, y %d to %d of the picture; what is outside it is the black ground of the "
-                                     "photograph, or the matte past the picture's edge) and the compiler moved it back: %s. Aim the camera inside the painted area, or zoom in." % (s.get("id"), box[0], box[2], box[1], box[3], "; ".join(moved)),
+                                     "photograph, or the matte past the picture's edge) and the compiler moved it back: %s. Aim the camera inside the painted area, or zoom in." % (s.get("id"), box[0], box[2], box[1], box[3], "; ".join(desc)),
                                      field="params.camera", level="warn"))
         return out
 
@@ -1142,7 +1137,7 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
-    pointfix = {"name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late"}
+    pointfix = {"name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
         required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
         rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items

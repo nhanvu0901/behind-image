@@ -6,7 +6,7 @@ moves and the word anchors follow by themselves; the absolute times do not. This
 parts belong, from the same computation the compiler uses (`bti.draft.zones.place`), so that a full compile and a retime agree.
 
     off_voice(storyboard, timing, style) -> [problem]                     (tolerance 0.05 s; empty = the storyboard fits the voice)
-    retime(storyboard, timing, style, meta=None, defaults=None, video_title=None) -> (storyboard, report)
+    retime(storyboard, timing, style, meta=None, defaults=None, video_title=None, project_dir=None) -> (storyboard, report)
 
 Pure: no model, no clock, no file. `timing` is `timing.json` (or its normalized form), `style` the style.json document (its `identity` block is
 read), `meta` the project's facts for the opening shot (`main_asset`), `defaults(id)` the registry defaults of a technique
@@ -257,7 +257,7 @@ def _anchor_at(f: _Fit, shot: dict, t: float) -> dict:
     return {"t": round(t, 3)}
 
 
-def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defaults=None, video_title: str | None = None) -> tuple[dict, dict]:
+def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defaults=None, video_title: str | None = None, *, project_dir=None) -> tuple[dict, dict]:
     """See the module docstring. The input is never changed. `report` is `{"inserted": [ids], "removed": [ids], "moved": [{"shot", "what", "from", "to"}],
     "end": {"from", "to"} | None, "left": [problems that are still there], "identity": {"style", "changed", "skipped"} | None, "before": [codes],
     "video_title": {"from", "to"} | None}` (`video_title`: the title the beat now shows when this call wrote another one, else None). `video_title` None or ""
@@ -348,7 +348,7 @@ def retime(storyboard: dict, timing: dict, style, meta: dict | None = None, defa
         meta2 = dict(meta or {})
         if f.main and not meta2.get("main_asset"):
             meta2["main_asset"] = f.main
-        sb, rep = ID.apply_identity(sb, f.style_id, style, normalized(timing), meta2, defaults=defaults)
+        sb, rep = ID.apply_identity(sb, f.style_id, style, normalized(timing), meta2, defaults=defaults, project_dir=project_dir)
         report["identity"] = rep
     # Fit timed overlays only after all structural and identity changes have settled.
     f = _Fit(sb, timing, style, meta)
