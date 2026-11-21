@@ -1,0 +1,714 @@
+{
+ "0001": {
+  "full": [
+   [
+    "h1",
+    "What Great Paintings Say"
+   ],
+   [
+    "para",
+    "Volume 1"
+   ],
+   [
+    "para",
+    "Rose-Marie & Rainer Hagen"
+   ],
+   [
+    "para",
+    "TASCHEN"
+   ]
+  ],
+  "type": "front",
+  "read": true
+ },
+ "0005": {
+  "full": [
+   [
+    "h1",
+    "What Great Paintings Say"
+   ],
+   [
+    "para",
+    "Volume 1"
+   ]
+  ],
+  "type": "front",
+  "read": true
+ },
+ "0006": {
+  "type": "plate",
+  "full": [],
+  "read": true
+ },
+ "0007": {
+  "full": [
+   [
+    "h1",
+    "What Great Paintings Say"
+   ],
+   [
+    "para",
+    "Volume 1"
+   ],
+   [
+    "para",
+    "Rose-Marie and Rainer Hagen"
+   ],
+   [
+    "para",
+    "TASCHEN"
+   ],
+   [
+    "para",
+    "KÖLN LONDON LOS ANGELES MADRID PARIS TOKYO"
+   ]
+  ],
+  "type": "front",
+  "read": true
+ },
+ "0008": {
+  "type": "credits",
+  "read": true,
+  "full": [
+   [
+    "credit",
+    "Cover: Diego Velázquez, Venus at her Mirror, c. 1646, Oil on canvas, 123 x 177 cm, London, National Gallery, Photo: AKG Berlin"
+   ],
+   [
+    "credit",
+    "Backcover: Georges de La Tour, The Fortune Teller, after 1630, Oil on canvas, 102 x 123 cm, New York, The Metropolitan Museum of Art, Photo: AKG Berlin / Erich Lessing"
+   ],
+   [
+    "credit",
+    "Illustration Page 2: Peter Paul Rubens, The Love Garden (detail), c. 1632-1634, Oil on canvas, 198 x 283 cm, Derechos reservados © Museo del Prado, Madrid"
+   ],
+   [
+    "para",
+    "To stay informed about upcoming TASCHEN titles, please request our magazine at www.taschen.com or write to TASCHEN America, 6671 Sunset Boulevard, Suite 1508, USA-Los Angeles, CA 90028, Fax: +1-323-463 4442. We will be happy to send you a free copy of our magazine which is filled with information about all of our books."
+   ],
+   [
+    "para",
+    "© 2003 TASCHEN GmbH, Hohenzollernring 53, D-50672 Köln, www.taschen.com"
+   ],
+   [
+    "para",
+    "Original edition © 2000 Benedikt Taschen Verlag GmbH"
+   ],
+   [
+    "para",
+    "© 2002 for the illustrations of Marc Chagall, James Ensor and Otto Dix: VG Bild-Kunst, Bonn"
+   ],
+   [
+    "para",
+    "Editing and layout: Simone Philippi, Susanne Uppenbrock, Cologne"
+   ],
+   [
+    "para",
+    "English Translation: Iain Galbraith, Wiesbaden; Karen Williams, Whitley Chapel"
+   ],
+   [
+    "para",
+    "Cover design: Claudia Frey, Angelika Taschen, Cologne"
+   ],
+   [
+    "para",
+    "Printed in Slovenia"
+   ],
+   [
+    "para",
+    "ISBN 3-8228-2100-4"
+   ]
+  ]
+ },
+ "0499": {
+  "type": "back",
+  "read": true,
+  "full": [
+   [
+    "h1",
+    "Masterpieces under the microscope"
+   ],
+   [
+    "para",
+    "From ancient Egyptian papyrus scrolls to 20th century works: painting’s hidden secrets revealed"
+   ],
+   [
+    "para",
+    "New! What Great Paintings Say Volume 2, Rose-Marie & Rainer Hagen"
+   ],
+   [
+    "quote",
+    "“This book unravels the symbolism located in plain view in many Old Masters that remains overlooked by many of today’s observers.” —Adventures, United States"
+   ],
+   [
+    "quote",
+    "“Amazingly informative and readable ... An important addition to art history literature.” —The Sanford Herald, United States"
+   ],
+   [
+    "para",
+    "What Great Paintings Say Vol. 2, Rose-Marie & Rainer Hagen. English, German, French and Spanish editions. Flexi-cover, format: 19.6 x 24.5 cm (7.7 x 9.6 in.), 432 pp. US$ 39.99 / £ 19.99 / € 29.99 / ¥ 4,500"
+   ],
+   [
+    "para",
+    "www.taschen.com"
+   ]
+  ],
+  "issues": [
+   "advertisement page; the printed word \"reamins\" in the first review quote is a misprint, corrected to \"remains\" only here because Vision and the page agree on the other letters (read from image)"
+  ]
+ },
+ "0504": {
+  "type": "back",
+  "read": true,
+  "full": [
+   [
+    "para",
+    "What is that callow youth doing among the gypsies? What was the penalty for stealing a gold coin or a purse? Is the painting an ingenious fake? How did it make its way from France to the United States?"
+   ],
+   [
+    "para",
+    "These are the kinds of question Rose-Marie and Rainer Hagen ask when faced with world-famous masterpieces. In the language of today they comment on the fashions and attitudes, trends and intrigues, love, vice and lifestyles of past times."
+   ],
+   [
+    "para",
+    "ISBN 3-8228-2100-4"
+   ]
+  ]
+ },
+ "0024": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Due de Berry",
+    "to": "Duc de Berry",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0157": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Caliarl",
+    "to": "Caliari",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0186": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Tiburtine Sybil,",
+    "to": "Tiburtine Sybil, c. 1580",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0198": {
+  "read": true,
+  "delete_match": [
+   {
+    "kind": "h2",
+    "text": "El Greco: The Burial of Count Orgaz, 1586"
+   }
+  ],
+  "insert": [
+   {
+    "index": 1,
+    "kind": "meta",
+    "text": "El Greco: The Burial of Count Orgaz, 1586"
+   }
+  ],
+  "replace": [
+   {
+    "from": ">f the painting",
+    "to": "of the painting",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0205": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Armada Portrait of Elizabeth",
+    "to": "Armada Portrait of Elizabeth I, c. 1590",
+    "reason": "read page image"
+   }
+  ],
+  "delete_match": [
+   {
+    "kind": "h2",
+    "text": "I, c. 1590"
+   }
+  ]
+ },
+ "0276": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Charles Le Brum The Chancellor Séguier",
+    "to": "Charles Le Brun: The Chancellor Séguier",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0379": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Theodore Géricault",
+    "to": "Théodore Géricault",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0384": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Eugene Delacroix",
+    "to": "Eugène Delacroix",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0444": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Pierre-Auguste Renoir: Pierre Auguste Renoir:",
+    "to": "Pierre-Auguste Renoir:",
+    "reason": "duplicated artist name from override of a line that was already present"
+   }
+  ]
+ },
+ "0451": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Folies Bergere",
+    "to": "Folies Bergère",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0360": {
+  "read": true,
+  "issues": [
+   "no artist/title line is printed on this opening page (checked on the image); works.json gives Jacques-Louis David: The Coronation of Napoleon, 1807"
+  ]
+ },
+ "0077": {
+  "read": true,
+  "delete_match": [
+   {
+    "kind": "h2",
+    "text": "if"
+   }
+  ]
+ },
+ "0131": {
+  "read": true,
+  "delete_match": [
+   {
+    "kind": "h2",
+    "text": "in.1-"
+   }
+  ]
+ },
+ "0272": {
+  "read": true,
+  "replace": [
+   {
+    "from": "eventeenth century spectators",
+    "to": "Seventeenth century spectators",
+    "reason": "drop cap S lost in text layer"
+   }
+  ]
+ },
+ "0416": {
+  "read": true,
+  "replace": [
+   {
+    "from": "I I think there were two hundred",
+    "to": "I think there were two hundred",
+    "reason": "drop cap I duplicated by text layer"
+   },
+   {
+    "from": "Greek liberation struggle",
+    "to": "Greeek liberation struggle",
+    "reason": "printed spelling restored (page image reads Greeek)"
+   },
+   {
+    "from": "who* after",
+    "to": "who, after",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0417": {
+  "read": true,
+  "replace": [
+   {
+    "from": "It It was customary",
+    "to": "It was customary",
+    "reason": "drop cap duplicated"
+   }
+  ]
+ },
+ "0478": {
+  "read": true,
+  "replace": [
+   {
+    "from": "nees together, feet apart",
+    "to": "Knees together, feet apart",
+    "reason": "drop cap K lost in text layer"
+   },
+   {
+    "from": "uch had changed since the war",
+    "to": "Much had changed since the war",
+    "reason": "drop cap M lost in text layer"
+   },
+   {
+    "from": "With'her",
+    "to": "With her",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0470": {
+  "read": true,
+  "replace": [
+   {
+    "from": "% # ive la Sociale” are the words writ-\\g ten ab°ve the heads of the crowd: w the banner reads",
+    "to": "“Vive la Sociale” are the words written above the heads of the crowd: the banner reads",
+    "reason": "drop cap V and OCR specks"
+   }
+  ]
+ },
+ "0012": {
+  "read": true,
+  "replace": [
+   {
+    "from": "is'told",
+    "to": "is told",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0113": {
+  "read": true,
+  "replace": [
+   {
+    "from": "~is wrapped",
+    "to": "is wrapped",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0129": {
+  "read": true,
+  "replace": [
+   {
+    "from": "*of France",
+    "to": "of France",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0141": {
+  "read": true,
+  "replace": [
+   {
+    "from": "whilę^ their",
+    "to": "while their",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0153": {
+  "read": true,
+  "replace": [
+   {
+    "from": "was'sure",
+    "to": "was sure",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0168": {
+  "read": true,
+  "replace": [
+   {
+    "from": "\\ enice possessed",
+    "to": "Venice possessed",
+    "reason": "read page image"
+   },
+   {
+    "from": "V hatever",
+    "to": "Whatever",
+    "reason": "read page image"
+   },
+   {
+    "from": "Doge s palace",
+    "to": "Doge’s palace",
+    "reason": "read page image"
+   },
+   {
+    "from": "In 184S",
+    "to": "In 1848",
+    "reason": "digit misread"
+   }
+  ]
+ },
+ "0218": {
+  "read": true,
+  "replace": [
+   {
+    "from": "°no doubt",
+    "to": "no doubt",
+    "reason": "read page image"
+   },
+   {
+    "from": "in 160C;",
+    "to": "in 1600;",
+    "reason": "digit misread"
+   }
+  ]
+ },
+ "0224": {
+  "read": true,
+  "replace": [
+   {
+    "from": "^With the help",
+    "to": "with the help",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0231": {
+  "read": true,
+  "replace": [
+   {
+    "from": "foretell.”*",
+    "to": "foretell.”",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0257": {
+  "read": true,
+  "replace": [
+   {
+    "from": "rulers,^artists",
+    "to": "rulers, artists",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0382": {
+  "read": true,
+  "replace": [
+   {
+    "from": "on'the distant",
+    "to": "on the distant",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0409": {
+  "read": true,
+  "replace": [
+   {
+    "from": "the'people",
+    "to": "the people",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0421": {
+  "read": true,
+  "replace": [
+   {
+    "from": "German* Reich",
+    "to": "German Reich",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0455": {
+  "read": true,
+  "replace": [
+   {
+    "from": "^perspective",
+    "to": "perspective",
+    "reason": "read page image"
+   },
+   {
+    "from": "the'reflection",
+    "to": "the reflection",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0312": {
+  "read": true,
+  "replace": [
+   {
+    "from": "“A1 fresco”",
+    "to": "“Al fresco”",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0138": {
+  "read": true,
+  "replace": [
+   {
+    "from": "“1’homme",
+    "to": "“l’homme",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0273": {
+  "read": true,
+  "replace": [
+   {
+    "from": "favour... ”2",
+    "to": "favour...”",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0429": {
+  "read": true,
+  "replace": [
+   {
+    "from": "1-858",
+    "to": "1858",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0279": {
+  "read": true,
+  "replace": [
+   {
+    "from": "chancellor^ department",
+    "to": "chancellor’s department",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0397": {
+  "read": true,
+  "replace": [
+   {
+    "from": "is<a lavish",
+    "to": "is a lavish",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0495": {
+  "read": true,
+  "replace": [
+   {
+    "from": "Fran^ais",
+    "to": "Français",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0497": {
+  "read": true,
+  "replace": [
+   {
+    "from": "thyroi'de",
+    "to": "thyroïde",
+    "reason": "read page image"
+   }
+  ]
+ },
+ "0498": {
+  "read": true,
+  "replace": [
+   {
+    "from": "452^157",
+    "to": "452-457",
+    "reason": "dash misread as ^"
+   },
+   {
+    "from": "464^169",
+    "to": "464-469",
+    "reason": "dash misread as ^"
+   },
+   {
+    "from": "44^19",
+    "to": "44-49",
+    "reason": "dash misread as ^"
+   },
+   {
+    "from": "422^127",
+    "to": "422-427",
+    "reason": "dash misread as ^"
+   }
+  ]
+ },
+ "0026": {
+  "read": true,
+  "replace_head": {
+   "count": 2,
+   "items": [
+    [
+     "para",
+     "in the Middle Ages, especially those by the Limburg Brothers, Herman, Jean and Paul. Born in Nijmegen, they worked for the Duc de Berry from about 1405. By 1416, all three were dead, presumably the victims of an epidemic."
+    ],
+    [
+     "h2",
+     "A hard life on the land"
+    ],
+    [
+     "para",
+     "It is difficult to make out the donkey’s load, but it is probably wood. Only branches and brushwood were burned by the villagers for cooking and heating. Tree-trunks were reserved for the duke’s own hearth, or were used to build houses."
+    ]
+   ],
+   "reason": "first paragraph garbled in the text layer beside the picture; rewritten from the page image"
+  }
+ },
+ "0486": {
+  "read": true,
+  "full": [
+   [
+    "h1",
+    "400 years at a glance"
+   ],
+   [
+    "meta",
+    "Diego Rivera: Dream of a Sunday Afternoon in Alameda Park, 1948"
+   ],
+   [
+    "para",
+    "If you want to take a proper look at the whole of Diego Rivera’s 4.8-metre-high mural, you’ll need to take a walk – along all 15 metres of its length, and past almost 150 different characters. By European standards, the format is enormous – as enormous, indeed, as the task which the artist set himself: to bring together figures from the past 400 years into a panorama of the history of his country, set in Alameda Park."
+   ],
+   [
+    "para",
+    "The park lies in Mexico City, and on Sunday afternoons the capital’s inhabitants still gather here to sit, stroll, chat and picnic. The grown-ups buy balloons and windmills for their children, and the adolescents wade in the fountain which Rivera has portrayed in the centre of his composition. He has placed well-known figures from Mexican history alongside many more who are unknown, and has also incorporated mythical figures such as angels and Death, as well as members of his own family. This is no official historical record, in other words, no Social Realism, but a collage just as might be experienced in a dream."
+   ],
+   [
+    "para",
+    "The chronology of the mural nevertheless unfolds more or less logically from left to right. At the apex of three small pyramids of figures distributed across the composition, Rivera portrays three Mexican presidents: on the left, Benito Juárez, head of state from 1858 to 1872, is holding the written constitution in his hands. Just to the right of centre is the uniformed, sleeping figure of Porfirio Díaz, who held office for over 30 years before being ousted by Francisco Madero. The latter can be seen, raising his hat in greeting, near the right-hand edge of the mural; in 1913 he was assassinated."
+   ],
+   [
+    "para",
+    "Beneath them, along the lower edge of the mural, are those who have no hand in politics, but who suffer its effects: ordinary citizens, Indians, agricultural workers, and the poor. The conflict between these people and those in power was one which Rivera painted many times. On the left, a thin youth is picking the pocket of a well-dressed gentleman; in the middle, an Indian woman in a yellow dress strikes an"
+   ]
+  ],
+  "issues": [
+   "whole page rewritten from the page image: the text layer interleaved two columns of the introduction"
+  ]
+ }
+}

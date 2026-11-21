@@ -1,0 +1,10 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, sleep, go, settle, pipeline, stepperDom } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const PID = process.argv[2];
+const br = await openBrowser(); const p = await br.newPage();
+await go(p, base, `#/project/${PID}/edit`);
+const t = async () => (await p.eval(`Array.from(document.querySelectorAll('.step')).map(e=>e.innerText.replace(/\\n/g,' ')).join(' | ')`));
+console.log(await t());
+console.log(JSON.stringify((await pipeline(api, PID)).steps.map(s=>[s.id,s.work])));
+await sleep(8000); console.log(await t());
+br.close();

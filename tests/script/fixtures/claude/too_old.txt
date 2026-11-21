@@ -1,0 +1,1 @@
+Claude Code 2.1.233 does not support this model; version 2.1.280 or newer is required. Run 'claude update'

@@ -4,7 +4,7 @@
  "artist": "Jan Van Eyck",
  "year": "1434",
  "stage": "selected",
- "created_at": "2026-11-16T12:51:42-04:00",
+ "created_at": "2026-11-16T13:24:48-04:00",
  "sources": [
   {
    "work_id": "payne_gae/002",
@@ -31,5 +31,7 @@
    ]
   }
  ],
- "artwork_key": "eyck-the-arnolfini-portrait"
+ "artwork_key": "eyck-the-arnolfini-portrait",
+ "dossier": "source/dossier.json",
+ "library_dossier": "library/dossiers/eyck-the-arnolfini-portrait/dossier.json"
 }

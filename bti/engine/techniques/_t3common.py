@@ -7,6 +7,7 @@ several rows (a quote and its attribution), colours, an extra font face (`serif`
 from __future__ import annotations
 
 import os
+import threading
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -18,6 +19,7 @@ FONT_KINDS = ("reg", "bold", "sans_bold", "serif_it", "serif")
 _SERIF = [r"C:\Windows\Fonts\georgia.ttf", r"C:\Windows\Fonts\times.ttf", "/System/Library/Fonts/Supplemental/Georgia.ttf",
           "/System/Library/Fonts/Supplemental/Times New Roman.ttf"]
 _CACHE: dict = {}
+_CACHE_LOCK = threading.RLock()
 
 
 def font(kind, size):
@@ -26,17 +28,21 @@ def font(kind, size):
     if kind != "serif":
         return vfx.font(kind if kind in vfx._FONTS else "reg", size)
     key = ("serif", size)
-    if key not in _CACHE:
-        ft = None
-        for p in _SERIF:
-            if os.path.exists(p):
-                try:
-                    ft = ImageFont.truetype(p, size)
-                    break
-                except Exception:
-                    continue
-        _CACHE[key] = ft or vfx.font("serif_it", size)
-    return _CACHE[key]
+    with _CACHE_LOCK:
+        if key in _CACHE:
+            return _CACHE[key]
+    ft = None
+    for p in _SERIF:
+        if os.path.exists(p):
+            try:
+                ft = ImageFont.truetype(p, size)
+                break
+            except Exception:
+                continue
+    res = ft or vfx.font("serif_it", size)
+    with _CACHE_LOCK:
+        _CACHE[key] = res
+    return res
 
 
 def serif_signature():

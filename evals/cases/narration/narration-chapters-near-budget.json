@@ -1,0 +1,20 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-chapters-near-budget",
+  "step": "narration",
+  "title": "Every chapter is as long as its budget, within 30%, and none is more than 15% over it",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md: a chapter more than 30% off its budget is a warning (chapter_off_budget); the budget is a ceiling, and the narration job writes a chapter that is more than 10% over it again once, so after the job none should be more than 15% over.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "budgets",
+      "kind": "narration.chapter_budgets",
+      "tolerance": 0.3,
+      "max_over": 0.15
+    }
+  ]
+}

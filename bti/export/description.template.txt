@@ -1,0 +1,14 @@
+{{title}}
+
+{{artwork}}
+
+Chapters:
+{{chapters}}
+
+Sources:
+{{books}}
+
+Images and credits:
+{{credits}}
+
+{{notes}}

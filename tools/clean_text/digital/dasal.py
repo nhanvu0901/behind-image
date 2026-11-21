@@ -24,7 +24,8 @@ def join_para(ls,log=None):
     return re.sub(r'\s+',' ',out)
 CONTENTS={7,8}; NOTES=set(range(237,250)); CREDITS={250}; INDEX=set(range(251,267)); FRONT={2:'front',3:'front',5:'front',6:'front'}
 chap=[(w['pdf_pages'][0],w['title']) for w in json.load(open(f'{ROOT}/library/books/{BID}/works.json'))]
-meta={}; stats=collections.Counter(); dclog=[]; hylog=[]
+CARRY=[False]
+meta={}; stats=collections.Counter(); dclog=[]; hylog=[]; sb_pages=set()
 struct={}
 for n in range(1,N+1):
     L,w,h=lines(doc[n-1]); struct[n]=[l for l in L if l['t'].strip()]
@@ -32,7 +33,7 @@ def kind(l):
     s=l['size']; f=l['font']
     if s>=50: return 'drop'
     if s==11.2 and 'Sans' in f and re.match(r'(CHAPTER \d+|INTRODUCTION|EPILOGUE|CONCLUSION)\b',l['t']): return 'label'
-    if s==25.0 and 'Type3' in f: return 'title'
+    if s>=25.0 and s<50 and 'Type3' in f: return 'title'
     if s==21.2 and 'Type3' in f: return 'sub'
     if s==16.9: return 'h2'
     if s==11.2 and 'Type3' in f: return 'attr'
@@ -49,7 +50,7 @@ def paras(ls,drop=None):
     out=[]; first_cont=False; prev=None; start_ind=False
     for l in ls:
         ind=l['x0']-margin>5
-        if l['t'].strip().replace(' ','')=='***': out.append([l]); prev=None; start_ind=False; out.append(None); continue
+        if re.sub(r'[\s\u00a0]','',l['t'])=='***': out.append([l]); prev=None; start_ind=False; out.append(None); continue
         if prev is None:
             if not ind and out==[] and not drop: first_cont=True
             if out and out[-1] is None: out.pop()
@@ -121,6 +122,9 @@ for n in range(1,N+1):
     # ---- body pages
     K=collections.defaultdict(list)
     for l in L: K[kind(l)].append(l)
+    for l in list(K['side']):
+        if abs((l['x0']+l['x1'])/2-306)<22 and l['x1']-l['x0']>80 and l['x0']>=100 and not any(o is not l and abs(o['y0']-l['y0'])<20 for o in K['side']+K['main']) and not opener:
+            K['side'].remove(l); K['cap'].append(l)
     drop=K['drop'][0] if K['drop'] else None
     label=K['label'][0] if K['label'] else None
     opener=label is not None
@@ -171,31 +175,42 @@ for n in range(1,N+1):
     # build items
     title=None; i=0
     # opener: heading first (title / sub) then meta
-    out=[]; pend_label=None
+    out=[]; pend_label=None; sbs=[CARRY[0]]; CARRY[0]=False
+    def close_sb():
+        if sbs[0]: out.append('[sidebar-end]'); sbs[0]=False
     for y,k,pl in seq:
         if k=='label': pend_label=pl; continue
-        if k=='title': out.append('# '+pl+(('\n[meta] '+pend_label) if pend_label else '')); pend_label=None; continue
+        if k=='title': close_sb(); out.append('# '+pl+(('\n[meta] '+pend_label) if pend_label else '')); pend_label=None; continue
         if k=='sub':
             if opener and not any(o.startswith('# ') for o in out): out.append('# '+pl+(('\n[meta] '+pend_label) if pend_label else '')); pend_label=None
-            else: out.append('## '+pl)
+            else:
+                close_sb(); out.append('[sidebar-start] '+pl); sbs[0]=True; stats['sidebars']+=1; sb_pages.add(n)
             continue
-        if k=='epi': out.append('[quote] '+join_para([x['t'] for x in pl[1]])); continue
+        if k=='epi': close_sb(); out.append('[quote] '+join_para([x['t'] for x in pl[1]])); continue
         if k=='epiattr': out.append('[quote] '+pl); continue
         if k=='cap': out.append('[caption] '+pl); continue
-        if k in ('p','sp'): out.append(pl.replace('* * *','* * *') if pl.replace(' ','')!='***' else '* * *')
+        if k=='p': close_sb(); out.append(pl if re.sub(r'[\s\u00a0]','',pl)!='***' else '* * *'); continue
+        if k=='sp':
+            if not sbs[0]: out.append('[sidebar-start]'); sbs[0]=True; sb_pages.add(n); m['issues'].append('sidebar text continues from the previous page (empty sidebar-start)')
+            out.append(pl)
+    if sbs[0] and out and out[-1].startswith('[sidebar-start]'): CARRY[0]=True
+    else: close_sb()
     if pend_label: out.insert(0,'# '+pend_label)
     items=out
     if opener: m['issues'].append('chapter opener: drop cap rejoined, CHAPTER label put in [meta]')
-    # continuation to next page: last paragraph class must equal first class of next page and next first line not indented
-    lastp=[(y,k) for y,k,pl in seq if k in ('p','sp')]
-    if lastp and n+1 in struct and (n+1) not in NOTES|CONTENTS|CREDITS|INDEX and struct[n+1]:
-        lastk=max(lastp)[1]; lasty=max(lastp)[0]
-        later=[k for y,k,pl in seq if y>lasty and k in ('title','sub','epi')]
-        nl=sorted(struct[n+1],key=lambda l:(l['y0'],l['x0'])); nk=[(kind(l),l) for l in nl]
-        fk,fl=nk[0]
-        if fk in ('main','side') and (fk=='main')==(lastk=='p') and 'drop' not in [k for k,_ in nk] and not later:
-            xs=collections.Counter(round(l['x0']) for k,l in nk if k==fk); cand=[x for x,c in xs.items() if c>=2]; margin=min(cand) if cand else min(xs)
-            if fl['x0']-margin<=5: cont=True
+    # continuation to the next page of type body (plate pages are skipped)
+    lastp=[(y,k,pl) for y,k,pl in seq if k in ('p','sp')]
+    if lastp:
+        y_,lastk,lastpl=max(lastp,key=lambda t:t[0])
+        later=[k for y,k,pl in seq if y>y_ and k in ('title','sub','epi')]
+        nk=n+1
+        while nk<=N and nk not in NOTES|CONTENTS|CREDITS|INDEX and not any(kind(l) in ('main','side','drop') for l in struct[nk]): nk+=1
+        if re.sub(r'[\s\u00a0]','',lastpl)!='***' and nk<=N and nk not in NOTES|CONTENTS|CREDITS|INDEX and not later:
+            nl=sorted(struct[nk],key=lambda l:(l['y0'],l['x0'])); nkk=[(kind(l),l) for l in nl]
+            fk,fl=next(((k,l) for k,l in nkk if k in ('main','side','drop','title','sub','label')),(None,None))
+            if fk in ('main','side') and (fk=='main')==(lastk=='p') and 'drop' not in [k for k,_ in nkk]:
+                xs=collections.Counter(round(l['x0']) for k,l in nkk if k==fk); cand=[x for x,c in xs.items() if c>=2]; margin=min(cand) if cand else min(xs)
+                if fl['x0']-margin<=5: cont=True
     write_page(BID,n,'body',items,cont); meta[f'{n:04d}']=m
 json.dump(meta,open(f'{ROOT}/.scratch/clean_digital/dasal_meta_raw.json','w'))
-print(stats); print(collections.Counter(x[0] for x in hylog)); print(dclog)
+print(stats, 'sidebar pages',len(sb_pages)); print(collections.Counter(x[0] for x in hylog)); print(dclog)

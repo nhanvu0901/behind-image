@@ -1,0 +1,18 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-context-lines-leave-the-main-painting",
+  "step": "draft",
+  "title": "A shot about a person, a place or another work does not show the main painting",
+  "why": "skills/storyboard_draft/TASK.template.md section 5, intent `context`: the sentence talks about something outside the painting, so the picture is that something.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "context",
+      "kind": "draft.context_lines_avoid_the_main_painting"
+    }
+  ]
+}

@@ -129,14 +129,17 @@ for n in range(1,N+1):
         if it.startswith('[quote] ') and merged and merged[-1].startswith('[quote] '): merged[-1]+='\n'+it
         else: merged.append(it)
     items=merged
-    # continuation
-    last_body=[s for s in seq if s[1]=='p']
-    if last_body and n+1 in struct and (n+1) not in NOTES|CREDITS|INDEX|CONTENTS|FRONT and n+1 not in BACK and struct[n+1]:
+    # continuation to the next page of type body (plate pages skipped)
+    last_body=[x for x in seq if x[1]=='p']
+    SPECIAL=NOTES|CREDITS|INDEX|CONTENTS|FRONT|BACK
+    nk=n+1
+    def has_body(k): return any(l['size']>CAPMAX for l in struct[k])
+    while nk<=N and nk not in SPECIAL and not has_body(nk): nk+=1
+    if last_body and nk<=N and nk not in SPECIAL:
         lastp=last_body[-1]
-        # last element on page should be that paragraph (ignoring captions below)
-        nl=struct[n+1]; firstb=[l for l in nl if l['size']>CAPMAX and not (l['bold'] and l['size']>=18)]
+        nl=struct[nk]; firstb=[l for l in nl if l['size']>CAPMAX and not (l['bold'] and l['size']>=18)]
         nheads=[l for l in nl if l['bold'] and l['size']>=18]
-        if firstb and not nheads and lastp[0]>=max(s[0] for s in seq if s[1] in ('p','h'))-0.1:
+        if firstb and not nheads and lastp[0]>=max(x[0] for x in seq if x[1] in ('p','h'))-0.1:
             if not ends_term(lastp[2]) or firstb[0]['t'][:1].islower(): cont=True
     write_page(BID,n,ptype,items,cont); meta[f'{n:04d}']=m
 json.dump(meta,open(f'{ROOT}/.scratch/clean_digital/grovier_meta_raw.json','w'))

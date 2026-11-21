@@ -1,0 +1,192 @@
+{
+ "source": "the exported file of the arnolfini-opus run before round 3 (ffmpeg signalstats of one frame per second around the middle of each highlight window, 16..235 scale); .scratch/arnrun/LOG.md, 'ROUND 3'",
+ "rows": [
+  {
+   "shot": "s0005",
+   "overlay": "o2",
+   "technique": "HI-01",
+   "region": "HANDS",
+   "start": 39.8,
+   "end": 46.9,
+   "measured_before": 37.8,
+   "measured_before_min": 37.1,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0126",
+   "overlay": "o25",
+   "technique": "HI-01",
+   "region": "WOMAN_FULL",
+   "start": 164.4,
+   "end": 168.4,
+   "measured_before": 39.9,
+   "measured_before_min": 39.6,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0023",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "WOMAN_HEAD",
+   "start": 174.0,
+   "end": 178.7,
+   "measured_before": 41.9,
+   "measured_before_min": 40.8,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0026",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "SKIRT_HAND",
+   "start": 191.9,
+   "end": 197.5,
+   "measured_before": 36.2,
+   "measured_before_min": 31.9,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0046",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "BED",
+   "start": 311.1,
+   "end": 318.2,
+   "measured_before": 39.6,
+   "measured_before_min": 38.4,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0145",
+   "overlay": "o37",
+   "technique": "HI-01",
+   "region": "LIT_CANDLE",
+   "start": 356.0,
+   "end": 360.8,
+   "measured_before": 22.9,
+   "measured_before_min": 22.2,
+   "note": "KEPT floor 0.6"
+  },
+  {
+   "shot": "s0153",
+   "overlay": "o46",
+   "technique": "X-HI-01",
+   "region": "MIRROR",
+   "start": 423.3,
+   "end": 427.1,
+   "measured_before": 27.6,
+   "measured_before_min": 27.3,
+   "note": "KEPT floor 0.6"
+  },
+  {
+   "shot": "s0068",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "MIRROR_FIGURES",
+   "start": 486.0,
+   "end": 491.6,
+   "measured_before": 27.7,
+   "measured_before_min": 27.2,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0069",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "ROUNDELS_RIGHT",
+   "start": 497.1,
+   "end": 504.0,
+   "measured_before": 30.8,
+   "measured_before_min": 29.8,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0076",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "SIGNATURE",
+   "start": 528.9,
+   "end": 532.8,
+   "measured_before": 28.0,
+   "measured_before_min": 24.1,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0158",
+   "overlay": "o50",
+   "technique": "HI-01",
+   "region": "OVERSHOES",
+   "start": 539.7,
+   "end": 544.1,
+   "measured_before": 27.4,
+   "measured_before_min": 24.7,
+   "note": "layer removed + close frame, no dimming"
+  },
+  {
+   "shot": "s0159",
+   "overlay": "o51",
+   "technique": "HI-01",
+   "region": "WOMAN_FULL",
+   "start": 545.6,
+   "end": 546.8,
+   "measured_before": 39.7,
+   "measured_before_min": 39.7,
+   "note": "layer removed + close frame, no dimming"
+  },
+  {
+   "shot": "s0159",
+   "overlay": "o52",
+   "technique": "HI-01",
+   "region": "ORANGES",
+   "start": 546.8,
+   "end": 552.4,
+   "measured_before": 24.8,
+   "measured_before_min": 24.5,
+   "note": "layer removed + close frame, no dimming"
+  },
+  {
+   "shot": "s0080",
+   "overlay": "o2",
+   "technique": "HI-01",
+   "region": "SIGNATURE",
+   "start": 566.6,
+   "end": 567.9,
+   "measured_before": 35.5,
+   "measured_before_min": 35.5,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0083",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "ROUNDELS_RIGHT",
+   "start": 584.2,
+   "end": 586.2,
+   "measured_before": 31.2,
+   "measured_before_min": 30.8,
+   "note": "layer removed"
+  },
+  {
+   "shot": "s0097",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "ORANGE_SILL",
+   "start": 669.2,
+   "end": 675.1,
+   "measured_before": 23.2,
+   "measured_before_min": 22.9,
+   "note": "layer removed + close frame, no dimming"
+  },
+  {
+   "shot": "s0102",
+   "overlay": "o1",
+   "technique": "HI-01",
+   "region": "SIGNATURE",
+   "start": 714.2,
+   "end": 717.6,
+   "measured_before": 35.6,
+   "measured_before_min": 35.1,
+   "note": "layer removed"
+  }
+ ]
+}

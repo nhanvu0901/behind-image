@@ -7,10 +7,28 @@ anything: every piece of content comes from the storyboard, every default from `
 python -m bti.engine still    projects/arnolfini 310 --width 960 -o out.png
 python -m bti.engine render   projects/arnolfini --t0 300 --t1 310 -o out.mp4 --width 640 --fps 15
 python -m bti.engine validate projects/arnolfini
-python -m pytest tests/engine -q                      # use .venv-engine/bin/python
+python -m pytest tests/engine -q                      # use .venv-engine/bin/python (includes the validate/draw sweep)
 python tests/engine/equivalence_check.py              # new engine vs the benchmark frame_at (writes equivalence_report.md)
 python tools/export_arnolfini.py                      # rebuild projects/arnolfini from demo_runs/claude_code
 ```
+
+### Command line rules
+
+Limits come from `bti/engine/limits.py` (the same constants the editor's HTTP API uses). Times are finite and `>= 0`; `render` needs
+`--t1 > --t0`; `--t0` / `t` must be before the end of the storyboard; `--width` 64..1920; `--fps` 1..30; `--threads` 0 (automatic, the
+default) or 1..64. `0` is a value, not "not given". Exit codes: 0 success, 1 run-time failure (missing project, unreadable storyboard,
+unwritable output, ffmpeg failed, a technique cannot draw, `validate` found errors), 2 usage error. A failure prints one line on stderr;
+the traceback only with `--debug`. A failed `render` leaves no partial output file.
+
+### Validate, draw and the registry
+
+`Project.validate` reports every issue with `level`, `path`, `message`, `code` and `args` (`bti.engine.storyboard.ISSUE_CODES` lists the
+codes). The rule behind the registry is: whatever `validate` accepts without an error can be drawn. Param definitions therefore carry
+`min`/`max` (every number has both), `pattern` + `pattern_hint` (string/text/lines; the Vietnamese hint says what to type),
+`min_items`/`max_items` (points/lines/items), `fields` (items, below) and `numeric_only` (a point that cannot be a region name). `Project.draw_check` draws one small
+frame per shot, overlay and transition and returns `undrawable` issues; approval runs it. A technique that fails while drawing raises
+`RenderError` (shot id, overlay id, technique id) from `frame_at` and `render_range`. `bti/engine/guard.py` refuses any buffer over
+four canvases. `tests/engine/test_validate_draw_sweep.py` checks the rule for all 86 techniques and all fourteen param types.
 
 ## Layout
 
@@ -19,11 +37,12 @@ python tools/export_arnolfini.py                      # rebuild projects/arnolfi
 | `api.py` | the facade (design 8.1): `open_project`, `Project`, `load_style` |
 | `storyboard.py` | canonical JSON + revision, `resolve`, `validate`, atomic `save` with `history/` backup |
 | `timing.py` | word lookup (`find`, `anchor_for`) and anchor resolution (`t`, `w`+`off`+`text`, `rel`) |
-| `registry.py` | `@technique(id, kind)`, parameter validation against `techniques.json`, `check_registry` |
+| `registry.py` | `@technique(id, kind)`, parameter validation against `techniques.json` (including the `items` type and a per-technique `check_params` hook), `check_registry` |
+| `geo.py` | Web Mercator views (`View`, `fit`, `ease_view`) and the bundled Natural Earth data (`land`, `countries`, `seas`), read once and cached |
 | `scene.py` | compile a resolved storyboard into a `Scene`: `frame_at`, `render_range`, transitions, end fade |
 | `base.py` | the renderer interfaces, `Ctx`, and the process-wide LRU caches |
 | `vfx.py` | pixel primitives lifted from the benchmark (`Img`, `Cam`, `compose_matte`, `text_layer`, `spotlight`, `ring` ...) |
-| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions` |
+| `techniques/` | one module per family: `camera`, `labels`, `annotate`, `cards`, `layout`, `diagrams`, `transitions`, `identity` (the ID family, below), `explain_base` (TIME-01, TREE-01, STATE-01, below), `maps` (MAP-01, below), `explain_over` (KEY-01, NUM-01, DOC-01, below) |
 
 Frame pipeline: shot lookup (bisect on shot starts) -> base renderer -> overlays in list order -> optional `transition_in`
 (both shots are rendered during the overlap) -> end fade (`end.fade_s`, default 1.6 s, `inout_sine`) -> uint8 -> resize.
@@ -124,7 +143,7 @@ registry and `default_params` must fill it when it can.
    ],
    "engine": {"status": "done", "available": true, "impl": "bti.engine.techniques.labels.SourceLabel", "reason": null, "notes": "..."}
    ```
-   Param types: `number, enum, bool, string, text, color (#rrggbb), point, box, camera, asset, points, lines`. Unknown params are errors for everyone, so list every knob. File format: `style/gae/techniques.schema.json`.
+   Param types: `number, enum, bool, string, text, color (#rrggbb), point, box, camera, asset, points, lines, items, at`. Unknown params are errors for everyone, so list every knob. File format: `style/gae/techniques.schema.json`.
 3. **Write the renderer** in the family module (`techniques/labels.py`) and decorate it with the id and kind:
 
    ```python
@@ -170,9 +189,219 @@ The reel functions in `demo_runs/claude_code/build_reel.py` have the signature `
 turn `(t, d)` into `render(t)` using `self.t0`/`self.t1`, replace `S()["A"]` / `view(...)` by `ctx.image(slot_asset)`, replace the module-global text cache by `ctx.layer`, replace the global `W, H` by `ctx.w, ctx.h`.
 Check it against the reel's own frame the same way `tests/engine/equivalence_check.py` checks the episode (PSNR >= 40 dB, same Mac).
 
+## Channel identity: the family ID (`techniques/identity.py`)
+
+The opening, the channel-name beat and the chapter marks of "Raking Light", in two styles that the owner (or an agent) picks per video.
+Contract and numbers: `docs/design/2026-11-18-identity-raking-light.md` (sections 2 to 5); moving mock-ups: `docs/design/2026-11-18-d13-identity-mock.html`.
+
+| id | kind | style | what it draws |
+|---|---|---|---|
+| `ID-OPEN-01` | overlay | raking | the opening: black, the picture rises to `floor`, a band of light sweeps across and leaves it at `wake`, then 100 % (nominal 9.0 s) |
+| `ID-LABEL-01` | overlay | raking | two-line artwork label bottom left, no strip, soft shadow (4.5 s) |
+| `ID-BRAND-01` | base | raking | the channel name written by a band over the dimmed picture (5.0 s) |
+| `ID-BRAND-03` | base | raking | the channel name written by a band, then a second sweep writes the video's title (italic) and a small line under it; the name stays (9.1 s, 4.5 s with no lines) |
+| `ID-MARK-01` | base | raking | one chapter-mark line written by a band, then the picture is released (3.2 s) |
+| `ID-OPEN-02` | overlay | dim | the frame dims, the title (italic) and a small "ARTIST · YEAR" line fade in, then out (5.0 s) |
+| `ID-BRAND-02` | base | dim | the channel name fades in over the dimmed picture, then out (4.0 s) |
+| `ID-MARK-02` | base | dim | one chapter-mark line fades in over the dimmed picture (3.0 s) |
+
+`style/gae/style.json` has a block `identity` (`channel_name`, `default_style`, and per style the technique of each role `open`, `label`,
+`brand`, `mark`, the `mark_transition` and the `nominal` start and length of each role); the applier reads it, never constants of its own.
+
+Rules that hold for all eight (and that a new technique of the family must keep):
+
+- **Nominal timeline, scaled.** Times in the params are nominal seconds from the start of the element (the overlay; the shot for a base
+  technique). An element shorter than its nominal length (`nominal_s`, or the sum of its own times for `ID-OPEN-01`, `ID-MARK-*`) scales every
+  time by actual / nominal; a longer one keeps the nominal times (the brand beats hold their last state and fade out at the real end; opening and
+  marks end plain). An element is meant to be >= 1.5 s (`timing.min_s`, `style.identity.min_element_s`).
+- **The picture is CAM-01's.** The five base techniques derive from `camera.MatteShot`: same `camera` keys, slot `image` and `shadow`, same `view()`,
+  so overlays work on them. Light and text come after the picture. With neutral light (`floor`/`wake`/`dim` = 1, no text) the frame equals CAM-01's.
+- **Light is a gain on brightness**, never a box or strip: `vfx.Band` (below) for the raking style, a smoothstep dim for the dim style.
+- **Text** is one line, EB Garamond, with a soft shadow, placed by cap height in percent of the frame height (the font size comes from the real
+  glyph H of the font, `vfx.cap_ratio`) and centred at `y_pct` (the middle of the capitals). A line wider than 88 % of the frame is made
+  smaller, never wrapped. Capital-only lines (channel name, small-caps line) are upper-cased by the renderer and tracked per letter.
+- **Revealed by the band** means: the opacity of the text at a pixel is the largest value the band's mask has had there so far. For a band that
+  moves in one direction at constant speed that is `Band.reveal(s)`: 1 behind the band's centre line, the band's own shoulder ahead of it. No
+  accumulation over frames, so a frame is a pure function of time.
+
+### `ID-BRAND-03`: the channel name, then the video's title (class `BrandTitle`)
+
+A base technique on CAM-01's picture, its own shot, hard cut at the end. Nominal timeline (s): the picture dims to `floor` over `dim_s` (0.6); from
+`sweep_delay_s` (0.5) a band crosses the frame for `sweep_s` (1.6) and writes the channel name, the picture behind it at `wake`; `name_hold_s` (2.4) of
+stillness; a second band crosses in the same direction for `title_sweep_s` (1.6) and writes the title (italic, as given) and under it a small line
+(capitals, tracked); the name does not move and the picture stays at `wake` on both sides of the second band; `title_hold_s` (3.0) of hold. Nominal
+length 9.1 s; with `title` and `subtitle` both empty there is no second sweep (4.5 s) and the name sits at `y_alone_pct` (42) instead of `y_pct` (36).
+With one line only, the second sweep writes that line at its own place (`title_y_pct` 54, `sub_y_pct` 62.5). A shorter shot scales every time; a longer
+one holds the last state. The title and the small line are set at most 84 % of the frame wide and are made smaller until they fit (a 70-character
+title is set at about three quarters of the size of a short one: a 57 px font instead of 76 px at 1080p); the title is kerned from the GPOS table of the face (Pillow's basic layout does not read it;
+`identity._Kerning`), the other lines are not. `state(t)` returns the `BeatState` (nominal time, the two sweep progresses, the band that lights
+the picture and the brightness ahead of and behind it). `ID-BRAND-01` is untouched; the section "ID-BRAND-03" of the design document has the
+reasoning.
+
+### The band primitive (`vfx.Band`)
+
+`Band(w, h, width_pct, feather, angle_deg, direction)`: a strip with straight edges tilted `angle_deg` from the vertical ("/" for positive), a
+plateau of full brightness (`core`) and smoothstep shoulders (`edge`). `width_pct` is the width at half brightness, `feather` the part of it that
+one shoulder takes. It moves along the axis perpendicular to its edges; the progress `q` runs 0..1 from just off the canvas on the entering side
+to just off the canvas on the leaving side (with a 13 % run-in), at constant speed. `s` is the signed distance in px ahead of the centre line.
+`Band.light(frame, q, ahead, wake, warm)` multiplies the frame (in place) by `ahead` in front of the band, 1 in it, `wake` behind it, and adds the
+warm screen tint; the gain is a map at 1/4 resolution enlarged bilinearly (as `spotlight` does) and only the columns where it varies are touched.
+`Band.reveal_box(q, x0, y0, x1, y1)` gives the reveal mask of a text box; `vfx.composite_layer_masked(frame, layer, mask_fn, env)` draws a
+text layer through it. Measured on the Windows server (1080p frame, warm caches): see `docs/qa/FIX_identity_engine.md`.
+
+### Font kinds
+
+`vfx.font(kind, size)` knows three bundled kinds besides the old system faces: `eb_regular`, `eb_italic`, `eb_medium` = `EBGaramond-Regular.ttf`,
+`-Italic.ttf`, `-Medium.ttf` in `style/gae/fonts/` (static files from github.com/octaviopardo/EBGaramond12, SIL Open Font Licence in `OFL.txt` next to
+them). They load from that folder on every machine; a missing or unreadable file raises `vfx.BundledFontError` (a `FileNotFoundError`) that names the
+file and the folder. There is no fallback to another face and `fonts.map` of style.json cannot replace them. The file size is part of
+`font_signature()`, so a replaced file never returns a stale text layer.
+
+### Tests and previews
+
+`tests/engine/test_identity.py` draws frames of a flat grey (or black) picture that fills the canvas and measures: band position, the three zones,
+text only behind the band, the dim levels, end state = plain picture, time scaling, cap heights, fonts, every param at min and max.
+`tests/engine/test_identity_brand_title.py` does the same for `ID-BRAND-03` (the state at the times that matter, both sweeps, the scaled timeline, long titles, kerning) and holds
+the SHA-256 of frames of the older identity techniques as they were before it existed. `tests/engine/intro_stills.py` draws the contact sheet, the stills and the
+preview clip of `ID-BRAND-03` on real paintings (run it with `tools/deploy/snapshot_py.sh`).
+`tests/engine/identity_lab.py` adds one item per ID technique to a copy of `projects/technique_lab` for the registry sweeps. Preview clips of the
+family are 640x360, 30 fps, as long as the nominal timeline; since the server gets its code by `git pull`, `style/gae/previews/*.mp4` is tracked
+(`.gitignore` no longer ignores it).
+
+## Lists of records: the parameter type `items`
+
+A param of type `items` holds a list of objects whose fields the registry entry declares (contract `docs/design/2026-11-18-explainer-components.md` section 3).
+The entry carries `fields` (each: `name`, `type`, `required`, `default`, `min`, `max`, `values`, and for text `pattern` + `pattern_hint`) and the usual
+`min_items` / `max_items`. Field types: `string`, `number`, `enum`, `bool`, `lonlat` (`[longitude, latitude]`, -180..180 and -85..85), `ref` (a region
+name of the shot's picture or a pixel point, checked against `regions` like a `point`) and `at` (seconds from the start of the element as a number, or a
+word anchor `{"w": index, "off": s, "text": word}`, `{"t": s}` or `{"rel": 0..1}`).
+
+* **Validation** (`registry.check_items`): the first problem of the first bad item, as `(code, args, message)`; the message and the args name the item
+  (`item 2 (Lucca)`, `index` 1) and the field. Codes: `param_not_items`, `item_not_object`, `item_unknown_field`, `item_field_missing`, `item_field_bad_type`,
+  `item_field_below_min`, `item_field_above_max`, `item_field_not_in_values`, `item_field_bad_form`, `item_field_bad_lonlat`, `item_field_bad_at` (all listed in
+  `storyboard.ISSUE_CODES`, each with a Vietnamese sentence in `sbissues.js`). Rules between params (a route end names a place, an ISO code exists) go in a
+  classmethod `check_params(params) -> [(param, code, args, message)]` of the renderer; `validate_params` calls it over the merged params when the per-param
+  checks found nothing, so the rule "what validate accepts can be drawn" holds across params too.
+* **Defaults**: `registry.merged_params` fills every missing field of every item from the field default and collapses line breaks of text fields, so a renderer
+  never meets a missing field (`R.fill_items`). The registry default of the param is a list of complete items.
+* **Anchors**: `storyboard.resolve` resolves a word anchor in an `at` field the way a camera key's `at` is resolved (`_t` = absolute seconds; `rel` counts from the
+  element's own start to its end); `validate` reports `item_anchor_invalid` / `item_anchor_stale`. The renderer turns an `at` into seconds from its own start with
+  `R.at_seconds(at, self.t0)`. `R.items_at_fields(spec)` lists where anchors can sit.
+* **Page**: `formgen.js` (pure: `newItem`, `addItem`, `removeItem`, `moveItem`, `setItemField`, `itemsProblem`) and `formui.js` (rows: one input per field, add,
+  remove, up, down; a time field offers seconds or "= playhead word"). Every other param type's form is unchanged. Tests: `tests/editor_frontend/items.test.mjs`.
+* **Catalogue** (`bti/draft/techniques_md.py`): prints the fields, e.g. `places:items(1..12)[{id:string*, name:string*, lonlat:lonlat*, at:at[0..600]=1.0, ...}]`.
+* An element of the families `ID-`, `MAP-`, `KEY-`, `TIME-`, `NUM-`, `TREE-`, `STATE-`, `DOC-` shorter than its technique's `timing.min_s` is the error `element_too_short`.
+
+## One moment: the parameter type `at`
+
+A param of type `at` is ONE moment: a number of seconds from the start of the element (held to the param's `min` and `max`), or a word anchor `{"w": index, "off": s, "text": word}`,
+`{"t": s}` or `{"rel": 0..1}` (a word, so that the moment lands on the word that names it). It is validated like the `at` field of an item (`param_bad_at`, `param_below_min`,
+`param_above_max`), resolved by `storyboard.resolve` in `_t` (absolute seconds, `rel` counts over the element) like every other anchor, and checked by `validate` (`stale_anchor`,
+`anchor_invalid`, with `param` in the args and no `index`). A renderer reads it with `registry.at_seconds(self.p["name"], self.t0)` (seconds from the start of the element);
+`registry.at_params(spec)` lists the names. The page (`formgen.js`, `formui.js`) edits it as "seconds | word" with a number field and the button "= đầu phát" (the word at the playhead),
+the same control as an `at` field of an items row. `MAP-01.region_at`, `TIME-01.focus_s` and `DOC-01.reading_at` are the users; a technique with a single-moment param declares `"type": "at"` with `min`, `max` in seconds.
+
+## The explanatory devices `TIME-01`, `TREE-01`, `STATE-01` (`techniques/explain_base.py`)
+
+Three base techniques, each the approved moving mock-up (`docs/design/mock/2026-11-18-explainer/components.html`, functions `timeline`, `tree`, `states`); contract
+`docs/design/2026-11-18-explainer-components.md` sections 2 to 5. Dark ground `#131519`, text `#E9E2D0`, hairlines `#8D877A` (2 px for the axis and stalks, 3.2 px for the connectors),
+second lines and edge labels at 72 percent, sizes as cap heights of the bundled EB Garamond. The agent gives data only; the technique solves the layout. Report with the numbers:
+`docs/qa/FIX_comp_base.md`. Stills, timings and the preview clips: `python tools/explain_base/render_examples.py stills OUTDIR | timing | preview`.
+
+* **`TIME-01`** (`items`: `date` a whole year, negative for BC, `label`, `side` auto|up|down, `at`, `accent`; `from`, `to` as text, empty = the items' range with one year of margin; `tick_every`
+  0 = automatic; `focus_s`, `dim_to`, `cap_pct`). The axis grows from the left over 0.8 s (ease in and out), ticks fade in (staggered), a stalk grows over 0.35 s from its `at` (ease out), the year fades in from
+  +0.2 s and the label from +0.35 s; at `focus_s` (0.8 s ramp) the accented items brighten, get a dot on the axis, and the others dim to `dim_to`. **Layout** (`solve_time`): for every item a depth first search over
+  side, stalk length (three lengths above the axis, 13, 24 and 35 percent of the height, two below, 13 and 24) and label place (centred and pushed into the frame, or shifted to either side), the accented items
+  first, then by date; a choice is refused when a label or year box touches another one (padding 1.2 percent of the width, 0.8 of the height), when a stalk runs through another item's box, or when a box leaves the
+  frame. The first choices are the mock-up's (alternate sides, short stalks, a longer one only where two labels would touch), so the default data comes out exactly as the mock-up. Data that cannot be laid out is the
+  error `time_crowded`; a date outside the axis is `time_date_outside`; `to` not after `from` is `time_range_inverted`.
+* **`TREE-01`** (`nodes`: `id`, `name`, `sub`, `row`, `col` (both -1 = automatic), `at`, `strong`; `edges`: `from`, `to`, `kind` descent|marriage|link, `label`, `at`; `cap_pct`). A name fades in over 0.4 s; a connector is
+  drawn over 0.7 s from `from` (ease in and out), its label fades in from +0.4 s. **Layout** (`solve_tree`, automatic when any name lacks `row` or `col`): spouses are one unit (a chain: a person has at most two
+  marriages, else `tree_marriage_shape`); generations are the longest path down along descent and link edges, a source whose people all stand further down moves down next to them; an edge that skips rows gets a
+  virtual node per skipped row so that it runs between the names; the order inside the rows comes from barycentre sweeps (the best of ten by number of crossings), a couple's members from where their parents stand;
+  the coordinates from a weighted least-squares relaxation with minimum gaps (pool adjacent violators, symmetric Gauss-Seidel, re-centred every sweep): a parent stands over the middle of a child couple, a child straight
+  below the middle of a marriage line, a small tree is spread over up to 82 percent of the width; text is made smaller (down to 64 percent) while a row is too wide, then `tree_too_big`. Descent from one of two spouses starts at
+  the middle of their marriage line and is drawn once when both spouses name the same child. Connectors are right-angled: down from the upper name, across in the gap between the rows (parallel runs get lanes), down into the lower
+  name. A marriage line is level with the names, between their ends. A label sits above its own horizontal run when that is long enough, else beside the longest vertical run, else where it touches least. A hand-made grid
+  (`row` and `col` on every name) maps the cells onto the frame (rows evenly spaced, columns up to 20 percent of the width apart); names that touch are `tree_overlap`, married names in different rows `tree_marriage_rows`.
+* **`STATE-01`** (slots `a` required with regions, `b` required; `label_a`, `label_b`, `camera`, `dissolve_s` 0.5 to 1.5, `holds` "h0; h1; ...", `first`, `label_cap_pct`, `shadow`). Both pictures are drawn as CAM-01 draws one, through the
+  shot's `camera` in the pixels of `a`; `b` is scaled to the width of `a` and centred on it, so two images of one crop line up at any pixel size (a different shape is not corrected). Timeline: hold, linear dissolve of
+  `dissolve_s`, hold ..., alternating from `first`; the last state is held to the end, a shorter shot cuts the schedule. A hold is exactly one picture. **The camera does not move during a change**: its clock stands still through a
+  dissolve and runs faster in the holds by the time lost, so the whole move of its keys is still made by the end of the shot; `view()` returns the camera and the regions of `a`, so overlays follow. Caption: small capitals,
+  tracking 0.14 em, at 4.5 percent from the left, baseline 6 percent above the bottom, soft shadow; it fades in at 0.3 s, flips through a fade at the middle of every dissolve, fades out ending 0.1 s before the end.
+* A shot of these three shorter than 3 s is the error `element_too_short`. Word anchors in an item's `at` are the `items` machinery's; `focus_s` is a param of type `at` (seconds, or a word anchor). Tests: `tests/engine/test_explain_base.py`,
+  `tests/editor_frontend/explain_base.test.mjs`, `tests/draft/test_explainers_briefing.py` (the catalogue's filled example and the briefing part).
+
+## The atlas map `MAP-01` (`techniques/maps.py`, `geo.py`, `style/gae/geo/`)
+
+The approved moving mock-up is `docs/design/mock/2026-11-18-explainer/components.html` (function `plate`); the renderer reproduces its look and timeline. Data it
+takes: `places` (id, name, lonlat, `at`, `label_side`), `route` (from, to, `via` as `lon, lat; lon, lat`, shape, `at`, `draw_s`, head), `region_iso` + `region_label` +
+`region_at` + `region_fill_s`, the views (`view_start_width_km`, `view_start_center`, `view_end_mode` fit | manual with `view_end_margin_pct`, `view_end_center`,
+`view_end_width_km`, `push_s`), `sea` (`blue_grey`, `sepia`), `sea_names`, `sea_names_max`, `graticule_deg`, `grain`, `vignette`, `label_cap_pct`, `fade_s`, `seed`.
+
+* **Projection**: Web Mercator. A view is a centre and a ground width in km at the centre's latitude: pixels per radian `s = 1920 R cos(lat0) / width_km`
+  (`geo.View`). `geo.fit(points, margin_pct)` keeps the points in the middle (100 - 2 x margin) percent of the longer side (Bruges and Lucca at 19 percent: centre
+  6.86 E 47.66 N, 2,348 km wide, Bruges at 38.4 / 19.0 percent). The push eases the zoom and the centre linearly in an in-out-quad progress (`push_s`), as the mock-up's `scale()`.
+* **A frame** (a pure function of t, about 45 to 60 ms at 1920 px on the server): the land rings of the 1:10m file (views narrower than 1,500 km) or 1:50m file are
+  filled on a canvas 96 px larger than the frame; one distance transform of the sea gives each sea pixel its distance to the coast, and one lookup table (distance to
+  colour) paints the sea, the shade toward the coast (the profile of the mock-up's blurred stroke), the flat strip beside the coast and the two water lines; then the graticule,
+  the ink coastline, the region tint, the dotted route and its head, grain and vignette (pinned to the screen, seeded), sea names, place marks and labels.
+  Widths that live in map space in the mock-up (shade, water lines, route dots) scale with the push (`k`, held to 0.6..1.65); marks, labels and the hairlines keep their pixel size.
+  Outlines whose segments are longer than 8 px (a narrow view of 1:10m data) are clipped to the canvas and have their corners cut (`maps.chaikin`).
+* **Place labels** are put where no ink lies under their text box. The ink of a view is the coastline stroke, the two water lines and the outline of the region (a `Field`,
+  made for five views along the push: the start, the middle, the end and between); a box is clear when none of it lies within `INK_MARGIN` (5 px) of the box, and it touches
+  no route, mark, other label or frame edge in any of the five views. The eight sides are tried in the order se, ne, e, sw, nw, w, s, n at the mark's gap, then twice and three
+  times as far out; when none is clear (a mark on a crowded coast, as Bruges beside the outline of Belgium), the nearest clear place on a grid of offsets (6 px apart) is taken,
+  which can be 80 px or more from the mark; `label_side` forces a side. Labels get a 2 px paper-coloured halo (not in the mock-up). `r.label_at[id]` is the (dx, dy) from the mark
+  to the label's left edge and baseline, `r.sides[id]` its compass name, `r.placed(place, x, y)` its box.
+* **The region's name** goes inside the outline when it fits there with 6 px of clearance in all five views, else outside, beside the region on free ground (10 px off the
+  fill), nearest to the region's pole first; never over ink, the route, a mark or a place label. When there is no such place the name is left out.
+* **Sea names** (at most `sea_names_max`, most important first) lie wholly on water: in every view of the push where a name would be printed (its sea is big enough for the view
+  and its text is inside the frame), every pixel within 4 px of the text is sea more than 8 px beyond the outer water line, and the text touches no route, mark, label or other name.
+  The position is searched around the sea's listed position, inside the sea's own outline (`poly` of `seas.json`, `_in_sea`), nearest first; when there is none the name is left out
+  (the Mediterranean has none in the default example, the Adriatic none in a view of 2,000 km).
+* **Warnings and bounds**: a view narrower than 300 km (start or end) is the warning `map_view_coarse` (no error: the storyboard saves): Natural Earth has no detail there, and a spot
+  inside a city belongs on a street-map picture from the picks. The widths that live in map space (shade, water lines, route dots) scale with the zoom since the start view but never
+  above `K_MAX` = 1.617, the zoom of the default example's end view; the hairlines are the same in px at every zoom. A sea route needs `via` points in open water
+  (the Venice example's are found by a shortest path over the 1:10m water, `tests/engine/test_map.py::test_the_venice_example_route_stays_on_water`).
+* **Geography bundle** (`style/gae/geo/`, 2 MB, public domain, README there with sources, versions and sha256): land at 1:50m and 1:10m, countries at 1:50m with ISO
+  codes, sea names with positions and outlines. Rebuild: `python tools/geo/build_bundle.py --downloads DIR --fetch` (numpy and OpenCV only; byte-identical output). Loaded once per process, no network.
+* **Stills, timings and the preview clip**: `python tools/geo/render_map_examples.py stills|timing|preview`.
+
+## The explanatory overlays `KEY-01`, `NUM-01`, `DOC-01` (`techniques/explain_over.py`)
+
+Three overlays that make one point visible over a picture (contract `docs/design/2026-11-18-explainer-components.md` sections 2 to 5; approved moving mock-up `docs/design/mock/2026-11-18-explainer/components.html`,
+functions `labels`, `number`, `doclit`). Report with the numbers and stills: `docs/qa/FIX_comp_over.md`. Times (`at`, `reading_at`, ...) are seconds from the start of the OVERLAY (a word anchor in an `at` or in `reading_at`, a param of type `at`, is resolved by
+`registry.at_seconds`); everything leaves by a fade that ends with the overlay (`leave_s`); text is EB Garamond sized by cap height, `#F1EADB` with a soft shadow, drawn at quarter-pixel positions (`Art`: the line is drawn once at
+four times the size and shifted by whole pixels of the big drawing before it is shrunk, because Pillow places glyphs on whole pixels and a label on a moving camera would advance in jumps); the picture is dimmed by a gain.
+
+| id | data | what it draws |
+|---|---|---|
+| `KEY-01` | `labels` (items: `text`, `ref`, `side`, `at`, `style`), `cap_pct`, `dim_picture_to`, `fade_s`, `leave_s`, `shadow`, `leader` | a label beside each detail, outside its region's ellipse on its side; follows the camera, keeps its size; a hairline only where `leader` says (default `auto`: for a label displaced from its detail or in doubt about it) |
+| `NUM-01` | `rows` (items: `label`, `value`, `units`, `count`, `at`; 1 to 4), `caption`, `source`, `dim_picture_to`, `cap_pct`, `align`, `marks_s`, `leave_s` | the figure of each row large with its units and `count` marks that appear one by one over `marks_s`; caption after the last mark |
+| `DOC-01` | `lit` (items: `ref`, `box`, `at`, `hold_s`; 1 to 6), `dim_to`, `ramp_s`, `edge_px`, `pad_px`, `reading`, `original`, `reading_at`, `leave_s` | the window (region ellipse box or `box`, grown by `pad_px`) is lit, the rest dims, soft edge, no outline; then the reading (italic) and the line as written (small capitals) |
+
+* **Through the camera.** `KEY-01` and `DOC-01` map a region name or `[x, y]` of the shot's picture with `view.to_screen` and sizes in source pixels with `view.z`, like `HI-01` and `AN-01`; the base shot's `view(t)` is also sampled
+  (seven times over the overlay and at every item's time) to decide, once, the side of every `auto` label and whether the reading goes above or below the windows. A frame is still a pure function of t.
+* **Valid on** every base technique whose renderer provides `view()` (`NeedsCamera.check_base`; today: `CAM-01` to `CAM-06`, `STATIC-01`, `X-LAY-01`, `LAY-01`, `LAY-04`, `LAY-05`, `HI-02`, `AN-07`, `CMP-01` to `CMP-05`, `X-CMP-01`, `X-CMP-02` and the four ID bases). `storyboard.validate` calls the overlay class's `check_base(base technique id)` and refuses
+  the others (`LAY-02`, `-03`, `-06`, `-07`, `-08`, `TXT-01`, `STATIC-06`, `-07`, `DIA-*`, `FOOT-01`, `SHORT-*`, `X-CARD-*`, `MAP-01`) with `overlay_needs_camera`; a shot without an `image` slot makes the overlay incomplete (the usual `incomplete` warning, skipped when drawn); a region name not on the picture is `region_undefined`.
+  A base that provides `view()` but returns None at some moment (a layout without a camera) draws nothing. `NUM-01` needs no picture and is valid on every shot.
+* **`KEY-01` placement.** Sides of `auto` labels: the first of e, w, n, s, ne, nw, se, sw whose box clears the other labels, the frame (margin 1.5 percent) and, at a smaller cost, the other details, at seven camera samples; a fixed `side` is kept. Per frame a label is held inside the frame and pushed
+  along its side's tangent just far enough to leave 0.6 percent of the height of air to the label before it; a detail that leaves the frame fades its label out over 8 percent of the height. The dim starts 0.4 s before the first label (0.6 s ramp).
+  Among the sides that are equally near, the one with the darker picture under the text wins (`ground_level`, read from the base image's pyramid at the camera samples; the order e, w, n, s ... breaks ties).
+  `leader` is `none`, `hairline` (a 2 px line in `#8D877A` from every label to the edge of its detail's ellipse, over a soft dark underlay) or `auto` (the default): a line only from a label that is farther from the edge of its detail than
+  max(2.2 natural gaps = 31 px, 0.35 of the detail's larger radius), or that lies over the ellipse of another label's detail (or within half its own distance of it); the line fades in over half of that distance and with its label.
+  The registry's usage rule tells the agent to put at most five labels on screen at a time and to show details that lie close together in two shots. The plan is cached with the picture's file and time in its key.
+* **`NUM-01` layout.** The mock-up's sizes at a figure of 8 percent, scaled by `cap_pct / 8`, rows stacked and centred on 53 percent of the height; when they do not fit between 8 and 85 percent the rows come closer, then everything shrinks by one factor.
+  Up to 40 marks make lines of 20, 41 to 60 lines of 30. The caption fades in when the first marks start to appear (0.6 s after the first row that has marks) and stays to the end; the units are as big as the row's label at 72 percent.
+* **`DOC-01` window.** Gain 1 inside and `dim_to` outside, a smoothstep edge `edge_px` wide centred on the border of a rounded rectangle (radius 22 px); windows share the dimming (`min(1, sum of their envelopes)`), so a crossfade between two lines keeps the surroundings dim.
+  A region without radii lights a default window (14 percent of the picture's width by 4 percent). The `ref` field of an item is for region names; the box is a text field (`box`, "x0, y0, x1, y1" in source pixels) because `ref` holds a region name or a point.
+* Issue codes: `overlay_needs_camera`, `doc_lit_no_target`, `doc_bad_box` (and the `items` codes). `registry.check_items` treats a `ref` that is `""` (a blank box on the page) as empty, like null.
+* **Stills, timings and previews**: `python tools/explain/render_examples.py stills|timing|preview`. Tests: `tests/engine/test_explain_over.py` (106), `tests/editor_frontend/explain_items.test.mjs` (7).
+
 ## Known behaviour worth knowing
 
-- Fonts keep the benchmark's behaviour: Windows faces first, then the macOS fallback (Futura for `reg`/`bold`, Arial Bold, Georgia Italic). `style.json` `fonts.stand_in_label_mac` can override the Futura path and an optional
+- Fonts keep the benchmark's behaviour for the old kinds: Windows faces first, then the macOS fallback (Futura for `reg`/`bold`, Arial Bold, Georgia Italic); the three EB Garamond kinds of the ID family are bundled and never fall back (see above). `style.json` `fonts.stand_in_label_mac` can override the Futura path and an optional
   `fonts.map = {kind: [paths]}` replaces a whole list (`vfx.configure_fonts`). The font choice is part of every layer cache key.
 - `shots[0]` also covers `t < its start`; `end` may carry `fade_s`.
 - A storyboard with validation errors can still be drawn through `use_draft` (the editor needs live previews), but `save` refuses it.
@@ -204,7 +433,7 @@ Four engineers port the remaining 47 techniques at the same time. The rules that
   "preview": {"reel_start": 0, "reel_end": 6, "clip": "previews/CMP-01.mp4", "thumb": "previews/CMP-01.jpg"}}}
 ```
 Required: `engine.available: true` with `impl` starting `bti.engine.` and `reason: null`. A param whose value cannot be empty and has no sensible default: `"default": null, "required": true`.
-Param types: number, enum, bool, string, text, color, point, box, camera, asset, points (list of points: region names or `[x, y]`), lines (list of strings).
+Param types: number, enum, bool, string, text, color, point, box, camera, asset, points (list of points: region names or `[x, y]`), lines (list of strings), items (list of records, below), at (one moment, below).
 
 ### Declaring extra slots
 

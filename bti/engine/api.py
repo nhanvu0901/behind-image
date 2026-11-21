@@ -11,7 +11,12 @@ thread-safe: callers serialise access (the backend holds a lock).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import copy
+import json
+import logging
+import os
+import threading
 from collections import OrderedDict
 from pathlib import Path
 
@@ -19,11 +24,33 @@ import numpy as np
 
 from . import registry as R
 from . import storyboard as SB
+from .errors import DataError, RenderError
 from .scene import Scene
 from .timing import Timing
 
-__all__ = ["open_project", "Project", "load_style", "ValidationError"]
+__all__ = ["open_project", "Project", "load_style", "ValidationError", "RenderError", "_default_check_threads"]
 ValidationError = SB.ValidationError
+log = logging.getLogger("bti.engine")
+
+
+def _default_check_threads() -> int:
+    plat = "windows" if os.name == "nt" else "default"
+    fallback = 8 if plat == "windows" else 4
+    cfg_file = Path(__file__).resolve().parents[2] / "config" / "server.json"
+    try:
+        if cfg_file.exists():
+            doc = json.loads(cfg_file.read_text(encoding="utf-8"))
+            if isinstance(doc, dict):
+                block = doc.get(plat)
+                if not isinstance(block, dict):
+                    block = doc.get("default")
+                if isinstance(block, dict):
+                    ct = block.get("check_threads")
+                    if isinstance(ct, int) and not isinstance(ct, bool) and ct > 0:
+                        return ct
+    except Exception:
+        pass
+    return fallback
 
 
 def load_style(style_id: str) -> dict:
@@ -45,8 +72,8 @@ class Project:
         self._saved_mtime = (self.dir / "storyboard.json").stat().st_mtime_ns
         self._draft = None
         self._scenes: OrderedDict = OrderedDict()
-        self._timing = None
-        self._timing_mtime = None
+        self._timings: dict = {}            # relative path -> (mtime_ns, Timing)
+        self._lock = threading.RLock()
 
     # -- documents -------------------------------------------------------------------------------------------
     @property
@@ -62,13 +89,32 @@ class Project:
         self._reload_if_changed()
         return copy.deepcopy(self._saved)
 
+    def _timing_for(self, sb) -> Timing:
+        """The timing file named by document `sb` (default timing.json): inside the project, present, well formed.
+        Any problem is a DataError that names it. Parsed files are cached by modification time."""
+        rel = sb.get("timing") if isinstance(sb, dict) else None
+        if rel is None or rel == "":
+            rel = "timing.json"
+        if not isinstance(rel, str):
+            raise DataError("timing must be a file path inside the project", what="timing")
+        path = SB.safe_rel(self.dir, rel)
+        if path is None:
+            raise DataError("timing %r must be a file inside the project" % rel, what="timing")
+        try:
+            mt = path.stat().st_mtime_ns
+        except OSError:
+            raise DataError("%s is missing" % rel, what="timing")
+        with self._lock:
+            hit = self._timings.get(rel)
+            if hit is None or hit[0] != mt:
+                tm = Timing.load(path)
+                self._timings[rel] = hit = (mt, tm)
+                self._scenes.clear()
+            return hit[1]
+
     def _tm(self) -> Timing:
-        path = self.dir / (self._saved.get("timing") or "timing.json")
-        mt = path.stat().st_mtime_ns
-        if self._timing is None or mt != self._timing_mtime:
-            self._timing, self._timing_mtime = Timing.load(path), mt
-            self._scenes.clear()
-        return self._timing
+        self._reload_if_changed()
+        return self._timing_for(self._saved)
 
     def timing(self) -> dict:
         return copy.deepcopy(self._tm().data)
@@ -84,30 +130,53 @@ class Project:
     # -- resolve / validate ----------------------------------------------------------------------------------
     def resolve(self, storyboard: dict | None = None) -> dict:
         sb = storyboard if storyboard is not None else self.storyboard()
-        return SB.resolve(sb, self._tm(), self.bundle)
+        return SB.resolve(sb, self._timing_for(sb), self._bundle_for(sb))
+
+    def _bundle_for(self, sb) -> R.StyleBundle:
+        style = sb.get("style", "gae") if isinstance(sb, dict) else "gae"
+        return R.load_bundle(style)
 
     def validate(self, storyboard: dict | None = None) -> list[dict]:
+        """Issues of `storyboard` (default: the saved one). Everything a later load needs is checked here: the style exists,
+        the timing file is inside the project and readable, audio and asset files stay inside the project."""
         sb = storyboard if storyboard is not None else self.storyboard()
-        return SB.validate(sb, self._tm(), self.bundle, self.dir)
+        if not isinstance(sb, dict):
+            return SB.validate(sb, None, None, self.dir)
+        issues: list[dict] = []
+        try:
+            bundle = self._bundle_for(sb)
+        except DataError as e:
+            issues.append({"level": "error", "path": "style", "code": "style_unusable", "args": {"style": sb.get("style")}, "message": e.message})
+            try:
+                bundle = self.bundle
+            except DataError:
+                bundle = R.load_bundle("gae")
+        try:
+            tm = self._timing_for(sb)
+        except DataError as e:
+            issues.append({"level": "error", "path": "timing", "code": "timing_unusable", "args": {"file": sb.get("timing")}, "message": e.message})
+            tm = Timing({"duration": 0.0, "words": []})
+        return issues + SB.validate(sb, tm, bundle, self.dir)
 
     def use_draft(self, storyboard: dict | None) -> None:
         self._draft = copy.deepcopy(storyboard) if storyboard is not None else None
 
     # -- rendering -------------------------------------------------------------------------------------------
     def _scene(self) -> Scene:
-        self._reload_if_changed()
-        tm = self._tm()
-        sb = self._draft if self._draft is not None else self._saved
-        key = (SB.revision_of(sb), self._draft is not None)
-        sc = self._scenes.get(key)
-        if sc is None:
-            sc = Scene(self.dir, SB.resolve(sb, tm, self.bundle), tm, self.bundle)
-            self._scenes[key] = sc
-            while len(self._scenes) > 4:
-                self._scenes.popitem(last=False)
-        else:
-            self._scenes.move_to_end(key)
-        return sc
+        with self._lock:
+            self._reload_if_changed()
+            sb = self._draft if self._draft is not None else self._saved
+            tm, bundle = self._timing_for(sb), self._bundle_for(sb)
+            key = (SB.revision_of(sb), self._draft is not None)
+            sc = self._scenes.get(key)
+            if sc is None:
+                sc = Scene(self.dir, SB.resolve(sb, tm, bundle), tm, bundle)
+                self._scenes[key] = sc
+                while len(self._scenes) > 4:
+                    self._scenes.popitem(last=False)
+            else:
+                self._scenes.move_to_end(key)
+            return sc
 
     def frame_at(self, t: float, width: int = 960) -> np.ndarray:
         """BGR uint8 frame, 16:9, `width` px wide."""
@@ -117,13 +186,124 @@ class Project:
         """Silent H.264 of [t0, t1) written to out_path."""
         return self._scene().render_range(float(t0), float(t1), Path(out_path), int(width), int(fps), on_progress, quality, threads)
 
+    def draw_check(self, storyboard: dict | None = None, width: int = 320, threads: int | None = None) -> list[dict]:
+        """The whole check in one call (see `draw_check_iter` for the step by step form)."""
+        it = self.draw_check_iter(storyboard, width, threads=threads)
+        while True:
+            try:
+                next(it)
+            except StopIteration as done:
+                return done.value or []
+
+    def draw_check_iter(self, storyboard: dict | None = None, width: int = 320, threads: int | None = None):
+        """Generator form of `draw_check`: yields after the storyboard is compiled and after every drawn sample, and RETURNS the
+        issues (`StopIteration.value`). A caller that holds a lock may release it between two `next()` calls: the draft is swapped
+        in only while the storyboard is compiled (inside the first step, restored before that step yields); the samples are drawn
+        from the compiled scene, which does not depend on the project's draft state.
+
+        Draws three small frames (just inside the start, the middle, just inside the end) of every shot, one inside every overlay's
+        span and one in the middle of every transition; the failures are issues
+        `{"level": "error", "code": "undrawable", "path", "shot", "message"}`. Never raises for a technique failure and leaves
+        the project's draft state as the caller had it."""
+        issues: list[dict] = []
+        seen: set = set()
+
+        def fail(path, shot_id, message, technique=None, overlay=None, asset=None):
+            if (path, message) not in seen:
+                seen.add((path, message))
+                issues.append({"level": "error", "code": "undrawable", "path": path, "shot": shot_id, "message": message,
+                               "args": {"shot": shot_id, "technique": technique, "overlay": overlay, "asset": asset}})
+
+        saved_draft = self._draft
+        try:
+            if storyboard is not None:
+                self.use_draft(storyboard)
+            scene = self._scene()
+        except RenderError as e:
+            fail(e.path or "", e.shot, e.message, e.technique, e.overlay, getattr(e, "asset", None))
+            return issues
+        except DataError as e:
+            fail("", None, e.message)
+            return issues
+        except Exception as e:      # noqa: BLE001
+            log.warning("draw_check: the storyboard cannot be compiled", exc_info=e)
+            fail("", None, "the storyboard cannot be compiled")
+            return issues
+        finally:
+            self._draft = saved_draft
+        yield
+
+        frame = 1 / 15.0
+        jobs = []
+        job_idx = 0
+        for i, c in enumerate(scene.shots):
+            sid = c.shot.get("id") if isinstance(c.shot.get("id"), str) else None
+            t0, t1 = c.t0, c.t1
+            if t0 is None or t1 is None:
+                continue
+            eps = min(0.05, (t1 - t0) / 10)            # just inside the shot: a camera move needs its largest buffer at an end
+            times = [("shots[%d]" % i, t0 + eps), ("shots[%d]" % i, (t0 + t1) / 2), ("shots[%d]" % i, t1 - eps)]
+            tr = c.shot.get("transition_in")
+            if c.transition is not None and i > 0 and isinstance(tr, dict) and c.transition.dur > 0:
+                times.append(("shots[%d].transition_in" % i, t0 + c.transition.dur / 2))
+            for j, o in enumerate(c.shot.get("overlays") or []):
+                ot0, ot1 = o.get("_t0"), o.get("_t1")
+                if ot0 is None or ot1 is None:
+                    continue
+                times.append(("shots[%d].overlays[%d]" % (i, j), (ot0 + ot1) / 2))
+            drawn: list = []
+            for path, t in times:
+                if any(abs(t - d) < frame for d in drawn):
+                    continue            # closer than one frame to a frame already drawn
+                drawn.append(t)
+                jobs.append((job_idx, path, sid, i, t))
+                job_idx += 1
+
+        def _draw_job(job):
+            j_idx, path, sid, i, t = job
+            try:
+                scene.frame_at(t, int(width))
+                return None
+            except RenderError as e:
+                return (j_idx, e.path or path, e.shot or sid, e.message, e.technique, e.overlay, getattr(e, "asset", None))
+            except Exception as e:      # noqa: BLE001
+                log.warning("draw_check: %s cannot be drawn", path, exc_info=e)
+                return (j_idx, path, sid, "shot %s cannot be drawn" % (sid or i), None, None, None)
+
+        n_threads = max(1, int(threads if threads is not None else _default_check_threads()))
+        if n_threads == 1 or len(jobs) <= 1:
+            for job in jobs:
+                res = _draw_job(job)
+                if res is not None:
+                    fail(*res[1:])
+                yield
+            return issues
+
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=n_threads)
+        results = [None] * len(jobs)
+        try:
+            futures = [executor.submit(_draw_job, job) for job in jobs]
+            for fut in concurrent.futures.as_completed(futures):
+                res = fut.result()
+                if res is not None:
+                    results[res[0]] = res[1:]
+                yield
+            for r in results:
+                if r is not None:
+                    fail(*r)
+            return issues
+        finally:
+            executor.shutdown(wait=True, cancel_futures=True)
+
     # -- editing support -------------------------------------------------------------------------------------
     def _asset_info(self, key: str, sb: dict) -> dict | None:
         a = (sb.get("assets") or {}).get(key)
-        if not a:
+        if not isinstance(a, dict):
             return None
         w, h = a.get("width"), a.get("height")
-        if not (w and h):
+        ok = lambda v: isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0     # noqa: E731
+        if not (ok(w) and ok(h)):
+            w = h = None
             try:
                 import cv2
                 im = cv2.imread(str(self.dir / a["file"]), cv2.IMREAD_REDUCED_COLOR_8)
@@ -165,7 +345,7 @@ class Project:
 
     def save(self, storyboard: dict) -> str:
         """Validate (errors refuse the save with ValidationError), write atomically, back up to history/, return the revision."""
-        issues = SB.validate(storyboard, self._tm(), self.bundle, self.dir)
+        issues = self.validate(storyboard)
         rev = SB.save(self.dir, storyboard, issues)
         self._saved = SB.strip_derived(copy.deepcopy(storyboard))
         self._saved_mtime = (self.dir / "storyboard.json").stat().st_mtime_ns

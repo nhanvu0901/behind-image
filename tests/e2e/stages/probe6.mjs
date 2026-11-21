@@ -1,0 +1,12 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, both, sleep, go, settle, pipeline, leftovers, clickExact } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const PID = process.argv[2];
+const br = await openBrowser(); const p = await br.newPage();
+await go(p, base, `#/project/${PID}/picks`);
+await clickExact(p, 'Tìm');
+await p.waitFor(`document.body.innerText.includes('Làm tranh chính')`, 20000);
+await settle(p);
+await snap(p, 'p6-search');
+console.log((await bodyText(p)).split('\n').slice(-50).join(' | '));
+console.log(await leftovers(p), p.logs, p.bad());
+br.close();

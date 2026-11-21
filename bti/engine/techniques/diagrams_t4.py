@@ -307,7 +307,10 @@ class ExplodedFigure(_T4Base):
                 c = C.parse_point(src) if "," in src else src
                 cx, cy = C.focus_xy(ctx, c, pkey)
                 return ctx.image(pkey).view(cx, cy, zoom, tw, tw)[0].astype(np.float32)
-            piece = ctx.cached(("t4dia04pc", psig, src, zoom, tw), build)
+            try:
+                piece = ctx.cached(("t4dia04pc", psig, src, zoom, tw), build)
+            except KeyError:
+                continue                    # a region name this image does not define: that piece is left out
             x = int(W / 2 + (pos[0] - W / 2) * pr)
             y = int(Hh / 2 + (pos[1] - Hh / 2) * pr)
             fx0, fy0, fx1, fy1 = max(x, 0), max(y, 0), min(x + tw, W), min(y + tw, Hh)

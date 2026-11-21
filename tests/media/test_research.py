@@ -76,6 +76,14 @@ def test_live_needs_env_key(monkeypatch):
         confirm_claim("x", CTX, live=True)
 
 
+def test_guard_accepts_a_key_held_by_the_client_not_the_environment(monkeypatch):
+    monkeypatch.delenv("YDC_API_KEY", raising=False)
+    c = YouComClient(api_key="from-dotenv")
+    assert research._require_live(c, True) is c            # LR-001
+    with pytest.raises(LiveCallDisabled):
+        research._require_live(YouComClient(api_key=""), True)
+
+
 def test_guard_blocks_before_any_request(monkeypatch):
     monkeypatch.setenv("YDC_API_KEY", "dummy")
 

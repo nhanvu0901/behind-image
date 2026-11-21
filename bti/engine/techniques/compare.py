@@ -14,7 +14,7 @@ import numpy as np
 from .. import helpers as H
 from ..base import BaseRenderer, View
 from ..registry import technique
-from ..vfx import backdrop, blend, compose_matte, ease, ramp
+from ..vfx import backdrop, blend, compose_matte, ease, put, ramp
 from ._t1common import (TREATMENTS, aligned_view, as_lines, caption, cam_of, fit_cam, floats, hexbgr, panel, pdef, region_xy, static_cam, treat)
 
 
@@ -41,8 +41,8 @@ class GreyToColour(BaseRenderer):
         f = backdrop(ctx.w, ctx.h).copy()
         a = panel(ctx, self.key, self.cam, t, w, h)
         g = aligned_view(ctx, self.key, self.gkey, self.cam, t, w, h) if self.gkey else H.gray(a)
-        f[y:y + h, xl:xl + w] = g
-        f[y:y + h, xr:xr + w] = blend(g, a, ramp(tt, float(p["colour_delay_s"]), float(p["colour_fade_s"])))
+        put(f, xl, y, g)
+        put(f, xr, y, blend(g, a, ramp(tt, float(p["colour_delay_s"]), float(p["colour_fade_s"]))))
         cy = int(p["caption_y_px"])
         if p["caption_left"]:
             caption(ctx, p["caption_left"], None, xl + w // 2, cy, 30, 6).apply(f)
@@ -114,9 +114,9 @@ class StagesVsFinished(BaseRenderer):
             if a <= 0:
                 continue
             y = y0 + i * pitch
-            f[y:y + sz, x0:x0 + sz] = f[y:y + sz, x0:x0 + sz] * (1 - a) + self._stage(i) * a
+            put(f, x0, y, self._stage(i), a)
         bx0, by0, bx1, by1 = [int(v) for v in p["finished_box"]]
-        f[by0:by1, bx0:bx1] = panel(ctx, self.key, self.fcam, t, bx1 - bx0, by1 - by0)
+        put(f, bx0, by0, panel(ctx, self.key, self.fcam, t, bx1 - bx0, by1 - by0))
         return f
 
     def view(self, t):
@@ -160,7 +160,7 @@ class ColourVersions(BaseRenderer):
                 continue
             im = aligned_view(ctx, self.key, k, self.cam, t, w, h)
             x = x0 + i * pitch
-            f[y:y + h, x:x + w] = f[y:y + h, x:x + w] * (1 - al) + np.clip(treat(im, v), 0, 255) * al
+            put(f, x, y, np.clip(treat(im, v), 0, 255), al)
         return f
 
     def view(self, t):
@@ -196,13 +196,13 @@ class ColourBlocks(BaseRenderer):
         f = backdrop(ctx.w, ctx.h).copy()
         w, h, y, xl, xr = int(p["panel_w_px"]), int(p["panel_h_px"]), int(p["panel_y_px"]), int(p["left_x_px"]), int(p["right_x_px"])
         a = panel(ctx, self.key, self.cam, t, w, h)
-        f[y:y + h, xl:xl + w] = a
+        put(f, xl, y, a)
         b0, b1 = float(p["blocks_start"]), float(p["blocks_end"])
         nb = int(b0 + (b1 - b0) * ramp(tt, float(p["grow_delay_s"]), float(p["grow_s"])))
         nb = max(1, nb)
         nr = max(1, int(round(nb * h / w)))
         small = cv2.resize(a, (nb, nr), interpolation=cv2.INTER_AREA)
-        f[y:y + h, xr:xr + w] = cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST)
+        put(f, xr, y, cv2.resize(small, (w, h), interpolation=cv2.INTER_NEAREST))
         return f
 
     def view(self, t):
@@ -373,7 +373,7 @@ class SwapSplit(BaseRenderer):
             cx, cy, z = img.w / 2, img.h / 2, (0.94 * min(pw / img.w, ph / img.h) if p["anchor_fit"] == "matte" else max(pw / img.w, ph / img.h))
         if p["anchor_push"]:
             z *= 1 + float(p["anchor_push_pct"]) / 100.0 * tt / self.d
-        f[py:py + ph, ax:ax + pw] = compose_matte(img, cx, cy, z, pw, ph) if p["anchor_fit"] == "matte" else img.view(cx, cy, z, pw, ph)[0].astype(np.float32)
+        put(f, ax, py, compose_matte(img, cx, cy, z, pw, ph) if p["anchor_fit"] == "matte" else img.view(cx, cy, z, pw, ph)[0].astype(np.float32))
         # swap panel
         n = len(self.swaps)
         sps = float(p["seconds_per_swap"])
@@ -396,7 +396,7 @@ class SwapSplit(BaseRenderer):
                     panel_img[:, shift:] = cur[:, :pw - shift]
                 else:
                     panel_img[:, :pw - shift] = cur[:, shift:]
-        f[py:py + ph, sx:sx + pw] = panel_img
+        put(f, sx, py, panel_img)
         # captions
         cy = py + ph + 52
         if p["anchor_caption"]:

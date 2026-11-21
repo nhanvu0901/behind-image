@@ -1,0 +1,444 @@
+<title>Bản đồ và thành phần giải thích</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: a screening room. One column of 16:9 stages, each with a transport bar and a short note; the page chrome stays quiet. */
+:root{
+  --bg:#eceff1; --panel:#ffffff; --ink:#14181d; --muted:#56626c; --line:#cfd6db; --accent:#1f6f8b; --accent-ink:#ffffff; --chip:#dfe6ea;
+  --ui:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif; --serif:"EB Garamond",Georgia,"Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --bg:#0f1215; --panel:#161b20; --ink:#e8ecef; --muted:#93a0ab; --line:#27303a; --accent:#6ec1d6; --accent-ink:#0b1114; --chip:#1f262d; color-scheme:dark } }
+:root[data-theme="dark"]{ --bg:#0f1215; --panel:#161b20; --ink:#e8ecef; --muted:#93a0ab; --line:#27303a; --accent:#6ec1d6; --accent-ink:#0b1114; --chip:#1f262d; color-scheme:dark }
+body{background:var(--bg);color:var(--ink);font:400 15px/1.6 var(--ui);padding-block:28px 64px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+h1{font:600 28px/1.2 var(--ui);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font:600 20px/1.25 var(--ui);margin:0;text-wrap:balance}
+h3{font:600 16px/1.3 var(--ui);margin:0}
+p{margin:0;max-width:68ch}
+.lede{color:var(--muted)}
+.eyebrow{font:500 12px/1 var(--ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+section{display:flex;flex-direction:column;gap:18px}
+.head{display:flex;flex-direction:column;gap:8px}
+.opts{display:flex;flex-direction:column;gap:30px}
+figure{margin:0;display:flex;flex-direction:column;gap:10px}
+.stage{position:relative;aspect-ratio:16/9;width:100%;max-width:100%;overflow:hidden;container-type:size;border-radius:6px;background:#000;isolation:isolate}
+.cam{position:absolute;inset:0;transform-origin:50% 50%;will-change:transform}
+.cam svg{position:absolute;inset:0;width:100%;height:100%;display:block;overflow:visible}
+.over,.fxl{position:absolute;inset:0;pointer-events:none}
+.fadeout{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none}
+.mk{position:absolute;width:0;height:0}
+.mk i{position:absolute;left:0;top:0;border-radius:50%;transform:translate(-50%,-50%)}
+.lb{position:absolute;white-space:nowrap;font:italic 400 3.7cqh/1 var(--serif)}
+.lb.ne{transform:translate(1.7cqh,-125%)} .lb.se{transform:translate(1.7cqh,30%)} .lb.c{transform:translate(-50%,-50%)} .lb.w{transform:translate(calc(-100% - 1.7cqh),-50%)} .lb.e{transform:translate(1.7cqh,-50%)} .lb.s{transform:translate(-50%,60%)} .lb.n{transform:translate(-50%,-160%)}
+.caps{font:400 2.9cqh/1 var(--serif);letter-spacing:.14em;text-transform:uppercase;font-style:normal}
+.bar{display:flex;align-items:center;gap:12px}
+.bar button{font:500 13px/1 var(--ui);min-width:74px;padding:9px 12px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.bar button:hover{border-color:var(--accent)}
+.bar button:focus-visible,.bar input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.bar input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.bar .tc{font:400 12px/1 var(--ui);font-variant-numeric:tabular-nums;color:var(--muted);min-width:44px;text-align:right}
+figcaption{display:flex;flex-direction:column;gap:6px}
+.tag{display:inline-block;font:500 12px/1 var(--ui);padding:5px 8px;border-radius:4px;background:var(--chip);color:var(--ink);margin-right:8px}
+.note{color:var(--muted);font-size:14px}
+.seg{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.seg span{font:500 12px/1 var(--ui);color:var(--muted);margin-right:4px}
+.seg button{font:500 12px/1 var(--ui);padding:7px 10px;border-radius:5px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.picked{display:inline-block;font:500 12px/1 var(--ui);padding:5px 8px;border-radius:4px;background:var(--accent);color:var(--accent-ink);margin-left:8px;vertical-align:2px}
+.two{display:flex;flex-direction:column;gap:30px}
+.old{display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:18px;align-items:center}
+.old img{border-radius:6px;display:block;width:100%}
+.old ul{margin:0;padding-left:18px;color:var(--muted);font-size:14px}
+@media (max-width:620px){ .old{grid-template-columns:1fr} h1{font-size:23px} }
+.ask{border-top:1px solid var(--line);padding-top:20px;display:flex;flex-direction:column;gap:10px}
+.ask ol{margin:0;padding-left:20px;max-width:68ch}
+/* scene pieces */
+.pic{position:absolute;max-width:none;display:block}
+.dim{position:absolute;inset:0;background:#000;opacity:0}
+.hole{position:absolute;border-radius:2cqh;box-shadow:0 0 5cqh 300cqw rgba(0,0,0,.68);opacity:0}
+.tl-line{position:absolute;height:1px;background:#8d877a}
+.txt{position:absolute;color:#E9E2D0;font-family:var(--serif)}
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <div class="eyebrow">Raking Light · bản mẫu chuyển động · 18/11/2026</div>
+    <h1>Bản đồ và thành phần giải thích</h1>
+    <p class="lede">Ba kiểu bản đồ mới trên địa lý thật, và sáu thành phần hoạt hình khác để làm rõ một ý trong video. Bấm Phát ở từng khung, xem xong thì cho mình biết bạn chọn gì.</p>
+  </header>
+
+  <section>
+    <div class="head"><div class="eyebrow">Hiện tại</div><h2>Bản đồ đang có trong video Arnolfini</h2></div>
+    <div class="old">
+      <img src="old_map.jpg" alt="Bản đồ hiện tại: nền xám, hai chấm Bruges và Lucca, một đường chấm đỏ" width="640" height="360">
+      <ul>
+        <li>Nền là các mảng xám do code vẽ ra, không có bờ biển hay nước nào thật.</li>
+        <li>Đất và biển gần như cùng màu; nhãn nhỏ và nhạt.</li>
+        <li>Hai địa điểm hiện ngay từ đầu, trước khi lời dẫn nhắc tới.</li>
+        <li>Máy quay đứng yên, không cho biết ta đang ở đâu trên thế giới.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <div class="eyebrow">Phần 1 · chọn kiểu bản đồ</div>
+      <h2>Ba kiểu bản đồ mới, cùng ví dụ Bruges đến Lucca</h2>
+      <p class="lede">Cả ba dùng bờ biển thật của Natural Earth (dữ liệu công cộng, không cần ghi nguồn), nhãn bằng EB Garamond, không có khung chữ. Mỗi địa điểm hiện đúng lúc lời dẫn nhắc tên. Dữ liệu vào chỉ là tên và toạ độ, nên dùng lại được cho mọi video.</p>
+    </div>
+    <div class="opts">
+      <figure data-scene="plate">
+        <div class="stage" aria-label="Kiểu A: trang atlas"></div>
+        <div class="bar"><button type="button" id="b-plate">Phát</button><input id="r-plate" type="range" min="0" max="8" step="0.01" aria-label="Thời gian kiểu A"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">A</span>Trang atlas<span class="picked">Bạn đã chọn</span></h3>
+        <div class="seg" role="group" aria-label="Màu biển của kiểu A"><span>Màu biển:</span><button type="button" data-v="teal" aria-pressed="true">Xanh xám</button><button type="button" data-v="sepia" aria-pressed="false">Nâu sẫm</button><button type="button" data-v="old" aria-pressed="false">Như bản trước</button></div>
+        <p>Bản này đã sửa chỗ khó phân biệt đất và biển: biển có màu riêng và đậm dần về phía bờ, đất sáng hơn. Bấm ba nút trên để so. Phần còn lại giữ nguyên: bờ biển nét mực có các đường viền nước như atlas cổ, vùng Bỉ ngày nay được tô nhẹ, đường đi là hàng chấm đỏ nâu có điểm đầu chạy, máy quay đẩy chậm vào hai thành phố.</p>
+        <p class="note">Hợp với tranh trước 1900 và phần lớn video. Gần với tranh minh hoạ trong sách nguồn.</p></figcaption>
+      </figure>
+      <figure data-scene="relief">
+        <div class="stage" aria-label="Kiểu B: địa hình dưới ánh sáng xiên"></div>
+        <div class="bar"><button type="button" id="b-relief">Phát</button><input id="r-relief" type="range" min="0" max="8" step="0.01" aria-label="Thời gian kiểu B"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">B</span>Địa hình dưới ánh sáng xiên</h3>
+        <p>Bản đồ tối, địa hình nổi thật (thấy rõ dãy Alps giữa hai thành phố). Một vệt sáng quét qua làm lộ đất liền, đúng ý tên kênh. Đường đi phát sáng, máy quay vừa đẩy vào vừa nghiêng nhẹ.</p>
+        <p class="note">Hợp với hành trình, chuyến đi biển, đoạn kịch tính. Đây là kiểu khó xây nhất.</p></figcaption>
+      </figure>
+      <figure data-scene="paper">
+        <div class="stage" aria-label="Kiểu C: giấy cắt"></div>
+        <div class="bar"><button type="button" id="b-paper">Phát</button><input id="r-paper" type="range" min="0" max="8" step="0.01" aria-label="Thời gian kiểu C"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">C</span>Giấy cắt</h3>
+        <p>Mở từ quả địa cầu xoay về châu Âu rồi chuyển sang bản đồ phẳng. Nền sáng, đất liền như tờ giấy cắt có bóng đổ nhẹ, một màu nhấn duy nhất, chấm địa điểm nhấp một nhịp khi được nhắc tên. Máy quay đứng yên khi có chữ.</p>
+        <p class="note">Hợp với địa điểm thời hiện đại và cảnh ngắn.</p></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <div class="eyebrow">Phần 2 · chọn thành phần xây trước</div>
+      <h2>Sáu thành phần giải thích khác</h2>
+      <p class="lede">Mỗi cái làm rõ một loại thông tin. Ví dụ đều lấy từ lời dẫn video Arnolfini. Nghiên cứu đếm được trong 91 câu lời dẫn: khoảng 14 câu cần gọi tên một phần của tranh, 8 câu có ngày tháng, 6 câu về quan hệ gia đình hay người bảo trợ, 5 câu có số lượng.</p>
+    </div>
+    <div class="two">
+      <figure data-scene="labels"><div class="stage" aria-label="Nhãn gọi tên các phần của tranh"></div>
+        <div class="bar"><button type="button" id="b-labels">Phát</button><input id="r-labels" type="range" min="0" max="7" step="0.01" aria-label="Thời gian nhãn"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">1</span>Nhãn gọi tên các phần của tranh</h3><p class="note">Chữ nghiêng nhỏ đặt ngay cạnh chi tiết, không khung, không gạch nối, hiện lần lượt theo lời dẫn. Tranh tối đi một chút để chữ nổi.</p></figcaption></figure>
+      <figure data-scene="timeline"><div class="stage" aria-label="Trục thời gian"></div>
+        <div class="bar"><button type="button" id="b-timeline">Phát</button><input id="r-timeline" type="range" min="0" max="8" step="0.01" aria-label="Thời gian trục thời gian"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">2</span>Trục thời gian có ngày</h3><p class="note">Một đường mảnh, từng mốc mọc lên theo thứ tự lời dẫn, mốc của bức tranh sáng lên sau cùng.</p></figcaption></figure>
+      <figure data-scene="number"><div class="stage" aria-label="Con số và so sánh"></div>
+        <div class="bar"><button type="button" id="b-number">Phát</button><input id="r-number" type="range" min="0" max="7" step="0.01" aria-label="Thời gian con số"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">3</span>Con số lớn và so sánh hai con số</h3><p class="note">600 so với 2.000 tấm da sóc: mỗi chấm là 50 tấm, hai hàng chấm chạy ra để thấy ngay gấp hơn ba lần.</p></figcaption></figure>
+      <figure data-scene="tree"><div class="stage" aria-label="Sơ đồ quan hệ"></div>
+        <div class="bar"><button type="button" id="b-tree">Phát</button><input id="r-tree" type="range" min="0" max="8" step="0.01" aria-label="Thời gian sơ đồ"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">4</span>Sơ đồ gia đình và người bảo trợ</h3><p class="note">Chỉ có tên và năm, nối bằng nét mảnh, hiện từng mối quan hệ một: ai thuê ai, ai cưới ai, ai vẽ ai.</p></figcaption></figure>
+      <figure data-scene="states"><div class="stage" aria-label="Cùng một tranh ở hai trạng thái"></div>
+        <div class="bar"><button type="button" id="b-states">Phát</button><input id="r-states" type="range" min="0" max="7" step="0.01" aria-label="Thời gian hai trạng thái"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">5</span>Cùng một tranh ở hai trạng thái</h3><p class="note">Ảnh màu tan sang ảnh hồng ngoại rồi trở lại, tranh đứng yên, góc dưới ghi tên kỹ thuật. Ảnh hồng ngoại ở đây là giả lập từ ảnh màu, chỉ để xem chuyển động.</p></figcaption></figure>
+      <figure data-scene="doclit"><div class="stage" aria-label="Một dòng chữ được làm sáng"></div>
+        <div class="bar"><button type="button" id="b-doclit">Phát</button><input id="r-doclit" type="range" min="0" max="7" step="0.01" aria-label="Thời gian dòng chữ"><span class="tc"></span></div>
+        <figcaption><h3><span class="tag">6</span>Một dòng chữ được làm sáng</h3><p class="note">Máy quay tiến vào dòng chữ ký trên tường, phần còn lại tối đi, bản dịch hiện bên dưới. Dùng được cho thư từ, sổ sách, bản kê tài sản.</p></figcaption></figure>
+    </div>
+  </section>
+
+  <section class="ask">
+    <h2>Mình cần bạn chọn</h2>
+    <ol>
+      <li><b>Bản đồ:</b> bạn đã chọn A. Còn một lựa chọn nhỏ: màu biển xanh xám hay nâu sẫm.</li>
+      <li><b>Thành phần xây trước:</b> những số nào trong 1 đến 6. Nghiên cứu xếp nhu cầu theo thứ tự 1, 2, 3, 4, 5, 6.</li>
+    </ol>
+    <p class="note">Đây là bản mẫu dựng bằng trình duyệt để xem cách chuyển động. Bản thật sẽ do engine của video vẽ từng khung, nên chi tiết nhỏ có thể khác. Báo cáo nghiên cứu đầy đủ nằm ở <code>docs/design/research/R10_explainer_components.md</code>.</p>
+  </section>
+</div>
+
+<script src="geo.js"></script>
+<script>
+(() => {
+const G = window.GEO || null, NS = 'http://www.w3.org/2000/svg';
+const sv = (tag, at = {}, parent) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); if (parent) parent.appendChild(e); return e; };
+const h = (tag, cls, parent, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const seg = (t, a, b) => clamp((t - a) / (b - a));
+const ease = (x) => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+const easeOut = (x) => 1 - Math.pow(1 - x, 3);
+const lerp = (a, b, x) => a + (b - a) * x;
+const css = (e, o) => Object.assign(e.style, o);
+
+/* ---------- shared pieces of the map scenes ---------- */
+function smooth(pts) {
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += `C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0]},${p2[1]}`;
+  }
+  return d;
+}
+function mapStage(stage) {
+  const cam = h('div', 'cam', stage);
+  const base = sv('svg', { viewBox: '0 0 1920 1080', preserveAspectRatio: 'xMidYMid slice' }); cam.appendChild(base);
+  const top = sv('svg', { viewBox: '0 0 1920 1080', preserveAspectRatio: 'xMidYMid slice' }); cam.appendChild(top);
+  const fx = h('div', 'fxl', stage), over = h('div', 'over', stage), fade = h('div', 'fadeout', stage);
+  const items = [];
+  const pin = (pt, node) => { items.push([sv('circle', { cx: pt[0], cy: pt[1], r: 0.01, fill: 'none' }, top), node]); return node; };
+  const layout = () => {
+    const R = stage.getBoundingClientRect(); if (!R.width) return;
+    for (const [a, n] of items) { const r = a.getBoundingClientRect(); n.style.left = ((r.left + r.width / 2 - R.left) / R.width * 100) + '%'; n.style.top = ((r.top + r.height / 2 - R.top) / R.height * 100) + '%'; }
+  };
+  return { stage, cam, base, top, fx, over, fade, pin, layout };
+}
+function routeParts(S, id, d, strokeAt, maskW) {
+  const [X0, Y0, X1, Y1] = G.extent;
+  const mask = sv('mask', { id, maskUnits: 'userSpaceOnUse', x: X0, y: Y0, width: X1 - X0, height: Y1 - Y0 }, S.top);
+  const mp = sv('path', { d, fill: 'none', stroke: '#fff', 'stroke-width': maskW, 'stroke-linecap': 'round' }, mask);
+  const line = sv('path', Object.assign({ d, fill: 'none', mask: `url(#${id})` }, strokeAt), S.top);
+  const L = line.getTotalLength() || 600;
+  mp.setAttribute('stroke-dasharray', L + ' ' + L);
+  return { line, L, draw: (p) => { mp.setAttribute('stroke-dashoffset', L * (1 - p)); return line.getPointAtLength(L * p); } };
+}
+const mark = (S, pt, html) => { const m = h('div', 'mk', S.over); m.innerHTML = html; return S.pin(pt, m); };
+const label = (S, pt, text, cls, style) => { const l = h('div', 'lb ' + cls, S.over, text); if (style) css(l, style); return S.pin(pt, l); };
+
+/* ---------- A: plate ---------- */
+function plate(stage) {
+  const S = mapStage(stage), [X0, Y0, X1, Y1] = G.extent, EW = X1 - X0, EH = Y1 - Y0, ink = '#3B2F26', sea = '#DDD4BE', acc = '#8C2F23';
+  const SEAS = { teal: { sea: '#AFC6C4', land: '#F3EBD9', shade: '#6F9796', so: .55, w1: .26, w2: .42 }, sepia: { sea: '#C6B592', land: '#F5EEDF', shade: '#8E7A52', so: .5, w1: .22, w2: .36 }, old: { sea: '#DDD4BE', land: '#EFE6D2', shade: '#DDD4BE', so: 0, w1: .15, w2: .28 } };
+  const setSea = (k) => { const v = SEAS[k] || SEAS.teal; for (const n of ['sea', 'land', 'shade', 'so', 'w1', 'w2']) stage.style.setProperty('--' + n, v[n]); stage.style.background = v.sea; };
+  setSea('teal');
+  sv('rect', { x: X0, y: Y0, width: EW, height: EH, style: 'fill:var(--sea)' }, S.base);
+  sv('path', { d: G.land, fill: 'none', 'stroke-width': 52, 'stroke-linejoin': 'round', style: 'stroke:var(--shade);stroke-opacity:var(--so);filter:blur(11px)' }, S.base);
+  for (const [w, o, c] of [[27, 'w1', 23.6], [15, 'w2', 11.6]]) {
+    sv('path', { d: G.land, fill: 'none', stroke: ink, 'stroke-width': w, 'stroke-linejoin': 'round', style: `stroke-opacity:var(--${o})` }, S.base);
+    sv('path', { d: G.land, fill: 'none', 'stroke-width': c, 'stroke-linejoin': 'round', style: 'stroke:var(--sea)' }, S.base);
+  }
+  sv('path', { d: G.land, style: 'fill:var(--land)' }, S.base);
+  const gr = sv('g', { stroke: ink, 'stroke-opacity': .09 }, S.base);
+  G.grat.v.forEach((x) => sv('line', { x1: x, y1: Y0, x2: x, y2: Y1, 'vector-effect': 'non-scaling-stroke' }, gr));
+  G.grat.h.forEach((y) => sv('line', { x1: X0, y1: y, x2: X1, y2: y, 'vector-effect': 'non-scaling-stroke' }, gr));
+  sv('path', { d: G.land, fill: 'none', stroke: ink, 'stroke-opacity': .85, 'stroke-width': 1.5, 'stroke-linejoin': 'round', 'vector-effect': 'non-scaling-stroke' }, S.base);
+  const region = sv('path', { d: G.belgium, fill: acc, 'fill-opacity': 0, stroke: acc, 'stroke-opacity': 0, 'stroke-width': 1.6, 'vector-effect': 'non-scaling-stroke' }, S.top);
+  const R = routeParts(S, 'mk-plate', smooth([G.bruges, ...G.via, G.lucca]), { stroke: acc, 'stroke-width': 6, 'stroke-linecap': 'round', 'stroke-dasharray': '0 15' }, 26);
+  const halo = sv('circle', { r: 17, fill: acc, 'fill-opacity': .22 }, S.top), head = sv('circle', { r: 7.5, fill: acc }, S.top);
+  S.fx.innerHTML = '<svg width="100%" height="100%" style="position:absolute;inset:0;mix-blend-mode:multiply;opacity:.55"><filter id="pg"><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" seed="4"/><feColorMatrix values="0 0 0 0 0.45  0 0 0 0 0.38  0 0 0 0 0.3  0 0 0 0.55 -0.2"/></filter><rect width="100%" height="100%" filter="url(#pg)"/></svg><div style="position:absolute;inset:0;background:radial-gradient(ellipse at 50% 50%,transparent 58%,rgba(59,47,38,.26) 100%)"></div>';
+  const dot = `<i style="width:2.3cqh;height:2.3cqh;border:.22cqh solid ${ink}"></i><i style="width:.95cqh;height:.95cqh;background:${acc}"></i>`;
+  const seas = G.labels.sea.slice(0, 3).map(([t, x, y]) => label(S, [x, y], t, 'c caps', { color: ink, opacity: .7 }));
+  const reg = label(S, [G.bruges[0] + 118, G.bruges[1] + 34], 'Belgium', 'c caps', { color: acc, fontSize: '2.1cqh', opacity: 0 });
+  const mB = mark(S, G.bruges, dot), mL = mark(S, G.lucca, dot);
+  const lB = label(S, G.bruges, 'Bruges', 'ne', { color: ink }), lL = label(S, G.lucca, 'Lucca', 'se', { color: ink });
+  return { dur: 8, rest: 6.4, layout: S.layout, setSea, update(t) {
+    S.cam.style.transform = `scale(${lerp(1, 1.612, ease(seg(t, 0, 6)))})`;
+    const rg = seg(t, .6, 1.6); region.setAttribute('fill-opacity', .2 * rg); region.setAttribute('stroke-opacity', .75 * rg); reg.style.opacity = .85 * seg(t, 1.0, 1.6);
+    mB.style.opacity = seg(t, 1.0, 1.3); lB.style.opacity = seg(t, 1.2, 1.5); mL.style.opacity = seg(t, 2.3, 2.6); lL.style.opacity = seg(t, 2.5, 2.8);
+    const p = seg(t, 2.6, 5.6), pt = R.draw(p), ho = p > 0 ? 1 - seg(t, 5.6, 6.1) : 0;
+    for (const c of [head, halo]) { c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y); c.setAttribute('opacity', ho); }
+    S.fade.style.opacity = seg(t, 7.2, 8);
+  } };
+}
+
+/* ---------- B: raking relief ---------- */
+function relief(stage) {
+  const S = mapStage(stage), [X0, Y0, X1, Y1] = G.extent, EW = X1 - X0, EH = Y1 - Y0, pale = '#E9E2D0', gold = '#F2D9A6';
+  stage.style.background = '#0C1116';
+  S.cam.style.transformOrigin = '50% 56%';
+  sv('rect', { x: X0, y: Y0, width: EW, height: EH, fill: '#0C1116' }, S.base);
+  const cp = sv('clipPath', { id: 'cp-relief' }, S.base); sv('path', { d: G.land }, cp);
+  const g = sv('g', { 'clip-path': 'url(#cp-relief)' }, S.base);
+  sv('image', { href: 'relief.jpg', x: X0, y: Y0, width: EW, height: EH, preserveAspectRatio: 'none' }, g);
+  sv('rect', { x: X0, y: Y0, width: EW, height: EH, fill: '#C3B696', style: 'mix-blend-mode:multiply' }, g);
+  sv('path', { d: G.land, fill: 'none', stroke: '#8A8F94', 'stroke-opacity': .5, 'stroke-width': 1, 'vector-effect': 'non-scaling-stroke' }, S.base);
+  const d = smooth([G.bruges, ...G.via, G.lucca]);
+  const glowM = routeParts(S, 'mk-relief-g', d, { stroke: gold, 'stroke-width': 13, 'stroke-linecap': 'round', 'stroke-opacity': .45, style: 'filter:blur(7px)' }, 40);
+  const R = routeParts(S, 'mk-relief', d, { stroke: gold, 'stroke-width': 2.6, 'stroke-linecap': 'round', 'vector-effect': 'non-scaling-stroke' }, 20);
+  const spark = sv('circle', { r: 16, fill: gold, 'fill-opacity': .35, style: 'filter:blur(5px)' }, S.top), head = sv('circle', { r: 5, fill: '#fff6dc' }, S.top);
+  const band = h('div', '', S.fx); css(band, { position: 'absolute', inset: '-20%' });
+  const vig = h('div', '', S.fx); css(vig, { position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 50% 50%,transparent 45%,rgba(0,0,0,.5) 100%)' });
+  const ring = `<i style="width:2.5cqh;height:2.5cqh;border:.24cqh solid ${pale};box-shadow:0 0 1cqh rgba(0,0,0,.6)"></i>`;
+  const sh = { color: pale, textShadow: '0 .2cqh .8cqh rgba(0,0,0,.75)' };
+  const mB = mark(S, G.bruges, ring), mL = mark(S, G.lucca, ring), lB = label(S, G.bruges, 'Bruges', 'ne', sh), lL = label(S, G.lucca, 'Lucca', 'se', sh);
+  return { dur: 8, rest: 6.6, layout: S.layout, update(t) {
+    const mv = ease(seg(t, 2.6, 5.6)), Hh = stage.clientHeight || 540;
+    S.cam.style.transform = `perspective(${(Hh * 1.7).toFixed(0)}px) rotateX(${(18 * mv).toFixed(2)}deg) scale(${lerp(1, 1.55, mv).toFixed(4)})`;
+    const behind = t < 5.6 ? .55 : t < 7.2 ? lerp(.55, .72, seg(t, 5.6, 7.2)) : lerp(.72, 1, seg(t, 7.2, 8)), a = (b) => `rgba(4,6,9,${(1 - b).toFixed(3)})`;
+    const pos = lerp(-12, 118, seg(t, .2, 2.6));
+    band.style.background = t >= 2.6 ? a(behind) : `linear-gradient(100deg, ${a(behind)} 0%, ${a(behind)} ${pos - 17}%, ${a(.97)} ${pos - 8}%, ${a(.08)} ${pos}%, ${a(.08)} 100%)`;
+    mB.style.opacity = seg(t, 1.0, 1.3); lB.style.opacity = seg(t, 1.3, 1.6); mL.style.opacity = seg(t, 2.3, 2.6); lL.style.opacity = seg(t, 2.6, 2.9);
+    const p = seg(t, 2.6, 5.6); glowM.draw(p); const pt = R.draw(p), ho = p > 0 ? 1 - seg(t, 5.6, 6.2) : 0;
+    for (const c of [head, spark]) { c.setAttribute('cx', pt.x); c.setAttribute('cy', pt.y); c.setAttribute('opacity', ho); }
+    S.fade.style.opacity = seg(t, 7.4, 8);
+  } };
+}
+
+/* ---------- C: cut paper, opening from a globe ---------- */
+function paper(stage) {
+  const S = mapStage(stage), [X0, Y0, X1, Y1] = G.extent, EW = X1 - X0, EH = Y1 - Y0, acc = '#C2452F', ink = '#2B2B2B', sea = '#DCE6EA', ground = '#EDF1F2';
+  stage.style.background = ground;
+  sv('rect', { x: X0, y: Y0, width: EW, height: EH, fill: sea }, S.base);
+  sv('path', { d: G.land, fill: '#F6F4EE', style: 'filter:drop-shadow(4px 5px 5px rgba(20,35,45,.22))' }, S.base);
+  sv('path', { d: G.borders, fill: 'none', stroke: '#C4C0B4', 'stroke-width': .9, 'vector-effect': 'non-scaling-stroke' }, S.base);
+  const region = sv('path', { d: G.belgium, fill: acc, 'fill-opacity': 0, stroke: acc, 'stroke-opacity': 0, 'stroke-width': 2, 'vector-effect': 'non-scaling-stroke' }, S.top);
+  const R = routeParts(S, 'mk-paper', smooth([G.bruges, ...G.via, G.lucca]), { stroke: acc, 'stroke-width': 6, 'stroke-linecap': 'round' }, 18);
+  const head = sv('circle', { r: 6.5, fill: acc }, S.top);
+  const cv = h('canvas', '', stage); cv.width = cv.height = 400;
+  css(cv, { position: 'absolute', left: '50%', top: '50%', width: '78cqh', height: '78cqh', transform: 'translate(-50%,-50%)', filter: 'drop-shadow(0 2.2cqh 2.6cqh rgba(20,35,45,.28))' });
+  stage.insertBefore(cv, S.fx);
+  const dot = `<i style="width:1.15cqh;height:1.15cqh;background:${acc}"></i>`, pulse = `<i class="pl" style="border:.2cqh solid ${acc}"></i>`;
+  const mB = mark(S, G.bruges, pulse + dot), mL = mark(S, G.lucca, pulse + dot);
+  const st = { color: ink, fontStyle: 'normal', opacity: 0 };
+  const lB = label(S, G.bruges, 'Bruges', 'ne', st), lL = label(S, G.lucca, 'Lucca', 'se', st);
+  const reg = label(S, [G.bruges[0] + 118, G.bruges[1] + 34], 'Belgium', 'c caps', { color: acc, fontSize: '2.1cqh', opacity: 0 });
+  // globe: per-pixel orthographic view of an equirectangular land mask (the way the engine would draw it)
+  let mask = null; const N = 400, ctx = cv.getContext('2d'), img = ctx.createImageData(N, N), vec = [];
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const u = (x + .5) / N * 2 - 1, v = 1 - (y + .5) / N * 2, r2 = u * u + v * v; if (r2 <= 1) vec.push(y * N + x, u, v, Math.sqrt(1 - r2)); }
+  const im = new Image(); im.onload = () => { const c = document.createElement('canvas'); c.width = 1440; c.height = 720; const x = c.getContext('2d'); x.drawImage(im, 0, 0); try { mask = x.getImageData(0, 0, 1440, 720).data; } catch (e) { mask = null; } api.update(api._t); }; im.src = 'landmask.png';
+  let lastKey = '';
+  function globe(lon0, lat0) {
+    if (!mask) return; const key = lon0.toFixed(1) + ',' + lat0.toFixed(1); if (key === lastKey) return; lastKey = key;
+    const d = img.data, cl = Math.cos(lat0 * Math.PI / 180), sl = Math.sin(lat0 * Math.PI / 180), l0 = lon0 * Math.PI / 180;
+    d.fill(0);
+    for (let i = 0; i < vec.length; i += 4) {
+      const o = vec[i] * 4, x = vec[i + 1], y = vec[i + 2], z = vec[i + 3];
+      const lat = Math.asin(clamp(y * cl + z * sl, -1, 1)), lon = l0 + Math.atan2(x, z * cl - y * sl);
+      let mx = Math.floor(((lon / (2 * Math.PI) + .5) % 1 + 1) % 1 * 1440), my = Math.min(719, Math.floor((.5 - lat / Math.PI) * 720));
+      const land = mask[(my * 1440 + mx) * 4] > 127, s = .9 + .1 * z, edge = z < .1 ? z / .1 : 1;
+      d[o] = (land ? 250 : 205) * s; d[o + 1] = (land ? 247 : 220) * s; d[o + 2] = (land ? 240 : 228) * s; d[o + 3] = 255 * edge;
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+  const api = { dur: 8, rest: 6.6, _t: 6.6, layout: S.layout, update(t) {
+    api._t = t;
+    const turn = easeOut(seg(t, 0, 1.3)), x = ease(seg(t, 1.2, 2.0));
+    if (t < 2.05) globe(lerp(-58, G.center[0], turn), lerp(22, G.center[1], turn));
+    css(cv, { opacity: 1 - x, transform: `translate(-50%,-50%) scale(${lerp(1, 4.2, x * x)})`, visibility: t < 2.05 ? 'visible' : 'hidden' });
+    S.cam.style.opacity = x; S.cam.style.transform = `scale(${lerp(1.25, 1.612, easeOut(x))})`;
+    const rg = seg(t, 1.6, 2.6); region.setAttribute('fill-opacity', .18 * rg); region.setAttribute('stroke-opacity', .8 * rg); reg.style.opacity = .9 * seg(t, 2.0, 2.6);
+    for (const [m, l, at] of [[mB, lB, 2.0], [mL, lL, 3.0]]) {
+      m.style.opacity = seg(t, at, at + .3); l.style.opacity = .9 * seg(t, at + .2, at + .5);
+      const q = seg(t, at, at + 1.2), pl = m.querySelector('.pl'); css(pl, { width: lerp(1, 5.2, easeOut(q)) + 'cqh', height: lerp(1, 5.2, easeOut(q)) + 'cqh', opacity: q > 0 && q < 1 ? .7 * (1 - q) : 0 });
+    }
+    const p = ease(seg(t, 3.4, 6.2)), pt = R.draw(p); head.setAttribute('cx', pt.x); head.setAttribute('cy', pt.y); head.setAttribute('opacity', p > 0 ? 1 : 0);
+    S.fade.style.opacity = seg(t, 7.5, 8);
+  } };
+  return api;
+}
+
+/* ---------- picture scenes (the Arnolfini Portrait, source space 4386 x 6000) ---------- */
+const SW = 4386, SH = 6000;
+function picStage(stage, filter) {
+  stage.style.background = '#0d0e10';
+  const imgs = [h('img', 'pic', stage)]; imgs[0].src = 'arnolfini.jpg'; imgs[0].alt = '';
+  if (filter) { const b = h('img', 'pic', stage); b.src = 'arnolfini.jpg'; b.alt = ''; b.style.filter = filter; imgs.push(b); }
+  const dim = h('div', 'dim', stage), over = h('div', 'over', stage), fade = h('div', 'fadeout', stage);
+  let crop = [0, 0, SW, SW * 9 / 16];
+  const setCrop = (c) => { crop = c; for (const i of imgs) css(i, { width: (SW / c[2] * 100) + '%', left: (-c[0] / c[2] * 100) + '%', top: (-c[1] / c[3] * 100) + '%' }); };
+  const at = (node, x, y) => css(node, { left: ((x - crop[0]) / crop[2] * 100) + '%', top: ((y - crop[1]) / crop[3] * 100) + '%' });
+  return { stage, imgs, dim, over, fade, setCrop, at, crop: () => crop };
+}
+const mix = (a, b, x) => a.map((v, i) => lerp(v, b[i], x));
+
+function labels(stage) {
+  const P = picStage(stage), crop = [300, 330, 3840, 2160]; P.setCrop(crop);
+  const L = [['One candle, lit', 1856, 420, 'w', .7], ['Latin inscription', 2220, 1390, 'n', 1.6], ['Convex mirror', 2220, 1790, 's', 2.5], ['Amber beads', 1810, 1650, 'w', 3.4], ['A brush', 2700, 1560, 'e', 4.3]]
+    .map(([t, x, y, side, at]) => { const n = h('div', 'lb ' + side, P.over, t); css(n, { color: '#F1EADB', textShadow: '0 .2cqh .9cqh rgba(0,0,0,.85)', fontSize: '3.9cqh' }); if (side === 's') n.style.transform = 'translate(-50%,22cqh)'; if (side === 'n') n.style.transform = 'translate(-50%,-9.6cqh)'; P.at(n, x, y); return [n, at]; });
+  return { dur: 7, rest: 5.6, update(t) { P.dim.style.opacity = .24 * seg(t, .3, .9) * (1 - seg(t, 6.3, 6.9)); for (const [n, at] of L) n.style.opacity = seg(t, at, at + .35) * (1 - seg(t, 6.2, 6.6)); P.fade.style.opacity = 0; } };
+}
+
+function timeline(stage) {
+  stage.style.background = '#131519';
+  const over = h('div', 'over', stage), fade = h('div', 'fadeout', stage), Y = 56, X = (yr) => 9 + (yr - 1424) / 11 * 82;
+  const line = h('div', 'tl-line', over); css(line, { left: '6%', top: Y + '%', width: '88%' });
+  const ticks = []; for (let y = 1424; y <= 1435; y++) { const k = h('div', '', over); css(k, { position: 'absolute', left: X(y) + '%', top: (Y - (y % 5 ? .9 : 1.8)) + '%', width: '1px', height: (y % 5 ? 1.8 : 3.6) + '%', background: '#8d877a' }); ticks.push(k); }
+  const items = [[1425, 'Painter to Philip the Good', -1, .8], [1426, 'Giovanni marries Costanza Trenta', 1, 1.7], [1431, 'Van Eyck settles in Bruges', -1, 2.6], [1432, 'The Ghent Altarpiece', 1, 3.5], [1433, 'Costanza is dead', -1, 4.4], [1434, 'The Arnolfini Portrait', 1, 5.3]].map(([yr, text, side, at], i, all) => {
+    const stalk = h('div', '', over), yrN = h('div', 'txt', over, String(yr)), tx = h('div', 'txt', over, text), last = i === all.length - 1, len = side < 0 ? (i === 4 ? 24 : 13) : (last ? 13 : (i === 3 ? 24 : 13));
+    css(stalk, { position: 'absolute', left: X(yr) + '%', width: '1px', background: last ? '#E9E2D0' : '#8d877a', top: (side < 0 ? Y - len : Y) + '%', height: len + '%', transformOrigin: side < 0 ? '50% 100%' : '50% 0%' });
+    css(yrN, { left: X(yr) + '%', top: (side < 0 ? Y - len - 11.5 : Y + len + 2) + '%', transform: 'translateX(-50%)', font: `500 4.6cqh/1 var(--serif)` });
+    css(tx, { left: X(yr) + '%', top: (side < 0 ? Y - len - 6 : Y + len + 7.5) + '%', transform: yr > 1432 ? 'translateX(-78%)' : yr < 1427 ? 'translateX(-22%)' : 'translateX(-50%)', font: 'italic 400 3.2cqh/1 var(--serif)', whiteSpace: 'nowrap' });
+    return { stalk, yrN, tx, at, last };
+  });
+  const dotN = h('div', '', over); css(dotN, { position: 'absolute', left: X(1434) + '%', top: Y + '%', width: '1.6cqh', height: '1.6cqh', borderRadius: '50%', background: '#E9E2D0', transform: 'translate(-50%,-50%)' });
+  return { dur: 8, rest: 6.8, update(t) {
+    line.style.transform = `scaleX(${ease(seg(t, 0, .8))})`; ticks.forEach((k, i) => k.style.opacity = seg(t, .2 + i * .04, .5 + i * .04));
+    const focus = seg(t, 6.0, 6.8);
+    for (const it of items) { const a = seg(t, it.at, it.at + .35), d = it.last ? 1 : lerp(1, .55, focus); it.stalk.style.transform = `scaleY(${easeOut(a)})`; it.stalk.style.opacity = d; it.yrN.style.opacity = seg(t, it.at + .2, it.at + .5) * d; it.tx.style.opacity = seg(t, it.at + .35, it.at + .7) * d; }
+    dotN.style.opacity = seg(t, 5.3, 5.6); dotN.style.transform = `translate(-50%,-50%) scale(${lerp(1, 1.5, focus)})`;
+    fade.style.opacity = seg(t, 7.5, 8);
+  } };
+}
+
+function number(stage) {
+  const P = picStage(stage); P.setCrop([2050, 2330, 2336, 1314]);
+  const rows = [['An ordinary gown', '600', 12, 1.0, 26], ['This gown', '2,000', 40, 2.9, 56]].map(([name, val, n, at, y]) => {
+    const nm = h('div', 'txt', P.over, name), vl = h('div', 'txt', P.over, val), un = h('div', 'txt', P.over, 'pelts'), dots = [];
+    css(nm, { left: '8%', top: y + '%', font: 'italic 400 3.6cqh/1 var(--serif)' });
+    css(vl, { left: '8%', top: (y + 5.2) + '%', font: '500 12cqh/1 var(--serif)', fontVariantNumeric: 'lining-nums' });
+    css(un, { left: (8 + (val.length > 3 ? 22.5 : 13.5)) + '%', top: (y + 12.2) + '%', font: 'italic 400 3.4cqh/1 var(--serif)', opacity: 0 });
+    for (let i = 0; i < n; i++) { const d = h('div', '', P.over); css(d, { position: 'absolute', left: (9 + (i % 20) * 2.05) + '%', top: (y + 19.5 + Math.floor(i / 20) * 3.6) + '%', width: '1.5cqh', height: '1.5cqh', borderRadius: '50%', background: '#E9E2D0', opacity: 0 }); dots.push(d); }
+    return { nm, vl, un, dots, at };
+  });
+  const cap = h('div', 'txt', P.over, 'each dot is fifty squirrel pelts'); css(cap, { left: '8%', top: '88%', font: 'italic 400 2.9cqh/1 var(--serif)', opacity: 0 });
+  return { dur: 7, rest: 5.8, update(t) {
+    const out = 1 - seg(t, 6.3, 6.8); P.dim.style.opacity = .62 * seg(t, .2, .9) * out + (1 - out) * 0;
+    for (const r of rows) { r.nm.style.opacity = seg(t, r.at, r.at + .35) * out; r.vl.style.opacity = seg(t, r.at + .25, r.at + .6) * out; r.un.style.opacity = .85 * seg(t, r.at + .4, r.at + .75) * out; const per = 1.1 / r.dots.length; r.dots.forEach((d, i) => d.style.opacity = .92 * seg(t, r.at + .6 + i * per, r.at + .6 + i * per + .12) * out); }
+    cap.style.opacity = .7 * seg(t, 4.8, 5.3) * out;
+  } };
+}
+
+function tree(stage) {
+  stage.style.background = '#131519';
+  const over = h('div', 'over', stage), fade = h('div', 'fadeout', stage);
+  const svg = sv('svg', { viewBox: '0 0 1600 900', preserveAspectRatio: 'none', style: 'position:absolute;inset:0;width:100%;height:100%' }); stage.insertBefore(svg, over);
+  const node = (x, y, name, sub, big) => { const n = h('div', 'txt', over); n.innerHTML = `<div style="font:${big ? '500 4.3cqh' : '400 3.9cqh'}/1.1 var(--serif)">${name}</div>` + (sub ? `<div style="font:italic 400 2.8cqh/1.5 var(--serif);opacity:.72">${sub}</div>` : ''); css(n, { left: x / 16 + '%', top: y / 9 + '%', transform: 'translate(-50%,-50%)', textAlign: 'center', whiteSpace: 'nowrap', opacity: 0 }); return n; };
+  const edge = (d, lab, lx, ly) => { const p = sv('path', { d, fill: 'none', stroke: '#8d877a', 'stroke-width': 1.6, 'vector-effect': 'non-scaling-stroke' }, svg), L = p.getTotalLength() || 300; p.setAttribute('stroke-dasharray', L + ' ' + L); const l = lab ? h('div', 'txt', over, lab) : null; if (l) css(l, { left: lx / 16 + '%', top: ly / 9 + '%', transform: 'translate(-50%,-50%)', font: 'italic 400 2.6cqh/1 var(--serif)', opacity: 0, color: '#b9b2a2', whiteSpace: 'nowrap' }); return { p, L, l }; };
+  const N = { duke: node(400, 170, 'Philip the Good', 'Duke of Burgundy', true), jan: node(400, 470, 'Jan van Eyck', 'painter', true), fam: node(1170, 170, 'The Arnolfini', 'merchants from Lucca', true), gio: node(930, 470, 'Giovanni di Nicolao', 'Arnolfini'), cos: node(1400, 470, 'Costanza Trenta', 'dead by 1433'), pic: node(800, 760, 'The Arnolfini Portrait', '1434', true) };
+  const E = [edge('M400,235 L400,415', 'court painter, 1425', 535, 325), edge('M1170,235 L1170,330 L930,330 L930,420', null), edge('M1100,462 L1262,462', 'married 1426', 1181, 432), edge('M400,535 L400,640 L680,700', 'paints', 470, 668), edge('M930,535 L930,640 L905,700', 'buys', 975, 640)];
+  const order = [['duke', 0.5], ['jan', 1.5], ['fam', 2.4], ['gio', 3.3], ['cos', 4.2], ['pic', 5.6]], eAt = [1.0, 2.8, 3.8, 5.0, 5.2];
+  return { dur: 8, rest: 6.9, update(t) {
+    for (const [k, at] of order) N[k].style.opacity = seg(t, at, at + .4);
+    E.forEach((e, i) => { const p = ease(seg(t, eAt[i], eAt[i] + .7)); e.p.setAttribute('stroke-dashoffset', e.L * (1 - p)); if (e.l) e.l.style.opacity = seg(t, eAt[i] + .4, eAt[i] + .8); });
+    fade.style.opacity = seg(t, 7.5, 8);
+  } };
+}
+
+function states(stage) {
+  const P = picStage(stage, 'grayscale(1) contrast(1.45) brightness(1.08)'); P.setCrop([2650, 950, 1700, 956]);
+  const cap = h('div', 'txt caps', P.over); css(cap, { left: '4.5%', bottom: '6%', fontSize: '2.7cqh', textShadow: '0 .2cqh .8cqh rgba(0,0,0,.9)' });
+  return { dur: 7, rest: 3.2, update(t) {
+    const b = seg(t, 1.5, 2.5) * (1 - seg(t, 5.0, 5.6)); P.imgs[1].style.opacity = b;
+    cap.textContent = b > .5 ? 'Infrared' : 'Colour'; cap.style.opacity = Math.abs(b - .5) * 2 * seg(t, .3, .7) * (1 - seg(t, 6.4, 6.9));
+  } };
+}
+
+function doclit(stage) {
+  const P = picStage(stage), a = [900, 560, 2640, 1485], b = [1420, 1005, 1600, 900];
+  const hole = h('div', 'hole', stage); stage.insertBefore(hole, P.over);
+  const tr = h('div', 'txt', P.over, 'Jan van Eyck was here. 1434'), or = h('div', 'txt caps', P.over, 'Johannes de eyck fuit hic · 1434');
+  css(tr, { left: '50%', top: '76%', transform: 'translateX(-50%)', font: 'italic 400 4.4cqh/1 var(--serif)', whiteSpace: 'nowrap', opacity: 0 }); css(or, { left: '50%', top: '84.5%', transform: 'translateX(-50%)', fontSize: '2.3cqh', whiteSpace: 'nowrap', opacity: 0 });
+  return { dur: 7, rest: 5.6, update(t) {
+    const c = mix(a, b, ease(seg(t, 0, 2.6))); P.setCrop(c);
+    const x0 = (2220 - 470 - c[0]) / c[2] * 100, y0 = (1390 - 150 - c[1]) / c[3] * 100, w = 940 / c[2] * 100, hh = 300 / c[3] * 100, out = 1 - seg(t, 6.3, 6.8);
+    css(hole, { left: x0 + '%', top: y0 + '%', width: w + '%', height: hh + '%', opacity: seg(t, 1.0, 1.7) * out });
+    tr.style.opacity = seg(t, 2.4, 2.8) * out; or.style.opacity = .7 * seg(t, 2.8, 3.2) * out;
+  } };
+}
+
+/* ---------- players ---------- */
+const BUILD = { plate, relief, paper, labels, timeline, number, tree, states, doclit }, players = [];
+const reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+document.querySelectorAll('figure[data-scene]').forEach((fig) => {
+  const name = fig.dataset.scene, stage = fig.querySelector('.stage'), btn = fig.querySelector('button'), rng = fig.querySelector('input'), tc = fig.querySelector('.tc');
+  let sc; try { if ((name === 'plate' || name === 'relief' || name === 'paper') && !G) throw new Error('no map data'); sc = BUILD[name](stage); } catch (e) { stage.textContent = 'Không dựng được cảnh này: ' + e.message; stage.style.color = '#fff'; stage.style.padding = '12px'; return; }
+  const P = { t: sc.rest, playing: false, last: 0,
+    render() { const t = Math.min(P.t, sc.dur); sc.update(t); if (sc.layout) sc.layout(); rng.value = t; tc.textContent = t.toFixed(1) + ' s'; },
+    stop() { P.playing = false; btn.textContent = 'Phát'; },
+    play() { players.forEach((q) => q !== P && q.stop()); if (P.t >= sc.dur - .05 || P.t === sc.rest) P.t = 0; P.playing = true; btn.textContent = 'Dừng'; P.last = performance.now(); requestAnimationFrame(P.tick); },
+    tick(now) { if (!P.playing) return; P.t += Math.min(.1, (now - P.last) / 1000); P.last = now; if (P.t > sc.dur + 1.2) P.t = 0; P.render(); requestAnimationFrame(P.tick); } };
+  btn.addEventListener('click', () => P.playing ? P.stop() : P.play());
+  rng.addEventListener('input', () => { P.stop(); P.t = parseFloat(rng.value); P.render(); });
+  players.push(P); P.render();
+  fig.querySelectorAll('.seg button').forEach((b) => b.addEventListener('click', () => { if (!sc.setSea) return; sc.setSea(b.dataset.v); fig.querySelectorAll('.seg button').forEach((q) => q.setAttribute('aria-pressed', q === b ? 'true' : 'false')); }));
+});
+const again = () => players.forEach((p) => p.render());
+window.addEventListener('resize', again); window.addEventListener('load', again);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(again);
+window.__seek = (i, t) => { const p = players[i]; if (p) { p.stop(); p.t = t; p.render(); } };
+if (!reduce && players[0] && 'IntersectionObserver' in window) { const io = new IntersectionObserver((es) => { if (es.some((e) => e.isIntersecting)) { io.disconnect(); if (!players.some((p) => p.playing)) players[0].play(); } }, { threshold: .6 }); io.observe(document.querySelector('figure[data-scene="plate"] .stage')); }
+})();
+</script>

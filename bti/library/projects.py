@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import datetime as dt
 import re
+import shutil
 from pathlib import Path
 
-from . import catalogue, config, extract
+from . import catalogue, config, dossiers
 
 PID_RE = re.compile(r"[a-z0-9][a-z0-9_-]{0,63}")
-STAGES = ["selected", "script", "voiced", "storyboard", "approved", "rendered"]
+STAGES = ["selected", "script", "voiced", "picked", "storyboard", "approved", "rendered"]
 
 
 class ProjectError(ValueError):
@@ -32,10 +33,48 @@ def parse_work_id(wid: str) -> tuple[str, int]:
     return bid, int(n)
 
 
-def create_project(work_ids: list[str], slug: str | None = None, projects_root: Path | None = None) -> dict:
+def _work_level(wid: str) -> str:
+    """The trust level (normal, restored or low) of one work of an artwork; the level of its book when the work is not in the catalogue."""
+    bid, n = wid.split("/")
+    w = catalogue.load_work(bid, int(n))
+    return catalogue.work_trust(w)["trust"] if w else catalogue.book_trust(bid)["trust"]
+
+
+def _write_intro_silences(d: Path) -> None:
+    """A project the app creates gets the two silences of the new opening (`intro` of config/voice.json: the lead before the first word and
+    the silence that holds the channel-name beat) written into its own voice settings. A project made another way (by hand, in a test, an
+    older one) has none and keeps `silence.lead` and `silence.title`."""
+    from bti.voice import files as voice_files
+    from bti.voice.config import SILENCE_RANGES, load_voice_config
+    intro = load_voice_config().get("intro")
+    own = {k: round(float(intro[k]), 3) for k, (lo, hi) in SILENCE_RANGES.items()
+           if isinstance(intro, dict) and isinstance(intro.get(k), (int, float)) and not isinstance(intro.get(k), bool) and lo <= intro[k] <= hi}
+    if own:
+        voice_files.write_settings(d, own)
+
+
+def create_project(work_ids: list[str] | None, slug: str | None = None, projects_root: Path | None = None,
+                   artwork_key: str | None = None, exclude: list[str] | None = None) -> dict:
+    """Project from an ARTWORK (`artwork_key`, minus the `exclude`d work ids) or from explicit `work_ids`.
+    Writes project.json and source/ (a copy of the dossier and its body texts as they are now)."""
     root = Path(projects_root or config.PROJECTS_DIR)
+    if artwork_key is not None:
+        art = catalogue.load_artworks().get(artwork_key) if isinstance(artwork_key, str) else None
+        if art is None:
+            raise ProjectError(f"artwork {artwork_key!r} not found", 404)
+        if work_ids:
+            raise ProjectError("give artwork_key or work_ids, not both")
+        if exclude is None:  # default: `low` sources are left out unless nothing else is left (normal and restored sources stay)
+            low = {wid for wid in art["works"] if _work_level(wid) == "low"}
+            exclude = list(low) if len(low) < len(art["works"]) else []
+        if not (isinstance(exclude, list) and all(isinstance(x, str) for x in exclude)):
+            raise ProjectError("exclude must be a list of strings")
+        excl = set(exclude)
+        work_ids = [w for w in art["works"] if w not in excl]
     if not isinstance(work_ids, list) or not work_ids:
         raise ProjectError("work_ids must be a non-empty list")
+    if not all(isinstance(w, str) for w in work_ids):
+        raise ProjectError("work_ids must be a list of strings")
     if len(set(work_ids)) != len(work_ids):
         raise ProjectError("duplicate work ids")
     works = []
@@ -58,50 +97,87 @@ def create_project(work_ids: list[str], slug: str | None = None, projects_root: 
     if d.exists():
         raise ProjectError(f"project {slug!r} already exists", 409)
     keys = [w.get("artwork_key") for w in works]
-    d.mkdir(parents=True)
+    key = artwork_key or keys[0]
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        d.mkdir()                       # exclusive: of two simultaneous creates of one slug, one gets the folder, the other 409
+    except FileExistsError:
+        raise ProjectError(f"project {slug!r} already exists", 409)
     try:
         src = d / "source"
+        tmp = d / ".dossier_tmp"
+        doc = dossiers.build_one(key, {"works": [w["id"] for w in works]}, out_dir=tmp)
         src.mkdir()
-        sources = []
-        for w in works:
-            bid = w["id"].split("/")[0]
-            t = extract.work_text(w)
-            base = f"{bid}_{w['n']:03d}"
-            (src / f"{base}.txt").write_text(t["text"] + "\n", encoding="utf-8")
-            catalogue.write_json(src / f"{base}.json", {
-                "work_id": w["id"], "book_id": bid, "title": w["title"], "artist": w.get("artist"),
-                "year": w.get("year"), "pdf_pages": w["pdf_pages"], "ocr": t["ocr"],
-                "text_source": t["text_source"], "words": len(t["text"].split()),
-                "note": "Trích từ sách có bản quyền, chỉ dùng nội bộ để nghiên cứu."})
-            sources.append({"work_id": w["id"], "book_id": bid, "pdf_pages": w["pdf_pages"]})
-        proj = {"id": slug, "title": head["title"], "artist": head.get("artist"), "year": head.get("year"),
+        for s in doc["sources"]:
+            base = Path(s["file"]).name
+            shutil.copyfile(tmp / s["file"], src / base)
+            s["file"] = base
+        catalogue.write_json(src / "dossier.json", doc)
+        shutil.rmtree(tmp)
+        sources = [{"work_id": s["work_id"], "book_id": s["book_id"], "pdf_pages": s["pdf_pages"]}
+                   for s in doc["sources"]]
+        proj = {"id": slug, "title": doc["identity"]["title"] or head["title"],
+                "artist": doc["identity"]["artist"], "year": doc["identity"]["year"],
                 "stage": "selected", "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
-                "sources": sources, "artwork_key": keys[0]}
+                "sources": sources, "artwork_key": key, "dossier": "source/dossier.json",
+                "library_dossier": f"library/dossiers/{key}/dossier.json"}
         if len(set(keys)) > 1:
             proj["mixed_artwork_keys"] = keys
         catalogue.write_json(d / "project.json", proj)
+        _write_intro_silences(d)
     except BaseException:
-        import shutil
         shutil.rmtree(d, ignore_errors=True)
         raise
     return proj
 
 
-def infer_stage(d: Path) -> str:
-    """selected < script < voiced < storyboard < approved < rendered, from which files exist."""
+def _safe_state(module: str, d: Path) -> dict:
+    """`state(project_dir)` of a stage package, never raising: {"state": "none"|"running"|"stale"|"done", "detail": str, ...}."""
+    try:
+        import importlib
+        out = importlib.import_module(module).state(d)
+        if isinstance(out, dict) and out.get("state") in ("none", "running", "stale", "done"):
+            return out
+    except Exception:           # noqa: BLE001 - a stage that cannot answer must not break the home list
+        pass
+    return {"state": "none", "detail": ""}
+
+
+def stage_states(d: Path) -> dict:
+    """What each stage package says about the project, computed once and shared by the stage and the pipeline:
+    {"voice": {...}, "picks": {...}, "export": {...}} (the draft's own state is not needed for steps or the stage)."""
+    return {"voice": _safe_state("bti.voice", d), "picks": _safe_state("bti.picks", d), "export": _safe_state("bti.export", d)}
+
+
+def infer_stage(d: Path, states: dict | None = None) -> str:
+    """selected < script < voiced < picked < storyboard < approved < rendered: the furthest step for which every earlier step
+    is done (design section 2).
+
+    voiced   = the voice is fresh (`bti.voice.state` is done). A project that has `audio/` or `timing.json` but no voice manifest
+               (an imported one) keeps its old meaning: those files are the voice.
+    picked   = voiced and the picks approval is fresh.
+    storyboard = a storyboard.json exists (an imported project has one without voice or picks: it still counts).
+    approved = the storyboard approval names the current revision (a stale one leaves the stage at `storyboard`).
+    rendered = a fresh export, or (old projects) a video file in render/, output/, out/ or the project folder."""
     import json
+    st = states if states is not None else stage_states(d)
     stage = "selected"
     if any((d / n).is_file() for n in ("script.md", "script.txt", "script.json")):
         stage = "script"
     audio = d / "audio"
-    if (d / "timing.json").is_file() or (audio.is_dir() and any(audio.iterdir())):
+    legacy_voice = (d / "timing.json").is_file() or (audio.is_dir() and any(audio.iterdir()))
+    has_manifest = (d / "voice" / "voice.json").is_file()
+    voiced = st["voice"]["state"] == "done" or (legacy_voice and not has_manifest)
+    if voiced:
         stage = "voiced"
+        if st["picks"]["state"] == "done":
+            stage = "picked"
     sbf = d / "storyboard.json"
     if sbf.is_file():
         stage = "storyboard"
         try:
-            appr = (json.loads(sbf.read_text(encoding="utf-8")).get("approvals") or {}).get("storyboard")
-            if appr:
+            from bti.editor.common import storyboard_approval      # the ONE rule: an approval counts only for the current revision
+            if storyboard_approval(json.loads(sbf.read_text(encoding="utf-8"))) == "fresh":
                 stage = "approved"
         except Exception:
             pass
@@ -109,6 +185,6 @@ def infer_stage(d: Path) -> str:
             p = d / sub
             if p.is_dir() and any(p.glob("*.mp4")):
                 stage = "rendered"
-        if any(d.glob("*.mp4")):
+        if any(d.glob("*.mp4")) or st["export"]["state"] == "done":
             stage = "rendered"
     return stage

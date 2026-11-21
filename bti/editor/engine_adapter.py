@@ -9,12 +9,39 @@ from __future__ import annotations
 
 import importlib
 import threading
+import time
 from pathlib import Path
 from typing import Any
+
+from bti.engine.errors import DataError
 
 from .engine_stub import StubProject, load_style_stub
 
 ENGINE_LOCK = threading.RLock()
+
+
+def draw_check_stepwise(project, storyboard: dict | None = None, width: int = 320, threads: int | None = None) -> list[dict]:
+    """`project.draw_check` with `ENGINE_LOCK` held ONLY for compiling the scene (the first step).
+    The samples are drawn by a thread pool that does NOT hold `ENGINE_LOCK`, so other requests are served meanwhile."""
+    try:
+        it = project.draw_check_iter(storyboard, width, threads=threads)
+    except TypeError:
+        it = project.draw_check_iter(storyboard, width)
+    try:
+        # Step 1: compile the scene under ENGINE_LOCK
+        with ENGINE_LOCK:
+            try:
+                next(it)
+            except StopIteration as done:
+                return done.value or []
+        # Step 2+: sample frames drawn by the pool WITHOUT holding ENGINE_LOCK
+        while True:
+            try:
+                next(it)
+            except StopIteration as done:
+                return done.value or []
+    finally:
+        it.close()
 
 
 def import_facade(name: str) -> Any | None:
@@ -39,30 +66,44 @@ class EngineAdapter:
         self.mode = "real" if module is not None else "stub"
         self.fallbacks: dict[str, str] = {}
         self._projects: dict[str, Any] = {}
+        self._previews: dict[str, tuple[Any, threading.RLock]] = {}
+
+    def _open(self, pid: str, record_fallback: bool):
+        pdir = self.projects_root / pid
+        p = None
+        if self.module is not None:
+            try:
+                p = self.module.open_project(pdir)
+            except BaseException as e:  # noqa: BLE001
+                if isinstance(e, (KeyboardInterrupt, SystemExit, DataError)):
+                    raise                    # damaged data is the project's problem, not a reason to run the stub
+                if record_fallback:
+                    self.fallbacks[pid] = f"{type(e).__name__}: {e}"[:300]
+        return p if p is not None else StubProject(pdir, self.style_root)
 
     def project(self, pid: str):
         p = self._projects.get(pid)
         if p is not None:
             return p
-        pdir = self.projects_root / pid
         with ENGINE_LOCK:
             p = self._projects.get(pid)
             if p is None:
-                if self.module is not None:
-                    try:
-                        p = self.module.open_project(pdir)
-                    except BaseException as e:  # noqa: BLE001
-                        if isinstance(e, (KeyboardInterrupt, SystemExit)):
-                            raise
-                        self.fallbacks[pid] = f"{type(e).__name__}: {e}"[:300]
-                        p = None
-                if p is None:
-                    p = StubProject(pdir, self.style_root)
-                self._projects[pid] = p
+                p = self._projects[pid] = self._open(pid, True)
         return p
+
+    def preview_project(self, pid: str):
+        """(project, lock) for preview rendering: a SECOND engine instance of the project with its own lock, so that a long
+        render never holds ENGINE_LOCK (stills, validation and opening a project keep answering). The image and layer caches
+        are process-wide and thread-safe, so the two instances share them."""
+        with ENGINE_LOCK:
+            hit = self._previews.get(pid)
+            if hit is None:
+                hit = self._previews[pid] = (self._open(pid, False), threading.RLock())
+        return hit
 
     def forget(self, pid: str) -> None:
         self._projects.pop(pid, None)
+        self._previews.pop(pid, None)
 
     def load_style(self, style_id: str) -> dict:
         if self.module is not None:

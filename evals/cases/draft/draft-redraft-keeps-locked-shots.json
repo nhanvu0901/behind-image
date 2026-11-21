@@ -1,0 +1,28 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-redraft-keeps-locked-shots",
+  "step": "draft",
+  "title": "A re-draft leaves the shots the owner locked exactly as they are",
+  "why": "skills/storyboard_draft/TASK.template.md rule 10: never touch a locked shot; a human decision outranks the agent's.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "as_is_locked"
+  },
+  "request": {
+    "body": {
+      "chapters": [
+        "c02"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "locked",
+      "kind": "draft.locked_shots_unchanged"
+    },
+    {
+      "id": "no-errors",
+      "kind": "draft.no_error_issues"
+    }
+  ]
+}

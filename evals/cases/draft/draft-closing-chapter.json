@@ -1,0 +1,29 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-closing-chapter",
+  "step": "draft",
+  "title": "The closing chapter (c08) is drafted alone without error",
+  "why": "skills/storyboard_draft/TASK.template.md rules 3 to 5 for the last chapter: it must run to the end of the voice.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {
+    "body": {
+      "chapters": [
+        "c08"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "no-errors",
+      "kind": "draft.no_error_issues"
+    },
+    {
+      "id": "reasons",
+      "kind": "draft.every_shot_has_a_reason",
+      "min_share": 0.9
+    }
+  ]
+}

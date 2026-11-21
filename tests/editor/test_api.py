@@ -207,7 +207,7 @@ def test_frame_get_and_disk_cache(client, root):
 
 
 def test_frame_cache_control_and_rev(client, state):
-    r = client.get(f"{P}/frame", params={"t": 1, "rev": state["rev"]})
+    r = client.get(f"{P}/frame", params={"t": 1, "rev": state["render_key"]})
     assert "immutable" in r.headers["cache-control"]
     assert "immutable" not in client.get(f"{P}/frame", params={"t": 1, "rev": "old"}).headers["cache-control"]
 
@@ -407,10 +407,14 @@ def test_media_search_and_import(client):
     assert client.get(j["asset"]["thumb_url"]).status_code == 200
 
 
-def test_media_import_licence_rejected(client):
-    bad = next(x for x in client.get("/api/media/search", params={"limit": 50}).json() if not x["licence_ok"])
+def test_media_import_licence_is_advisory(client):
+    """The licence gate only flags (design 2026-11-16, section 6): a restricted or unknown licence is imported with `credit.flag`."""
+    cands = client.get("/api/media/search", params={"limit": 50}).json()
+    bad = next(x for x in cands if not x["licence_ok"])
+    assert bad["flag"] in ("rejected", "unknown")
     r = client.post(f"{P}/assets/import", json={"source": bad["source"], "source_id": bad["source_id"]})
-    assert r.status_code == 422 and r.json()["reason"]
+    assert r.status_code == 200, r.text
+    assert r.json()["asset"]["credit"]["flag"] == bad["flag"]
     assert client.post(f"{P}/assets/import", json={"source": "x"}).status_code == 422
     assert client.post(f"{P}/assets/import", json={"source": "commons", "source_id": "nope"}).status_code == 404
 
@@ -428,9 +432,12 @@ def test_upload(client, root):
     assert r.status_code == 200, r.text
     a = r.json()["asset"]
     assert (root / PID / a["file"]).is_file() and a["width"] == 40 and a["credit"]["licence"] == "CC0"
-    bad = client.post(f"{P}/assets/upload", data={**form, "licence": "CC BY-NC 4.0"},
-                      files={"file": ("p.png", _png(), "image/png")})
-    assert bad.status_code == 422
+    nc = client.post(f"{P}/assets/upload", data={**form, "licence": "CC BY-NC 4.0"},
+                     files={"file": ("p.png", _png(), "image/png")})
+    assert nc.status_code == 200 and nc.json()["asset"]["credit"]["flag"] == "rejected"      # flagged, never refused
+    bare = client.post(f"{P}/assets/upload", data={}, files={"file": ("q.png", _png(), "image/png")})
+    assert bare.status_code == 200, bare.text                                                 # no licence, source or author needed
+    assert bare.json()["asset"]["credit"]["flag"] in ("unknown", "small") and bare.json()["asset"]["credit"]["source_url"] == ""
     assert client.post(f"{P}/assets/upload", data=form,
                        files={"file": ("p.exe", b"MZ", "application/octet-stream")}).status_code == 422
     assert client.post(f"{P}/assets/upload", data=form,
@@ -484,10 +491,10 @@ def test_real_media_exceptions_are_translated(root):
     class LicenceRejected(Exception):
         pass
 
-    def imp(d, s, i):
+    def imp(d, s, i, **kw):
         raise LicenceRejected("CC BY-NC not allowed")
 
-    def up(d, f, m):
+    def up(d, f, m, **kw):
         raise ValueError("upload metadata is missing: source_url")
 
     def se(q, source="commons", kind="image", limit=24):

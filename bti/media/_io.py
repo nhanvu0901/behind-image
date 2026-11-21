@@ -5,18 +5,19 @@ import json
 import os
 from pathlib import Path
 from typing import Any
+from bti.fsio import atomic_replace
 
 
-def write_json_atomic(path: Path, doc: Any, *, indent: int = 2) -> Path:
+def write_json_atomic(path: Path, doc: Any, *, indent: int = 2, parents: bool = True) -> Path:
     path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(parents=parents, exist_ok=True)       # parents=False: FileNotFoundError when the folder above is gone
     tmp = path.with_name(path.name + ".tmp")
     try:
         with open(tmp, "w", encoding="utf-8") as fh:
             json.dump(doc, fh, indent=indent, ensure_ascii=False)
             fh.flush()
             os.fsync(fh.fileno())
-        os.replace(tmp, path)
+        atomic_replace(tmp, path)
     except BaseException:
         tmp.unlink(missing_ok=True)
         raise
@@ -32,7 +33,7 @@ def read_json(path: Path, default: Any = None) -> Any:
         return json.loads(path.read_text(encoding="utf-8"))
     except ValueError:
         try:
-            os.replace(path, path.with_name(path.name + ".corrupt"))
+            atomic_replace(path, path.with_name(path.name + ".corrupt"))
         except OSError:
             pass
         return default

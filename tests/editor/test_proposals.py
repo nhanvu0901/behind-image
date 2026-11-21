@@ -19,7 +19,7 @@ def saved(root):
 
 
 def test_list_and_detail(client):
-    lst = client.get(f"{P}/proposals").json()
+    lst = client.get(f"{P}/proposals").json()["items"]
     assert [p["id"] for p in lst] == ["p_demo_001"]
     assert set(lst[0]) == {"id", "created_at", "author", "summary", "n_changes"} and lst[0]["n_changes"] == 6
     j = client.get(f"{P}/proposals/p_demo_001").json()
@@ -160,11 +160,11 @@ def test_new_asset_comes_with_shot(client, root, state):
 
 def test_corrupt_proposal_quarantined(client, root):
     (root / PID / "proposals" / "bad.json").write_text("{not json")
-    assert [p["id"] for p in client.get(f"{P}/proposals").json()] == ["p_demo_001"]
+    assert [p["id"] for p in client.get(f"{P}/proposals").json()["items"]] == ["p_demo_001"]
     assert not (root / PID / "proposals" / "bad.json").exists()
     assert list((root / PID / "proposals").glob("bad.json.corrupt-*"))
 
 
 def test_listing_sorted_newest_first(client, root, state):
     write_proposal(root, "newer", editable(state), created_at="2027-01-01T00:00:00")
-    assert [p["id"] for p in client.get(f"{P}/proposals").json()] == ["newer", "p_demo_001"]
+    assert [p["id"] for p in client.get(f"{P}/proposals").json()["items"]] == ["newer", "p_demo_001"]

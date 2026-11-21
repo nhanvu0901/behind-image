@@ -1,0 +1,18 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-spoken-words-only",
+  "step": "narration",
+  "title": "Nothing a voice cannot say",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md: no source ids (PAY-07), fact ids (f03), markup, brackets or bars in the spoken text.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "spoken",
+      "kind": "narration.spoken_words_only"
+    }
+  ]
+}

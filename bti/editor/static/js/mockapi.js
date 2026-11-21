@@ -30,12 +30,14 @@ function validate(sb) {
       if (t.engine.available === false) issues.push({ level: 'warn', path: `shots[${i}].technique`, message: `${s.technique} chưa render được` });
       const known = new Set(t.params.map((p) => p.name));
       for (const k of Object.keys(s.params || {})) if (!known.has(k)) issues.push({ level: 'error', path: `shots[${i}].params.${k}`, message: `Tham số không xác định: ${k}` });
-      for (const sl of t.slots) if (sl.required && !s.slots?.[sl.name]?.asset) issues.push({ level: 'error', path: `shots[${i}].slots.${sl.name}`, message: `Slot bắt buộc còn trống: ${sl.name}` });
+      // incomplete is not invalid: a warning with code "incomplete" (saved normally, never approved), like the real server
+      for (const sl of t.slots) if (sl.required && sl.type !== 'text' && !s.slots?.[sl.name]?.asset) issues.push({ level: 'warn', code: 'incomplete', path: `shots[${i}].slots.${sl.name}`, message: `required slot '${sl.name}' is missing` });
     }
     if (s._t1 - s._t0 < MIN_SHOT - 1e-9) issues.push({ level: 'error', path: `shots[${i}].start`, message: 'Shot ngắn hơn 0.2 s' });
     (s.overlays || []).forEach((o, j) => {
       const ot = techById(o.technique);
       if (!ot) issues.push({ level: 'error', path: `shots[${i}].overlays[${j}].technique`, message: `Kỹ thuật không có trong registry: ${o.technique}` });
+      else for (const sl of ot.slots) if (sl.required && sl.type !== 'text' && !o.slots?.[sl.name]?.asset && !(sl.name === 'image' && Object.values(s.slots || {}).some((v) => v?.asset))) issues.push({ level: 'warn', code: 'incomplete', path: `shots[${i}].overlays[${j}].slots.${sl.name}`, message: `required slot '${sl.name}' is missing` });
       if (o._t0 < s._t0 - 1e-6 || o._t0 + (o.dur || 0) > s._t1 + 1e-6) issues.push({ level: 'warn', path: `shots[${i}].overlays[${j}].start`, message: 'Lớp phủ vượt ra ngoài shot' });
     });
   });
@@ -44,11 +46,51 @@ function validate(sb) {
 
 const projectBody = () => ({ storyboard: resolved(S.sb), timing: S.timing, issues: validate(S.sb), rev: S.rev });
 
+// The agent select (agentpick.js) in mock mode: the two agents, and a choice kept in memory. Nothing else is read through the generic verbs here.
+const MOCK_AGENTS = [{ id: 'gemini', label: 'Gemini 3.8 Flash', model: 'agy:gemini-3.8-flash-high', available: true, reason: null },
+  { id: 'opus', label: 'Opus 5.5 High', model: 'claude:claude-opus-5-5@high', available: true, reason: null }];
+const MOCK_STEPS = ['script', 'picks', 'storyboard'];
+let agentChoice = { agent: null, steps: {}, rev: 'mock-agent-1' };
+const agentDoc = () => {
+  const eff = {};
+  for (const st of MOCK_STEPS) {
+    const id = agentChoice.steps[st] || agentChoice.agent || 'gemini';
+    const a = MOCK_AGENTS.find((x) => x.id === id);
+    eff[st] = { id, label: a.label, model: a.model, source: agentChoice.steps[st] ? 'step' : agentChoice.agent ? 'project' : 'default' };
+  }
+  return { rev: agentChoice.rev, agent: agentChoice.agent, steps: { ...agentChoice.steps }, effective: eff, warnings: [] };
+};
+
 export const mockApi = {
   mode: 'mock',
+  async get(path) {
+    await delay(20);
+    if (path.startsWith('/api/agents')) return { agents: MOCK_AGENTS, default: 'gemini', machine_default: null, warnings: [] };
+    if (/^\/api\/projects\/[^/]+\/agent$/.test(path)) return agentDoc();
+    throw new ApiError(404, { detail: 'not found' }, path);
+  },
+  async put(path, body) {
+    await delay(20);
+    if (!/^\/api\/projects\/[^/]+\/agent$/.test(path)) throw new ApiError(404, { detail: 'not found' }, path);
+    if (body?.base_rev !== agentChoice.rev) throw new ApiError(409, { detail: 'stale', code: 'stale', rev: agentChoice.rev }, path);
+    if ('agent' in body) agentChoice.agent = body.agent;
+    if ('steps' in body) agentChoice.steps = body.steps === null ? {} : { ...agentChoice.steps, ...Object.fromEntries(Object.entries(body.steps).filter(([, v]) => v)) };
+    agentChoice.rev = 'mock-agent-' + (Number(agentChoice.rev.split('-').pop()) + 1);
+    return agentDoc();
+  },
   async health() { await init(); return { ok: true, engine: 'stub', media: 'stub', mock: true }; },
   async style() { await init(); return { style: await fx('style.json'), techniques: S.reg.techniques, intents: S.intents }; },
   async projects() { await init(); return [{ id: 'arnolfini-mock', title: S.sb.title, duration: S.timing.duration, updated_at: '2026-11-16T09:00:00Z' }, { id: 'empty-demo', title: 'Dự án trống (mock)', duration: 0, updated_at: '2026-11-10T09:00:00Z' }]; },
+  /** Same shape as GET /api/projects/{pid}/pipeline: in mock mode only the editing step has data. */
+  async pipeline(pid) {
+    await init();
+    const L = [['artwork', 'Tác phẩm'], ['script', 'Kịch bản'], ['voice', 'Giọng đọc'], ['picks', 'Chọn hình'], ['edit', 'Dựng hình'], ['export', 'Xuất video']];
+    const steps = L.map(([id, label], i) => ({ id, n: i + 1, label, detail: '', reason: id === 'edit' ? '' : (i < 4 ? 'Dự án này được nhập từ bản dựng trước, chưa có dữ liệu cho bước này.' : 'Bước này chưa được xây dựng.'),
+      state: id === 'edit' ? 'current' : i < 4 ? 'no_data' : 'not_built' }));
+    return { project: pid, title: pid === 'empty-demo' ? 'Dự án trống (mock)' : S.sb.title, painting: { title: S.sb.title, artist: 'Jan van Eyck', year: '1434' }, stage: 'storyboard', imported: true, protected: false, artwork_key: null, current: 'edit', steps, outputs: [] };
+  },
+  async pipelineTemplate() { return this.pipeline('mock'); },
+  async deleteProject() { throw new ApiError(403, { detail: 'Chế độ mock không xóa được dự án.' }, 'delete'); },
   async project(pid) { await init(); await delay(); return projectBody(); },
   async save(pid, storyboard, base_rev) {
     await init(); await delay(120);
@@ -70,7 +112,11 @@ export const mockApi = {
     }
     return { params };
   },
-  async approve(pid, rev) { return { approvals: { storyboard: { rev, at: new Date().toISOString() } } }; },
+  async approve(pid, rev) {
+    await init();
+    const issues = validate(S.sb);
+    if (issues.some((i) => i.code === 'incomplete' || i.level === 'error')) throw new ApiError(422, { issues }, 'approve');
+    return { approvals: { storyboard: { rev, at: new Date().toISOString() } } }; },
   async frame(pid, t, width, storyboard) {
     await init(); await delay(40);
     const sb = resolved(stripDerived(storyboard));

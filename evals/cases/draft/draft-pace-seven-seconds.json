@@ -1,0 +1,23 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-pace-seven-seconds",
+  "step": "draft",
+  "title": "About one shot every seven seconds",
+  "why": "skills/storyboard_draft/TASK.template.md rule 5: median about 7 s, one in ten under 4 s, none under 1.5 s, none over 30 s.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "pace",
+      "kind": "draft.shot_pace",
+      "median_min": 5.0,
+      "median_max": 9.0,
+      "shortest": 1.5,
+      "longest": 30.0,
+      "max_share_under_4": 0.25
+    }
+  ]
+}

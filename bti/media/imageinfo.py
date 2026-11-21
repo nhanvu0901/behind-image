@@ -41,3 +41,65 @@ def image_size(path: Path) -> tuple[int, int]:
             return im.size
     except Exception:
         return 0, 0
+
+
+def drawn_size(path: Path) -> tuple[int, int]:
+    """The pixel size the engine DRAWS and the page SHOWS for the file at `path`, or (0, 0) when it cannot be read.
+
+    It is `image_size` (the pixels of the file) with one correction: OpenCV (`cv2.imread`, what `bti.engine.vfx.Img` uses)
+    and browsers turn a JPEG whose EXIF orientation is 5 to 8 a quarter turn, so for such a file the drawn width is the stored
+    height. Every asset record must carry this size: it is the space the regions, the camera maths and the page agree on."""
+    w, h = image_size(path)
+    if not (w and h):
+        return 0, 0
+    try:
+        with open(path, "rb") as fh:
+            jpeg = fh.read(2) == b"\xff\xd8"
+        if jpeg:
+            from PIL import Image
+            with Image.open(path) as im:
+                if im.getexif().get(0x0112) in (5, 6, 7, 8):
+                    return int(h), int(w)
+    except Exception:       # noqa: BLE001  the header sniff above already gave a usable answer
+        pass
+    return int(w), int(h)
+
+
+class ImageDamaged(ValueError):
+    """An image file that does not decode completely. `code`: `image_empty`, `image_truncated` or `image_unreadable`."""
+
+    def __init__(self, message: str, code: str):
+        super().__init__(message)
+        self.code = code
+
+
+def image_problem(path: Path) -> tuple[str, str] | None:
+    """None when `path` is a non-empty image that decodes completely, else `(code, short reason)`. A file that only has a valid
+    header (cut off part way, or junk after it) is refused: a stored asset must never break the stills that use it. This is the
+    same completeness rule as the engine's `media_problem` (header reads AND all pixel data decodes); it is kept here because
+    `bti.media` must not import the engine."""
+    from PIL import Image
+    try:
+        if Path(path).stat().st_size == 0:
+            return "image_empty", "the file is empty"
+    except OSError:
+        return "image_unreadable", "the file cannot be read"
+    try:
+        with Image.open(path) as im:
+            im.verify()
+    except Exception:       # noqa: BLE001
+        return "image_unreadable", "the file is not a readable image (damaged or not an image)"
+    try:
+        with Image.open(path) as im:
+            im.load()
+            if im.width < 1 or im.height < 1:
+                return "image_unreadable", "the image has no pixels"
+    except Exception:       # noqa: BLE001
+        return "image_truncated", "the image is cut off: its picture does not decode completely"
+    return None
+
+
+def readable_problem(path: Path) -> str | None:
+    """Short reason (see `image_problem`) or None."""
+    p = image_problem(path)
+    return p[1] if p else None

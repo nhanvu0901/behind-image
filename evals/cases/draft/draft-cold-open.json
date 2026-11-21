@@ -1,0 +1,33 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-cold-open",
+  "step": "draft",
+  "title": "The cold open (chapter c01) is paced and complete",
+  "why": "skills/storyboard_draft/TASK.template.md rules 4 and 5: the first shot of a chapter starts on its first word; the pace holds in a chapter drafted alone.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {
+    "body": {
+      "chapters": [
+        "c01"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "no-errors",
+      "kind": "draft.no_error_issues"
+    },
+    {
+      "id": "pace",
+      "kind": "draft.shot_pace",
+      "median_min": 4.0,
+      "median_max": 9.0,
+      "shortest": 1.5,
+      "longest": 30.0,
+      "max_share_under_4": 0.35
+    }
+  ]
+}

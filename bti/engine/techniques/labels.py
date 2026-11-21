@@ -92,6 +92,8 @@ class ScreenText(OverlayRenderer):
             d["text"] = context["text"]
         if context.get("region") is not None:
             d["at"] = context["region"]
+        else:
+            d["screen"] = [960, 900]        # a label needs a position: bottom centre of the 1920x1080 canvas, where the strips sit
         return d
 
 

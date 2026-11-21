@@ -1,0 +1,11 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, sleep } from './common.mjs';
+const base = readBase();
+const br = await openBrowser(); const p = await br.newPage();
+await p.goto(base + '/#/library/artwork/velazquez-las-meninas', 3000);
+console.log((await bodyText(p)).slice(0, 300), p.logs, p.bad());
+await p.goto(base + '/#/library', 3000);
+console.log((await bodyText(p)).slice(100, 500));
+await p.eval(`location.hash='#/library/artwork/velazquez-las-meninas'`); await sleep(3000);
+console.log((await bodyText(p)).slice(100, 400), p.logs, p.bad());
+console.log(await p.eval(`document.querySelector('#view')?.innerHTML.slice(0,300)`));
+br.close();

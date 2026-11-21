@@ -1,0 +1,10 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, both, sleep, go, settle, pipeline, leftovers } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const PID = process.argv[2];
+const br = await openBrowser(); const p = await br.newPage();
+await go(p, base, `#/project/${PID}/voice`);
+await snap(p, 'probe4-voice-done');
+console.log((await bodyText(p)).split('\n').slice(24, 60).join(' | '));
+console.log(JSON.stringify(await p.eval(`Array.from(document.querySelectorAll('audio')).map(a=>({src:a.src,controls:a.controls,dur:a.duration,state:a.readyState,err:a.error&&a.error.code}))`)));
+console.log(await leftovers(p), p.logs, p.bad());
+br.close();

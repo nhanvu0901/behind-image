@@ -1,0 +1,12 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, both, sleep } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const br = await openBrowser(); const p = await br.newPage();
+await p.goto(base + '/#/');
+console.log((await bodyText(p)).slice(0, 800));
+console.log(JSON.stringify(await p.eval(`Array.from(document.querySelectorAll('nav a, header a, .stepper *')).slice(0,20).map(e=>e.tagName+'.'+e.className+':'+e.textContent.slice(0,30))`)));
+await snap(p, 'probe-home');
+await p.goto(base + '/#/project/arnolfini-from-books/script');
+console.log((await bodyText(p)).slice(0, 1500));
+await snap(p, 'probe-script');
+console.log(p.logs, p.bad());
+br.close();

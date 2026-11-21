@@ -22,18 +22,18 @@ from .common import (ApiError, SCHEMA, STYLE_RE, compute_rev, read_json, safe_jo
 
 MIN_SHOT = 0.2
 ITEM_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}")
-SOURCES = ("import", "agent", "human")
+SOURCES = ("import", "agent", "human", "identity")
 _REG_CACHE: dict[str, tuple[float, dict]] = {}
 _REG_LOCK = threading.Lock()
 
 
 def load_style_stub(style_root: Path, style_id: str) -> dict:
     if not STYLE_RE.fullmatch(style_id or ""):
-        raise ApiError(404, "style not found")
+        raise ApiError(404, "style not found", code="style_not_found")
     d = style_root / style_id
     tp = d / "techniques.json"
     if not tp.is_file():
-        raise ApiError(404, "style not found")
+        raise ApiError(404, "style not found", code="style_not_found")
     mt = tp.stat().st_mtime_ns
     with _REG_LOCK:
         hit = _REG_CACHE.get(str(tp))
@@ -177,6 +177,14 @@ class StubProject:
         return sb
 
     # ----- validate -----
+    def draw_check(self, storyboard: dict | None = None, width: int = 320) -> list[dict]:
+        """The stub draws placeholders, so nothing is ever undrawable (the real engine's `Project.draw_check` does the work)."""
+        return []
+
+    def draw_check_iter(self, storyboard: dict | None = None, width: int = 320):
+        return []
+        yield       # a generator that returns [] at once
+
     def validate(self, storyboard: dict | None = None) -> list[dict]:
         issues: list[dict] = []
 
@@ -397,7 +405,7 @@ class StubProject:
     def default_params(self, technique_id: str, context: dict) -> dict:
         tech = self._registry(self.storyboard() if self._sb_path.is_file() else {}).get(technique_id)
         if tech is None:
-            raise ApiError(422, f"unknown technique {technique_id!r}")
+            raise ApiError(422, f"unknown technique {technique_id!r}", code="unknown_technique", field="technique")
         out = {}
         for d in tech.get("params") or []:
             if d.get("default") is not None:
@@ -409,7 +417,7 @@ class StubProject:
         sb = strip_derived(storyboard)
         errs = [i for i in self.validate(sb) if i["level"] == "error"]
         if errs:
-            raise ApiError(422, "validation failed", issues=errs)
+            raise ApiError(422, "validation failed", issues=errs, code="validation_failed")
         if self._sb_path.is_file():
             hist = self.dir / "history"
             hist.mkdir(exist_ok=True)

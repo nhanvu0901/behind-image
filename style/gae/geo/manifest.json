@@ -1,0 +1,67 @@
+{
+ "source": "Natural Earth (public domain)",
+ "sources": [
+  {
+   "name": "ne_10m_land.zip",
+   "url": "https://naciscdn.org/naturalearth/10m/physical/ne_10m_land.zip",
+   "version": "5.1.1",
+   "bytes": 3269070,
+   "sha256": "e547d749445eaa0964aba76738090ec88f5e63c4585122170f98c67a7ea922dc",
+   "used_for": "land and coastline, 1:10m"
+  },
+  {
+   "name": "ne_50m_land.zip",
+   "url": "https://naciscdn.org/naturalearth/50m/physical/ne_50m_land.zip",
+   "version": "4.1.0",
+   "bytes": 457183,
+   "sha256": "0b8e670cf80dce9cbebe2a193bc44ba5602758c22e1fa603980553646d7ff162",
+   "used_for": "land and coastline, 1:50m"
+  },
+  {
+   "name": "ne_50m_admin_0_countries.zip",
+   "url": "https://naciscdn.org/naturalearth/50m/cultural/ne_50m_admin_0_countries.zip",
+   "version": "5.1.1",
+   "bytes": 799734,
+   "sha256": "5fed433373581fa648920435f937d95f2d3c0200e067409c6478dcdf1b853139",
+   "used_for": "countries with ISO codes, 1:50m"
+  },
+  {
+   "name": "ne_50m_geography_marine_polys.zip",
+   "url": "https://naciscdn.org/naturalearth/50m/physical/ne_50m_geography_marine_polys.zip",
+   "version": "5.1.0",
+   "bytes": 700610,
+   "sha256": "9e460b9fe2566d3f466d69096348953f5348bab63ce1328c94c3072b9f48eef1",
+   "used_for": "sea and ocean names"
+  }
+ ],
+ "files": [
+  {
+   "name": "land_50m.npz",
+   "bytes": 254697,
+   "sha256": "c933b25e8c1e7287ec6d9df5ac22e957b67c7504d9b8389f3f22b7ef59296236",
+   "rings": 1422,
+   "vertices": 59239
+  },
+  {
+   "name": "land_10m.npz",
+   "bytes": 1359537,
+   "sha256": "798ee3bdedb8824656259fdb466a4da577e1802b1ffb632b2afb411e5e8da2b0",
+   "rings": 6838,
+   "vertices": 439317
+  },
+  {
+   "name": "countries_50m.npz",
+   "bytes": 413130,
+   "sha256": "20917462d9b4962db93cc1710e3d25c700ef793af4ca2d239e8c3f5fe6ed0eb2",
+   "rings": 1629,
+   "vertices": 97832,
+   "countries": 237
+  },
+  {
+   "name": "seas.json",
+   "bytes": 44427,
+   "sha256": "718e57af6d0ec2765aa99e8d88ae9f746477d087c5478912c8302bd5252d839b",
+   "names": 113
+  }
+ ]
+}

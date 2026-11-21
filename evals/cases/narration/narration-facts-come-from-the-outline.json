@@ -1,0 +1,18 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-facts-come-from-the-outline",
+  "step": "narration",
+  "title": "Every fact a line cites is in the outline",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md (unknown_fact): the narration follows the approved outline and invents no fact.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "facts",
+      "kind": "narration.facts_in_outline"
+    }
+  ]
+}

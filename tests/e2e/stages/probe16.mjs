@@ -1,0 +1,17 @@
+import { openBrowser, readBase, makeApi, bodyText, snap, both, sleep, go, settle, pipeline, leftovers, clickExact } from './common.mjs';
+const base = readBase(); const api = makeApi(base);
+const PID = process.argv[2];
+const br = await openBrowser(); const p = await br.newPage();
+await go(p, base, `#/project/${PID}/edit`);
+await clickExact(p, 'Mở đề xuất'); await sleep(2500);
+await p.eval(`(()=>{const b=Array.from(document.querySelectorAll('button')).find(b=>/^Áp dụng/.test(b.textContent.trim())); b.scrollIntoView(); const r=b.getBoundingClientRect(); window.__r={x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+const r = await p.eval('window.__r'); await p.clickXY(r.x, r.y);
+await sleep(2000); await snap(p, 'p16-after-apply-click');
+console.log('DLG', await p.eval(`document.querySelector('.modal:last-of-type, dialog')?.innerText?.slice(0,400)`), p.dialogs);
+await settle(p, 30000); await sleep(4000);
+await both(p, 'p16-editor');
+console.log((await bodyText(p)).slice(0,500).split('\n').join(' | '));
+const sb = (await api.get(`/api/projects/${PID}/storyboard`)); console.log(sb.status, sb.json && Object.keys(sb.json), sb.json?.storyboard?.shots?.length ?? sb.json?.shots?.length);
+console.log(JSON.stringify((await pipeline(api, PID)).steps.map(s=>[s.id,s.state,s.work,s.detail])));
+console.log(await leftovers(p), p.logs.slice(-5), p.bad());
+br.close();

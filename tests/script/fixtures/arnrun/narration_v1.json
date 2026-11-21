@@ -1,0 +1,843 @@
+{
+ "schema": "bti.narration/1",
+ "project": "arnolfini-opus",
+ "title": "The Arnolfini Portrait",
+ "language": "en",
+ "chapters": [
+  {
+   "id": "c01",
+   "role": "cold_open",
+   "title": "COLD OPEN",
+   "card": false,
+   "beats": [
+    {
+     "id": "b0001",
+     "text": "Start above the round mirror on the back wall. Van Eyck painted a Latin line there, and it means Jan van Eyck was here, 1434.",
+     "facts": [
+      "f42"
+     ],
+     "show": [
+      "the ornate signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0002",
+     "text": "Hodge calls it one of his witty signatures, but Brooke-Hitching says it reads like an official document.",
+     "facts": [
+      "f42"
+     ],
+     "show": [
+      "close on the lettering of the signature"
+     ]
+    },
+    {
+     "id": "b0003",
+     "text": "Now look at the woman in green below. Payne and Hodge both say she is probably Costanza Trenta, married to the merchant Giovanni in 1426.",
+     "facts": [
+      "f09",
+      "f08"
+     ],
+     "show": [
+      "the couple full length",
+      "slow move to the woman's face"
+     ]
+    },
+    {
+     "id": "b0004",
+     "text": "Yet Costanza died in 1433, the year before that painted date. Brooke-Hitching suggests instead a second wife who left no record.",
+     "facts": [
+      "f08",
+      "f09"
+     ],
+     "show": [
+      "the woman's face",
+      "cut back to the date in the signature"
+     ]
+    },
+    {
+     "id": "b0005",
+     "text": "Then look at the centre of the panel, where his hand holds hers. Brooke-Hitching sees the pose of a couple taking their marriage vows. Payne sees a loose, uncertain grip, as if she were slipping from his grasp.",
+     "facts": [
+      "f44"
+     ],
+     "show": [
+      "close on the joined hands"
+     ]
+    },
+    {
+     "id": "b0006",
+     "text": "So is this a wedding, a memorial to a wife already gone, or a merchant's showroom? Centuries of close study have not agreed. But the clues sit in objects you can check on this small panel.",
+     "facts": [
+      "f01"
+     ],
+     "show": [
+      "slow pull back from the hands to the whole painting"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c02",
+   "role": "chapter",
+   "title": "WHO IS IN THE ROOM",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0007",
+     "text": "Start with the man's long, pale face beneath the wide dark hat. So who is this man?",
+     "facts": [
+      "f06"
+     ],
+     "show": [
+      "close on the man's face"
+     ]
+    },
+    {
+     "id": "b0008",
+     "text": "The earliest inventory calls him Hernoul le Fin. He is probably Giovanni di Nicolao Arnolfini, an Italian merchant from Lucca.",
+     "facts": [
+      "f06"
+     ],
+     "show": [
+      "the man full length"
+     ]
+    },
+    {
+     "id": "b0009",
+     "text": "Why is a man from Lucca based in Bruges? In the 1400s the city was a hub of international trade, and newly rich merchants were rising across northern Europe.",
+     "facts": [
+      "f02",
+      "f06"
+     ],
+     "show": [
+      "the window and the light falling into the room"
+     ]
+    },
+    {
+     "id": "b0010",
+     "text": "He grew rich on silks, fabrics, tapestries and precious objects, Payne says. Hodge adds that the family dealt in finance as well, as early merchant bankers.",
+     "facts": [
+      "f07"
+     ],
+     "show": [
+      "the couple's clothes",
+      "the bed hangings"
+     ]
+    },
+    {
+     "id": "b0011",
+     "text": "Payne calls a Van Eyck portrait the most exclusive status symbol of the 1430s. He notes this is among the earliest portraits of a couple neither royal nor noble, shown at home.",
+     "facts": [
+      "f03",
+      "f11"
+     ],
+     "show": [
+      "the whole painting"
+     ]
+    },
+    {
+     "id": "b0012",
+     "text": "That painter worked in Bruges for Philip the Good, Duke of Burgundy, on a yearly salary. Payne dates the post to 1425, but Hodge says it came after his brother Hubert died in 1426.",
+     "facts": [
+      "f04",
+      "f05"
+     ],
+     "show": [
+      "the whole painting, slow move toward the mirror"
+     ]
+    },
+    {
+     "id": "b0013",
+     "text": "Van Eyck lived from about 1390 to 1441, and Hodge counts only about twenty-three paintings as wholly his.",
+     "facts": [
+      "f05"
+     ],
+     "show": [
+      "the mirror and the wall around it"
+     ]
+    },
+    {
+     "id": "b0014",
+     "text": "The signature reads 1434, and Payne dates the panel to that year. Hodge also cites a frame inscription dated the twenty-first of October 1433, but that passage may describe a different painting.",
+     "facts": [
+      "f10"
+     ],
+     "show": [
+      "the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0015",
+     "text": "Now return to the woman's face, pale and still. Payne and Hodge both say she is probably Costanza, and Payne finds no evidence of a second wife.",
+     "facts": [
+      "f09",
+      "f08"
+     ],
+     "show": [
+      "close on the woman's face"
+     ]
+    },
+    {
+     "id": "b0016",
+     "text": "Brooke-Hitching says she is thought to be a second wife who left no record. He also reports a newer theory, that this is Costanza painted after her death.",
+     "facts": [
+      "f09"
+     ],
+     "show": [
+      "the woman full length"
+     ]
+    },
+    {
+     "id": "b0017",
+     "text": "So the man has a name. Whoever stands beside him is the hinge of everything that follows.",
+     "facts": [
+      "f06",
+      "f09"
+     ],
+     "show": [
+      "the couple side by side"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c03",
+   "role": "chapter",
+   "title": "A WALKING ADVERTISEMENT",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0018",
+     "text": "Move down from her face to the deep, even green of her dress. Payne says dyers worked for weeks on that colour, with plants, herbs and exotic spices.",
+     "facts": [
+      "f14"
+     ],
+     "show": [
+      "the green dress, full length"
+     ]
+    },
+    {
+     "id": "b0019",
+     "text": "At the cuffs, pale fur shows. Payne and Hodge agree the gown is lined with squirrel. Payne estimates up to 2,000 pieces of belly fur, where an ordinary gown used about 600.",
+     "facts": [
+      "f15",
+      "f16"
+     ],
+     "show": [
+      "the fur cuffs on her sleeves"
+     ]
+    },
+    {
+     "id": "b0020",
+     "text": "She holds the skirt bunched at her stomach, so many viewers take her for pregnant. The sources agree she is not. Hodge and Brooke-Hitching call this lifted bulk of cloth the fashion of the period.",
+     "facts": [
+      "f12"
+     ],
+     "show": [
+      "her hand gathering the skirt"
+     ]
+    },
+    {
+     "id": "b0021",
+     "text": "Near the floor, a little blue shows beneath the green. Hodge describes a blue underdress trimmed with white fur. Payne reads the glimpse as restraint, since blue was costly and tied to the Virgin Mary.",
+     "facts": [
+      "f20"
+     ],
+     "show": [
+      "the hem of the blue underdress"
+     ]
+    },
+    {
+     "id": "b0022",
+     "text": "Her frilled white headdress, Hodge says, marks her as married, because unmarried women wore their hair loose.",
+     "facts": [
+      "f21"
+     ],
+     "show": [
+      "close on the headdress"
+     ]
+    },
+    {
+     "id": "b0023",
+     "text": "Now cross to the man and his tabard, a sleeveless outer tunic. Payne and Hodge say it is lined with pine marten. Payne adds silk velvet from Lucca, about one hundred Russian martens, and a cost to rival sable.",
+     "facts": [
+      "f17"
+     ],
+     "show": [
+      "D12 the tabard and its fur edges"
+     ]
+    },
+    {
+     "id": "b0024",
+     "text": "That dark plum cost more than her green, because dark dyes were dearer to make. But Payne describes plum and black fabrics, while Hodge warns that the colours have faded.",
+     "facts": [
+      "f18"
+     ],
+     "show": [
+      "the dark folds of his tabard"
+     ]
+    },
+    {
+     "id": "b0025",
+     "text": "Look up at his hat, which Payne says is straw woven in tiny plaits, the latest Italian fashion. Then look down to his boots, so soft that Payne says they show the shape of his feet.",
+     "facts": [
+      "f19"
+     ],
+     "show": [
+      "the straw hat",
+      "his boots"
+     ]
+    },
+    {
+     "id": "b0026",
+     "text": "Fur, silk, wool, linen and leather were all goods that Flanders traded. Payne calls the couple a walking advert for the Arnolfini brand, a portrait meant to fix their place in society.",
+     "facts": [
+      "f13",
+      "f49"
+     ],
+     "show": [
+      "D3 the couple side by side"
+     ]
+    },
+    {
+     "id": "b0027",
+     "text": "So the clothes make a strong case for a showroom. Yet Payne reads that lifted skirt as a pose for prized fertility, and some see more than fashion in that green.",
+     "facts": [
+      "f12"
+     ],
+     "show": [
+      "D9 the green dress gathered at her waist"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c04",
+   "role": "chapter",
+   "title": "A ROOM BUILT TO BE READ",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0028",
+     "text": "Now step back from the couple and take in the room. Behind her stands a large bed hung with red cloth, so is this a bedroom?",
+     "facts": [
+      "f22",
+      "f23"
+     ],
+     "show": [
+      "the whole room",
+      "the red bed"
+     ]
+    },
+    {
+     "id": "b0029",
+     "text": "Payne and Hodge both call it a reception room, but for different reasons. Payne points to the guests in the mirror, and to costly beds that rich households displayed but never used. Hodge says that in Burgundy, beds served as seating.",
+     "facts": [
+      "f23"
+     ],
+     "show": [
+      "the red bed",
+      "the reflection of the guests in the mirror"
+     ]
+    },
+    {
+     "id": "b0030",
+     "text": "Along the back wall stands a carved bench with a red velvet cushion, which Payne reads as a sign of wealth. Right above the joined hands, he points out carved gargoyles, believed to ward off evil spirits.",
+     "facts": [
+      "f25"
+     ],
+     "show": [
+      "the bench and its red cushion",
+      "the gargoyles above the joined hands"
+     ]
+    },
+    {
+     "id": "b0031",
+     "text": "On the high-backed chair beside it sits a small carved woman, and here the sources split. Payne suggests Saint Martha, patron of housewives, whose emblem, a brush, hangs nearby. Hodge names Saint Margaret, patron saint of pregnant women and childbirth.",
+     "facts": [
+      "f26"
+     ],
+     "show": [
+      "the chair carving",
+      "the hanging brush"
+     ]
+    },
+    {
+     "id": "b0032",
+     "text": "On the floor lies an oriental carpet, which Hodge calls Anatolian and rare. Payne links it to paintings of the Virgin, and suggests it may signal her piety.",
+     "facts": [
+      "f27"
+     ],
+     "show": [
+      "the carpet on the floor"
+     ]
+    },
+    {
+     "id": "b0033",
+     "text": "Through the window on the left, a cherry tree shows outside. Hodge reads its fruit as a sign of early summer, while Brooke-Hitching reads the tree as a symbol of love.",
+     "facts": [
+      "f31"
+     ],
+     "show": [
+      "the window and the cherry tree"
+     ]
+    },
+    {
+     "id": "b0034",
+     "text": "On the sill below lie oranges, imported fruit that only the rich could afford. Even the glass is described two ways, crown glass for Payne, stained glass for Brooke-Hitching.",
+     "facts": [
+      "f28",
+      "f30"
+     ],
+     "show": [
+      "the oranges on the sill and table",
+      "the window glass"
+     ]
+    },
+    {
+     "id": "b0035",
+     "text": "Beside the mirror hang amber prayer beads. Payne calls them a usual gift from groom to bride, and a nod to the Baltic amber trade through Bruges.",
+     "facts": [
+      "f32"
+     ],
+     "show": [
+      "the amber beads beside the mirror"
+     ]
+    },
+    {
+     "id": "b0036",
+     "text": "Overhead, only one candle burns in the brass chandelier, and Brooke-Hitching reads it as the seeing eye of God.",
+     "facts": [
+      "f34"
+     ],
+     "show": [
+      "the chandelier",
+      "the single lit candle"
+     ]
+    },
+    {
+     "id": "b0037",
+     "text": "Every object here signals wealth, though Payne adds it was chosen to stop short of looking aristocratic. And between the two figures, the eye keeps returning to that round mirror.",
+     "facts": [
+      "f22"
+     ],
+     "show": [
+      "the whole room",
+      "slow move to the mirror between the couple"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c05",
+   "role": "chapter",
+   "title": "THE MIRROR",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0038",
+     "text": "Now let your eye travel into the round mirror on the back wall. Its surface bulges outward, so the whole room curves inside it.",
+     "facts": [
+      "f35"
+     ],
+     "show": [
+      "D5 the convex mirror filling the frame"
+     ]
+    },
+    {
+     "id": "b0039",
+     "text": "The sources agree the mirror is convex, the usual form for glass mirrors then. Hodge calls it the only shape available, and only the wealthy owned one.",
+     "facts": [
+      "f35"
+     ],
+     "show": [
+      "the mirror's curved surface and its wooden frame"
+     ]
+    },
+    {
+     "id": "b0040",
+     "text": "Payne adds that a glass mirror this large was technically impossible in 1434. So, he says, Van Eyck scaled it up on purpose to deepen the room and hold the eye.",
+     "facts": [
+      "f36"
+     ],
+     "show": [
+      "slow pull back from the mirror to the whole back wall"
+     ]
+    },
+    {
+     "id": "b0041",
+     "text": "Inside the glass you see the couple from behind. Beyond them stand two small figures, in a doorway the painting itself never shows.",
+     "facts": [
+      "f37"
+     ],
+     "show": [
+      "close on the reflected backs of the couple",
+      "the two figures in the doorway"
+     ]
+    },
+    {
+     "id": "b0042",
+     "text": "So who are these two visitors? Payne says the figure in blue is said to be Van Eyck, and the other may stand for the viewer. Hodge says one is probably Van Eyck, while Brooke-Hitching asks if the painter arrives with an assistant.",
+     "facts": [
+      "f37"
+     ],
+     "show": [
+      "tight on the two figures in the doorway",
+      "the figure in blue"
+     ]
+    },
+    {
+     "id": "b0043",
+     "text": "Back in the room, Giovanni's right hand is raised towards that doorway. Payne reads it as acknowledging the visitors, and Hodge as perhaps a greeting.",
+     "facts": [
+      "f38"
+     ],
+     "show": [
+      "the man's raised right hand",
+      "cut to the doorway in the reflection"
+     ]
+    },
+    {
+     "id": "b0044",
+     "text": "Around the mirror's frame sit ten tiny roundels, each a scene from the Passion of Christ. Payne calls them the only direct biblical references here, and Hodge reads them as God's promise of salvation.",
+     "facts": [
+      "f39"
+     ],
+     "show": [
+      "the ten roundels around the mirror, one by one"
+     ]
+    },
+    {
+     "id": "b0045",
+     "text": "The glass itself is spotless, and all three sources read that as purity. Hodge and Brooke-Hitching tie it to the Virgin Mary. Payne ties it to the marriage and the couple's moral standing.",
+     "facts": [
+      "f41"
+     ],
+     "show": [
+      "the clean surface of the mirror catching window light"
+     ]
+    },
+    {
+     "id": "b0046",
+     "text": "Even the signature above it is transcribed two ways, Johannes van Eyck for Hodge, Johannes de Eyck for Brooke-Hitching.",
+     "facts": [
+      "f42"
+     ],
+     "show": [
+      "D7 the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0047",
+     "text": "Now notice where the later roundels fall. Payne observes that every scene after Christ's death, from the Descent from the Cross to the Harrowing of Hell, sits on her side of the mirror. If that placement is deliberate, the mirror carries us straight into the question of wedding or memorial.",
+     "facts": [
+      "f40",
+      "f39"
+     ],
+     "show": [
+      "the roundels on the woman's side",
+      "then the mirror between the two figures"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c06",
+   "role": "chapter",
+   "title": "WEDDING OR MEMORIAL",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0048",
+     "text": "Set the two readings side by side, starting with the wedding. In 1934 the art historian Erwin Panofsky proposed that this panel records a marriage ceremony, almost like a legal document. Brooke-Hitching notes that the idea is now disputed.",
+     "facts": [
+      "f43"
+     ],
+     "show": [
+      "the whole painting",
+      "the couple full length"
+     ]
+    },
+    {
+     "id": "b0049",
+     "text": "To Brooke-Hitching, the joined hands recall a couple taking their vows. He adds that the signature above the mirror reads like an official document.",
+     "facts": [
+      "f44",
+      "f43"
+     ],
+     "show": [
+      "close on the joined hands",
+      "the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0050",
+     "text": "In the lower left lie his wooden overshoes. Brooke-Hitching links them to the passage in Exodus about holy ground, while Payne says discarded shoes often signal the sanctity of marriage.",
+     "facts": [
+      "f45"
+     ],
+     "show": [
+      "the overshoes lower left"
+     ]
+    },
+    {
+     "id": "b0051",
+     "text": "Hodge reads the green dress as hope and fertility. She and Brooke-Hitching also tie the oranges to love and fertility.",
+     "facts": [
+      "f48"
+     ],
+     "show": [
+      "the green dress",
+      "the oranges on the sill and side table"
+     ]
+    },
+    {
+     "id": "b0052",
+     "text": "But the wedding reading needs a bride, and Payne finds no evidence of a second wife.",
+     "facts": [
+      "f09"
+     ],
+     "show": [
+      "the woman's face"
+     ]
+    },
+    {
+     "id": "b0053",
+     "text": "The memorial reading starts from that gap. If the woman is Costanza, she died a year before the date painted above the mirror. Hodge cites a frame inscription dated 1433, though that passage may describe another painting.",
+     "facts": [
+      "f09",
+      "f10"
+     ],
+     "show": [
+      "the woman's face",
+      "the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0054",
+     "text": "Then look at the small dog at her feet. Dogs usually stand for loyalty, but Payne recalls tombs where a dog lies at a woman's feet.",
+     "facts": [
+      "f46"
+     ],
+     "show": [
+      "the dog at her feet"
+     ]
+    },
+    {
+     "id": "b0055",
+     "text": "Payne also notes the death scenes gathered on her side of the mirror, and wonders if Giovanni is dressed in mourning. For Payne, the most compelling clue is that loose grip, as if she were slipping away.",
+     "facts": [
+      "f40",
+      "f47",
+      "f44"
+     ],
+     "show": [
+      "the roundels on her side",
+      "the man's dark clothes",
+      "close on the joined hands"
+     ]
+    },
+    {
+     "id": "b0056",
+     "text": "Hodge links the red bed to birthing chambers, and suggests Costanza may have died in childbirth. She names the carved saint on the chair as Saint Margaret, patron of childbirth, where Payne sees Saint Martha.",
+     "facts": [
+      "f24",
+      "f26"
+     ],
+     "show": [
+      "the red bed",
+      "the chair carving"
+     ]
+    },
+    {
+     "id": "b0057",
+     "text": "Each side has its weak point. Payne treats that bed only as an unused display, and he warns that no painting holds a single meaning.",
+     "facts": [
+      "f24",
+      "f47"
+     ],
+     "show": [
+      "the red bed",
+      "the whole room"
+     ]
+    },
+    {
+     "id": "b0058",
+     "text": "So the sources leave the question open, and their common ground is narrower. Payne says the portrait was certainly meant to fix the couple's place in society, and Hodge calls the marriage a commercial union too.",
+     "facts": [
+      "f49"
+     ],
+     "show": [
+      "the couple full length",
+      "the whole painting"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c07",
+   "role": "chapter",
+   "title": "THE ALCHEMIST'S SURFACE",
+   "card": true,
+   "beats": [
+    {
+     "id": "b0059",
+     "text": "Now set meaning aside for a moment and look at how this panel was made. Payne says Van Eyck's own contemporaries called him an alchemist.",
+     "facts": [
+      "f53"
+     ],
+     "show": [
+      "the whole painting",
+      "slow push towards the centre of the panel"
+     ]
+    },
+    {
+     "id": "b0060",
+     "text": "Hodge calls him one of the first painters to use oil rather than tempera. Payne differs, saying he did not invent oil painting but refined it.",
+     "facts": [
+      "f50"
+     ],
+     "show": [
+      "close on the folds of the green dress"
+     ]
+    },
+    {
+     "id": "b0061",
+     "text": "He built colour in many thin, see-through layers of oil called glazes. Those layers give the surface its glow and its very smooth finish.",
+     "facts": [
+      "f51"
+     ],
+     "show": [
+      "close on the red bed hangings and the glossy fur"
+     ]
+    },
+    {
+     "id": "b0062",
+     "text": "Look at the single orange on the windowsill. It casts a shadow, and it shows again in the window glass behind it. Payne calls it a still life before that genre existed.",
+     "facts": [
+      "f29"
+     ],
+     "show": [
+      "the orange on the sill and its reflection in the glass"
+     ]
+    },
+    {
+     "id": "b0063",
+     "text": "Beside the mirror, each amber bead catches the light. Payne notes a thin green silk thread running through them, probably painted with a single-hair brush.",
+     "facts": [
+      "f33"
+     ],
+     "show": [
+      "the amber beads beside the mirror"
+     ]
+    },
+    {
+     "id": "b0064",
+     "text": "Up in the brass chandelier, window light gleams on the curved metal, as it does on the mirror and on her white headdress.",
+     "facts": [
+      "f52"
+     ],
+     "show": [
+      "the chandelier",
+      "the headdress catching the light"
+     ]
+    },
+    {
+     "id": "b0065",
+     "text": "Hodge says Van Eyck planted symbols for viewers to hunt for. Yet the orange's reflection and the glinting beads need no code, because they are simply superbly painted.",
+     "facts": [
+      "f54",
+      "f29",
+      "f33"
+     ],
+     "show": [
+      "the orange and the beads side by side"
+     ]
+    },
+    {
+     "id": "b0066",
+     "text": "His work was studied and copied, and Payne says it was sought in England, France and Portugal. He traces its influence to Dürer and to Velázquez, and on as far as the Pre-Raphaelites.",
+     "facts": [
+      "f55"
+     ],
+     "show": [
+      "the whole painting",
+      "pull back from the panel"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "c08",
+   "role": "closing",
+   "title": "CLOSING",
+   "card": false,
+   "beats": [
+    {
+     "id": "b0067",
+     "text": "Come back to his hand holding hers, then up to the line above the mirror, Jan van Eyck was here, 1434.",
+     "facts": [
+      "f44",
+      "f42"
+     ],
+     "show": [
+      "D2 close on the joined hands",
+      "D7 the signature above the mirror"
+     ]
+    },
+    {
+     "id": "b0068",
+     "text": "The sources settle some things. The man is probably Giovanni Arnolfini, the merchant named in the earliest inventory. His wealth is on full display, and Payne says the portrait was certainly meant to fix the couple's place in society.",
+     "facts": [
+      "f06",
+      "f22",
+      "f49"
+     ],
+     "show": [
+      "the man's face",
+      "the fur-lined clothes and the room"
+     ]
+    },
+    {
+     "id": "b0069",
+     "text": "But they stop at the woman. Payne and Hodge say she is probably Costanza, who died the year before that date, while Brooke-Hitching suggests an unrecorded second wife.",
+     "facts": [
+      "f09",
+      "f08",
+      "f10"
+     ],
+     "show": [
+      "the woman's face",
+      "D7 the date in the signature"
+     ]
+    },
+    {
+     "id": "b0070",
+     "text": "Nor can they say if that loose grip is a vow or a farewell. My own view, and it is only a view, leans towards farewell, because the dog and the death scenes on her side agree with it.",
+     "facts": [
+      "f44",
+      "f46",
+      "f40"
+     ],
+     "show": [
+      "the joined hands",
+      "the dog at her feet",
+      "the roundels on her side of the mirror"
+     ]
+    },
+    {
+     "id": "b0071",
+     "text": "Yet nothing on this small panel rules out a vow, so those two hands still hold the question.",
+     "facts": [
+      "f44",
+      "f43",
+      "f01"
+     ],
+     "show": [
+      "the whole painting"
+     ]
+    }
+   ]
+  }
+ ]
+}

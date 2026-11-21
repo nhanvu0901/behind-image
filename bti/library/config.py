@@ -1,6 +1,7 @@
 """Paths and the fixed list of books of the library (no LLM, no network)."""
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -26,14 +27,27 @@ BOOKS = [
     dict(id="dasal_artcurious", key="ArtCurious", title="ArtCurious", author="Jennifer Dasal",
          pdf_type="digital", unit="themed_chapter"),
 ]
+TRUST_NOTE_LOW = "Bản dịch máy, không dùng làm nguồn sự kiện: văn xuôi thiếu tin cậy, nhiều tên riêng bị dịch sai."
+# The note for a work whose machine-translated text was restored and reviewed (trust level `restored`, see restored.py).
+TRUST_NOTE_RESTORED = ("Bản khôi phục từ bản dịch máy, đã rà soát: dùng được cho ý và mô tả; "
+                       "số liệu, năm và trích dẫn phải có nguồn khác xác nhận.")
 BOOK_BY_ID = {b["id"]: b for b in BOOKS}
+
+
+def long_path(f: Path) -> Path:
+    """A path the Windows API accepts when it is 260 characters or longer (the extended-length `\\\\?\\` prefix). Elsewhere, or
+    when the path is short, the same path. Book file names run to 230 characters, so `books/<name>` can pass the limit."""
+    s = str(f)
+    if os.name == "nt" and len(s) >= 240 and not s.startswith("\\\\?\\"):
+        return Path("\\\\?\\" + os.path.abspath(s))
+    return f
 
 
 def book_pdf(book_id: str) -> Path | None:
     key = BOOK_BY_ID[book_id]["key"]
     for f in sorted(BOOKS_DIR.glob("*.pdf")):
         if key in f.name:
-            return f
+            return long_path(f)
     return None
 
 

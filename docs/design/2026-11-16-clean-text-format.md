@@ -58,7 +58,10 @@ The clean text restores **what is printed on the page**. It is a correction of e
   - pull quotes that repeat a body sentence
   - note-reference digits glued to words ("get.2" becomes "get.")
   - text that OCR produced from inside a picture
-- **Continuation.** If the last paragraph continues on the next page, the last line of the file is `[continues]`.
+- **Continuation.** If the last paragraph continues later, the last line of the file is `[continues]`. "Later" means the next page of type `body`: a paragraph that jumps over one or more plate pages still gets the marker. A reader joins it to the first paragraph of the next body page.
+- **Sidebars and boxed asides** are content, but they are not part of the main flow. Wrap them between a line `[sidebar-start] <title or empty>` and a line `[sidebar-end]`. A reader that wants only the main argument can skip the block.
+- **Headings are what the page prints.** A chapter or entry title is taken from the page itself, never from a table of contents or a catalogue file. If the page prints a chapter number, keep it as `[meta] CHAPTER n` (or the printed form).
+- **Margin captions.** When two captions share a margin, each is its own `[caption]` line with its own words. Never interleave them line by line.
 - **Drop caps** are rejoined to their word.
 - **Not restored:** italics and other typographic emphasis.
 

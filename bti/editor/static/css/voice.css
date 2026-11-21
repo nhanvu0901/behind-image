@@ -1,0 +1,38 @@
+/* Voice view ("Giọng đọc"). Scoped under .v-vc. */
+.v-vc.vc-root { display: grid; grid-template-rows: auto minmax(0, 1fr); height: 100%; min-width: 900px; }
+.v-vc .vc-head { padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--panel); display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.v-vc .vc-head h1 { margin: 0; font-size: 16px; }
+.v-vc .vc-top { display: flex; gap: 10px; align-items: center; flex: 1 1 260px; }
+.v-vc .vc-acts { display: flex; gap: 8px; }
+.v-vc .vc-chip { padding: 2px 10px; border-radius: 10px; font-size: 12px; border: 1px solid var(--border); background: var(--elev); }
+.v-vc .vc-done { border-color: #2f7d4f; color: #8ad7a6; }
+.v-vc .vc-stale { border-color: #6a5410; color: #e5c36a; }
+.v-vc .vc-running { border-color: var(--accent); color: var(--accent); }
+.v-vc .vc-body { display: grid; grid-template-columns: minmax(300px, 420px) minmax(0, 1fr); min-height: 0; }
+.v-vc .vc-col { overflow: auto; padding: 10px 14px 40px; border-right: 1px solid var(--border); min-height: 0; }
+.v-vc .vc-col:last-child { border-right: 0; }
+.v-vc h3.sh { margin: 16px 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.v-vc .box { padding: 8px 10px; margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--radius); font-size: 13px; }
+.v-vc .box.warn { border-color: #6a5410; background: #2d2510; }
+.v-vc .box.err { border-color: var(--danger); }
+.v-vc .vc-bar { height: 8px; background: var(--elev); border-radius: 4px; overflow: hidden; margin: 6px 0; }
+.v-vc .vc-bar i { display: block; height: 100%; background: var(--accent); transition: width .4s; }
+.v-vc .vc-part { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 2px 0; }
+.v-vc .vc-p-done span:first-child { color: #8ad7a6; }
+.v-vc .vc-p-running span:first-child { color: var(--accent); }
+.v-vc .fieldrow { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.v-vc .fieldrow input[type=text] { flex: 1; min-width: 0; }
+.v-vc .fieldrow input[type=number] { width: 84px; }
+.v-vc .fieldrow label { color: var(--muted); font-size: 12px; }
+.v-vc .vc-ch { margin: 18px 0 6px; font-weight: 600; font-size: 13px; border-bottom: 1px solid var(--border); padding-bottom: 3px; }
+.v-vc .vc-ch:first-of-type { margin-top: 4px; }
+.v-vc .vc-row { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; }
+.v-vc .vc-newbeat { margin-top: 8px; }
+.v-vc .vc-play { flex: none; width: 28px; padding: 2px 0; }
+.v-vc .vc-text { flex: 1; line-height: 1.45; min-width: 0; }
+.v-vc .vc-spoken { font-size: 11px; }
+.v-vc .vc-side { flex: none; display: flex; gap: 8px; align-items: center; }
+.v-vc .vc-tag { font-size: 11px; padding: 1px 7px; border-radius: 9px; border: 1px solid var(--border); }
+.v-vc .vc-tag.warn { border-color: #6a5410; color: #e5c36a; }
+.v-vc .vc-again { font-size: 11px; padding: 2px 7px; }
+.v-vc .vc-next { margin: 10px 0; }

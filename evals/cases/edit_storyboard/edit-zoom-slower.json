@@ -1,0 +1,41 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "edit-zoom-slower",
+  "step": "edit_storyboard",
+  "title": "\"Zoom slower\" changes only the shots in scope and makes the zoom slower",
+  "why": "docs/APP_GUIDE.md, \"Sửa video bằng lời\": the agent changes only the part the instruction is about; skills/storyboard_edit/FAST.template.md.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "as_is"
+  },
+  "request": {
+    "instruction": "Zoom chậm hơn vào chiếc gương ở hai cảnh này.",
+    "scope": {
+      "shots": [
+        "s0004",
+        "s0005"
+      ]
+    },
+    "mode": "auto"
+  },
+  "criteria": [
+    {
+      "id": "scope",
+      "kind": "edit.only_scope_changed"
+    },
+    {
+      "id": "changed",
+      "kind": "edit.changed_something_in_scope"
+    },
+    {
+      "id": "slower",
+      "kind": "edit.metric_moved",
+      "metric": "zoom_rate",
+      "direction": "decrease"
+    },
+    {
+      "id": "no-errors",
+      "kind": "edit.no_error_issues"
+    }
+  ]
+}

@@ -17,6 +17,8 @@ from ..imageinfo import image_size
 from ..licence import check_licence
 
 MET_API_BASE = "https://collectionapi.metmuseum.org/public/collection/v1"
+# LR-003: `/v1/search` was retired on 2026-10-01 (HTTP 410); the replacement is Elastic-backed and paginated by offset and limit.
+MET_SEARCH_BASE = "https://collectionapi.metmuseum.org/public/collection/v1.1"
 MAX_IMAGE_BYTES = 150 * 1024 * 1024
 
 
@@ -59,8 +61,8 @@ class MetSource:
     name = "met"
 
     def __init__(self, *, opener: Callable | None = None, sleep: Callable[[float], None] = time.sleep,
-                 base: str = MET_API_BASE):
-        self._opener, self._sleep, self.base = opener, sleep, base
+                 base: str = MET_API_BASE, search_base: str = MET_SEARCH_BASE):
+        self._opener, self._sleep, self.base, self.search_base = opener, sleep, base, search_base
 
     def _get(self, path: str, params: dict | None = None) -> dict:
         return http.get_json(f"{self.base}{path}", params, opener=self._opener, sleep=self._sleep)
@@ -77,8 +79,10 @@ class MetSource:
     def search(self, query: str, kind: str = "image", limit: int = 24) -> list[dict]:
         if kind != "image":
             return []
-        data = self._get("/search", {"hasImages": "true", "isPublicDomain": "true", "q": query})
-        ids = list(data.get("objectIDs") or [])[: max(1, int(limit))]
+        n = max(1, int(limit))
+        data = http.get_json(f"{self.search_base}/search", {"hasImages": "true", "isPublicDomain": "true", "q": query,
+                                                              "limit": n, "offset": 0}, opener=self._opener, sleep=self._sleep)
+        ids = list(data.get("objectIDs") or [])[:n]
         def one(i):
             try:
                 return self.fetch_meta(str(i))

@@ -1,0 +1,29 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-leaves-out-an-excluded-book",
+  "step": "outline",
+  "title": "A book the owner excluded is not cited",
+  "why": "docs/APP_GUIDE.md 5.1: the owner can leave a source out; a fact that rests on an excluded source is an error of the outline.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {
+    "options": {
+      "exclude": [
+        "hodge_aid"
+      ]
+    }
+  },
+  "criteria": [
+    {
+      "id": "no-excluded",
+      "kind": "outline.no_excluded_source"
+    },
+    {
+      "id": "facts-sourced",
+      "kind": "outline.facts_sourced",
+      "min_share": 1.0
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 // Technique gallery modal: all registry entries, grouped by kind then category.
 import { h, modal, debounce } from './util.js';
 import { ctx } from './ctx.js';
+import { intentLabel } from './labels.js';
 import { PREVIEW_BASE } from './config.js';
 
 export const KIND_VI = { base: 'Cảnh nền (base)', overlay: 'Lớp phủ (overlay)', transition: 'Chuyển cảnh (transition)', card: 'Thẻ chữ (card)' };
@@ -28,7 +29,7 @@ export function openGallery({ title = 'Thư viện kỹ thuật', kinds = KIND_O
   const grid = h('div', { class: 'body' });
   const count = h('span', { class: 'muted' });
   const search = h('input', { type: 'search', value: q, placeholder: 'Tìm theo tên, mã, mô tả...', oninput: debounce((e) => { st.q = e.target.value.toLowerCase(); render(); }, 120) });
-  const intentSel = h('select', { onchange: (e) => { st.intent = e.target.value; render(); } }, h('option', { value: '', text: 'Mọi ý đồ (intent)' }), ...ctx.reg.intents.map((i) => h('option', { value: i, text: i })));
+  const intentSel = h('select', { onchange: (e) => { st.intent = e.target.value; render(); } }, h('option', { value: '', text: 'Mọi ý đồ' }), ...ctx.reg.intents.map((i) => h('option', { value: i, text: intentLabel(i), title: i })));
   const only = h('input', { type: 'checkbox', onchange: (e) => { st.onlyOk = e.target.checked; render(); } });
   const pills = {};
   const pillBar = h('div', { style: { display: 'flex', gap: '6px' } }, ...['all', ...KIND_ORDER].map((k) => (pills[k] = h('button', { class: 'pillbtn', text: k === 'all' ? 'Tất cả' : KIND_VI[k].split(' (')[0], onclick: () => { st.kind = k; render(); } }))));
@@ -46,7 +47,7 @@ export function openGallery({ title = 'Thư viện kỹ thuật', kinds = KIND_O
       pv,
       h('div', { class: 'meta' },
         h('div', { class: 'vi', text: t.label_vi }), h('div', { class: 'en', text: t.name }),
-        h('div', { class: 'chips' }, usageChip(t), engineChip(t), ...t.intents.map((i) => h('span', { class: 'chip', text: i }))),
+        h('div', { class: 'chips' }, usageChip(t), engineChip(t), ...t.intents.map((i) => h('span', { class: 'chip', text: intentLabel(i), title: i }))),
         !ok ? h('div', { class: 'why', text: unavailableReason(t) }) : (!allowed ? h('div', { class: 'why', text: `Loại ${t.kind}: không dùng cho vị trí này` }) : h('div', { class: 'desc', text: t.description }))));
     return c;
   }

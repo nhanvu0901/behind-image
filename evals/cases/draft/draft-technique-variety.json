@@ -1,0 +1,24 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "draft-technique-variety",
+  "step": "draft",
+  "title": "At least six different techniques, mostly the channel's core ones",
+  "why": "skills/storyboard_draft/TASK.template.md rule 9: prefer the core techniques, use the others where a beat calls for them, never a shorts-only one.",
+  "sample": {
+    "project": "arnolfini",
+    "start": "redraft"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "variety",
+      "kind": "draft.distinct_techniques_at_least",
+      "k": 6
+    },
+    {
+      "id": "core",
+      "kind": "draft.core_techniques",
+      "min_share": 0.6
+    }
+  ]
+}

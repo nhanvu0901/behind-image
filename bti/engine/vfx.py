@@ -9,9 +9,10 @@ Original docstring:
 All camera motion is sub-pixel: cv2.warpAffine with a float matrix + INTER_CUBIC from an area-averaged image pyramid
 (level chosen so the warp scale stays within 0.7-1.4, i.e. never aliases, never zoompan).  Frames are BGR uint8.
 """
-import math, os, sys
+import math, os, sys, threading
 import cv2, numpy as np
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
+from .guard import check_pixels, unlimited
 
 W, H = 1920, 1080
 cv2.setNumThreads(int(os.environ.get("CV_THREADS", "4")))
@@ -28,6 +29,7 @@ _FONT_CANDIDATES = {
 }
 _FONTS = {k: list(v) for k, v in _FONT_CANDIDATES.items()}
 _FONT_CACHE = {}
+_FONT_LOCK = threading.RLock()
 
 
 def configure_fonts(style=None):
@@ -44,25 +46,83 @@ def configure_fonts(style=None):
         for kind, paths in m.items():
             if isinstance(paths, list):
                 fonts[kind] = list(paths)
-    _FONTS = fonts
-    _FONT_CACHE.clear()
+    with _FONT_LOCK:
+        _FONTS = fonts
+        _FONT_CACHE.clear()
+
+
+# Bundled faces (the channel identity, family ID-*): EB Garamond Regular / Italic / Medium, static .ttf files with their licence in
+# style/gae/fonts/. They load from that folder on every machine; a missing or unreadable file is an error that names the file and
+# the folder, never a silent fallback to another face (the identity must not quietly change its typeface).
+BUNDLED_FONTS = {"eb_regular": "EBGaramond-Regular.ttf", "eb_italic": "EBGaramond-Italic.ttf", "eb_medium": "EBGaramond-Medium.ttf"}
+
+
+class BundledFontError(FileNotFoundError):
+    """A bundled font file is missing or cannot be read."""
+
+
+def bundled_font_dir():
+    from . import registry as _registry          # late: the style root can be moved by BTI_STYLE_ROOT before the first use
+    return _registry.STYLE_ROOT / "gae" / "fonts"
+
+
+def bundled_font_path(kind):
+    return bundled_font_dir() / BUNDLED_FONTS[kind]
 
 
 def font_signature():
     """Stable text identifying the font choice; part of every text-layer cache key."""
     out = []
-    for kind in sorted(_FONTS):
-        first = next((p for p in _FONTS[kind] if os.path.exists(p)), "default")
+    with _FONT_LOCK:
+        kinds = sorted(_FONTS)
+        candidates = {k: list(_FONTS[k]) for k in kinds}
+    for kind in kinds:
+        first = next((p for p in candidates[kind] if os.path.exists(p)), "default")
         out.append(kind + "=" + os.path.basename(first))
+    for kind in sorted(BUNDLED_FONTS):
+        p = bundled_font_path(kind)
+        out.append("%s=%s:%s" % (kind, p.name, p.stat().st_size if p.is_file() else "missing"))
     return ";".join(out)
+
+
+def _bundled_font(kind, size):
+    p = bundled_font_path(kind)
+    if not p.is_file():
+        raise BundledFontError("the bundled font %s is missing: expected the file %s (the EB Garamond files ship with the project in "
+                               "style/gae/fonts/ and are never replaced by another face)" % (kind, p))
+    try:
+        return ImageFont.truetype(str(p), size)
+    except OSError as e:
+        raise BundledFontError("the bundled font file %s cannot be read (%s)" % (p, e)) from e
+
+
+def cap_ratio(kind):
+    """Cap height of the face as a fraction of its font size (px per px of size), measured on the glyph H of the real font."""
+    key = ("cap_ratio", kind)
+    with _FONT_LOCK:
+        if key in _FONT_CACHE:
+            return _FONT_CACHE[key]
+    big = 2000
+    top = font(kind, big).getbbox("H", anchor="ls")[1]
+    r = -top / big
+    with _FONT_LOCK:
+        _FONT_CACHE[key] = r
+    return r
 
 
 def font(kind, size):
     key = (kind, int(size))
-    if key in _FONT_CACHE:
-        return _FONT_CACHE[key]
+    with _FONT_LOCK:
+        if key in _FONT_CACHE:
+            return _FONT_CACHE[key]
+        candidates = list(_FONTS.get(kind, []))
+    if kind in BUNDLED_FONTS:
+        res = _bundled_font(kind, int(size))
+        with _FONT_LOCK:
+            _FONT_CACHE[key] = res
+        return res
     res = None
-    for p in _FONTS[kind]:
+    for p in candidates:
         if os.path.exists(p):
             try:
                 if p.endswith(".ttc") and "Futura" in p:
@@ -74,7 +134,8 @@ def font(kind, size):
                 continue
     if res is None:
         res = ImageFont.load_default()
-    _FONT_CACHE[key] = res
+    with _FONT_LOCK:
+        _FONT_CACHE[key] = res
     return res
 
 
@@ -121,12 +182,18 @@ class Img:
         self.levels = [a]
         while min(self.levels[-1].shape[:2]) // 2 >= 256:
             p = self.levels[-1]
-            self.levels.append(cv2.resize(p, (p.shape[1] // 2, p.shape[0] // 2), interpolation=cv2.INTER_AREA))
+            with unlimited():                      # sized by the source file, not by the storyboard
+                self.levels.append(cv2.resize(p, (p.shape[1] // 2, p.shape[0] // 2), interpolation=cv2.INTER_AREA))
         self.h, self.w = a.shape[:2]
 
-    def view(self, cx, cy, zoom, ow=W, oh=H, bg=None):
+    def rect(self, cx, cy, zoom, ow=W, oh=H):
+        """Where the source rectangle lands on the canvas: (x0, y0, x1, y1) in canvas px."""
+        return (ow / 2 + (0 - cx) * zoom, oh / 2 + (0 - cy) * zoom, ow / 2 + (self.w - cx) * zoom, oh / 2 + (self.h - cy) * zoom)
+
+    def view(self, cx, cy, zoom, ow=W, oh=H, bg=None, region=None):
         """Render the source into an ow x oh canvas. (cx,cy)=source point at canvas centre, zoom=out px per source px.
         Returns (frame BGR, alpha float32 ow x oh x1).  Outside the source, frame is `bg` (or 0) and alpha 0."""
+        check_pixels(ow, oh, "view")
         k = int(round(math.log2(1.0 / zoom))) if zoom < 1 else 0
         k = max(0, min(k, len(self.levels) - 1))
         s = zoom * (2 ** k)
@@ -140,8 +207,9 @@ class Img:
         x1 = ow / 2 + (self.w - cx) * zoom
         y0 = oh / 2 + (0 - cy) * zoom
         y1 = oh / 2 + (self.h - cy) * zoom
-        xs = np.arange(ow, dtype=np.float32) + .5
-        ys = np.arange(oh, dtype=np.float32) + .5
+        rx0, ry0, rx1, ry1 = region if region is not None else (0, 0, ow, oh)     # alpha only over `region` (x0, y0, x1, y1) when given
+        xs = np.arange(rx0, rx1, dtype=np.float32) + .5
+        ys = np.arange(ry0, ry1, dtype=np.float32) + .5
         ax = np.clip(np.minimum(xs - x0, x1 - xs), 0, 1)
         ay = np.clip(np.minimum(ys - y0, y1 - ys), 0, 1)
         alpha = (ay[:, None] * ax[None, :])[:, :, None].astype(np.float32)
@@ -153,26 +221,34 @@ class Img:
 
 # ----------------------------------------------------------------------------- backdrop (designed near-black gallery matte)
 _BD = {}
+_BD_LOCK = threading.RLock()
 
 
 def backdrop(ow=W, oh=H):
     key = (ow, oh)
-    if key not in _BD:
-        yy, xx = np.mgrid[0:oh, 0:ow].astype(np.float32)
-        r = np.sqrt(((xx - ow / 2) / (ow * .62)) ** 2 + ((yy - oh * .46) / (oh * .72)) ** 2)
-        v = 30 - 24 * np.clip(r, 0, 1.15) ** 1.4          # centre ~#1e, edges ~#06
-        v = np.clip(v, 5, 30)
-        bgr = np.stack([v * 1.02, v * 0.99, v * 0.97], -1)  # faint warm-neutral
-        rng = np.random.RandomState(7)
-        bgr += rng.normal(0, 0.6, bgr.shape[:2])[:, :, None]  # grain kills 8-bit banding
-        _BD[key] = np.clip(bgr, 0, 255).astype(np.float32)
-    return _BD[key]
+    with _BD_LOCK:
+        if key in _BD:
+            return _BD[key]
+    yy, xx = np.mgrid[0:oh, 0:ow].astype(np.float32)
+    r = np.sqrt(((xx - ow / 2) / (ow * .62)) ** 2 + ((yy - oh * .46) / (oh * .72)) ** 2)
+    v = 30 - 24 * np.clip(r, 0, 1.15) ** 1.4          # centre ~#1e, edges ~#06
+    v = np.clip(v, 5, 30)
+    bgr = np.stack([v * 1.02, v * 0.99, v * 0.97], -1)  # faint warm-neutral
+    rng = np.random.RandomState(7)
+    bgr += rng.normal(0, 0.6, bgr.shape[:2])[:, :, None]  # grain kills 8-bit banding
+    res = np.clip(bgr, 0, 255).astype(np.float32)
+    with _BD_LOCK:
+        _BD[key] = res
+    return res
 
 
 def compose_matte(img, cx, cy, zoom, ow=W, oh=H, shadow=True):
     """Painting over designed backdrop with soft drop shadow. Returns float32 BGR frame."""
-    out, alpha, (x0, y0, x1, y1) = img.view(cx, cy, zoom, ow, oh)
-    bd = backdrop(ow, oh).copy()
+    x0, y0, x1, y1 = img.rect(cx, cy, zoom, ow, oh)
+    ix0, ix1 = max(0, int(math.floor(x0)) - 1), min(ow, int(math.ceil(x1)) + 1)
+    iy0, iy1 = max(0, int(math.floor(y0)) - 1), min(oh, int(math.ceil(y1)) + 1)
+    out, alpha, _ = img.view(cx, cy, zoom, ow, oh, region=(ix0, iy0, max(ix1, ix0), max(iy1, iy0)))   # alpha only where it can be non-zero
+    bd = backdrop(ow, oh)                     # shared, never modified: a copy is made below only when it is blended into
     covers = x0 <= 0 and y0 <= 0 and x1 >= ow and y1 >= oh
     if covers:
         return out.astype(np.float32)
@@ -181,9 +257,22 @@ def compose_matte(img, cx, cy, zoom, ow=W, oh=H, shadow=True):
         d = max(6, 14 * zoom / 0.17) / 4
         cv2.rectangle(sh, (int((x0 + 10) / 4), int((y0 + 22) / 4)), (int((x1 + 10) / 4), int((y1 + 22) / 4)), 1.0, -1)
         sh = cv2.GaussianBlur(sh, (0, 0), max(3.0, 11 * min(zoom, .6) / .17 / 4 * .5 + 3))
+        sh *= -.75                            # 1 - .75*sh on the small array (resize is linear, so it commutes)
+        sh += 1
         sh = cv2.resize(sh, (ow, oh), interpolation=cv2.INTER_LINEAR)[:, :, None]
-        bd = bd * (1 - .75 * sh)
-    return bd * (1 - alpha) + out.astype(np.float32) * alpha
+        bd = bd * sh                          # a new array (this is the copy)
+    else:
+        bd = bd.copy()
+    # bd*(1-a) + out*a == bd + (out-bd)*a. Outside the painting's rectangle a is exactly 0 (the frame is the backdrop), so only
+    # the rectangle (grown by a pixel) is blended; in place, no full-frame temporaries.
+    if ix1 > ix0 and iy1 > iy0:
+        sl = (slice(iy0, iy1), slice(ix0, ix1))
+        reg = out[sl].astype(np.float32)
+        reg -= bd[sl]
+        reg *= alpha
+        reg += bd[sl]
+        bd[sl] = reg
+    return bd
 
 
 # ----------------------------------------------------------------------------- camera paths
@@ -247,6 +336,8 @@ def label_layer(title, sub=None, y0=.70, h=140, x_text=.07, w=W, hh=H, opacity=0
     """Channel-style detail label: dark translucent strip, white caps title, smaller 2nd line (artist, year).
     (opacity/fade_frac/size/sub_size/pad/gap are new keyword arguments; their defaults reproduce the benchmark.)"""
     Y0 = int(y0 * hh)
+    if h < 1 or w < 1:
+        return Layer(np.zeros((1, 1, 4), np.uint8), 0, 0)      # a strip whose bottom edge is above its top edge: nothing to draw
     a = np.full((h, w), opacity * 255, np.float32)
     fade = int(w * fade_frac)
     if fade > 0:
@@ -265,6 +356,7 @@ def label_layer(title, sub=None, y0=.70, h=140, x_text=.07, w=W, hh=H, opacity=0
 
 def text_layer(text, cx, cy, size=90, kind="reg", tracking=6, color=(255, 255, 255), sub=None, subsize=30, w=W, h=H, shadow=True):
     """Centred text (and optional sub line) on a transparent full-frame layer, cropped to its bbox."""
+    check_pixels(w, h, "text layer")
     im = Image.new("RGBA", (w, h), (0, 0, 0, 0))
     d = ImageDraw.Draw(im)
     ft = font(kind, size)
@@ -304,6 +396,155 @@ def spotlight(frame, sx, sy, rx, ry, a, floor=0.35, feather=0.55):
     return frame * gain
 
 
+def smoothstep(u):
+    """0 -> 1 smooth step of `u` (a number or an array), clamped to 0..1."""
+    u = np.clip(u, 0.0, 1.0)
+    return u * u * (3.0 - 2.0 * u)
+
+
+class Band:
+    """A soft-edged strip of light that travels across the canvas (the channel identity, family ID-*).
+
+    The strip has straight edges tilted `angle_deg` from the vertical (a "/" for a positive angle) and moves along the axis that is
+    perpendicular to them, in one direction at constant speed. Its profile along the axis is a plateau (`core`) with smoothstep
+    shoulders (`edge`): `width_pct` is the width of the strip at half brightness (core + edge), `feather` the part of that width that
+    each shoulder takes (0.05 sharp .. 1 no plateau). `s` is the signed distance in px of a pixel from the strip's centre line along
+    the direction of travel: s > 0 is AHEAD of the strip (not yet reached), s < 0 BEHIND it (already passed).
+
+    Everything is a pure function of the progress `q` (0 = the strip is just off the canvas where it enters, 1 = just off the canvas
+    where it leaves, with a run-in margin so that a strip is never visible at q = 0 or q = 1). Masks are computed on a grid reduced by
+    `qres` and enlarged bilinearly (as `spotlight` does); the reveal mask of a text box is computed the same way on that box only."""
+
+    RUN_IN = 0.13           # extra travel before and after the canvas, as a fraction of the axis length (the mock-up's -22 % .. 122 %)
+
+    def __init__(self, w, h, width_pct, feather, angle_deg, direction="left_to_right"):
+        a = math.radians(float(angle_deg))
+        self.w, self.h = int(w), int(h)
+        self.ca, self.sa = math.cos(a), math.sin(a)
+        self.length = abs(self.w * self.ca) + abs(self.h * self.sa)             # axis length over the canvas (corner to corner)
+        width = max(float(width_pct) / 100.0 * self.w, 1.0)
+        self.edge = max(width * min(max(float(feather), 0.0), 1.0), 1e-3)         # one shoulder
+        self.core = max(width - self.edge, 0.0)                                  # the plateau
+        self.half = self.core / 2.0 + self.edge                                  # centre line to where the strip ends
+        pad = self.half + self.RUN_IN * self.length
+        self.span = (-(self.length / 2.0 + pad), self.length / 2.0 + pad)        # centre-line positions at q = 0 and q = 1 (left to right)
+        self.sign = -1.0 if direction == "right_to_left" else 1.0
+
+    def centre(self, q):
+        """Axis position (px from the canvas centre, positive to the right and down-right) of the strip's centre line."""
+        q = min(max(float(q), 0.0), 1.0)
+        a, b = self.span
+        return a + q * (b - a) if self.sign > 0 else b - q * (b - a)
+
+    def s_grid(self, q, xs, ys):
+        """Signed distance ahead (px) for pixel-centre coordinates `xs` (1-D, width) and `ys` (1-D, height): shape (len(ys), len(xs))."""
+        u = (xs[None, :] - self.w / 2.0) * self.ca + (ys[:, None] - self.h / 2.0) * self.sa
+        return (u - self.centre(q)) * self.sign
+
+    def profile(self, s):
+        """Strip brightness weight 0..1 at signed distance s."""
+        return 1.0 - smoothstep((np.abs(s) - self.core / 2.0) / self.edge)
+
+    def reveal(self, s):
+        """Largest value the strip's profile has had so far at a pixel with signed distance s (1 once the centre line has passed)."""
+        return 1.0 - smoothstep((s - self.core / 2.0) / self.edge)
+
+    def reveal_box(self, q, x0, y0, x1, y1, qres=4):
+        """Reveal values (float32, y1-y0 by x1-x0) for the canvas pixels x0..x1, y0..y1: computed on a grid reduced by `qres` and enlarged
+        bilinearly (the profile's shoulders are many pixels wide), so a text box costs a fraction of a millisecond."""
+        bw, bh = x1 - x0, y1 - y0
+        gw, gh = max(2, -(-bw // qres)), max(2, -(-bh // qres))
+        xs = x0 + (np.arange(gw, dtype=np.float32) + 0.5) * (bw / gw)
+        ys = y0 + (np.arange(gh, dtype=np.float32) + 0.5) * (bh / gh)
+        m = self.reveal(self.s_grid(q, xs, ys)).astype(np.float32)
+        return cv2.resize(m, (bw, bh), interpolation=cv2.INTER_LINEAR)
+
+    def light(self, frame, q, ahead, wake, warm=0.0, qres=4):
+        """Multiply `frame` (float32 BGR, IN PLACE) by the strip's light: `ahead` of it, 1 inside it, `wake` behind it, plus a warm tint
+        (`warm` is the screen-blend opacity of an amber (255, 205, 140) at full strength inside the strip). Returns the frame.
+
+        The gain is a low-resolution map enlarged bilinearly (as `spotlight` does) and only the columns where it is not constant are
+        touched with it (about a third of the frame); the rest is one scalar multiply. The tint is folded into the same pass:
+        f * (g * (1 - a t)) + 255 * a * t per channel (a = warm * strip weight, t = the tint)."""
+        if ahead >= 1.0 and wake >= 1.0:
+            return frame
+        if q <= 0.0:
+            return gain_in_place(frame, ahead)
+        if q >= 1.0:
+            return gain_in_place(frame, wake)
+        h, w = frame.shape[:2]
+        if w % qres or h % qres:
+            qres = 1
+        gh, gw = h // qres, w // qres
+        xs = (np.arange(gw, dtype=np.float32) + 0.5) * qres
+        ys = (np.arange(gh, dtype=np.float32) + 0.5) * qres
+        s = self.s_grid(q, xs, ys)
+        b = self.profile(s)
+        r = smoothstep(-s / self.half)
+        g = ahead + (wake - ahead) * r
+        g = (g + (1.0 - g) * b).astype(np.float32)
+        varying = (b.max(axis=0) > 1e-4) | ((r.max(axis=0) - r.min(axis=0)) > 1e-4)
+        cols = np.nonzero(varying)[0]
+        if not cols.size:                                           # the strip is wholly off the canvas: one level for all of it
+            return gain_in_place(frame, float(g[0, 0]))
+        j0, j1 = max(0, int(cols[0]) - 2), min(gw, int(cols[-1]) + 3)
+        x0, x1 = j0 * qres, j1 * qres
+        if x0 > 0:
+            gain_in_place(frame[:, :x0], float(g[0, 0]))                   # columns that are entirely ahead of the strip (or entirely behind)
+        if x1 < w:
+            gain_in_place(frame[:, x1:], float(g[0, gw - 1]))
+        reg = frame[:, x0:x1]
+        gz = g[:, j0:j1]
+        if warm > 0:
+            a = (b[:, j0:j1] * warm)[:, :, None]
+            gain = cv2.resize((gz[:, :, None] * (1.0 - a * _WARM_BGR)).astype(np.float32), (x1 - x0, h), interpolation=cv2.INTER_LINEAR)
+            lift = cv2.resize(((255.0 * a) * _WARM_BGR).astype(np.float32), (x1 - x0, h), interpolation=cv2.INTER_LINEAR)
+            reg[...] = cv2.multiply(reg, gain)
+            reg += lift
+        else:
+            gain = cv2.resize(gz, (x1 - x0, h), interpolation=cv2.INTER_LINEAR)
+            reg[...] = cv2.multiply(reg, cv2.merge([gain, gain, gain]))
+        return frame
+
+
+def gain_in_place(frame, k):
+    """frame *= k in place (a view of a frame is fine); returns it."""
+    if k != 1.0:
+        np.multiply(frame, np.float32(k), out=frame)
+    return frame
+
+
+_WARM_BGR = np.array([140.0, 205.0, 255.0], np.float32) / 255.0
+
+
+def composite_layer_masked(frame, layer, mask_fn=None, env=1.0):
+    """Draw `layer` on `frame` (IN PLACE, like `Layer.apply`) with the opacity `env` times a per-pixel mask: `mask_fn(x0, y0, x1, y1)`
+    returns the mask (0..1, float32, shape y1-y0 by x1-x0) of the canvas box that the layer covers (clipped to the frame); None means
+    no mask. Only the columns where the mask is not zero are touched. Used for text that is revealed by a moving band."""
+    if env <= 0.001:
+        return frame
+    lh, lw = layer.a.shape[:2]
+    x0, y0 = layer.x0, layer.y0
+    fx0, fy0 = max(x0, 0), max(y0, 0)
+    fx1, fy1 = min(x0 + lw, frame.shape[1]), min(y0 + lh, frame.shape[0])
+    if fx1 <= fx0 or fy1 <= fy0:
+        return frame
+    a = layer.a[fy0 - y0:fy1 - y0, fx0 - x0:fx1 - x0]
+    rgb = layer.rgb[fy0 - y0:fy1 - y0, fx0 - x0:fx1 - x0]
+    if mask_fn is not None:
+        m = mask_fn(fx0, fy0, fx1, fy1)
+        cols = np.nonzero(m.max(axis=0) > 0.001)[0]
+        if not cols.size:
+            return frame
+        c0, c1 = int(cols[0]), int(cols[-1]) + 1
+        a, rgb, fx0, fx1 = a[:, c0:c1] * (m[:, c0:c1, None] * env), rgb[:, c0:c1], fx0 + c0, fx0 + c1
+    else:
+        a = a * env
+    reg = frame[fy0:fy1, fx0:fx1]
+    reg -= (reg - rgb) * a                                   # reg * (1 - a) + rgb * a
+    return frame
+
+
 def ring(frame, sx, sy, r, prog, alpha=0.75, thick=13, color=(205, 205, 205)):
     """Light-grey ring drawn on over prog 0..1 (arc sweep from top, clockwise)."""
     if prog <= 0 or alpha <= 0:
@@ -325,6 +566,24 @@ def ring(frame, sx, sy, r, prog, alpha=0.75, thick=13, color=(205, 205, 205)):
 
 def blend(a, b, p):
     return a * (1 - p) + b * p
+
+
+def put(frame, x, y, img, alpha=None):
+    """Draw `img` (h, w, 3) on `frame` with its top-left corner at (x, y), clipped to the canvas: the part that lies outside is
+    dropped, a box that lies completely outside draws nothing. `alpha` (0..1) blends instead of replacing. Slice assignment with a
+    box that leaves the canvas fails (or wraps around when x or y is negative), so every layout draws through this."""
+    x, y = int(x), int(y)
+    h, w = img.shape[:2]
+    fx0, fy0 = max(x, 0), max(y, 0)
+    fx1, fy1 = min(x + w, frame.shape[1]), min(y + h, frame.shape[0])
+    if fx1 <= fx0 or fy1 <= fy0:
+        return frame
+    part = img[fy0 - y:fy1 - y, fx0 - x:fx1 - x]
+    if alpha is None:
+        frame[fy0:fy1, fx0:fx1] = part
+    else:
+        frame[fy0:fy1, fx0:fx1] = frame[fy0:fy1, fx0:fx1] * (1 - alpha) + part * alpha
+    return frame
 
 
 def to_u8(f):

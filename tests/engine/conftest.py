@@ -1,7 +1,10 @@
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
+
+os.environ["BTI_NO_REAL_MODELS"] = "1"
 
 import cv2
 import numpy as np
@@ -80,3 +83,7 @@ def arnolfini():
     if not (d / "storyboard.json").exists():
         pytest.skip("projects/arnolfini not exported")
     return open_project(d)
+
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: takes minutes (the validate/draw sweep); skip with -m 'not slow'")

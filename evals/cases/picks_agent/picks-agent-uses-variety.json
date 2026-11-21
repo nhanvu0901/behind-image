@@ -1,0 +1,24 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "picks-agent-uses-variety",
+  "step": "picks_agent",
+  "title": "The video is not one picture repeated: at least six different pictures",
+  "why": "The design: pictures for each line of the narration; the draft prefers the owner's picks, so variety is the pictures step's job.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "narration_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "variety",
+      "kind": "picks.variety_at_least",
+      "k": 6
+    },
+    {
+      "id": "decided",
+      "kind": "picks.every_beat_decided",
+      "min_share": 0.9
+    }
+  ]
+}

@@ -35,15 +35,28 @@ _CANDS = [
 
 
 def _licence_ok(lic: str) -> tuple[bool, str, str]:
+    """(on the allow list?, licence name, why not). Advisory: it only decides the flag, nothing is refused."""
     name = (lic or "").strip()
     low = name.lower()
     if not low:
         return False, "", "licence missing"
     if re.search(r"\b(nc|nd)\b|non-?commercial|no-?deriv|fair use", low):
-        return False, name, f"licence {name} is not allowed (NC, ND or fair use)"
+        return False, name, f"licence {name} is restricted (NC, ND or fair use)"
     if low.startswith(ALLOWED) or low == "pd":
         return True, name, "allowed"
     return False, name, f"licence {name!r} is not on the allow list"
+
+
+def _flag(lic: str, w: int = 0, h: int = 0) -> str | None:
+    """The advisory flag of an asset, like `bti.media.licence`: rejected | unknown | small | None."""
+    ok, name, reason = _licence_ok(lic)
+    if not ok:
+        flag = "unknown" if not name else "rejected"
+    elif min(w, h) and min(w, h) < 1200:
+        flag = "small"
+    else:
+        flag = None
+    return flag
 
 
 def _placeholder(path: Path, label: str, w: int = 1200, h: int = 1600) -> None:
@@ -51,7 +64,7 @@ def _placeholder(path: Path, label: str, w: int = 1200, h: int = 1600) -> None:
     d = ImageDraw.Draw(img)
     d.rectangle([w // 10, h // 10, w - w // 10, h - h // 10], outline=(60, 50, 40), width=8)
     d.text((w // 8, h // 2), label, fill=(30, 25, 20))
-    path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.mkdir(exist_ok=True)           # media/ only: never the project folder
     img.save(path, "JPEG", quality=80)
 
 
@@ -60,21 +73,27 @@ def _translate(e: Exception) -> Exception:
     n = type(e).__name__
     if n == "LicenceRejected":
         return LicenceRejected(str(e))
-    if isinstance(e, ApiError):
+    if isinstance(e, (ApiError, FileNotFoundError)):       # FileNotFoundError: the project was deleted meanwhile (404 by the app)
         return e
     if isinstance(e, ValueError):
-        return ApiError(422, str(e)[:300])
+        code = getattr(e, "code", None)
+        return ApiError(422, str(e)[:300], **({"code": code or "invalid_field", "reason": str(e)[:300]}))
     if n == "ImageTooSmall":
-        return ApiError(422, str(e)[:300], reason=str(e)[:300])
+        return ApiError(422, str(e)[:300], reason=str(e)[:300], code="image_too_small")
     if n == "MediaHTTPError":
         st = getattr(e, "status", None)
+        if getattr(e, "rate_limited", False):
+            # the source said "too many requests": the page names the wait it asked for (seconds; null when it gave none),
+            # the same code and body as bti.picks.service, so the same sentence is shown (errmsg.js `sourceLimitText`)
+            return ApiError(503, "the image source limits downloads: wait before trying again (HTTP %s)" % st, code="source_rate_limited",
+                            retryable=True, retry_after=getattr(e, "retry_after", None))
         if st in (429, 503, 502, 504, None):
             return ApiError(503, "Nguồn ảnh đang giới hạn tốc độ hoặc không phản hồi (HTTP %s). Hãy thử lại sau vài giây." % (st or "?"),
-                            retryable=True, retry_after=10)
-        return ApiError(502, f"media source error (HTTP {st}): {e}"[:300])
+                            retryable=True, retry_after=10, code="source_unreachable")
+        return ApiError(502, f"media source error (HTTP {st}): {e}"[:300], code="source_error")
     if n == "NotFound":
-        return ApiError(404, str(e)[:300])
-    return ApiError(502, f"media facade failed: {n}: {e}"[:300])
+        return ApiError(404, str(e)[:300], code="not_found")
+    return ApiError(502, f"media facade failed: {n}: {e}"[:300], code="source_error")
 
 
 class MediaAdapter:
@@ -106,7 +125,7 @@ class MediaAdapter:
                         "thumb_url": f"/api/media/stub-thumb/{re.sub(r'[^A-Za-z0-9]', '_', sid)}.jpg",
                         "page_url": f"https://example.invalid/{sid}", "width": w, "height": h,
                         "mime": "image/png" if sid.endswith(".png") else "image/jpeg", "author": author,
-                        "licence": lic, "licence_ok": ok, "licence_reason": reason})
+                        "licence": lic, "licence_ok": ok, "licence_reason": reason, "flag": _flag(lic, w, h)})
         return out[:limit]
 
     # ----- import / upload -----
@@ -127,54 +146,70 @@ class MediaAdapter:
     def import_candidate(self, project_dir: Path, source: str, source_id: str) -> dict:
         if self.module is not None:
             try:
-                return self.module.import_candidate(project_dir, source, source_id)
+                return self.module.import_candidate(project_dir, source, source_id, require_root=True)
             except Exception as e:  # noqa: BLE001
                 raise _translate(e)
         cand = next((c for c in _CANDS if c[0] == source and c[1] == source_id), None)
         if cand is None:
-            raise ApiError(404, "unknown candidate")
+            raise ApiError(404, "unknown candidate", code="not_found")
         _, _, title, author, lic, _, w, h = cand
-        ok, name, reason = _licence_ok(lic)
-        if not ok:
-            raise LicenceRejected(reason)
+        ok, name, reason = _licence_ok(lic)         # advisory: a restricted or unknown licence is flagged, never refused
         key = self._next_key(project_dir)
         fname = f"media/stub_{re.sub(r'[^A-Za-z0-9]', '_', source_id)}.jpg"
         _placeholder(project_dir / fname, title, 1200, round(1200 * h / w))
         asset = {"file": fname, "kind": "image", "title": title, "artist": author, "year": "",
                  "width": 1200, "height": round(1200 * h / w),
                  "credit": {"source": source, "source_url": f"https://example.invalid/{source_id}",
-                            "author": author, "licence": name, "licence_url": ""}, "regions": {}}
+                            "author": author, "licence": name, "licence_url": "", "flag": _flag(lic, 1200, round(1200 * h / w))}, "regions": {}}
         return {"asset_key": key, "asset": asset}
 
     def add_upload(self, project_dir: Path, file_path: Path, meta: dict) -> dict:
         if self.module is not None:
             try:
-                return self.module.add_upload(project_dir, file_path, meta)
+                return self.module.add_upload(project_dir, file_path, meta, require_root=True)
             except Exception as e:  # noqa: BLE001
                 raise _translate(e)
-        ok, name, reason = _licence_ok(meta.get("licence", ""))
-        if not ok:
-            raise LicenceRejected(reason)
-        if not meta.get("source_url") or not meta.get("author"):
-            raise LicenceRejected("source_url and author are required (author may be 'unknown, PD')")
+        ok, name, reason = _licence_ok(meta.get("licence", ""))         # advisory: no licence, source or author is required
+        ext_in = file_path.suffix.lower()
+        if ext_in in {".mp4", ".webm", ".mov", ".m4v"}:
+            from bti.media import clips
+            key = self._next_key(project_dir)
+            dest = safe_join(project_dir, "media") / f"upload_{key}.mp4"
+            dest.parent.mkdir(exist_ok=True)
+            try:
+                clips.normalize(file_path, dest, strip_audio=True)
+            except clips.MediaError as exc:
+                if isinstance(exc, clips.ToolMissing):
+                    shutil.copyfile(file_path, dest)
+                else:
+                    raise ApiError(422, f"video cannot be processed: {exc}", code="video_unreadable", reason="video cannot be processed")
+            p2 = clips.probe_video(dest)
+            w, h, dur = p2["width"], p2["height"], p2["duration"]
+            asset = {"file": f"media/{dest.name}", "kind": "video", "title": meta.get("title") or "", "artist": meta.get("artist") or "",
+                     "year": meta.get("year") or "", "width": w, "height": h,
+                     "credit": {"source": "upload", "source_url": meta.get("source_url") or "", "author": meta.get("author") or "",
+                                "licence": name, "licence_url": "", "flag": _flag(meta.get("licence", ""), 0, 0)}, "regions": {}}
+            if dur:
+                asset["duration"] = dur
+            return {"asset_key": key, "asset": asset}
         try:
             with Image.open(file_path) as im:
                 w, h = im.size
                 fmt = (im.format or "JPEG").lower()
         except Exception:
-            raise ApiError(422, "file is not a readable image")
+            raise ApiError(422, "file is not a readable image", code="image_unreadable", reason="file is not a readable image")
         ext = {"jpeg": "jpg", "png": "png", "webp": "webp"}.get(fmt)
         if ext is None:
-            raise ApiError(422, f"unsupported image format {fmt}")
+            raise ApiError(422, f"unsupported image format {fmt}", code="unsupported_file_type")
         key = self._next_key(project_dir)
         rel = f"media/upload_{key}.{ext}"
         dest = safe_join(project_dir, "media") / f"upload_{key}.{ext}"
-        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.parent.mkdir(exist_ok=True)
         shutil.copyfile(file_path, dest)
         asset = {"file": rel, "kind": "image", "title": meta.get("title") or "", "artist": meta.get("artist") or "",
                  "year": meta.get("year") or "", "width": w, "height": h,
-                 "credit": {"source": "upload", "source_url": meta["source_url"], "author": meta["author"],
-                            "licence": name, "licence_url": ""}, "regions": {}}
+                 "credit": {"source": "upload", "source_url": meta.get("source_url") or "", "author": meta.get("author") or "",
+                            "licence": name, "licence_url": "", "flag": _flag(meta.get("licence", ""), w, h)}, "regions": {}}
         return {"asset_key": key, "asset": asset}
 
     def stub_thumb(self, name: str) -> bytes:

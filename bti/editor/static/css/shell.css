@@ -1,0 +1,131 @@
+/* The persistent frame of the app: bar, stepper, one view at a time. */
+#shell { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); height: 100vh; }   /* the column may not grow with a wide view: the view scrolls by itself */
+#shell-top { background: var(--panel); border-bottom: 1px solid var(--border); }
+#frame-bar { display: flex; align-items: center; gap: 10px; height: 44px; padding: 0 14px; min-width: 0; }
+.brand { font-weight: 700; letter-spacing: .02em; margin-right: 6px; color: var(--text); text-decoration: none; white-space: nowrap; }
+#project-pick { min-width: 150px; max-width: 280px; flex: 0 1 280px; }
+#btn-new, #health { white-space: nowrap; flex: none; }
+#frame-project { display: flex; align-items: baseline; gap: 8px; min-width: 0; overflow: hidden; white-space: nowrap; }
+#frame-project .pt { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+#frame-project .pp { color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+#frame-status { max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#view { min-height: 0; min-width: 0; position: relative; overflow: auto; }
+#view > .view-msg { padding: 40px 20px; text-align: center; color: var(--muted); }
+
+#stepper { display: flex; gap: 2px; padding: 0 10px; border-top: 1px solid var(--border); background: #131720; overflow-x: auto; }
+#stepper[hidden] { display: none; }
+.step { display: flex; align-items: center; gap: 9px; padding: 8px 16px 7px; border: 0; border-bottom: 3px solid transparent; border-radius: 0; background: transparent; color: var(--muted); text-align: left; white-space: nowrap; }
+.step:hover:not(.disabled) { background: var(--elev); border-color: transparent; border-bottom-color: #3a4a68; }
+.step .num { width: 22px; height: 22px; flex: none; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--elev); border: 1px solid var(--border); color: var(--muted); }
+.step .lbl { display: flex; flex-direction: column; line-height: 1.2; }
+.step .nm { font-size: 13px; color: var(--text); font-weight: 600; }
+.step .tg { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; }
+.step.active { background: #1a2230; border-bottom-color: var(--accent); }
+.step.st-done .num { background: #153d2e; border-color: #1e5a43; color: var(--ok); }
+.step.st-done .tg { color: var(--ok); }
+.step.st-current .num, .step.at .num { background: var(--accent); border-color: var(--accent); color: #07101d; }
+.step.st-current .tg, .step.at .tg { color: var(--accent); }
+.step.st-available .tg { color: var(--muted); }
+.step.st-waiting .tg { color: #d8a93a; }
+.step.st-waiting .num { border-color: #6a5410; }
+#step-banner { display: flex; align-items: center; gap: 12px; padding: 8px 16px; background: #2a2410; border-top: 1px solid #6a5410; color: var(--text); font-size: 13px; line-height: 1.45; }
+#step-banner[hidden] { display: none; }
+#step-banner .msg { flex: 1; }
+.step.st-locked { opacity: .5; cursor: not-allowed; }
+.step.st-locked .nm { font-weight: 400; }
+.step.st-not_built .num { border-style: dashed; }
+.step.st-not_built .nm, .step.st-no_data .nm { font-weight: 400; color: var(--muted); }
+.step.st-no_data .tg { color: #6a5410; }
+.step.st-not_built.at .num { background: transparent; border-color: var(--accent); color: var(--accent); }
+
+/* home */
+.home { max-width: 1200px; margin: 0 auto; padding: 22px 20px 60px; }
+.home h1 { font-size: 20px; margin: 0 0 4px; }
+.home .head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 14px; }
+.plist { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.prow { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.2fr) minmax(0, 1.4fr) 176px; gap: 14px; align-items: center; padding: 12px 14px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; }
+.prow:hover { border-color: #3a4a68; }
+.prow .pt { font-weight: 600; } .prow .sub { color: var(--muted); font-size: 12px; }
+.prow .mono { color: var(--muted); font-size: 11px; }
+.prow .acts { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+.minisb { display: flex; gap: 3px; margin-top: 6px; }
+.minisb i { width: 22px; height: 6px; border-radius: 3px; background: var(--elev); border: 1px solid var(--border); }
+.minisb i.st-done { background: var(--ok); border-color: var(--ok); } .minisb i.st-current, .minisb i.at { background: var(--accent); border-color: var(--accent); }
+.minisb i.st-locked, .minisb i.st-no_data { opacity: .35; }
+.empty-box { padding: 40px 20px; text-align: center; color: var(--muted); border: 1px dashed var(--border); border-radius: 8px; margin-top: 12px; }
+
+/* placeholder / no-data / locked views */
+.infov { max-width: 760px; margin: 0 auto; padding: 36px 20px 60px; }
+.infov h1 { font-size: 20px; margin: 0 0 6px; }
+.infov .box { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin: 14px 0; }
+.infov .box.warn { border-color: #6a5410; background: #231d0a; }
+.infov .box h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.infov ul { margin: 0; padding-left: 20px; line-height: 1.6; }
+.infov .acts { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.infov .files { display: flex; flex-direction: column; gap: 6px; }
+.infov .file { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.infov code { background: var(--elev); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+/* project artwork step */
+.artv { max-width: 1200px; margin: 0 auto; padding: 20px 20px 60px; }
+.artv h1 { font-size: 20px; margin: 0 0 4px; }
+.artv .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+.artv .panel h4 { margin: 0 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.artv .srcrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: center; }
+.artv .srcrow:last-child { border-bottom: 0; }
+.artv .sub { color: var(--muted); font-size: 12px; }
+.artv .acts { display: flex; gap: 10px; flex-wrap: wrap; margin: 14px 0; }
+.artv pre.text { white-space: pre-wrap; margin: 8px 0 0; max-height: 280px; overflow: auto; font: 13px/1.5 ui-serif, Georgia, serif; color: #d6dae3; background: var(--elev); padding: 8px 10px; border-radius: 6px; }
+.artv .conflict { color: var(--warn); }
+.prow.damaged { border-color: #6a5410; }
+
+/* The agent select (agentpick.js): the same on every step that calls a model. A select with a label, one line under it that says where the
+   value comes from, and a warning line when the agent cannot run now. */
+.agent-pick { display: flex; flex-direction: column; gap: 1px; min-width: 0; max-width: 100%; }
+.agent-pick .agent-row { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.agent-pick .agent-label { color: var(--muted); white-space: nowrap; }
+.agent-pick .agent-select { min-width: 150px; max-width: 260px; flex: 1 1 auto; padding: 2px 6px; text-overflow: ellipsis; }
+.agent-pick .agent-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; font-size: 12px; line-height: 1.3; }
+.agent-pick .agent-whole { color: var(--accent); text-decoration: underline; padding: 0; font-size: 12px; }
+.agent-pick .agent-whole[hidden], .agent-pick .agent-warn[hidden] { display: none; }
+.agent-pick .agent-warn { font-size: 12px; max-width: 330px; }
+.prompt-agent { min-width: 0; }
+.prompt-agent .agent-pick { width: 100%; }
+.prompt-agent .agent-select { max-width: none; }
+.draft-panel .draft-agent .agent-pick { gap: 3px; }
+/* the quota message: a sentence and ONE button */
+.agent-quota { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.agent-quota-text { font-weight: 600; }
+.agent-quota-action { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.agent-quota-why { font-size: 12px; }
+.prompt-turn-quota { display: flex; flex-direction: column; gap: 4px; }
+.prompt-turn-agent { font-size: 11px; }
+/* the settings box: the default agent on top, the table of models per role under a collapsed "Nâng cao" */
+.settings-agent { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px solid var(--border); }
+.settings-agent h4 { margin: 0 0 6px; font-size: 15px; }
+.settings-agent-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.settings-agent-row select { min-width: 220px; }
+.settings-advanced > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.settings-advanced .settings-adv-hint { margin: 2px 0 8px; }
+
+/* worker c5cli: the switch "Cho agent tự chạy dự án này" (autoswitch.js) */
+#btn-auto { white-space: nowrap; flex: none; }
+#btn-auto.on { border-color: var(--accent); color: var(--accent); }
+#btn-auto[hidden] { display: none; }
+.auto-dialog .auto-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+.auto-dialog .auto-main { font-size: 15px; }
+.auto-dialog .auto-gates { margin: 10px 0 6px 22px; }
+.auto-dialog .auto-money { margin-top: 12px; font-weight: 600; }
+
+/* worker c6auto: the button "Chạy tự động" next to the switch and the bar under the top bar (progress while a run goes on, one sentence when it ended). */
+#btn-auto-run { white-space: nowrap; flex: none; }
+#btn-auto-run[hidden] { display: none; }
+#btn-auto-run:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+#auto-run-bar { display: flex; align-items: center; gap: 12px; padding: 8px 16px; border-top: 1px solid var(--border); font-size: 13px; line-height: 1.45; background: #131720; }
+#auto-run-bar[hidden] { display: none; }
+#auto-run-bar .msg { flex: 1; min-width: 0; }
+#auto-run-bar .hd { white-space: nowrap; }
+#auto-run-bar .go { white-space: nowrap; color: var(--accent); }
+#auto-run-bar.ok { background: #10241a; border-top-color: #1f6a43; }
+#auto-run-bar.warn { background: #2a2410; border-top-color: #6a5410; }
+#auto-run-bar.err { background: #2a1414; border-top-color: #7a2a2a; }

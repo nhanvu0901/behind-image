@@ -1,0 +1,6350 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "eligius",
+ "title": "St. Eligius",
+ "style": "gae",
+ "identity": {
+  "style": "raking"
+ },
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": "audio/mix.m4a",
+ "assets": {
+  "goldsmith_his_shop": {
+   "file": "media/goldsmith_his_shop.jpg",
+   "kind": "image",
+   "title": "A Goldsmith in his Shop MET DT711",
+   "artist": "Petrus Christus",
+   "year": "1449",
+   "width": 1920,
+   "height": 2206,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:A_Goldsmith_in_his_Shop_MET_DT711.jpg",
+    "author": "Petrus Christus",
+    "licence": "CC0",
+    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3219,
+   "original_height": 3699
+  },
+  "goldsmith_his_shop_3bc1": {
+   "file": "media/goldsmith_his_shop_3bc1.jpg",
+   "kind": "image",
+   "title": "A Goldsmith in his Shop",
+   "artist": "Petrus Christus",
+   "year": "1449",
+   "width": 3469,
+   "height": 4000,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/459052",
+    "author": "Petrus Christus",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {
+    "SCALES": {
+     "x": 2012,
+     "y": 2940,
+     "rx": 347,
+     "ry": 460,
+     "label": "Bàn tay cầm cân tiểu ly và chiếc nhẫn trong đĩa cân"
+    },
+    "SAINT_FACE": {
+     "x": 1995,
+     "y": 1700,
+     "rx": 364,
+     "ry": 420,
+     "label": "Khuôn mặt thánh Eligius, mắt ngước lên"
+    },
+    "SAINT": {
+     "x": 2047,
+     "y": 2240,
+     "rx": 902,
+     "ry": 960,
+     "label": "Thánh Eligius sau quầy trong áo thị dân màu đỏ"
+    },
+    "COUPLE": {
+     "x": 1093,
+     "y": 1720,
+     "rx": 989,
+     "ry": 1320,
+     "label": "Đôi vợ chồng trẻ ăn mặc sang trọng"
+    },
+    "WOMAN": {
+     "x": 763,
+     "y": 1480,
+     "rx": 659,
+     "ry": 1000,
+     "label": "Người phụ nữ với áo gấm vàng và mũ đính ngọc trai"
+    },
+    "MAN_CHAIN": {
+     "x": 1405,
+     "y": 1040,
+     "rx": 503,
+     "ry": 640,
+     "label": "Chàng trai với dây chuyền vàng và trâm cài trên mũ"
+    },
+    "MIRROR": {
+     "x": 3018,
+     "y": 2800,
+     "rx": 243,
+     "ry": 520,
+     "label": "Tấm gương lồi phản chiếu phố và hai người đàn ông"
+    },
+    "MIRROR_MEN": {
+     "x": 3018,
+     "y": 2940,
+     "rx": 173,
+     "ry": 220,
+     "label": "Hai người đàn ông trong gương, một người cầm chim ưng"
+    },
+    "COUNTER": {
+     "x": 1717,
+     "y": 3320,
+     "rx": 1648,
+     "ry": 400,
+     "label": "Quầy hàng mở ra phía đường"
+    },
+    "WEIGHT_BOX": {
+     "x": 2342,
+     "y": 3300,
+     "rx": 399,
+     "ry": 220,
+     "label": "Hộp tròn đựng quả cân, nắp mở"
+    },
+    "COINS": {
+     "x": 2845,
+     "y": 3260,
+     "rx": 208,
+     "ry": 220,
+     "label": "Những đồng tiền vàng trên quầy"
+    },
+    "GIRDLE": {
+     "x": 954,
+     "y": 3320,
+     "rx": 538,
+     "ry": 400,
+     "label": "Dải thắt lưng cưới trên quầy"
+    },
+    "SHELF_BEADS": {
+     "x": 2741,
+     "y": 1140,
+     "rx": 520,
+     "ry": 220,
+     "label": "Khóa vàng và chuỗi hạt san hô, hổ phách trên kệ"
+    },
+    "PITCHERS": {
+     "x": 2775,
+     "y": 560,
+     "rx": 520,
+     "ry": 440,
+     "label": "Các bình bạc và pha lê trên kệ trên cùng"
+    },
+    "SHELVES": {
+     "x": 2758,
+     "y": 1240,
+     "rx": 538,
+     "ry": 1080,
+     "label": "Toàn bộ các kệ đồ quý phía sau thánh"
+    },
+    "TONGUES": {
+     "x": 2862,
+     "y": 1480,
+     "rx": 191,
+     "ry": 240,
+     "label": "Lưỡi rắn treo trên dây vàng và hai thỏi đá dựng vào tường"
+    },
+    "COCONUT": {
+     "x": 2359,
+     "y": 1640,
+     "rx": 173,
+     "ry": 320,
+     "label": "Chén vỏ dừa khuất sau tấm rèm"
+    },
+    "CORAL_VESSEL": {
+     "x": 2949,
+     "y": 1540,
+     "rx": 312,
+     "ry": 460,
+     "label": "Cành san hô và bình vàng thủy tinh bên cạnh"
+    },
+    "INSCRIPTION": {
+     "x": 1769,
+     "y": 3720,
+     "rx": 590,
+     "ry": 120,
+     "label": "Dòng chữ ký tiếng Latinh ở mép dưới"
+    },
+    "HEART_SIGN": {
+     "x": 2238,
+     "y": 3700,
+     "rx": 156,
+     "ry": 120,
+     "label": "Dấu hình trái tim cạnh chữ ký"
+    },
+    "TOUCHSTONES": {
+     "x": 2610,
+     "y": 1725,
+     "rx": 150,
+     "ry": 175,
+     "label": "Two oblong touchstones leaning on the wall"
+    }
+   }
+  },
+  "ban_do_lubeck": {
+   "file": "media/ban_do_lubeck.jpg",
+   "kind": "image",
+   "title": "Bản đồ Lübeck",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=12/53.8664/10.6847",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "ban_do_limoges": {
+   "file": "media/ban_do_limoges.jpg",
+   "kind": "image",
+   "title": "Bản đồ Limoges",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=13/45.8354/1.2645",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "portret_van_dagobert": {
+   "file": "media/portret_van_dagobert.jpg",
+   "kind": "image",
+   "title": "Portret van Dagobert I, koning van Frankrijk, RP-P-1920-1178",
+   "artist": "Rijksmuseum",
+   "year": "1610",
+   "width": 1920,
+   "height": 2444,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Portret_van_Dagobert_I,_koning_van_Frankrijk,_RP-P-1920-1178.jpg",
+    "author": "Rijksmuseum",
+    "licence": "CC0",
+    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3458,
+   "original_height": 4402
+  },
+  "ban_do_noyon": {
+   "file": "media/ban_do_noyon.jpg",
+   "kind": "image",
+   "title": "Bản đồ Noyon",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=14/49.5806/3.0000",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "ban_do_brugge": {
+   "file": "media/ban_do_brugge.jpg",
+   "kind": "image",
+   "title": "Bản đồ Brugge",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=13/51.2086/3.2268",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "assorted_fossilized_shar": {
+   "file": "media/assorted_fossilized_shar.jpeg",
+   "kind": "image",
+   "title": "Assorted fossilized shark teeth displayed on a dark background, emphasizing prehistoric marine life.",
+   "artist": "Stephen Carroll",
+   "year": "",
+   "width": 3000,
+   "height": 4000,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/close-up-of-ancient-tools-17038605/",
+    "author": "Stephen Carroll",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3000,
+   "original_height": 4000
+  },
+  "decorative_mirror_reflec": {
+   "file": "media/decorative_mirror_reflec.jpeg",
+   "kind": "image",
+   "title": "A decorative mirror reflects a hallway with striped walls and doors, creating a unique convex effect.",
+   "artist": "cottonbro studio",
+   "year": "",
+   "width": 3773,
+   "height": 5660,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/convex-mirror-mounted-on-the-wall-5138199/",
+    "author": "cottonbro studio",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3773,
+   "original_height": 5660
+  },
+  "head_christ_ecce": {
+   "file": "media/head_christ_ecce.jpg",
+   "kind": "image",
+   "title": "Head of Christ (Ecce Homo)",
+   "artist": "Petrus Christus",
+   "year": "1445",
+   "width": 2743,
+   "height": 3722,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/435897",
+    "author": "Petrus Christus",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "ban_do_antwerpen": {
+   "file": "media/ban_do_antwerpen.jpg",
+   "kind": "image",
+   "title": "Bản đồ Antwerpen",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=12/51.2211/4.3997",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "metropolitan_museum_art": {
+   "file": "media/metropolitan_museum_art.jpg",
+   "kind": "image",
+   "title": "metropolitan museum of art, nyc, new york, city, manhattan, architecture, building, architectural, attraction, main, museum, neoclassical, place, tourism",
+   "artist": "anielbaez0",
+   "year": "",
+   "width": 1280,
+   "height": 857,
+   "credit": {
+    "source": "pixabay",
+    "source_url": "https://pixabay.com/photos/metropolitan-museum-of-art-nyc-754843/",
+    "author": "anielbaez0",
+    "licence": "Pixabay Content License",
+    "licence_url": "https://pixabay.com/service/license-summary/",
+    "flag": "small"
+   },
+   "regions": {},
+   "original_width": 3872,
+   "original_height": 2592
+  }
+ },
+ "shots": [
+  {
+   "id": "s0001",
+   "start": {
+    "w": 0,
+    "off": -0.35,
+    "text": "Look"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 2750,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "ID-OPEN-01",
+     "intent": "structure",
+     "start": {
+      "w": 0,
+      "off": -0.35,
+      "text": "Look"
+     },
+     "dur": 8.11,
+     "params": {
+      "floor": 0.1,
+      "wake": 0.45,
+      "black_s": 0.4,
+      "rise_s": 0.8,
+      "sweep_start_s": 1.5,
+      "sweep_s": 6.0,
+      "direction": "right_to_left",
+      "band_width_pct": 14,
+      "feather": 0.4,
+      "angle_deg": 10,
+      "release_s": 1.5,
+      "warm": 0.14
+     },
+     "slots": {},
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "ID-LABEL-01",
+     "intent": "structure",
+     "start": {
+      "w": 13,
+      "off": 0.05,
+      "text": "and"
+     },
+     "dur": 3.0,
+     "params": {
+      "title": "St. Eligius",
+      "artist_year": "Petrus Christus, 1449",
+      "x_pct": 4,
+      "bottom_pct": 92,
+      "title_cap_pct": 3.0,
+      "second_cap_pct": 2.3,
+      "fade_in_s": 0.5,
+      "fade_out_s": 0.5,
+      "shadow": true,
+      "nominal_s": 4.5
+     },
+     "slots": {},
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "cold open on the hands and the scales, the first thing the narrator asks us to see"
+  },
+  {
+   "id": "s0002",
+   "start": {
+    "w": 21,
+    "off": 0.0,
+    "text": "A"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1650,
+      "cy": 2100,
+      "zoom": 0.7,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1250,
+      "cy": 1500,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "drift up to the young couple as they are introduced watching him"
+  },
+  {
+   "id": "s0003",
+   "start": {
+    "w": 33,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2050,
+      "cy": 2300,
+      "zoom": 0.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1995,
+      "cy": 1720,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'now look at his eyes': travel from the hands up to the saint's face"
+  },
+  {
+   "id": "s0004",
+   "start": {
+    "w": 47,
+    "off": 0.0,
+    "text": "They"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1980,
+      "cy": 1700,
+      "zoom": 1.45,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1960,
+      "cy": 1640,
+      "zoom": 1.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "slow push on the raised eyes while the narrator says they turn away from the work"
+  },
+  {
+   "id": "s0005",
+   "start": {
+    "w": 58,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1300,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1900,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the narrow workshop and its three figures: a slow travel down the full width"
+  },
+  {
+   "id": "s0006",
+   "start": {
+    "w": 69,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 2500,
+      "zoom": 0.85,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2783,
+      "cy": 2840,
+      "zoom": 1.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the eye arrives at the round mirror as it is named"
+  },
+  {
+   "id": "s0007",
+   "start": {
+    "w": 85,
+    "off": 0.0,
+    "text": "This"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2100,
+      "cy": 2200,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2030,
+      "cy": 1950,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "Saint Eligius",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 93,
+      "off": 0.0,
+      "text": "Saint"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "'this man is no ordinary craftsman': push on the saint and name him"
+  },
+  {
+   "id": "s0008",
+   "start": {
+    "w": 99,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2150,
+      "cy": 1900,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2150,
+      "cy": 2500,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "travel down the red citizen's gown while the robes are contrasted"
+  },
+  {
+   "id": "s0009",
+   "start": {
+    "w": 110,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2000,
+      "zoom": 0.5535,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2000,
+      "zoom": 0.27,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the pull back that ends the cold open: the whole panel as its two readings are named"
+  },
+  {
+   "id": "s0010",
+   "start": {
+    "w": 128,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2300,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1850,
+      "cy": 2400,
+      "zoom": 0.64,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'a prayer or a shop sign?': back in on a full frame of saint and counter before the title"
+  },
+  {
+   "id": "s0011",
+   "start": {
+    "t": 58.97
+   },
+   "technique": "ID-BRAND-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1850,
+      "cy": 2400,
+      "zoom": 0.64,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1850,
+      "cy": 2400,
+      "zoom": 0.6592,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "text": "RAKING LIGHT",
+    "dim_s": 0.6,
+    "floor": 0.12,
+    "wake": 0.26,
+    "sweep_delay_s": 0.6,
+    "sweep_s": 2.4,
+    "direction": "left_to_right",
+    "band_width_pct": 16,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "warm": 0.14,
+    "cap_pct": 8.0,
+    "tracking_pct": 25,
+    "y_pct": 42,
+    "nominal_s": 5.0
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "title card"
+  },
+  {
+   "id": "s0012",
+   "start": {
+    "t": 61.87
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1734.5,
+      "cy": 1600,
+      "zoom": 0.53221,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1734.5,
+      "cy": 1600,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "1. The Open Window",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0013",
+   "start": {
+    "w": 138,
+    "off": 0.0,
+    "text": "Why"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1600,
+      "zoom": 0.5535,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 3000,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'why can we see into this shop?': travel down the full width to the counter as it is named"
+  },
+  {
+   "id": "s0014",
+   "start": {
+    "w": 159,
+    "off": 0.0,
+    "text": "Goldsmiths"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1300,
+      "cy": 3250,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2250,
+      "cy": 3150,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "working in full view: a slow pan along the counter where customers could watch"
+  },
+  {
+   "id": "s0015",
+   "start": {
+    "w": 178,
+    "off": 0.0,
+    "text": "These"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2900,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1400,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the guild rules in general: a slow travel up the whole shop front"
+  },
+  {
+   "id": "s0016",
+   "start": {
+    "w": 196,
+    "off": 0.0,
+    "text": "One"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 1950,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1995,
+      "cy": 1760,
+      "zoom": 1.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the rule against sneezing to attract custom: a dry push in on the goldsmith's face"
+  },
+  {
+   "id": "s0017",
+   "start": {
+    "w": 211,
+    "off": 0.0,
+    "text": "Behind"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1850,
+      "cy": 2500,
+      "zoom": 0.8,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2012,
+      "cy": 2880,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "fear of fraud and careful weighing: down to the hand-scales"
+  },
+  {
+   "id": "s0018",
+   "start": {
+    "w": 235,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "lubeck",
+      "name": "Lübeck",
+      "lonlat": [
+       10.6866,
+       53.8655
+      ],
+      "at": {
+       "w": 247,
+       "text": "Lübeck,"
+      }
+     },
+     {
+      "id": "bruges",
+      "name": "Bruges",
+      "lonlat": [
+       3.2247,
+       51.2093
+      ],
+      "at": {
+       "w": 251,
+       "text": "Bruges."
+      }
+     }
+    ],
+    "route": [
+     {
+      "from": "lubeck",
+      "to": "bruges",
+      "via": "",
+      "shape": "curve",
+      "at": {
+       "w": 248,
+       "text": "set"
+      },
+      "draw_s": 1.6
+     }
+    ],
+    "region_iso": [],
+    "region_label": "",
+    "region_at": 0.6,
+    "region_fill_s": 1.0,
+    "view_start_width_km": 1800,
+    "view_start_center": "",
+    "view_end_mode": "fit",
+    "view_end_margin_pct": 19,
+    "view_end_center": "",
+    "view_end_width_km": 2400,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the Hanse scales built in Lübeck and set up in Bruges: the journey on a map"
+  },
+  {
+   "id": "s0019",
+   "start": {
+    "w": 252,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2040,
+      "cy": 2800,
+      "zoom": 1.35,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2000,
+      "cy": 2830,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'no accident that the saint is shown weighing': a slow push on the scales and ring"
+  },
+  {
+   "id": "s0020",
+   "start": {
+    "w": 280,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2900,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1800,
+      "cy": 2950,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "WEIGHT_BOX",
+      "rx": 399.0,
+      "ry": 220.0,
+      "floor": 0.6,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 284,
+      "off": 0.0,
+      "text": "round"
+     },
+     "dur": 8.58,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "wide on the counter, the spotlight finds the round weight box as it is named"
+  },
+  {
+   "id": "s0021",
+   "start": {
+    "w": 307,
+    "off": 0.0,
+    "text": "And"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2030,
+      "cy": 2650,
+      "zoom": 1.0,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1995,
+      "cy": 1800,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'the hand that lifts them belongs to a very particular man': from the hand up to the face"
+  },
+  {
+   "id": "s0022",
+   "start": {
+    "t": 136.99
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2047,
+      "cy": 1800,
+      "zoom": 0.86538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2047,
+      "cy": 1800,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "2. The Saint Behind the Counter",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0023",
+   "start": {
+    "w": 319,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2047,
+      "cy": 1800,
+      "zoom": 0.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2030,
+      "cy": 2750,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the man behind the counter down his citizen's clothes to the scales in his hand"
+  },
+  {
+   "id": "s0024",
+   "start": {
+    "w": 337,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "limoges",
+      "name": "Limoges",
+      "lonlat": [
+       1.2611,
+       45.8336
+      ],
+      "at": {
+       "w": 343,
+       "text": "Limoges"
+      }
+     }
+    ],
+    "route": [],
+    "region_iso": [],
+    "region_label": "",
+    "region_at": 0.6,
+    "region_fill_s": 1.0,
+    "view_start_width_km": 2400,
+    "view_start_center": "",
+    "view_end_mode": "manual",
+    "view_end_margin_pct": 19,
+    "view_end_center": "1.26, 45.83",
+    "view_end_width_km": 900,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "born at Limoges: the place on a map (replaces the owner's street tile)"
+  },
+  {
+   "id": "s0025",
+   "start": {
+    "w": 346,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "portret_van_dagobert"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 960.0,
+      "cy": 1222.0,
+      "zoom": 0.41538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 960.0,
+      "cy": 1222.0,
+      "zoom": 0.44031,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "King Dagobert",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 353,
+      "off": 0.0,
+      "text": "King"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the owner's portrait of the king, named as the narrator names him"
+  },
+  {
+   "id": "s0026",
+   "start": {
+    "w": 362,
+    "off": 0.0,
+    "text": "telling"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 1800,
+      "zoom": 1.15,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1990,
+      "cy": 1720,
+      "zoom": 1.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the children's song about the king's trousers lands on the adviser's straight face"
+  },
+  {
+   "id": "s0027",
+   "start": {
+    "w": 372,
+    "off": 0.0,
+    "text": "Legend"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 1600,
+      "zoom": 0.85,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2620,
+      "cy": 1150,
+      "zoom": 1.15,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the gold and jewels of the throne legend: the eye goes to the treasures on the shelves"
+  },
+  {
+   "id": "s0028",
+   "start": {
+    "w": 389,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2500,
+      "cy": 3050,
+      "zoom": 1.2,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2845,
+      "cy": 3260,
+      "zoom": 1.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "master of the mint: down to the coins on the counter"
+  },
+  {
+   "id": "s0029",
+   "start": {
+    "w": 400,
+    "off": 0.0,
+    "text": "Dagobert"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "noyon",
+      "name": "Noyon",
+      "lonlat": [
+       2.9997,
+       49.5817
+      ],
+      "at": {
+       "w": 405,
+       "text": "Noyon,"
+      }
+     },
+     {
+      "id": "bruges",
+      "name": "Bruges",
+      "lonlat": [
+       3.2247,
+       51.2093
+      ],
+      "at": {
+       "w": 410,
+       "text": "Bruges,"
+      }
+     }
+    ],
+    "route": [],
+    "region_iso": [],
+    "region_label": "",
+    "region_at": 0.6,
+    "region_fill_s": 1.0,
+    "view_start_width_km": 1600,
+    "view_start_center": "",
+    "view_end_mode": "manual",
+    "view_end_margin_pct": 19,
+    "view_end_center": "3.1, 50.4",
+    "view_end_width_km": 600,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "Bishop of Noyon, a diocese reaching Bruges: both towns on the map (replaces the owner's Noyon tile)"
+  },
+  {
+   "id": "s0030",
+   "start": {
+    "w": 416,
+    "off": 0.0,
+    "text": "Some"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 1850,
+      "zoom": 1.1,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1950,
+      "cy": 2650,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "apprentice or blacksmith: from his face down to the working hands"
+  },
+  {
+   "id": "s0031",
+   "start": {
+    "w": 428,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1750,
+      "cy": 2950,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1650,
+      "cy": 3000,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the horse-shoeing miracle: a slow push on the craftsman's hand resting on the counter"
+  },
+  {
+   "id": "s0032",
+   "start": {
+    "w": 447,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2540,
+      "cy": 3150,
+      "zoom": 1.05,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2050,
+      "cy": 2900,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "patron of smiths and money changers: from the coins across to the scales"
+  },
+  {
+   "id": "s0033",
+   "start": {
+    "w": 466,
+    "off": 0.0,
+    "text": "Every"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2100,
+      "cy": 2100,
+      "zoom": 0.75,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1380,
+      "cy": 1700,
+      "zoom": 0.72,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "every guild had its patron: from the saint across to the townspeople he protects"
+  },
+  {
+   "id": "s0034",
+   "start": {
+    "w": 480,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1700,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1900,
+      "zoom": 0.58,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "compare",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "saint and couple in one wide frame: in citizen's clothes he looks like one of them"
+  },
+  {
+   "id": "s0035",
+   "start": {
+    "w": 493,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1900,
+      "cy": 2600,
+      "zoom": 0.8,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2300,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "STATIC-09",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "year": "1449",
+      "sub": "Chapel of Smiths, Bruges",
+      "x_pct": 50,
+      "y_pct": 46,
+      "size_px": 120,
+      "tracking_px": 10,
+      "sub_px": 30,
+      "fade_in_s": 0.2,
+      "fade_out_s": 0.25
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 494,
+      "off": 0.0,
+      "text": "1449,"
+     },
+     "dur": 4.0,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the year of the panel and of the Smiths' chapel, set over a slow pull back to a wide band"
+  },
+  {
+   "id": "s0036",
+   "start": {
+    "t": 226.46
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 0.96154,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "3. The Ring on the Scales",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0037",
+   "start": {
+    "w": 521,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2000,
+      "cy": 2850,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'look back at the scales': a push toward the small ring in the pan"
+  },
+  {
+   "id": "s0038",
+   "start": {
+    "w": 542,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2040,
+      "cy": 2830,
+      "zoom": 1.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2060,
+      "cy": 2850,
+      "zoom": 2.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the first reading begins with the ring: close on the ring and the pan below it"
+  },
+  {
+   "id": "s0039",
+   "start": {
+    "w": 558,
+    "off": 0.0,
+    "text": "Eligius"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2330,
+      "cy": 1700,
+      "zoom": 0.85,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2590,
+      "cy": 1250,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "a ring kept in a cathedral treasury: the eye wanders to the treasures on the shelves"
+  },
+  {
+   "id": "s0040",
+   "start": {
+    "w": 571,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1500,
+      "cy": 1700,
+      "zoom": 0.8,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1350,
+      "cy": 1100,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "rich suitors wanting to marry: the richly dressed young man stands in for them"
+  },
+  {
+   "id": "s0041",
+   "start": {
+    "w": 588,
+    "off": 0.0,
+    "text": "Eligius"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1900,
+      "cy": 2400,
+      "zoom": 1.05,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2012,
+      "cy": 2780,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "Eligius steps in with his golden ring: to his hand holding the ring"
+  },
+  {
+   "id": "s0042",
+   "start": {
+    "w": 602,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1200,
+      "cy": 1500,
+      "zoom": 0.8,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1950,
+      "cy": 1700,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the saint who turns a girl from marriage: from the young woman across to his raised eyes"
+  },
+  {
+   "id": "s0043",
+   "start": {
+    "w": 619,
+    "off": 0.0,
+    "text": "Another"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1950,
+      "cy": 2850,
+      "zoom": 1.15,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2000,
+      "cy": 2850,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the guardian of the wedding-ring trade: back to the ring on the scales"
+  },
+  {
+   "id": "s0044",
+   "start": {
+    "w": 635,
+    "off": 0.0,
+    "text": "That"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2800,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2950,
+      "zoom": 0.58,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "GIRDLE",
+      "rx": 538.0,
+      "ry": 400.0,
+      "floor": 0.6,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 644,
+      "off": 0.0,
+      "text": "traditional"
+     },
+     "dur": 3.92,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "wide on the counter, the spotlight picks out the wedding girdle in front of the couple"
+  },
+  {
+   "id": "s0045",
+   "start": {
+    "w": 656,
+    "off": 0.0,
+    "text": "On"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2450,
+      "cy": 1450,
+      "zoom": 0.95,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2640,
+      "cy": 1120,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "AN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "at": [
+       2640,
+       1071
+      ],
+      "radius": 150,
+      "draw_s": 0.5,
+      "hold_s": 2.0,
+      "fade_s": 0.4,
+      "opacity": 0.75,
+      "color": "#cdcdcd",
+      "stroke_pct_width": 0.7
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 661,
+      "off": 0.0,
+      "text": "golden"
+     },
+     "dur": 2.72,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "up to the shelf: a ring marks the golden buckle that would fit the girdle"
+  },
+  {
+   "id": "s0046",
+   "start": {
+    "w": 667,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 960,
+      "cy": 2350,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 960,
+      "cy": 950,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pan up the woman from the pomegranate brocade to the pearl-embroidered bonnet"
+  },
+  {
+   "id": "s0047",
+   "start": {
+    "w": 691,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1400,
+      "cy": 1400,
+      "zoom": 1.3,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1250,
+      "cy": 750,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the heavy gold chain up to the brooch on his headgear, in the order they are named"
+  },
+  {
+   "id": "s0048",
+   "start": {
+    "w": 705,
+    "off": 0.0,
+    "text": "Only"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1150,
+      "cy": 1300,
+      "zoom": 0.95,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1700,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "dress fit for the Burgundian court: pull back to the couple and the goldsmith together"
+  },
+  {
+   "id": "s0049",
+   "start": {
+    "w": 728,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1250,
+      "cy": 1150,
+      "zoom": 0.85,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1150,
+      "cy": 1000,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'nobody knows who they are': a slow push on the two anonymous faces"
+  },
+  {
+   "id": "s0050",
+   "start": {
+    "t": 315.84
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2300,
+      "cy": 3050,
+      "zoom": 0.96154,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2300,
+      "cy": 3050,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "4. Coins from Everywhere",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0051",
+   "start": {
+    "w": 744,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 3050,
+      "zoom": 1.0,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2845,
+      "cy": 3260,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "past the scales to the coins as they are named"
+  },
+  {
+   "id": "s0052",
+   "start": {
+    "w": 764,
+    "off": 0.0,
+    "text": "Beside"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2790,
+      "cy": 3280,
+      "zoom": 2.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2830,
+      "cy": 3300,
+      "zoom": 2.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the duke's heavy gold coins among the foreign ones: a slow push on the stack"
+  },
+  {
+   "id": "s0053",
+   "start": {
+    "w": 777,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2650,
+      "cy": 3200,
+      "zoom": 1.3,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2900,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'how did so much foreign gold reach one counter?': pull back from the coins to the whole counter"
+  },
+  {
+   "id": "s0054",
+   "start": {
+    "w": 787,
+    "off": 0.0,
+    "text": "Bruges,"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "bruges",
+      "name": "Bruges",
+      "lonlat": [
+       3.2247,
+       51.2093
+      ],
+      "at": {
+       "w": 787,
+       "text": "Bruges,"
+      }
+     }
+    ],
+    "route": [],
+    "region_iso": [],
+    "region_label": "",
+    "region_at": 0.6,
+    "region_fill_s": 1.0,
+    "view_start_width_km": 3000,
+    "view_start_center": "",
+    "view_end_mode": "manual",
+    "view_end_margin_pct": 19,
+    "view_end_center": "4.0, 51.0",
+    "view_end_width_km": 1400,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "Bruges, commercial capital of the north, placed on the map (replaces the owner's street tile)"
+  },
+  {
+   "id": "s0055",
+   "start": {
+    "w": 802,
+    "off": 0.0,
+    "text": "Furs"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1300,
+      "cy": 1300,
+      "zoom": 1.2,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 950,
+      "cy": 2150,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "furs from the north, silks from the south: from the man's fur collar to the woman's brocade"
+  },
+  {
+   "id": "s0056",
+   "start": {
+    "w": 815,
+    "off": 0.0,
+    "text": "On"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2400,
+      "cy": 2650,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2731,
+      "cy": 2750,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "NUM-01",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "rows": [
+       {
+        "label": "British caravels",
+        "value": "42",
+        "units": "ships",
+        "count": 42,
+        "at": {
+         "w": 823,
+         "text": "42"
+        }
+       },
+       {
+        "label": "Venetian galleys",
+        "value": "3",
+        "units": "ships",
+        "count": 3,
+        "at": {
+         "w": 827,
+         "text": "three"
+        }
+       }
+      ],
+      "caption": "each dot is one ship in the harbour",
+      "source": "",
+      "dim_picture_to": 0.38,
+      "cap_pct": 8.0,
+      "align": "left",
+      "marks_s": 1.1,
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 819,
+      "off": 0.0,
+      "text": "1457"
+     },
+     "dur": 9.54,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the harbour count of one day in 1457, over a drift toward the street in the mirror"
+  },
+  {
+   "id": "s0057",
+   "start": {
+    "w": 837,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2350,
+      "cy": 1000,
+      "zoom": 0.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2731,
+      "cy": 600,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the duke as best customer: up to the silver and crystal on the top shelf"
+  },
+  {
+   "id": "s0058",
+   "start": {
+    "w": 852,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2450,
+      "cy": 620,
+      "zoom": 1.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2850,
+      "cy": 600,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "tables piled with his plate: a slow pan along the row of vessels"
+  },
+  {
+   "id": "s0059",
+   "start": {
+    "w": 863,
+    "off": 0.0,
+    "text": "One"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2450,
+      "cy": 800,
+      "zoom": 1.25,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2450,
+      "cy": 760,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "NUM-01",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "rows": [
+       {
+        "label": "One salt cellar",
+        "value": "900",
+        "units": "ducats",
+        "count": 0,
+        "at": {
+         "w": 873,
+         "text": "900"
+        }
+       },
+       {
+        "label": "A craftsman's wages",
+        "value": "200",
+        "units": "years",
+        "count": 0,
+        "at": {
+         "w": 876,
+         "text": "200"
+        }
+       }
+      ],
+      "caption": "the value of one piece of the duke's plate",
+      "source": "",
+      "dim_picture_to": 0.38,
+      "cap_pct": 8.0,
+      "align": "left",
+      "marks_s": 1.1,
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 872,
+      "off": 0.0,
+      "text": "about"
+     },
+     "dur": 5.74,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the salt cellar's value stated large over the covered cup on the shelf"
+  },
+  {
+   "id": "s0060",
+   "start": {
+    "w": 882,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2269,
+      "cy": 1800,
+      "zoom": 0.8,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2590,
+      "cy": 1450,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "payment in chains and jewelled boxes: drift over the boxes and jewels on the shelf"
+  },
+  {
+   "id": "s0061",
+   "start": {
+    "w": 903,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1150,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1200,
+      "zoom": 0.58,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "KEY-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "labels": [
+       {
+        "text": "Rings",
+        "ref": [
+         2984,
+         1938
+        ],
+        "side": "auto",
+        "at": {
+         "w": 910,
+         "text": "rings,"
+        }
+       },
+       {
+        "text": "Silver pitchers",
+        "ref": "PITCHERS",
+        "side": "auto",
+        "at": {
+         "w": 911,
+         "text": "silver"
+        }
+       },
+       {
+        "text": "Brooches",
+        "ref": [
+         2640,
+         1377
+        ],
+        "side": "auto",
+        "at": {
+         "w": 913,
+         "text": "brooches"
+        }
+       },
+       {
+        "text": "Pearls",
+        "ref": [
+         2490,
+         1950
+        ],
+        "side": "auto",
+        "at": {
+         "w": 915,
+         "text": "pearls,"
+        }
+       },
+       {
+        "text": "Heavy chain",
+        "ref": [
+         1352,
+         1326
+        ],
+        "side": "auto",
+        "at": {
+         "w": 919,
+         "text": "heavy"
+        }
+       }
+      ],
+      "cap_pct": 2.4,
+      "dim_picture_to": 0.78,
+      "fade_s": 0.3,
+      "leave_s": 0.5,
+      "shadow": true,
+      "leader": "auto"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 904,
+      "off": 0.0,
+      "text": "look"
+     },
+     "dur": 9.5,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the narrator lists the portable wealth; each piece is labelled as it is named"
+  },
+  {
+   "id": "s0062",
+   "start": {
+    "t": 400.13
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2250,
+      "cy": 1700,
+      "zoom": 0.86538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2250,
+      "cy": 1700,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "5. Jewels Against Poison",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0063",
+   "start": {
+    "w": 931,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2250,
+      "cy": 1700,
+      "zoom": 0.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2840,
+      "cy": 1460,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "past the saint to the wall, arriving on the small dark shapes on gold chains"
+  },
+  {
+   "id": "s0064",
+   "start": {
+    "w": 949,
+    "off": 0.0,
+    "text": "They"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "assorted_fossilized_shar"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1500.0,
+      "cy": 2000.0,
+      "zoom": 0.2538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1500.0,
+      "cy": 2000.0,
+      "zoom": 0.26903,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "Fossilized shark teeth",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 954,
+      "off": 0.0,
+      "text": "fossilized"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the owner's photo of real fossil shark teeth, the 'adder's tongues'"
+  },
+  {
+   "id": "s0065",
+   "start": {
+    "w": 965,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2650,
+      "cy": 1680,
+      "zoom": 1.4,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2615,
+      "cy": 1725,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "back in the painting on the two oblong touchstones leaning on the wall"
+  },
+  {
+   "id": "s0066",
+   "start": {
+    "w": 977,
+    "off": 0.0,
+    "text": "Half"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1500,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1800,
+      "cy": 1550,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "COCONUT",
+      "rx": 173.0,
+      "ry": 320.0,
+      "floor": 0.6,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 977,
+      "off": 0.0,
+      "text": "Half"
+     },
+     "dur": 6.13,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "wide frame; the spotlight finds the coconut goblet half hidden by the curtain"
+  },
+  {
+   "id": "s0067",
+   "start": {
+    "w": 994,
+    "off": 0.0,
+    "text": "Princes"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 1250,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2500,
+      "cy": 1750,
+      "zoom": 1.15,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "princes feared poison: a slow drift over the shelf of protective objects"
+  },
+  {
+   "id": "s0068",
+   "start": {
+    "w": 1009,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2450,
+      "cy": 1650,
+      "zoom": 1.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2420,
+      "cy": 1640,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "STATIC-09",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "year": "1461",
+      "sub": "",
+      "x_pct": 50,
+      "y_pct": 46,
+      "size_px": 120,
+      "tracking_px": 10,
+      "sub_px": 30,
+      "fade_in_s": 0.2,
+      "fade_out_s": 0.25
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1010,
+      "off": 0.0,
+      "text": "1461"
+     },
+     "dur": 3.5,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the year of the attempt on the heir, set large over the poison-fighting goblet"
+  },
+  {
+   "id": "s0069",
+   "start": {
+    "w": 1024,
+    "off": 0.0,
+    "text": "Rulers"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2590,
+      "cy": 1750,
+      "zoom": 1.1,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2590,
+      "cy": 700,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "food tasters and the privilege of lids: pan up to the covered vessels on the top shelf"
+  },
+  {
+   "id": "s0070",
+   "start": {
+    "w": 1043,
+    "off": 0.0,
+    "text": "Most"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2550,
+      "cy": 1100,
+      "zoom": 1.15,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1400,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'most things here were meant to protect': pull back to take in the whole stock"
+  },
+  {
+   "id": "s0071",
+   "start": {
+    "w": 1054,
+    "off": 0.0,
+    "text": "Branching"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2650,
+      "cy": 1550,
+      "zoom": 1.3,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "w": 1059,
+       "text": "stop"
+      },
+      "cx": 2850,
+      "cy": 1720,
+      "zoom": 1.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2620,
+      "cy": 1930,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "to the branching coral as it is named, then across to the dish of gems for the rubies and sapphires"
+  },
+  {
+   "id": "s0072",
+   "start": {
+    "w": 1069,
+    "off": 0.0,
+    "text": "There"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2500,
+      "cy": 1300,
+      "zoom": 1.1,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "w": 1072,
+       "text": "rosary"
+      },
+      "cx": 2741,
+      "cy": 1150,
+      "zoom": 1.5,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "w": 1078,
+       "text": "gold"
+      },
+      "cx": 2741,
+      "cy": 1150,
+      "zoom": 1.5,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2829,
+      "cy": 1560,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the coral and amber rosary, then down to the gold and glass vessel beside the coral"
+  },
+  {
+   "id": "s0073",
+   "start": {
+    "w": 1092,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1100,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1869,
+      "cy": 1200,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "goldsmiths of church and rulers: a slow wide drift over the shop's precious stock"
+  },
+  {
+   "id": "s0074",
+   "start": {
+    "w": 1115,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 1800,
+      "zoom": 1.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2860,
+      "cy": 1800,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'some are simply painted with care': a close pan along the finely painted objects"
+  },
+  {
+   "id": "s0075",
+   "start": {
+    "t": 491.68
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2650,
+      "cy": 3250,
+      "zoom": 1.25,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2650,
+      "cy": 3250,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "6. The Mirror",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0076",
+   "start": {
+    "w": 1129,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2650,
+      "cy": 3250,
+      "zoom": 1.3,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2783,
+      "cy": 2820,
+      "zoom": 1.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'move your eye past the coins': from the coins up to the round mirror"
+  },
+  {
+   "id": "s0077",
+   "start": {
+    "w": 1141,
+    "off": 0.0,
+    "text": "Its"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2915,
+      "cy": 2750,
+      "zoom": 1.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3000,
+      "cy": 2700,
+      "zoom": 2.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "into the curved glass: the red-brick houses and the two men in the street"
+  },
+  {
+   "id": "s0078",
+   "start": {
+    "w": 1155,
+    "off": 0.0,
+    "text": "They"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 3030,
+      "cy": 2890,
+      "zoom": 2.3,
+      "ease": "in_quad"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2300,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the men stand where we stand: start on them, then pull back to show inside and outside at once"
+  },
+  {
+   "id": "s0079",
+   "start": {
+    "w": 1173,
+    "off": 0.0,
+    "text": "Mirrors"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "decorative_mirror_reflec"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1886.5,
+      "cy": 2830.0,
+      "zoom": 0.17936,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1886.5,
+      "cy": 2830.0,
+      "zoom": 0.19013,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the owner's photo of a convex wall mirror in a home, while such mirrors are described"
+  },
+  {
+   "id": "s0080",
+   "start": {
+    "w": 1190,
+    "off": 0.0,
+    "text": "Some"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2820,
+      "cy": 2800,
+      "zoom": 1.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2936,
+      "cy": 2800,
+      "zoom": 1.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'some called them witches': back to the painted mirror, edging closer"
+  },
+  {
+   "id": "s0081",
+   "start": {
+    "w": 1197,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2269,
+      "cy": 1500,
+      "zoom": 0.8,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "w": 1204,
+       "text": "Their"
+      },
+      "cx": 2590,
+      "cy": 1050,
+      "zoom": 1.1,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2590,
+      "cy": 1750,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "to the shelves, then a slow tilt down their skewed angles while perspective is discussed"
+  },
+  {
+   "id": "s0082",
+   "start": {
+    "w": 1225,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2869,
+      "cy": 2850,
+      "zoom": 1.6,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3030,
+      "cy": 2900,
+      "zoom": 2.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "into the mirror to the man with the falcon and his tilted head"
+  },
+  {
+   "id": "s0083",
+   "start": {
+    "w": 1246,
+    "off": 0.0,
+    "text": "Jan"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2780,
+      "cy": 2800,
+      "zoom": 1.4,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2880,
+      "cy": 2800,
+      "zoom": 1.65,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "Van Eyck's mirror in the Arnolfini portrait: hold the whole mirror as the parallel is drawn"
+  },
+  {
+   "id": "s0084",
+   "start": {
+    "w": 1266,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 3010,
+      "cy": 2920,
+      "zoom": 2.1,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3070,
+      "cy": 2930,
+      "zoom": 2.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'the falconer as Petrus Christus himself': close in on the falconer"
+  },
+  {
+   "id": "s0085",
+   "start": {
+    "w": 1280,
+    "off": 0.0,
+    "text": "Falconry"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1600,
+      "zoom": 0.6,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1405,
+      "cy": 1050,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the Burgundian court's pastime: the courtly young man stands for that world"
+  },
+  {
+   "id": "s0086",
+   "start": {
+    "w": 1296,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2600,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1800,
+      "cy": 2650,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "MIRROR_MEN",
+      "rx": 173.0,
+      "ry": 220.0,
+      "floor": 0.6,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1297,
+      "off": 0.0,
+      "text": "the"
+     },
+     "dur": 5.28,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "too costly for a painter: wide frame, the spotlight keeps the tiny falconer in view"
+  },
+  {
+   "id": "s0087",
+   "start": {
+    "w": 1314,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2783,
+      "cy": 2850,
+      "zoom": 1.4,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2150,
+      "cy": 3350,
+      "zoom": 1.05,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "transition",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the uncertain face in the mirror, a slow move down toward the bottom edge"
+  },
+  {
+   "id": "s0088",
+   "start": {
+    "t": 574.59
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1734.5,
+      "cy": 2800,
+      "zoom": 0.57692,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1734.5,
+      "cy": 2800,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "7. Made Me",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0089",
+   "start": {
+    "w": 1327,
+    "off": 0.0,
+    "text": "Drop"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2800,
+      "zoom": 0.6,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1769,
+      "cy": 3470,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'drop your eye to the bottom edge': down to the line of Latin"
+  },
+  {
+   "id": "s0090",
+   "start": {
+    "w": 1345,
+    "off": 0.0,
+    "text": "Translated,"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1769,
+      "cy": 3500,
+      "zoom": 1.35,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1769,
+      "cy": 3525,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quote",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "DOC-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "lit": [
+       {
+        "ref": "INSCRIPTION",
+        "at": 0.4
+       }
+      ],
+      "dim_to": 0.34,
+      "ramp_s": 0.7,
+      "edge_px": 28,
+      "pad_px": 40,
+      "reading": "Master Petrus Christus made me, 1449",
+      "original": "m petr xpi me fecit a° 1449",
+      "reading_at": {
+       "w": 1348,
+       "text": "Petrus"
+      },
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1345,
+      "off": 0.0,
+      "text": "Translated,"
+     },
+     "dur": 8.5,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the signature lit while its translation is read, then held for 'fewer dated them'"
+  },
+  {
+   "id": "s0091",
+   "start": {
+    "w": 1368,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "head_christ_ecce"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1371.5,
+      "cy": 1861.0,
+      "zoom": 0.27276,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1371.5,
+      "cy": 1861.0,
+      "zoom": 0.28912,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "Head of Christ",
+      "artist_year": "Petrus Christus",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1368,
+      "off": 0.0,
+      "text": "He"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the owner's pick: a work by the painter himself as his life is introduced"
+  },
+  {
+   "id": "s0092",
+   "start": {
+    "w": 1376,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "TIME-01",
+   "slots": {},
+   "params": {
+    "items": [
+     {
+      "date": 1415,
+      "label": "Born at Baerle",
+      "at": 0.5
+     },
+     {
+      "date": 1444,
+      "label": "Citizen of Bruges",
+      "at": {
+       "w": 1385,
+       "text": "1444."
+      },
+      "accent": true
+     },
+     {
+      "date": 1462,
+      "label": "Joins a brotherhood",
+      "at": {
+       "w": 1393,
+       "text": "1462,"
+      }
+     }
+    ],
+    "from": "",
+    "to": "",
+    "tick_every": 0,
+    "focus_s": {
+     "w": 1386,
+     "text": "Seven"
+    },
+    "dim_to": 0.55,
+    "cap_pct": 2.1
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the painter's dated life events on one axis, each on its word"
+  },
+  {
+   "id": "s0093",
+   "start": {
+    "w": 1404,
+    "off": 0.0,
+    "text": "Beside"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1950,
+      "cy": 3500,
+      "zoom": 1.4,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2200,
+      "cy": 3650,
+      "zoom": 2.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "AN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "at": [
+       2238,
+       3700
+      ],
+      "radius": 160,
+      "draw_s": 0.5,
+      "hold_s": 2.0,
+      "fade_s": 0.4,
+      "opacity": 0.75,
+      "color": "#cdcdcd",
+      "stroke_pct_width": 0.7
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1410,
+      "off": 0.0,
+      "text": "heart-shaped"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "along the signature to the small heart-shaped sign, ringed as it is named"
+  },
+  {
+   "id": "s0094",
+   "start": {
+    "w": 1421,
+    "off": 0.0,
+    "text": "used"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2150,
+      "cy": 3550,
+      "zoom": 1.6,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2700,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "a mark of miniaturists and goldsmiths: pull back from the sign to the goldsmith at work"
+  },
+  {
+   "id": "s0095",
+   "start": {
+    "w": 1430,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1900,
+      "zoom": 0.6,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 800,
+      "cy": 1000,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pupil of Jan van Eyck: travel to the woman's face, painted in the Eyckian manner"
+  },
+  {
+   "id": "s0096",
+   "start": {
+    "w": 1458,
+    "off": 0.0,
+    "text": "Others"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2620,
+      "cy": 1900,
+      "zoom": 1.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2590,
+      "cy": 1950,
+      "zoom": 2.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "trained as a miniaturist or goldsmith: a close push on the tiny gems in their dish"
+  },
+  {
+   "id": "s0097",
+   "start": {
+    "w": 1468,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2250,
+      "cy": 1750,
+      "zoom": 1.15,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2869,
+      "cy": 1540,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "how exactly every object is painted: from the saint across to the coral and gold vessel"
+  },
+  {
+   "id": "s0098",
+   "start": {
+    "t": 643.39
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1734.5,
+      "cy": 1250,
+      "zoom": 0.53221,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1734.5,
+      "cy": 1250,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "8. What Did Not Last",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0099",
+   "start": {
+    "w": 1487,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 1250,
+      "zoom": 0.5535,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2402,
+      "cy": 1100,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'look again at the shelf': from the wide band across to the pitchers, chains and brooches"
+  },
+  {
+   "id": "s0100",
+   "start": {
+    "w": 1505,
+    "off": 0.0,
+    "text": "After"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2600,
+      "cy": 640,
+      "zoom": 1.25,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2731,
+      "cy": 590,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "taken apart or recast: a slow push on the silver pitchers"
+  },
+  {
+   "id": "s0101",
+   "start": {
+    "w": 1515,
+    "off": 0.0,
+    "text": "One"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1990,
+      "cy": 1820,
+      "zoom": 1.1,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1995,
+      "cy": 1720,
+      "zoom": 1.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the goldsmith who despaired and left for a monastery: on the goldsmith's own upturned face"
+  },
+  {
+   "id": "s0102",
+   "start": {
+    "w": 1528,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "switzerland",
+      "name": "Switzerland",
+      "lonlat": [
+       8.2275,
+       46.8182
+      ],
+      "at": {
+       "w": 1539,
+       "text": "Switzerland."
+      }
+     }
+    ],
+    "route": [],
+    "region_iso": [
+     "CH"
+    ],
+    "region_label": "Switzerland",
+    "region_at": {
+     "w": 1539,
+     "text": "Switzerland."
+    },
+    "region_fill_s": 1.0,
+    "view_start_width_km": 2400,
+    "view_start_center": "",
+    "view_end_mode": "manual",
+    "view_end_margin_pct": 19,
+    "view_end_center": "8.2, 46.8",
+    "view_end_width_km": 800,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "STATIC-09",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "year": "1476",
+      "sub": "",
+      "x_pct": 50,
+      "y_pct": 46,
+      "size_px": 120,
+      "tracking_px": 10,
+      "sub_px": 30,
+      "fade_in_s": 0.2,
+      "fade_out_s": 0.25
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1529,
+      "off": 0.0,
+      "text": "1476"
+     },
+     "dur": 3.0,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "1476, the last duke defeated in Switzerland: the country tinted on its word"
+  },
+  {
+   "id": "s0103",
+   "start": {
+    "w": 1540,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2450,
+      "cy": 1350,
+      "zoom": 1.0,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2741,
+      "cy": 1140,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pearls broken out and gold melted: on the beads and brooches of the shelf"
+  },
+  {
+   "id": "s0104",
+   "start": {
+    "w": 1560,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1700,
+      "cy": 3300,
+      "zoom": 1.0,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2920,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the guilds that kept the shop front open: pull back to the whole open counter"
+  },
+  {
+   "id": "s0105",
+   "start": {
+    "w": 1572,
+    "off": 0.0,
+    "text": "Then"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2800,
+      "zoom": 0.58,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1900,
+      "zoom": 0.58,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "guild quarrels and decline: a slow travel up the full width of the shop"
+  },
+  {
+   "id": "s0106",
+   "start": {
+    "w": 1585,
+    "off": 0.0,
+    "text": "By"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2880,
+      "cy": 2650,
+      "zoom": 1.65,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3000,
+      "cy": 2620,
+      "zoom": 2.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "STATIC-09",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "year": "1494",
+      "sub": "4,000 to 5,000 houses empty",
+      "x_pct": 50,
+      "y_pct": 46,
+      "size_px": 120,
+      "tracking_px": 10,
+      "sub_px": 30,
+      "fade_in_s": 0.2,
+      "fade_out_s": 0.25
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1586,
+      "off": 0.0,
+      "text": "1494"
+     },
+     "dur": 4.5,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the emptied city: the red-brick Bruges houses in the mirror under the year and the figure"
+  },
+  {
+   "id": "s0107",
+   "start": {
+    "w": 1601,
+    "off": 0.0,
+    "text": "Merchants"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "bruges",
+      "name": "Bruges",
+      "lonlat": [
+       3.2247,
+       51.2093
+      ],
+      "at": 0.3
+     },
+     {
+      "id": "antwerp",
+      "name": "Antwerp",
+      "lonlat": [
+       4.4025,
+       51.2194
+      ],
+      "at": {
+       "w": 1606,
+       "text": "Antwerp."
+      }
+     }
+    ],
+    "route": [
+     {
+      "from": "bruges",
+      "to": "antwerp",
+      "via": "",
+      "shape": "curve",
+      "at": {
+       "w": 1604,
+       "text": "moved"
+      },
+      "draw_s": 1.2
+     }
+    ],
+    "region_iso": [],
+    "region_label": "",
+    "region_at": 0.6,
+    "region_fill_s": 1.0,
+    "view_start_width_km": 1200,
+    "view_start_center": "",
+    "view_end_mode": "manual",
+    "view_end_margin_pct": 19,
+    "view_end_center": "3.8, 51.2",
+    "view_end_width_km": 350,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "merchants and bankers move to Antwerp: the short move drawn on the map (replaces the owner's Antwerp tile)"
+  },
+  {
+   "id": "s0108",
+   "start": {
+    "w": 1614,
+    "off": 0.0,
+    "text": "A"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2600,
+      "zoom": 0.5535,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 1800,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the panel's own journey through a collector's hands: a slow travel over the whole shop"
+  },
+  {
+   "id": "s0109",
+   "start": {
+    "w": 1633,
+    "off": 0.0,
+    "text": "Today"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "metropolitan_museum_art"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 640.0,
+      "cy": 428.5,
+      "zoom": 1.1846,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 640.0,
+      "cy": 428.5,
+      "zoom": 1.25567,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "New York",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1637,
+      "off": 0.0,
+      "text": "New"
+     },
+     "dur": 2.95,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "'today it hangs in New York': the owner's photo of the museum"
+  },
+  {
+   "id": "s0110",
+   "start": {
+    "w": 1646,
+    "off": -1.0,
+    "text": "Come"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1950,
+      "cy": 2500,
+      "zoom": 0.9,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'come back to the hands and the scales': the opening image returns"
+  },
+  {
+   "id": "s0111",
+   "start": {
+    "w": 1662,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2012,
+      "cy": 2500,
+      "zoom": 1.3,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1995,
+      "cy": 1700,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "up from the ring to the eyes still turned upward"
+  },
+  {
+   "id": "s0112",
+   "start": {
+    "w": 1670,
+    "off": 0.0,
+    "text": "So,"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1990,
+      "cy": 1780,
+      "zoom": 1.4,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2100,
+      "zoom": 0.5535,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'a prayer or a shop sign? both': pull back from the face to saint, couple and counter"
+  },
+  {
+   "id": "s0113",
+   "start": {
+    "w": 1686,
+    "off": 0.0,
+    "text": "Weighing"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1734.5,
+      "cy": 2600,
+      "zoom": 0.6,
+      "ease": "inout_sine"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "weighing is where trade meets trust: back toward the scales"
+  },
+  {
+   "id": "s0114",
+   "start": {
+    "w": 1700,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2030,
+      "cy": 2800,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2020,
+      "cy": 2800,
+      "zoom": 1.7,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "STATIC-09",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "year": "1960",
+      "sub": "Karol Wojtyla",
+      "x_pct": 50,
+      "y_pct": 46,
+      "size_px": 120,
+      "tracking_px": 10,
+      "sub_px": 30,
+      "fade_in_s": 0.2,
+      "fade_out_s": 0.25
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1705,
+      "off": 0.0,
+      "text": "1960"
+     },
+     "dur": 3.5,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the play of 1960 and its goldsmith, over a slow push on the hand-scales"
+  },
+  {
+   "id": "s0115",
+   "start": {
+    "w": 1720,
+    "off": 0.0,
+    "text": "My"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "goldsmith_his_shop_3bc1"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2012,
+      "cy": 2850,
+      "zoom": 1.8,
+      "ease": "out_cubic"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1734.5,
+      "cy": 2000,
+      "zoom": 0.27,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the last shot: from the gold balance out to the whole panel as the video ends"
+  }
+ ],
+ "end": {
+  "t": 753.84
+ },
+ "approvals": {
+  "storyboard": {
+   "rev": "98e8ad8d5488a9bc45b201dff4ceb005a3fa3ffc8b1618ca8700bc738861ec83",
+   "approved_at": "2026-11-19T17:52:12-0800",
+   "by": "agent:auto"
+  }
+ }
+}

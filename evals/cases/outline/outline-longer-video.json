@@ -1,0 +1,29 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "outline-longer-video",
+  "step": "outline",
+  "title": "A target of 3000 words gives a longer outline with matching budgets",
+  "why": "The owner sets the target in the Sources column (docs/APP_GUIDE.md 5.1); the outline must follow it.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "book"
+  },
+  "request": {
+    "options": {
+      "target_words": 3000
+    }
+  },
+  "criteria": [
+    {
+      "id": "budget",
+      "kind": "outline.budget_near_target",
+      "tolerance": 0.15
+    },
+    {
+      "id": "chapters",
+      "kind": "outline.chapters_between",
+      "min": 6,
+      "max": 12
+    }
+  ]
+}

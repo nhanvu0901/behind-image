@@ -9,6 +9,7 @@ from pathlib import Path
 import pymupdf
 
 from . import config
+from bti.fsio import atomic_replace
 
 _LOCK = threading.RLock()
 _DOCS: dict[str, "pymupdf.Document"] = {}
@@ -45,18 +46,11 @@ def page_text(book_id: str, pdf_page: int) -> tuple[str, str]:
 
 
 def work_text(work: dict) -> dict:
-    book_id = work["id"].split("/")[0]
-    a, b = work["pdf_pages"]
-    scan = config.BOOK_BY_ID[book_id]["pdf_type"] == "scan"
-    pages, srcs = [], []
-    for p in range(a, b + 1):
-        t, src = page_text(book_id, p)
-        pages.append({"page": p, "text": repair(t) if src == "layer" else t})
-        srcs.append(src)
-    kinds = set(srcs)
-    source = "clean" if kinds == {"clean"} else "layer" if kinds == {"layer"} else "mixed"
-    return {"work_id": work["id"], "ocr": scan, "text_source": source, "pdf_pages": [a, b], "pages": pages,
-            "text": "\n\n".join(p["text"].strip() for p in pages if p["text"].strip())}
+    """Body text of one entry (clean pages when present, text layer otherwise); see clean.entry."""
+    from . import clean
+    e = clean.entry(work)
+    return {"work_id": work["id"], "ocr": e["ocr"], "text_source": e["text_source"], "pdf_pages": work["pdf_pages"],
+            "pages": e["pages"], "text": e["body"], "words": e["words"], "outline": e["outline"]}
 
 
 def headings(book_id: str, a: int, b: int, limit: int = 10) -> list[str]:
@@ -133,7 +127,7 @@ def render_page(book_id: str, pdf_page: int, width: int = 800) -> Path:
         data = pix.tobytes("jpeg", jpg_quality=80)
     tmp = out.with_suffix(".tmp")
     tmp.write_bytes(data)
-    tmp.replace(out)
+    atomic_replace(tmp, out)
     return out
 
 
@@ -157,5 +151,5 @@ def render_image(book_id: str, xref: int, width: int = 600) -> Path:
             im = im.resize((width, max(1, round(im.height * width / im.width))))
         tmp = out.with_suffix(".tmp")
         im.save(tmp, format="JPEG", quality=82)
-        tmp.replace(out)
+        atomic_replace(tmp, out)
     return out

@@ -17,7 +17,7 @@ import numpy as np
 from .. import helpers as H
 from ..base import BaseRenderer, View
 from ..registry import technique
-from ..vfx import Cam, backdrop, blend, ease, ramp
+from ..vfx import Cam, backdrop, blend, ease, put, ramp
 from ._t1common import (aligned_view, as_lines, cam_of, fit_cam, hexbgr, panel, pdef, region_xy, static_cam, treat, TREATMENTS)
 from .camera import _key
 
@@ -59,7 +59,7 @@ class FourGrid(BaseRenderer):
             if a <= 0 or k is None:
                 continue
             tile = panel(self.ctx, k, cam, t, tw, th)
-            f[y:y + th, x:x + tw] = f[y:y + th, x:x + tw] * (1 - a) + tile * a
+            put(f, x, y, tile, a)
         if p["connectors"]:
             pr = ramp(tt, float(p["connector_delay_s"]), float(p["connector_draw_s"]), "inout_sine")
             if pr > 0:
@@ -138,7 +138,7 @@ class Columns(BaseRenderer):
                 continue
             c = _fit_tile(self.ctx, k, cw, ch, p["treatment_%d" % (i + 1)], p["fit"])
             x = x0 + i * (cw + gap)
-            f[y0:y0 + ch, x:x + cw] = f[y0:y0 + ch, x:x + cw] * (1 - a) + c * a
+            put(f, x, y0, c, a)
         return f
 
     @classmethod
@@ -202,7 +202,7 @@ class InsetWindow(BaseRenderer):
                     f = f * (1 - ba) + g * ba
         if a > 0 and self.ikey:
             ins = self._inset(t, w_, h_)
-            f[y:y + h_, x:x + w_] = f[y:y + h_, x:x + w_] * (1 - a) + ins * a
+            put(f, x, y, ins, a)
         return f
 
     def view(self, t):
@@ -357,7 +357,7 @@ class GridWithObject(BaseRenderer):
         cw, ch = W // cols, Hh // rows
         for i, (k, cam) in enumerate(self.tiles):
             x, y = (i % cols) * cw, (i // cols) * ch
-            f[y:y + ch, x:x + cw] = panel(ctx, k, cam, t, cw, ch)
+            put(f, x, y, panel(ctx, k, cam, t, cw, ch))
         a = float(p["overlay_opacity"]) * ramp(tt, float(p["overlay_delay_s"]), float(p["overlay_fade_s"]))
         if a > 0 and self.okey:
             img = ctx.image(self.okey)

@@ -24,6 +24,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
 from . import vfx
+from .base import tag_asset
 from .vfx import Img, Layer, backdrop, compose_matte
 
 
@@ -90,7 +91,10 @@ def _mask_img(ctx, mask_key):
         if m is None:
             raise FileNotFoundError(path)
         return Img(cv2.cvtColor(m, cv2.COLOR_GRAY2BGR), mask_key)
-    return ctx.cached(("mask", path, os.stat(path).st_mtime_ns), build, lambda im: sum(l.nbytes for l in im.levels))
+    try:
+        return ctx.cached(("mask", path, os.stat(path).st_mtime_ns), build, lambda im: sum(l.nbytes for l in im.levels))
+    except Exception as e:      # noqa: BLE001
+        raise tag_asset(e, mask_key, ctx)
 
 
 def mask_alpha(ctx, mask_key, cx, cy, zoom, ow=None, oh=None, image_key=None):
@@ -148,7 +152,10 @@ def video_frame(ctx, key, t, loop=False):
     with _VLOCK:
         v = _VIDEOS.get(path)
         if v is None:
-            v = _VIDEOS[path] = _Video(path)
+            try:
+                v = _VIDEOS[path] = _Video(path)
+            except Exception as e:      # noqa: BLE001
+                raise tag_asset(e, key, ctx)
             while len(_VIDEOS) > 3:
                 _, old = _VIDEOS.popitem(last=False)
                 old.cap.release()

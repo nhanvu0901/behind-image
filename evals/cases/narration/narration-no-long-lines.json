@@ -1,0 +1,19 @@
+{
+  "schema": "bti.eval.case/1",
+  "name": "narration-no-long-lines",
+  "step": "narration",
+  "title": "No line is longer than 90 words",
+  "why": "docs/APP_GUIDE.md section 5.5 and prompts/script.md, prompts/rules_voice.md: a line over 90 words (beat_too_long) should be split.",
+  "sample": {
+    "project": "arnolfini-from-books",
+    "start": "outline_approved"
+  },
+  "request": {},
+  "criteria": [
+    {
+      "id": "lines",
+      "kind": "narration.max_beat_words",
+      "max": 90
+    }
+  ]
+}

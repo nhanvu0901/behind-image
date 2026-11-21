@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<title>Kịch bản - Behind the Image</title>
+<link rel="icon" href="data:,">
+</head>
+<body>
+<!-- Old address. The app lives at / now; this page only forwards to the right place (the # part is not sent to the server, so the browser must do it). -->
+<p>Trang này đã được gộp vào ứng dụng. <a href="/">Mở ứng dụng</a></p>
+<script type="module">
+import { legacyTarget } from './js/router.js';
+const t = legacyTarget(location) || { search: location.search, hash: '#/' };
+location.replace('/' + t.search + t.hash);
+</script>
+</body>
+</html>

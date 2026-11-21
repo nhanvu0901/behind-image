@@ -1,9 +1,12 @@
 import io
 import json
+import os
 import struct
 import sys
 import zlib
 from pathlib import Path
+
+os.environ["BTI_NO_REAL_MODELS"] = "1"
 
 import pytest
 
@@ -66,3 +69,12 @@ class FakeNet:
 def no_sleep():
     waits = []
     return waits.append
+
+
+@pytest.fixture(autouse=True)
+def _no_cooldown_between_tests():
+    """A source's "wait N seconds" is remembered per host for the life of the process: no test may inherit another's."""
+    from bti.media import http
+    http.reset_cooldowns()
+    yield
+    http.reset_cooldowns()

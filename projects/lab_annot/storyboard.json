@@ -178,7 +178,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "cam02"
   },
   {
@@ -218,7 +218,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "cam06"
   },
   {
@@ -267,7 +267,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "hi02"
   },
   {
@@ -321,12 +321,12 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "hi03"
   },
   {
@@ -380,12 +380,12 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "an02"
   },
   {
@@ -440,12 +440,12 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "an03"
   },
   {
@@ -497,12 +497,12 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "an04"
   },
   {
@@ -554,12 +554,12 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "an06"
   },
   {
@@ -599,7 +599,7 @@
    "transition_in": null,
    "overlays": [],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "an07"
   },
   {
@@ -654,12 +654,12 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "xhi01"
   },
   {
@@ -724,12 +724,12 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "xann04"
   },
   {
@@ -789,12 +789,12 @@
      },
      "slots": {},
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "xann05"
   },
   {
@@ -848,12 +848,12 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "an04_img"
   },
   {
@@ -907,12 +907,12 @@
       }
      },
      "locked": false,
-     "source": "lab",
+     "source": "agent",
      "note": ""
     }
    ],
    "locked": false,
-   "source": "lab",
+   "source": "agent",
    "note": "xann05_img"
   }
  ],

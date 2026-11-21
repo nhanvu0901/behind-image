@@ -36,6 +36,24 @@ def _by_id(items: Any) -> dict[str, dict]:
     return out
 
 
+def shape_problem(sb: Any) -> str | None:
+    """None when a proposed storyboard has the shape `diff` and `apply` rely on (lists of objects, assets by key), else why not."""
+    if not isinstance(sb, dict):
+        return "storyboard must be an object"
+    if "assets" in sb and not (isinstance(sb["assets"], dict) and all(isinstance(a, dict) for a in sb["assets"].values())):
+        return "assets must be an object of objects"
+    if "end" in sb and sb["end"] is not None and not isinstance(sb["end"], dict):
+        return "end must be an object"
+    shots = sb.get("shots", [])
+    if not (isinstance(shots, list) and all(isinstance(s, dict) for s in shots)):
+        return "shots must be a list of objects"
+    for s in shots:
+        ovs = s.get("overlays", [])
+        if not (isinstance(ovs, list) and all(isinstance(o, dict) for o in ovs)):
+            return f"shot {s.get('id')!r}: overlays must be a list of objects"
+    return None
+
+
 def diff(saved: dict, proposed: dict) -> list[dict]:
     saved, proposed = strip_derived(saved), strip_derived(proposed)
     changes: list[dict] = []
@@ -90,6 +108,21 @@ def diff(saved: dict, proposed: dict) -> list[dict]:
     return changes
 
 
+def adopt(proposed: dict) -> dict:
+    """The first storyboard of a project, from a proposal: the whole document, every shot and overlay marked `source: "agent"`
+    and not locked, and an empty approval."""
+    doc = strip_derived(copy.deepcopy(proposed))
+    for s in doc.get("shots") or []:
+        if not isinstance(s, dict):
+            continue
+        s["source"], s["locked"] = "agent", False
+        for o in s.get("overlays") or []:
+            if isinstance(o, dict):
+                o["source"], o["locked"] = "agent", False
+    doc["approvals"] = {"storyboard": None}
+    return doc
+
+
 def apply(saved: dict, proposed: dict, accept: Any) -> tuple[dict, list[str], list[str]]:
     """Return (new storyboard, applied ids, skipped-by-lock ids)."""
     saved, proposed = strip_derived(saved), strip_derived(proposed)
@@ -100,10 +133,10 @@ def apply(saved: dict, proposed: dict, accept: Any) -> tuple[dict, list[str], li
     elif isinstance(accept, list) and all(isinstance(x, str) for x in accept):
         unknown = [x for x in accept if x not in by_id]
         if unknown:
-            raise ApiError(422, f"unknown change ids: {unknown}")
+            raise ApiError(422, f"unknown change ids: {unknown}", code="unknown_change_ids", field="accept")
         chosen = list(dict.fromkeys(accept))
     else:
-        raise ApiError(422, 'accept must be "all" or a list of change ids')
+        raise ApiError(422, 'accept must be "all" or a list of change ids', code="accept_invalid", field="accept")
     skipped = [i for i in chosen if by_id[i]["blocked_by_lock"]]
     todo = [by_id[i] for i in chosen if not by_id[i]["blocked_by_lock"]]
 
