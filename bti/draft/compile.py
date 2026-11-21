@@ -32,9 +32,9 @@ from bti.engine import registry as R
 from bti.engine import storyboard as SB
 from bti.engine import viewchecks as VC
 from bti.engine.timing import AnchorError, Timing, norm
-from bti.media.assets import scale_regions
 from bti.media import contentbox as CB          # panelbox: the painted area of the main painting
 
+from . import assetmerge as AM
 from . import camera as CAM
 from . import spec as S
 from . import decompile as D
@@ -151,10 +151,9 @@ class _Compiler:
 
     # ---------------------------------------------------------------- assets
     def _merge_assets(self, regions) -> dict:
-        assets = copy.deepcopy(self.inp.picks["assets"])
-        for k, a in ((self.inp.current or {}).get("assets") or {}).items():
-            if isinstance(a, dict):
-                assets[k] = self._saved_asset(a, assets.get(k))
+        # the pictures step is where regions are made: a full draft takes the picks' regions (each whole, replacing the saved one of the same name) and keeps the
+        # regions only the saved storyboard has; an edit keeps the saved asset as it is (`bti.draft.assetmerge`: one rule for the compiler, the work folder and the helpers)
+        assets = AM.merged_assets(self.inp.picks["assets"], (self.inp.current or {}).get("assets"), edit=self.inp.edit_shots is not None)
         for key, regs in (regions or {}).items():
             a = assets.get(key)
             if not isinstance(a, dict):
@@ -167,28 +166,7 @@ class _Compiler:
                     have[name] = dict(r)
         return assets
 
-    # What describes the STORED FILE of a picture: its path, kind, pixel size, the source's own size kept beside it, a video's length. These are
-    # facts of the file and always come from the picks (their sizes were corrected to the file by `reconcile_sizes`); a storyboard saved before
-    # a correction must not keep the old ones (the warning `asset_size_mismatch` would never clear). Everything else on the saved copy (regions,
-    # title, artist, year, credit, anything a person or an agent added there) is kept, as before.
-    FILE_FACTS = ("file", "kind", "width", "height", "original_width", "original_height", "duration")
-
-    def _saved_asset(self, saved: dict, pick) -> dict:
-        out = copy.deepcopy(saved)
-        if not isinstance(pick, dict):
-            return out                                   # a picture only the storyboard has: its own record
-        old_w, old_h = out.get("width"), out.get("height")
-        for k in self.FILE_FACTS:
-            if k in pick:
-                out[k] = copy.deepcopy(pick[k])
-            else:
-                out.pop(k, None)                         # a fact the picks do not state is not kept from another file
-        if "content_box" in pick and self.inp.edit_shots is None:       # panelbox: the painted area is a fact of the picture too: a draft takes the picks' (a person may have set it); an edit keeps the saved asset as it is
-            out["content_box"] = copy.deepcopy(pick["content_box"])
-        new_w, new_h = out.get("width"), out.get("height")
-        if all(isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0 for v in (old_w, old_h, new_w, new_h)) and (old_w, old_h) != (new_w, new_h):
-            scale_regions(out.get("regions"), new_w / old_w, new_h / old_h)     # the regions were drawn in the old size: the same scaling as `reconcile_sizes`
-        return out
+    FILE_FACTS = AM.FILE_FACTS            # what describes the stored file: always from the picks (see `bti.draft.assetmerge`)
 
     def info(self, key):
         a = self.assets.get(key)

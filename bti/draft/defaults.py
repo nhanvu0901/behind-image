@@ -87,8 +87,8 @@ def main(argv=None) -> int:
     except Exception as e:      # noqa: BLE001
         print("ERROR %s" % getattr(e, "message", e))
         return 2
-    assets = dict(inp.picks["assets"])
-    assets.update((inp.current or {}).get("assets") or {})
+    from .assetmerge import merged_assets
+    assets = merged_assets(inp.picks["assets"], (inp.current or {}).get("assets"), edit=inp.edit_shots is not None)       # the regions the compiler will use
     rec = assets.get(a.asset)
     if rec is None:
         print("ERROR no asset %r (assets: %s)" % (a.asset, ", ".join(sorted(assets))))

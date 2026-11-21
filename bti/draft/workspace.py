@@ -35,6 +35,7 @@ from bti.engine import registry as R
 
 from . import decompile as D
 from . import spec as S
+from .assetmerge import merged_assets
 from . import techniques_md
 from .inputs import NOTE_MAX, DraftError, DraftInputs, beat_kinds, beat_missing, beat_picks, line_assets, narration_notes, shot_assets
 
@@ -237,10 +238,10 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
 
     # pictures and video clips: only those that a line of the narration uses (and the main painting). A picture the owner took out of every line stays
     # in the project but is not offered, or the draft uses it again; one that the saved storyboard still shows is offered, marked "do not use".
-    all_assets = dict(inp.picks["assets"])
-    for k, a in ((inp.current or {}).get("assets") or {}).items():
-        if isinstance(a, dict):
-            all_assets[k] = a
+    # the model sees the assets the compiler will use (`bti.draft.assetmerge`): for a full draft the regions of the pictures step, each whole, plus the regions only
+    # the saved storyboard has; for an edit the saved asset as it is
+    is_edit = inp.edit_shots is not None
+    all_assets = merged_assets(inp.picks["assets"], (inp.current or {}).get("assets"), edit=is_edit)
     offered = line_assets(inp)
     kept_only: set = set()
     if offered is not None:
@@ -300,6 +301,10 @@ def build(inp: DraftInputs, *, root: Path | None = None, python: str | None = No
     current = copy.deepcopy(inp.current) if inp.current else None
     if current:
         current["assets"] = _rewrite_assets(current.get("assets") or {}, copies, video_copies)
+        if not is_edit:                          # a full draft: the helpers compile from the regions the model is shown (the picks' ones, plus the saved storyboard's own)
+            for k, a in current["assets"].items():
+                if isinstance(all_assets.get(k), dict):
+                    a["regions"] = copy.deepcopy(all_assets[k].get("regions") or {})
     picks = copy.deepcopy(inp.picks)
     picks["assets"] = _rewrite_assets(picks["assets"], copies, video_copies)
     if picks["main_asset"] not in picks["assets"]:
@@ -388,10 +393,10 @@ def workspace_compile(root: Path, *, draw: bool = True, engine=None):
     """Compile what the agent wrote in `out/` (what `check` prints). -> (CompileResult, OutResult)."""
     from .compile import compile_specs
     inp, _ = load_workspace(root)
-    res = read_out(root, inp.in_scope(), inp.picks["assets"])
+    from .assetmerge import merged_assets
     from .engine import scaled_images
-    assets = dict(inp.picks["assets"])
-    assets.update((inp.current or {}).get("assets") or {})
+    assets = merged_assets(inp.picks["assets"], (inp.current or {}).get("assets"), edit=inp.edit_shots is not None)       # the regions the compiler will use
+    res = read_out(root, inp.in_scope(), assets)
     with scaled_images(Path(root), assets):
         out = compile_specs(inp, res.specs, regions=res.regions, spec_problems=res.problems, degrade=False, draw=draw, engine=engine)
     return out, res

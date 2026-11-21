@@ -37,9 +37,9 @@ def main(argv=None) -> int:
         return 2
     try:
         inp, _ = load_workspace(a.workspace)
-        res = read_out(a.workspace, inp.in_scope(), inp.picks["assets"])
-        assets = dict(inp.picks["assets"])
-        assets.update((inp.current or {}).get("assets") or {})
+        from .assetmerge import merged_assets
+        assets = merged_assets(inp.picks["assets"], (inp.current or {}).get("assets"), edit=inp.edit_shots is not None)       # the regions the compiler will use
+        res = read_out(a.workspace, inp.in_scope(), assets)
         root = Path(a.workspace).resolve()
         eng = DraftProject(root, {"schema": "bti.storyboard/1", "assets": assets, "shots": [], "end": {"t": 1.0}}, inp.timing)
         try:

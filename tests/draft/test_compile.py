@@ -203,16 +203,19 @@ def test_new_ids_never_reuse_reserved_ones(proj):
     assert min(int(s["id"][1:]) for s in res.storyboard["shots"]) == 21
 
 
-def test_assets_merge_storyboard_wins_and_regions_are_added(proj):
+def test_assets_merge_picks_regions_win_in_a_full_draft_and_the_models_regions_are_added(proj):
+    """regionsrc: this test used to say "storyboard wins" (the saved MIRROR kept in a full draft). The pictures step is where regions are measured, so a full draft takes the
+    picks' MIRROR; the model's out/regions.json still adds new names and never overwrites one that exists (tests/draft/test_regions_source.py has the rest of the rule)."""
     inp, specs = good(proj)
     cur = compile_specs(inp, specs, draw=False).storyboard
     cur["assets"]["A"]["regions"]["MIRROR"]["rx"] = 123
+    cur["assets"]["A"]["regions"]["ONLY_SAVED"] = {"x": 50, "y": 60, "rx": 7, "ry": 7, "label": "Only the storyboard has it"}
     (proj / "storyboard.json").write_text(json.dumps(cur), encoding="utf-8")
     inp2 = load_inputs(proj)
     regions = {"A": {"NEWSPOT": {"x": 10, "y": 20, "rx": 5, "ry": 5, "label": "New"}, "MIRROR": {"x": 1, "y": 1, "label": "x"}}}
     res = compile_specs(inp2, specs, regions=regions, draw=False)
     r = res.storyboard["assets"]["A"]["regions"]
-    assert r["MIRROR"]["rx"] == 123 and r["NEWSPOT"]["x"] == 10
+    assert r["MIRROR"]["rx"] == 80 and r["NEWSPOT"]["x"] == 10 and r["ONLY_SAVED"]["rx"] == 7        # the picks' box (rx 80), not the saved 123
     assert any(i["code"] == "region_exists" for i in res.warnings)
 
 

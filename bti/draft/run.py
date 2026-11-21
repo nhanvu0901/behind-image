@@ -18,6 +18,7 @@ import time
 from pathlib import Path
 
 from . import spec as S
+from .assetmerge import merged_assets
 from .inputs import (NOTE_MAX, DraftError, DraftInputs, canon_hash, clone_inputs, load_inputs,
                      normalize_timing, read_json_file, resolve_edit_scope)
 from bti import agents as AG
@@ -538,7 +539,7 @@ def make_parts(project_dir: Path, provider: str, model: str | None, chapters: li
             regions = None
             problems: list = []
             if provider == "agy":
-                r.out = read_out(r.ws.root, inp.in_scope(), {**inp.picks["assets"], **((inp.current or {}).get("assets") or {})})
+                r.out = read_out(r.ws.root, inp.in_scope(), merged_assets(inp.picks["assets"], (inp.current or {}).get("assets"), edit=inp.edit_shots is not None))
                 r.specs, regions, problems, r.notes = r.out.specs, r.out.regions, r.out.problems, r.out.notes
                 if not r.specs:
                     if problems:
@@ -931,7 +932,7 @@ def make_edit_parts(project_dir: Path, *, model: str | None = None, instruction:
                 return
 
             preserve_out()
-            out_data = read_out(ws.root, deep_inputs.in_scope(), {**deep_inputs.picks["assets"], **((deep_inputs.current or {}).get("assets") or {})})
+            out_data = read_out(ws.root, deep_inputs.in_scope(), merged_assets(deep_inputs.picks["assets"], (deep_inputs.current or {}).get("assets"), edit=deep_inputs.edit_shots is not None))
             st.notes = out_data.notes
 
             if not out_data.specs:
