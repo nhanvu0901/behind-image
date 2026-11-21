@@ -65,7 +65,10 @@ def _inputs(ws):
 def make_plan(ws, first_run):
     ctx, lines = _inputs(ws)
     p = ctx["plan"]
-    regions = [{"name": "MIRROR", "box": [0.40, 0.30, 0.60, 0.55], "what": "Tấm gương lồi"}, {"name": "HEAD", "box": [0.10, 0.05, 0.30, 0.25], "what": "Khuôn mặt"}]
+    regions = [
+        {"name": "MIRROR", "box": [0.40, 0.30, 0.60, 0.55], "what": "Tấm gương lồi", "thing": "convex mirror on back wall"},
+        {"name": "HEAD", "box": [0.10, 0.05, 0.30, 0.25], "what": "Khuôn mặt", "thing": "man's face"},
+    ]
     regions = [r for r in regions if r["name"] not in p["existing_regions"]]
     out = []
     for i, bid in enumerate(p["targets"]):
@@ -97,11 +100,28 @@ def make_plan(ws, first_run):
     return {"schema": shapes.PLAN_SCHEMA, "regions": regions, "lines": out}
 
 
-def make_choice(ws):
-    ctx = json.loads((Path(ws) / "inputs" / "context.json").read_text(encoding="utf-8"))["choice"]
+def make_choice(ws, confirmed=None):
+    ws = Path(ws)
+    ctx = json.loads((ws / "inputs" / "context.json").read_text(encoding="utf-8"))["choice"]
+    if confirmed is None:
+        st_file = ws / "look" / "tighten_state.json"
+        st = json.loads(st_file.read_text(encoding="utf-8")) if st_file.is_file() else {}
+        confirmed = bool(st.get("sheets"))
+    cutouts = ctx.get("cutouts") or {}
+    regions = []
+    for r in ctx["regions"]:
+        if r in cutouts:
+            cw, ch = cutouts[r]["cutout_size"]
+            box = [max(0, cw // 5), max(0, ch // 5), max(2, (cw * 4) // 5), max(2, (ch * 4) // 5)]
+            entry = {"name": r, "action": "tight", "box": box, "reason": "Khung ôm sát chi tiết."}
+            if confirmed:
+                entry["confirmed"] = True
+            regions.append(entry)
+        else:
+            regions.append({"name": r, "action": "keep", "reason": ""})
     return {"schema": shapes.CHOICE_SCHEMA,
             "wants": [{"id": w, "pick": 1, "reason": "Hình rõ nét, đúng thứ lời dẫn nói tới."} for w in ctx["wants"]],
-            "regions": [{"name": r, "action": "keep", "reason": ""} for r in ctx["regions"]]}
+            "regions": regions}
 
 
 class FakeRunner:
@@ -128,17 +148,20 @@ class FakeRunner:
                 time.sleep(0.1)
             if not STATE["slow"] and steps >= 3:
                 break
+        out_path = ws / "out" / ("plan.json" if mode == "plan" else "choice.json")
         (ws / "out").mkdir(exist_ok=True)
-        if STATE["fail"]:
-            (ws / "out" / ("plan.json" if mode == "plan" else "choice.json")).write_text("{ not json", encoding="utf-8")
-        else:
-            data = make_plan(ws, first_run) if mode == "plan" else make_choice(ws)
-            (ws / "out" / ("plan.json" if mode == "plan" else "choice.json")).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
-        res.steps, res.turns = steps, 1
         turn = 1
-        while check is not None and turn <= max_repairs:      # the repair rounds, like the real runner
+        while True:                                          # write output and re-run on repair rounds (e.g. check-sheet confirmation)
+            if STATE["fail"]:
+                out_path.write_text("{ not json", encoding="utf-8")
+            else:
+                data = make_plan(ws, first_run) if mode == "plan" else make_choice(ws)
+                out_path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+            res.steps, res.turns = steps, turn
+            if check is None:
+                break
             problems = check(turn)
-            if not problems:
+            if not problems or turn > max_repairs:
                 break
             turn += 1
             res.repairs += 1

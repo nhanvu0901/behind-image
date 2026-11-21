@@ -381,3 +381,33 @@ def test_picks_tighten_failure_writes_nothing_and_dropped_in_use_stays(t_api):
             break
         time.sleep(0.05)
     assert j2["state"] == "error" and "MIRROR" in doc.non_tight_regions(doc.load(t_api.pdir))
+
+
+def test_picks_state_shows_tighten_label_while_running(t_api):
+    from bti import picks
+    from bti.draft.providers.agy import AgyResult
+
+    def hold_until_cancelled(mode, ws, kw):
+        while not kw["cancel"]():
+            time.sleep(0.02)
+        return AgyResult(status="cancelled")
+
+    t_api.agent.hook = hold_until_cancelled
+    r = t_api.post(t_api.u, json={})
+    assert r.status_code == 200, r.text
+    jid = r.json()["job_id"]
+    try:
+        assert picks.state(t_api.pdir) == {"state": "running", "detail": "Agent đang đo lại khung chi tiết."}
+        st = t_api.get("/api/projects/%s/state" % t_api.pid).json()
+        picks_step = next(s for s in st["steps"] if s["step"] == "picks")
+        assert picks_step["detail"] == "Agent đang đo lại khung chi tiết."
+    finally:
+        assert t_api.post("/api/longjobs/%s/cancel" % jid, json={}).status_code == 200
+        end = time.time() + 30
+        while time.time() < end:
+            j = t_api.get("/api/longjobs/" + jid).json()
+            if j["state"] in ("done", "error", "cancelled"):
+                break
+            time.sleep(0.05)
+        assert j["state"] == "cancelled"
+    assert t_api.get(t_api.u).json()["running"] is None
