@@ -1176,3 +1176,9 @@ def test_a_frame_costs_what_the_other_overlays_cost(tmp_path):
         for t in (4.0, 4.3, 6.0, 6.3):
             frame(p, t)
         assert (time.perf_counter() - t0) / 4 < 0.4, tid
+
+
+def test_key_late_saved_labels_are_planned_earlier_when_rendered(tmp_path):
+    p = key_project(tmp_path, [lab('First', 'A', at=5.4), lab('Second', 'B', at=6.2)], dur=7.0)
+    r = renderer(p)
+    assert [lb['at'] for lb in r.labels] == pytest.approx([4.45, 4.7])

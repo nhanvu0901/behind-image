@@ -48,9 +48,9 @@ HINTS = {
     "shot_short": "Merge this shot into the one before it or move its cut later so that it lasts at least %.1f seconds." % MIN_SHOT_S,
     "upright_whole_share": ("Keep the whole painting only for the pull back that ends the cold open, for one chapter opening and for the last shot; "
                             "give every other shot a framing that fills the screen (the painting at full width with a slow travel up or down, or a wide band of it)."),
-    "highlight_off_frame": "Aim the camera so that the region stays well inside the frame for the whole window of the highlight, or remove the highlight.",
-    "highlight_too_dark": ("Remove the highlight when the camera already frames its subject closely; otherwise raise its floor (`floor` for HI-01, `surround_floor` "
-                           "for X-HI-01) to about 0.6 so that the rest of the picture stays visible."),
+    "highlight_off_frame": "Aim the camera so that the named region stays well inside the frame for the whole window, or use a tighter region.",
+    "highlight_too_dark": ("Raise its floor (`floor` for HI-01, `surround_floor` for X-HI-01) to at least 0.6 so that the rest of the picture stays visible; "
+                           "end the camera wider or use a tighter region when needed."),
     "caption_placeholder": "Write a caption that comes from the narration or from the picture's own title, or leave it empty; never a placeholder or a note to the reader.",
     "caption_repeats": "Say it once: remove the repeated words from the caption.",
     "text_not_in_narration": ("Show only what the narration says: take the word or figure from the narration, or leave it out (an empty label is better than a guess; "
@@ -483,7 +483,7 @@ def _highlights(c: _Ctx) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------------------------------------- text on the screen
-NOT_TEXT = {"id", "via", "holds", "from", "to", "view_start_center", "view_end_center", "box", "ref", "region_iso"}
+NOT_TEXT = {"id", "via", "holds", "from", "to", "view_start_center", "view_end_center", "box", "ref", "region_iso", "frame_aspect"}
 PLACEHOLDER = re.compile(r"\b(unknown author|anonymous author|lorem ipsum|placeholder|your text here|sample narration|todo|tbd)\b", re.I)
 PLACEHOLDER_WHOLE = {"unknown", "anonymous", "untitled", "n/a", "na", "none", "null", "undefined", "nan", "xxx", "test", "example"}
 META_WORD = re.compile(r"\b(narration|narrator|voice[- ]?over)\b", re.I)
@@ -977,6 +977,231 @@ CATALOGUE_ISSUES = {
 
 
 # ----------------------------------------------------------------------------------------------------------- entry
+# pointfix: point out small details and keep on-screen text readable.
+SMALL_ON_SCREEN = 0.40
+MAX_LIT_AREA = 0.45
+HINTS.update({
+    "small_detail_not_lit": "Add HI-01 on the named detail during this line, using a tight region.",
+    "highlight_nothing_to_dim": "End the camera wider or use a tighter region so that the surroundings can darken.",
+    "text_too_brief": "Start the shot or overlay earlier, or drop the text.",
+})
+
+
+def _highlight_nothing_to_dim(c):
+    out = []
+    for i, shot in enumerate(c.shots):
+        sp = c.spans[i]
+        if not sp or not c.has_camera(i):
+            continue
+        keys = c.keys_of(i, sp)
+        if not keys:
+            continue
+        for j, ov in enumerate(shot.get("overlays") or []):
+            tid = ov.get("technique")
+            if tid not in HIGHLIGHTS:
+                continue
+            span = _overlay_span(c, ov, sp)
+            p = {**c.bundle.param_defaults(tid), **(ov.get("params") or {})}
+            if not span or not (_num(p.get("rx")) and _num(p.get("ry"))):
+                continue
+            cx, cy, z = camera_at(keys, sum(span) / 2)
+            point = _region_xy(c.assets.get(c.primary(i)) or {}, p.get("at"))
+            if point is None:
+                continue
+            sx = L.CANVAS_W / 2 + (point[0] - cx) * z
+            sy = L.CANVAS_H / 2 + (point[1] - cy) * z
+            xr, yr = p["rx"] * z, p["ry"] * z
+            if xr <= 0 or yr <= 0:
+                continue
+            # Integrate the ellipse clipped to the frame, not its unbounded area.
+            left, right = max(0.0, sx-xr), min(float(L.CANVAS_W), sx+xr)
+            step = max(0.0, right-left) / 256
+            area = 0.0
+            for k in range(256):
+                xx = left + (k + .5) * step
+                half = yr * math.sqrt(max(0.0, 1 - ((xx-sx)/xr)**2))
+                area += max(0.0, min(L.CANVAS_H, sy+half) - max(0.0, sy-half)) * step
+            if p.get("shape") == "rect":
+                area = max(0.0, min(L.CANVAS_W,sx+xr)-max(0.0,sx-xr)) * max(0.0, min(L.CANVAS_H,sy+yr)-max(0.0,sy-yr))
+            share = area / (L.CANVAS_W * L.CANVAS_H)
+            if share > MAX_LIT_AREA:
+                out.append(_issue("highlight_nothing_to_dim", "shots[%d].overlays[%d]" % (i,j),
+                    "Spotlight on %s covers %.1f%% of the frame." % (c.sid(i), 100*share), shot=c.sid(i), overlay=ov.get("id"), share=_r(share,3), limit=MAX_LIT_AREA))
+    return out
+
+
+def _small_detail_not_lit(c):
+    out = []
+    rows = _beat_rows(c)
+    main = (c._picks or {}).get("main_asset") or c.main_asset()
+    asset = c.assets.get(main) or {}
+    regs = asset.get("regions") or {}
+    for row in rows:
+        if "detail" not in (row["kinds"] or []):
+            continue
+        seen_regions = set()
+        for item in row["entry"].get("items") or []:
+            name = item.get("region") if isinstance(item, dict) and item.get("asset") == main else None
+            if isinstance(name, str) and name in seen_regions:
+                continue
+            if isinstance(name, str):
+                seen_regions.add(name)
+            reg = regs.get(name) if isinstance(name, str) else None
+            if not isinstance(reg, dict) or not all(_num(reg.get(k)) for k in ("x","y","rx","ry")):
+                continue
+            x,y,rx,ry = (float(reg[k]) for k in ("x","y","rx","ry"))
+            candidates = []
+            all_small = True
+            for i, shot in enumerate(c.shots):
+                sp = c.spans[i]
+                if not sp or c.primary(i) != main or not c.has_camera(i) or min(sp[1],row["t1"]) <= max(sp[0],row["t0"]):
+                    continue
+                keys = c.keys_of(i,sp)
+                if not keys:
+                    continue
+                a,b=max(sp[0],row["t0"]),min(sp[1],row["t1"])
+                n = max(1, int(math.ceil((b-a) / SAMPLE_S)))
+                moments = [a + (b-a)*k/n for k in range(n+1)] + [key[0] for key in keys if a < key[0] < b]
+                poses = [camera_at(keys,t) for t in moments]
+                if all(2*rx*z/L.CANVAS_W < SMALL_ON_SCREEN and 2*ry*z/L.CANVAS_H < SMALL_ON_SCREEN and
+                       abs(x-cx)*z+rx*z <= L.CANVAS_W/2 and abs(y-cy)*z+ry*z <= L.CANVAS_H/2 for cx,cy,z in poses):
+                    candidates.append((i, max(2*rx*z/L.CANVAS_W for _,_,z in poses), max(2*ry*z/L.CANVAS_H for _,_,z in poses)))
+                else:
+                    all_small = False
+            if not candidates or not all_small:
+                continue
+            found = False
+            for i, _, _ in candidates:
+                for ov in c.shots[i].get("overlays") or []:
+                    tid=ov.get("technique")
+                    if tid not in ("HI-01","X-HI-01","AN-01","KEY-01"):
+                        continue
+                    span=_overlay_span(c,ov,c.spans[i])
+                    if not span or min(span[1],row["t1"]) <= max(span[0],row["t0"]):
+                        continue
+                    p=ov.get("params") or {}
+                    if tid == "KEY-01":
+                        from .techniques.explain_over import plan_label_times
+                        pp = {**c.bundle.param_defaults(tid), **p}
+                        labels = [dict(v, at=_resolved_at(c, v.get("at"), span[0])) for v in pp.get("labels", []) if isinstance(v,dict)]
+                        starts = plan_label_times(labels, span[0], span[1]-span[0], float(pp.get("fade_s",.3)), float(pp.get("leave_s",.5)))
+                        refs = [v.get("ref") for v, at in zip(labels, starts) if span[0] + at < row["t1"] and span[1] > row["t0"]]
+                    else:
+                        refs = [p.get("at")]
+                    for ref in refs:
+                        pt=_region_xy(asset,ref)
+                        target=regs.get(ref) if isinstance(ref,str) else None
+                        tx=float(target.get("rx") or 0) if isinstance(target,dict) else 0
+                        ty=float(target.get("ry") or 0) if isinstance(target,dict) else 0
+                        if pt and x-rx <= pt[0]-tx and pt[0]+tx <= x+rx and y-ry <= pt[1]-ty and pt[1]+ty <= y+ry:
+                            found=True
+                            break
+                    if found: break
+                if found: break
+            if not found:
+                i, width_share, height_share = candidates[0]
+                out.append(_issue("small_detail_not_lit", "shots[%d]" % i, "Line %s names small region %s without a pointer in shot %s (%.1f%% of width, %.1f%% of height)." % (row["id"],name,c.sid(i),100*width_share,100*height_share), beat=row["id"],region=name,shot=c.sid(i),width_share=_r(width_share,3),height_share=_r(height_share,3),limit=SMALL_ON_SCREEN))
+    return out
+
+
+def _resolved_at(c, value, t0):
+    if isinstance(value,dict):
+        if _num(value.get("_t")):
+            return value
+        try:
+            return {"_t":c.tm.resolve(value)}
+        except Exception:
+            return 0.0
+    return value
+
+
+def _text_windows(c, tid, p, span, spec):
+    from .techniques.explain_over import plan_label_times
+    t0,t1=span
+    dur=t1-t0
+    if tid == "KEY-01":
+        labels=[dict(it,at=_resolved_at(c,it.get("at"),t0)) for it in p.get("labels",[]) if isinstance(it,dict)]
+        fade=float(p.get("fade_s",.3)); leave=float(p.get("leave_s",.5))
+        for it, at in zip(labels,plan_label_times(labels,t0,dur,fade,leave)):
+            yield str(it.get("text", "")), max(0.0,dur-leave-at-fade)
+        return
+    fadein=float(p.get("pop_in_s",p.get("fade_in_s",0)) or 0)
+    fadeout=float(p.get("fade_out_s",p.get("leave_s",0)) or 0)
+    for name,idx,field,text in _texts(spec,p):
+        if tid in ("AN-04", "X-ANN-05") and name == "labels" and idx is not None:
+            points = p.get("places" if tid == "AN-04" else "points") or []
+            count = min(len(points), int(p["marker_count"])) if tid == "X-ANN-05" and p.get("marker_count") else len(points)
+            if idx >= count:
+                continue
+        if tid == "STATIC-04" and name == "attribution" and not str(p.get("quote") or "").strip():
+            continue
+        if tid == "NUM-01" and not p.get("rows"):
+            continue
+        start=fadein
+        end_fade=fadeout
+        if tid == "STATIC-04":
+            start += float(p.get("delay_s", 0))
+        elif tid == "AN-05":
+            start = float(p.get("pop_s", 0))
+        elif tid == "AN-04":
+            start = float(p.get("label_delay_s",0)) + (idx or 0)*float(p.get("label_stagger_s",0)) + float(p.get("label_fade_s",0))
+            end_fade = float(p.get("fade_s",0))
+        elif tid == "X-ANN-05":
+            start = float(p.get("start_delay_s",0)) + (idx or 0)*float(p.get("stagger_s",0)) + float(p.get("label_delay_s",0)) + float(p.get("label_fade_s",0))
+            end_fade = float(p.get("fade_s",0))
+        elif tid == "SHORT-04":
+            start = float(p.get("text_delay_s",0)) + float(p.get("pop_s",0))
+        elif tid == "TXT-02":
+            start = (idx or 0)*float(p.get("row_delay_s",0))
+        elif tid == "ID-LABEL-01":
+            scale=min(1.0,dur/float(p.get("nominal_s") or dur))
+            start *= scale
+            end_fade *= scale
+        elif tid == "ID-OPEN-02":
+            scale=min(1.0,dur/float(p.get("nominal_s") or dur))
+            start=max(0.0,float(p.get("ramp_in_s",0))-float(p.get("title_fade_in_s",0)))
+            start += (float(p.get("sub_delay_s",0))+float(p.get("sub_fade_in_s",0))) if name == "sub" else float(p.get("title_fade_in_s",0))
+            start *= scale
+            end_fade=float(p.get("ramp_out_s",0))*scale
+        elif tid == "NUM-01":
+            if name == "rows" and idx is not None:
+                item=p["rows"][idx]; at=_resolved_at(c,item.get("at"),t0)
+                from .registry import at_seconds
+                start=at_seconds(at,t0,0)+{"label":.35,"value":.60,"units":.75}.get(field,.35)
+            elif name in ("caption", "source"):
+                from .registry import at_seconds
+                rows = [r for r in p.get("rows", []) if isinstance(r,dict)]
+                ats = [at_seconds(_resolved_at(c,r.get("at"),t0),t0,0) for r in rows]
+                first = min(ats or [0.0])
+                if name == "source":
+                    start = first + .65
+                else:
+                    counted = [at for at,r in zip(ats,rows) if r.get("count")]
+                    start = (min(counted) + .6 if counted else first + .75) + .5
+        elif tid == "DOC-01":
+            from .registry import at_seconds
+            start=at_seconds(_resolved_at(c,p.get("reading_at"),t0),t0,2.4)+(.8 if name == "original" else .4)
+        yield text,max(0.0,dur-end_fade-start)
+
+
+def _text_too_brief(c):
+    from .techniques.explain_over import min_read_seconds
+    out=[]
+    for i, shot in enumerate(c.shots):
+        sp=c.spans[i]
+        if not sp: continue
+        for j,ov in enumerate(shot.get("overlays") or []):
+            tid=ov.get("technique"); spec=c.bundle.spec(tid) if isinstance(tid,str) else None
+            span=_overlay_span(c,ov,sp)
+            if not spec or not span: continue
+            p={**c.bundle.param_defaults(tid),**(ov.get("params") or {})}
+            for text,got in _text_windows(c,tid,p,span,spec):
+                if not text.strip(): continue
+                need=min_read_seconds(text)
+                if got+1e-6 < need:
+                    out.append(_issue("text_too_brief", "shots[%d].overlays[%d]" % (i,j), "Text %r is fully visible for %.2f s but needs %.2f s." % (text,got,need), shot=c.sid(i),overlay=ov.get("id"),text=text,seconds=_r(got,2),needed=_r(need,2)))
+    return out
+
 def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> list[dict]:
     """The viewer checks of a storyboard whose shots start at `starts` (seconds, None when unresolvable) and end at `end_t`. Never raises."""
     try:
@@ -985,7 +1210,7 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         return []
     out: list[dict] = []
     for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer,
-               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small):         # the last four: catalogue pass, silent on beats without kinds
+               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief):         # the last four: catalogue pass, silent on beats without kinds
         try:
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
@@ -1062,3 +1287,9 @@ def _frame_off_painting(c: _Ctx) -> list[dict]:
 # panelbox (2026-11-20): the camera stays inside the painted area of the main painting (`_frame_off_painting`)
 CODES["frame_off_painting"] = ("A camera key of a shot on the main painting shows more than 1% of its frame outside the painted area of the main painting (`content_box` of the asset, "
                                "bti/media/contentbox.py), judged along the axes where the frame is not a pull-back round the painting, and does not hold the whole painting (warning). args: shot, asset, key (0-based), share, limit, box [x0, y0, x1, y1], cx, cy, zoom.")
+
+CODES.update({
+    "small_detail_not_lit": "A small named painting detail has no pointer (warning). args: beat, region, shot, width_share, height_share, limit.",
+    "highlight_nothing_to_dim": "A spotlight covers too much of the frame (warning). args: shot, overlay, share, limit.",
+    "text_too_brief": "A text is fully visible for too little time (warning). args: shot, overlay, text, seconds, needed.",
+})

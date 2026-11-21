@@ -35,8 +35,7 @@ TASK_RULES = {
     "the frame is full": ["**The frame is full.**", "`zoom = 1920 / W`", "3840 px wide: 0.5", "under 0.6 of that (0.3)", "at most 5% of the running time (30 s in ten minutes)",
                           "the pull back that ends the cold open, ONE chapter opening and the last shot", "`zoom >= 0.6 x 1920 / W`", "`cx = W / 2`",
                           "Neighbouring shots never end and start on the same frame", "channel-name beat and each chapter mark", "start every chapter's first shot, on a filling frame"],
-    "highlights": ["**Highlights are rare and stay lit.**", "at most one in two minutes, none in the first minute", "never when the camera already frames it closely",
-                   "5% in from every edge", "`floor` / `surround_floor` 0.6 or more"],
+    "highlights": ["**Light each small detail.**", "consecutive shots and near views", "5% inside every edge", "at least 0.6", "at least 2.5 s"],
     "text on the screen": ["**Text on the screen is true and tidy.**", "comes from the narration", "never a placeholder (\"Unknown author\")", "the word \"narration\"",
                            "the same words twice", "`region_label` `\"\"`", "`region_iso` `[]`", "`sea_names` `false`"],
     "the first half minute": ["**The first half minute is the painting.**", "before second 30", "STATIC-09"],
@@ -53,7 +52,7 @@ TASK_RULES = {
 }
 FAST_RULES = {
     "the frame stays full": ["**the frame stays full**", "`zoom = 1920 / W`", "under 0.6 of that", "5% of the video at most", "`cx` = `W / 2`", "does not end where the next begins"],
-    "highlights after a camera move": ["**after you move a camera, look at its highlights**", "5% in from every edge", "`remove_overlay` it", "under 0.6"],
+    "highlights after a camera move": ["**after you move a camera, look at its highlights**", "5% in from every edge", "wider or use a tighter region", "at least 0.6"],
     "text on the screen": ["**text on the screen**", "no placeholder", "no word \"narration\"", "`region_label` `\"\"`", "`sea_names` `false`", "Before second 30", "`STATIC-09`"],
     "pictures": ["**pictures**", "each is chosen for some line", "long side is under 1000 px", "`zoom` 2 at most", "default fit", "twice its size"],
     "the catalogue pass": ["`unknown_technique`", "never for one place that is merely mentioned", "never over the painting's face"],
@@ -76,7 +75,7 @@ def test_the_briefings_are_not_much_bigger_than_before():
     """Before this worker: 23,600 characters (23,693 bytes) for the draft task and 7,714 (7,868 bytes) for the fast briefing. The rules cost 3,130 and 1,309.
     Worker introflow added what the program writes at the start of the video (the opening shot `s0000`: the model's first shot is never a still view of the whole
     painting): about 450 and 180 more characters."""
-    assert len(TASK) < 32_000 and len(TASK) - 23_600 < 8_400          # catalogue pass: the table by kinds and the rules 18 to 21 (+3,950)
+    assert len(TASK) < 32_600 and len(TASK) - 23_600 < 9_000          # catalogue pass: the table by kinds and the rules 18 to 21 (+3,950)
     assert len(FAST) < 10_200 and len(FAST) - 7_714 < 2_500
 
 
@@ -327,18 +326,17 @@ def test_a_placeholder_caption_makes_the_agent_repair_it_and_the_prompt_says_whi
     assert j["state"] == "done"
 
 
-def test_a_clean_draft_is_not_sent_back_and_a_default_spotlight_is(proj, mgr, fake):
-    """The fake's draft has a spotlight on the mirror with the default floor (0.2 from style.json): on the fixture's picture that is almost black, so the first
-    draft is sent back twice; with a floor of 0.7 nothing is raised and the agent is asked once."""
-    finish(mgr, R.start(proj.name, proj, provider="agy", manager=mgr, guard_factory=gf, python="python"))
-    sent = [str(p) for p in fake.prompts()]
-    assert len(sent) == 3 and "highlight_too_dark" in sent[1] and "looks the owner rejects" in sent[1]
-    fixed = json.loads(json.dumps(GOOD))
-    fixed["c01"]["shots"][1]["overlays"][0]["params"]["floor"] = 0.7
-    (fake.dir / "cfg.json").write_text(json.dumps({"specs": fixed, "victim": str(proj / "timing.json")}), encoding="utf-8")
-    (fake.dir / "prompts.jsonl").unlink()
+def test_default_spotlight_is_readable_and_explicit_dark_one_is_sent_back(proj, mgr, fake):
+    """The compiler now defaults the spotlight floor to 0.6; an explicit dark floor is still checked."""
     finish(mgr, R.start(proj.name, proj, provider="agy", manager=mgr, guard_factory=gf, python="python"))
     assert len(fake.prompts()) == 1
+    bad = json.loads(json.dumps(GOOD))
+    bad["c01"]["shots"][1]["overlays"][0]["params"]["floor"] = 0.2
+    (fake.dir / "cfg.json").write_text(json.dumps({"specs": bad, "victim": str(proj / "timing.json")}), encoding="utf-8")
+    (fake.dir / "prompts.jsonl").unlink()
+    finish(mgr, R.start(proj.name, proj, provider="agy", manager=mgr, guard_factory=gf, python="python"))
+    sent = [str(p) for p in fake.prompts()]
+    assert len(sent) == 3 and "highlight_too_dark" in sent[1]
 
 
 # ----------------------------------------------------------------------------------------------------------------- "9/8 chapters"

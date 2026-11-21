@@ -55,3 +55,25 @@ def test_explicit_end_anchor_is_fitted(tmp_path, brand03):
     result, report = RT.retime(sb, timing, style_doc())
     assert any(o['overlay'] == 'end-anchor' and o['what'] == 'shortened' for o in report['overlays'])
     assert not any(p['code'] == 'overlay_off_shot' for p in RT.off_voice(result, timing, style_doc()))
+
+
+def test_retimed_key_plans_late_label_again_without_a_new_draft(tmp_path, brand03):
+    import json
+    from bti.engine.api import open_project
+    timing=intro_timing()
+    proj=make_project(tmp_path,timing)
+    sb=compiled(proj).storyboard
+    fit=RT._Fit(sb,timing,style_doc())
+    i=next(i for i,s in enumerate(sb['shots']) if s.get('technique')=='CAM-01' and 'w' in s.get('start',{}) and fit.t1[i]-fit.t0[i]>3.5)
+    shot=sb['shots'][i]
+    sb['shots'][i+1]['start']={'t':fit.t0[i]+3.5}
+    shot['overlays']=[{'id':'keyproof','technique':'KEY-01','intent':'point_at','slots':{},
+                       'start':copy.deepcopy(shot['start']),'dur':6.0,'locked':False,'source':'agent','note':'',
+                       'params':{'labels':[{'text':'Mirror','ref':'MIRROR','at':3.2}], 'fade_s':.3,'leave_s':.5}}]
+    result, report=RT.retime(sb,timing,style_doc())
+    assert any(o['overlay']=='keyproof' and o['what']=='shortened' for o in report['overlays']), report
+    (proj/'storyboard.json').write_text(json.dumps(result),encoding='utf-8')
+    scene=open_project(proj)._scene()
+    rendered=next(r for _,r in scene.shots[i].overlays if r.tid=='KEY-01')
+    assert rendered.labels[0]['at'] == pytest.approx(rendered.dur-2.3,abs=.002)
+    assert rendered.labels[0]['at'] < 3.2

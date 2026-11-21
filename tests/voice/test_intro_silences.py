@@ -120,7 +120,7 @@ def test_a_project_the_app_creates_gets_the_intro_silences(tmp_path, monkeypatch
     d = tmp_path / "newproj"
     d.mkdir()
     P._write_intro_silences(d)
-    assert files.read_settings(d) == {"lead": 5.0, "title": 10.2}
+    assert files.read_settings(d) == {"lead": 5.0, "title": 10.2, "tempo": 1.1}
 
 
 def test_create_project_itself_writes_them(tmp_path):
@@ -131,7 +131,7 @@ def test_create_project_itself_writes_them(tmp_path):
     except projects.ProjectError as e:
         pytest.skip("no library data on this machine: %s" % e)
     d = tmp_path / p["id"]
-    assert files.read_settings(d) == {"lead": 5.0, "title": 10.2}
+    assert files.read_settings(d) == {"lead": 5.0, "title": 10.2, "tempo": 1.1}
     assert silence_settings(files.read_settings(d), load_voice_config())["own"] == {"lead": True, "title": True}
 
 
@@ -200,3 +200,8 @@ def test_taking_the_values_away_goes_back_to_the_old_timing(project, mgr, cfg):
     assert describe(project, cfg=cfg, server={}, provider_name="fake")["reasons"] == ["mix_settings_changed"]
     go(project, mgr, cfg)
     assert _timing(project)["words"] == old["words"]
+
+
+def test_old_project_without_own_tempo_keeps_fallback(tmp_path):
+    from bti.voice.config import project_settings
+    assert project_settings(files.read_settings(tmp_path), load_voice_config())["tempo"] == 1.0

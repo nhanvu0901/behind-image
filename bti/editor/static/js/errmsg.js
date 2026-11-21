@@ -804,3 +804,23 @@ export const PANELBOX_SENTENCES = {
 };
 export const PANELBOX_CODES = Object.keys(PANELBOX_SENTENCES);
 Object.assign(BUILD, PANELBOX_SENTENCES);
+
+// ---- worker pointfix: viewer warnings for pointing and reading.
+export const POINTFIX_SENTENCES = {
+  small_detail_not_lit: (i) => { const a = i.args || {}; return `Dòng ${a.beat ?? '?'} nói đến chi tiết nhỏ ở cảnh ${a.shot ?? '?'} nhưng chưa chỉ rõ vị trí. Hãy rọi sáng chi tiết đó.`; },
+  highlight_nothing_to_dim: (i) => { const a = i.args || {}; return `${fdShot(a)}: vùng sáng chiếm quá nhiều khung hình. Hãy cho máy quay lùi rộng hơn hoặc chọn vùng nhỏ hơn.`; },
+  text_too_brief: (i) => { const a = i.args || {}; return `${fdShot(a)}: chữ “${a.text ?? ''}” chỉ hiện rõ ${fdVn(a.seconds)} giây, cần ${fdVn(a.needed)} giây. Hãy cho cảnh hoặc chữ bắt đầu sớm hơn, hoặc bỏ chữ.`; },
+};
+export const POINTFIX_CODES = Object.keys(POINTFIX_SENTENCES);
+Object.assign(BUILD, POINTFIX_SENTENCES);
+
+// ---- worker pointfix: keep a named detail lit while brightening its surroundings.
+FIXDRAFT_SENTENCES.highlight_too_dark = (i) => { const a = i.args || {}; return `${fdShot(a)}: lớp rọi sáng vùng "${a.region ?? ''}" làm cả khung hình gần như đen (độ sáng ${fdVn(a.luma, 0)}, dưới mức ${fdVn(a.min, 0)}). Nâng độ sáng phần còn lại lên khoảng ${a.floor_needed != null ? fdVn(a.floor_needed, 2) : '0,6'}; nếu cần, cho máy quay lùi rộng hơn hoặc chọn vùng nhỏ hơn.`; };
+Object.assign(BUILD, FIXDRAFT_SENTENCES);
+
+// ---- worker pointfix: keep the pointer visible for the whole highlight.
+FIXDRAFT_SENTENCES.highlight_off_frame = (i) => { const a = i.args || {}; return `${fdShot(a)}: vùng sáng "${a.region ?? ''}" nằm sát mép hoặc ngoài khung hình lúc giây ${fdVn(a.at)}. Chỉnh máy quay để chi tiết nằm trong khung suốt lúc rọi sáng, hoặc chọn vùng nhỏ hơn.`; };
+Object.assign(BUILD, FIXDRAFT_SENTENCES);
+
+// ---- worker pointfix: a draft shot cannot fit the minimum spotlight window.
+BUILD.highlight_short_shot = () => 'Cảnh quá ngắn để rọi sáng ít nhất 2,5 giây rồi tắt dần. Hãy bắt đầu cảnh sớm hơn hoặc gộp với cảnh khác.';

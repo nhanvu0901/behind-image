@@ -1,0 +1,1561 @@
+{
+ "schema": "bti.picks/1",
+ "main_asset": "van_eyck_arnolfini",
+ "assets": {
+  "van_eyck_arnolfini": {
+   "file": "media/van_eyck_arnolfini.jpg",
+   "kind": "image",
+   "title": "Van Eyck - Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 3840,
+   "height": 5253,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {
+    "INSCRIPTION": {
+     "x": 1958,
+     "y": 1129,
+     "rx": 422,
+     "ry": 158,
+     "label": "Dòng chữ ký Latinh trên tường phía trên gương"
+    },
+    "MIRROR": {
+     "x": 1939,
+     "y": 1563,
+     "rx": 365,
+     "ry": 355,
+     "label": "Tấm gương lồi cùng khung có mười ô tròn"
+    },
+    "MIRROR_REFLECTION": {
+     "x": 1958,
+     "y": 1576,
+     "rx": 173,
+     "ry": 184,
+     "label": "Hình phản chiếu trong gương: cặp đôi và hai người ở cửa"
+    },
+    "ROUNDELS_WOMAN": {
+     "x": 2112,
+     "y": 1576,
+     "rx": 192,
+     "ry": 341,
+     "label": "Các ô tròn khung gương bên phía người vợ"
+    },
+    "WOMAN_HEAD": {
+     "x": 3034,
+     "y": 1287,
+     "rx": 422,
+     "ry": 394,
+     "label": "Gương mặt và khăn trùm đầu trắng của người vợ"
+    },
+    "MAN_HEAD": {
+     "x": 1114,
+     "y": 972,
+     "rx": 499,
+     "ry": 447,
+     "label": "Gương mặt và chiếc mũ rơm đen của Giovanni"
+    },
+    "TABARD": {
+     "x": 1094,
+     "y": 2784,
+     "rx": 902,
+     "ry": 1523,
+     "label": "Áo khoác tím sẫm của Giovanni và bàn tay giơ lên"
+    },
+    "TABARD_FUR": {
+     "x": 710,
+     "y": 3546,
+     "rx": 518,
+     "ry": 657,
+     "label": "Viền lông chồn ở vạt áo khoác"
+    },
+    "JOINED_HANDS": {
+     "x": 2112,
+     "y": 2259,
+     "rx": 384,
+     "ry": 368,
+     "label": "Hai bàn tay nắm nhau, tượng quỷ nhỏ và gối đỏ"
+    },
+    "GREEN_SKIRT": {
+     "x": 2976,
+     "y": 2364,
+     "rx": 595,
+     "ry": 788,
+     "label": "Váy len xanh được túm lên, tay áo viền lông"
+    },
+    "BLUE_HEM": {
+     "x": 2496,
+     "y": 3992,
+     "rx": 346,
+     "ry": 525,
+     "label": "Váy lót xanh lam viền lông trắng gần gấu"
+    },
+    "BED": {
+     "x": 3264,
+     "y": 2049,
+     "rx": 576,
+     "ry": 2049,
+     "label": "Chiếc giường rèm đỏ phía sau người vợ"
+    },
+    "CHAIR_SAINT": {
+     "x": 2496,
+     "y": 1261,
+     "rx": 269,
+     "ry": 368,
+     "label": "Tượng thánh nữ trên lưng ghế và cây chổi treo"
+    },
+    "RUG": {
+     "x": 2074,
+     "y": 3625,
+     "rx": 307,
+     "ry": 578,
+     "label": "Tấm thảm Anatolia và đôi giày đỏ phía sau"
+    },
+    "BEADS": {
+     "x": 1613,
+     "y": 1576,
+     "rx": 154,
+     "ry": 315,
+     "label": "Chuỗi hạt cầu nguyện bằng hổ phách"
+    },
+    "WINDOW": {
+     "x": 288,
+     "y": 1313,
+     "rx": 288,
+     "ry": 1313,
+     "label": "Cửa sổ kính bên trái và cây anh đào bên ngoài"
+    },
+    "ORANGES": {
+     "x": 288,
+     "y": 2626,
+     "rx": 288,
+     "ry": 420,
+     "label": "Những quả cam trên bậu cửa và trên rương"
+    },
+    "CHANDELIER": {
+     "x": 1958,
+     "y": 525,
+     "rx": 576,
+     "ry": 525,
+     "label": "Đèn chùm bằng đồng với một ngọn nến cháy"
+    },
+    "PATTENS": {
+     "x": 307,
+     "y": 4806,
+     "rx": 307,
+     "ry": 394,
+     "label": "Đôi guốc gỗ ở góc dưới bên trái"
+    },
+    "DOG": {
+     "x": 1882,
+     "y": 4728,
+     "rx": 499,
+     "ry": 525,
+     "label": "Chú chó nhỏ dưới chân người vợ"
+    }
+   },
+   "original_width": 4386,
+   "original_height": 6000
+  },
+  "ban_do_lucca": {
+   "file": "media/ban_do_lucca.jpg",
+   "kind": "image",
+   "title": "Bản đồ Lucca",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=11/44.0178/10.4544",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "brugge_blick_vom": {
+   "file": "media/brugge_blick_vom.jpg",
+   "kind": "image",
+   "title": "Brügge Blick vom Belfried 4",
+   "artist": "Zairon",
+   "year": "2016",
+   "width": 3840,
+   "height": 2460,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Br%C3%BCgge_Blick_vom_Belfried_4.jpg",
+    "author": "Zairon",
+    "licence": "CC BY-SA 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 4520,
+   "original_height": 2896
+  },
+  "european_pine_marten": {
+   "file": "media/european_pine_marten.jpeg",
+   "kind": "image",
+   "title": "A European pine marten (Martes martes) in a lush Niedersachsen forest.",
+   "artist": "Georg Wietschorke",
+   "year": "",
+   "width": 4926,
+   "height": 3277,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/european-pine-marten-in-forest-niedersachsen-35251937/",
+    "author": "Georg Wietschorke",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 4926,
+   "original_height": 3277
+  },
+  "length_velvet": {
+   "file": "media/length_velvet.jpg",
+   "kind": "image",
+   "title": "Length of velvet",
+   "artist": "",
+   "year": "",
+   "width": 1315,
+   "height": 2893,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/227208",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "saint_margaret_antioch": {
+   "file": "media/saint_margaret_antioch.jpg",
+   "kind": "image",
+   "title": "Saint Margaret of Antioch",
+   "artist": "",
+   "year": "1475",
+   "width": 3000,
+   "height": 4000,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/469836",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "lotto_carpet": {
+   "file": "media/lotto_carpet.jpg",
+   "kind": "image",
+   "title": "Lotto Carpet",
+   "artist": "",
+   "year": "",
+   "width": 2560,
+   "height": 1920,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/447571",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {},
+   "content_box": {
+    "x0": 0,
+    "y0": 72,
+    "x1": 2560,
+    "y1": 1872,
+    "how": "found"
+   }
+  },
+  "marcia_1480": {
+   "file": "media/marcia_1480.png",
+   "kind": "image",
+   "title": "marcia 1480",
+   "artist": "laphamsquarterly.org",
+   "year": "",
+   "width": 1200,
+   "height": 627,
+   "credit": {
+    "source": "web",
+    "source_url": "https://www.laphamsquarterly.org/roundtable/mirror-effect",
+    "author": "laphamsquarterly.org",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "philipp_good_van": {
+   "file": "media/philipp_good_van.jpg",
+   "kind": "image",
+   "title": "Philipp the Good - Van der Weyden",
+   "artist": "After Rogier van der Weyden",
+   "year": "1450",
+   "width": 1920,
+   "height": 2886,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Philipp_the_Good_-_Van_der_Weyden.jpg",
+    "author": "After Rogier van der Weyden",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3475,
+   "original_height": 5224
+  },
+  "lavin_panofksyportrait_g": {
+   "file": "media/lavin_panofksyportrait_g.jpg",
+   "kind": "image",
+   "title": "Lavin PanofksyPortrait.gif",
+   "artist": "ias.edu",
+   "year": "",
+   "width": 567,
+   "height": 700,
+   "credit": {
+    "source": "web",
+    "source_url": "https://www.ias.edu/ideas/2010/lavin-panofsky-eyck-pearlstein",
+    "author": "ias.edu",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "moses_burning_bush": {
+   "file": "media/moses_burning_bush.jpg",
+   "kind": "image",
+   "title": "Moses and the Burning Bush",
+   "artist": "Gerard Hoet",
+   "year": "",
+   "width": 2600,
+   "height": 3943,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/387049",
+    "author": "Gerard Hoet",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "img_5994": {
+   "file": "media/img_5994.jpg",
+   "kind": "image",
+   "title": "img 5994",
+   "artist": "murreyandblue.wordpress.com",
+   "year": "",
+   "width": 750,
+   "height": 436,
+   "credit": {
+    "source": "web",
+    "source_url": "https://murreyandblue.wordpress.com/2020/03/05/the-medieval-doggie-and-everything-you-ever-wanted-to-know-about-them/",
+    "author": "murreyandblue.wordpress.com",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "jan_van_eyck": {
+   "file": "media/jan_van_eyck.jpg",
+   "kind": "image",
+   "title": "Jan van Eyck - Portrait of a Man (Self Portrait?) 1433",
+   "artist": "Jan van Eyck",
+   "year": "1433",
+   "width": 3840,
+   "height": 5283,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_-_Portrait_of_a_Man_(Self_Portrait%3F)_1433.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 8889,
+   "original_height": 12230
+  },
+  "great_art_explained": {
+   "file": "media/great_art_explained.jpg",
+   "kind": "image",
+   "title": "Great Art Explained, image 872",
+   "artist": "James Payne",
+   "year": "",
+   "width": 1557,
+   "height": 1200,
+   "credit": {
+    "source": "book",
+    "source_url": "Great Art Explained, image 872",
+    "author": "James Payne",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "las_meninas_diego": {
+   "file": "media/las_meninas_diego.jpg",
+   "kind": "image",
+   "title": "Las Meninas, by Diego Velázquez, from Prado in Google Earth",
+   "artist": "Diego Velázquez",
+   "year": "1656",
+   "width": 3840,
+   "height": 4420,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Las_Meninas,_by_Diego_Vel%C3%A1zquez,_from_Prado_in_Google_Earth.jpg",
+    "author": "Diego Velázquez",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 26065,
+   "original_height": 30000
+  }
+ },
+ "beats": {
+  "b0001": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn đọc dòng chữ trên tường rồi nhắc tấm gương bên dưới: đi từ chữ xuống gương.",
+   "kinds": [
+    "inscription",
+    "detail"
+   ]
+  },
+  "b0002": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về nét chữ của chính họa sĩ: quay lại dòng chữ ký.",
+   "kinds": [
+    "inscription"
+   ]
+  },
+  "b0003": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn gọi tên người phụ nữ áo xanh rồi so với ngày trên tường.",
+   "kinds": [
+    "detail",
+    "inscription"
+   ]
+  },
+  "b0004": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu hỏi về ý nghĩa của cả bức tranh: cho thấy toàn cảnh.",
+   "kinds": [
+    "whole"
+   ]
+  },
+  "b0005": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "JOINED_HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn đưa mắt từ gương xuống hai người bên dưới: đi theo đúng hướng đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0006": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào người đàn ông đội mũ đen: cận gương mặt ông.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0007": {
+   "items": [
+    {
+     "asset": "ban_do_lucca",
+     "region": null,
+     "role": "map",
+     "note": "Bản đồ OpenStreetMap của đúng thành phố Lucca ở Tuscany, Ý, điểm xuất phát của gia đình."
+    },
+    {
+     "asset": "brugge_blick_vom",
+     "region": null,
+     "role": "context",
+     "note": "Ảnh chụp hôm nay nhìn từ tháp chuông xuống phố cổ Bruges còn giữ nét thời trung cổ, vì không có hình nào vẽ thành phố thế kỷ 15."
+    }
+   ],
+   "status": "picked",
+   "note": "Gia đình đi từ Lucca đến Bruges, một trung tâm thương mại: bản đồ rồi cảnh Bruges xưa.",
+   "kinds": [
+    "journey",
+    "outside"
+   ]
+  },
+  "b0008": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn người phụ nữ áo xanh khi kể về Costanza: cận mặt bà.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0009": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Các giả thuyết về danh tính người vợ: lùi ra cả hai người trong tranh.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0010": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về tầng lớp thương nhân giàu lên nhờ buôn bán: cần hình thương nhân thời đó. Chưa tìm được: Thương nhân Flanders buôn bán thế kỷ 15.",
+   "kinds": [
+    "outside"
+   ],
+   "missing": [
+    {
+     "what": "Thương nhân Flanders buôn bán thế kỷ 15",
+     "code": "agent_none"
+    }
+   ]
+  },
+  "b0011": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về cặp đôi trong nhà của họ: cho thấy cả căn phòng.",
+   "kinds": [
+    "whole"
+   ]
+  },
+  "b0012": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "GREEN_SKIRT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào váy xanh túm lên rồi kể về thợ nhuộm: chi tiết váy rồi cảnh nhuộm vải xưa. Chưa tìm được: Thợ nhuộm len thời Trung cổ.",
+   "kinds": [
+    "detail",
+    "outside"
+   ],
+   "missing": [
+    {
+     "what": "Thợ nhuộm len thời Trung cổ",
+     "code": "agent_none"
+    }
+   ]
+  },
+  "b0013": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "GREEN_SKIRT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Con số về lông sóc nói về lớp lót lông ở tay áo: quay lại chi tiết đó.",
+   "kinds": [
+    "detail",
+    "figure"
+   ]
+  },
+  "b0014": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BLUE_HEM",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào chút màu xanh lam gần gấu váy: cận đúng chỗ đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0015": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về khăn trùm đầu trắng của người vợ: cận đầu bà.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0016": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chuyển sang bộ đồ tím sẫm của Giovanni: cho thấy áo khoác của ông.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0017": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD_FUR",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "european_pine_marten",
+     "region": null,
+     "role": "context",
+     "note": "Ảnh chụp hôm nay một con chồn thông châu Âu trong rừng ở Đức, thấy rõ cả bộ lông."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về lớp lót lông chồn và trăm con chồn: viền lông rồi hình con chồn.",
+   "kinds": [
+    "detail",
+    "figure"
+   ]
+  },
+  "b0018": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MAN_HEAD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về mũ rơm rồi đôi ủng: từ mũ xuống cả dáng người.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0019": {
+   "items": [
+    {
+     "asset": "length_velvet",
+     "region": null,
+     "role": "context",
+     "note": "Tấm nhung lụa Ý dệt hoa văn lựu kiểu thế kỷ 15 trong Bảo tàng Met, thuộc phạm vi công cộng."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói Giovanni buôn lụa và vải quý: cần hình tấm lụa thời đó.",
+   "kinds": [
+    "outside"
+   ]
+  },
+  "b0020": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Hai cách đọc về sự giàu có và căn phòng quanh họ: lùi ra toàn cảnh.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0021": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BED",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ vào chiếc giường đỏ phía sau: đi vào đúng chi tiết đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0022": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BED",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói giường ở Burgundy dùng để ngồi: cần hình một căn phòng có giường thời đó. Chưa tìm được: Căn phòng có giường màn thế kỷ 15.",
+   "kinds": [
+    "outside"
+   ],
+   "missing": [
+    {
+     "what": "Căn phòng có giường màn thế kỷ 15",
+     "code": "agent_none"
+    }
+   ]
+  },
+  "b0023": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "JOINED_HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về ghế dài gối đỏ và tượng quỷ ngay trên hai bàn tay: cận đúng chỗ đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0024": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHAIR_SAINT",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "saint_margaret_antioch",
+     "region": null,
+     "role": "context",
+     "note": "Tượng đá Thánh Margaret xứ Antioch bước ra từ con rồng, tác phẩm cuối thời trung cổ ở Bảo tàng Met."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ tượng thánh nữ trên ghế rồi nêu hai vị thánh: tượng, rồi hình Thánh Martha và Thánh Margaret. Chưa tìm được: Thánh Martha với con rồng.",
+   "kinds": [
+    "detail",
+    "outside"
+   ],
+   "missing": [
+    {
+     "what": "Thánh Martha với con rồng",
+     "code": "agent_none"
+    }
+   ]
+  },
+  "b0025": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "RUG",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "lotto_carpet",
+     "region": null,
+     "role": "context",
+     "note": "Thảm Lotto dệt ở Anatolia thế kỷ 16 trong Bảo tàng Met, đúng loại thảm hay xuất hiện trong tranh, muộn hơn bức tranh khoảng một thế kỷ."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ tấm thảm Anatolia quý hiếm: chi tiết thảm rồi một tấm thảm thật cùng thời.",
+   "kinds": [
+    "detail",
+    "outside"
+   ]
+  },
+  "b0026": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BEADS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ chuỗi hạt hổ phách cạnh gương: cận đúng chi tiết đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0027": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WINDOW",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về cửa sổ kính và cây anh đào ngoài kia: cho thấy cửa sổ.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0028": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ORANGES",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về những quả cam trên bậu và rương: cận đúng chỗ đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0029": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHANDELIER",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nhắc đèn chùm rồi dẫn mắt xuống gương: đi theo đúng thứ tự đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0030": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_REFLECTION",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "marcia_1480",
+     "region": null,
+     "role": "context",
+     "note": "Tiểu họa đầu thế kỷ 15 vẽ người phụ nữ soi gương cầm tay để tự họa chân dung, cho thấy loại gương thời đó; bản quyền chưa rõ vì lấy từ web."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn tiến sát mặt gương lồi rồi nói về gương thời đó: cận mặt kính rồi một chiếc gương lồi thật.",
+   "kinds": [
+    "detail",
+    "outside"
+   ]
+  },
+  "b0031": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Họa sĩ đã phóng to tấm gương: cho thấy gương so với bức tường.",
+   "kinds": [
+    "construction"
+   ]
+  },
+  "b0032": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_REFLECTION",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn tả hình phản chiếu rồi bàn tay giơ lên của Giovanni: hai chi tiết nối nhau.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0033": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_REFLECTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn hỏi hai người ở cửa là ai: cận hình phản chiếu.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0034": {
+   "items": [
+    {
+     "asset": "philipp_good_van",
+     "region": null,
+     "role": "context",
+     "note": "Chân dung Philip the Good đội mũ đen đeo chuỗi Lông Cừu Vàng, chép theo mẫu Rogier van der Weyden vẽ khoảng năm 1450, bản lớn và rõ nét."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói Van Eyck làm họa sĩ cung đình cho Philip the Good: cần chân dung vị công tước.",
+   "kinds": [
+    "outside"
+   ]
+  },
+  "b0035": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ mười ô tròn quanh khung gương: cho thấy cả khung.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0036": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_REFLECTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Ý nghĩa cứu rỗi và sự trong sạch của mặt kính: cận mặt gương sạch.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0037": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ROUNDELS_WOMAN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói các cảnh sau cái chết nằm bên phía người vợ: cận nửa khung gương đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0038": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Câu hỏi hướng về người vợ: chuyển xuống gương mặt bà.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0039": {
+   "items": [
+    {
+     "asset": "lavin_panofksyportrait_g",
+     "region": null,
+     "role": "context",
+     "note": "Bức chân dung Erwin Panofsky vẽ về sau, treo ở Viện Nghiên cứu Cao cấp Princeton, ảnh nhỏ và chưa rõ giấy phép."
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "JOINED_HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nêu Panofsky rồi chỉ vào hai bàn tay: chân dung ông rồi chi tiết tay.",
+   "kinds": [
+    "outside",
+    "detail"
+   ]
+  },
+  "b0040": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo ngước nhìn dòng chữ ký: quay lại dòng chữ.",
+   "kinds": [
+    "inscription"
+   ]
+  },
+  "b0041": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "PATTENS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "RUG",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ đôi guốc góc trái rồi đôi thứ hai phía xa: hai chi tiết theo thứ tự.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0042": {
+   "items": [
+    {
+     "asset": "moses_burning_bush",
+     "region": null,
+     "role": "context",
+     "note": "Bản vẽ của Gerard Hoet khoảng năm 1700 cho thấy Moses quỳ cởi dép trước bụi gai cháy."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nhắc đoạn Xuất Hành về cởi giày trên đất thánh: cần hình Moses cởi giày trước bụi gai cháy.",
+   "kinds": [
+    "outside"
+   ]
+  },
+  "b0043": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ORANGES",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WINDOW",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "GREEN_SKIRT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn kể lần lượt quả cam, cây anh đào và váy xanh: ba chi tiết theo đúng thứ tự.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0044": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHANDELIER",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về ngọn nến duy nhất được thắp: cận đèn chùm.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0045": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "JOINED_HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Cách đọc tưởng niệm bắt đầu từ hai bàn tay: cận lại bàn tay.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0046": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "DOG",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "img_5994",
+     "region": null,
+     "role": "context",
+     "note": "Chi tiết bia đồng khắc trên mộ một phụ nữ thời Trung cổ, con chó đeo vòng chuông nằm dưới chân bà; ảnh chụp hôm nay, bản quyền chưa rõ."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn chỉ chú chó rồi nhắc chó tạc dưới chân tượng mộ: chi tiết chó rồi một tượng mộ thật.",
+   "kinds": [
+    "detail",
+    "outside"
+   ]
+  },
+  "b0047": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "ROUNDELS_WOMAN",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về đồ tối màu của ông rồi các cảnh bên phía bà: hai chi tiết nối nhau.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0048": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BED",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Giả thuyết bà mất khi sinh con: cho thấy người vợ và chiếc giường đỏ.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0049": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "JOINED_HANDS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Hai cách đọc cùng dựa trên đôi tay: toàn cảnh rồi dừng ở bàn tay.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0050": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WINDOW",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "CHANDELIER",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn theo ánh sáng từ cửa sổ đến đèn chùm và khăn trùm đầu: ba chi tiết theo thứ tự.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0051": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "GREEN_SKIRT",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn giải thích các lớp sơn dầu mỏng: cận lớp màu xanh sâu của váy.",
+   "kinds": [
+    "construction"
+   ]
+  },
+  "b0052": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lớp sơn mịn và sáng như kính: cho thấy mặt gương và bức tường trơn láng.",
+   "kinds": [
+    "construction"
+   ]
+  },
+  "b0053": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "TABARD_FUR",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "DOG",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Kỹ thuật vẽ ướt và cọ khô tạo chất liệu: lông viền áo rồi bộ lông chó.",
+   "kinds": [
+    "construction"
+   ]
+  },
+  "b0054": {
+   "items": [
+    {
+     "asset": "jan_van_eyck",
+     "region": null,
+     "role": "context",
+     "note": "Chân dung người đàn ông đội khăn đỏ do Jan van Eyck vẽ năm 1433, thường được coi là chân dung tự họa của ông."
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói về chính họa sĩ, người được gọi là nhà giả kim: cần chân dung Jan van Eyck.",
+   "kinds": [
+    "outside"
+   ]
+  },
+  "b0055": {
+   "items": [
+    {
+     "asset": "great_art_explained",
+     "region": null,
+     "role": "context",
+     "note": "Hình trong sách của bạn in bức Đức Mẹ với Kinh sĩ van der Paele, tranh tôn giáo do Jan van Eyck vẽ năm 1436."
+    }
+   ],
+   "status": "picked",
+   "note": "Con số khoảng hai mươi ba bức tranh của riêng ông: cho thấy một tác phẩm khác của ông.",
+   "kinds": [
+    "figure"
+   ]
+  },
+  "b0056": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "BEADS",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nói chuỗi hạt hổ phách chỉ đơn giản được vẽ tuyệt đẹp: cận chuỗi hạt.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0057": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo nhìn lại người phụ nữ trong ánh sáng ấy: cận gương mặt bà.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0058": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "INSCRIPTION",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn bảo ngước nhìn lại dòng chữ trên gương: quay về dòng chữ.",
+   "kinds": [
+    "inscription"
+   ]
+  },
+  "b0059": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "JOINED_HANDS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "PATTENS",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "DOG",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn điểm lại bàn tay, đôi giày và chú chó: lướt qua ba chi tiết đó.",
+   "kinds": [
+    "detail"
+   ]
+  },
+  "b0060": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "WOMAN_HEAD",
+     "role": "detail",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Mấu chốt là danh tính người phụ nữ: dừng trên gương mặt bà.",
+   "kinds": [
+    "idea"
+   ]
+  },
+  "b0061": {
+   "items": [
+    {
+     "asset": "las_meninas_diego",
+     "region": null,
+     "role": "context",
+     "note": "Bản chụp Google Art Project rõ nét của bức Las Meninas do Velázquez vẽ năm 1656, thuộc phạm vi công cộng."
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Lời dẫn nêu Las Meninas của Velázquez học từ ông: đặt bức đó bên cạnh tranh này.",
+   "kinds": [
+    "compare"
+   ]
+  },
+  "b0062": {
+   "items": [
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": "MIRROR_REFLECTION",
+     "role": "detail",
+     "note": ""
+    },
+    {
+     "asset": "van_eyck_arnolfini",
+     "region": null,
+     "role": "main",
+     "note": ""
+    }
+   ],
+   "status": "picked",
+   "note": "Kết bằng hai người trong gương rồi lùi ra toàn cảnh.",
+   "kinds": [
+    "detail",
+    "whole"
+   ]
+  }
+ },
+ "approval": {
+  "approved": false,
+  "sha1": null,
+  "approved_at": null
+ }
+}

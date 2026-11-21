@@ -162,34 +162,25 @@ def normalise(src_wav: Path, out_m4a: Path, loud: dict, bitrate: str) -> dict:
         af = ln + ":measured_I=%s:measured_TP=%s:measured_LRA=%s:measured_thresh=%s:offset=%s:linear=true" % (
             j["input_i"], j["input_tp"], j["input_lra"], j["input_thresh"], j["target_offset"])
     tmp = out_m4a.with_name(out_m4a.stem + ".part.m4a")
-    cmd = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(src_wav)]
-    filters = []
-    if af:
-        filters.append(af)
-    filters.append(_limiter_filter(tp_target, 0.2))
-    cmd += ["-af", ",".join(filters)]
-    cmd += ["-ar", str(SR), "-ac", "2", "-c:a", "aac", "-b:a", bitrate, "-movflags", "+faststart", str(tmp)]
-    r2 = _run(cmd)
-    if r2.returncode != 0:
-        raise VoiceError("voice_assemble_failed", "ffmpeg could not write the mix: " + r2.stderr.decode("utf-8", "replace")[-200:], 500)
-    _finish(tmp, out_m4a)
-    meas = measure(out_m4a)
-    if meas.get("tp") is not None and meas["tp"] > tp_target + 1e-4:
-        # Retry with additional limiter margin to compensate for AAC encoder overshoot
-        margin = max(0.4, (meas["tp"] - tp_target) + 0.3)
-        filters_retry = []
-        if af:
-            filters_retry.append(af)
-        filters_retry.append(_limiter_filter(tp_target, margin))
-        cmd_retry = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(src_wav), "-af", ",".join(filters_retry),
-                     "-ar", str(SR), "-ac", "2", "-c:a", "aac", "-b:a", bitrate, "-movflags", "+faststart", str(tmp)]
-        r3 = _run(cmd_retry)
-        if r3.returncode == 0:
-            _finish(tmp, out_m4a)
-            meas = measure(out_m4a)
-    if meas.get("tp") is not None and meas["tp"] > tp_target + 1e-4:
-        raise VoiceError("voice_assemble_failed", "true peak %.2f dBTP exceeds limit %.2f dBTP" % (meas["tp"], tp_target), 500)
-    return meas
+    margin = 0.2
+    peaks = []
+    for _ in range(5):
+        filters = ([af] if af else []) + [_limiter_filter(tp_target, margin)]
+        cmd = ["ffmpeg", "-y", "-v", "error", "-nostdin", "-i", str(src_wav), "-af", ",".join(filters),
+               "-ar", str(SR), "-ac", "2", "-c:a", "aac", "-b:a", bitrate, "-movflags", "+faststart", str(tmp)]
+        result = _run(cmd)
+        if result.returncode != 0:
+            raise VoiceError("voice_assemble_failed", "ffmpeg could not write the mix: " + result.stderr.decode("utf-8", "replace")[-200:], 500)
+        _finish(tmp, out_m4a)
+        meas = measure(out_m4a)
+        peak = meas.get("tp")
+        if peak is None or peak <= tp_target + 1e-4:
+            return meas
+        peaks.append(peak)
+        margin += peak - tp_target + 0.3
+    raise VoiceError("voice_assemble_failed", "true peak measurements %s dBTP exceed limit %.2f dBTP after five encodes" %
+                     (", ".join("%.2f" % p for p in peaks), tp_target), 500)
+
 
 
 def measure(path: Path) -> dict:

@@ -735,3 +735,8 @@ output/<mã tác phẩm>/
 - **Ghi lại từ một dự án có sẵn** (hoặc khi README báo không ghi được): `bti output <mã dự án>`; thêm `--clean` để dọn luôn các tệp tạm của dự án đã xuất xong.
 - **Chép video về máy Mac:** trên Mac chạy `tools/deploy/fetch_video.sh <mã tác phẩm>`; nó chỉ chép đúng `final.mp4` về `~/Desktop/Claude Render/<mã tác phẩm>.mp4`, không chép gì khác.
 - Đừng sửa tay trong thư mục `output/`: lần ghi sau sẽ ghi đè. Ứng dụng không bao giờ đọc ngược từ đó.
+
+Khi xem storyboard, cảnh báo có thể báo chi tiết nhỏ chưa được rọi sáng,
+vùng sáng chiếm quá nhiều khung hình hoặc chữ hiện quá nhanh. Hãy chỉnh cảnh
+hay chữ theo gợi ý trước khi duyệt. Với dự án mới, giọng đọc mặc định ở tốc
+độ 1,1; dự án cũ giữ cài đặt riêng hoặc tốc độ cũ.

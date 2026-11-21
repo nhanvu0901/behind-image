@@ -574,3 +574,16 @@ def test_an_answer_that_is_not_the_apps_is_exit_6(tmp_path):
     assert run_bti(t, "status").code == 6
     odd = Scripted({("GET", "/api/projects/arn/state"): Reply(200, {"hello": 1})})
     assert run_bti(odd, "status", "arn").code == 6
+
+
+def test_finished_voice_assembly_job_shows_detail_and_specific_fix(bti, at, monkeypatch):
+    import bti.voice.run as voice_run
+    at('narration_approved')
+    reason='true peak measurements -1.26, -1.24 dBTP exceed limit -1.50'
+    monkeypatch.setattr(voice_run, 'start', real_job(('voice_assemble_failed', reason)))
+    jid=bti('do','arn','voice.generate','--yes-cost','--json').json['job_id']
+    bti('job',jid,'--wait','--interval','0')
+    plain=bti('job',jid)
+    assert reason in plain.out and 'limiter' in plain.out
+    js=bti('job',jid,'--json').json
+    assert reason in js['error'] and 'limiter' in js['fix']

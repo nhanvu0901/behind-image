@@ -260,6 +260,26 @@ LEADER_MIN_GAP, LEADER_RADIUS_SHARE = 2.2 * LABEL_GAP, 0.35     # `leader` auto:
 GROUND_WEIGHT = 0.4                       # cost of the brightness (0..1) of the picture under a label, to prefer the darker one among sides that are equally near
 
 
+MIN_READ_S = 1.5
+
+
+def min_read_seconds(text: str) -> float:
+    """Fully visible time required for a short on-screen text."""
+    return min(4.0, MIN_READ_S + 0.3 * max(0, len(text.split()) - 3))
+
+
+def plan_label_times(labels, t0, duration, fade, leave):
+    """Keep labels in spoken order, moving late labels only as far as needed."""
+    times = [max(0.0, R.at_seconds(it.get("at"), t0, 0.0)) for it in labels]
+    order = sorted(range(len(times)), key=lambda i: (times[i], i))
+    following = float("inf")
+    for i in reversed(order):
+        latest = duration - leave - fade - min_read_seconds(str(labels[i].get("text", "")))
+        times[i] = max(0.0, min(times[i], latest, following - 0.25))
+        following = times[i]
+    return times
+
+
 def _hit(a, b, pad=0.0) -> bool:
     return not (a[2] + pad <= b[0] or b[2] + pad <= a[0] or a[3] + pad <= b[1] or b[3] + pad <= a[1])
 
@@ -308,10 +328,11 @@ class LabelsKey(NeedsCamera, OverlayRenderer):
         self.leave = max(0.02, float(p["leave_s"]))
         self.dur = self.t1 - self.t0
         self.labels = []
-        for it in p["labels"]:
+        label_times = plan_label_times(p["labels"], self.t0, self.dur, self.fade, self.leave)
+        for it, planned_at in zip(p["labels"], label_times):
             style = it.get("style", "italic")
             self.labels.append({"text": str(it["text"]), "ref": it["ref"], "side": it.get("side", "auto"), "style": style,
-                                "at": R.at_seconds(it.get("at"), self.t0, 0.0)})
+                                "at": planned_at})
         self.order = sorted(range(len(self.labels)), key=lambda i: (self.labels[i]["at"], i))
         self.arts = []
         for lb in self.labels:

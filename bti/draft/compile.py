@@ -537,6 +537,8 @@ class _Compiler:
             if region is not None:
                 ctx["region"] = region
             params = self.defaults(tid, ctx, {"chapter": zone["id"], "n": n})
+        if tid == "HI-01" and "floor" not in mine:
+            params["floor"] = max(0.6, float(params.get("floor") or 0))
         self._fill_anchors(mine)
         params.update(mine)
         return {"technique": tid, "intent": os_.get("intent") or (spec["intents"][0] if spec and spec.get("intents") else None),
@@ -793,6 +795,18 @@ class _Compiler:
                     issues.append(S.problem("overlay_start_word", r["chapter"], r["n"], "start_word %d does not exist" % sw, overlay=j, field="start_word"))
                     continue
                 ts = self.words[sw]["s"] + float(os_.get("off") or 0.0)
+                if ts < r["t0"] - 0.05 or ts >= t1:
+                    issues.append(S.problem("overlay_outside_shot", r["chapter"], r["n"], "the overlay's start word is outside its shot", overlay=j, field="start_word"))
+                    continue
+                default_window = None
+                if os_.get("end_word") is None and os_.get("dur") is None:
+                    from .defaults import overlay_default_window
+                    from bti.engine.viewchecks import _texts
+                    ospec = self.bundle.spec(os_["technique"])
+                    texts = [t for _, _, _, t in _texts(ospec, o["params"])] if ospec else []
+                    duration = ((ospec or {}).get("timing") or {}).get("default_s")
+                    default_window = overlay_default_window(os_["technique"], ts, r["t0"], t1, o["params"], texts, duration)
+                    ts = default_window[0]
                 if ts < r["t0"] - 0.05 or ts >= t1 - 0.3:
                     issues.append(S.problem("overlay_outside_shot", r["chapter"], r["n"], "the overlay starts at %.2f s (word %d) but the shot lasts from %.2f s to %.2f s; start the overlay on a word inside the shot (and at least 0.3 s before it ends)" % (ts, sw, r["t0"], t1), overlay=j, field="start_word"))
                     continue
@@ -806,16 +820,15 @@ class _Compiler:
                         issues.append(S.problem("overlay_end_word", r["chapter"], r["n"], "end_word %d does not exist" % ew, overlay=j, field="end_word", level="warn"))
                 elif os_.get("dur") is not None:
                     te = ts + float(os_["dur"])
-                else:
-                    ospec = self.bundle.spec(os_["technique"])
-                    d = ((ospec or {}).get("timing") or {}).get("default_s")
-                    if d:
-                        te = ts + float(d)
+                elif default_window is not None:
+                    te = default_window[1]
                 if te is not None:
                     if te > t1:
                         te = t1
                     if te - ts < 0.3:
                         te = min(t1, ts + 0.3)
+                if os_["technique"] == "HI-01" and default_window is not None and te is not None and te - ts < 2.5 - 1e-6:
+                    issues.append(S.problem("highlight_short_shot", r["chapter"], r["n"], "the shot is too short for a 2.5 second spotlight and its fade; start the shot earlier or merge it with another shot", overlay=j, field="start_word"))
                 a = self.words[sw]
                 o["start"] = {"w": sw, "off": round(ts - a["s"], 4), "text": a["w"]}
                 if te is not None:
@@ -1097,11 +1110,14 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
+    pointfix = {"small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
-        for i in items[:limit]:
+        required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
+        rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items
+        for i in required + rest[:limit]:
             lines.append("%s %s: %s" % (tag, i["code"], i["message"]))
-        if len(items) > limit:
-            lines.append("... and %d more %s" % (len(items) - limit, tag.lower() + "s"))
+        if len(rest) > limit:
+            lines.append("... and %d more %s" % (len(rest) - limit, tag.lower() + "s"))
     head = "%d error(s), %d warning(s)." % (len(errs), len(warns))
     if not result.drawn and errs:
         head += " The draw check was skipped until the errors are fixed."

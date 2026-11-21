@@ -981,3 +981,10 @@ TITLE_LABELS.tookInFail = 'Không tải được storyboard mới: ';
    `case 'content_box_unsure': return W.issue.contentBoxUnsure;` line, which that file's owner adds). */
 PICKS_LABELS.issue.content_box_unsure = () => 'Chưa chắc phần nào của tranh chính là mặt tranh (quanh ảnh có dải đen hoặc sáng chưa rõ): dùng cả ảnh như trước. Nếu ảnh có nền đen, hãy đặt vùng tranh cho đúng.';
 PICKS_PAGE_LABELS.issue.contentBoxUnsure = 'Chưa chắc phần nào của tranh chính là mặt tranh (quanh ảnh có dải đen hoặc sáng chưa rõ): dùng cả ảnh như trước.';
+
+// ---- worker pointfix: short names for the viewer's checks.
+export const POINTFIX_LABELS = {
+  small_detail_not_lit: 'Chi tiết nhỏ chưa được rọi sáng',
+  highlight_nothing_to_dim: 'Vùng sáng chiếm quá nhiều khung hình',
+  text_too_brief: 'Chữ hiện quá nhanh',
+};

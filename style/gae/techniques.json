@@ -2714,16 +2714,16 @@
     "point_at"
    ],
    "description": "The painting darkens and a soft ellipse around the subject stays bright.",
-   "usage_rule": "Isolates a figure, table or statue while the narration discusses it, then restores the whole (Goya white-shirted figure, Last Supper table, Raphael statues).",
+   "usage_rule": "Light each small named detail, even in near or consecutive shots; the thing stays bright while its surroundings darken.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
-   "use_when": "The sentence singles out one part while the frame must stay wide, because the part's place among the others is the point: the one lit candle in a chandelier, the box of weights among the objects on the counter, the tiny falconer in the mirror. The picture darkens a little around the part, the part stays bright, then the whole returns.",
-   "needs": "The point (a region of the picture) and its size (`rx`, `ry`), and a wide frame. The centre of the region stays inside the frame, 5% in from every edge, from the start of the layer to its end (look at both camera keys); `floor` is 0.6 or more.",
-   "never_when": "A close-up (the camera already frames the part); two shots in a row; the first minute; more than one in two minutes; together with AN-01 on the same thing.",
-   "example": "Arnolfini b0165: \"High in the brass chandelier, only one candle is lit, and it has been read as the seeing eye of God.\"",
+   "use_when": "Use EVERY time a detail sentence names a thing that is small on screen: an object, mark, carved figure, candle or beads. The surroundings darken and the thing stays bright, even in consecutive shots or a near view.",
+   "needs": "Start on the word naming the thing and continue to the shot end, at least 2.5 s. The region covers the thing itself and nothing else; if a stored region is loose, measure a tight region with ./crop and add it to out/regions.json. Leave room to darken: the thing occupies less than about 40% of both frame width and height; end a closer camera a little wider. Keep the centre inside the frame, 5% from each edge, throughout; floor is 0.6 or more.",
+   "never_when": "The thing fills the frame; the sentence concerns the whole picture, a face or figure, or something outside the painting; the opening shot or channel-name beat; two spotlights at the same moment; together with AN-01 on the same thing.",
+   "example": "Arnolfini b0044: \"Only one candle is lit, and it has been read as the seeing eye of God.\"",
    "slots": [
     {
      "name": "image",
@@ -3154,16 +3154,16 @@
     "point_at"
    ],
    "description": "One or two rings are drawn around a small detail, held, then fade.",
-   "usage_rule": "Marks small objects named in the narration (candles, roundels, lines in a document); two rings appear one after the other.",
+   "usage_rule": "Distinguish one of several similar things so close together that a spotlight would cover them all; otherwise use HI-01.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
-   "use_when": "The sentence names a thing that stays small, or sits among similar things, even in the close view, so that the eye cannot find it alone: one coin among many, a small mark beside a signature, one candle among six. A thin ring is drawn around it on the word that names it, held for about two seconds, then it fades.",
-   "needs": "The point (a region of the picture that is the thing) and its size: the radius fits the thing, not the frame.",
-   "never_when": "The thing fills a third of the frame or more (the camera already shows it); together with HI-01 on the same thing; two rings at once for things the narration does not name together; the thing is not on screen.",
-   "example": "St. Eligius b0050: \"Beside the signature sits a small heart-shaped sign.\" (a ring around the sign)",
+   "use_when": "One thing among several of the same kind so close together that a pool of light would hold them all, such as one coin in a row of coins. Otherwise use HI-01.",
+   "needs": "A point and a tight radius around the named thing; keep it visible on screen.",
+   "never_when": "The thing fills the frame; together with HI-01 on the same thing; two rings at once for things the narration does not name together; the thing is not on screen.",
+   "example": "Arnolfini b0026: \"Each bead catches the light, strung on fine green silk.\" (one bead among its close neighbours)",
    "slots": [
     {
      "name": "image",
@@ -10729,16 +10729,16 @@
     "context"
    ],
    "description": "A dark translucent strip across the lower frame with one white caps line naming the detail; the right end of the strip fades out.",
-   "usage_rule": "Appears just after a cut to a detail crop, names the object, stays about 3.2 s, then disappears.",
+   "usage_rule": "Name an unfamiliar object in a strip; if it is small on screen, use HI-01 on that thing as well.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
    "use_when": "The sentence names, for the first time, a thing that is on the screen now and whose name a stranger to the painting would not know: \"adder's tongues\", \"touchstones\", \"a master's mark\". A dark strip with the name in capitals shows for about three seconds, starting on the word that names the thing.",
-   "needs": "The name in the narration's own words (one to five words, never a sentence). The thing is already in the frame when the label appears.",
+   "needs": "The name in the narration’s own words (one to five words, never a sentence). The thing is already in the frame when the label appears. Use the strip with HI-01 on the thing, never alone for a small thing.",
    "never_when": "The thing was labelled before; the text is an opinion, a date or a whole sentence; the thing is not on screen; the picture is another artwork (X-ANN-02 gives its title, maker and date); the sentence names three or more parts one after another (KEY-01); the thing needs no name (a face, a hand).",
-   "example": "St. Eligius b0033: \"They are probably adder's tongues, fossilized shark teeth believed to change colour when they touched poison.\" (label ADDER'S TONGUES)",
+   "example": "Arnolfini b0023: \"Behind the joined hands stands a bench called a settle, its red velvet cushion a sign of money.\" (label SETTLE with a spotlight on the bench)",
    "slots": [
     {
      "name": "text",
@@ -15536,14 +15536,14 @@
     "context"
    ],
    "description": "Small text labels beside the parts of a picture a sentence names, one after another: no box, no line, each label fades in on the word that names its detail, sits outside the detail's region on the chosen side, follows the base shot's camera and keeps its size. The picture dims a little so the letters stand out. The technique places the labels: they never touch each other or leave the frame, they prefer the darker ground under the text, and a label that had to be pushed away from its detail gets a hairline to it.",
-   "usage_rule": "Use it when a sentence NAMES parts of the picture one after another (the candle, the mirror, the inscription, the dog): a key to the picture, the way a good art channel writes 'Theology', 'Medicine' on the panels of a ceiling. Overlay on any shot that shows one picture through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots); validation refuses it on cards, diagrams and maps. Give `labels`: a list (1 to 12) of {`text` (what is written, up to 60 characters), `ref` (a region name of the shot's picture, or [x, y] in source pixels), `side` (auto, n, ne, e, se, s, sw, w, nw: the side of the detail the text sits on; auto lets the technique choose), `at` (seconds from the start of the overlay, or a word anchor so the label lands on the word that names it), `style` (italic, regular, caps)}. The default labels are an example for the Arnolfini Portrait: ALWAYS set `labels` yourself, with regions that exist on the picture. Placement, spacing and keeping inside the frame are the technique's job, not yours. Put at most five labels on screen at a time; details that lie close together are better shown in two shots. Let the overlay last 4 to 10 s (at least 2.5 s) and start the last label at least 1.5 s before it ends.",
+   "usage_rule": "Use it when a sentence NAMES parts of the picture one after another (the candle, the mirror, the inscription, the dog): a key to the picture, the way a good art channel writes 'Theology', 'Medicine' on the panels of a ceiling. Overlay on any shot that shows one picture through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots); validation refuses it on cards, diagrams and maps. Give `labels`: a list (1 to 12) of {`text` (what is written, up to 60 characters), `ref` (a region name of the shot's picture, or [x, y] in source pixels), `side` (auto, n, ne, e, se, s, sw, w, nw: the side of the detail the text sits on; auto lets the technique choose), `at` (seconds from the start of the overlay, or a word anchor so the label lands on the word that names it), `style` (italic, regular, caps)}. The default labels are an example for the Arnolfini Portrait: ALWAYS set `labels` yourself, with regions that exist on the picture. Placement, spacing and keeping inside the frame are the technique's job, not yours. Put at most five labels on screen at a time; details that lie close together are better shown in two shots. Let the overlay last 4 to 10 s (at least 2.5 s) and leave about 2.5 s from the last named word to the end of the shot.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
    "use_when": "The sentence names three or more parts of the picture that are all in one frame, one after another (\"the shelf of rings, silver pitchers, brooches and pearls, and the heavy chain\"). A small label fades in beside each part on the word that names it, like the key of a map.",
-   "needs": "For every label: the region (or the [x, y] point) of the part in the picture, and its word in the narration. All the parts are inside the frame of the shot.",
+   "needs": "For every label: the region (or the [x, y] point) of the part in the picture, and its word in the narration. All parts are inside the frame. Leave about 2.5 s from the last named part’s word to the shot end; when the sentence ends on the list, labels come a little before their words.",
    "never_when": "One or two parts (X-ANN-01, or a ring); parts that are out of the frame; more than five labels on screen at once (split the sentence over two shots); words that are not names of things (opinions, dates).",
    "example": "St. Eligius b0031: \"So look again at the shelf of rings, silver pitchers, brooches and pearls, and at the heavy chain on the young man.\"",
    "slots": [

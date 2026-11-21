@@ -20,7 +20,8 @@ test('the codes of the page for the catalogue pass are the five codes of the eng
   assert.deepEqual([...CATALOGUE_CODES].sort(), [...FIVE].sort());
   assert.deepEqual(Object.keys(ISSUES).sort(), [...FIVE].sort());
   const src = fs.readFileSync(new URL('../../bti/engine/viewchecks.py', import.meta.url), 'utf8');
-  const block = src.slice(src.indexOf('CATALOGUE_ISSUES = {'), src.indexOf('CODES = {'));
+  const start = src.indexOf('CATALOGUE_ISSUES = {');
+  const block = src.slice(start, src.indexOf('\n}', start) + 2);
   const py = [...block.matchAll(/^    "([a-z_]+)":/gm)].map((m) => m[1]);
   assert.deepEqual(py.sort(), [...FIVE].sort());
   for (const c of FIVE) assert.ok(!FIXDRAFT_CODES.includes(c), 'the fixdraft list stays as it was');

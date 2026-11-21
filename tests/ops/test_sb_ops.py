@@ -811,3 +811,15 @@ def test_a_replace_range_keeps_the_hidden_techniques_the_run_already_has_and_ref
                           "shots": [{"technique": shot(client, "s0002")["technique"], "slots": shot(client, "s0002")["slots"],
                                      "overlays": [{"technique": HIDDEN_OVERLAY, "params": {"text": "NEW"}, "start": {"t": 10.0}, "dur": 3}]}]}],
                 422, "technique_not_offered", ["ops[0].shots[0].overlays[0].technique"])           # s0002 has no STATIC-02: it is new there
+
+
+def test_typed_key_overlay_plans_late_label_for_reading(client):
+    from bti.engine.api import open_project
+    r=sb(client,[{'op':'add_overlay','shot':'s0004','technique':'KEY-01',
+                  'start':{'w':62},'dur':3.0,
+                  'params':{'labels':[{'text':'Green dress','ref':'CENTRE','at':2.7}], 'fade_s':.3,'leave_s':.5}}])
+    assert r.status_code == 200, r.text
+    p=open_project(client.pdir)
+    scene=p._scene()
+    renderer=next(renderer for _,renderer in scene.shots[3].overlays if renderer.tid == 'KEY-01')
+    assert renderer.labels[0]['at'] == pytest.approx(.7)

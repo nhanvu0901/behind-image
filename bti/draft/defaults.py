@@ -9,6 +9,48 @@ import json
 import sys
 
 
+
+def overlay_default_window(tid, start, shot_start, shot_end, params, texts, default_duration):
+    """Default overlay window, keeping room for its fade and readable text."""
+    from bti.engine.techniques.explain_over import min_read_seconds
+    if tid == "HI-01":
+        end = max(shot_start, shot_end - float(params.get("ramp_out", 0.5)))
+        return max(shot_start, min(start, end - 2.5)), end
+    if tid == "KEY-01":
+        return start, shot_end
+    end = min(shot_end, start + float(default_duration or shot_end - start))
+    if texts and end >= shot_end - 1e-6:
+        fade_in = float(params.get("pop_in_s", params.get("fade_in_s", 0)) or 0)
+        fade_out = float(params.get("fade_out_s", params.get("leave_s", 0)) or 0)
+        if tid == "STATIC-04":
+            fade_in += float(params.get("delay_s", 0) or 0)
+        elif tid == "AN-05":
+            fade_in = float(params.get("pop_s",0) or 0)
+        elif tid == "AN-04":
+            fade_in = float(params.get("label_delay_s",0) or 0) + max(0,len(texts)-1)*float(params.get("label_stagger_s",0) or 0) + float(params.get("label_fade_s",0) or 0)
+            fade_out = float(params.get("fade_s",0) or 0)
+        elif tid == "X-ANN-05":
+            fade_in = sum(float(params.get(k,0) or 0) for k in ("start_delay_s","label_delay_s","label_fade_s")) + max(0,len(texts)-1)*float(params.get("stagger_s",0) or 0)
+            fade_out = float(params.get("fade_s",0) or 0)
+        elif tid == "SHORT-04":
+            fade_in = float(params.get("text_delay_s",0) or 0) + float(params.get("pop_s",0) or 0)
+        elif tid == "TXT-02":
+            fade_in = max(0,len(texts)-1)*float(params.get("row_delay_s",0) or 0)
+        elif tid == "ID-OPEN-02":
+            fade_in = max(0.0, float(params.get("ramp_in_s",0) or 0) - float(params.get("title_fade_in_s",0) or 0))
+            fade_in += max(float(params.get("title_fade_in_s",0) or 0), float(params.get("sub_delay_s",0) or 0) + float(params.get("sub_fade_in_s",0) or 0))
+            fade_out = float(params.get("ramp_out_s",0) or 0)
+        elif tid == "DOC-01":
+            read_at = params.get("reading_at", 2.4)
+            fade_in = (float(read_at) if isinstance(read_at, (int,float)) else 0) + .8
+        elif tid == "NUM-01":
+            rows = [r for r in params.get("rows",[]) if isinstance(r,dict)]
+            ats = [float(r.get("at") or 0) if isinstance(r.get("at"), (int,float)) else 0 for r in rows]
+            fade_in = max([1.25] + [at + .75 for at in ats])
+        need = max(min_read_seconds(t) for t in texts if t.strip()) + fade_in + fade_out if any(t.strip() for t in texts) else 0
+        start = max(shot_start, min(start, shot_end - need))
+    return start, end
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="defaults", description=__doc__.split("\n")[0])
     ap.add_argument("technique")

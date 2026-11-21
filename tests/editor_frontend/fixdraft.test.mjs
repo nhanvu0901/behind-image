@@ -28,7 +28,8 @@ test('the codes of the page are the nine codes of the engine', () => {
 
 test('the codes of the page are the codes of bti/engine/viewchecks.py', () => {
   const src = fs.readFileSync(new URL('../../bti/engine/viewchecks.py', import.meta.url), 'utf8');
-  const block = src.slice(src.indexOf('CODES = {'));
+  const start = src.indexOf('CODES = {');
+  const block = src.slice(start, src.indexOf('\n}', start) + 2);
   const py = [...block.matchAll(/^    "([a-z_]+)":/gm)].map((m) => m[1]);
   assert.deepEqual(py.sort(), [...FIXDRAFT_CODES].sort());
 });

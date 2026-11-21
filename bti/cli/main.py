@@ -353,6 +353,19 @@ def finish_job(ctx: Ctx, jid: str, job: dict) -> int:
 
 
 def _job_fix(job: dict) -> str:
+    if job.get("error_code") == "voice_assemble_failed":
+        detail = str(job.get("error") or "")
+        if "true peak" in detail:
+            return "Inspect the measured peaks and limiter settings before trying the mix again."
+        if "could not be finished" in detail:
+            return "Check the output folder, available space and file permissions before retrying."
+        if "could not read" in detail:
+            return "Check that the audio input exists and is readable by ffmpeg."
+        if "did not run" in detail and "TimeoutExpired" in detail:
+            return "Inspect the server load and why ffmpeg timed out before retrying."
+        if "did not run" in detail:
+            return "Check that ffmpeg is installed and can be started on the server."
+        return "Inspect the ffmpeg error and output path, then correct the cause before retrying."
     code = job.get("error_code")
     try:
         from bti.editor.hints import hint
@@ -573,7 +586,11 @@ def cmd_job(ctx: Ctx, a) -> int:
     if a.wait:
         return follow_job(ctx, jid, None, a.interval, a.max_wait)
     job, _ = fetch_job(ctx, jid)
-    return ctx.success(job, [R.job_line({"id": jid, **job})] + (R.job_end_lines(job) if job.get("state") in FINAL_STATES else []))
+    lines = [R.job_line({"id": jid, **job})] + (R.job_end_lines(job) if job.get("state") in FINAL_STATES else [])
+    if job.get("state") == "error" and job.get("error_code") == "voice_assemble_failed":
+        job = {**job, "fix": _job_fix(job)}
+        lines.append("  fix: " + job["fix"])
+    return ctx.success(job, lines)
 
 
 def cmd_changes(ctx: Ctx, a) -> int:

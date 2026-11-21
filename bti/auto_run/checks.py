@@ -94,6 +94,10 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                               "có hiệu ứng chỉ có một hai mục để hiện nên không có ý nghĩa"),
         "figure_on_wrong_picture": ("a large figure is laid over another picture although the picks of its line hold the picture of the thing counted (the first video laid 42 ships over the saint)",
                                     "có con số lớn nằm trên hình không phải thứ được đếm"),
+        # pointfix: a viewer needs to locate details and read labels.
+        "small_detail_not_lit": ("a small named detail in the painting has no visual pointer", "có chi tiết nhỏ chưa được rọi sáng"),
+        "highlight_nothing_to_dim": ("a spotlight covers so much of the frame that little can be darkened", "có vùng sáng chiếm quá nhiều khung hình"),
+        "text_too_brief": ("on-screen text is not fully visible for long enough to read", "có chữ hiện quá nhanh"),
         "outside_on_painting": ("a line about something outside the painting has its picture but shows the painting for most of the line (the picture is on screen for less than 45% of it, 25% when the line has two kinds, or for less than 3.5 seconds): the viewer never sees what the narrator speaks of",
                                 "có dòng nói về thứ ngoài tranh, đã có hình, nhưng vẫn chỉ hiện bức tranh"),
         "outside_picture_small": ("a picture that is not the painting is drawn smaller than 80% of its default fit: it sits small between black bars", "có hình ngoài tranh hiện nhỏ lọt thỏm giữa hai dải đen"),

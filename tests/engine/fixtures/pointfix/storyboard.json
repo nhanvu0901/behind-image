@@ -1,0 +1,6181 @@
+{
+ "schema": "bti.storyboard/1",
+ "project": "arnolfini-v3",
+ "title": "The Arnolfini Portrait",
+ "style": "gae",
+ "identity": {
+  "style": "raking",
+  "video_title": "Was She Already Dead When He Signed the Wall?"
+ },
+ "canvas": {
+  "w": 1920,
+  "h": 1080,
+  "fps": 30
+ },
+ "timing": "timing.json",
+ "audio": "audio/mix.m4a",
+ "assets": {
+  "van_eyck_arnolfini": {
+   "file": "media/van_eyck_arnolfini.jpg",
+   "kind": "image",
+   "title": "Van Eyck - Arnolfini Portrait",
+   "artist": "Jan van Eyck",
+   "year": "1434",
+   "width": 3840,
+   "height": 5253,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Van_Eyck_-_Arnolfini_Portrait.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {
+    "INSCRIPTION": {
+     "x": 1958,
+     "y": 1129,
+     "rx": 422,
+     "ry": 158,
+     "label": "Dòng chữ ký Latinh trên tường phía trên gương"
+    },
+    "MIRROR": {
+     "x": 1939,
+     "y": 1563,
+     "rx": 365,
+     "ry": 355,
+     "label": "Tấm gương lồi cùng khung có mười ô tròn"
+    },
+    "MIRROR_REFLECTION": {
+     "x": 1958,
+     "y": 1576,
+     "rx": 173,
+     "ry": 184,
+     "label": "Hình phản chiếu trong gương: cặp đôi và hai người ở cửa"
+    },
+    "ROUNDELS_WOMAN": {
+     "x": 2112,
+     "y": 1576,
+     "rx": 192,
+     "ry": 341,
+     "label": "Các ô tròn khung gương bên phía người vợ"
+    },
+    "WOMAN_HEAD": {
+     "x": 3034,
+     "y": 1287,
+     "rx": 422,
+     "ry": 394,
+     "label": "Gương mặt và khăn trùm đầu trắng của người vợ"
+    },
+    "MAN_HEAD": {
+     "x": 1114,
+     "y": 972,
+     "rx": 499,
+     "ry": 447,
+     "label": "Gương mặt và chiếc mũ rơm đen của Giovanni"
+    },
+    "TABARD": {
+     "x": 1094,
+     "y": 2784,
+     "rx": 902,
+     "ry": 1523,
+     "label": "Áo khoác tím sẫm của Giovanni và bàn tay giơ lên"
+    },
+    "TABARD_FUR": {
+     "x": 710,
+     "y": 3546,
+     "rx": 518,
+     "ry": 657,
+     "label": "Viền lông chồn ở vạt áo khoác"
+    },
+    "JOINED_HANDS": {
+     "x": 2112,
+     "y": 2259,
+     "rx": 384,
+     "ry": 368,
+     "label": "Hai bàn tay nắm nhau, tượng quỷ nhỏ và gối đỏ"
+    },
+    "GREEN_SKIRT": {
+     "x": 2976,
+     "y": 2364,
+     "rx": 595,
+     "ry": 788,
+     "label": "Váy len xanh được túm lên, tay áo viền lông"
+    },
+    "BLUE_HEM": {
+     "x": 2496,
+     "y": 3992,
+     "rx": 346,
+     "ry": 525,
+     "label": "Váy lót xanh lam viền lông trắng gần gấu"
+    },
+    "BED": {
+     "x": 3264,
+     "y": 2049,
+     "rx": 576,
+     "ry": 2049,
+     "label": "Chiếc giường rèm đỏ phía sau người vợ"
+    },
+    "CHAIR_SAINT": {
+     "x": 2496,
+     "y": 1261,
+     "rx": 269,
+     "ry": 368,
+     "label": "Tượng thánh nữ trên lưng ghế và cây chổi treo"
+    },
+    "RUG": {
+     "x": 2074,
+     "y": 3625,
+     "rx": 307,
+     "ry": 578,
+     "label": "Tấm thảm Anatolia và đôi giày đỏ phía sau"
+    },
+    "BEADS": {
+     "x": 1613,
+     "y": 1576,
+     "rx": 154,
+     "ry": 315,
+     "label": "Chuỗi hạt cầu nguyện bằng hổ phách"
+    },
+    "WINDOW": {
+     "x": 288,
+     "y": 1313,
+     "rx": 288,
+     "ry": 1313,
+     "label": "Cửa sổ kính bên trái và cây anh đào bên ngoài"
+    },
+    "ORANGES": {
+     "x": 288,
+     "y": 2626,
+     "rx": 288,
+     "ry": 420,
+     "label": "Những quả cam trên bậu cửa và trên rương"
+    },
+    "CHANDELIER": {
+     "x": 1958,
+     "y": 525,
+     "rx": 576,
+     "ry": 525,
+     "label": "Đèn chùm bằng đồng với một ngọn nến cháy"
+    },
+    "PATTENS": {
+     "x": 307,
+     "y": 4806,
+     "rx": 307,
+     "ry": 394,
+     "label": "Đôi guốc gỗ ở góc dưới bên trái"
+    },
+    "DOG": {
+     "x": 1882,
+     "y": 4728,
+     "rx": 499,
+     "ry": 525,
+     "label": "Chú chó nhỏ dưới chân người vợ"
+    },
+    "LIT_CANDLE": {
+     "x": 1618,
+     "y": 355,
+     "rx": 90,
+     "ry": 150,
+     "label": "The one lit candle"
+    },
+    "CHERRY_TREE": {
+     "x": 320,
+     "y": 1380,
+     "rx": 60,
+     "ry": 140,
+     "label": "Cherry tree beyond the window"
+    },
+    "FUR_SLEEVE": {
+     "x": 3165,
+     "y": 2310,
+     "rx": 150,
+     "ry": 700,
+     "label": "Pale fur lining at her sleeve"
+    },
+    "GARGOYLE": {
+     "x": 2201,
+     "y": 2010,
+     "rx": 100,
+     "ry": 120,
+     "label": "Carved gargoyle above the hands"
+    },
+    "RED_SHOES": {
+     "x": 1952,
+     "y": 3334,
+     "rx": 120,
+     "ry": 70,
+     "label": "Second pair of shoes"
+    },
+    "ORANGE_SILL": {
+     "x": 415,
+     "y": 2362,
+     "rx": 70,
+     "ry": 70,
+     "label": "Single orange on the sill"
+    },
+    "RAISED_HAND": {
+     "x": 972,
+     "y": 1709,
+     "rx": 150,
+     "ry": 220,
+     "label": "Giovanni's raised hand"
+    },
+    "BOOTS": {
+     "x": 1200,
+     "y": 4390,
+     "rx": 220,
+     "ry": 380,
+     "label": "His soft boots"
+    }
+   },
+   "original_width": 4386,
+   "original_height": 6000
+  },
+  "ban_do_lucca": {
+   "file": "media/ban_do_lucca.jpg",
+   "kind": "image",
+   "title": "Bản đồ Lucca",
+   "artist": "© OpenStreetMap contributors",
+   "year": "",
+   "width": 2400,
+   "height": 1350,
+   "credit": {
+    "source": "osm",
+    "source_url": "https://www.openstreetmap.org/#map=11/44.0178/10.4544",
+    "author": "© OpenStreetMap contributors",
+    "licence": "ODbL",
+    "licence_url": "https://www.openstreetmap.org/copyright",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2400,
+   "original_height": 1350
+  },
+  "brugge_blick_vom": {
+   "file": "media/brugge_blick_vom.jpg",
+   "kind": "image",
+   "title": "Brügge Blick vom Belfried 4",
+   "artist": "Zairon",
+   "year": "2016",
+   "width": 3840,
+   "height": 2460,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Br%C3%BCgge_Blick_vom_Belfried_4.jpg",
+    "author": "Zairon",
+    "licence": "CC BY-SA 4.0",
+    "licence_url": "https://creativecommons.org/licenses/by-sa/4.0",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 4520,
+   "original_height": 2896
+  },
+  "european_pine_marten": {
+   "file": "media/european_pine_marten.jpeg",
+   "kind": "image",
+   "title": "A European pine marten (Martes martes) in a lush Niedersachsen forest.",
+   "artist": "Georg Wietschorke",
+   "year": "",
+   "width": 4926,
+   "height": 3277,
+   "credit": {
+    "source": "pexels",
+    "source_url": "https://www.pexels.com/photo/european-pine-marten-in-forest-niedersachsen-35251937/",
+    "author": "Georg Wietschorke",
+    "licence": "Pexels License",
+    "licence_url": "https://www.pexels.com/license/",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 4926,
+   "original_height": 3277
+  },
+  "length_velvet": {
+   "file": "media/length_velvet.jpg",
+   "kind": "image",
+   "title": "Length of velvet",
+   "artist": "",
+   "year": "",
+   "width": 1315,
+   "height": 2893,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/227208",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "saint_margaret_antioch": {
+   "file": "media/saint_margaret_antioch.jpg",
+   "kind": "image",
+   "title": "Saint Margaret of Antioch",
+   "artist": "",
+   "year": "1475",
+   "width": 3000,
+   "height": 4000,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/469836",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "lotto_carpet": {
+   "file": "media/lotto_carpet.jpg",
+   "kind": "image",
+   "title": "Lotto Carpet",
+   "artist": "",
+   "year": "",
+   "width": 2560,
+   "height": 1920,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/447571",
+    "author": "unknown, PD",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {},
+   "content_box": {
+    "x0": 0,
+    "y0": 72,
+    "x1": 2560,
+    "y1": 1872,
+    "how": "found"
+   }
+  },
+  "marcia_1480": {
+   "file": "media/marcia_1480.png",
+   "kind": "image",
+   "title": "marcia 1480",
+   "artist": "laphamsquarterly.org",
+   "year": "",
+   "width": 1200,
+   "height": 627,
+   "credit": {
+    "source": "web",
+    "source_url": "https://www.laphamsquarterly.org/roundtable/mirror-effect",
+    "author": "laphamsquarterly.org",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "philipp_good_van": {
+   "file": "media/philipp_good_van.jpg",
+   "kind": "image",
+   "title": "Philipp the Good - Van der Weyden",
+   "artist": "After Rogier van der Weyden",
+   "year": "1450",
+   "width": 1920,
+   "height": 2886,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Philipp_the_Good_-_Van_der_Weyden.jpg",
+    "author": "After Rogier van der Weyden",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 3475,
+   "original_height": 5224
+  },
+  "lavin_panofksyportrait_g": {
+   "file": "media/lavin_panofksyportrait_g.jpg",
+   "kind": "image",
+   "title": "Lavin PanofksyPortrait.gif",
+   "artist": "ias.edu",
+   "year": "",
+   "width": 567,
+   "height": 700,
+   "credit": {
+    "source": "web",
+    "source_url": "https://www.ias.edu/ideas/2010/lavin-panofsky-eyck-pearlstein",
+    "author": "ias.edu",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "moses_burning_bush": {
+   "file": "media/moses_burning_bush.jpg",
+   "kind": "image",
+   "title": "Moses and the Burning Bush",
+   "artist": "Gerard Hoet",
+   "year": "",
+   "width": 2600,
+   "height": 3943,
+   "credit": {
+    "source": "met",
+    "source_url": "https://www.metmuseum.org/art/collection/search/387049",
+    "author": "Gerard Hoet",
+    "licence": "CC0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "flag": null
+   },
+   "regions": {}
+  },
+  "img_5994": {
+   "file": "media/img_5994.jpg",
+   "kind": "image",
+   "title": "img 5994",
+   "artist": "murreyandblue.wordpress.com",
+   "year": "",
+   "width": 750,
+   "height": 436,
+   "credit": {
+    "source": "web",
+    "source_url": "https://murreyandblue.wordpress.com/2020/03/05/the-medieval-doggie-and-everything-you-ever-wanted-to-know-about-them/",
+    "author": "murreyandblue.wordpress.com",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "jan_van_eyck": {
+   "file": "media/jan_van_eyck.jpg",
+   "kind": "image",
+   "title": "Jan van Eyck - Portrait of a Man (Self Portrait?) 1433",
+   "artist": "Jan van Eyck",
+   "year": "1433",
+   "width": 3840,
+   "height": 5283,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_-_Portrait_of_a_Man_(Self_Portrait%3F)_1433.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 8889,
+   "original_height": 12230
+  },
+  "great_art_explained": {
+   "file": "media/great_art_explained.jpg",
+   "kind": "image",
+   "title": "Great Art Explained, image 872",
+   "artist": "James Payne",
+   "year": "",
+   "width": 1557,
+   "height": 1200,
+   "credit": {
+    "source": "book",
+    "source_url": "Great Art Explained, image 872",
+    "author": "James Payne",
+    "licence": "",
+    "licence_url": "",
+    "flag": "unknown"
+   },
+   "regions": {}
+  },
+  "las_meninas_diego": {
+   "file": "media/las_meninas_diego.jpg",
+   "kind": "image",
+   "title": "Las Meninas, by Diego Velázquez, from Prado in Google Earth",
+   "artist": "Diego Velázquez",
+   "year": "1656",
+   "width": 3840,
+   "height": 4420,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Las_Meninas,_by_Diego_Vel%C3%A1zquez,_from_Prado_in_Google_Earth.jpg",
+    "author": "Diego Velázquez",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 26065,
+   "original_height": 30000
+  },
+  "jan_van_eyck_4565": {
+   "file": "media/jan_van_eyck_4565.jpg",
+   "kind": "image",
+   "title": "Jan van Eyck (um 1390-1400 - 1441) - Portrait of a man (from the Arnolfini family^) Around 1440 - 523A - Gemäldegalerie",
+   "artist": "Jan van Eyck",
+   "year": "1438",
+   "width": 1920,
+   "height": 2674,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Jan_van_Eyck_(um_1390-1400_-_1441)_-_Portrait_of_a_man_(from_the_Arnolfini_family%5E)_Around_1440_-_523A_-_Gem%C3%A4ldegalerie.jpg",
+    "author": "Jan van Eyck",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2872,
+   "original_height": 4000
+  },
+  "dyers_soaking_red": {
+   "file": "media/dyers_soaking_red.jpg",
+   "kind": "image",
+   "title": "Dyers soaking red cloth in a heated barrel - Des Proprietez des Choses (Volume II) (1482), f.269 - BL Royal MS 15 E III",
+   "artist": "Master of Edward IV",
+   "year": "1482",
+   "width": 1280,
+   "height": 1447,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Dyers_soaking_red_cloth_in_a_heated_barrel_-_Des_Proprietez_des_Choses_(Volume_II)_(1482),_f.269_-_BL_Royal_MS_15_E_III.jpg",
+    "author": "Master of Edward IV",
+    "licence": "CC0",
+    "licence_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 1331,
+   "original_height": 1505
+  },
+  "rogier_van_der": {
+   "file": "media/rogier_van_der.jpg",
+   "kind": "image",
+   "title": "Rogier van der Weyden - The Annunciation - WGA25591",
+   "artist": "Rogier van der Weyden",
+   "year": "1435",
+   "width": 500,
+   "height": 472,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Rogier_van_der_Weyden_-_The_Annunciation_-_WGA25591.jpg",
+    "author": "Rogier van der Weyden",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": "small"
+   },
+   "regions": {},
+   "original_width": 895,
+   "original_height": 845
+  },
+  "taming_tarasque_hours": {
+   "file": "media/taming_tarasque_hours.jpg",
+   "kind": "image",
+   "title": "Taming the Tarasque, from Hours of Henry VIII",
+   "artist": "Graham S. Haber",
+   "year": "2021",
+   "width": 1920,
+   "height": 1390,
+   "credit": {
+    "source": "commons",
+    "source_url": "https://commons.wikimedia.org/wiki/File:Taming_the_Tarasque,_from_Hours_of_Henry_VIII.jpg",
+    "author": "Graham S. Haber",
+    "licence": "PD",
+    "licence_url": "",
+    "flag": null
+   },
+   "regions": {},
+   "original_width": 2072,
+   "original_height": 1500
+  }
+ },
+ "shots": [
+  {
+   "id": "s0000",
+   "start": {
+    "t": 0.0
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1920.0,
+      "cy": 2626.5,
+      "zoom": 0.19634,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1920.0,
+      "cy": 2626.5,
+      "zoom": 0.20224,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [
+    {
+     "id": "o1",
+     "technique": "ID-OPEN-01",
+     "intent": "structure",
+     "start": {
+      "t": 0.0
+     },
+     "dur": 3.6,
+     "params": {
+      "floor": 0.1,
+      "wake": 0.45,
+      "black_s": 0.4,
+      "rise_s": 0.8,
+      "sweep_start_s": 1.5,
+      "sweep_s": 6.0,
+      "direction": "right_to_left",
+      "band_width_pct": 14,
+      "feather": 0.4,
+      "angle_deg": 10,
+      "release_s": 1.5,
+      "warm": 0.14
+     },
+     "slots": {},
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    },
+    {
+     "id": "o2",
+     "technique": "ID-LABEL-01",
+     "intent": "structure",
+     "start": {
+      "w": 0,
+      "off": -3.8,
+      "text": "Look"
+     },
+     "dur": 3.45,
+     "params": {
+      "title": "The Arnolfini Portrait",
+      "artist_year": "Jan van Eyck, 1434",
+      "x_pct": 4,
+      "bottom_pct": 92,
+      "title_cap_pct": 3.0,
+      "second_cap_pct": 2.3,
+      "fade_in_s": 0.5,
+      "fade_out_s": 0.5,
+      "shadow": true,
+      "nominal_s": 4.5
+     },
+     "slots": {},
+     "locked": false,
+     "source": "agent",
+     "note": ""
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "opening shot: the whole painting before the first word"
+  },
+  {
+   "id": "s0001",
+   "start": {
+    "w": 0,
+    "off": -0.35,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 1600,
+      "zoom": 0.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1950,
+      "cy": 1300,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the back wall up to the lettering above the mirror as it is described"
+  },
+  {
+   "id": "s0002",
+   "start": {
+    "w": 26,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1958,
+      "cy": 1180,
+      "zoom": 1.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1150,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quote",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "DOC-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "lit": [
+       {
+        "ref": "INSCRIPTION",
+        "at": {
+         "w": 26,
+         "text": "In"
+        }
+       }
+      ],
+      "dim_to": 0.34,
+      "ramp_s": 0.7,
+      "edge_px": 28,
+      "pad_px": 40,
+      "reading": "Van Eyck was here",
+      "original": "Johannes de eyck fuit hic 1434",
+      "reading_at": {
+       "w": 30,
+       "text": "Jan"
+      },
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 26,
+      "off": 0.0,
+      "text": "In"
+     },
+     "dur": 8.59,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the line is lit and read while the narrator translates it; held through 'in his own lettering'"
+  },
+  {
+   "id": "s0003",
+   "start": {
+    "w": 54,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2100,
+      "cy": 1200,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2950,
+      "cy": 1290,
+      "zoom": 1.15,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'another date sits uneasily beside it': travel from the date to the woman named as Costanza"
+  },
+  {
+   "id": "s0004",
+   "start": {
+    "w": 81,
+    "off": 0.0,
+    "text": "She"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2880,
+      "cy": 1300,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1150,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'a full year before the date on the wall': back from her face to the 1434"
+  },
+  {
+   "id": "s0005",
+   "start": {
+    "w": 94,
+    "off": 0.0,
+    "text": "This"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 2300,
+      "zoom": 0.65,
+      "ease": "out_quad"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2626.5,
+      "zoom": 0.19634,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the pull back that ends the cold open: the whole crowded panel and the question it asks"
+  },
+  {
+   "id": "s0006",
+   "start": {
+    "w": 130,
+    "off": 0.0,
+    "text": "Let"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 1200,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2050,
+      "cy": 2300,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "glide down from the lettering past the mirror to the couple, as the sentence says"
+  },
+  {
+   "id": "s0007",
+   "start": {
+    "t": 55.537
+   },
+   "technique": "ID-BRAND-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2050,
+      "cy": 2300,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2050,
+      "cy": 2300,
+      "zoom": 0.824,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "text": "RAKING LIGHT",
+    "title": "Was She Already Dead When He Signed the Wall?",
+    "subtitle": "The Arnolfini Portrait · Jan van Eyck, 1434",
+    "dim_s": 0.6,
+    "floor": 0.12,
+    "wake": 0.26,
+    "sweep_delay_s": 0.5,
+    "sweep_s": 1.6,
+    "name_hold_s": 2.4,
+    "title_sweep_s": 1.6,
+    "title_hold_s": 3.0,
+    "direction": "left_to_right",
+    "band_width_pct": 16,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "warm": 0.14,
+    "cap_pct": 8.0,
+    "tracking_pct": 25,
+    "y_pct": 36,
+    "y_alone_pct": 42,
+    "title_cap_pct": 4.6,
+    "title_y_pct": 54,
+    "sub_cap_pct": 2.2,
+    "sub_tracking_pct": 14,
+    "sub_y_pct": 62.5
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "title card"
+  },
+  {
+   "id": "s0008",
+   "start": {
+    "t": 64.637
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1664.01,
+      "cy": 2200,
+      "zoom": 0.57692,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1600,
+      "cy": 2200,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "1. Who Stands in the Room",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0009",
+   "start": {
+    "w": 149,
+    "off": 0.0,
+    "text": "Start"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1600,
+      "cy": 2200,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1114,
+      "cy": 1000,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'the man on the left, under the dark hat': from his figure up to the face"
+  },
+  {
+   "id": "s0010",
+   "start": {
+    "w": 168,
+    "off": 0.0,
+    "text": "Most"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1114,
+      "cy": 1000,
+      "zoom": 1.1,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1114,
+      "cy": 990,
+      "zoom": 1.35,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "push in on the face while he is named as Giovanni Arnolfini"
+  },
+  {
+   "id": "s0011",
+   "start": {
+    "w": 186,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "MAP-01",
+   "slots": {},
+   "params": {
+    "places": [
+     {
+      "id": "lucca",
+      "name": "Lucca",
+      "lonlat": [
+       10.5027,
+       43.8429
+      ],
+      "at": {
+       "w": 190,
+       "text": "Lucca"
+      }
+     },
+     {
+      "id": "bruges",
+      "name": "Bruges",
+      "lonlat": [
+       3.2247,
+       51.2093
+      ],
+      "at": {
+       "w": 194,
+       "text": "Bruges,"
+      }
+     }
+    ],
+    "route": [
+     {
+      "from": "lucca",
+      "to": "bruges",
+      "at": {
+       "w": 193,
+       "text": "to"
+      },
+      "draw_s": 1.6
+     }
+    ],
+    "region_iso": [],
+    "region_label": "",
+    "region_at": 0.6,
+    "region_fill_s": 1.0,
+    "view_start_width_km": 3800,
+    "view_start_center": "",
+    "view_end_mode": "fit",
+    "view_end_margin_pct": 19,
+    "view_end_center": "",
+    "view_end_width_km": 2400,
+    "push_s": 6.0,
+    "sea": "blue_grey",
+    "sea_names": false,
+    "sea_names_max": 3,
+    "graticule_deg": 5,
+    "grain": 1.0,
+    "vignette": 1.0,
+    "label_cap_pct": 2.4,
+    "fade_s": 0.3,
+    "seed": 4
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the family's move from Lucca to Bruges, each place marked as it is named"
+  },
+  {
+   "id": "s0012",
+   "start": {
+    "w": 202,
+    "off": 0.0,
+    "text": "They"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "brugge_blick_vom"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1920.0,
+      "cy": 1230.0,
+      "zoom": 0.41268,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1920.0,
+      "cy": 1230.0,
+      "zoom": 0.43744,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "Bruges itself, the trading city where they settled"
+  },
+  {
+   "id": "s0013",
+   "start": {
+    "w": 215,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2240,
+      "cy": 2000,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2880,
+      "cy": 1300,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'now look at the woman in green': across to her face"
+  },
+  {
+   "id": "s0014",
+   "start": {
+    "w": 230,
+    "off": 0.0,
+    "text": "She"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2990,
+      "cy": 1290,
+      "zoom": 1.15,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3034,
+      "cy": 1287,
+      "zoom": 1.4,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "stay on her face through the brief facts of Costanza's life"
+  },
+  {
+   "id": "s0015",
+   "start": {
+    "w": 245,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 1700,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2200,
+      "cy": 1600,
+      "zoom": 0.62,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "both heads in a wide band, easing toward her while her identity is questioned"
+  },
+  {
+   "id": "s0016",
+   "start": {
+    "w": 270,
+    "off": 0.0,
+    "text": "It"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2112,
+      "cy": 2259,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2112,
+      "cy": 2259,
+      "zoom": 0.95,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "begun in her lifetime, finished after: settle on the bond between the two"
+  },
+  {
+   "id": "s0017",
+   "start": {
+    "w": 287,
+    "off": 0.0,
+    "text": "Either"
+   },
+   "technique": "STATIC-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2700,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2500,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'a picture like this': a wide band of the panel, drifting"
+  },
+  {
+   "id": "s0018",
+   "start": {
+    "w": 298,
+    "off": 0.0,
+    "text": "Booming"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "jan_van_eyck_4565"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 960.0,
+      "cy": 1337.0,
+      "zoom": 0.37966,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 960.0,
+      "cy": 1337.0,
+      "zoom": 0.40244,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "PORTRAIT OF A MAN (ARNOLFINI FAMILY?)",
+      "artist_year": "JAN VAN EYCK, 1438",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 298,
+      "off": 0.0,
+      "text": "Booming"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "a Van Eyck merchant portrait: the status a new merchant class paid for"
+  },
+  {
+   "id": "s0019",
+   "start": {
+    "w": 325,
+    "off": 0.0,
+    "text": "It"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 1800,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2300,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pull back to the couple at home: one of the earliest such portraits"
+  },
+  {
+   "id": "s0020",
+   "start": {
+    "w": 346,
+    "off": 0.0,
+    "text": "It"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2700,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2000,
+      "cy": 2900,
+      "zoom": 0.62,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "easing toward their clothes as the next chapter is announced"
+  },
+  {
+   "id": "s0021",
+   "start": {
+    "t": 144.204
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2024.74,
+      "cy": 2600,
+      "zoom": 0.52885,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2095,
+      "cy": 2600,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "2. A Walking Advert",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0022",
+   "start": {
+    "w": 369,
+    "off": 0.0,
+    "text": "Begin"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2095,
+      "cy": 2600,
+      "zoom": 0.55,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2773,
+      "cy": 2300,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "to the gathered green dress as it is named"
+  },
+  {
+   "id": "s0023",
+   "start": {
+    "w": 391,
+    "off": 0.0,
+    "text": "Dyeing"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "dyers_soaking_red"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 640.0,
+      "cy": 723.5,
+      "zoom": 0.70159,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 640.0,
+      "cy": 723.5,
+      "zoom": 0.74368,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "DYERS SOAKING RED CLOTH",
+      "artist_year": "MASTER OF EDWARD IV, 1482",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 391,
+      "off": 0.0,
+      "text": "Dyeing"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "dyers at work, from a later Bruges manuscript (labelled, so it is not taken for her dress)"
+  },
+  {
+   "id": "s0024",
+   "start": {
+    "w": 408,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2773,
+      "cy": 2400,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3040,
+      "cy": 2350,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "NUM-01",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "rows": [
+       {
+        "label": "One estimate",
+        "value": "2,000",
+        "units": "pieces",
+        "count": 40,
+        "at": {
+         "w": 426,
+         "text": "2,000"
+        }
+       },
+       {
+        "label": "Usual",
+        "value": "600",
+        "units": "pieces",
+        "count": 12,
+        "at": {
+         "w": 432,
+         "text": "600"
+        }
+       }
+      ],
+      "caption": "each dot is fifty pieces of fur",
+      "source": "",
+      "dim_picture_to": 0.38,
+      "cap_pct": 8.0,
+      "align": "left",
+      "marks_s": 1.1,
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 421,
+      "off": 0.0,
+      "text": "One"
+     },
+     "dur": 5.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the pale fur at her sleeve, then the two counts of pelts over that fur"
+  },
+  {
+   "id": "s0025",
+   "start": {
+    "w": 435,
+    "off": 0.0,
+    "text": "Near"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2240,
+      "cy": 3600,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2400,
+      "cy": 3800,
+      "zoom": 0.7,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "BLUE_HEM",
+      "rx": 346.0,
+      "ry": 525.0,
+      "floor": 0.65,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 440,
+      "off": 0.0,
+      "text": "blue"
+     },
+     "dur": 3.18,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the blue is tiny in the wide skirt: a spotlight finds it on 'blue'"
+  },
+  {
+   "id": "s0026",
+   "start": {
+    "w": 448,
+    "off": 0.0,
+    "text": "Blue"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2496,
+      "cy": 3992,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2496,
+      "cy": 4050,
+      "zoom": 1.45,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "close on the costly blue while its meaning is given"
+  },
+  {
+   "id": "s0027",
+   "start": {
+    "w": 463,
+    "off": 0.0,
+    "text": "Her"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2469,
+      "cy": 2000,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2967,
+      "cy": 1300,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "up to the frilled white headdress of a married woman"
+  },
+  {
+   "id": "s0028",
+   "start": {
+    "w": 483,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2469,
+      "cy": 1800,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1371,
+      "cy": 2300,
+      "zoom": 0.7,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'now cross to Giovanni': from her side to his dark plum"
+  },
+  {
+   "id": "s0029",
+   "start": {
+    "w": 497,
+    "off": 0.0,
+    "text": "Whether"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1150,
+      "cy": 2300,
+      "zoom": 0.85,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1150,
+      "cy": 3400,
+      "zoom": 0.85,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "glide down the fabric and fur while the faded plum is debated"
+  },
+  {
+   "id": "s0030",
+   "start": {
+    "w": 514,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 960,
+      "cy": 3500,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 768,
+      "cy": 3550,
+      "zoom": 1.25,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "Tabard",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 515,
+      "off": 0.0,
+      "text": "tabard,"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the tabard and its fur edge, named for those who do not know the word"
+  },
+  {
+   "id": "s0031",
+   "start": {
+    "w": 530,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "european_pine_marten"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 2463.0,
+      "cy": 1638.5,
+      "zoom": 0.3098,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 2463.0,
+      "cy": 1638.5,
+      "zoom": 0.32838,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "NUM-01",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "rows": [
+       {
+        "label": "Russian martens",
+        "value": "100",
+        "units": "",
+        "count": 0,
+        "at": {
+         "w": 536,
+         "text": "hundred"
+        }
+       }
+      ],
+      "caption": "",
+      "source": "",
+      "dim_picture_to": 0.38,
+      "cap_pct": 8.0,
+      "align": "left",
+      "marks_s": 1.1,
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 534,
+      "off": 0.0,
+      "text": "taken"
+     },
+     "dur": 5.5,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the animal counted, with the hundred over it"
+  },
+  {
+   "id": "s0032",
+   "start": {
+    "w": 549,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1200,
+      "cy": 1600,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1114,
+      "cy": 900,
+      "zoom": 1.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "up to the plaited straw hat"
+  },
+  {
+   "id": "s0033",
+   "start": {
+    "w": 561,
+    "off": -0.3,
+    "text": "His"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1150,
+      "cy": 3900,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1200,
+      "cy": 4390,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "down to the soft boots"
+  },
+  {
+   "id": "s0034",
+   "start": {
+    "w": 570,
+    "off": 0.0,
+    "text": "Giovanni"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "length_velvet"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 657.5,
+      "cy": 1446.5,
+      "zoom": 0.35092,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 657.5,
+      "cy": 1446.5,
+      "zoom": 0.37197,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "LENGTH OF VELVET",
+      "artist_year": "",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 570,
+      "off": 0.0,
+      "text": "Giovanni"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the kind of luxury silk he traded"
+  },
+  {
+   "id": "s0035",
+   "start": {
+    "w": 582,
+    "off": 0.0,
+    "text": "couple"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2400,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2300,
+      "zoom": 0.58,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "back to the couple wearing those goods: a walking advert"
+  },
+  {
+   "id": "s0036",
+   "start": {
+    "w": 596,
+    "off": 0.0,
+    "text": "One"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 2000,
+      "zoom": 0.75,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 1900,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pull back from the couple to the furnished room that 'makes the same claim'"
+  },
+  {
+   "id": "s0037",
+   "start": {
+    "t": 240.414
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1800,
+      "cy": 2200,
+      "zoom": 0.57692,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1800,
+      "cy": 2200,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "3. A Room Built to Be Seen",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0038",
+   "start": {
+    "w": 627,
+    "off": 0.0,
+    "text": "Start"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1800,
+      "cy": 2200,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2700,
+      "cy": 1900,
+      "zoom": 0.85,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "to the red bed behind the couple"
+  },
+  {
+   "id": "s0039",
+   "start": {
+    "w": 650,
+    "off": 0.0,
+    "text": "One"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "rogier_van_der"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 250.0,
+      "cy": 236.0,
+      "zoom": 2.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 250.0,
+      "cy": 236.0,
+      "zoom": 2.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "THE ANNUNCIATION",
+      "artist_year": "ROGIER VAN DER WEYDEN, 1435",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 650,
+      "off": 0.0,
+      "text": "One"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "a room of the time with such a red bed, labelled so it is not taken for this one"
+  },
+  {
+   "id": "s0040",
+   "start": {
+    "w": 671,
+    "off": 0.0,
+    "text": "Behind"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2600,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2050,
+      "cy": 2350,
+      "zoom": 1.1,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "Settle",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 680,
+      "off": 0.0,
+      "text": "settle,"
+     },
+     "dur": 3.0,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "behind the joined hands to the bench and its red cushion; the unfamiliar word is labelled"
+  },
+  {
+   "id": "s0041",
+   "start": {
+    "w": 689,
+    "off": 0.0,
+    "text": "Carved"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2150,
+      "cy": 2150,
+      "zoom": 1.4,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2201,
+      "cy": 2050,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "Gargoyles",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 690,
+      "off": 0.0,
+      "text": "gargoyles,"
+     },
+     "dur": 3.0,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "push in on the small carving above the hands"
+  },
+  {
+   "id": "s0042",
+   "start": {
+    "w": 701,
+    "off": 0.0,
+    "text": "On"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 1900,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2480,
+      "cy": 1300,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "up the chair to the carved woman on her dragon"
+  },
+  {
+   "id": "s0043",
+   "start": {
+    "w": 714,
+    "off": 0.0,
+    "text": "Some"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "taming_tarasque_hours"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 960.0,
+      "cy": 695.0,
+      "zoom": 0.73036,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 960.0,
+      "cy": 695.0,
+      "zoom": 0.77418,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "TAMING THE TARASQUE",
+      "artist_year": "HOURS OF HENRY VIII",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 714,
+      "off": 0.0,
+      "text": "Some"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "Saint Martha with her dragon, the first reading"
+  },
+  {
+   "id": "s0044",
+   "start": {
+    "w": 726,
+    "off": 0.0,
+    "text": "Others"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "saint_margaret_antioch"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1500.0,
+      "cy": 2000.0,
+      "zoom": 0.2538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1500.0,
+      "cy": 2000.0,
+      "zoom": 0.26903,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "SAINT MARGARET OF ANTIOCH",
+      "artist_year": "1475",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 726,
+      "off": 0.0,
+      "text": "Others"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "Saint Margaret rising from her dragon, the second reading"
+  },
+  {
+   "id": "s0045",
+   "start": {
+    "w": 733,
+    "off": 0.0,
+    "text": "On"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2000,
+      "cy": 3200,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2074,
+      "cy": 3550,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "down to the rug on the floor"
+  },
+  {
+   "id": "s0046",
+   "start": {
+    "w": 746,
+    "off": 0.0,
+    "text": "Such"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "lotto_carpet"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1280.0,
+      "cy": 960.0,
+      "zoom": 0.52875,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1280.0,
+      "cy": 960.0,
+      "zoom": 0.56047,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "LOTTO CARPET",
+      "artist_year": "",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 746,
+      "off": 0.0,
+      "text": "Such"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "a real carpet of the kind, as 'such carpets' are spoken of"
+  },
+  {
+   "id": "s0047",
+   "start": {
+    "w": 762,
+    "off": 0.0,
+    "text": "Beside"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1800,
+      "cy": 1550,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1750,
+      "cy": 1560,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "BEADS",
+      "rx": 154.0,
+      "ry": 315.0,
+      "floor": 0.65,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 766,
+      "off": 0.0,
+      "text": "amber"
+     },
+     "dur": 3.3,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the beads are small beside the mirror: a spotlight finds them on 'amber'"
+  },
+  {
+   "id": "s0048",
+   "start": {
+    "w": 776,
+    "off": 0.0,
+    "text": "Each"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1613,
+      "cy": 1576,
+      "zoom": 1.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1613,
+      "cy": 1600,
+      "zoom": 2.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "close on the beads catching the light"
+  },
+  {
+   "id": "s0049",
+   "start": {
+    "w": 786,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1600,
+      "cy": 1800,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 960,
+      "cy": 1350,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "across to the window glass at left"
+  },
+  {
+   "id": "s0050",
+   "start": {
+    "w": 802,
+    "off": 0.0,
+    "text": "Beyond"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 738,
+      "cy": 1500,
+      "zoom": 1.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 565,
+      "cy": 1400,
+      "zoom": 1.7,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "push through the window to the cherry tree in fruit"
+  },
+  {
+   "id": "s0051",
+   "start": {
+    "w": 812,
+    "off": 0.0,
+    "text": "Oranges"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1200,
+      "cy": 2400,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 800,
+      "cy": 2600,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "to the oranges on the sill and the chest"
+  },
+  {
+   "id": "s0052",
+   "start": {
+    "w": 826,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 600,
+      "cy": 2400,
+      "zoom": 1.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 480,
+      "cy": 2370,
+      "zoom": 2.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the single orange, its shadow and its reflection in the glass"
+  },
+  {
+   "id": "s0053",
+   "start": {
+    "w": 842,
+    "off": 0.0,
+    "text": "It"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 533,
+      "cy": 2450,
+      "zoom": 1.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1200,
+      "cy": 2500,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pull back so the corner reads as a still life"
+  },
+  {
+   "id": "s0054",
+   "start": {
+    "w": 854,
+    "off": 0.0,
+    "text": "Above"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1958,
+      "cy": 600,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 861,
+       "text": "Yet"
+      },
+      "cx": 1958,
+      "cy": 640,
+      "zoom": 1.05,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1939,
+      "cy": 1563,
+      "zoom": 1.25,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "on the chandelier, then down along the lines to the mirror on 'the mirror'"
+  },
+  {
+   "id": "s0055",
+   "start": {
+    "t": 334.89
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1939,
+      "cy": 1600,
+      "zoom": 0.86538,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1939,
+      "cy": 1600,
+      "zoom": 0.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "4. The Mirror",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0056",
+   "start": {
+    "w": 875,
+    "off": 0.0,
+    "text": "Come"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1939,
+      "cy": 1600,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1950,
+      "cy": 1570,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'come closer to the round mirror': push in"
+  },
+  {
+   "id": "s0057",
+   "start": {
+    "w": 885,
+    "off": -0.15,
+    "text": "Its"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "marcia_1480"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 600.0,
+      "cy": 313.5,
+      "zoom": 1.61914,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 600.0,
+      "cy": 313.5,
+      "zoom": 1.71629,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "a period picture of such a small convex mirror in use"
+  },
+  {
+   "id": "s0058",
+   "start": {
+    "w": 895,
+    "off": 0.0,
+    "text": "A"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1939,
+      "cy": 1563,
+      "zoom": 1.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1939,
+      "cy": 1500,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "pull back so the mirror is seen against the width of the wall: its size is the point"
+  },
+  {
+   "id": "s0059",
+   "start": {
+    "w": 913,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1950,
+      "cy": 1570,
+      "zoom": 1.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1576,
+      "zoom": 2.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "into the reflection: the couple from behind and the two figures in the door"
+  },
+  {
+   "id": "s0060",
+   "start": {
+    "w": 937,
+    "off": 0.0,
+    "text": "and"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1800,
+      "cy": 1600,
+      "zoom": 2.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 972,
+      "cy": 1700,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the visitors to Giovanni's raised hand greeting them"
+  },
+  {
+   "id": "s0061",
+   "start": {
+    "w": 948,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1400,
+      "cy": 1650,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1560,
+      "zoom": 2.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'so who are they?': back into the mirror, close on the figure in blue"
+  },
+  {
+   "id": "s0062",
+   "start": {
+    "w": 988,
+    "off": 0.0,
+    "text": "Philip"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "philipp_good_van"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 960.0,
+      "cy": 1443.0,
+      "zoom": 0.35177,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 960.0,
+      "cy": 1443.0,
+      "zoom": 0.37287,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "PHILIP THE GOOD",
+      "artist_year": "AFTER ROGIER VAN DER WEYDEN, 1450",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 988,
+      "off": 0.0,
+      "text": "Philip"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the duke he served, shown as he is named"
+  },
+  {
+   "id": "s0063",
+   "start": {
+    "w": 1004,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1850,
+      "cy": 1563,
+      "zoom": 1.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2030,
+      "cy": 1563,
+      "zoom": 1.9,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "back to the figure in blue, drifting across the glass"
+  },
+  {
+   "id": "s0064",
+   "start": {
+    "w": 1017,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1900,
+      "cy": 1700,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1939,
+      "cy": 1563,
+      "zoom": 1.35,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'now look at the frame': the ring of ten roundels"
+  },
+  {
+   "id": "s0065",
+   "start": {
+    "w": 1036,
+    "off": 0.0,
+    "text": "Among"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1939,
+      "cy": 1563,
+      "zoom": 1.45,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1800,
+      "cy": 1500,
+      "zoom": 1.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "closer on the roundels while the Passion scenes are named"
+  },
+  {
+   "id": "s0066",
+   "start": {
+    "w": 1049,
+    "off": 0.0,
+    "text": "Together"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1958,
+      "cy": 1576,
+      "zoom": 1.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1576,
+      "zoom": 2.3,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "slow push into the spotless glass while its readings are given"
+  },
+  {
+   "id": "s0067",
+   "start": {
+    "w": 1081,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1939,
+      "cy": 1563,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2150,
+      "cy": 1576,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "over to the roundels on the woman's side as the later scenes are listed"
+  },
+  {
+   "id": "s0068",
+   "start": {
+    "w": 1111,
+    "off": 0.0,
+    "text": "Why"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2200,
+      "cy": 1576,
+      "zoom": 1.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2880,
+      "cy": 1350,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the death scenes across to her: why beside her?"
+  },
+  {
+   "id": "s0069",
+   "start": {
+    "t": 423.695
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1920,
+      "cy": 2300,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1920,
+      "cy": 2300,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "5. Wedding or Memorial",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0070",
+   "start": {
+    "w": 1123,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2300,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2300,
+      "zoom": 0.56,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "a wide band of the couple under the chapter mark, before the historian is named"
+  },
+  {
+   "id": "s0071",
+   "start": {
+    "w": 1129,
+    "off": -0.2,
+    "text": "Panofsky"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "lavin_panofksyportrait_g"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 283.5,
+      "cy": 350.0,
+      "zoom": 1.45029,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 283.5,
+      "cy": 350.0,
+      "zoom": 1.5373,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "Erwin Panofsky, as he is named"
+  },
+  {
+   "id": "s0072",
+   "start": {
+    "w": 1142,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2600,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2112,
+      "cy": 2259,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'look at the joined hands at the centre'"
+  },
+  {
+   "id": "s0073",
+   "start": {
+    "w": 1159,
+    "off": 0.0,
+    "text": "Then"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2050,
+      "cy": 2100,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1166,
+       "text": "Its"
+      },
+      "cx": 1958,
+      "cy": 1160,
+      "zoom": 1.4,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1140,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quote",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "DOC-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "lit": [
+       {
+        "ref": "INSCRIPTION",
+        "at": {
+         "w": 1166,
+         "text": "Its"
+        }
+       }
+      ],
+      "dim_to": 0.34,
+      "ramp_s": 0.7,
+      "edge_px": 28,
+      "pad_px": 40,
+      "reading": "Van Eyck was here",
+      "original": "Johannes de eyck fuit hic 1434",
+      "reading_at": {
+       "w": 1168,
+       "text": "Jan"
+      },
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1166,
+      "off": 0.0,
+      "text": "Its"
+     },
+     "dur": 8.634,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "'lift your eye to the inscription': glide up, then the line is lit and read again"
+  },
+  {
+   "id": "s0074",
+   "start": {
+    "w": 1193,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1600,
+      "cy": 4000,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 800,
+      "cy": 4790,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "text": "Pattens",
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1204,
+      "off": 0.0,
+      "text": "pattens,"
+     },
+     "dur": 2.16,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "'drop to the lower left' to the wooden overshoes, named"
+  },
+  {
+   "id": "s0075",
+   "start": {
+    "w": 1209,
+    "off": 0.0,
+    "text": "A"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1500,
+      "cy": 4000,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1952,
+      "cy": 3400,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "on to the second pair farther back"
+  },
+  {
+   "id": "s0076",
+   "start": {
+    "w": 1215,
+    "off": 0.0,
+    "text": "One"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "moses_burning_bush"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1300.0,
+      "cy": 1971.5,
+      "zoom": 0.25747,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1300.0,
+      "cy": 1971.5,
+      "zoom": 0.27292,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "MOSES AND THE BURNING BUSH",
+      "artist_year": "GERARD HOET",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1215,
+      "off": 0.0,
+      "text": "One"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the Exodus scene where the shoes come off on holy ground"
+  },
+  {
+   "id": "s0077",
+   "start": {
+    "w": 1234,
+    "off": 0.0,
+    "text": "Others"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 4000,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1745,
+      "cy": 4000,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "back to the floor: his pattens by the door, her shoes deep in the room"
+  },
+  {
+   "id": "s0078",
+   "start": {
+    "w": 1248,
+    "off": 0.0,
+    "text": "Then"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2200,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2200,
+      "zoom": 0.52,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "KEY-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "labels": [
+       {
+        "text": "Oranges",
+        "ref": "ORANGES",
+        "at": {
+         "w": 1257,
+         "text": "oranges,"
+        }
+       },
+       {
+        "text": "Cherry tree",
+        "ref": "CHERRY_TREE",
+        "at": {
+         "w": 1259,
+         "text": "cherry"
+        }
+       },
+       {
+        "text": "Green dress",
+        "ref": "GREEN_SKIRT",
+        "at": {
+         "w": 1262,
+         "text": "green"
+        }
+       }
+      ],
+      "cap_pct": 2.4,
+      "dim_picture_to": 0.78,
+      "fade_s": 0.3,
+      "leave_s": 0.5,
+      "shadow": true,
+      "leader": "auto"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1256,
+      "off": 0.0,
+      "text": "the"
+     },
+     "dur": 3.06,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "three signs named in a row, all in one wide band: a key labels each on its word"
+  },
+  {
+   "id": "s0079",
+   "start": {
+    "w": 1266,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2200,
+      "cy": 2300,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2880,
+      "cy": 2500,
+      "zoom": 1.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "push on the gathered skirt: fertility pose or fashion"
+  },
+  {
+   "id": "s0080",
+   "start": {
+    "w": 1283,
+    "off": 0.0,
+    "text": "Even"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1958,
+      "cy": 900,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1900,
+      "cy": 850,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "isolate",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "HI-01",
+     "intent": "isolate",
+     "slots": {},
+     "params": {
+      "at": "LIT_CANDLE",
+      "rx": 90.0,
+      "ry": 150.0,
+      "floor": 0.65,
+      "ramp_in": 0.5,
+      "ramp_out": 0.5,
+      "feather": 0.55
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1288,
+      "off": 0.0,
+      "text": "Only"
+     },
+     "dur": 3.94,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the whole chandelier stays in frame; the one lit candle is lit up on 'only one candle'"
+  },
+  {
+   "id": "s0081",
+   "start": {
+    "w": 1304,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2112,
+      "cy": 2259,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2050,
+      "cy": 2245,
+      "zoom": 1.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "slow push in on his loose hold of her hand"
+  },
+  {
+   "id": "s0082",
+   "start": {
+    "w": 1327,
+    "off": 0.0,
+    "text": "At"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2300,
+      "cy": 3800,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1882,
+      "cy": 4700,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "down to the dog at her feet"
+  },
+  {
+   "id": "s0083",
+   "start": {
+    "w": 1337,
+    "off": 0.0,
+    "text": "But"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "img_5994"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 375.0,
+      "cy": 218.0,
+      "zoom": 2.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 375.0,
+      "cy": 218.0,
+      "zoom": 2.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "a dog at a woman's feet on a tomb brass, as the custom is described"
+  },
+  {
+   "id": "s0084",
+   "start": {
+    "w": 1356,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1477,
+      "cy": 2700,
+      "zoom": 0.65,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1280,
+      "cy": 2800,
+      "zoom": 0.75,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "his dark clothes, read as mourning"
+  },
+  {
+   "id": "s0085",
+   "start": {
+    "w": 1363,
+    "off": 0.0,
+    "text": "And"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1800,
+      "cy": 1800,
+      "zoom": 0.9,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2112,
+      "cy": 1576,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "up to the death scenes on her side of the mirror"
+  },
+  {
+   "id": "s0086",
+   "start": {
+    "w": 1376,
+    "off": 0.0,
+    "text": "Some"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2469,
+      "cy": 2300,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2640,
+      "cy": 2200,
+      "zoom": 0.8,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the woman and the red bed behind her: the childbirth reading"
+  },
+  {
+   "id": "s0087",
+   "start": {
+    "w": 1390,
+    "off": 0.0,
+    "text": "Both"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2112,
+      "cy": 2259,
+      "zoom": 1.2,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2400,
+      "zoom": 0.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the same hands back to the couple: the question stays open"
+  },
+  {
+   "id": "s0088",
+   "start": {
+    "t": 527.399
+   },
+   "technique": "ID-MARK-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1426.28,
+      "cy": 1500,
+      "zoom": 0.67308,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1371,
+      "cy": 1500,
+      "zoom": 0.7,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true,
+    "title": "6. The Alchemist",
+    "floor": 0.12,
+    "wake": 0.55,
+    "sweep_delay_s": 0.1,
+    "sweep_s": 2.0,
+    "direction": "left_to_right",
+    "band_width_pct": 18,
+    "feather": 0.4,
+    "angle_deg": 10,
+    "release_at_s": 2.5,
+    "release_s": 0.7,
+    "text_fade_out_s": 0.4,
+    "cap_pct": 4.5,
+    "y_pct": 50,
+    "warm": 0.14
+   },
+   "intent": "structure",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "chapter card"
+  },
+  {
+   "id": "s0089",
+   "start": {
+    "w": 1418,
+    "off": 0.0,
+    "text": "Now"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1371,
+      "cy": 1500,
+      "zoom": 0.7,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1129,
+      "cy": 1400,
+      "zoom": 0.85,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "toward the window, the source of the light"
+  },
+  {
+   "id": "s0090",
+   "start": {
+    "w": 1439,
+    "off": 0.0,
+    "text": "It"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1958,
+      "cy": 700,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2967,
+      "cy": 1300,
+      "zoom": 1.15,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "follow the glints: chandelier, mirror, then her white frills"
+  },
+  {
+   "id": "s0091",
+   "start": {
+    "w": 1454,
+    "off": 0.0,
+    "text": "How"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2880,
+      "cy": 2600,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2900,
+      "cy": 2700,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explain_mechanism",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "close on the green where the colour deepens in layers of glaze"
+  },
+  {
+   "id": "s0092",
+   "start": {
+    "w": 1480,
+    "off": 0.0,
+    "text": "Picture"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1700,
+      "cy": 1450,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 2000,
+      "cy": 1500,
+      "zoom": 1.25,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explain_mechanism",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "drift across the smooth, luminous mirror and wall"
+  },
+  {
+   "id": "s0093",
+   "start": {
+    "w": 1503,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 740,
+      "cy": 3546,
+      "zoom": 1.3,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1882,
+      "cy": 4650,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explain_mechanism",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "from the fur trim to the dog's coat: the fine dry-brush textures"
+  },
+  {
+   "id": "s0094",
+   "start": {
+    "w": 1521,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "jan_van_eyck"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1920.0,
+      "cy": 2641.5,
+      "zoom": 0.19216,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1920.0,
+      "cy": 2641.5,
+      "zoom": 0.20369,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "context",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "X-ANN-02",
+     "intent": "context",
+     "slots": {},
+     "params": {
+      "title": "PORTRAIT OF A MAN (SELF PORTRAIT?)",
+      "artist_year": "JAN VAN EYCK, 1433",
+      "second_line_scale": 0.55,
+      "strip_y_top_pct": 79.4,
+      "strip_y_bottom_pct": 93.3,
+      "strip_opacity": 0.8,
+      "text_x_pct": 7.0,
+      "size_px": 58,
+      "right_fade_pct": 20,
+      "pop_in_s": 0.1,
+      "fade_out_s": 0.2,
+      "case": "upper"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1521,
+      "off": 0.0,
+      "text": "He"
+     },
+     "dur": 3.2,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the painter himself, probably, while he is called an alchemist"
+  },
+  {
+   "id": "s0095",
+   "start": {
+    "w": 1546,
+    "off": 0.0,
+    "text": "Yet"
+   },
+   "technique": "X-LAY-01",
+   "slots": {
+    "image": {
+     "asset": "great_art_explained"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 778.5,
+      "cy": 600.0,
+      "zoom": 0.846,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 778.5,
+      "cy": 600.0,
+      "zoom": 0.89676,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quantify",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "NUM-01",
+     "intent": "quantify",
+     "slots": {},
+     "params": {
+      "rows": [
+       {
+        "label": "Paintings by his hand",
+        "value": "23",
+        "units": "",
+        "count": 23,
+        "at": {
+         "w": 1549,
+         "text": "twenty-three"
+        }
+       }
+      ],
+      "caption": "each dot is one painting",
+      "source": "",
+      "dim_picture_to": 0.38,
+      "cap_pct": 8.0,
+      "align": "left",
+      "marks_s": 1.1,
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1546,
+      "off": 0.0,
+      "text": "Yet"
+     },
+     "dur": 4.4,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "one of his paintings under the count of twenty-three"
+  },
+  {
+   "id": "s0096",
+   "start": {
+    "w": 1559,
+    "off": 0.0,
+    "text": "He"
+   },
+   "technique": "CAM-05",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1800,
+      "cy": 1700,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1613,
+      "cy": 1576,
+      "zoom": 2.0,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "to the amber beads, 'simply painted superbly'"
+  },
+  {
+   "id": "s0097",
+   "start": {
+    "w": 1578,
+    "off": 0.0,
+    "text": "Look"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2880,
+      "cy": 1400,
+      "zoom": 1.0,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3034,
+      "cy": 1287,
+      "zoom": 1.35,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "her face in the window light: alive or remembered?"
+  },
+  {
+   "id": "s0098",
+   "start": {
+    "w": 1597,
+    "off": -1.0,
+    "text": "Lift"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1939,
+      "cy": 1700,
+      "zoom": 1.1,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "w": 1604,
+       "text": "line"
+      },
+      "cx": 1958,
+      "cy": 1160,
+      "zoom": 1.4,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1958,
+      "cy": 1140,
+      "zoom": 1.5,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "quote",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "DOC-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "lit": [
+       {
+        "ref": "INSCRIPTION",
+        "at": {
+         "w": 1604,
+         "text": "line"
+        }
+       }
+      ],
+      "dim_to": 0.34,
+      "ramp_s": 0.7,
+      "edge_px": 28,
+      "pad_px": 40,
+      "reading": "Van Eyck was here",
+      "original": "Johannes de eyck fuit hic 1434",
+      "reading_at": {
+       "w": 1608,
+       "text": "Jan"
+      },
+      "leave_s": 0.5
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1604,
+      "off": 0.0,
+      "text": "line"
+     },
+     "dur": 3.927,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "'lift your eye once more': up from the mirror to the lit line, read a last time"
+  },
+  {
+   "id": "s0099",
+   "start": {
+    "w": 1614,
+    "off": 0.0,
+    "text": "So"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2750,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2750,
+      "zoom": 0.53,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "point_at",
+   "transition_in": null,
+   "overlays": [
+    {
+     "technique": "KEY-01",
+     "intent": "point_at",
+     "slots": {},
+     "params": {
+      "labels": [
+       {
+        "text": "Joined hands",
+        "ref": "JOINED_HANDS",
+        "at": {
+         "w": 1623,
+         "text": "hands,"
+        }
+       },
+       {
+        "text": "Shoes",
+        "ref": "RED_SHOES",
+        "at": {
+         "w": 1625,
+         "text": "shoes"
+        }
+       },
+       {
+        "text": "Fruit",
+        "ref": "ORANGES",
+        "at": {
+         "w": 1628,
+         "text": "fruit"
+        }
+       }
+      ],
+      "cap_pct": 2.4,
+      "dim_picture_to": 0.78,
+      "fade_s": 0.3,
+      "leave_s": 0.5,
+      "shadow": true,
+      "leader": "auto"
+     },
+     "locked": false,
+     "source": "agent",
+     "note": "",
+     "start": {
+      "w": 1622,
+      "off": 0.0,
+      "text": "The"
+     },
+     "dur": 2.62,
+     "id": "o1"
+    }
+   ],
+   "locked": false,
+   "source": "agent",
+   "note": "the signs of a marriage, each named again in one wide band"
+  },
+  {
+   "id": "s0100",
+   "start": {
+    "w": 1634,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-04",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1900,
+      "cy": 4300,
+      "zoom": 0.6,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1900,
+      "cy": 1700,
+      "zoom": 0.6,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the signs of a loss in the order named: glide up from the dog, past his dark clothes, to her roundels"
+  },
+  {
+   "id": "s0101",
+   "start": {
+    "w": 1650,
+    "off": 0.0,
+    "text": "The"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 2640,
+      "cy": 1500,
+      "zoom": 0.8,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 3034,
+      "cy": 1300,
+      "zoom": 1.2,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "'the hinge is the woman': slow push on her face"
+  },
+  {
+   "id": "s0102",
+   "start": {
+    "w": 1683,
+    "off": 0.0,
+    "text": "His"
+   },
+   "technique": "CAM-01",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1920,
+      "cy": 2000,
+      "zoom": 0.5,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2100,
+      "zoom": 0.55,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "explore",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the panel in a wide band while its fame abroad is told"
+  },
+  {
+   "id": "s0103",
+   "start": {
+    "w": 1693,
+    "off": 0.0,
+    "text": "Painters"
+   },
+   "technique": "LAY-01",
+   "slots": {
+    "left": {
+     "asset": "van_eyck_arnolfini"
+    },
+    "right": {
+     "asset": "las_meninas_diego"
+    }
+   },
+   "params": {
+    "camera_left": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1939.0,
+      "cy": 1563.0,
+      "zoom": 0.8338,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1939.0,
+      "cy": 1563.0,
+      "zoom": 0.8338,
+      "ease": "linear"
+     }
+    ],
+    "camera_right": [
+     {
+      "at": {
+       "rel": 0.0
+      },
+      "cx": 1920.0,
+      "cy": 2210.0,
+      "zoom": 0.23438,
+      "ease": "linear"
+     },
+     {
+      "at": {
+       "rel": 1.0
+      },
+      "cx": 1920.0,
+      "cy": 2210.0,
+      "zoom": 0.23438,
+      "ease": "linear"
+     }
+    ],
+    "caption_left": "The Arnolfini Portrait",
+    "caption_left_sub": "",
+    "caption_right": "Las Meninas",
+    "caption_right_sub": "Diego Velázquez, 1656",
+    "panel_w_px": 900,
+    "panel_h_px": 740,
+    "panel_y_px": 36,
+    "left_x_px": 50,
+    "right_x_px": 970,
+    "slide_delay_s": 0.1,
+    "slide_s": 0.85
+   },
+   "intent": "compare",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "the painters who learned from him: the mirror beside Las Meninas and its own back-wall mirror"
+  },
+  {
+   "id": "s0104",
+   "start": {
+    "w": 1713,
+    "off": 0.0,
+    "text": "In"
+   },
+   "technique": "CAM-03",
+   "slots": {
+    "image": {
+     "asset": "van_eyck_arnolfini"
+    }
+   },
+   "params": {
+    "camera": [
+     {
+      "at": {
+       "rel": 0
+      },
+      "cx": 1958,
+      "cy": 1576,
+      "zoom": 2.0,
+      "ease": "out_quad"
+     },
+     {
+      "at": {
+       "rel": 1
+      },
+      "cx": 1920,
+      "cy": 2626.5,
+      "zoom": 0.19634,
+      "ease": "linear"
+     }
+    ],
+    "shadow": true
+   },
+   "intent": "establish",
+   "transition_in": null,
+   "overlays": [],
+   "locked": false,
+   "source": "agent",
+   "note": "last shot: from the two figures in the mirror out to the whole painting"
+  }
+ ],
+ "end": {
+  "t": 637.7844
+ },
+ "approvals": {
+  "storyboard": null
+ }
+}

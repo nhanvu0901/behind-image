@@ -484,3 +484,17 @@ ffmpeg -f concat -safe 0 -i list.txt -c copy full.mp4                           
 `--quality preview` (default; 640 px, 15 fps) uses `-preset veryfast -crf 27`; `final` uses `-preset medium -crf 15 -pix_fmt yuv420p -g 60`. Frame i is drawn at `t = i/fps` for
 `i in range(round(t0*fps), round(t1*fps))` (half-open), so parts that share a boundary are frame-exact and gap-free. `--threads N` sets ffmpeg and OpenCV threads. Progress lines (`progress 35%`)
 go to stdout every 5 %. Only `ffmpeg` on PATH is needed; no platform-specific paths. Python: `Project.render_range(t0, t1, out, width, fps, on_progress, quality="preview", threads=None)`.
+
+The viewer checks `small_detail_not_lit`, `highlight_nothing_to_dim` and
+`text_too_brief` warn when a small named region has no pointer, a spotlight
+leaves too little of the frame outside its ellipse, or text cannot be read in
+its fully visible window. The detail check uses the picks' `kinds`; older
+projects without kinds are not judged for this check. `KEY-01` plans its
+label times at draw time so saved and retimed storyboards receive the same
+reading-time treatment.
+
+A text needs 1.5 s fully visible for up to three words, plus 0.3 s per
+additional word, capped at 4.0 s. A `KEY-01` label that would miss that window
+is planned earlier, with its earlier neighbours moved only as needed to keep
+0.25 s between labels and none moved before the overlay starts. If the overlay
+itself is too short, `text_too_brief` reports the remaining deficit.

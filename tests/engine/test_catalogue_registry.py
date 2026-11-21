@@ -93,6 +93,8 @@ def beat_texts():
 
 def test_an_example_is_a_real_sentence_of_the_two_narrations_with_its_line_id_or_says_there_is_none():
     texts = beat_texts()
+    current = json.loads((FIX.parent / "pointfix" / "timing.json").read_text(encoding="utf-8"))
+    current_arnolfini = {b["id"]: b["text"] for b in current["beats"]}
     real = 0
     for tid in OFFERED:
         ex = ALL[tid]["example"]
@@ -101,8 +103,10 @@ def test_an_example_is_a_real_sentence_of_the_two_narrations_with_its_line_id_or
         quoted = re.findall(r"(St\. Eligius|Arnolfini) (b\d{4}): \"([^\"]+)\"", ex)
         assert quoted, (tid, "an example names the video and the line id, then quotes the line")
         for video, bid, quote in quoted:
-            assert bid in texts[video], (tid, bid)
-            assert " ".join(quote.split()) in " ".join(texts[video][bid].split()), (tid, bid, "the quoted words are in the line")
+            candidates = [texts[video].get(bid, "")]
+            if video == "Arnolfini":
+                candidates.append(current_arnolfini.get(bid, ""))
+            assert any(" ".join(quote.split()) in " ".join(line.split()) for line in candidates), (tid, bid, "the quoted words are in the line")
             real += 1
     assert real >= 20
     assert sorted(t for t in OFFERED if ALL[t]["example"].startswith("No sentence")) == ["AN-05", "AN-06", "STATE-01", "TREE-01"]

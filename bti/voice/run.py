@@ -23,7 +23,7 @@ VI = {   # what the owner reads when a part fails (the page may translate by cod
     "voice_chunks_failed": "Có câu máy chưa đọc được. Bấm đọc lại để thử tiếp.",
     "voice_chunks_missing": "Lời dẫn đã đổi trong lúc đọc. Hãy chạy lại để đọc phần mới.",
     "voice_worker_failed": "Máy đọc giọng bị dừng giữa chừng. Chạy lại để đọc tiếp, các câu đã đọc được giữ lại.",
-    "voice_assemble_failed": "Không ghép được tệp âm thanh (ffmpeg lỗi).",
+    "voice_assemble_failed": "Không ghép được tệp âm thanh.",
     "voice_align_failed": "Không đo được thời điểm từng từ.",
     "voice_not_configured": "Máy này chưa cài giọng đọc.",
 }
@@ -31,7 +31,10 @@ VI = {   # what the owner reads when a part fails (the page may translate by cod
 
 def _partfail(e: VoiceError):
     from bti.longjob import PartError
-    return PartError(e.code, VI.get(e.code, "Bước giọng đọc thất bại."))
+    message = VI.get(e.code, "Bước giọng đọc thất bại.")
+    if e.code == "voice_assemble_failed":
+        message += " " + e.message
+    return PartError(e.code, message)
 
 
 def _guard(fn):

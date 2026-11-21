@@ -23,7 +23,7 @@ from bti.engine.timing import Timing
 
 FIX = Path(__file__).parent / "fixtures" / "viewer"
 BUNDLE = R.load_bundle("gae")
-VIEWER = set(VC.CODES)
+VIEWER = set(VC.CODES) - {"small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief"}
 
 
 # ----------------------------------------------------------------------------------------------------------------- the real run

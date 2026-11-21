@@ -41,14 +41,20 @@ def _work_level(wid: str) -> str:
 
 
 def _write_intro_silences(d: Path) -> None:
-    """A project the app creates gets the two silences of the new opening (`intro` of config/voice.json: the lead before the first word and
-    the silence that holds the channel-name beat) written into its own voice settings. A project made another way (by hand, in a test, an
-    older one) has none and keeps `silence.lead` and `silence.title`."""
+    """Write the new opening silences and new-project tempo into this project's voice settings.
+
+    Older projects and projects made by hand keep the global fallback values when they have no own settings.
+    """
     from bti.voice import files as voice_files
     from bti.voice.config import SILENCE_RANGES, load_voice_config
-    intro = load_voice_config().get("intro")
+    cfg = load_voice_config()
+    intro = cfg.get("intro")
     own = {k: round(float(intro[k]), 3) for k, (lo, hi) in SILENCE_RANGES.items()
            if isinstance(intro, dict) and isinstance(intro.get(k), (int, float)) and not isinstance(intro.get(k), bool) and lo <= intro[k] <= hi}
+    tempo = cfg.get("new_project_tempo", 1.1)
+    lo, hi = cfg.get("tempo_range", [1.0, 1.2])
+    if isinstance(tempo, (int, float)) and not isinstance(tempo, bool) and lo <= tempo <= hi:
+        own["tempo"] = float(tempo)
     if own:
         voice_files.write_settings(d, own)
 
