@@ -120,6 +120,15 @@ def test_costs_and_models_are_declared(at):
     c, pid, st = at("storyboard_approved")
     assert action(st, "voice.generate")["cost"] == {"kind": "machine_time", "about": "about 1 hour"}
     assert action(st, "export.start")["cost"] == {"kind": "machine_time", "about": "about 25 minutes"}
+
+
+def test_export_cost_mentions_incremental_parts_when_parts_exist(at, tmp_path):
+    c, pid, _ = at("exported")
+    st = c.get("/api/projects/%s/state" % pid).json()
+    assert action(st, "export.start")["cost"] == {
+        "kind": "machine_time",
+        "about": "only changed ~60 s parts (full export: about 25 minutes)",
+    }
     d = action(st, "draft.start")
     assert d["cost"] == {"kind": "model", "about": "about 20 minutes"} and d["uses_model"] is True
     assert d["agent"] == {"id": "gem", "label": "Gemini giả", "usable": True, "reason": None}

@@ -35,7 +35,7 @@ def test_get_before_anything_says_none_and_names_the_agent_and_the_limits(tc):
     assert b["state"] == "none" and b["title"] is None and b["candidates"] == [] and b["history"] == [] and b["written"] is None and b["stale"] is False
     assert b["rev"] == T.EMPTY_REV and b["narration_rev"] is None and b["current_narration_rev"] == T.narration_rev(tc.root / PID)
     assert b["agent"]["id"] == "gem" and b["agent"]["model"] == "mock" and b["running"] is None and b["problems"] == []
-    assert b["limits"] == {"max_chars": 60, "best": [28, 55], "max_words": 9, "person_max_chars": 60} and b["storyboard"] == {"exists": False, "title": None, "same": False, "off_voice": False}
+    assert b["limits"] == {"max_chars": 60, "best": [28, 55], "max_words": 9, "best_max_words": 7, "person_max_chars": 60} and b["storyboard"] == {"exists": False, "title": None, "same": False, "off_voice": False}
     assert tc.get("/api/projects/nope/title").status_code == 404
 
 

@@ -156,8 +156,18 @@ def test_the_export_job_publishes_the_video_and_cleans_the_caches(proj, monkeypa
     assert {"final.mp4", "6_export/description.txt", "6_export/report.json", "5_storyboard/shots.md"} <= set(t)
     assert (proj.out / KEY / "final.mp4").read_bytes() == (proj.d / "export" / (PID + ".mp4")).read_bytes()
     st = proj.state()
+    m = json.loads((proj.d / "export" / "export.json").read_text(encoding="utf-8"))
+    parts_dir = proj.d / "cache" / "export" / "parts"
+    cur_files = {p["file"] for p in m["parts"]}
+    assert cur_files and all((parts_dir / f).is_file() for f in cur_files)
+    assert not (parts_dir / "part_01_x.mp4").exists()
+    assert not (proj.d / "cache" / "export" / "video_all.mp4").exists()
     assert st["status"] == "done" and st["clean"]["done"] and st["clean"]["freed_bytes"] > 0
-    assert not (proj.d / "cache" / "export").exists() and (proj.d / "cache" / "draft" / "thread.json").exists()
+    assert st["clean"]["kept_parts"] == len(cur_files) and st["clean"]["kept_parts_bytes"] > 0
+    assert st["video"]["parts_total"] == len(cur_files)
+    assert st["video"]["parts_rendered"] == len(cur_files) and st["video"]["parts_reused"] == 0
+    assert (proj.d / "cache" / "draft" / "thread.json").exists()
+    assert "Các đoạn dựng" in proj.text("README.md")
     assert any(w["code"] == "output_sheets_failed" for w in st["warnings"]), "the fake video cannot be cut into frames: a warning, and the export is done all the same"
     assert (proj.d / "export" / "export.json").exists()
 

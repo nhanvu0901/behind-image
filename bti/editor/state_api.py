@@ -203,7 +203,7 @@ SPECS: list[Spec] = [
     # ---- export
     Spec("export.start", "export", "Xuất video", "POST", P + "/export/start", long_job=True, follow=LONGJOBS,
          cost=("machine_time", "about 25 minutes"),
-         when="Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported."),
+         when="Once the storyboard is approved. Ready unless an export runs, or the audio mix or timing is missing. Advances until a video is exported. Renders in ~60-second parts keyed by what each part shows; kept parts from the last export are reused, so a small edit costs only its changed parts."),
     Spec("export.cancel", "export", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While an export job of the project runs."),
     # ---- c6auto: the automatic run (bti/auto_run/): `step` is the step the project is at (the export is the last one, so this is its default)
     Spec("auto.run", "export", "Chạy tự động", "POST", P + "/auto/run", long_job=True, follow=LONGJOBS,
@@ -935,10 +935,20 @@ def b_export_start(c: Ctx):
 RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit"})
 
 
-def cost_about(spec: Spec) -> str:
+def cost_about(spec: Spec, c: Ctx | None = None) -> str:
     """What a cost line says: the spec's own words, and for `picks.auto` with the owner's switch for the web search ON, the paid searches it may make
     (`, up to 80 web searches (You.com)`). With the switch off the line is the spec's, so nothing paid is ever implied."""
     about = spec.cost[1]
+    # ---- partexport: tell an agent when prior exported parts exist that a small edit only re-renders its changed parts
+    if spec.id == "export.start" and c is not None:
+        has_parts = False
+        try:
+            pdir = c.d / "cache" / "export" / "parts"
+            has_parts = pdir.is_dir() and any(p.is_file() and ".partial" not in p.name for p in pdir.glob("part_*.mp4"))
+        except OSError:
+            has_parts = False
+        if has_parts or c.work("export") in ("stale", "done"):
+            return "only changed ~60 s parts (full export: about 25 minutes)"
     if spec.id == "picks.auto":
         from bti.picks import websettings
         from bti.picks.auto import webround
@@ -1016,7 +1026,7 @@ def _action(spec: Spec, e: dict, c: Ctx, job: dict | None = None) -> dict:
     out = {"id": spec.id, "step": e.get("step") or spec.step, "label": _label(spec, c), "method": spec.method, "path": path, "body": e["body"],
            "ready": not needs, "needs": needs, "gate": spec.gate, "auto_ok": _auto_ok(spec, c), "long_job": spec.long_job,
            "uses_model": spec.role is not None, "agent": c.agent(spec.role) if spec.role else None,
-           "cost": ({"kind": spec.cost[0], "about": cost_about(spec)} if spec.cost else None) if spec.id != "auto.run" else e.get("run_cost"),      # c6auto: the run's own cost
+           "cost": ({"kind": spec.cost[0], "about": cost_about(spec, c)} if spec.cost else None) if spec.id != "auto.run" else e.get("run_cost"),      # c6auto: the run's own cost
            "advances": bool(e["advances"]) and not needs and spec.id != "auto.run"}
     if spec.follow:
         out["follow"] = spec.follow

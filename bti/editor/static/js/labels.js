@@ -1002,3 +1002,26 @@ export const BOXCAM_LABELS = {
   thing_arrives_late: 'Máy quay tới chi tiết quá muộn',
 };
 Object.assign(CODE, BOXCAM_LABELS);
+
+// ---- worker partexport (2026-11-21): incremental ~60 s export parts (kept after clean; reused on small edits)
+OUTPUT_LABELS.hint = 'Mỗi tác phẩm có một thư mục riêng trong "output": video, lời dẫn, các cảnh và nhật ký. Khi xuất video xong, ứng dụng xóa các tệp tạm của dự án (video ghép tạm, ảnh xem thử, bản ghi từng lượt chạy của agent, nhật ký dài và các đoạn dựng cũ) nhưng giữ lại các đoạn dựng của lần xuất này để khi sửa nhỏ chỉ dựng lại các đoạn đã đổi. Tài liệu, hình, giọng đọc, lịch sử sửa và video không bị xóa. Tắt đi nếu bạn muốn giữ toàn bộ tệp tạm.';
+export const PARTEXPORT_LABELS = {
+  reusedNote: 'Đã có sẵn, dùng lại',
+  renderedNote: 'Đã dựng mới',
+  partsPlan: (toRender, reused, total) => (
+    toRender === 0
+      ? `Dùng lại cả ${total} đoạn (không cần dựng lại)`
+      : reused === 0
+        ? `Sẽ dựng mới ${total}/${total} đoạn`
+        : `Sẽ dựng mới ${toRender} đoạn, dùng lại ${reused} đoạn đã có`
+  ),
+  partsSummary: (rendered, reused) => (
+    rendered === 0
+      ? `Đã dùng lại cả ${reused} đoạn (không phải dựng lại).`
+      : reused === 0
+        ? `Đã dựng mới ${rendered} đoạn (dùng lại 0 đoạn).`
+        : `Đã dựng mới ${rendered} đoạn, dùng lại ${reused} đoạn.`
+  ),
+};
+Object.assign(EXPORT_LABELS, PARTEXPORT_LABELS);
+

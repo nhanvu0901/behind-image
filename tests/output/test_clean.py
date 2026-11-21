@@ -5,7 +5,7 @@ from pathlib import Path
 from bti.output import clean, publish
 from output_helpers import KEY, Project
 
-REMOVED = ["export", "frames", "thumbs", "previews", "uploads", "picks_auto/runs", "voice", "longjobs/work", "wave_abc_4000.json",
+REMOVED = ["export/chapters.ffmeta", "export/parts/part_01_x.mp4", "export/video_all.mp4", "frames", "thumbs", "previews", "uploads", "picks_auto/runs", "voice", "longjobs/work", "wave_abc_4000.json",
            "longjobs/1111111111111111.log", "longjobs/2222222222222222.log"]
 KEPT = ["picks_auto/plan.json", "picks_auto/last.json", "picks_auto/thumbs/x.jpg", "draft/thread.json", "draft/turns/t1/out/c01.json", "picks/suggestions.json", "longjobs/1111111111111111.json", "longjobs/2222222222222222.json", "jobs/3333333333333333.json"]
 
@@ -50,7 +50,7 @@ def test_the_list_of_cache_paths_is_exactly_the_documented_one(proj):
     (proj.d / "cache" / "zzz").mkdir()
     (proj.d / "cache" / "zzz" / "other.bin").write_bytes(b"x")
     got = {p.relative_to(proj.d / "cache").as_posix() for p in clean.targets(proj.d)}
-    assert got == {"export", "frames", "thumbs", "previews", "uploads", "picks_auto/runs", "voice", "longjobs/work", "wave_abc_4000.json",
+    assert got == {"export/chapters.ffmeta", "export/parts/part_01_x.mp4", "export/video_all.mp4", "frames", "thumbs", "previews", "uploads", "picks_auto/runs", "voice", "longjobs/work", "wave_abc_4000.json",
                    "longjobs/1111111111111111.log", "longjobs/2222222222222222.log"}, got
     sync(proj)
     assert (proj.d / "cache" / "zzz" / "other.bin").exists(), "a path that is not on the list is never touched"
@@ -117,3 +117,23 @@ def test_a_second_cleaning_has_nothing_to_do_and_does_not_fail(proj):
     sync(proj)
     r = clean.clean_project(proj.d)
     assert r["done"] is True and r["freed_bytes"] <= 100            # only the log files made since
+
+
+def test_current_export_parts_are_kept_while_stale_parts_and_video_all_go(proj):
+    built(proj)
+    cur = proj.d / "cache" / "export" / "parts" / "part_01_cur.mp4"
+    cur.write_bytes(b"CUR" * 400)
+    m = json.loads((proj.d / "export" / "export.json").read_text(encoding="utf-8"))
+    m["parts"] = [{"index": 1, "key": "cur", "file": "part_01_cur.mp4", "did_render": True}]
+    m["parts_total"], m["parts_rendered"], m["parts_reused"] = 1, 1, 0
+    (proj.d / "export" / "export.json").write_text(json.dumps(m), encoding="utf-8")
+
+    res = sync(proj)
+    c = res["clean"]
+    assert c["done"] is True
+    assert c["kept_parts"] == 1 and c["kept_parts_bytes"] == cur.stat().st_size
+    assert cur.is_file()
+    assert not (proj.d / "cache" / "export" / "parts" / "part_01_x.mp4").exists()
+    assert not (proj.d / "cache" / "export" / "video_all.mp4").exists()
+    md = proj.text("README.md")
+    assert "Các đoạn dựng" in md and "Đã giữ lại **1 đoạn dựng** của lần xuất này" in md

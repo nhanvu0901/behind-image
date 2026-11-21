@@ -96,6 +96,8 @@ def _title_problems(title: str, cited_text: str, where: str, rep: Report) -> Non
     words = title.split()
     if len(words) > R.MAX_WORDS:
         rep.errors.append("%s has %d words: at most %d." % (shown, len(words), R.MAX_WORDS))
+    elif len(words) > R.BEST_MAX_WORDS:
+        rep.warnings.append("%s has %d words: %d or fewer is best (at most %d)." % (shown, len(words), R.BEST_MAX_WORDS, R.MAX_WORDS))
     for phrase in R.vague_in(title):
         rep.errors.append('%s holds "%s": a title that could sit on any video (rule 6).' % (shown, phrase))
     for phrase in R.borrowed_in(title):

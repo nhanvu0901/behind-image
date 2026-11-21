@@ -169,6 +169,8 @@ def _job_row(path: Path, script: bool) -> dict | None:
             detail = ("%s câu" % meta["chunks"]) if meta.get("chunks") else ""
         elif kind == "export" and res.get("report_status"):
             detail = "kiểm tra: " + str(res["report_status"])
+            if res.get("parts_rendered") is not None and res.get("parts_reused") is not None:
+                detail += " · dựng mới %d, dùng lại %d đoạn" % (res["parts_rendered"], res["parts_reused"])
         elif kind in ("outline", "narration"):
             ch = r.get("chapters") if isinstance(r.get("chapters"), list) else []
             detail = str(ch[0].get("message") or "") if kind == "outline" and ch and isinstance(ch[0], dict) else ("%d chương" % len(ch) if ch else "")

@@ -14,7 +14,7 @@ CONFIG_PATH = REPO_ROOT / "config" / "server.json"
 @dataclass(frozen=True)
 class Settings:
     render_threads: int = 4          # `--threads` of the engine (0 = automatic)
-    part_seconds: float = 240.0      # target length of one render part
+    part_seconds: float = 60.0       # target length of one render part
     render_speed: float = 2.0        # minutes of compute per minute of video (measured on the server, W1)
     fps: int = 30
     width: int = 1920

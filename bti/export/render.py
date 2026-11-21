@@ -57,8 +57,8 @@ def render_part(ctx, tools: Tools, settings: Settings, project_dir: Path, spec: 
     name = part_filename(spec, key)
     final = parts_dir / name
     if final.is_file() and final.stat().st_size > 0:
-        ctx.log("%s exists for this storyboard; not rendered again" % name)
-        ctx.progress(1.0, "Đã có sẵn")
+        ctx.log("%s exists for this part key; reused" % name)
+        ctx.progress(1.0, "Đã có sẵn, dùng lại")
         return {"file": name, "skipped": True, "frames": spec.frames}
     make_parent(parts_dir / "x", 3)           # cache/export/parts; never re-creates a deleted project folder
     tmp = parts_dir / (name[:-4] + ".partial.mp4")
@@ -89,7 +89,7 @@ def render_part(ctx, tools: Tools, settings: Settings, project_dir: Path, spec: 
         tmp.unlink(missing_ok=True)
         raise ExportError("frames_mismatch", "part %d has %s frames, expected %d" % (spec.index + 1, frames, spec.frames), status=500, part=spec.index + 1)
     atomic_replace(tmp, final)
-    ctx.progress(1.0)
+    ctx.progress(1.0, "Đã dựng mới")
     return {"file": name, "skipped": False, "frames": frames}
 
 

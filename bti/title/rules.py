@@ -16,6 +16,7 @@ SCHEMA = "bti.title.choice/1"            # the file the agent writes (out/title.
 MAX_CHARS = 60
 BEST_MIN = 28
 BEST_MAX = 55
+BEST_MAX_WORDS = 7                      # concise target matching the owner's accepted examples; exceeding it warns, MAX_WORDS refuses
 MAX_WORDS = 9
 MAX_QUESTION_MARKS = 1
 PERSON_MAX_CHARS = MAX_CHARS            # a title typed by a person or an operator: the same limit, and one line (not the banned phrases)
@@ -99,7 +100,9 @@ def template_values() -> dict:
     return {
         "VAGUE_PHRASES": quoted(s for s, _ in VAGUE),
         "BORROWED_WORDS": quoted(s for s, _ in BORROWED),
-        "BEST_MIN": BEST_MIN, "BEST_MAX": BEST_MAX, "MAX_CHARS": MAX_CHARS, "MAX_WORDS_TEXT": number_word(MAX_WORDS),
+        "BEST_MIN": BEST_MIN, "BEST_MAX": BEST_MAX, "MAX_CHARS": MAX_CHARS,
+        "BEST_MAX_WORDS": BEST_MAX_WORDS, "BEST_MAX_WORDS_TEXT": number_word(BEST_MAX_WORDS),
+        "MAX_WORDS_TEXT": number_word(MAX_WORDS),
         "WRITE_AT_LEAST_TEXT": number_word(WRITE_AT_LEAST), "FORMS_AT_LEAST_TEXT": number_word(FORMS_AT_LEAST),
         "MIN_CANDIDATES_TEXT": number_word(MIN_CANDIDATES), "MAX_CANDIDATES_TEXT": number_word(MAX_CANDIDATES),
         "FIRST_CENTRAL_MIN": FIRST_CENTRAL_MIN, "FORMS_LIST": ", ".join("`%s`" % f for f in FORMS),
@@ -108,4 +111,4 @@ def template_values() -> dict:
 
 def public() -> dict:
     """What `GET /api/projects/{pid}/title` says about the limits (the page shows the counter)."""
-    return {"max_chars": MAX_CHARS, "best": [BEST_MIN, BEST_MAX], "max_words": MAX_WORDS, "person_max_chars": PERSON_MAX_CHARS}
+    return {"max_chars": MAX_CHARS, "best": [BEST_MIN, BEST_MAX], "best_max_words": BEST_MAX_WORDS, "max_words": MAX_WORDS, "person_max_chars": PERSON_MAX_CHARS}

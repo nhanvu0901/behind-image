@@ -59,6 +59,23 @@ def test_the_build_route_fills_the_folder_and_says_so(proj):
         assert (proj.d / "cache" / "export" / "video_all.mp4").exists(), "a rebuild does not clean unless it is asked to"
         r = c.post("/api/projects/%s/output/build" % PID, json={"clean": True})
         assert r.json()["clean"]["done"] is True and not (proj.d / "cache" / "export").exists()
+
+
+def test_the_build_route_with_clean_keeps_current_export_parts(proj):
+    proj.stage("export").caches()
+    cur = proj.d / "cache" / "export" / "parts" / "part_01_cur.mp4"
+    cur.write_bytes(b"CUR" * 500)
+    m = json.loads((proj.d / "export" / "export.json").read_text(encoding="utf-8"))
+    m["parts"] = [{"index": 1, "key": "cur", "file": "part_01_cur.mp4", "did_render": False}]
+    (proj.d / "export" / "export.json").write_text(json.dumps(m), encoding="utf-8")
+    with TestClient(app_of(proj)) as c:
+        r = c.post("/api/projects/%s/output/build" % PID, json={"clean": True})
+        assert r.status_code == 200
+        cl = r.json()["clean"]
+        assert cl["done"] is True and cl["kept_parts"] == 1
+        assert cur.is_file()
+        assert not (proj.d / "cache" / "export" / "parts" / "part_01_x.mp4").exists()
+        assert not (proj.d / "cache" / "export" / "video_all.mp4").exists()
         g = c.get("/api/projects/%s/output" % PID).json()
         assert g["enabled"] and g["key"] == KEY and g["state"]["project"] == PID
         assert c.post("/api/projects/%s/output/build" % PID, json={"clean": "yes"}).status_code == 422
