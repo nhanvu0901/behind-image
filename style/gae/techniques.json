@@ -2720,8 +2720,8 @@
    "serves": [
     "detail"
    ],
-   "use_when": "Use EVERY time a detail sentence names a thing that is small on screen: an object, mark, carved figure, candle or beads. The surroundings darken and the thing stays bright, even in consecutive shots or a near view.",
-   "needs": "Start on the word naming the thing and continue to the shot end, at least 2.5 s. The region covers the thing itself and nothing else; if a stored region is loose, measure a tight region with ./crop and add it to out/regions.json. Leave room to darken: the thing occupies less than about 40% of both frame width and height; the compiler caps camera zoom at the sharp limit so tight small regions stay under 40% automatically. Keep the centre inside the frame, 5% from each edge, throughout; floor is 0.6 or more.",
+   "use_when": "Use EVERY time a detail sentence names a thing that is small on screen: an object, mark, carved figure, or a narrow or flat thing in a wide frame (a bench, a rug, a string of beads, a candle). The surroundings darken and the thing stays bright, even in consecutive shots or a near view.",
+   "needs": "Start on the word naming the thing and continue to the shot end, at least 2.5 s. The region covers the thing itself and nothing else; if a stored region is loose, measure a tight region with ./crop and add it to out/regions.json. Leave room to darken: the thing is either under about 40% of both frame width and height (the compiler caps camera zoom at the sharp limit so tight small regions stay under 40% automatically) or a narrow or flat thing whose narrower side is under 20% of the frame's matching side. Keep the centre inside the frame, 5% from each edge, throughout; floor is 0.6 or more.",
    "never_when": "The thing fills the frame; the sentence concerns the whole picture, a face or figure, or something outside the painting; the opening shot or channel-name beat; two spotlights at the same moment; together with AN-01 on the same thing.",
    "example": "Arnolfini b0044: \"Only one candle is lit, and it has been read as the seeing eye of God.\"",
    "slots": [
@@ -10729,14 +10729,14 @@
     "context"
    ],
    "description": "A dark translucent strip across the lower frame with one white caps line naming the detail; the right end of the strip fades out.",
-   "usage_rule": "Name an unfamiliar object in a strip; if it is small on screen, use HI-01 on that thing as well.",
+   "usage_rule": "Name an unfamiliar object in a strip; if it is small on screen (including a narrow or flat thing in a wide frame), use HI-01 on that thing as well.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
    "use_when": "The sentence names, for the first time, a thing that is on the screen now and whose name a stranger to the painting would not know: \"adder's tongues\", \"touchstones\", \"a master's mark\". A dark strip with the name in capitals shows for about three seconds, starting on the word that names the thing.",
-   "needs": "The name in the narration’s own words (one to five words, never a sentence). The thing is already in the frame when the label appears. Use the strip with HI-01 on the thing, never alone for a small thing.",
+   "needs": "The name in the narration’s own words (one to five words, never a sentence). The thing is already in the frame when the label appears. Use the strip with HI-01 on the thing, never alone for a small thing (including a narrow or flat thing in a wide frame, such as a bench, a rug, a string of beads, or a candle).",
    "never_when": "The thing was labelled before; the text is an opinion, a date or a whole sentence; the thing is not on screen; the picture is another artwork (X-ANN-02 gives its title, maker and date); the sentence names three or more parts one after another (KEY-01); the thing needs no name (a face, a hand).",
    "example": "Arnolfini b0023: \"Behind the joined hands stands a bench called a settle, its red velvet cushion a sign of money.\" (label SETTLE with a spotlight on the bench)",
    "slots": [

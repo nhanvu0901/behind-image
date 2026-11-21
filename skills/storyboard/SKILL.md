@@ -49,8 +49,8 @@ then `proposal.apply` (`{"accept": "all"}` for the first draft; the proposal id 
 | `set_technique` | Change the technique of a shot. Parameters not given take the defaults of the new technique (the same as POST .../defaults); slots that still fit are kept; the shot's note (the reason written for the old treatment) is cleared. |
 | `set_params` | Change some parameters of a shot or of one of its overlays. A value of null returns that parameter to its default. |
 | `set_slot` | Put an asset into a slot of a shot or overlay (or empty the slot with asset null). When the main picture of a shot changes, its camera keys are fitted to the new picture the way the page does and its note (the reason written for the old picture) is cleared. |
-| `add_overlay` | Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not given take the defaults of the technique; it starts at the start of the shot and lasts 3 s unless said otherwise. |
-| `set_overlay` | Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end, intent or note. Use set_params for its parameters. |
+| `add_overlay` | Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not given take the defaults of the technique; it starts at the start of the shot and, when dur and end are left out, HI-01 runs to the end of its shot while others last 3 s. A length past the end of the shot is cut to the shot. |
+| `set_overlay` | Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end (cut to the shot if past its end), intent or note. Use set_params for its parameters. |
 | `remove_overlay` | Remove an overlay from a shot. |
 | `split_shot` | Cut a shot in two at a time. Each half keeps the camera pose it had at that time and the overlays go to the half they start in (an overlay that crosses the cut is shortened), as when the page cuts. |
 | `merge_shots` | Merge shots that follow each other into the first of them: it keeps its camera poses over the time it had, takes the overlays of the others and lasts until the end of the last. |

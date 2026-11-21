@@ -330,3 +330,15 @@ def test_a_whole_chapter_scope_is_the_shots_of_that_chapter_and_nothing_else(box
     box.wait_job(r.json()["job_id"])
     rec = box.changes("storyboard")[0]
     assert rec["scope"]["shots"] and "s0001" in rec["scope"]["shots"] and "s0010" not in rec["scope"]["shots"]
+
+
+def test_an_overlay_dur_slightly_past_shot_end_is_cut_on_first_try(box):
+    # s0002 spans word22 (8.10 s) to word48 (17.20 s); word28 starts at 10.20 s (7.00 s remaining)
+    op = {"op": "add_overlay", "shot": "s0002", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 120, "ry": 120},
+          "start": {"w": 28}, "dur": 7.03}
+    box.model([ans([op], summary="Đã thêm vùng sáng đến hết cảnh.")])
+    job, turn = box.run_edit("rọi sáng vùng giữa đến hết cảnh", SCOPE)
+    assert job["state"] == "done", why(job)
+    assert turn["status"] == "applied" and turn["repairs"] == 0
+    assert box.shot("s0002")["overlays"][-1]["dur"] == pytest.approx(7.0, abs=1e-6)
+    assert "cắt đến hết cảnh" in turn["batch_changes"][0]["what"]

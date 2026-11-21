@@ -112,3 +112,57 @@ def test_region_must_stay_small_through_all_painting_shots_of_line(tmp_path):
     for key in second['params']['camera']: key['zoom']=4
     c.shots.append(second); c.spans=[(0,4),(4,8)]; c.specs.append(c.bundle.spec('CAM-01'))
     assert V._small_detail_not_lit(c) == []
+
+
+def _region_frame_ctx(tmp_path, w, h, region, overlay=None):
+    cx, cy, z = V.region_frame(region, w, h)
+    asset = {'width': w, 'height': h, 'regions': {'THING': region}}
+    shot = {'id': 's1', 'start': {'t': 0}, 'technique': 'CAM-05', 'slots': {'image': {'asset': 'A', 'region': 'THING'}},
+            'params': {'camera': [{'at': {'rel': 0}, 'cx': cx, 'cy': cy, 'zoom': z}, {'at': {'rel': 1}, 'cx': cx, 'cy': cy, 'zoom': z}]},
+            'overlays': [overlay] if overlay else []}
+    sb = {'assets': {'A': asset}, 'shots': [shot]}
+    beat = {'id': 'b1', 'start': 0, 'end': 8, 'w0': 0, 'w1': 0}
+    entry = {'items': [{'asset': 'A', 'region': 'THING', 'role': 'detail'}], 'kinds': ['detail']}
+    (tmp_path / 'picks.json').write_text(json.dumps({'main_asset': 'A', 'beats': {'b1': entry}}))
+    return V._Ctx(sb, Timing({'duration': 8, 'words': [], 'beats': [beat]}), R.load_bundle('gae'), tmp_path, [0], 8, lambda *_: None)
+
+
+def test_tall_narrow_and_long_flat_regions_are_flagged_until_lit(tmp_path):
+    # Tall narrow on 1920x1080 (300x670 = 15.6% W x 62.0% H)
+    tall = {'x': 960, 'y': 540, 'rx': 150, 'ry': 335}
+    c = context(tmp_path, region=tall)
+    issues = V._small_detail_not_lit(c)
+    assert len(issues) == 1 and issues[0]['args']['limit'] == V.THIN_ON_SCREEN
+    assert V._small_detail_not_lit(context(tmp_path, region=tall, overlay=ov(at='THING', rx=150, ry=335))) == []
+
+    # Real settle cushion shape (588x1288 on 3840x5253 at region_frame: zoom 0.52, 15.9% W x 62.0% H)
+    settle = {'x': 2010, 'y': 2592, 'rx': 294, 'ry': 644}
+    (tmp_path / 'settle').mkdir()
+    cs = _region_frame_ctx(tmp_path / 'settle', 3840, 5253, settle)
+    assert len(V._small_detail_not_lit(cs)) == 1
+    assert V._small_detail_not_lit(_region_frame_ctx(tmp_path / 'settle', 3840, 5253, settle, ov(at='THING', rx=294, ry=644))) == []
+    assert V.region_frame_info(settle, 3840, 5253)['needs_spotlight'] is True
+
+    # Long flat on 1920x1080 (1200x160 = 62.5% W x 14.8% H) and wide painting at region_frame (1400x180 on 3840x2600)
+    flat = {'x': 960, 'y': 540, 'rx': 600, 'ry': 80}
+    assert len(V._small_detail_not_lit(context(tmp_path, region=flat))) == 1
+    assert V._small_detail_not_lit(context(tmp_path, region=flat, overlay=ov(at='THING', rx=600, ry=80))) == []
+
+    wide_flat = {'x': 1920, 'y': 1300, 'rx': 700, 'ry': 90}
+    (tmp_path / 'flat').mkdir()
+    assert len(V._small_detail_not_lit(_region_frame_ctx(tmp_path / 'flat', 3840, 2600, wide_flat))) == 1
+    assert V.region_frame_info(wide_flat, 3840, 2600)['needs_spotlight'] is True
+
+
+@pytest.mark.parametrize('name,w,h,reg', [
+    ('woman_head', 3840, 5253, {'x': 3034, 'y': 1287, 'rx': 422, 'ry': 394}),
+    ('tight_face', 3840, 5253, {'x': 3000, 'y': 1200, 'rx': 130, 'ry': 195}),
+    ('upright_figure_full', 3840, 5253, {'x': 1100, 'y': 2600, 'rx': 960, 'ry': 2180}),
+    ('upright_figure_tight', 3840, 5253, {'x': 1100, 'y': 2600, 'rx': 650, 'ry': 2100}),
+    ('landscape_figure_tall', 3840, 2600, {'x': 1920, 'y': 1300, 'rx': 325, 'ry': 975}),
+])
+def test_face_and_figure_shapes_are_not_flagged_as_thin(tmp_path, name, w, h, reg):
+    d = tmp_path / name
+    d.mkdir()
+    assert V._small_detail_not_lit(_region_frame_ctx(d, w, h, reg)) == []
+    assert V.region_frame_info(reg, w, h)['needs_spotlight'] is False

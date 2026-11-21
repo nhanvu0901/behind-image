@@ -236,9 +236,57 @@ def test_add_overlay_defaults_and_a_ref_used_later(client):
 
 
 def test_add_overlay_lasts_three_seconds_or_what_is_left(client):
-    sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100},
+    sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "AN-01", "params": {"at": "CENTRE", "radius": 100},
                  "start": {"t": 29.0}}])
     assert shot(client, "s0004")["overlays"][-1]["dur"] == 1.15                                      # the shot ends at 30.15 s
+
+
+def test_add_overlay_hi01_without_dur_or_end_runs_to_end_of_shot(client):
+    # s0004 spans word62 (22.10 s) to word85 (30.15 s); default ramp_out is 0.5 s -> ends at 29.65 s (7.55 s)
+    r = sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100}}])
+    assert r.status_code == 200, r.text
+    o = shot(client, "s0004")["overlays"][-1]
+    assert o["start"] == shot(client, "s0004")["start"] and o["dur"] == pytest.approx(7.55, abs=1e-6) and "end" not in o
+
+    # Late start shifts earlier to keep 2.5 s before shot_end - ramp_out (27.15 .. 29.65 s)
+    r2 = sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100},
+                      "start": {"t": 29.0}}])
+    assert r2.status_code == 200, r2.text
+    o2 = shot(client, "s0004")["overlays"][-1]
+    assert o2["start"] == {"t": 27.15} and o2["dur"] == pytest.approx(2.5, abs=1e-6)
+
+    # Zero ramp_out runs right to the end of the shot
+    r3 = sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100, "ramp_out": 0}}])
+    assert r3.status_code == 200, r3.text
+    assert shot(client, "s0004")["overlays"][-1]["dur"] == pytest.approx(30.15 - word_t(62), abs=1e-6)
+
+    # Shot shorter than default ramp_out (0.40 s <= 0.50 s) still gets positive dur covering the shot
+    r4 = sb(client, [{"op": "split_shot", "shot": "s0004", "at": 29.75, "snap": False, "ref": "tiny"},
+                     {"op": "add_overlay", "shot": "$tiny", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100}}])
+    assert r4.status_code == 200, r4.text
+    assert shot(client, r4.json()["created"]["shots"][0])["overlays"][-1]["dur"] == pytest.approx(0.40, abs=1e-6)
+
+
+def test_add_overlay_cuts_dur_or_end_past_shot_end_and_refuses_outside_start(client):
+    # s0004 starts at word62 (22.10 s) and ends at 30.15 s; word70 starts at 24.90 s (5.25 s remaining)
+    r1 = sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100},
+                      "start": {"w": 70}, "dur": 5.28}])                                              # 0.03 s too long
+    assert r1.status_code == 200, r1.text
+    assert shot(client, "s0004")["overlays"][-1]["dur"] == pytest.approx(5.25, abs=1e-6)
+    assert "cắt đến hết cảnh" in r1.json()["changes"][0]["what"]
+
+    r2 = sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 100, "ry": 100},
+                      "dur": 60}])                                                                   # much too long
+    assert r2.status_code == 200, r2.text
+    assert shot(client, "s0004")["overlays"][-1]["dur"] == pytest.approx(30.15 - word_t(62), abs=1e-6)
+    assert "cắt đến hết cảnh" in r2.json()["changes"][0]["what"]
+
+    r3 = sb(client, [{"op": "add_overlay", "shot": "s0004", "technique": "AN-01", "params": {"at": "CENTRE", "radius": 100},
+                      "start": {"w": 66}, "end": {"w": 90}}])                                        # end anchor past shot end
+    assert r3.status_code == 200, r3.text
+    o3 = shot(client, "s0004")["overlays"][-1]
+    assert "end" not in o3 and o3["dur"] == pytest.approx(30.15 - word_t(66), abs=1e-6)
+    assert "cắt đến hết cảnh" in r3.json()["changes"][0]["what"]
 
 
 @pytest.mark.parametrize("op,code,where", [
@@ -247,13 +295,13 @@ def test_add_overlay_lasts_three_seconds_or_what_is_left(client):
     ({"op": "add_overlay", "shot": "s0004", "technique": "CAM-01"}, "wrong_technique_kind", ["ops[0].technique"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "NOPE-99"}, "unknown_technique", ["ops[0].technique"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {"w": 10}}, "invalid_field", ["ops[0].start"]),
+    ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {"w": 85}}, "invalid_field", ["ops[0].start"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {"w": 9999}}, "invalid_field", ["ops[0].start"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {"w": 70, "text": "wrong"}}, "invalid_field", ["ops[0].start"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {}}, "invalid_field", ["ops[0].start"]),
-    ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "dur": 60}, "invalid_field", ["ops[0].dur"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "dur": 0}, "invalid_field", ["ops[0].dur"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "dur": 2, "end": {"w": 70}}, "invalid_field", ["ops[0].end"]),
-    ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {"w": 66}, "end": {"w": 90}}, "invalid_field", ["ops[0].end"]),
+    ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "start": {"w": 70}, "end": {"w": 66}}, "invalid_field", ["ops[0].end"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "NOPE"}}, "unknown_region", ["ops[0].params.at"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"zzz": 1}}, "unknown_param", ["ops[0].params.zzz"]),
     ({"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"rx": -4}}, "invalid_field", ["ops[0].params.rx"]),
@@ -272,6 +320,26 @@ def test_set_overlay(client):
     s = shot(client, "s0002")
     assert s["overlays"][0]["dur"] == 3.5 and s["overlays"][0]["note"] == "ring" and s["overlays"][0]["source"] == "agent"
     assert r.json()["changes"] == [{"target": {"shot": "s0002", "overlay": "o1"}, "time": "0:08", "what": "Cảnh 2: sửa lớp phủ " + vi("HI-01")}]
+
+
+def test_set_overlay_cuts_dur_or_end_past_shot_end(client):
+    # s0002 ends at word48 (17.20 s); o1 starts at word28 (10.20 s), 7.00 s remaining
+    r1 = sb(client, [{"op": "set_overlay", "shot": "s0002", "overlay": "o1", "dur": 20}])
+    assert r1.status_code == 200, r1.text
+    assert shot(client, "s0002")["overlays"][0]["dur"] == pytest.approx(7.0, abs=1e-6)
+    assert "cắt đến hết cảnh" in r1.json()["changes"][0]["what"]
+
+    r2 = sb(client, [{"op": "set_overlay", "shot": "s0002", "overlay": "o2", "end": {"w": 90}}])
+    assert r2.status_code == 200, r2.text
+    o2 = shot(client, "s0002")["overlays"][1]
+    assert "end" not in o2 and o2["dur"] == pytest.approx(word_t(48) - word_t(34), abs=1e-6)
+    assert "cắt đến hết cảnh" in r2.json()["changes"][0]["what"]
+
+    # Moving start later while keeping existing dur=7.0 also cuts dur to shot end
+    r3 = sb(client, [{"op": "set_overlay", "shot": "s0002", "overlay": "o1", "start": {"w": 40}}])
+    assert r3.status_code == 200, r3.text
+    assert shot(client, "s0002")["overlays"][0]["dur"] == pytest.approx(word_t(48) - word_t(40), abs=1e-6)
+    assert "cắt đến hết cảnh" in r3.json()["changes"][0]["what"]
 
 
 def test_set_overlay_start_end_and_open_end(client):
@@ -297,10 +365,9 @@ def test_set_overlay_technique_takes_new_defaults(client):
 @pytest.mark.parametrize("op,code,where", [
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o1"}, "invalid_field", ["ops[0]"]),
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "start": {"w": 10}}, "invalid_field", ["ops[0].start"]),
-    ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "dur": 20}, "invalid_field", ["ops[0].dur"]),
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "dur": -1}, "invalid_field", ["ops[0].dur"]),
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "dur": 2, "end": {"w": 40}}, "invalid_field", ["ops[0].end"]),
-    ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "end": {"w": 90}}, "invalid_field", ["ops[0].end"]),
+    ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "end": {"w": 25}}, "invalid_field", ["ops[0].end"]),
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "technique": "CAM-01"}, "wrong_technique_kind", ["ops[0].technique"]),
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o1", "technique": "NOPE-99"}, "unknown_technique", ["ops[0].technique"]),
     ({"op": "set_overlay", "shot": "s0002", "overlay": "o9", "dur": 2}, "unknown_overlay", ["ops[0].overlay"]),
@@ -522,13 +589,22 @@ def test_replace_range_with_overlays_and_inherited_slots(client):
      "unknown_asset", ["ops[0].shots[0].slots.image.asset"]),
     ({"op": "replace_range", "from_shot": "s0007", "to_shot": "s0008", "shots": [{"technique": "CAM-01", "params": {"zzz": 1}}]}, "unknown_param",
      ["ops[0].shots[0].params.zzz"]),
-    ({"op": "replace_range", "from_shot": "s0007", "to_shot": "s0008", "shots": [{"technique": "CAM-01", "overlays": [{"technique": "HI-01", "dur": 99}]}]},
-     "invalid_field", ["ops[0].shots[0].overlays[0].dur"]),
+    ({"op": "replace_range", "from_shot": "s0007", "to_shot": "s0008", "shots": [{"technique": "CAM-01", "overlays": [{"technique": "HI-01", "start": {"w": 130}}]}]},
+     "invalid_field", ["ops[0].shots[0].overlays[0].start"]),
     ({"op": "replace_range", "from_shot": "s0007", "to_shot": "s0008", "shots": [{"technique": "CAM-01", "extra": 1}]}, "invalid_field",
      ["ops[0].shots[0].extra"]),
 ])
 def test_replace_range_wrong_fields(client, op, code, where):
     refused(client, [op], 422, code, where)
+
+
+def test_replace_range_cuts_overlay_past_new_shot_end(client):
+    r = sb(client, [{"op": "replace_range", "from_shot": "s0007", "to_shot": "s0008", "shots": [
+        {"technique": "CAM-01", "overlays": [{"technique": "HI-01", "dur": 99}]}]}])
+    assert r.status_code == 200, r.text
+    new_id = r.json()["created"]["shots"][0]
+    assert shot(client, new_id)["overlays"][0]["dur"] == pytest.approx(word_t(200) - word_t(140), abs=1e-6)
+    assert "cắt đến hết cảnh" in r.json()["changes"][0]["what"]
 
 
 # ---------------------------------------------------------------- lock / unlock

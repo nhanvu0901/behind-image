@@ -10,6 +10,7 @@ error that says what to change; the engine's own validation then judges the whol
 from __future__ import annotations
 
 import copy
+import math
 import re
 from typing import Any
 
@@ -48,8 +49,8 @@ SLOTS = S.free_object("Slots by name, `{slot: {\"asset\": key}}` (a text slot ta
 OVERLAY_FIELDS = {
     "technique": TECH,
     "start": S.any_of(ANCHOR, title="an anchor", description="When the overlay starts; default: the start of the shot."),
-    "dur": S.number("How long it lasts, in seconds; default: 3 s or what is left of the shot.", exclusive_minimum=0),
-    "end": S.any_of(ANCHOR, title="an anchor", description="When it ends (instead of dur)."),
+    "dur": S.number("How long it lasts, in seconds; cut to the end of the shot if longer. Leave out for HI-01 to run to the end of its shot (others default to 3 s).", exclusive_minimum=0),
+    "end": S.any_of(ANCHOR, title="an anchor", description="When it ends (instead of dur); cut to the end of the shot if later."),
     "params": S.free_object("Parameters by name; those not given take the defaults of the technique."),
     "slots": SLOTS, "intent": INTENT, "note": NOTE}
 EPS = 1e-6
@@ -304,22 +305,29 @@ def _anchor_arg(ctx, value, field: str, *, snap: bool = True) -> tuple[dict, flo
     return a, t
 
 
-def _overlay_window(ctx, ot0: float, ot1: float, t0: float, t1: float, field: str, shot_id: str, end_name: str = "dur") -> None:
-    """An overlay lies inside its shot [t0, t1]. `field` prefixes the paths of the errors; `end_name` is the field that gave its end
-    (`dur`, or `end` when an end anchor was given)."""
+def _cut_dur(ot0: float, t1: float) -> float:
+    """Duration from `ot0` to `t1`, rounded down to milliseconds so `ot0 + dur <= t1` never fails engine validation."""
+    rem = t1 - ot0
+    d = math.floor(rem * 1000.0 + 1e-9) / 1000.0
+    return d if d > 0 else rem
+
+
+def _overlay_window(ctx, ot0: float, ot1: float, t0: float, t1: float, field: str, shot_id: str, end_name: str = "dur") -> tuple[float, bool]:
+    """An overlay lies inside its shot [t0, t1]; an end past `t1` is cut to `t1`. Returns `(clamped_ot1, was_cut)`."""
     def at(name: str) -> str:
         return "%s.%s" % (field, name) if field else name
     if ot0 < t0 - EPS or ot0 >= t1 - EPS:
         ctx.bad(at("start"), "starts at %.2f s, outside shot %s (%.2f to %.2f s)" % (ot0, shot_id, t0, t1))
-    if ot1 > t1 + EPS:
-        ctx.bad(at(end_name), "ends at %.2f s, after shot %s ends (%.2f s): %s" % (ot1, shot_id, t1, "use a shorter dur" if end_name == "dur" else "use an earlier end"))
     if ot1 <= ot0 + EPS:
         ctx.bad(at(end_name), "an overlay must last longer than 0 seconds")
+    if ot1 > t1 + EPS:
+        return t1, True
+    return ot1, False
 
 
-def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str, base: str, *, existing: bool = False) -> dict:
+def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str, base: str, *, existing: bool = False) -> tuple[dict, bool]:
     """A new overlay inside `shot` (which spans [t0, t1]) from the fields of an add_overlay: the page's `addOverlay`, plus the
-    checks. `base` is the field prefix of the errors ('' or 'shots[1].overlays[0].')."""
+    checks, cutting any end past `t1` to the shot. `base` is the field prefix of the errors ('' or 'shots[1].overlays[0].')."""
     tl = ctx.facts.timeline
     spec = _tech(ctx, spec_o["technique"], ("overlay",), base + "technique", existing=existing)
     if spec_o.get("start") is not None:
@@ -329,18 +337,36 @@ def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str
         ot0 = tl.resolve(a)
         if ot0 is None:
             a, ot0 = {"t": jround(t0, 3)}, t0
+    if ot0 < t0 - EPS or ot0 >= t1 - EPS:
+        ctx.bad(base + "start", "starts at %.2f s, outside shot %s (%.2f to %.2f s)" % (ot0, shot["id"], t0, t1))
     if spec_o.get("dur") is not None and spec_o.get("end") is not None:
         ctx.bad(base + "end", "give dur or end, not both")
     ov: dict = {"id": oid, "technique": spec_o["technique"], "intent": spec_o.get("intent") or (spec.get("intents") or [None])[0],
                 "start": a}
+    cut = False
+    has_len = spec_o.get("end") is not None or spec_o.get("dur") is not None
     if spec_o.get("end") is not None:
         e, ot1 = _anchor_arg(ctx, spec_o["end"], base + "end")
-        ov["end"] = e
-    else:
-        dur = float(spec_o["dur"]) if spec_o.get("dur") is not None else jround(min(3.0, t1 - ot0), 2)
+        ot1, cut = _overlay_window(ctx, ot0, ot1, t0, t1, base.rstrip("."), shot["id"], "end")
+        if cut:
+            dur = _cut_dur(ot0, t1)
+            ov["dur"] = dur
+            ot1 = ot0 + dur
+        else:
+            ov["end"] = e
+    elif spec_o.get("dur") is not None:
+        dur = float(spec_o["dur"])
+        ot1, cut = _overlay_window(ctx, ot0, ot0 + dur, t0, t1, base.rstrip("."), shot["id"], "dur")
+        if cut:
+            dur = _cut_dur(ot0, t1)
+            ot1 = ot0 + dur
+        ov["dur"] = dur
+    elif spec_o["technique"] != "HI-01":
+        dur = min(3.0, _cut_dur(ot0, t1))
         ov["dur"] = dur
         ot1 = ot0 + dur
-    _overlay_window(ctx, ot0, ot1, t0, t1, base.rstrip("."), shot["id"], "end" if "end" in ov else "dur")
+    else:
+        ot1 = t1
     slots = _check_slots(ctx, spec, spec_o["slots"], base + "slots") if spec_o.get("slots") else {}
     shot_slots = {**(shot.get("slots") or {}), **slots}
     given = spec_o.get("params") or {}
@@ -351,13 +377,33 @@ def _build_overlay(ctx, shot: dict, spec_o: dict, t0: float, t1: float, oid: str
         elif name not in {p["name"] for p in spec["params"]}:
             ctx.bad("%sparams.%s" % (base, name), "%r is not a parameter of %s" % (name, spec["id"]),
                     allowed=sorted(p["name"] for p in spec["params"]), code="unknown_param")
-    params = _defaults(ctx, spec_o["technique"], "overlay", shot, shot_slots, ot1 - ot0)
+    params = _defaults(ctx, spec_o["technique"], "overlay", shot, shot_slots, max(0.0, ot1 - ot0))
     params.update({k: v for k, v in given.items() if v is not None})
+    if not has_len and spec_o["technique"] == "HI-01":
+        from bti.draft.defaults import overlay_default_window
+        win0, win1 = overlay_default_window("HI-01", ot0, t0, t1, params, [], None)
+        if win1 <= win0 + EPS:
+            win0, win1 = ot0, t1
+        if abs(win0 - ot0) > EPS:
+            if "w" in a:
+                a = dict(a, off=jround(win0 - float(tl.words[a["w"]]["s"]), 4))
+            else:
+                a = {"t": jround(win0, 3)}
+            resolved = tl.resolve(a)
+            if resolved is None or resolved < t0 - EPS:
+                a = {"t": jround(max(t0, win0), 3)}
+                ot0 = a["t"]
+            else:
+                ot0 = resolved
+            ov["start"] = a
+        dur = _cut_dur(ot0, min(t1, win1))
+        ov["dur"] = dur
+        ot1 = ot0 + dur
     ov["params"] = params
     if slots:
         ov["slots"] = slots
     ov.update({"locked": False, "source": ctx.source, "note": spec_o.get("note") or ""})
-    return ov
+    return ov, cut
 
 
 # ---------------------------------------------------------------- operations: technique, parameters, slots
@@ -508,38 +554,42 @@ def set_slot(ctx, o):
 # ---------------------------------------------------------------- operations: overlays
 @op("storyboard", "add_overlay",
     summary="Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not given take the defaults of the technique; "
-            "it starts at the start of the shot and lasts 3 s unless said otherwise.",
+            "it starts at the start of the shot and, when dur and end are left out, HI-01 runs to the end of its shot while others last 3 s. "
+            "A length past the end of the shot is cut to the shot.",
     schema=S.obj("add_overlay", ["shot", "technique"], {"shot": SHOT, "ref": REF, **OVERLAY_FIELDS}),
     example={"op": "add_overlay", "shot": "s0004", "technique": "HI-01", "params": {"at": "CENTRE", "rx": 220, "ry": 220},
              "start": {"w": 70}, "dur": 4, "ref": "ring"},
-    sentences={"default": "Cảnh {n}: thêm lớp phủ {technique}", "region": "Cảnh {n}: thêm lớp phủ {technique} ở vùng {region}"})
+    sentences={"default": "Cảnh {n}: thêm lớp phủ {technique}", "region": "Cảnh {n}: thêm lớp phủ {technique} ở vùng {region}",
+               "default_cut": "Cảnh {n}: thêm lớp phủ {technique} (cắt đến hết cảnh)",
+               "region_cut": "Cảnh {n}: thêm lớp phủ {technique} ở vùng {region} (cắt đến hết cảnh)"})
 def add_overlay(ctx, o):
     i, shot = _find(ctx, o["shot"])
     _guard(ctx, shot)
     t0, t1 = _span(ctx, i)
     ctx.touch("shot:" + shot["id"])
-    ov = _build_overlay(ctx, shot, o, t0, t1, next_overlay_id(ctx.doc), "")
+    ov, cut = _build_overlay(ctx, shot, o, t0, t1, next_overlay_id(ctx.doc), "")
     shot.setdefault("overlays", []).append(ov)
     _mark(ctx, shot)
     ctx.created["overlays"].append({"shot": shot["id"], "overlay": ov["id"]})
     ctx.define_ref(o.get("ref"), "overlay", ov["id"], shot["id"])
     region = _region_of(ctx, ov.get("params"), _primary_asset(shot, ov))
-    ctx.say({"shot": shot["id"], "overlay": ov["id"]}, _when(ctx, shot), "region" if region else "default", n=i + 1,
+    variant = ("region_cut" if cut else "region") if region else ("default_cut" if cut else "default")
+    ctx.say({"shot": shot["id"], "overlay": ov["id"]}, _when(ctx, shot), variant, n=i + 1,
             technique=_label(ctx, ov["technique"]), region=region or "")
 
 
 @op("storyboard", "set_overlay",
-    summary="Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end, intent or note. "
+    summary="Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end (cut to the shot if past its end), intent or note. "
             "Use set_params for its parameters.",
     schema=S.obj("set_overlay", ["shot", "overlay"], {
         "shot": SHOT, "overlay": OVERLAY, "technique": TECH,
         "start": OVERLAY_FIELDS["start"],
-        "dur": S.number("Duration in seconds, or null to run to the end of the shot.", exclusive_minimum=0, nullable=True),
+        "dur": S.number("Duration in seconds (cut to the shot if longer), or null to run to the end of the shot.", exclusive_minimum=0, nullable=True),
         "end": S.any_of(ANCHOR, {"type": "null", "title": "null"}, title="an anchor or null",
                         description="When it ends (instead of dur); null removes it."),
         "intent": INTENT, "note": NOTE}),
     example={"op": "set_overlay", "shot": "s0002", "overlay": "o1", "dur": 3.5},
-    sentences="Cảnh {n}: sửa lớp phủ {technique}")
+    sentences={"default": "Cảnh {n}: sửa lớp phủ {technique}", "cut": "Cảnh {n}: sửa lớp phủ {technique} (cắt đến hết cảnh)"})
 def set_overlay(ctx, o):
     i, shot = _find(ctx, o["shot"])
     _guard(ctx, shot)
@@ -584,14 +634,18 @@ def set_overlay(ctx, o):
         new["intent"] = o["intent"]
     if "note" in o:
         new["note"] = o["note"]
+    cut = False
     raw0 = tl.resolve(new.get("start"))
     if raw0 is not None and ("start" in o or "dur" in o or "end" in o):
         end_t = (raw0 + float(new["dur"])) if is_num(new.get("dur")) else (tl.resolve(new["end"]) if isinstance(new.get("end"), dict) else t1)
-        _overlay_window(ctx, raw0, end_t if end_t is not None else t1, t0, t1, "", shot["id"], "end" if isinstance(new.get("end"), dict) else "dur")
+        _, cut = _overlay_window(ctx, raw0, end_t if end_t is not None else t1, t0, t1, "", shot["id"], "end" if isinstance(new.get("end"), dict) else "dur")
+        if cut:
+            new.pop("end", None)
+            new["dur"] = _cut_dur(raw0, t1)
     ov.clear()
     ov.update(new)
     _mark(ctx, ov)
-    ctx.say({"shot": shot["id"], "overlay": ov["id"]}, _when(ctx, shot), n=i + 1, technique=_label(ctx, ov["technique"]))
+    ctx.say({"shot": shot["id"], "overlay": ov["id"]}, _when(ctx, shot), "cut" if cut else "default", n=i + 1, technique=_label(ctx, ov["technique"]))
 
 
 @op("storyboard", "remove_overlay",
@@ -769,7 +823,7 @@ def move_boundary(ctx, o):
     example={"op": "replace_range", "from_shot": "s0007", "to_shot": "s0008",
              "shots": [{"technique": "CAM-01", "intent": "explore", "slots": {"image": {"asset": "C"}}, "ref": "first"},
                        {"technique": "STATIC-01", "start": {"w": 154}, "slots": {"image": {"asset": "B"}}}]},
-    sentences="Cảnh {rng}: thay bằng {k} cảnh mới")
+    sentences={"default": "Cảnh {rng}: thay bằng {k} cảnh mới", "cut": "Cảnh {rng}: thay bằng {k} cảnh mới (lớp phủ cắt đến hết cảnh)"})
 def replace_range(ctx, o):
     tl = ctx.facts.timeline
     i, first = _find(ctx, o["from_shot"], "from_shot")
@@ -821,6 +875,7 @@ def replace_range(ctx, o):
         ctx.touch("shot:" + nid)
     new_shots = []
     oid_floor = _overlay_floor(ctx.doc)
+    any_cut = False
     for k, ns in enumerate(o["shots"]):
         base = "shots[%d]." % k
         spec = _tech(ctx, ns["technique"], ("base", "card"), base + "technique", existing=ns["technique"] in carried_base)
@@ -843,7 +898,9 @@ def replace_range(ctx, o):
         shot["params"] = params
         for m, so in enumerate(ns.get("overlays") or []):
             oid_floor += 1
-            shot["overlays"].append(_build_overlay(ctx, shot, so, n0, n1, "o%d" % oid_floor, "%soverlays[%d]." % (base, m), existing=so["technique"] in carried_overlay))
+            ov, ov_cut = _build_overlay(ctx, shot, so, n0, n1, "o%d" % oid_floor, "%soverlays[%d]." % (base, m), existing=so["technique"] in carried_overlay)
+            any_cut = any_cut or ov_cut
+            shot["overlays"].append(ov)
         new_shots.append(shot)
     ctx.doc["shots"][i:j + 1] = new_shots
     for k, ns in enumerate(o["shots"]):
@@ -853,7 +910,7 @@ def replace_range(ctx, o):
         for ov in new_shots[k]["overlays"]:
             ctx.created["overlays"].append({"shot": new_ids[k], "overlay": ov["id"]})
         ctx.define_ref(ns.get("ref"), "shot", new_ids[k])
-    ctx.say({"shot": new_ids[0]}, fmt_time(t_start), rng=str(i + 1) if i == j else "%d–%d" % (i + 1, j + 1), k=len(new_shots))
+    ctx.say({"shot": new_ids[0]}, fmt_time(t_start), "cut" if any_cut else "default", rng=str(i + 1) if i == j else "%d–%d" % (i + 1, j + 1), k=len(new_shots))
 
 
 # ---------------------------------------------------------------- operations: locks

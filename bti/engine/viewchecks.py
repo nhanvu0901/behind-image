@@ -989,12 +989,39 @@ CATALOGUE_ISSUES = {
 # ----------------------------------------------------------------------------------------------------------- entry
 # pointfix: point out small details and keep on-screen text readable.
 SMALL_ON_SCREEN = 0.40
+THIN_ON_SCREEN = 0.20
+THIN_MAX_SPAN = 0.70  # keeps full-height standing figures / painting-wide bands out of the thin clause
 MAX_LIT_AREA = 0.45
 HINTS.update({
     "small_detail_not_lit": "Add HI-01 on the named detail during this line, using a tight region.",
     "highlight_nothing_to_dim": "End the camera wider or use a tighter region so that the surroundings can darken.",
     "text_too_brief": "Start the shot or overlay earlier, or drop the text.",
 })
+
+
+def is_small_on_screen(x: float, y: float, rx: float, ry: float, cx: float, cy: float, z: float,
+                       w: float | None = None, h: float | None = None, box=None) -> bool:
+    """True when region `(x, y, rx, ry)` sits wholly inside camera `(cx, cy, z)` and is small:
+    under `SMALL_ON_SCREEN` of both frame sides, or a thin thing whose narrower side is under
+    `THIN_ON_SCREEN` of the visible painted surface while its longer side does not exceed `THIN_MAX_SPAN`."""
+    if z <= 0 or rx <= 0 or ry <= 0:
+        return False
+    if not box_inside_frame((x - rx, y - ry, x + rx, y + ry), cx, cy, z)[0]:
+        return False
+    ws = 2.0 * rx * z / L.CANVAS_W
+    hs = 2.0 * ry * z / L.CANVAS_H
+    if ws < SMALL_ON_SCREEN - 1e-9 and hs < SMALL_ON_SCREEN - 1e-9:
+        return True
+    vw, vh = L.CANVAS_W / z, L.CANVAS_H / z
+    if w and h and float(w) > 0 and float(h) > 0:
+        bx0, by0, bx1, by1 = _valid_box(box, float(w), float(h))
+        ow = min(bx1, cx + vw / 2.0) - max(bx0, cx - vw / 2.0)
+        oh = min(by1, cy + vh / 2.0) - max(by0, cy - vh / 2.0)
+        w_vis = (2.0 * rx / ow) if ow > 1e-6 else ws
+        h_vis = (2.0 * ry / oh) if oh > 1e-6 else hs
+    else:
+        w_vis, h_vis = ws, hs
+    return min(w_vis, h_vis) < THIN_ON_SCREEN - 1e-9 and max(w_vis, h_vis) <= THIN_MAX_SPAN + 1e-9
 
 
 def _highlight_nothing_to_dim(c):
@@ -1046,6 +1073,8 @@ def _small_detail_not_lit(c):
     main = (c._picks or {}).get("main_asset") or c.main_asset()
     asset = c.assets.get(main) or {}
     regs = asset.get("regions") or {}
+    size = c.size(main) if main else None
+    aw, ah = size if size else (None, None)
     for row in rows:
         if "detail" not in (row["kinds"] or []):
             continue
@@ -1073,8 +1102,7 @@ def _small_detail_not_lit(c):
                 n = max(1, int(math.ceil((b-a) / SAMPLE_S)))
                 moments = [a + (b-a)*k/n for k in range(n+1)] + [key[0] for key in keys if a < key[0] < b]
                 poses = [camera_at(keys,t) for t in moments]
-                if all(2*rx*z/L.CANVAS_W < SMALL_ON_SCREEN and 2*ry*z/L.CANVAS_H < SMALL_ON_SCREEN and
-                       abs(x-cx)*z+rx*z <= L.CANVAS_W/2 and abs(y-cy)*z+ry*z <= L.CANVAS_H/2 for cx,cy,z in poses):
+                if all(is_small_on_screen(x, y, rx, ry, cx, cy, z, aw, ah) for cx, cy, z in poses):
                     candidates.append((i, max(2*rx*z/L.CANVAS_W for _,_,z in poses), max(2*ry*z/L.CANVAS_H for _,_,z in poses)))
                 else:
                     all_small = False
@@ -1110,7 +1138,8 @@ def _small_detail_not_lit(c):
                 if found: break
             if not found:
                 i, width_share, height_share = candidates[0]
-                out.append(_issue("small_detail_not_lit", "shots[%d]" % i, "Line %s names small region %s without a pointer in shot %s (%.1f%% of width, %.1f%% of height)." % (row["id"],name,c.sid(i),100*width_share,100*height_share), beat=row["id"],region=name,shot=c.sid(i),width_share=_r(width_share,3),height_share=_r(height_share,3),limit=SMALL_ON_SCREEN))
+                limit = SMALL_ON_SCREEN if (width_share < SMALL_ON_SCREEN and height_share < SMALL_ON_SCREEN) else THIN_ON_SCREEN
+                out.append(_issue("small_detail_not_lit", "shots[%d]" % i, "Line %s names small region %s without a pointer in shot %s (%.1f%% of width, %.1f%% of height)." % (row["id"],name,c.sid(i),100*width_share,100*height_share), beat=row["id"],region=name,shot=c.sid(i),width_share=_r(width_share,3),height_share=_r(height_share,3),limit=limit))
     return out
 
 
@@ -1436,7 +1465,9 @@ def region_frame_info(region: dict | None, w: float, h: float, box=None, *, fit_
         hs = (rbox[3] - rbox[1]) * z / L.CANVAS_H
         info["width_share"] = round(ws, 4)
         info["height_share"] = round(hs, 4)
-        info["needs_spotlight"] = (ws < SMALL_ON_SCREEN - 1e-9 and hs < SMALL_ON_SCREEN - 1e-9)
+        rx, ry = (rbox[2] - rbox[0]) / 2.0, (rbox[3] - rbox[1]) / 2.0
+        rx_c, ry_c = (rbox[0] + rbox[2]) / 2.0, (rbox[1] + rbox[3]) / 2.0
+        info["needs_spotlight"] = is_small_on_screen(rx_c, ry_c, rx, ry, cx, cy, z, w, h, box)
     return info
 
 

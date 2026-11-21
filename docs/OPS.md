@@ -490,7 +490,7 @@ Sentences in `changes`: `default` = `Cảnh {n}: đổi ô {slot} sang {pic}`; `
 
 ### `add_overlay`
 
-Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not given take the defaults of the technique; it starts at the start of the shot and lasts 3 s unless said otherwise.
+Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not given take the defaults of the technique; it starts at the start of the shot and, when dur and end are left out, HI-01 runs to the end of its shot while others last 3 s. A length past the end of the shot is cut to the shot.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
@@ -499,8 +499,8 @@ Add an overlay (a ring of light, a label, an arrow...) to a shot. Parameters not
 | `ref` | text | no | A name for what this operation creates; later operations of the batch write it as $name. |
 | `technique` | text | yes | A technique id of the style registry, such as CAM-01 or HI-01. |
 | `start` | None or None | no | When the overlay starts; default: the start of the shot. |
-| `dur` | number | no | How long it lasts, in seconds; default: 3 s or what is left of the shot. |
-| `end` | None or None | no | When it ends (instead of dur). |
+| `dur` | number | no | How long it lasts, in seconds; cut to the end of the shot if longer. Leave out for HI-01 to run to the end of its shot (others default to 3 s). |
+| `end` | None or None | no | When it ends (instead of dur); cut to the end of the shot if later. |
 | `params` | object | no | Parameters by name; those not given take the defaults of the technique. |
 | `slots` | object | no | Slots by name, `{slot: {"asset": key}}` (a text slot takes `{"text": ...}`). |
 | `intent` | one of `establish`, `explore`, `point_at`, `isolate`, `reveal`, `compare`, `context`, `quantify`, `explain_mechanism`, `quote`, `structure`, `transition` | no | What the shot or overlay is for. |
@@ -526,11 +526,11 @@ Example:
 }
 ```
 
-Sentences in `changes`: `default` = `Cảnh {n}: thêm lớp phủ {technique}`; `region` = `Cảnh {n}: thêm lớp phủ {technique} ở vùng {region}`
+Sentences in `changes`: `default` = `Cảnh {n}: thêm lớp phủ {technique}`; `region` = `Cảnh {n}: thêm lớp phủ {technique} ở vùng {region}`; `default_cut` = `Cảnh {n}: thêm lớp phủ {technique} (cắt đến hết cảnh)`; `region_cut` = `Cảnh {n}: thêm lớp phủ {technique} ở vùng {region} (cắt đến hết cảnh)`
 
 ### `set_overlay`
 
-Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end, intent or note. Use set_params for its parameters.
+Change an overlay of a shot: its technique (parameters then take the new defaults), start, duration or end (cut to the shot if past its end), intent or note. Use set_params for its parameters.
 
 | Field | Type | Required | Meaning |
 |---|---|---|---|
@@ -539,7 +539,7 @@ Change an overlay of a shot: its technique (parameters then take the new default
 | `overlay` | text | yes | An overlay id of that shot (such as o2), or a $ref made by an earlier add_overlay. |
 | `technique` | text | no | A technique id of the style registry, such as CAM-01 or HI-01. |
 | `start` | None or None | no | When the overlay starts; default: the start of the shot. |
-| `dur` | number or null | no | Duration in seconds, or null to run to the end of the shot. |
+| `dur` | number or null | no | Duration in seconds (cut to the shot if longer), or null to run to the end of the shot. |
 | `end` | None or None or null | no | When it ends (instead of dur); null removes it. |
 | `intent` | one of `establish`, `explore`, `point_at`, `isolate`, `reveal`, `compare`, `context`, `quantify`, `explain_mechanism`, `quote`, `structure`, `transition` | no | What the shot or overlay is for. |
 | `note` | text | no | A short note (up to 400 characters). |
@@ -555,7 +555,7 @@ Example:
 }
 ```
 
-Sentence in `changes`: `Cảnh {n}: sửa lớp phủ {technique}`
+Sentences in `changes`: `default` = `Cảnh {n}: sửa lớp phủ {technique}`; `cut` = `Cảnh {n}: sửa lớp phủ {technique} (cắt đến hết cảnh)`
 
 ### `remove_overlay`
 
@@ -694,7 +694,7 @@ Example:
 }
 ```
 
-Sentence in `changes`: `Cảnh {rng}: thay bằng {k} cảnh mới`
+Sentences in `changes`: `default` = `Cảnh {rng}: thay bằng {k} cảnh mới`; `cut` = `Cảnh {rng}: thay bằng {k} cảnh mới (lớp phủ cắt đến hết cảnh)`
 
 ### `lock`
 
