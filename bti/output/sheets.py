@@ -100,7 +100,7 @@ def _jpeg(im, quality: int = 82) -> bytes:
 
 # ------------------------------------------------------------------------------------------------ the regions sheet
 def regions_sheet(image_path: Path, regions: dict, out_path: Path, title: str = "", max_side: int = 1500) -> int:
-    """Draw every region (an ellipse `x, y, rx, ry` in the picture's own pixels, or a point when it has no radius) on the main painting, numbered, with the legend beside it. -> the number of regions drawn."""
+    """Draw every region (a rectangle when `tight` is true, else an ellipse `x, y, rx, ry` in the picture's own pixels, or a point when it has no radius) on the main painting, numbered, with the legend beside it. -> the number of regions drawn."""
     from PIL import Image, ImageDraw
     im = Image.open(image_path)
     im.load()
@@ -111,12 +111,17 @@ def regions_sheet(image_path: Path, regions: dict, out_path: Path, title: str = 
     items = [(k, r) for k, r in regions.items() if isinstance(r, dict) and isinstance(r.get("x"), (int, float)) and isinstance(r.get("y"), (int, float))]
     d = ImageDraw.Draw(pic, "RGBA")
     badge = font(max(18, int(pic.size[1] / 70)))
+    tight_n = 0
     for i, (_k, r) in enumerate(items):
         col = COLORS[i % len(COLORS)]
         cx, cy = r["x"] * s, r["y"] * s
         rx = float(r["rx"]) * s if isinstance(r.get("rx"), (int, float)) and r["rx"] > 0 else None
         ry = float(r["ry"]) * s if isinstance(r.get("ry"), (int, float)) and r["ry"] > 0 else rx
-        if rx:
+        if r.get("tight") is True and rx:
+            tight_n += 1
+            d.rectangle([cx - rx, cy - ry, cx + rx, cy + ry], outline=col + (255,), width=4, fill=col + (16,))
+            ty = cy - ry
+        elif rx:
             d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], outline=col + (255,), width=4, fill=col + (16,))
             ty = cy - ry
         else:
@@ -133,13 +138,16 @@ def regions_sheet(image_path: Path, regions: dict, out_path: Path, title: str = 
     g = ImageDraw.Draw(sheet)
     head, body = font(30), font(24)
     g.text((pic.size[0] + 20, 16), _fit(g, title or "Các vùng trên tranh chính", head, lw - 40), font=head, fill=(40, 40, 40))
-    g.text((pic.size[0] + 20, 54), "%d vùng đã vẽ" % len(items), font=body, fill=(110, 110, 110))
+    count_line = ("%d vùng đã vẽ (%d khít)" % (len(items), tight_n)) if tight_n else ("%d vùng đã vẽ" % len(items))
+    g.text((pic.size[0] + 20, 54), count_line, font=body, fill=(110, 110, 110))
     for i, (k, r) in enumerate(items):
         col = COLORS[i % len(COLORS)]
         y = 96 + i * 36
         g.rectangle([pic.size[0] + 20, y + 3, pic.size[0] + 44, y + 27], fill=col)
         g.text((pic.size[0] + 26, y + 2), str(i + 1), font=font(18), fill=(255, 255, 255))
-        label = (r.get("label") or "").strip() or str(k)
+        label = (r.get("label") or "").strip() or (r.get("thing") or "").strip() or str(k)
+        if r.get("tight") is True:
+            label += " (khít)"
         g.text((pic.size[0] + 54, y), _fit(g, "%s" % label, body, lw - 70), font=body, fill=(40, 40, 40))
     fsutil.write_bytes(out_path, _jpeg(sheet, 86))
     return len(items)

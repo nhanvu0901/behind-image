@@ -35,7 +35,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from . import images, shapes
+from . import images, shapes, tighten
 from .inputs import Inputs
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -86,10 +86,10 @@ def _json(path: Path, obj) -> None:
     _write(path, json.dumps(obj, indent=1, ensure_ascii=False) + "\n")
 
 
-def wrappers(root: Path, python: str, repo: Path) -> dict:
-    """`check` and `crop`: one-line wrappers, so that the agent runs `./check` and `./crop ...` and nothing else."""
+def wrappers(root: Path, python: str, repo: Path, helpers: tuple[str, ...] = ("check", "crop")) -> dict:
+    """One-line wrapper scripts in `root`, so the agent runs `./check` / `./crop ...` and nothing else."""
     cmds = {}
-    for name in ("check", "crop"):
+    for name in helpers:
         if IS_WINDOWS:
             f = Path(root) / (name + ".cmd")
             _write(f, '@echo off\r\nset "PYTHONPATH=%s"\r\nset PYTHONUTF8=1\r\n"%s" -m %s %s %%*\r\n' % (repo, python, HELPER_MODULE, name))
@@ -173,17 +173,82 @@ def build_plan(inp: Inputs, limits, *, root: Path | None = None, template: Path 
     return Workspace(root=root, mode="plan")
 
 
+def plan_regions_to_tighten(inp: Inputs, plan: dict) -> list[str]:
+    """Region names referenced by lines in `plan` (show or fallback) that need the second look: all newly declared plan regions plus any existing non-tight region."""
+    from bti.media import contentbox as pcb
+    surface = tighten.surface_box((inp.painting.width, inp.painting.height), inp.painting.content_box) if inp.painting.content_box is not None else None
+    seen: list[str] = []
+    for ln in plan["lines"]:
+        for it in list(ln["show"]) + ([ln["fallback"]] if ln.get("fallback") else []):
+            if it["type"] == "detail":
+                name = it["region"]
+                if name in seen:
+                    continue
+                if name in plan["regions"]:
+                    if surface is not None:
+                        reg = shapes.box_to_region(plan["regions"][name]["box"], inp.painting.width, inp.painting.height)
+                        if pcb.clamp_region(reg, surface) is None:
+                            continue
+                    seen.append(name)
+                elif name in inp.painting.regions and not inp.painting.regions[name].get("tight"):
+                    seen.append(name)
+    return seen
+
+
+def _copy_full_painting(src_file: Path, root: Path) -> str:
+    ext = Path(src_file).suffix.lower() or ".jpg"
+    rel = "inputs/main_full" + ext
+    dest = root / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(src_file, dest)
+    return rel
+
+
 def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, root: Path | None = None, template: Path | None = None,
                  second: bool = False) -> tuple[Workspace, shapes.ChoiceCtx]:
-    """The folder of part 3 (choose): the plan's wanted pictures with their candidates, the owner's book pictures, and the proposed boxes.
+    """The folder of part 3 (choose): the plan's wanted pictures with their candidates, the owner's book pictures, and the second-look gridded cut-outs.
     `search`: the saved search state (`bti.picks.auto.search`). `books`: [{"n", "label", "source_id", "thumb": Path | None}].
     `second`: the folder of the SECOND session of a run that searched the web again (`bti.picks.auto.webround`): `search` then holds only the wants that
     got new candidates (numbered from 1), there are no boxes to review, and each want says what the first session answered (`earlier`)."""
     root = Path(root) if root else Path(tempfile.mkdtemp(prefix=PREFIX))
     root.mkdir(parents=True, exist_ok=True)
     shown = {wid: {**w, "candidates": w["candidates"][:MAX_SHOWN]} for wid, w in search["wants"].items() if w.get("candidates")}
-    used = [] if second else [n for n in plan["regions"] if any(i["type"] == "detail" and i["region"] == n for ln in plan["lines"] for i in ln["show"])]
-    ctx = shapes.ChoiceCtx(wants={wid: len(w["candidates"]) for wid, w in shown.items()}, books=len(books), regions=used)
+    used = [] if second else plan_regions_to_tighten(inp, plan)
+    cutouts: dict[str, dict] = {}
+    reg_rows: list[dict] = []
+    if used:
+        full_rel = _copy_full_painting(inp.painting.file, root)
+        try:
+            full_im = tighten._open_rgb(inp.painting.file)
+        except images.ImageError:
+            raise WorkspaceError("main_asset_unreadable", "the main painting cannot be read as a picture")
+        sw, sh = inp.painting.width, inp.painting.height
+        surface = tighten.surface_box((sw, sh), inp.painting.content_box)
+        for name in used:
+            lines = [ln["beat"] for ln in plan["lines"]
+                     if any(i["type"] == "detail" and i["region"] == name for i in list(ln["show"]) + ([ln["fallback"]] if ln.get("fallback") else []))]
+            line_texts = {b: inp.beat(b)["text"] for b in lines}
+            if name in plan["regions"]:
+                r = plan["regions"][name]
+                rough_px = list(shapes.crop_pixels(r["box"], sw, sh))
+                what, thing, existing = r["what"], str(r.get("thing") or ""), False
+            else:
+                er = inp.painting.regions[name]
+                rough_px = tighten.region_to_rough_px(er["raw"], (sw, sh), surface)
+                what, thing, existing = er["label"] or name, str(er.get("thing") or ""), True
+            geom = tighten.cutout_geom(rough_px, (sw, sh), surface, margin=tighten.MARGIN_INITIAL)
+            dest = "images/d_%s.jpg" % name
+            tighten.render_cutout(inp.painting.file, geom, root / dest, with_grid=True, full_im=full_im)
+            cutouts[name] = {
+                **geom, "name": name, "existing": existing, "what": what, "thing": thing,
+                "full_image": full_rel, "cutout": dest, "line_texts": list(line_texts.values()),
+            }
+            reg_rows.append({
+                "name": name, "existing": existing, "what": what, "thing": thing,
+                "lines": lines, "line_texts": line_texts, "cutout": dest,
+                "cutout_size": list(geom["cutout_size"]), "rough_px": list(geom["rough_px"]),
+            })
+    ctx = shapes.ChoiceCtx(wants={wid: len(w["candidates"]) for wid, w in shown.items()}, books=len(books), regions=used, cutouts=cutouts)
     cmds = _common(inp, root, "choose", {"choice": ctx.to_json()})
     # the wanted pictures
     by_line = {ln["beat"]: ln for ln in plan["lines"]}
@@ -222,19 +287,76 @@ def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, 
         book_rows.append({"n": "B%d" % b["n"], "label": b["label"]})
     _json(root / "inputs" / "wants.json", {"note": "Pick the number of a candidate on that want's sheet, \"B<number>\" for a picture of the owner's books, or null.",
                                           "wants": rows, "books": {"sheets": sheets, "pictures": book_rows}})
-    # the proposed boxes
-    reg_rows = []
-    for name in used:
-        r = plan["regions"][name]
-        lines = [ln["beat"] for ln in plan["lines"] if any(i["type"] == "detail" and i["region"] == name for i in ln["show"])]
-        dest = "images/d_%s.jpg" % name
-        try:
-            images.crop(inp.painting.file, r["box"], root / dest)
-        except images.ImageError:
-            dest = None
-        reg_rows.append({"name": name, "box": r["box"], "what": r["what"], "lines": lines, "line_texts": {b: inp.beat(b)["text"] for b in lines}, "crop": dest})
-    _json(root / "inputs" / "regions.json", {"note": "`crop` is exactly what the camera will show for the box.", "regions": reg_rows})
+    _json(root / "inputs" / "regions.json", {
+        "note": "Each `cutout` is cut from the full-resolution painting (+15% margin, inside painted surface), scaled to 1,024 px long side, with a 100-px grid in cut-out pixels.",
+        "regions": reg_rows,
+    })
     extra = {"N_WANTS": len(rows), "N_BOOKS": len(books), "N_REGIONS": len(reg_rows), "WANT_LIST": ", ".join(w["id"] for w in rows),
              "REGION_LIST": ", ".join(used), "SECOND_LOOK": "yes" if second else ""}
     _write(root / "TASK.md", render(_template("CHOOSE.template.md", template), _values(inp, cmds, limits, extra)))
     return Workspace(root=root, mode="choose"), ctx
+
+
+def build_tighten(pdir: Path, main_asset: dict, entries: list[dict], limits, *, root: Path | None = None,
+                  template: Path | None = None) -> tuple[Workspace, dict]:
+    """Work folder for standalone `picks.tighten`: only non-tight regions on the main painting, gridded full-res cut-outs, and `./check`."""
+    from bti.media import contentbox as pcb
+    root = Path(root) if root else Path(tempfile.mkdtemp(prefix=PREFIX))
+    for sub in ("images", "inputs", "out", "look"):
+        (root / sub).mkdir(parents=True, exist_ok=True)
+    src_file = Path(pdir) / main_asset["file"]
+    try:
+        sw, sh, cw, ch = images.save_scaled(src_file, root / "images" / "main.jpg", images.VIEW_SIDE, 90)
+        full_im = tighten._open_rgb(src_file)
+    except images.ImageError:
+        raise WorkspaceError("main_asset_unreadable", "the main painting cannot be read as a picture")
+    full_rel = _copy_full_painting(src_file, root)
+    asset_copy = dict(main_asset)
+    pcb.ensure(asset_copy, pdir)
+    surface = tighten.surface_box((sw, sh), pcb.box_of(asset_copy))
+    cutouts: dict[str, dict] = {}
+    reg_rows: list[dict] = []
+    for entry in entries:
+        name = entry["name"]
+        raw_r = entry["raw"]
+        rough_px = tighten.region_to_rough_px(raw_r, (sw, sh), surface)
+        geom = tighten.cutout_geom(rough_px, (sw, sh), surface, margin=tighten.MARGIN_INITIAL)
+        dest = "images/d_%s.jpg" % name
+        tighten.render_cutout(src_file, geom, root / dest, with_grid=True, full_im=full_im)
+        line_texts = entry.get("line_texts") or {}
+        cutouts[name] = {
+            **geom, "name": name, "existing": True,
+            "what": str(entry.get("label") or name),
+            "thing": str(entry.get("thing") or ""),
+            "full_image": full_rel, "cutout": dest,
+            "line_texts": list(line_texts.values()),
+        }
+        reg_rows.append({
+            "name": name, "label": str(entry.get("label") or ""), "thing": str(entry.get("thing") or ""),
+            "lines": list(entry.get("lines") or []), "line_texts": line_texts,
+            "cutout": dest, "cutout_size": list(geom["cutout_size"]), "rough_px": list(geom["rough_px"]),
+        })
+    tctx = {"regions": list(cutouts), "cutouts": cutouts}
+    _json(root / "inputs" / "painting.json", {
+        "title": str(main_asset.get("title") or ""), "artist": str(main_asset.get("artist") or ""),
+        "year": str(main_asset.get("year") or ""), "source_size": [sw, sh],
+        "image": "images/main.jpg", "image_size": [cw, ch],
+    })
+    _json(root / "inputs" / "regions.json", {
+        "note": "Measure each region's tight box in its cut-out's 100-px grid pixels (`out/tighten.json`).",
+        "regions": reg_rows,
+    })
+    _json(root / "inputs" / "context.json", {"mode": "tighten", "tighten": tctx})
+    cmds = wrappers(root, sys.executable, REPO_ROOT, helpers=("check",))
+    vals = {
+        "CHECK_CMD": cmds["check"],
+        "TITLE": str(main_asset.get("title") or "(no title)"),
+        "ARTIST": str(main_asset.get("artist") or "(unknown)"),
+        "YEAR": str(main_asset.get("year") or "(unknown)"),
+        "N_REGIONS": len(reg_rows),
+        "REGION_LIST": ", ".join(cutouts),
+        "MAX_MINUTES": int(limits.minutes),
+        "MAX_STEPS": int(limits.steps),
+    }
+    _write(root / "TASK.md", render(_template("TIGHTEN.template.md", template), vals))
+    return Workspace(root=root, mode="tighten"), tctx

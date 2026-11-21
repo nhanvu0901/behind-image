@@ -32,7 +32,8 @@ class Painting:
     year: str
     width: int                       # pixels of the stored file (what regions are measured in)
     height: int
-    regions: dict = field(default_factory=dict)       # NAME -> {"box": [x0, y0, x1, y1], "label": str}, the regions that already exist
+    regions: dict = field(default_factory=dict)       # NAME -> {"box": [x0, y0, x1, y1], "label": str, "tight": bool, "thing": str, "rough": ..., "raw": dict}
+    content_box: dict | None = None
 
 
 @dataclass
@@ -56,7 +57,8 @@ class Inputs:
 
     def plan_ctx(self) -> shapes.PlanCtx:
         return shapes.PlanCtx(beats=[{"id": b["id"], "chapter": b["chapter"], "words": b["words"]} for b in self.beats], targets=list(self.targets),
-                              existing_regions={n: r["box"] for n, r in self.painting.regions.items()})
+                              existing_regions={n: r["box"] for n, r in self.painting.regions.items()},
+                              painting_title=self.painting.title, line_texts={b["id"]: b["text"] for b in self.beats})
 
 
 def has_pictures(picks: dict, bid: str) -> bool:
@@ -66,6 +68,7 @@ def has_pictures(picks: dict, bid: str) -> bool:
 
 
 def _main(pdir: Path, picks: dict) -> Painting:
+    from bti.media import contentbox as pcb
     key = picks.get("main_asset")
     a = picks["assets"].get(key) if key else None
     if not a:
@@ -74,12 +77,16 @@ def _main(pdir: Path, picks: dict) -> Painting:
     if a.get("kind") == "video" or not f.is_file() or int(a.get("width") or 0) <= 0 or int(a.get("height") or 0) <= 0:
         raise AutoError("main_asset_unreadable", "the main painting has no readable picture file")
     w, h = int(a["width"]), int(a["height"])
+    a_copy = dict(a)
+    pcb.ensure(a_copy, pdir)
+    cbox = pcb.box_of(a_copy)
     regions = {}
     for name, r in (a.get("regions") or {}).items():
         box = shapes.region_to_box(r, w, h)
         if box is not None:
-            regions[name] = {"box": box, "label": str(r.get("label") or "")}
-    return Painting(key, f, str(a.get("title") or ""), str(a.get("artist") or ""), str(a.get("year") or ""), w, h, regions)
+            regions[name] = {"box": box, "label": str(r.get("label") or ""), "tight": r.get("tight") is True,
+                             "thing": str(r.get("thing") or ""), "rough": r.get("rough"), "raw": dict(r)}
+    return Painting(key, f, str(a.get("title") or ""), str(a.get("artist") or ""), str(a.get("year") or ""), w, h, regions, content_box=cbox)
 
 
 def load(pdir: Path, requested: list | None = None, *, redo: bool = False, owner_note: str = "", need_targets: bool = True) -> Inputs:

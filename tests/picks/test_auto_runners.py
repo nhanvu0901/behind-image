@@ -210,9 +210,9 @@ def test_a_job_can_name_its_own_rules_and_the_default_stays_the_pictures_jobs(fa
 def test_the_limits_of_the_two_sessions_are_written_once_in_the_job(ws):
     """fixes3: `session.py` used to carry the old numbers under the same names as `job.py`; now only the job has them, and the work folder's task says the job's numbers."""
     assert not hasattr(session, "PLAN_LIMITS") and not hasattr(session, "CHOOSE_LIMITS")
-    assert (job.PLAN_LIMITS.minutes, job.PLAN_LIMITS.steps) == (30, 120) and (job.CHOOSE_LIMITS.minutes, job.CHOOSE_LIMITS.steps) == (40, 220)
+    assert (job.PLAN_LIMITS.minutes, job.PLAN_LIMITS.steps) == (30, 140) and (job.CHOOSE_LIMITS.minutes, job.CHOOSE_LIMITS.steps) == (45, 280)
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
-    assert "**120 steps**" in task and "**30 minutes**" in task
+    assert "**140 steps**" in task and "**30 minutes**" in task
 
 
 def test_the_drafts_own_command_line_is_unchanged(fakeclaude):

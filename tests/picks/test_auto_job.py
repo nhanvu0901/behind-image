@@ -43,14 +43,17 @@ def test_the_whole_job_fills_every_line_from_an_empty_picks_document(env):
     r = result(job)
     assert (r["lines_total"], r["lines_done"], r["lines_with_pictures"], r["lines_kept"]) == (6, 6, 5, 1)
     assert r["lines_without"] == [] and r["missing"] == []
-    assert (r["pictures_imported"], r["regions_made"], r["clips"]) == (3, 2, 1)
+    assert (r["pictures_imported"], r["regions_made"], r["regions_tight"], r["clips"]) == (3, 2, 2, 1)
     assert r["sentence"] == "Agent đã chọn hình cho 6/6 đoạn." and r["stopped"] is None
     assert part_states(job) == [("plan", "done"), ("search", "done"), ("choose", "done"), ("write", "done")]
     assert job["parts"][0]["title"] == "Lập danh sách hình cần tìm (1/4)"
     d = env.picks()
     a = d["assets"]["A"]
-    assert set(a["regions"]) == {"MIRROR", "HEAD"} and a["regions"]["HEAD"]["rx"] == 156 and a["regions"]["HEAD"]["ry"] == 150      # the agent's adjusted box
-    assert a["regions"]["HEAD"]["label"] == "Khuôn mặt" and a["regions"]["MIRROR"]["x"] == 650 and a["regions"]["MIRROR"]["rx"] == 130
+    assert set(a["regions"]) == {"MIRROR", "HEAD"}
+    assert a["regions"]["HEAD"]["tight"] is True and a["regions"]["HEAD"]["thing"] == "man's face" and a["regions"]["HEAD"]["rough"] == [130, 62, 390, 313]
+    assert a["regions"]["HEAD"]["label"] == "Khuôn mặt" and a["regions"]["HEAD"]["rx"] < 156
+    assert a["regions"]["MIRROR"]["tight"] is True and a["regions"]["MIRROR"]["thing"] == "convex mirror on back wall" and a["regions"]["MIRROR"]["rough"] == [520, 375, 780, 688]
+    assert a["regions"]["MIRROR"]["x"] == 650 and a["regions"]["MIRROR"]["rx"] == 122
     b = d["beats"]
     assert b["b0001"]["items"] == [{"asset": "A", "region": None, "role": "main", "note": ""}] and b["b0001"]["status"] == "picked"
     assert b["b0002"]["items"] == [{"asset": "A", "region": "MIRROR", "role": "detail", "note": ""}]
@@ -77,8 +80,8 @@ def test_what_the_agent_is_given_and_the_limits_that_are_in_the_job(env):
     assert {"TASK.md", "check" + ext, "crop" + ext, "inputs/painting.json", "inputs/narration.json", "images/main.jpg", "inputs/main_large.jpg"} <= set(plan_call["files"])
     assert {"inputs/wants.json", "images/w_b0003_1.jpg", "images/w_b0004_2.jpg", "images/d_MIRROR.jpg", "images/d_HEAD.jpg"} <= set(choose_call["files"])
     assert "images/w_b0004_1.jpg" not in choose_call["files"]                                  # a map has no sheet: its candidate is a place
-    assert job["meta"]["limits"] == {"plan": {"minutes": 30, "steps": 120, "repairs": 1}, "choose": {"minutes": 40, "steps": 220, "repairs": 1}}      # they grew with the cap of 60 wants
-    assert result(job)["limits"]["plan"]["steps"] == 120 and result(job)["limits"]["choose"]["steps"] == 220
+    assert job["meta"]["limits"] == {"plan": {"minutes": 30, "steps": 140, "repairs": 1}, "choose": {"minutes": 45, "steps": 280, "repairs": 2}}
+    assert result(job)["limits"]["plan"]["steps"] == 140 and result(job)["limits"]["choose"]["steps"] == 280
     assert job["meta"]["action"] == "auto" and job["kind"] == "picks" and job["meta"]["agent"]["id"] in ("gemini", "opus")
     assert job["meta"]["beats"] == ["b0001", "b0002", "b0003", "b0004", "b0005", "b0006"]
 
@@ -402,7 +405,7 @@ def test_a_candidate_with_no_thumbnail_cannot_be_chosen_and_the_main_painting_is
 
 # ---------------------------------------------------------------------------------------------------------------- the agent's files
 def test_an_output_that_fails_the_check_is_repaired_once(env):
-    bad = plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.5, 0.6], "what": "Gương"}, PLAN["regions"][1]])
+    bad = plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.5, 0.6], "what": "Gương", "thing": "convex mirror"}, PLAN["regions"][1]])
     env.agent.plan = [bad, PLAN]
     job = env.run()
     assert job["state"] == "done"
@@ -412,7 +415,7 @@ def test_an_output_that_fails_the_check_is_repaired_once(env):
 
 
 def test_an_output_that_fails_the_check_twice_fails_the_part_with_its_sentence_and_writes_nothing(env):
-    bad = plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.5, 0.6], "what": "Gương"}, PLAN["regions"][1]])
+    bad = plan(regions=[{"name": "MIRROR", "box": [0.4, 0.3, 1.5, 0.6], "what": "Gương", "thing": "convex mirror"}, PLAN["regions"][1]])
     env.agent.plan = bad
     job = env.run()
     assert job["state"] == "error" and job["error_code"] == "picks_auto_no_output"

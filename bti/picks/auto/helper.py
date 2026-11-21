@@ -14,7 +14,7 @@ import os
 import sys
 from pathlib import Path
 
-from . import images, shapes
+from . import images, shapes, tighten
 
 MODE_FILE = "inputs/context.json"
 
@@ -24,7 +24,7 @@ def load_context(root: Path) -> tuple[str, dict]:
     try:
         d = json.loads(f.read_text(encoding="utf-8"))
         mode = d["mode"]
-        if mode not in ("plan", "choose"):
+        if mode not in ("plan", "choose", "tighten"):
             raise KeyError(mode)
         return mode, d
     except (OSError, ValueError, KeyError):
@@ -32,10 +32,11 @@ def load_context(root: Path) -> tuple[str, dict]:
 
 
 def out_file(root: Path, mode: str) -> Path:
-    return Path(root) / "out" / ("plan.json" if mode == "plan" else "choice.json")
+    names = {"plan": "plan.json", "choose": "choice.json", "tighten": "tighten.json"}
+    return Path(root) / "out" / names[mode]
 
 
-def run_check(root: Path) -> shapes.Report:
+def run_check(root: Path, *, allow_unconfirmed: bool = False) -> shapes.Report:
     """The report of the work folder's output file. The session uses this too (the repair message is its text)."""
     mode, ctx = load_context(root)
     obj, problem = shapes.read_json_file(out_file(root, mode), "out/%s" % out_file(root, mode).name)
@@ -45,7 +46,9 @@ def run_check(root: Path) -> shapes.Report:
         return rep
     if mode == "plan":
         return shapes.check_plan(obj, shapes.PlanCtx.from_json(ctx["plan"]))
-    return shapes.check_choice(obj, shapes.ChoiceCtx.from_json(ctx["choice"]))
+    if mode == "tighten":
+        return tighten.check_tighten(obj, ctx["tighten"], ws_root=root, allow_unconfirmed=allow_unconfirmed)
+    return shapes.check_choice(obj, shapes.ChoiceCtx.from_json(ctx["choice"]), ws_root=root, allow_unconfirmed=allow_unconfirmed)
 
 
 def _parse_box(text: str):

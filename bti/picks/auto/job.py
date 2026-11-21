@@ -41,13 +41,15 @@ ACTION = "auto"
 ROLE = "picks"
 # `write`: the downloads are paced one a second per host and may wait out a "too many requests" (`awrite.WRITE_SECONDS` says why the limit stays 25 minutes):
 # about 25 pictures at 3 requests each and their transfer, then the batches, is about 5 minutes (it was 2 when the downloads were not paced).
-EST_SECONDS = {"plan": 600, "search": 120, "choose": 480, "write": 300, "web": 180, "choose2": 240}
+EST_SECONDS = {"plan": 600, "search": 120, "choose": 600, "write": 300, "web": 180, "choose2": 240}
 # The limits of the two sessions of a run. What the real 61-line run of the first test video (project eligius, 2026-11-19) took: the plan 36 steps and 210 s
 # (20 boxes, a crop looked at for each), the choice of 21 pictures and 20 boxes 51 steps and 120 s (a little over one step for each sheet or crop it looked at).
-# A plan now asks for a picture on every line about something outside the painting, up to `shapes.MAX_WANTS` = 60 (it was 30): the choosing session looks at a
-# sheet for each of up to 60 pictures and each of up to 20 boxes, and a second choice of the pictures the first answered null may follow it, so the limits grow with the cap.
-PLAN_LIMITS = session.Limits(minutes=30, steps=120, repairs=1)
-CHOOSE_LIMITS = session.Limits(minutes=40, steps=220, repairs=1)
+# A plan now asks for a picture on every outside line up to `shapes.MAX_WANTS` = 60 and up to `shapes.MAX_REGIONS` = 30 rough regions (one thing each).
+# In the choosing session, each region gets a full-res 1,024-px gridded cut-out (30 steps), plus up to ~6 `wider` re-cuts (12 steps) and up to 5
+# 6-up check sheets plus confirmation (8 steps), adding ~50 steps and ~4-5 minutes on top of the 60 want sheets, so:
+#   PLAN_LIMITS = 30 min / 140 steps (1 repair), CHOOSE_LIMITS = 45 min / 280 steps (2 repairs: check sheets + optional 1 correction).
+PLAN_LIMITS = session.Limits(minutes=30, steps=140, repairs=1)
+CHOOSE_LIMITS = session.Limits(minutes=45, steps=280, repairs=2)
 
 
 def _manager():
@@ -249,7 +251,7 @@ def make_parts(r: _Run):
         return sorted(wid for wid, w in st["wants"].items() if any(c.get("round", 1) == 1 for c in w.get("candidates") or []))
 
     def regions_of(plan: dict) -> list[str]:
-        return sorted(n for n in plan["regions"])
+        return sorted(workspace.plan_regions_to_tighten(r.inp, plan))
 
     def choose_done(ctx) -> bool:
         r.begin()
@@ -283,8 +285,14 @@ def make_parts(r: _Run):
         if out.status == "cancelled" or ctx.cancelled():
             shutil.rmtree(ws.root, ignore_errors=True)
             return None
-        if out.status == "tampered" or not rep.ok:
+        if out.status == "tampered":
             raise _fail(out, ctx)
+        if not rep.ok:
+            rep_fb = helper.run_check(ws.root, allow_unconfirmed=True)
+            if rep_fb.ok:
+                rep = rep_fb                                      # keep unconfirmed regions as non-tight rather than discarding valid choices
+            else:
+                raise _fail(out, ctx)
         store.write(r.pdir, "choice.json", {"schema": store.SCHEMA, "key": r.key, "model": r.model, "agent": r.res.public(), "choice": rep.value,
                                             "shown": shown_of(st), "regions": regions_of(plan),
                                             "session": {"steps": out.steps, "turns": out.turns, "repairs": out.repairs, "status": out.status,
@@ -292,8 +300,9 @@ def make_parts(r: _Run):
         r.choice = rep.value
         _finish_workspace(ws, True)
         picked = sum(1 for w in rep.value["wants"].values() if w["pick"])
+        tight_n = sum(1 for reg in rep.value["regions"].values() if reg.get("action") == "tight" and reg.get("confirmed"))
         ctx.progress(1.0, "Agent đã chọn %d/%d hình." % (picked, len(rep.value["wants"])))
-        return {"choose": {"wants": len(rep.value["wants"]), "picked": picked, "regions": len(rep.value["regions"]),
+        return {"choose": {"wants": len(rep.value["wants"]), "picked": picked, "regions": len(rep.value["regions"]), "regions_tight": tight_n,
                            "session": {"steps": out.steps, "turns": out.turns, "repairs": out.repairs, "elapsed": round(out.elapsed)}}}
 
     # ---------------------------------------------------------------------------------------------------------- the web round (only with the owner's switch on)

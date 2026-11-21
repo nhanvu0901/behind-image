@@ -12,7 +12,7 @@ You write one JSON file, `out/choice.json`. A program imports the pictures you c
 
 - The painting: **{{TITLE}}** by {{ARTIST}}, {{YEAR}} (`images/main.jpg`).
 - Wanted pictures: **{{N_WANTS}}** ({{WANT_LIST}}). Pictures of the owner's books: **{{N_BOOKS}}** (B1 ...). Boxes to review: **{{N_REGIONS}}** ({{REGION_LIST}}).
-- You have at most **{{MAX_STEPS}} steps** (every command you run and every file you open is a step) and **{{MAX_MINUTES}} minutes**. A session that goes over is stopped, and then only a file that already passes the check is kept. Plan your steps: read `inputs/wants.json` and `inputs/regions.json` (2), open one contact sheet per wanted picture (one step each), open each box's crop (one step each), write `out/choice.json` (1), run the check (1 or 2).
+- You have at most **{{MAX_STEPS}} steps** (every command you run and every file you open is a step) and **{{MAX_MINUTES}} minutes**. A session that goes over is stopped, and then only a file that already passes the check is kept. Plan your steps: read `inputs/wants.json` and `inputs/regions.json` (2), open one contact sheet per wanted picture (one step each), open each gridded cut-out `images/d_<NAME>.jpg` (one step each), write `out/choice.json` (1), run `{{CHECK_CMD}}` (produces any `wider` cut-outs or `look/check_*.jpg` sheets), open every check sheet and confirm (or correct once) in `out/choice.json`, then run `{{CHECK_CMD}}` until `0 error(s)`.
 {{#OWNER_NOTE}}
 - **The owner's request for these lines**, in their own words: {{OWNER_NOTE}}
 {{/OWNER_NOTE}}
@@ -33,7 +33,7 @@ You write one JSON file, `out/choice.json`. A program imports the pictures you c
 | `inputs/wants.json` | The wanted pictures. Each has an `id` (`b0006.2` is the second picture of line b0006), the line (`line_text`) and why the plan wants it (`line_reason`), what it should show (`what`, Vietnamese), the sort of picture (`kind`), the name of the thing (`entity`, when the plan gave one) and the time the line speaks of (`period`: `"then"` wants a picture made in that time, `"now"` a photograph of today), what the line does (`kinds`, when the plan gave it: an `outside` line wants the thing itself, a `journey` line a map of its `places`), the words that were searched, `sheet` (the contact sheet to open) and `candidates` (at most eight): each with its `n` (the number on the sheet), `title`, `source`, `author`, `licence`, `flag`, size, `page_url`, and `media` (`image` or `video`; for a video the sheet shows a still). A candidate that Wikipedia or the web found also has `page_title` (the article or page it was found on), `site` (the website's name) and `snippet` (a few words about it: read them, they often name the picture); the licence of a web picture is unknown (`flag`: `unknown`). A map has no sheet: its candidate is a place, with its title. |
 | `images/w_<id>.jpg` | The **contact sheet** of a wanted picture: its candidates as numbered thumbnails. |
 | `images/books_<k>.jpg` | Contact sheets of the pictures in the owner's own books about this painting, numbered **B1, B2 ...** (listed in `inputs/wants.json`, `books`). Any wanted picture may pick one of them. |
-| `inputs/regions.json` | The boxes you proposed, each with the lines that use it, its `box` and `crop`: the file `images/d_<NAME>.jpg`, **exactly what the camera will show** for the box. |
+| `inputs/regions.json` | The regions used by the plan (new ones and any non-tight existing ones), each with `thing` (English), `what` (Vietnamese), the lines that use it, `cutout_size` `[w, h]`, and `cutout`: the file `images/d_<NAME>.jpg` — cut from the full-resolution painting (+15% margin, inside the painted surface), scaled to 1,024 px long side, with a 100-px coordinate grid in the cut-out's own pixels. |
 | `images/main.jpg` | The main painting. |
 | `inputs/narration.json`, `inputs/facts.json`, `inputs/dossier.json`, `inputs/painting.json` | As in the earlier session. |
 | `out/` | Where you write `choice.json`. `look/` is where `{{CROP_CMD}}` writes crops. |
@@ -57,13 +57,23 @@ For each wanted picture, open its contact sheet, read the candidates' details an
     - A **step 3** picture is right when it is a real surviving object of the kind the line names, from the period (a balance scale, a coin, a salt cellar in a museum). A photograph, taken in a museum, of a real object made in the period (a coin, a cup, a jewel, scales, a tapestry, a manuscript page) is NOT a modern photograph in the sense of the rule: for a step-3 want it is the right answer; what stays refused is a photograph of people, places or reconstructions of today, a film still, a stock picture.
     - A modern photograph of people, places or reconstructions of today, a film still or a stock picture is still never right. When nothing fits, `null` remains the right answer.
 
-For each **box**, open its crop and read the lines it is for:
+For each **region** in `inputs/regions.json` (the second look at full resolution):
 
-- `keep`: the crop shows the part the lines speak of, with a little air. Write the box as it is (the program keeps it).
-- `adjust`: it is close but cut off, too loose or off centre. Give the corrected `box` (fractions of the painting, `[x0, y0, x1, y1]`), **checking it first** with `{{CROP_CMD}} --box x0,y0,x1,y1 -o look/NAME.jpg` and opening the result.
-- `drop`: it does not show what the lines say and you cannot fix it with a box. The lines that use it then show the whole painting instead.
+Open its gridded cut-out (`images/d_<NAME>.jpg`), read `thing`, `what`, `cutout_size`, and the lines that use it. Measure in the **cut-out's own pixels** (using the 100-px yellow grid along the top and left edges — never convert to the main painting's coordinates, the program does that for you):
 
-Never keep a box you have not looked at. A box is wrong more often than it looks.
+- `tight`: give `box: [x0, y0, x1, y1]` in cut-out pixels (`0 <= x0 < x1 <= w`, `0 <= y0 < y1 <= h`). **Its edges touch `thing` itself, with NO air around it** — do not include neighbouring objects or half the rough box when the thing is smaller. Do not set `confirmed` on your first pass (leave `confirmed` out or `false`).
+- `wider`: ONLY if `thing` is partly cut off by the edge of the cut-out. Give a short Vietnamese `reason` and run `{{CHECK_CMD}}`; the program writes one wider cut-out enlarged +40% (`look/d_<NAME>_wider.jpg`). Open that wider cut-out and answer `tight` (or `drop`) in the wider cut-out's pixels. Only one `wider` request per region is allowed.
+- `drop`: ONLY if `thing` is not actually inside the painting/cut-out at all (never drop just to keep a loose frame). Give a Vietnamese `reason`; lines using it fall back to the whole painting.
+
+**Check sheet verification (mandatory before a region becomes tight):**
+
+1. After you give `tight` (and no region waits on `wider`), run `{{CHECK_CMD}}`. The program draws every tight box as a bright green rectangle on a clean cut-out (no grid) and tiles up to 6 per sheet (`look/check_1.jpg`, `look/check_2.jpg`, ...), labelled with region name and stored pixel size.
+2. **Open every `look/check_*.jpg` sheet.** Inspect each green rectangle against `thing`:
+   - If the green box fits `thing` tightly with no air and clips nothing important, add `"confirmed": true` to that region in `out/choice.json`.
+   - If the green box is slightly off, you may give a corrected `box` **once** together with `"confirmed": true` (or answer `drop`).
+3. Run `{{CHECK_CMD}}` again until it prints `0 error(s)`. Any region never confirmed after inspecting a check sheet is NOT stored as tight.
+
+Never answer a box you have not measured on its cut-out, and never confirm a box you have not visually checked on `look/check_*.jpg`.
 
 ## 4. The choice format (`bti.picks.choice/1`)
 
@@ -77,13 +87,14 @@ Never keep a box you have not looked at. A box is wrong more often than it looks
    {"id": "b0009.1", "pick": "B3",
     "reason": "Hình trong sách của bạn in đúng bản chụp tia X của bức tranh."}],
  "regions": [
-   {"name": "MIRROR", "action": "keep", "reason": "Khung bao trọn tấm gương, có chừa một ít viền."},
-   {"name": "SIGNATURE", "action": "adjust", "box": [0.38, 0.28, 0.64, 0.38],
-    "reason": "Khung cũ cắt mất chữ cuối; đã nới sang phải."}]}
+   {"name": "CARVED_SAINT", "action": "tight", "box": [298, 162, 398, 392], "confirmed": true,
+    "reason": "Khung sát tượng thánh khắc trên thành ghế, bỏ phần bàn chải và ghế xung quanh."},
+   {"name": "WRONG_DETAIL", "action": "drop",
+    "reason": "Chi tiết này không có trong vùng tranh như lời dẫn nêu."}]}
 ```
 
 - `wants`: one entry for each wanted picture. `pick`: the **number** of a candidate on that picture's own sheet, **`"B<number>"`** for a picture of the owner's books, or **`null`** when none is right. `reason`: one short Vietnamese sentence: why this picture shows what the line says, or why none does.
-- `regions`: one entry for each box. `action`: `keep`, `adjust` (with `box`) or `drop`; `reason` is needed for `adjust` and `drop`.
+- `regions`: one entry for each region in `inputs/regions.json`. `action`: `"tight"` (with cut-out pixel `box` `[x0, y0, x1, y1]`, and `"confirmed": true` after checking `look/check_*.jpg`), `"wider"` (once, with Vietnamese `reason`), or `"drop"` (with Vietnamese `reason`).
 
 ## 5. The two helper commands
 

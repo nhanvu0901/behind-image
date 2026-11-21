@@ -80,7 +80,7 @@ def test_start_runs_the_job_and_the_overview_tells_the_result(api):
     assert job["result"]["sentence"] == "Agent đã chọn hình cho 6/6 đoạn." and job["meta"]["action"] == "auto" and job["kind"] == "picks"
     ov = api.get(api.u()).json()
     assert ov["running"] is None and ov["last"]["result"]["lines_done"] == 6 and ov["agent"]["id"] == "gem"
-    assert ov["reasons"]["b0001"] == "Mở bằng cả bức tranh." and ov["limits"]["plan"] == {"minutes": 30, "steps": 120, "repairs": 1} and ov["limits"]["choose"]["steps"] == 220
+    assert ov["reasons"]["b0001"] == "Mở bằng cả bức tranh." and ov["limits"]["plan"] == {"minutes": 30, "steps": 140, "repairs": 1} and ov["limits"]["choose"]["steps"] == 280
     assert ov["limits"]["search_seconds"] == 600 and ov["limits"]["write_seconds"] == 1500
     # what the page shows is in the picks answer too, and the job never approved
     page = api.get("/api/projects/%s/picks" % api.pid).json()

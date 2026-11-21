@@ -10,6 +10,11 @@ PART_TITLES = {
     "write": "Ghi vào chọn hình (4/4)",
 }
 
+TIGHTEN_PART_TITLES = {
+    "tighten": "Đo lại khung chi tiết (1/2)",
+    "write": "Ghi khung chi tiết mới (2/2)",
+}
+
 VI = {
     "picks_auto_no_output": "Agent không viết được tệp kết quả dùng được, kể cả sau một lần nhắc sửa. Chạy lại, hoặc chọn agent khác.",
     "picks_auto_limit": "Agent đã dùng hết giới hạn của một lần chạy mà chưa có kết quả dùng được. Chạy lại để làm tiếp.",
@@ -22,6 +27,7 @@ VI = {
     "main_asset_unreadable": "Tranh chính chưa có tệp ảnh đọc được. Chọn lại tranh chính.",
     "retry_nothing_to_do": "Không có dòng nào đang thiếu hình vì nguồn giới hạn lượt tải.",
     "retry_no_files": "Các tệp của lần chạy trước (kế hoạch, kết quả tìm, lựa chọn) không còn trong dự án. Hãy cho agent chọn hình lại các dòng này.",
+    "tighten_nothing_to_do": "Mọi vùng chi tiết trên tranh chính đều đã được đo khung khít (hoặc tranh chính chưa có vùng nào).",
     "agent_job_running": "Agent đang làm một việc khác cho dự án này (chọn hình, sửa bằng lời, dựng bản nháp hoặc chạy tự động). Chờ xong hoặc bấm Dừng rồi thử lại.",       # join2: the same sentence as the draft's
 }
 
@@ -94,4 +100,14 @@ def retry_sentence(fixed: int, total: int, still: int, left: int) -> str:
         s += " %d chỗ vẫn bị giới hạn lượt tải, thử lại sau." % still
     if left > 0:
         s += " %d đoạn giữ nguyên." % left
+    return s
+
+
+def tighten_sentence(tightened: int, total: int, unconfirmed: int = 0, dropped: int = 0) -> str:
+    """Result sentence for `picks.tighten`."""
+    s = "Đã đo khung khít cho %d/%d vùng chi tiết." % (tightened, total)
+    if unconfirmed > 0:
+        s += " %d vùng chưa được xác nhận nên giữ nguyên." % unconfirmed
+    if dropped > 0:
+        s += " %d vùng không có trong tranh." % dropped
     return s

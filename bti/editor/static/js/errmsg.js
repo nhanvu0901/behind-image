@@ -804,3 +804,10 @@ export const PANELBOX_SENTENCES = {
 };
 export const PANELBOX_CODES = Object.keys(PANELBOX_SENTENCES);
 Object.assign(BUILD, PANELBOX_SENTENCES);
+
+// ---- worker tightbox (2026-11-21): `picks.tighten` (bti/picks/auto/tighten_job.py) refusal sentence matching texts.VI & PartError codes
+Object.assign(STAGE_CODES.picks, {
+  tighten_nothing_to_do: 'Mọi vùng chi tiết trên tranh chính đều đã được đo khung khít (hoặc tranh chính chưa có vùng nào).',
+  write_refused: 'Tài liệu chọn hình không chấp nhận thay đổi vừa ghi. Hãy tải lại dự án rồi thử lại.',
+});
+BY_CODE_HTTP.tighten_nothing_to_do = () => STAGE_CODES.picks.tighten_nothing_to_do;

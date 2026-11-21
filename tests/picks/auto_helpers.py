@@ -20,8 +20,8 @@ SMALL_PNG = png_bytes(64, 48)
 PLAN = {
     "schema": "bti.picks.plan/1",
     "regions": [
-        {"name": "MIRROR", "box": [0.40, 0.30, 0.60, 0.55], "what": "Tấm gương lồi"},
-        {"name": "HEAD", "box": [0.10, 0.05, 0.30, 0.25], "what": "Khuôn mặt"}],
+        {"name": "MIRROR", "box": [0.40, 0.30, 0.60, 0.55], "what": "Tấm gương lồi", "thing": "convex mirror on back wall"},
+        {"name": "HEAD", "box": [0.10, 0.05, 0.30, 0.25], "what": "Khuôn mặt", "thing": "man's face"}],
     "lines": [
         {"beat": "b0001", "reason": "Mở bằng cả bức tranh.", "kinds": ["whole"], "show": [{"type": "whole"}]},
         {"beat": "b0002", "reason": "Nói về tấm gương.", "kinds": ["detail"], "show": [{"type": "detail", "region": "MIRROR"}]},
@@ -44,8 +44,8 @@ CHOICE = {
         {"id": "b0004.1", "pick": 1, "reason": "Đúng thành phố Bruges."},
         {"id": "b0004.2", "pick": 1, "reason": "Cảnh kênh đào đúng ý."}],
     "regions": [
-        {"name": "MIRROR", "action": "keep", "reason": ""},
-        {"name": "HEAD", "action": "adjust", "box": [0.08, 0.04, 0.32, 0.28], "reason": "Nới khung để thấy cả đầu."}]}
+        {"name": "MIRROR", "action": "tight", "box": [120, 130, 735, 890], "confirmed": True, "reason": "Khung ôm sát tấm gương lồi."},
+        {"name": "HEAD", "action": "tight", "box": [110, 110, 900, 860], "confirmed": True, "reason": "Khung ôm vừa khuôn mặt."}]}
 
 
 def infer_kinds(line):
@@ -188,8 +188,9 @@ class FakeAgent:
     (turn 1, turn 2 ...). `hook(mode, ws_root, kw)` runs first (to cancel, to block, to raise)."""
     SUPPORTS_ALLOW = True
 
-    def __init__(self, plan=PLAN, choice=CHOICE, hook=None, status="ok", error_code=None):
+    def __init__(self, plan=PLAN, choice=CHOICE, hook=None, status="ok", error_code=None, tighten=None):
         self.plan, self.choice, self.hook, self.status, self.error_code = plan, choice, hook, status, error_code
+        self.tighten = choice if tighten is None else tighten
         self.calls = []
 
     def _content(self, what, ws_root, turn, mode):
@@ -201,7 +202,7 @@ class FakeAgent:
     @staticmethod
     def fit(content, ws_root, mode):
         """What a real agent does by reading its inputs: a prepared plan keeps only the lines it must cover (and says what each does, `kinds`, when the
-        prepared plan did not) and leaves out the regions the painting already has; a prepared choice answers every wanted picture and box it was shown (null / keep for those the file leaves out)."""
+        prepared plan did not) and leaves out the regions the painting already has; a prepared choice/tighten answers every wanted picture and region it was shown."""
         ctx = json.loads((Path(ws_root) / "inputs" / "context.json").read_text(encoding="utf-8"))
         c = copy.deepcopy(content)
         if mode == "plan":
@@ -211,12 +212,26 @@ class FakeAgent:
             have = {ln["beat"] for ln in c["lines"]}
             c["lines"] += [{"beat": b, "reason": "Giữ như đoạn trước.", "kinds": ["idea"], "show": []} for b in p["targets"] if b not in have]
         else:
-            q = ctx["choice"]
-            c["wants"] = [w for w in c.get("wants", []) if w.get("id") in q["wants"]]
+            q = ctx["choice"] if mode == "choose" else ctx["tighten"]
+            if mode == "choose":
+                c["wants"] = [w for w in c.get("wants", []) if w.get("id") in q["wants"]]
+                have = {w["id"] for w in c["wants"]}
+                c["wants"] += [{"id": w, "pick": None, "reason": "Không chắc."} for w in q["wants"] if w not in have]
             c["regions"] = [r for r in c.get("regions", []) if r.get("name") in q["regions"]]
-            have, haver = {w["id"] for w in c["wants"]}, {r["name"] for r in c["regions"]}
-            c["wants"] += [{"id": w, "pick": None, "reason": "Không chắc."} for w in q["wants"] if w not in have]
-            c["regions"] += [{"name": n, "action": "keep", "reason": ""} for n in q["regions"] if n not in haver]
+            haver = {r["name"] for r in c["regions"]}
+            cutouts = q.get("cutouts") or {}
+            for n in q["regions"]:
+                if n in haver:
+                    continue
+                if n in cutouts:
+                    cw, ch = cutouts[n]["cutout_size"]
+                    c["regions"].append({
+                        "name": n, "action": "tight",
+                        "box": [max(0, cw // 5), max(0, ch // 5), max(2, (cw * 4) // 5), max(2, (ch * 4) // 5)],
+                        "confirmed": True, "reason": "Khung ôm sát chi tiết.",
+                    })
+                else:
+                    c["regions"].append({"name": n, "action": "keep", "reason": ""})
         return c
 
     def run(self, ws_root, *, model=None, timeout=1800.0, max_repairs=2, check=None, cancel=None, on_progress=None, transcript_path=None,
@@ -236,10 +251,12 @@ class FakeAgent:
             res.error_message = "boom"
             return res
         turn = 1
+        src_val = {"plan": self.plan, "choose": self.choice, "tighten": self.tighten}[mode]
+        out_name = {"plan": "plan.json", "choose": "choice.json", "tighten": "tighten.json"}[mode]
         while True:
-            content = self._content(self.plan if mode == "plan" else self.choice, ws, turn, mode)
+            content = self._content(src_val, ws, turn, mode)
             (ws / "out").mkdir(exist_ok=True)
-            (ws / "out" / ("plan.json" if mode == "plan" else "choice.json")).write_text(
+            (ws / "out" / out_name).write_text(
                 content if isinstance(content, str) else json.dumps(content, ensure_ascii=False), encoding="utf-8")
             res.turns, res.steps = turn, 5 * turn
             if on_progress:
