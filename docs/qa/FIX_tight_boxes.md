@@ -214,3 +214,12 @@ Generated into `.scratch/tightbox/proof/` via `.scratch/tightbox/make_proof.py` 
 - No live VLM (`agy`, `claude`, `codex`) call was executed (prohibited by task limits); model behavior is verified with `FakeAgent` and static proof coordinates only.
 - Storyboard camera calculation from `tight` regions belongs to the concurrent camera worker (unowned `bti/draft/**`, `bti/engine/**`, `style/**`) and was not modified or tested against live video rendering here.
 - No live browser DOM interaction test was run against a running server process for `picks.tighten` UI triggers.
+
+## Follow-ups
+1. **Dedicated stepper label for `picks.tighten` ([`bti/picks/__init__.py`](../../bti/picks/__init__.py))**: `state()` now distinguishes active `picks.tighten` runs (`auto.tighten_job.active_job(pdir.name)`) and returns `"Agent đang đo lại khung chi tiết."` instead of `"Đang tìm gợi ý hình."`. Covered by `test_picks_state_shows_tighten_label_while_running` in `tests/picks/test_tighten.py`.
+2. **E2E fake launcher updated for `thing` and two-pass cut-out confirmation ([`tests/e2e/picks_auto/launch_picks_auto.py`](../../tests/e2e/picks_auto/launch_picks_auto.py), [`tests/picks/test_auto_e2e_launcher_plan.py`](../../tests/picks/test_auto_e2e_launcher_plan.py))**: `make_plan` now supplies valid English `thing` fields (`convex mirror on back wall`, `man's face`) on both regions; `make_choice` emits `tight` cut-out pixel boxes on pass 1 and adds `"confirmed": True` after `look/tighten_state.json` records `sheets`; `FakeRunner.run` re-runs `make_choice` across repair rounds so check-sheet confirmation completes in two turns. `tests/picks/test_auto_e2e_launcher_plan.py` now asserts directly that `make_plan`, `make_choice`, and `FakeRunner.run` pass `check_plan` / `helper.run_check`.
+3. **Unowned files untouched**: `bti/draft/run.py` was left completely unmodified (owned by another worker).
+4. **Follow-up verification (snapshot `tightbox`, one folder per run, without `-m slow`)**:
+   - `tests/picks`: `432 passed, 1 warning in 133.06s (0:02:13)`
+   - `tests/state`: `321 passed, 1 warning in 199.69s (0:03:19)`
+   - `node --test tests/editor_frontend/*.test.mjs tests/picks/picks_logic.test.mjs tests/picks/sourcelimit.test.mjs tests/output/*.test.mjs`: `tests 495`, `pass 494`, `fail 0`, `skipped 1`, `duration_ms 939.283917`

@@ -24,9 +24,11 @@ def state(project_dir) -> dict:
         try:                          # c3picks: the agent's own job says so (the stepper must answer whatever happens here)
             from . import auto
             mine = bool(auto.active_job(pdir.name))
+            tightening = False if mine else bool(auto.tighten_job.active_job(pdir.name))
         except Exception:             # noqa: BLE001
-            mine = False
-        return {"state": "running", "detail": "Agent đang chọn hình." if mine else "Đang tìm gợi ý hình."}
+            mine, tightening = False, False
+        detail = "Agent đang chọn hình." if mine else ("Agent đang đo lại khung chi tiết." if tightening else "Đang tìm gợi ý hình.")
+        return {"state": "running", "detail": detail}
     if d is None:
         return {"state": "none", "detail": "Chưa chọn hình.", "main_asset": None, "picked": 0, "beats": len(nv["beat_ids"])}
     beats = nv["beat_ids"]
