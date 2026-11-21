@@ -141,8 +141,10 @@ def _common(inp: Inputs, root: Path, mode: str, ctx_json: dict) -> dict:
                                   [{"asset": i["asset"], "region": i["region"], "role": i["role"]} for i in cur["items"]])
             rows.append(row)
         lines.append({"id": c["id"], "title": c["title"], "role": c["role"], "lines": rows})
-    _json(root / "inputs" / "narration.json", {"note": "Your lines are those with `target: true`. The others are not yours: they keep what they have.",
-                                              "chapters": lines})
+    narr = {"note": "Your lines are those with `target: true`. The others are not yours: they keep what they have.", "chapters": lines}
+    if isinstance(inp.picks.get("names"), list):
+        narr["existing_names"] = [n for n in inp.picks["names"] if isinstance(n, dict) and n.get("line") not in inp.targets]
+    _json(root / "inputs" / "narration.json", narr)
     _json(root / "inputs" / "facts.json", inp.facts)
     _json(root / "inputs" / "dossier.json", {"identity": inp.identity, "details": inp.details})
     _json(root / "inputs" / "context.json", {"mode": mode, **ctx_json})

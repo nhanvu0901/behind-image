@@ -95,6 +95,8 @@ def test_an_example_is_a_real_sentence_of_the_two_narrations_with_its_line_id_or
     texts = beat_texts()
     current = json.loads((FIX.parent / "pointfix" / "timing.json").read_text(encoding="utf-8"))
     current_arnolfini = {b["id"]: b["text"] for b in current["beats"]}
+    latest = json.loads((FIX.parent / "namefirst" / "timing.json").read_text(encoding="utf-8"))
+    latest_arnolfini = {b["id"]: b["text"] for b in latest["beats"]}
     real = 0
     for tid in OFFERED:
         ex = ALL[tid]["example"]
@@ -106,6 +108,7 @@ def test_an_example_is_a_real_sentence_of_the_two_narrations_with_its_line_id_or
             candidates = [texts[video].get(bid, "")]
             if video == "Arnolfini":
                 candidates.append(current_arnolfini.get(bid, ""))
+                candidates.append(latest_arnolfini.get(bid, ""))
             assert any(" ".join(quote.split()) in " ".join(line.split()) for line in candidates), (tid, bid, "the quoted words are in the line")
             real += 1
     assert real >= 20

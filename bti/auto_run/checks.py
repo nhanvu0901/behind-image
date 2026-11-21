@@ -95,6 +95,7 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "figure_on_wrong_picture": ("a large figure is laid over another picture although the picks of its line hold the picture of the thing counted (the first video laid 42 ships over the saint)",
                                     "có con số lớn nằm trên hình không phải thứ được đếm"),
         # pointfix: a viewer needs to locate details and read labels.
+        "name_not_shown": ("a first-presented person has no on-screen name", "có người được giới thiệu nhưng chưa hiện tên"),
         "small_detail_not_lit": ("a small named detail in the painting has no visual pointer", "có chi tiết nhỏ chưa được rọi sáng"),
         "highlight_nothing_to_dim": ("a spotlight covers so much of the frame that little can be darkened", "có vùng sáng chiếm quá nhiều khung hình"),
         "text_too_brief": ("on-screen text is not fully visible for long enough to read", "có chữ hiện quá nhanh"),

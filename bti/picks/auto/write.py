@@ -16,6 +16,7 @@ unwritten; a line of an older plan, which names no fallback, with nothing found 
 """
 from __future__ import annotations
 
+import copy
 import re
 import time
 from pathlib import Path
@@ -99,6 +100,30 @@ def resolve_picks(plan: dict, search: dict, choice: dict, books: list[dict]) -> 
             out[wid] = row
     return out
 
+
+
+def resolve_names(plan: dict, picks: dict, got: dict, regions: dict, dropped: set) -> list[dict]:
+    """Translate a plan's region/want references to the pictures actually kept."""
+    out = []
+    for entry in plan.get("names") or []:
+        where = entry["where"]
+        if "region" in where:
+            old = where["region"]
+            target = regions.get(old, old)
+            if old in dropped or target is None:
+                continue
+            target_where = {"region": target}
+        else:
+            picked = (picks.get(where.get("want")) or {}).get("pick")
+            key = (picked["source"], picked["source_id"]) if picked else None
+            target = got.get(key)
+            if not target:
+                continue
+            target_where = {"asset": target}
+        row = copy.deepcopy(entry)
+        row["where"] = target_where
+        out.append(row)
+    return out
 
 def final_regions(plan: dict, choice: dict) -> tuple[dict, list[str]]:
     """The boxes to make/update: `name -> {...}` (`tight` stored pixels when confirmed, else rough fractional box), and the names dropped."""
@@ -338,6 +363,8 @@ def _ops_for(lines: list[dict], main_key: str) -> list[dict]:
                 ops.append({"op": "import", "source": it["src"][0], "source_id": it["src"][1], "ref": refs[it["src"]]})
     for ln in lines:
         kinds = {"kinds": list(ln["kinds"])} if ln.get("kinds") else {}
+        if "names" in ln:
+            kinds["names"] = ln["names"]
         if not ln["show"]:
             ops.append({"op": "skip_beat", "beat": ln["beat"], "reason": _cut(ln["reason"], NOTE_MAX), **kinds})
             continue
@@ -391,6 +418,10 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
             problems.append({"want": "regions", "beat": None, "no": None, "what": "vùng chi tiết", "code": "write_refused",
                              "why": texts.why("write_refused", what="vùng chi tiết", detail=_cut(str(e.detail), 120))})
     lines = build_lines(inp, plan, picks, got, failed, names, dropped, lost)
+    if "names" in plan:
+        cast = resolve_names(plan, picks, got, names, set(dropped) | lost)
+        for line in lines:
+            line["names"] = [n for n in cast if n["line"] == line["beat"]]
     chapters: dict[str, list] = {}
     for ln in lines:
         if ln["beat"] in prev:

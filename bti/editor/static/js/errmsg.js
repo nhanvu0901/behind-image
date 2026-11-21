@@ -839,3 +839,10 @@ export const BOXCAM_SENTENCES = {
 };
 export const BOXCAM_CODES = Object.keys(BOXCAM_SENTENCES);
 Object.assign(BUILD, BOXCAM_SENTENCES);
+
+// ---- worker namefirst: first presentation of a named figure.
+export const NAMEFIRST_SENTENCES = {
+  name_not_shown: (i) => { const a = i.args || {}; return `Đoạn ${a.beat ?? "?"}, cảnh ${a.shot ?? "?"}: chưa hiện tên “${a.name ?? ""}” khi giới thiệu người này.`; },
+};
+export const NAMEFIRST_CODES = Object.keys(NAMEFIRST_SENTENCES);
+Object.assign(BUILD, NAMEFIRST_SENTENCES);

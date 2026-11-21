@@ -229,8 +229,11 @@ def normalize(d: Any) -> dict:
             if val:                                          # absent when empty: a document made before these existed keeps its revision
                 beats[bid][key] = val
     main = d.get("main_asset")
-    return {"schema": SCHEMA, "main_asset": main if isinstance(main, str) and main in assets else None,
-            "assets": assets, "beats": beats, "approval": _approval(d.get("approval"))}
+    result = {"schema": SCHEMA, "main_asset": main if isinstance(main, str) and main in assets else None,
+              "assets": assets, "beats": beats, "approval": _approval(d.get("approval"))}
+    if isinstance(d.get("names"), list):
+        result["names"] = copy.deepcopy(d["names"])
+    return result
 
 
 def doc_problem(d: Any) -> str | None:
@@ -239,6 +242,24 @@ def doc_problem(d: Any) -> str | None:
         return "picks (object) is required"
     if "main_asset" in d and d["main_asset"] is not None and not isinstance(d["main_asset"], str):
         return "picks.main_asset must be a string or null"
+    if "names" in d:
+        if not isinstance(d["names"], list):
+            return "picks.names must be a list"
+        cast_seen = set()
+        for i, n in enumerate(d["names"]):
+            if not (isinstance(n, dict) and isinstance(n.get("name"), str) and n["name"].strip()
+                    and isinstance(n.get("also"), list) and all(isinstance(a, str) and a.strip() for a in n["also"])
+                    and isinstance(n.get("line"), str) and BEAT_ID_RE.fullmatch(n["line"])
+                    and isinstance(n.get("sure"), bool) and isinstance(n.get("words"), str)
+                    and isinstance(n.get("where"), dict) and len(n["where"]) == 1
+                    and next(iter(n["where"]), None) in ("region", "asset")
+                    and isinstance(next(iter(n["where"].values()), None), str)
+                    and next(iter(n["where"].values())).strip()):
+                return f"picks.names[{i}] must name a person, line, region or asset, certainty and words"
+            aliases = {a.strip().casefold() for a in [n["name"]] + n["also"]}
+            if cast_seen & aliases:
+                return f"picks.names[{i}] repeats a person or alias"
+            cast_seen.update(aliases)
     assets = d.get("assets", {})
     if not isinstance(assets, dict) or len(assets) > MAX_ASSETS:
         return "picks.assets must be an object"

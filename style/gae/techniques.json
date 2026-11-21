@@ -10740,7 +10740,7 @@
    "use_when": "The first time the narration speaks the proper name of a person or thing, or the unfamiliar name of an object such as a settle, and its subject is on screen, show that name on the naming word, long enough to read. On another picture name the subject the narration speaks of, not the picture itself.",
    "needs": "The name from the narration. Use sub for a shortened caution in the narration’s own words when identity is uncertain, or a plain fact from the same sentence. On a borrowed picture sub may give its record title, maker and date only when available, never the photographer or photograph year. A strip is never alone for a small thing: use HI-01; never light a person or face.",
    "never_when": "The name has been presented before; the subject is not on screen; the label invents certainty or a fact; the shot already has X-ANN-02; three or more parts are named in sequence (KEY-01). A face needs no label saying FACE, but a person named by the narration gets their name.",
-   "example": "Arnolfini: \"The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini\" (COSTANZA TRENTA / most often named as the wife); \"Some historians see Saint Martha, patron of housewives\" (SAINT MARTHA / some historians see Saint Martha; Hours of Henry VIII).",
+   "example": "Arnolfini b0003: \"The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini\" (COSTANZA TRENTA / most often named as the wife); Arnolfini b0024: \"Some historians see Saint Martha, patron of housewives\" (SAINT MARTHA / some historians see Saint Martha; Hours of Henry VIII).",
    "slots": [
     {
      "name": "text",

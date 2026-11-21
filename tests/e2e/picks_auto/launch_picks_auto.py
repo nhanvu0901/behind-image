@@ -97,7 +97,7 @@ def make_plan(ws, first_run):
         else:
             show, why, kinds = [], "Vẫn cùng ý với đoạn trước, không cần hình mới.", ["idea"]
         out.append({"beat": bid, "reason": why, "kinds": kinds, "show": show, **extra})
-    return {"schema": shapes.PLAN_SCHEMA, "regions": regions, "lines": out}
+    return {"schema": shapes.PLAN_SCHEMA, "regions": regions, "lines": out, "names": []}
 
 
 def make_choice(ws, confirmed=None):

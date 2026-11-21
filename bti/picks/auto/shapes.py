@@ -212,6 +212,8 @@ class PlanCtx:
     existing_regions: dict = field(default_factory=dict)   # NAME -> [x0, y0, x1, y1] of the regions the main painting already has
     chapters: dict = field(default_factory=dict)        # beat id -> chapter id (same as `beats`, kept for quick lookups)
     painting_title: str = ""
+    existing_names: list = field(default_factory=list)
+    require_names: bool = False
     line_texts: dict = field(default_factory=dict)      # beat id -> English/Vietnamese line text (used to verify "X and Y" in `thing`)
 
     def __post_init__(self):
@@ -220,7 +222,7 @@ class PlanCtx:
 
     def to_json(self) -> dict:
         out = {"beats": self.beats, "targets": self.targets, "existing_regions": self.existing_regions,
-               "painting_title": self.painting_title}
+               "painting_title": self.painting_title, "existing_names": self.existing_names, "require_names": self.require_names}
         if self.line_texts:
             out["line_texts"] = dict(self.line_texts)
         return out
@@ -229,7 +231,7 @@ class PlanCtx:
     def from_json(cls, d: dict) -> "PlanCtx":
         return cls(beats=list(d.get("beats") or []), targets=list(d.get("targets") or []),
                    existing_regions={k: list(v) for k, v in (d.get("existing_regions") or {}).items()},
-                   painting_title=str(d.get("painting_title") or ""),
+                   painting_title=str(d.get("painting_title") or ""), existing_names=list(d.get("existing_names") or []), require_names=d.get("require_names") is True,
                    line_texts={str(k): str(v) for k, v in (d.get("line_texts") or {}).items()})
 
 
@@ -638,6 +640,50 @@ def pacing_warnings(lines: list[dict], ctx: PlanCtx) -> list[str]:
     return out
 
 
+
+def _cast_names(raw, lines, ctx, errors):
+    if raw is None:
+        return None
+    if not isinstance(raw, list):
+        errors.append("`names` must be a list of first-presented people")
+        return None
+    by_line = {line["beat"]: line for line in lines}
+    seen = {name.casefold() for row in ctx.existing_names if isinstance(row, dict) and row.get("line") not in ctx.targets
+            for name in [row.get("name")] + (row.get("also") if isinstance(row.get("also"), list) else []) if isinstance(name, str)}
+    result = []
+    for i, row in enumerate(raw):
+        where = "names[%d]" % i
+        if not isinstance(row, dict):
+            errors.append(where + ": expected an object")
+            continue
+        name, also, bid, place, sure, words = (row.get(k) for k in ("name", "also", "line", "where", "sure", "words"))
+        if not (isinstance(name, str) and name.strip() and isinstance(also, list)
+                and all(isinstance(a, str) and a.strip() for a in also) and isinstance(bid, str)
+                and isinstance(place, dict) and isinstance(sure, bool) and isinstance(words, str)):
+            errors.append(where + ": write name, also, line, where, sure and words")
+            continue
+        name, also, words = " ".join(name.split()), [" ".join(a.split()) for a in also], " ".join(words.split())
+        keys = {a.casefold() for a in [name] + also}
+        if seen & keys:
+            errors.append(where + ": this person or alias is listed twice")
+        seen.update(keys)
+        line = by_line.get(bid)
+        text = " ".join(ctx.line_texts.get(bid, "").split()).casefold()
+        def contains(value):
+            return bool(value) and re.search(r"(?<!\w)" + re.escape(value.casefold()) + r"(?!\w)", text) is not None
+        if not line or not any(contains(x) for x in [name] + also):
+            errors.append(where + ": line must be a target that speaks the name or an alias")
+        if (not sure and not words) or (words and not contains(words)):
+            errors.append(where + ": words must be the line's exact cautious words when identity is uncertain")
+        shown = line.get("show", []) if line else []
+        region, want = place.get("region"), place.get("want")
+        valid_region = set(place) == {"region"} and isinstance(region, str) and any(x.get("type") == "detail" and x.get("region") == region for x in shown)
+        valid_want = set(place) == {"want"} and isinstance(want, str) and any(want == "%s.%d" % (bid, n) and x.get("type") in ("context", "map", "clip") for n, x in enumerate(shown, 1))
+        if not (valid_region or valid_want):
+            errors.append(where + ": where must name a region or wanted picture shown by this line")
+        result.append({"name": name, "also": also, "line": bid, "where": dict(place), "sure": sure, "words": words})
+    return result
+
 def check_plan(obj: Any, ctx: PlanCtx) -> Report:
     """Check a decoded `out/plan.json` against the narration lines of this job. The returned `value` is the plan with the rules applied."""
     rep = Report()
@@ -784,8 +830,15 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
     for name in regions:
         if name not in used:
             notes.append("region %s is not used by any line, so it will not be made" % name)
+    if ctx.require_names and "names" not in obj:
+        err.append("`names` is required: list the figures to introduce, or write []")
+    cast = _cast_names(obj.get("names"), lines, ctx, err)
+    if err:
+        return rep
     rep.warnings.extend(pacing_warnings(lines, ctx))
     rep.value = {"schema": PLAN_SCHEMA, "regions": {n: r for n, r in regions.items() if n in used}, "lines": lines}
+    if cast is not None:
+        rep.value["names"] = cast
     return rep
 
 

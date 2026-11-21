@@ -1002,3 +1002,6 @@ export const BOXCAM_LABELS = {
   thing_arrives_late: 'Máy quay tới chi tiết quá muộn',
 };
 Object.assign(CODE, BOXCAM_LABELS);
+
+// ---- worker namefirst: first presentation of a named figure.
+CODE.name_not_shown = "Chưa hiện tên khi giới thiệu";

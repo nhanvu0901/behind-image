@@ -57,6 +57,8 @@ def thing_ref(doc_kind: str, key: str) -> dict:
         return {"shot": ident}
     if key == "main":
         return {"main": True}
+    if key == "names":
+        return {"part": "names"}
     if kind == "beat":
         return {"beat": ident}
     return {"asset": ident} if kind == "asset" else {"asset": ident, "part": "regions"}
@@ -176,6 +178,8 @@ def undo_changes(doc_kind: str, new_doc: dict, before: dict, after: dict, keys: 
             main = new_doc.get("main_asset")
             out.append({"target": {"asset": main}, "time": None,
                         "what": t["main"].format(pic=pic_name(new_doc, main) if main else "chưa chọn tranh nào")})
+        elif key == "names":
+            out.append({"target": {"part": "names"}, "time": None, "what": "Danh sách tên: trở lại như trước khi sửa"})
         elif kind == "beat":
             out.append({"target": {"beat": ident}, "time": facts.beat_time(ident), "what": t["beat"].format(n=facts.beat_no(ident))})
         elif kind == "asset":

@@ -44,10 +44,15 @@ You do not search for the pictures and you do not choose among them: a program s
 3. The `show` words of a line are the script writer's own idea of what to show; the dossier's details (`D1` ...) are the parts of this painting that the books talk about. Use them as hints, not as orders.
 4. Decide the line, then (for a detail) find its box on the grid and **check it with a crop** (section 6).
 
+## Cast of named figures
+
+Add a top-level `names` list to the plan. Include each person, saint or other named figure the narration names who can be seen in this video, once at the first line that names them while showing them. Omit people who are only mentioned. Each entry is `{"name": "Costanza Trenta", "also": ["Costanza"], "line": "b0003", "where": {"region": "WOMAN_HEAD"}, "sure": false, "words": "most often named as the wife"}`. For an outside picture use `"where": {"want": "b0003.1"}`: the want id is the line id, a dot, and the one-based position in `show`. The line must speak the name or an alias; the region or want must appear in that line. For uncertain identities copy a short exact cautious phrase from that line to `words`; for a certain identity set `sure` true and `words` to an empty string. Never list the same person or alias twice. When planning selected lines, list only people first presented on those lines; `inputs/narration.json` provides `existing_names` from other lines, which you must not repeat. Use an empty list when there are none.
+
 ## 4. The plan format (`bti.picks.plan/1`)
 
 ```json
 {"schema": "bti.picks.plan/1",
+ "names": [],
  "regions": [
    {"name": "MIRROR", "box": [0.43, 0.37, 0.59, 0.59], "what": "Tấm gương lồi ở phía sau", "thing": "convex mirror on back wall"},
    {"name": "SIGNATURE", "box": [0.39, 0.29, 0.63, 0.38], "what": "Dòng chữ ký phía trên gương", "thing": "Latin signature above mirror"}],

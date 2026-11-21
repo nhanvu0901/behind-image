@@ -58,7 +58,7 @@ class Inputs:
     def plan_ctx(self) -> shapes.PlanCtx:
         return shapes.PlanCtx(beats=[{"id": b["id"], "chapter": b["chapter"], "words": b["words"]} for b in self.beats], targets=list(self.targets),
                               existing_regions={n: r["box"] for n, r in self.painting.regions.items()},
-                              painting_title=self.painting.title, line_texts={b["id"]: b["text"] for b in self.beats})
+                              painting_title=self.painting.title, existing_names=list(self.picks.get("names") or []), require_names=True, line_texts={b["id"]: b["text"] for b in self.beats})
 
 
 def has_pictures(picks: dict, bid: str) -> bool:
