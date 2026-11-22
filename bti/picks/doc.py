@@ -225,12 +225,16 @@ def normalize(d: Any) -> dict:
         items = [x for x in (_item(i) for i in raw_items) if x is not None]
         status = b.get("status") if b.get("status") in STATUSES else ("picked" if items else "todo")
         beats[bid] = {"items": items, "status": status, "note": _s(b.get("note"))}
+        if isinstance(b.get("about"), list):
+            beats[bid]["about"] = copy.deepcopy(b["about"])
         for key, val in (("kinds", _kinds(b.get("kinds"))), ("missing", _missing(b.get("missing")))):
             if val:                                          # absent when empty: a document made before these existed keeps its revision
                 beats[bid][key] = val
     main = d.get("main_asset")
     result = {"schema": SCHEMA, "main_asset": main if isinstance(main, str) and main in assets else None,
               "assets": assets, "beats": beats, "approval": _approval(d.get("approval"))}
+    if isinstance(d.get("subjects"), list):
+        result["subjects"] = copy.deepcopy(d["subjects"])
     if isinstance(d.get("names"), list):
         result["names"] = copy.deepcopy(d["names"])
     return result
@@ -260,6 +264,26 @@ def doc_problem(d: Any) -> str | None:
             if cast_seen & aliases:
                 return f"picks.names[{i}] repeats a person or alias"
             cast_seen.update(aliases)
+    subject_ids = set()
+    if "subjects" in d:
+        if not isinstance(d["subjects"], list):
+            return "picks.subjects must be a list"
+        for i, subject in enumerate(d["subjects"]):
+            if not isinstance(subject, dict):
+                return f"picks.subjects[{i}] must be an object"
+            sid, kind, name, where = (subject.get(k) for k in ("id", "kind", "name", "where"))
+            if not (isinstance(sid, str) and sid.strip() and sid not in subject_ids
+                    and kind in ("person", "thing", "place", "work", "idea")
+                    and isinstance(name, str) and name.strip() and isinstance(subject.get("strip"), bool)
+                    and ("sub" not in subject or isinstance(subject["sub"], str))):
+                return f"picks.subjects[{i}] needs a unique id, kind, name and strip"
+            if where is None:
+                if kind != "idea":
+                    return f"picks.subjects[{i}].where may be null only for an idea"
+            elif not (isinstance(where, dict) and len(where) == 1 and next(iter(where), None) in ("region", "asset")
+                      and isinstance(next(iter(where.values()), None), str) and next(iter(where.values())).strip()):
+                return f"picks.subjects[{i}].where must name one region or asset"
+            subject_ids.add(sid)
     assets = d.get("assets", {})
     if not isinstance(assets, dict) or len(assets) > MAX_ASSETS:
         return "picks.assets must be an object"
@@ -299,6 +323,11 @@ def doc_problem(d: Any) -> str | None:
             return f"picks.beats.{bid}.status must be one of {', '.join(STATUSES)}"
         if "note" in b and b["note"] is not None and not isinstance(b["note"], str):
             return f"picks.beats.{bid}.note must be a string"
+        if "about" in b:
+            about = b["about"]
+            if not isinstance(about, list) or any(not isinstance(a, dict) or a.get("id") not in subject_ids
+                    or not isinstance(a.get("words"), str) or not a["words"].strip() for a in about):
+                return f"picks.beats.{bid}.about must list known subjects and their spoken words"
         kinds = b.get("kinds")
         if kinds is not None and not (isinstance(kinds, list) and len(kinds) <= MAX_KINDS and all(k in LINE_KINDS for k in kinds)):
             return f"picks.beats.{bid}.kinds must be a list of at most {MAX_KINDS} of: {', '.join(LINE_KINDS)}"

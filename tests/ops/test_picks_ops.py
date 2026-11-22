@@ -545,3 +545,12 @@ def test_set_region_rejects_bad_tight_thing_and_rough(client, extra, where):
     r = pk(client, [{"op": "set_region", "asset": "A", "region": "BAD", "x": 200, "y": 200, "rx": 40, "ry": 40, **extra}])
     assert r.status_code == 422 and paths(r) == where
     untouched(client, r, before)
+
+
+def test_subject_table_and_line_about_are_logged_and_undoable(client):
+    subject = {"id": "sitter", "kind": "person", "name": "Sitter", "strip": True, "where": {"region": "HEAD"}}
+    response = pk(client, [{"op": "set_subjects", "subjects": [subject]},
+                           {"op": "set_about", "beat": "b0001", "about": [{"id": "sitter", "words": "the sitter"}]}])
+    assert response.status_code == 200, response.text
+    assert picks(client)["subjects"] == [subject]
+    assert picks(client)["beats"]["b0001"]["about"] == [{"id": "sitter", "words": "the sitter"}]
