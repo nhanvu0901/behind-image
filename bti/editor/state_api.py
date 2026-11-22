@@ -280,7 +280,8 @@ class Ctx:
         self.draft_ready = {"voice": False, "picks": False}
         self.draft_state: dict = {"state": "none"}
         self.proposal: str | None = None
-        self.sb_exists = self.sb_corrupt = False
+        self.sb_exists = self.sb_corrupt = self.sb_old_narration = False
+        self.proposal_after_sb = False
         self.sb_rev: str | None = None
         self.sb_approval = "none"
         self.has_history = False
@@ -439,6 +440,33 @@ def _file_named(d: Path, sb: dict, key: str, default: str) -> bool:
         return False
 
 
+def storyboard_old_narration(d: Path, sb: dict) -> bool:
+    """Detect obsolete beat references, or an older draft's narration snapshot."""
+    from bti.picks.context import narration_view
+    ids = set(narration_view(d)["beat_ids"])
+    if not ids:
+        return False
+    beats = [s.get("beat") for s in sb.get("shots", []) if isinstance(s, dict) and isinstance(s.get("beat"), str) and s.get("beat")]
+    if beats:
+        return sum(b not in ids for b in beats) * 2 > len(beats)
+    # Compiled shots have word anchors, not beat ids. A saved draft records the
+    # narration hash; use it only when picks were approved after the storyboard.
+    from datetime import datetime
+    from bti.draft.inputs import canon_hash
+    picks = read_json(d / "picks.json")
+    approved_at = (picks.get("approval") or {}).get("approved_at")
+    if not approved_at or datetime.fromisoformat(approved_at.replace("Z", "+00:00")).timestamp() <= (d / "storyboard.json").stat().st_mtime:
+        return False
+    current = canon_hash(read_json(d / "script" / "narration.json"))
+    sb_time = (d / "storyboard.json").stat().st_mtime
+    proposals = sorted((p for p in (d / "proposals").glob("draft_*.json") if p.stat().st_mtime <= sb_time), key=lambda p: p.stat().st_mtime, reverse=True)
+    for path in proposals:
+        old_hash = (read_json(path).get("made_from") or {}).get("narration")
+        if old_hash:
+            return old_hash != current
+    return False
+
+
 def _load_storyboard(c: Ctx) -> None:
     f = c.d / "storyboard.json"
     c.sb_exists = f.is_file()
@@ -457,7 +485,10 @@ def _load_storyboard(c: Ctx) -> None:
                   fix=hints_mod.hint("storyboard_corrupt", 409, c.pid)["fix"] if c.has_history else hints_mod.hint("no_history_copy", 404, c.pid)["fix"],
                   vi="Storyboard không đọc được.")
         return
+    c.sb_old_narration = not c.imported and _try(lambda: storyboard_old_narration(c.d, sb), False)
     c.sb_rev, c.sb_approval = compute_rev(sb), storyboard_approval(sb)
+    if c.sb_old_narration:
+        c.sb_approval = "stale"
     ident = sb.get("identity") if isinstance(sb.get("identity"), dict) else {}      # titlestep
     c.sb_title = ident["video_title"].strip() or None if isinstance(ident.get("video_title"), str) else None
     c.sb_record = (sb.get("approvals") or {}).get("storyboard") if isinstance(sb.get("approvals"), dict) else None      # c5cli
@@ -559,6 +590,8 @@ def _load_draft(c: Ctx) -> None:
     c.draft_ready = {"voice": bool(r["voice"]["ok"]), "picks": bool(r["picks"]["ok"])}
     c.draft_state = draft_run.state(c.d)
     c.proposal = c.draft_state.get("proposal") if isinstance(c.draft_state.get("proposal"), str) else None
+    if c.sb_old_narration and c.proposal:
+        c.proposal_after_sb = _try(lambda: (c.d / "proposals" / (c.proposal + ".json")).stat().st_mtime_ns > (c.d / "storyboard.json").stat().st_mtime_ns, False)
 
 
 def running_jobs(pid: str, d: Path, script_jobs, preview_jobs, longjobs) -> list[dict]:
@@ -825,7 +858,7 @@ def b_draft_start(c: Ctx):
     if not _edit_open(c):
         return None
     needs = c.blocker_need("edit")
-    if c.title_waits():                                                     # titlestep: the channel-name beat shows the video's title: wait for it while an agent can write it
+    if c.title_waits() and not c.sb_old_narration:                          # titlestep: the channel-name beat shows the video's title: wait for it while an agent can write it
         needs.append("title_done")
     if not c.draft_ready["voice"]:
         needs.append("voice_done")
@@ -835,13 +868,13 @@ def b_draft_start(c: Ctx):
         needs.append("no_running_job")
     needs += _model_needs(c, "draft")
     st = c.draft_state.get("state")
-    return E(list(dict.fromkeys(needs)), {"provider": "agy", "note": None}, advances=not c.sb_exists and st in ("none", "stale"))      # note: optional, null = none
+    return E(list(dict.fromkeys(needs)), {"provider": "agy", "note": None}, advances=(not c.sb_exists and st in ("none", "stale")) or (c.sb_old_narration and (st in ("none", "stale") or (st == "done" and not c.proposal_after_sb))))      # note: optional, null = none
 
 
 def b_proposal_apply(c: Ctx):
-    if not _edit_open(c) or c.sb_exists or c.proposal is None:
+    if not _edit_open(c) or (c.sb_exists and not c.sb_old_narration) or c.proposal is None:
         return None
-    return E(body={"accept": "all"}, advances=c.draft_state.get("state") == "done", path_args={"prop_id": c.proposal})
+    return E(body={"accept": "all", **({"base_rev": c.sb_rev} if c.sb_old_narration else {})}, advances=c.draft_state.get("state") == "done" and (not c.sb_old_narration or c.proposal_after_sb), path_args={"prop_id": c.proposal})
 
 
 def b_storyboard_restore(c: Ctx):
@@ -859,7 +892,7 @@ def b_storyboard_validate(c: Ctx):
 
 
 def b_storyboard_approve(c: Ctx):
-    if not _sb_ok(c) or c.sb_approval == "fresh":
+    if not _sb_ok(c) or c.sb_approval == "fresh" or c.sb_old_narration:
         return None
     return E(["storyboard_fits_voice"] if c.sb_off else [], {"rev": c.sb_rev}, advances=True)
 
@@ -870,7 +903,7 @@ def b_storyboard_retime(c: Ctx):
     if not _sb_ok(c) or not c.sb_off:
         return None
     needs = [] if c.draft_ready["voice"] else ["voice_done"]
-    return E(needs, {"base_rev": c.sb_rev, "actor": "cli:retime"}, advances=any(p.get("repair") for p in c.sb_off), problems=[p["code"] for p in c.sb_off][:12])
+    return E(needs, {"base_rev": c.sb_rev, "actor": "cli:retime"}, advances=not c.sb_old_narration and any(p.get("repair") for p in c.sb_off), problems=[p["code"] for p in c.sb_off][:12])
 
 
 def b_storyboard_preview(c: Ctx):
@@ -1102,6 +1135,15 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
     _try(lambda: _load_draft(c))
     _try(lambda: _load_auto(c))                                      # c5cli
     _try(lambda: _load_agent_jobs(c, longjobs))                      # join2
+    if c.sb_old_narration:
+        edit = c.steps.get("edit")
+        if edit:
+            if edit["state"] == "done":
+                edit["state"] = "current"
+            edit["detail"] = "Storyboard được dựng cho lời dẫn cũ. Cần dựng bản nháp mới."
+        export = c.steps.get("export")
+        if export and export["state"] in ("done", "current", "available"):
+            export.update(state="waiting", blocked_by="edit")
     steps = _steps_out(pipe)
     for p in c.problems:                                            # a step that carries a problem says so on its line
         s = next((x for x in steps if x["step"] == p.get("step")), None)

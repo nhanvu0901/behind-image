@@ -934,6 +934,21 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
                         raise ApiError(409, "timing has changed or is unavailable; re-run edit", code="stale", current_rev=cur_rev)
             elif body.get("base_rev") is not None and body["base_rev"] != cur_rev:
                 raise ApiError(409, "a storyboard was saved in the meantime; open the proposal again", code="stale", current_rev=cur_rev)
+            from bti.editor.state_api import _try, storyboard_old_narration
+            old_narration = prop_id.startswith("draft_") and body.get("accept") == "all" and body.get("base_rev") == cur_rev and _try(lambda: storyboard_old_narration(pdir(pid), saved), False)
+            if old_narration:
+                # Only a fresh draft made after this storyboard may replace it.
+                from bti.draft import run as draft_run
+                draft = draft_run.state(pdir(pid))
+                prop_path = pdir(pid) / "proposals" / (prop_id + ".json")
+                if (draft.get("state") != "done" or draft.get("proposal") != prop_id
+                        or prop_path.stat().st_mtime_ns <= (pdir(pid) / "storyboard.json").stat().st_mtime_ns):
+                    raise ApiError(409, "a fresh draft is required", code="stale")
+                new = prop_mod.adopt(doc["storyboard"])
+                out = commit(pid, p, new)
+                from bti.draft.thread import record_acceptance
+                record_acceptance(pdir(pid), prop_id, "applied")
+                return {**out, "applied": ["first_draft"], "skipped_locked": []}
             new, applied, skipped = prop_mod.apply(saved, doc["storyboard"], body.get("accept"))
             if not applied:
                 out = save_result(pid, p)
