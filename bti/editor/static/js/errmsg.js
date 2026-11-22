@@ -922,3 +922,24 @@ Object.assign(BUILD, {
 Object.assign(STAGE_CODES.draft, {
   review_failed: 'Không xem lại được storyboard. Hãy thử lại sau khi kiểm tra cảnh và kết nối agent.',
 });
+// worker subjdraft: subject visibility, year_already_on_screen, and strip_without_light (no 60% size exemption).
+export const SUBJDRAFT_SENTENCES = {
+  subject_not_on_screen: (i) => {
+    const a = i.args || {};
+    const what = a.name ? ` “${a.name}”` : '';
+    return `${fdShot(a)}: chưa thấy chủ thể${what} khi lời dẫn nhắc đến. Hãy chọn khung hình có chủ thể.`;
+  },
+  year_already_on_screen: (i) => {
+    const a = i.args || {};
+    const y = a.year ? ` ${a.year}` : '';
+    return `${fdShot(a)}: năm${y} đã hiện trong nhãn đang mở. Hãy bỏ con số năm lớn.`;
+  },
+};
+export const SUBJDRAFT_CODES = Object.keys(SUBJDRAFT_SENTENCES);
+Object.assign(BUILD, SUBJDRAFT_SENTENCES, {
+  strip_without_light: (i) => {
+    const a = i.args || {};
+    const what = a.text ? ` “${a.text}”` : '';
+    return `${fdShot(a)}: nhãn${what} gọi tên một vật (không phải nhân vật) trên tranh chính nhưng lúc nhãn hiện chưa có đèn rọi (HI-01/X-HI-01) hay vòng tròn (AN-01) cùng xuất hiện. Hãy thêm HI-01 hoặc AN-01 vào vật đó.`;
+  },
+});

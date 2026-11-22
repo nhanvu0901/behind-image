@@ -861,8 +861,8 @@ class _Compiler:
                 used_o.add(o["id"])
                 ovs.append(o)
                 omap.append(j - 1)
-            # Add a light for a named non-cast object on the main painting.
-            if r["kind"] == "agent" and not r.get("verbatim") and SB.primary_slot(shot)[1] == self.main and isinstance(self.inp.picks.get("names"), list):
+            # Add a light for a named non-cast object on the main painting (legacy `names`-only projects).
+            if r["kind"] == "agent" and not r.get("verbatim") and SB.primary_slot(shot)[1] == self.main and isinstance(self.inp.picks.get("names"), list) and not isinstance(self.inp.picks.get("subjects"), list):
                 region = ((shot.get("slots") or {}).get("image") or {}).get("region")
                 aliases = VC._cast_aliases(self.inp.picks["names"])
                 if region and region in (main_asset_doc.get("regions") or {}):
@@ -947,6 +947,189 @@ class _Compiler:
             if vt:
                 doc = ID.with_video_title(doc, vt)
         return doc, origin, issues
+
+    def _subject_overlays(self, shot, rec, t1, names_seen):
+        """Generate subject labels and pointers at their spoken words, when visible."""
+        subjects = self.inp.picks.get("subjects")
+        if not isinstance(subjects, list):
+            return
+        def _aliases(s):
+            also = s.get("also")
+            return also if isinstance(also, list) else []
+
+        by_id = {x.get("id"): x for x in subjects if isinstance(x, dict)}
+        beats_overlapping = [
+            b for b in self.t["beats"]
+            if b["id"] == rec.get("beat") or (b["end"] > rec["t0"] + EPS and b["start"] < t1 - EPS)
+        ]
+        all_names = {tuple(VC.tokens(name)) for x in subjects if isinstance(x, dict)
+                     for name in [x.get("name"), *_aliases(x)] if VC.tokens(name)}
+        for b in beats_overlapping:
+            entry = (self.inp.picks.get("beats") or {}).get(b["id"]) or {}
+            if not isinstance(entry, dict):
+                continue
+            for item in entry.get("about") or []:
+                if not isinstance(item, dict):
+                    continue
+                sub = by_id.get(item.get("id"))
+                if sub and sub.get("kind") in ("idea", "text"):
+                    toks = tuple(VC.tokens(item.get("words", "")))
+                    if toks:
+                        all_names.add(toks)
+        all_regions = {(x.get("where") or {}).get("region") for x in subjects if isinstance(x, dict)} - {None}
+        shot["overlays"] = [o for o in (shot.get("overlays") or []) if not (
+            (o.get("technique") == "X-ANN-01" and tuple(VC.tokens((o.get("params") or {}).get("text"))) in all_names) or
+            (o.get("technique") in ("HI-01", "X-HI-01", "AN-01") and any((o.get("params") or {}).get("at") == target for target in all_regions)))]
+        if not beats_overlapping:
+            return
+
+        found = []
+        occurrences = {}
+        sentence_subjects = {}
+        name_events = []
+        for beat in beats_overlapping:
+            entry = (self.inp.picks.get("beats") or {}).get(beat["id"]) or {}
+            if not isinstance(entry, dict):
+                continue
+            mentioned = [by_id.get(item.get("id")) for item in entry.get("about") or [] if isinstance(item, dict)]
+            mentioned = [sub for sub in mentioned if isinstance(sub, dict)]
+            for item in entry.get("about") or []:
+                sub = by_id.get(item.get("id")) if isinstance(item, dict) else None
+                phrase = VC.tokens(item.get("words", "")) if isinstance(item, dict) else []
+                if not sub or not phrase or sub.get("kind") in ("idea", "text"):
+                    continue
+                occurrence_key = (beat["id"], sub.get("id"), tuple(phrase))
+                wi = next((n for n in range(occurrences.get(occurrence_key, beat["w0"]), beat["w1"] - len(phrase) + 1)
+                           if [norm(w["w"]) for w in self.words[n:n + len(phrase)]] == phrase), None)
+                if wi is None:
+                    continue
+                occurrences[occurrence_key] = wi + len(phrase)
+                t = self.words[wi]["s"]
+                end_word = next((n for n in range(wi, beat["w1"]) if re.search(r'[.!?][\"\'”’)]*$', self.words[n]["w"])), beat["w1"] - 1)
+                sentence_end = min(beat["end"], self.words[end_word]["e"])
+                sent_key = (beat["id"], sentence_end)
+                if (sub.get("where") or {}).get("region"):
+                    sentence_subjects.setdefault(sent_key, set()).add(sub.get("id"))
+                if rec["t0"] <= t < t1:
+                    found.append((sub, wi, t, sent_key, sentence_end))
+                elif beat["id"] == rec.get("beat") and t < rec["t0"] < sentence_end:
+                    next_wi = next((n for n in range(wi + 1, beat["w1"]) if self.words[n]["s"] >= rec["t0"]), wi)
+                    found.append((sub, next_wi, rec["t0"], sent_key, sentence_end))
+            unique_subjects = {sub.get("id"): sub for sub in mentioned}.values()
+            for sub in unique_subjects:
+                if not sub.get("strip") or sub.get("kind") in ("idea", "text"):
+                    continue
+                for name in [sub.get("name"), *_aliases(sub)]:
+                    name_words = VC.tokens(name)
+                    if not name_words:
+                        continue
+                    for name_wi in range(beat["w0"], beat["w1"] - len(name_words) + 1):
+                        if [norm(w["w"]) for w in self.words[name_wi:name_wi + len(name_words)]] == name_words:
+                            name_t = self.words[name_wi]["s"]
+                            if rec["t0"] <= name_t < t1:
+                                name_events.append((sub, name, name_wi, name_t, beat["end"]))
+
+        # A shorter alias inside a longer spoken name is not a second introduction.
+        name_events = [event for event in name_events if not any(
+            other[0].get("id") == event[0].get("id") and other[2] <= event[2]
+            and other[2] + len(VC.tokens(other[1])) >= event[2] + len(VC.tokens(event[1]))
+            and len(VC.tokens(other[1])) > len(VC.tokens(event[1])) for other in name_events)]
+        name_events.sort(key=lambda event: event[2])
+        if not found and not name_events:
+            return
+
+        asset = SB.primary_slot(shot)[1]
+        info = self.info(self.main) or {}
+        regions = info.get("regions") or {}
+
+        def keys_of_param(cam_param):
+            raw = (shot.get("params") or {}).get(cam_param) if isinstance(shot.get("params"), dict) else None
+            if not isinstance(raw, list) or not raw:
+                return None
+            out = []
+            try:
+                for k in raw:
+                    out.append((self.tm.resolve(k["at"], rec["t0"], t1), float(k["cx"]), float(k["cy"]), float(k["zoom"]), k.get("ease") or "linear"))
+            except (KeyError, ValueError, TypeError, AnchorError):
+                return None
+            return out if all(b[0] > a[0] for a, b in zip(out, out[1:])) else None
+
+        def subject_visible(sub, t):
+            return VC.subject_visible_at(
+                shot, (rec["t0"], t1), t, sub,
+                main=self.main, assets=self.assets, subjects=subjects,
+                bundle=self.bundle, keys_fn=keys_of_param,
+                primary_asset=asset, project_dir=self.inp.project_dir,
+            ) is True
+
+        visible = [row for row in found if subject_visible(row[0], row[2])]
+        overlays = shot.get("overlays") or []
+
+        to_emit = []
+        planned_keys = set()
+        for sub, name, name_wi, name_t, beat_end in name_events:
+            name_key = (sub.get("id"), tuple(VC.tokens(name)))
+            if name_key in names_seen or name_key in planned_keys or not subject_visible(sub, name_t):
+                continue
+            planned_keys.add(name_key)
+            to_emit.append((sub, name, name_wi, name_t, beat_end, name_key))
+
+        borrowed_single = asset != self.main and shot.get("technique") not in ("LAY-01", "X-CMP-01")
+        for idx, (sub, name, name_wi, name_t, beat_end, name_key) in enumerate(to_emit):
+            next_name = next((ev[3] for ev in to_emit[idx + 1:] if ev[3] > name_t), t1)
+            end_t = min(t1, next_name) if borrowed_single else min(t1, next_name, max(beat_end, name_t + 3.2))
+            dur = round(end_t - name_t, 3)
+            if dur < 0.05:
+                continue
+            obj = self.build_overlay(rec["zone"], rec["n"], 0,
+                                     {"technique": "X-ANN-01", "params": {"text": name, "sub": sub.get("sub") or ""}}, shot)
+            if obj:
+                used = {o.get("id") for o in overlays}
+                num = 1
+                while "o%d" % num in used:
+                    num += 1
+                obj.update(id="o%d" % num, start={"w": name_wi, "off": 0.0, "text": self.words[name_wi]["w"]}, dur=dur)
+                overlays.append(obj)
+                names_seen.add(name_key)
+
+        can_point = (asset == self.main and shot.get("technique") not in ("LAY-01", "X-CMP-01"))
+        cam_keys = keys_of_param("camera") if can_point else None
+        if can_point and not cam_keys and info.get("w") and info.get("h"):
+            cam_keys = [(rec["t0"], float(info["w"]) / 2.0, float(info["h"]) / 2.0, 0.955 * 1080.0 / float(info["h"]), "linear")]
+        pointer_seen = set()
+        for sub, wi, t, sent_key, sentence_end in visible:
+            region = (sub.get("where") or {}).get("region")
+            pointer_key = (sub.get("id"), sent_key)
+            if pointer_key in pointer_seen:
+                continue
+            pointer_seen.add(pointer_key)
+            defs = []
+            if region and can_point and cam_keys:
+                reg = regions.get(region) or {}
+                cx, cy, z = VC.camera_at(cam_keys, t)
+                multiple = len(sentence_subjects.get(sent_key, set())) > 1
+                small = all(k in reg for k in ("x", "y", "rx", "ry")) and VC.is_small_on_screen(
+                    reg["x"], reg["y"], reg["rx"], reg["ry"], cx, cy, z, info.get("w"), info.get("h"), self.box_for(info))
+                if multiple:
+                    defs.append(("AN-01", {"at": region}))
+                elif sub.get("kind") != "person" and small:
+                    defs.append(("HI-01", {"at": region}))
+            for tid, params in defs:
+                dur = round(min(t1, sentence_end) - t, 3)
+                if dur < 0.05:
+                    continue
+                obj = self.build_overlay(rec["zone"], rec["n"], 0, {"technique": tid, "params": params}, shot)
+                if obj:
+                    used = {o.get("id") for o in overlays}
+                    num = 1
+                    while "o%d" % num in used:
+                        num += 1
+                    start_anchor = {"w": wi, "off": round(t - self.words[wi]["s"], 4), "text": self.words[wi]["w"]}
+                    obj.update(id="o%d" % num, start=start_anchor, dur=dur)
+                    if tid == "AN-01":
+                        obj["params"]["hold_s"] = max(0.0, obj["dur"] - float(obj["params"].get("draw_s") or 0) - float(obj["params"].get("fade_s") or 0))
+                    overlays.append(obj)
+        shot["overlays"] = overlays
 
     # ---------------------------------------------------------------- the channel identity
     def apply_identity(self, doc: dict, origin: list) -> tuple[dict, dict | None]:
@@ -1093,6 +1276,16 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
         doc, origin, build_issues = c.build_doc(recs)
         doc, identity_report = c.apply_identity(doc, origin)
         c.base_issues += c.fit_to_box(doc, origin)                  # panelbox: no camera key of a shot on the main painting stays outside its painted area
+        if not c.edit:
+            by_id = {r["id"]: r for r in recs}
+            names_seen = set()
+            for shot, source in zip(doc.get("shots") or [], origin):
+                rec = by_id.get(source["id"])
+                if not rec or rec["kind"] != "agent" or rec.get("verbatim"):
+                    continue
+                before = {id(ov): m for ov, m in zip(shot.get("overlays") or [], source["ov_map"])}
+                c._subject_overlays(shot, rec, source["t1"], names_seen)
+                source["ov_map"] = [before.get(id(ov)) for ov in shot.get("overlays") or []]
         mapped: list = []
         errs_engine = c.eng.validate(doc)
         mapped += [c.map_issue(i, origin) for i in errs_engine]
@@ -1169,7 +1362,7 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
-    pointfix = {"name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light", "year_already_on_screen"}
+    pointfix = {"subject_not_on_screen", "name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light", "year_already_on_screen"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
         required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
         rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items

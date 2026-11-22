@@ -194,12 +194,18 @@ def _beats_doc(inp: DraftInputs) -> dict:
             beats.append({"id": b["id"], "text": b["text"], "facts": n.get("facts", []), "show": n.get("show", []), "start": round(b["start"], 3),
                           "end": round(b["end"], 3), "w0": b["w0"], "w1": b["w1"], "picks": beat_picks(inp.picks, b["id"]),
                           "kinds": beat_kinds(inp.picks, b["id"]), "missing": beat_missing(inp.picks, b["id"])})
+            entry = (inp.picks.get("beats") or {}).get(b["id"]) or {}
+            if isinstance(entry, dict) and isinstance(entry.get("about"), list):
+                beats[-1]["about"] = copy.deepcopy(entry["about"])
             if isinstance(inp.picks.get("names"), list):
                 beats[-1]["present"] = [copy.deepcopy(n) for n in inp.picks["names"] if isinstance(n, dict) and n.get("line") == b["id"]]
         chapters.append({"id": c["id"], "name": c["name"], "start": round(c["start"], 3), "end": round(c["end"], 3), "card": c["card"],
                          "w0": c["w0"], "w1": c["w1"], "beats": beats})
-    return {"title": inp.title, "duration": round(inp.timing["duration"], 3), "n_words": len(inp.timing["words"]),
-            "main_asset": inp.picks["main_asset"], "chapters": chapters}
+    result = {"title": inp.title, "duration": round(inp.timing["duration"], 3), "n_words": len(inp.timing["words"]),
+              "main_asset": inp.picks["main_asset"], "chapters": chapters}
+    if isinstance(inp.picks.get("subjects"), list):
+        result["subjects"] = copy.deepcopy(inp.picks["subjects"])
+    return result
 
 
 def render_template(text: str, mode: str, values: dict) -> str:
