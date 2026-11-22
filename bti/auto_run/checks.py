@@ -57,6 +57,9 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                                           "mở đầu chưa kết bằng một câu hỏi mở"),
         "cold_open_roadmap": ("the cold open uses a plan-of-the-video phrase instead of opening inside the painting and puzzle",
                               "mở đầu nói câu giới thiệu kế hoạch video thay vì đi thẳng vào tranh"),
+        # worker voiceplain (2026-11-22): literature-review attribution phrases read aloud by the voice
+        "attribution_phrase": ("a line attributes a claim to historians, scholars, critics or another reading instead of speaking in the channel's own voice, and the voice would read it aloud",
+                               "có dòng quy nhận định cho học giả, nhà phê bình hoặc cách đọc khác thay vì kể bằng giọng của kênh"),
     },
     "picks": {
         "beat_no_pick": ("more than a quarter of the lines of the narration have no picture (up to a quarter the run goes on: the draft shows the main painting there)",

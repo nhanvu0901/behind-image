@@ -160,6 +160,36 @@ def _chapter_beats(cid: str, title: str, budget: int, claims: list[str], bad: bo
     return out
 
 
+_ATTRIBUTION_REWRITES: tuple[tuple[str, str], ...] = (
+    ("one reading", "one view"),
+    ("another reading", "another view"),
+    ("a reading", "a view"),
+    ("has been read as", "looks like"),
+    ("is read as", "looks like"),
+    ("some see", "look closely at"),
+    ("others see", "others notice"),
+    ("historians", "observers"),
+    ("scholars", "observers"),
+    ("critics", "observers"),
+    ("has been described as", "looks like"),
+    ("according to", "from"),
+    ("it has been suggested", "perhaps"),
+    ("is thought to", "may"),
+    ("is believed", "may be"),
+)
+
+
+def _deattribute(text: str) -> str:
+    """Rewrite attribution phrases in echoed source claims so mock narration satisfies `attribution_phrase`."""
+    from .. import sourcenames
+    s = text
+    for phrase, repl in _ATTRIBUTION_REWRITES:
+        s = re.sub(r"\b" + re.escape(phrase).replace(r"\ ", r"\s+") + r"\b", repl, s, flags=re.I)
+    for rx in sourcenames._ATTRIBUTION:
+        s = rx.sub("", s)
+    return re.sub(r"\s{2,}", " ", s).strip()
+
+
 def _mock_script(user: str, retry: bool, cut: bool = False) -> str:
     sec = user.split("THE APPROVED OUTLINE", 1)[-1].split("YOUR TASK", 1)[0]
     from ..parse import parse_outline
@@ -175,7 +205,7 @@ def _mock_script(user: str, retry: bool, cut: bool = False) -> str:
             continue
         bad = (f"[mock:alwaysbad {c.id}]" in user) or (f"[mock:bad {c.id}]" in user and not retry) or (f"[mock:cutbad {c.id}]" in user and cut)
         long_ = (f"[mock:alwayslong {c.id}]" in user) or (not cut and any(f"[mock:{k} {c.id}]" in user for k in ("long", "cutbad", "cutfail")))
-        claims = [facts[f].claim for f in c.facts if f in facts]
+        claims = [_deattribute(facts[f].claim) for f in c.facts if f in facts]
         out.append(f"## {c.id} {c.title}")
         beats = (_cold_open_beats(c.word_budget, claims, bad, 1.5 if long_ else 1.0, title, artist)
                  if c.role == "cold_open"

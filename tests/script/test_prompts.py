@@ -11,7 +11,7 @@ def test_outline_prompt_demands_citations_and_conflicts(tproj):
     t = build_prompt("outline", tproj, notes="Focus on the mirror.")["text"]
     assert t.startswith("PHASE: outline")
     for must in ("[PAY-01]", "cite", "FLAG EVERY CONFLICT", "certainty", "established", "disputed", "OUTLINE", "TARGET WORDS",
-                 "OWNER NOTES FOR THIS RUN", "Focus on the mirror.", "LEAD THE EYE", "THREE LAYERS", "competing reading",
+                 "OWNER NOTES FOR THIS RUN", "Focus on the mirror.", "LEAD THE EYE", "THREE LAYERS", "competing",
                  "CONFLICTS BETWEEN SOURCES"):
         assert must.lower() in t.lower(), must
     assert "{{" not in t and "<!--" not in t
@@ -38,8 +38,9 @@ def test_every_prompt_that_speaks_of_low_trust_also_gives_the_restored_rule(tpro
         assert t.count("Sources marked RESTORED") == 1, name
         rule = t[t.index("Sources marked RESTORED"):].split("\n")[0].lower()           # the sentence(s) on that line
         assert "number, date or quotation" in rule and "never guess what a […] mark hides" in rule, name
-        for word in ("established fact", "number", "date", "quotation", "another source", "[…]", "guess", "reading"):
+        for word in ("established fact", "number", "date", "quotation", "another source", "[…]", "guess", "possibilities"):
             assert word in rule and word in note, (name, word)                       # the prompt and the brief's note say the same things
+        assert "one reading among others" not in rule and "one reading among others" not in note, name
         assert "never in the author's name" in note and "named once" not in rule and "as the author's own" not in rule and "say whose" not in rule, name
 
 
@@ -63,21 +64,29 @@ def test_the_old_rule_of_naming_the_authors_is_gone_from_every_prompt_file_and_n
 
 def test_the_script_prompt_tells_a_narrator_not_a_reviewer(tproj):
     t = build_prompt("script", tproj, outline=make_outline(approved=True))["text"]
-    for must in ("NEVER speak the name of an author of a source", "\"the books\"", "\"both books\"", "\"the sources\"", "\"that passage\"", "\"the book says\"",
-                 "two readings of the same object, in your own voice", "one reading sees", "some historians think", "one historian argues", "it has been suggested",
-                 "belongs to the story", "Panofsky in 1934", "Never speak a remark meant for the owner", "Leave the fact out of the narration instead",
-                 "THE VIEWER HAS NEVER HEARD OF YOUR SOURCES", "not a review of books"):
+    for must in ("Follow the four voice principles", "NEVER speak the name of an author of a source", "\"the books\"", "\"both books\"", "\"the sources\"",
+                 "\"that passage\"", "\"the book says\"", "weigh the two possibilities directly in your own voice",
+                 "Name a person only when that person belongs to the story itself", "Never speak a remark meant for the owner",
+                 "Leave the fact out of the narration instead", "THE VIEWER HAS NEVER HEARD OF YOUR SOURCES", "not a review of books"):
         assert must in t, must
+    for old_rule in ("tell the disagreement as two readings", "tell their ideas as one reading among others",
+                     "one historian argues", "some historians think", "Panofsky in 1934", "most historians accept"):
+        assert old_rule not in t, old_rule
     assert "{{" not in t and "<!--" not in t
     assert "NOTE:" not in t.split("YOUR TASK")[0].split("THE APPROVED OUTLINE")[1]          # the narrator is not shown the notes to the owner
 
 
 def test_the_voice_rules_keep_the_fact_table_attributions_out_of_the_spoken_text():
     v = (prompting.PROMPTS / "rules_voice.md").read_text(encoding="utf-8")
-    assert "what is known" in v and "never as what a book says" in v and "told as a reading" in v
-    assert "it has been read as ... and as ..." in v
+    for principle in ("THE FOUR PRINCIPLES", "1. ORIENT BEFORE INTRIGUE.", "2. ONE NARRATOR, THE CHANNEL'S OWN VOICE.",
+                      "3. NEVER MENTION A GESTURE, OBJECT OR SIGN WITHOUT SAYING IN THE SAME SENTENCE WHAT IT IS OR MEANS.",
+                      "4. PLAIN, COMPLETE SENTENCES UNDERSTOOD AT FIRST HEARING."):
+        assert principle in v, principle
+    assert "what is known" in v and "never as what a book says" in v and "in the channel's own voice" in v
     assert "Never quote a book about the painting" in v
-    assert "at most six" not in v                                                      # no count that only fits one video; "a few times" is the prompt's own
+    assert "at most six" not in v                                                      # no count that only fits one video
+    for gone in ("told as a reading", "it has been read as ... and as ...", "most historians accept"):
+        assert gone not in v, gone
 
 
 def test_the_outline_prompt_keeps_exact_attributions_for_the_fact_table_and_keeps_remarks_out_of_them(tproj):

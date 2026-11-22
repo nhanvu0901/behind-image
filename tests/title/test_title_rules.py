@@ -97,8 +97,10 @@ def test_the_numbers_a_person_may_type_are_the_agents_limits():
 
 def test_third_owner_verdict_and_plain_tone_guidance_are_in_rendered_prompt(rendered):
     text, _ = rendered
-    assert "Was She Already Dead When He Signed the Wall?" in text
-    assert "Is This a Wedding or a Memory?" in text
+    assert "Did This Forbidden Banquet Almost Put Him on Trial?" in text
+    assert "A Sacred Feast or a Public Scandal?" in text
     assert "A Prayer or a Shop Sign?" in text
+    tpl = TEMPLATE.read_text(encoding="utf-8").lower()
+    assert "arnolfini" not in tpl and "van eyck" not in tpl
     assert "BEST_MAX_WORDS" in R.template_values() and "BEST_MAX_WORDS_TEXT" in R.template_values()
     assert "%d words or fewer is best" % R.BEST_MAX_WORDS in text

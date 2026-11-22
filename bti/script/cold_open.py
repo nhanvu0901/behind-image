@@ -33,10 +33,10 @@ _EPITHETS = re.compile(r"\b(?:the\s+(?:younger|elder)|il\s+(?:vecchio|giovane))\
 _PLACEHOLDER_TITLES = frozenset({"unknown", "untitled", "none", "n/a", "na", "null", "test"})
 _PLACEHOLDER_ARTISTS = frozenset({"unknown", "anonymous", "various", "unknown artist", "anonymous artist", "none", "n/a"})
 
-# Explicit quoted spans (preserving apostrophes like Costanza's and van Eyck's)
+# Explicit quoted spans (preserving apostrophes like Holbein's and Bruegel's)
 _DBL_QUOTES = re.compile(r'["“][^"”\n]*["”]')
 _SGL_QUOTES = re.compile(r"(?<!\w)[‘']([^’'\n]+)[’'](?!\w)")
-# Spoken indirect quotation / translated inscription (e.g. "In English it says, Jan van Eyck was here, 1434.")
+# Spoken indirect quotation / translated inscription (e.g. "In English it says, Petrus Christus made me, 1449.")
 _INSCRIPTION_QUOTE = re.compile(
     r"(?:"
     r"(?:in\s+\w+\s+(?:the\s+(?:line|writing|inscription|signature|text|motto|scroll|banner|lettering)|it)\s+(?:says|reads))"
@@ -50,8 +50,8 @@ _INSCRIPTION_QUOTE = re.compile(
 _EARLY_TURN = re.compile(r"\b(?:but|yet)\b", re.I)
 STOCK_PHRASES = (
     "today we", "in this video", "let's find out", "let's dive", "join me",
-    "sits uneasily", "close looking", "ornate", "testament to", "delve", "tapestry of",
-    "hidden meaning", "secrets of", "uncover", "more than meets the eye", "stands as",
+    "testament to", "delve", "tapestry of",
+    "hidden meaning", "secrets of", "more than meets the eye",
 )
 _ROADMAP = [re.compile(r"\b" + re.escape(p).replace(r"\ ", r"\s+") + r"\b", re.I) for p in STOCK_PHRASES]
 _ROADMAP += [re.compile(p, re.I) for p in (
@@ -106,7 +106,7 @@ def first_n_words(beats: list[Beat], limit: int = EARLY_WINDOW_WORDS) -> tuple[s
 
 
 def title_tokens(title: str) -> list[str]:
-    """Distinguishing tokens of a painting title (e.g. 'The Arnolfini Portrait' -> ['arnolfini', 'portrait'])."""
+    """Distinguishing tokens of a painting title (e.g. 'Hunters in the Snow' -> ['hunters', 'snow'])."""
     raw = (title or "").strip()
     if not raw or textfold.fold(raw).strip() in _PLACEHOLDER_TITLES:
         return []
@@ -130,7 +130,7 @@ def title_spoken(unquoted_text: str, title: str) -> bool:
 
 
 def painter_surnames(artist: str) -> list[str]:
-    """Distinguishing surname(s) for a painter, handling multi-word names and epithets like 'Jan van Eyck' or 'Hans Holbein the Younger'."""
+    """Distinguishing surname(s) for a painter, handling multi-word names and epithets like 'Pieter Bruegel the Elder' or 'Hans Holbein the Younger'."""
     raw = (artist or "").strip()
     if not raw or textfold.fold(raw).strip() in _PLACEHOLDER_ARTISTS:
         return []

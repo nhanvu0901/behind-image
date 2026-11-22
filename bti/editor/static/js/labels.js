@@ -1054,3 +1054,9 @@ Object.assign(CODE, CODE_INTROOPEN);
 
 // worker listmark
 Object.assign(CODE, { year_already_on_screen: "Năm đã hiện trong nhãn" });
+
+// ---- worker voiceplain (2026-11-22): attribution phrases in narration
+export const CODE_VOICEPLAIN = {
+  attribution_phrase: 'Lời dẫn dùng cụm quy cho học giả hoặc cách đọc',
+};
+Object.assign(CODE, CODE_VOICEPLAIN);

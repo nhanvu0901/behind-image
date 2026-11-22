@@ -31,11 +31,11 @@ get what the title promised leaves, and the channel pays for it.
 2. **Read the whole narration before you write a word.** The title comes from the video, not from the painting's
    fame or from what you know about it. Why: a title about something the video does not show is a lie to the viewer.
 3. **Every word is true to the narration.** Each candidate lists the lines (`lines`, their ids) that make it true.
-   What the narration gives as one reading among others ("may", "probably", "one reading sees") is never stated as a
+   What the narration leaves uncertain ("probably", "could be", "maybe") is never stated as a
    fact in a title; a question or "might" keeps it honest. Nothing is taken from outside the narration. A title that
    is true to the letter and leaves a false picture is a lie too ("I Bought a Ferrari for $1", said over a toy car):
    if a viewer who believed the title would be wrong about what the video shows, strike it.
-4. **Concrete words.** At least one thing a person can picture: a saint, a ring, a mirror, a shop sign, a poisoned
+4. **Concrete words.** At least one thing a person can picture: a saint, a ring, a skull, a shop sign, a poisoned
    cup. Two abstract labels set against each other mean nothing to someone who has not watched yet.
 5. **It stands alone.** No painter's name, no painting's title, no date is needed to understand it (the small line
    under the title carries those, and the program writes it). A name everyone knows may be used when the narration
@@ -43,7 +43,7 @@ get what the title promised leaves, and the channel pays for it.
 6. **It opens a gap and does not close it.** After reading it one must want to know how or why. Do not give the
    whole answer away; do not be so vague that the line could sit on any video ({{VAGUE_PHRASES}} are never titles here).
 7. **No borrowed excitement.** No {{BORROWED_WORDS}}, unless the narration itself says exactly that and gives its reason.
-   Do not reach for shock — death, secrets, crimes, "already dead" — when the narration's own question is calmer; let
+   Do not reach for shock — death, secrets, crimes, "forbidden" — when the narration's own question is calmer; let
    the video's real open question carry the intrigue in plain words.
 8. **Short and plain.** {{BEST_MIN}} to {{BEST_MAX}} characters is best, {{MAX_CHARS}} is the limit (longer is cut off on a phone and does not fit one
    line on screen); {{BEST_MAX_WORDS}} words or fewer is best (shorter is better; the owner's example below is {{BEST_MAX_WORDS}} words), {{MAX_WORDS_TEXT}} words at most; Title Case; one line; no colon and second half, no brackets, no emoji, no word
@@ -55,16 +55,16 @@ get what the title promised leaves, and the channel pays for it.
 1. **Collect.** From the narration, note for yourself: the question the cold open asks; the answer the closing gives;
    the five facts a stranger would repeat to a friend, with their line ids; the oddest thing one can SEE in the picture.
 2. **Find the tension.** Good titles for this kind of video come from one of these:
-   - the video's real open question, where both sides are concrete human things a person can picture (a wedding, or a memory);
+   - the video's real open question, where both sides are concrete human things a person can picture (a sacred feast, or a public scandal);
    - two things that should not go together and do (a saint, and an advertisement);
-   - something in plain view that nobody notices (two strangers watching from a mirror);
+   - something in plain view that nobody notices (a distorted skull stretched across the floor);
    - a small thing with a large consequence (a ring on a pair of scales);
    - something that should not be there, or is wrong (shelves that break the rules of perspective);
    - what the picture really was for (a shop sign, a contract, a bribe, a warning);
    - a number that is hard to believe and is in the narration (a salt cellar worth two hundred years of wages).
 3. **Write at least {{WRITE_AT_LEAST_TEXT}} candidates, in at least {{FORMS_AT_LEAST_TEXT}} different forms.** The forms: the contradiction ("The Saint
    Who Was Also an Advertisement"); the question a stranger cannot answer yet ("Why Is a Saint Weighing a Ring?");
-   the thing hidden in plain sight ("The Two Strangers in the Mirror"); what it really is ("This Painting Was a Shop
+   the thing hidden in plain sight ("The Skull Stretched Across the Floor"); what it really is ("This Painting Was a Shop
    Sign"); the object with a past ("The Ring on the Scales"); the hard number. Do not write twelve variations of one.
 4. **Test each one against the rules of section 2 and strike every one that fails any rule.** Be strict on rule 3 and
    rule 6: most first ideas fail one of them.
@@ -86,19 +86,19 @@ shop sign and answers "both":
   other; it is the video's own answer in one line; it is true to the narration (the saint, the advertisement for the
   goldsmiths, "it is both"); a stranger wants to know how a saint can be an advertisement.
 
-For the video on Jan van Eyck's Arnolfini Portrait, whose narration weighs whether the painting records a marriage or
-commemorates a wife who had already died, and closes with "So is this a wedding or a memory?":
-- **Rejected: "Was She Already Dead When He Signed the Wall?"** The owner: "I also don't like the name", and asked
-  for "clear concise like is this a wedding or a mourning of a memory ? dont click bait be concise but still intrigue
-  focus on the intriguing factor". Why it fails: it reaches for shock ("Already Dead") and packs two dramatic clauses
-  into nine words when the narration's own open question is calmer and cleaner (rules 7, 8).
-- **Preferred direction: "Is This a Wedding or a Memory?"** ({{BEST_MAX_WORDS}} words). Why it works: it is the
-  video's own real open question in plain words, short and clear, with no clickbait; both sides are concrete human
-  things a stranger can picture at once, and the contrast between them makes one want the answer.
+For the video on Paolo Veronese's *The Feast in the House of Levi*, whose narration weighs whether the painting was a sacred
+banquet or a public scandal that drew the Inquisition, and closes with "Was Veronese turning a sacred feast into theatre,
+or hiding everyday Venice inside a Bible story?":
+- **Rejected: "Did This Forbidden Banquet Almost Put Him on Trial?"** (9 words). Why it fails: it reaches for clickbait
+  shock ("Forbidden", "Trial") and packs two dramatic clauses into nine words when the narration's own open question is
+  calmer and cleaner (rules 7, 8).
+- **Preferred direction: "A Sacred Feast or a Public Scandal?"** ({{BEST_MAX_WORDS}} words). Why it works: it holds the
+  video's real open tension in plain words, short and clear, with no clickbait; both sides are concrete human moments a
+  stranger can picture at once, and the clash between them makes one want the answer.
 
-What separates **"A Prayer or a Shop Sign?"** (rejected) from **"Is This a Wedding or a Memory?"** (wanted): both
+What separates **"A Prayer or a Shop Sign?"** (rejected) from **"A Sacred Feast or a Public Scandal?"** (wanted): both
 have the same "A or B?" shape, but the first sets two dry categories against each other with no human stake, while
-the second puts two human moments — a wedding and mourning a lost life — in tension, so a stranger immediately feels
+the second puts two human scenes — a sacred meal and a public scandal — in tension, so a stranger immediately feels
 why the answer matters.
 
 ## 5. The file you write

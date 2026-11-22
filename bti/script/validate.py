@@ -199,7 +199,12 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
             if talk:
                 out.append(issue("warning", "source_talk",
                                  f"Beat {b.id} in {c.id} speaks about the sources themselves ({'; '.join(repr(x) for _, x in talk[:3])}), or carries a remark "
-                                 "meant for the owner; tell it as two readings of the picture instead.", **where, found=[x for _, x in talk[:3]]))
+                                 "meant for the owner; tell it in the narrator's own voice instead.", **where, found=[x for _, x in talk[:3]]))
+            attr = sourcenames.find_attribution(b.text)
+            if attr:
+                out.append(issue("warning", "attribution_phrase",
+                                 f"Beat {b.id} in {c.id} attributes a claim instead of speaking in the narrator's own voice ({'; '.join(repr(x) for x in attr[:3])}); "
+                                 "say what is uncertain plainly in your own words.", **where, found=attr[:3]))
             if w > 90:
                 out.append(issue("warning", "beat_too_long", f"Beat {b.id} in {c.id} has {w} words (more than 90); split it.", **where))
             b_sentences = sentences(b.text)

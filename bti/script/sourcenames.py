@@ -204,3 +204,47 @@ def find_owner_address(text: str) -> list[str]:
         if m:
             out.append(m.group(0).strip(" .!?"))
     return out
+
+
+# -------------------------------------------------------------------------------------------------------- attribution phrases (literature-review voice)
+ATTRIBUTION_PHRASES: tuple[str, ...] = (
+    "one reading",
+    "another reading",
+    "a reading",
+    "has been read as",
+    "is read as",
+    "some see",
+    "others see",
+    "historians",
+    "scholars",
+    "critics",
+    "has been described as",
+    "according to",
+    "it has been suggested",
+    "is thought to",
+    "is believed",
+)
+
+_ATTRIBUTION: list[re.Pattern] = [
+    (re.compile(r"\ba\s+reading\b(?!\s+(?:room|desk|lamp|table|stand|glass|glasses)\b)", re.I)
+     if p == "a reading"
+     else re.compile(r"\b" + re.escape(p).replace(r"\ ", r"\s+") + r"\b", re.I))
+    for p in ATTRIBUTION_PHRASES
+]
+
+
+def find_attribution(text: str) -> list[str]:
+    """Return attribution / literature-review phrases in `text`, in order of first appearance (case-insensitively deduplicated)."""
+    hits: list[tuple[int, str]] = []
+    for rx in _ATTRIBUTION:
+        for m in rx.finditer(text or ""):
+            hits.append((m.start(), m.group(0)))
+    hits.sort(key=lambda x: x[0])
+    seen: set[str] = set()
+    out: list[str] = []
+    for _, phrase in hits:
+        key = phrase.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(phrase)
+    return out

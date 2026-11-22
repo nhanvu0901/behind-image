@@ -79,7 +79,29 @@ def test_real_texts_current_arnolfini_warns_and_study_rewrite_warns():
     } <= bad_codes
 
     n_ok, o_ok = _cold_doc(STUDY_REWRITE_C01)
-    assert {"cold_open_first_sentence_names", "cold_open_roadmap"} <= set(_warn_codes(n_ok, o_ok))
+    ok_codes = set(_warn_codes(n_ok, o_ok))
+    assert "cold_open_first_sentence_names" in ok_codes
+    assert "cold_open_roadmap" not in ok_codes
+
+
+def test_trimmed_stock_phrases_allow_ordinary_prose_and_catch_roadmap_phrases():
+    for prose in (
+        "Look at the ornate gold frame around the altarpiece.",
+        "Another date sits uneasily beside the signature.",
+        "Close looking at the canvas reveals two sketches beneath the paint.",
+        "Layers of glaze uncover an earlier portrait underneath.",
+        "The triptych stands as a landmark of northern painting.",
+    ):
+        assert cold_open.find_roadmap(prose) == [], prose
+
+    for stock in (
+        "In this video we examine the hidden workshop.",
+        "Today we look at three details.",
+        "Let's dive into the background.",
+        "Scholars looked for hidden meaning in the table.",
+        "A rich tapestry of symbols fills the room.",
+    ):
+        assert cold_open.find_roadmap(stock), stock
 
 
 def test_missing_name_and_quotation_and_translated_inscription_filtering():

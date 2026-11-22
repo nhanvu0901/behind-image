@@ -21,13 +21,13 @@ SRC_CODES = {"payne_gae": "PAY", "hodge_aid": "HOD", "hagen_wgps": "HAG", "brook
 LOW_NOTE = "low trust (machine translation): not a basis for facts"
 LEVELS = ("normal", "restored", "low")           # the trust levels of a source (bti.library.restored.LEVELS)
 RESTORED_NOTE = ("restored and reviewed rendering of a machine-translated book: its unmarked prose says what the book says, names "
-                 "corrected. Its ideas and readings of the picture may be used as readings of the picture, never as established fact and "
-                 "never in the author's name: tell them as one reading among others (the fact table keeps the paragraph ids). NO number, "
-                 "date or quotation may be taken from it unless another source of this dossier confirms it. […] marks a passage that could "
-                 "not be restored: never guess what it said.")
+                 "corrected. Its ideas and interpretations may be used as uncertain possibilities, never as established fact and "
+                 "never in the author's name: state them cautiously in the narrator's own voice, never attributed to outsiders "
+                 "(the fact table keeps the paragraph ids). NO number, date or quotation may be taken from it unless another source of "
+                 "this dossier confirms it. […] marks a passage that could not be restored: never guess what it said.")
 CARE_NOTE = ("NO FULLY TRUSTED SOURCE: none of the sources given below is a normal source (they are restored or low trust), so every "
              "fact of this painting needs care. Call a fact \"established\" only when it is a plain description of what the picture "
-             "shows; any other fact is \"likely\" at most, and the narration tells it as a reading, not as an established fact.")
+             "shows; any other fact is \"likely\" at most, and the narration states it cautiously as a possibility, not as an established fact.")
 DEFAULT_TARGET = 2000
 DEFAULT_WPS = 2.41
 PARA_ID_RE = re.compile(r"\b([A-Z]{3})-(\d{2,3})\b")

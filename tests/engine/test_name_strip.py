@@ -14,8 +14,8 @@ def test_name_strip_accepts_optional_second_line_and_preserves_old_default():
 def test_name_strip_guidance_reaches_draft_catalogue():
     from bti.draft.techniques_md import generate
     text = generate(registry.load_bundle('gae'))
-    assert 'COSTANZA TRENTA' in text
-    assert 'SAINT MARTHA' in text
+    assert 'JEAN DE DINTEVILLE' in text
+    assert 'TAVERN SIGN' in text
     assert 'sub:string' in text
 
 

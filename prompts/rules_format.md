@@ -22,12 +22,12 @@ CHAPTERS
 ## c01 COLD OPEN
 ROLE: cold_open
 CARD: no
-BUDGET: 190
+BUDGET: 120
 PURPOSE: what this chapter does for the argument
 FACTS: f01, f03
-SHOW: D2; the inscription above the mirror
+SHOW: D2; the distant mountain peaks
 
-## c02 THE MERCHANT CITY
+## c02 THE SETTING
 ROLE: chapter
 CARD: yes
 BUDGET: 260
@@ -48,18 +48,18 @@ Rules:
 <!-- section:script -->
 OUTPUT LAYOUT FOR THE NARRATION
 
-Write plain text, not JSON, no tables, no code fences, no preface. Put a line that says exactly FINAL SCRIPT first, then the chapters.
+Write plain text, not JSON, not a table, no code fences, no preface. Put a line that says exactly FINAL SCRIPT first, then the chapters.
 
 FINAL SCRIPT
 
 ## c01 COLD OPEN
 Paragraph of narration, one to three sentences, exactly as it will be spoken.
->> facts: f03, f07 | show: the convex mirror; the inscription above it
+>> facts: f03, f07 | show: the open window; the signature on the table
 
 Next paragraph.
 >> facts: f02 | show: the whole painting
 
-## c02 THE MERCHANT CITY
+## c02 THE SETTING
 ...
 
 Rules:

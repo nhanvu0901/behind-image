@@ -29,7 +29,7 @@ def script_warning_codes():
 def test_every_warning_of_the_outline_and_the_narration_is_sorted_into_one_of_the_two_lists():
     found = script_warning_codes()
     assert {"fact_no_source", "fact_for_owner", "outline_note"} <= found["outline"]
-    assert {"words_off_target", "source_author_named", "source_talk", "long_sentence"} <= found["narration"]
+    assert {"words_off_target", "source_author_named", "source_talk", "attribution_phrase", "long_sentence"} <= found["narration"]
     for gate, codes in found.items():
         sorted_codes = set(checks.STOPS[gate]) | set(checks.TOLERATED[gate])
         missing = sorted(c for c in codes if c not in sorted_codes)
@@ -91,3 +91,16 @@ def test_every_warning_of_the_script_step_has_a_sentence_for_the_page_and_the_ne
     assert "worker fixscript" in js and "worker fixscript" in labels
     # each block is a complete statement of its own (other workers append their blocks after it, so it is not required to be the last line)
     assert "Object.assign(BUILD, FIXSCRIPT_ISSUES);" in js.splitlines() and "Object.assign(CODE, CODE_FIXSCRIPT);" in labels.splitlines()
+
+
+def test_attribution_phrase_stops_the_run_and_has_page_labels():
+    assert "attribution_phrase" in checks.STOPS["narration"] and "attribution_phrase" not in checks.TOLERATED["narration"]
+    why, why_vi = checks.STOPS["narration"]["attribution_phrase"]
+    assert "voice" in why and reasons._is_vietnamese(why_vi)
+    verdict = checks.vet("narration", [{"level": "warning", "code": "attribution_phrase", "message": "Beat b0004 attributes", "beat": "b0004"}])
+    assert verdict[0] == "warning" and verdict[1][0]["code"] == "attribution_phrase" and verdict[1][0]["why_vi"]
+    js = (JS / "errmsg.js").read_text(encoding="utf-8")
+    labels = (JS / "labels.js").read_text(encoding="utf-8")
+    assert "worker voiceplain" in js and "worker voiceplain" in labels
+    assert re.search(r"\battribution_phrase:", js) and re.search(r"\battribution_phrase:", labels)
+    assert "Object.assign(BUILD, VOICEPLAIN_ISSUES);" in js.splitlines() and "Object.assign(CODE, CODE_VOICEPLAIN);" in labels.splitlines()

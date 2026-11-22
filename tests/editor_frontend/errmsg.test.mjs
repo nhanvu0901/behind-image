@@ -87,7 +87,8 @@ test('validation issues are Vietnamese sentences (the dialog of U1-002)', () => 
 });
 test('every code the server can raise has a Vietnamese sentence', () => {
   const codes = ['no_thesis', 'no_chapters', 'duplicate_chapter', 'chapter_no_title', 'chapter_no_budget', 'duplicate_fact', 'fact_no_source', 'unknown_source_id', 'disputed_no_conflict', 'unknown_fact', 'fact_unused', 'no_hook_choice', 'budget_sum', 'outline_missing', 'outline_not_approved', 'outline_stale', 'chapter_missing', 'empty_chapter', 'chapter_order', 'unknown_chapter', 'empty_beat', 'markup_in_text', 'spoken_chars', 'beat_too_long', 'no_show', 'words_under', 'words_off_target', 'chapter_off_budget', 'length', 'source_share', 'overlap', 'chapter_by_position', 'chapter_twice', 'meta_orphan', 'no_chapter_lines', 'preamble_dropped', 'chapter_empty', 'budget_defaulted', 'no_facts', 'hook_defaulted', 'long_sentence', 'sentence_median',
-    /* worker fixscript */ 'source_author_named', 'source_talk', 'fact_for_owner', 'outline_note'];
+    /* worker fixscript */ 'source_author_named', 'source_talk', 'fact_for_owner', 'outline_note',
+    /* worker voiceplain */ 'attribution_phrase'];
   for (const code of codes) { const t = issueText({ code, message: 'x', chapter: 'c01', fact: 'f01', beat: 'b1' }); assert.ok(!t.generic, code); assert.ok(isVietnamese(t.text) || /\d|c01|f01|b1/.test(t.text), code); }
 });
 test('failed model jobs', () => {
@@ -193,4 +194,18 @@ test('cold-open check issues format clean Vietnamese sentences', () => {
     const res = issueText({ level: 'warning', code, chapter: args.chapter, beat: args.beat, args });
     assert.ok(isVietnamese(res.text) && !res.generic, `${code} -> ${res.text}`);
   }
+});
+
+test('attribution_phrase formats clean Vietnamese sentence with beat id and found phrases', () => {
+  const res = issueText({
+    level: 'warning',
+    code: 'attribution_phrase',
+    chapter: 'c02',
+    beat: 'b0012',
+    found: ['one reading', 'historians'],
+    message: 'Beat b0012 in c02 attributes a claim.',
+  });
+  assert.ok(isVietnamese(res.text) && !res.generic);
+  assert.match(res.text, /b0012/);
+  assert.match(res.text, /"one reading", "historians"/);
 });

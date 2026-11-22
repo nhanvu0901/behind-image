@@ -92,27 +92,34 @@ def beat_texts():
 
 
 def test_an_example_is_a_real_sentence_of_the_two_narrations_with_its_line_id_or_says_there_is_none():
-    texts = beat_texts()
-    current = json.loads((FIX.parent / "pointfix" / "timing.json").read_text(encoding="utf-8"))
-    current_arnolfini = {b["id"]: b["text"] for b in current["beats"]}
-    latest = json.loads((FIX.parent / "namefirst" / "timing.json").read_text(encoding="utf-8"))
-    latest_arnolfini = {b["id"]: b["text"] for b in latest["beats"]}
+    texts = beat_texts()["St. Eligius"]
+    arnolfini_words = re.compile(r"arnolfini|van\s*eyck|costanza|giovanni|1434|1433|panofsky", re.I)
     real = 0
     for tid in OFFERED:
         ex = ALL[tid]["example"]
+        assert not arnolfini_words.search(ex), (tid, "example must not mention the Arnolfini Portrait")
         if ex.startswith("No sentence in the two narrations calls for it"):
             continue
-        quoted = re.findall(r"(St\. Eligius|Arnolfini) (b\d{4}): \"([^\"]+)\"", ex)
-        assert quoted, (tid, "an example names the video and the line id, then quotes the line")
-        for video, bid, quote in quoted:
-            candidates = [texts[video].get(bid, "")]
-            if video == "Arnolfini":
-                candidates.append(current_arnolfini.get(bid, ""))
-                candidates.append(latest_arnolfini.get(bid, ""))
-            assert any(" ".join(quote.split()) in " ".join(line.split()) for line in candidates), (tid, bid, "the quoted words are in the line")
-            real += 1
+        eligius_quoted = re.findall(r'St\. Eligius (b\d{4}): "([^"]+)"', ex)
+        if eligius_quoted:
+            for bid, quote in eligius_quoted:
+                line = texts.get(bid, "")
+                assert " ".join(quote.split()) in " ".join(line.split()), (tid, bid, "the quoted words are in the line")
+                real += 1
+        else:
+            other_quoted = re.findall(r'"([^"]+)"', ex)
+            assert other_quoted, (tid, "an example quotes a concrete sample sentence")
+            real += len(other_quoted)
     assert real >= 20
     assert sorted(t for t in OFFERED if ALL[t]["example"].startswith("No sentence")) == ["AN-05", "AN-06", "STATE-01", "TREE-01"]
+
+
+def test_no_arnolfini_mentions_in_offered_technique_text_fields():
+    arnolfini_words = re.compile(r"arnolfini|van\s*eyck|costanza|giovanni|1434|1433|panofsky", re.I)
+    for tid in OFFERED:
+        t = ALL[tid]
+        for field in ("description", "usage_rule", "use_when", "needs", "never_when", "example"):
+            assert not arnolfini_words.search(t.get(field) or ""), (tid, field)
 
 
 def test_an_example_never_tells_the_model_what_an_earlier_video_did_not_use():

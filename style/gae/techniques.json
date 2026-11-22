@@ -251,7 +251,7 @@
    "use_when": "The sentence steps back from details to the whole picture or to a wider group: a summing-up, the question the video asks, the end of a chapter (\"so, a prayer or a shop sign?\"), or a return to the whole after a run of details. The crop widens until the picture, or a wide band of it, fills the frame.",
    "needs": "Nothing beyond the picture. The move starts on the last thing looked at (a region) and ends on the wide view.",
    "never_when": "Twice in one chapter. It never ends on the tiny whole between black bars except in the three places rule 13 allows (the pull back that ends the cold open, ONE chapter opening, the last shot); everywhere else it ends on a wide band that fills the width of the screen.",
-   "example": "Arnolfini b0141: \"Centuries of close study have not settled what this small, crowded panel is for. Is it a wedding picture, a memorial to a wife already gone, or a merchant's showroom?\" (the pull back that ends the cold open)",
+   "example": "Landscape example: \"Is this simply a winter month on a rich man's wall, or a quiet portrait of a land falling into hard times?\" (pull back to the whole canvas at the end of the cold open)",
    "slots": [
     {
      "name": "image",
@@ -318,7 +318,7 @@
     "explore"
    ],
    "description": "The frame glides upward over a tall image, revealing forehead and eyes while the chin leaves the bottom edge.",
-   "usage_rule": "Slow reveal along a vertical figure or garment (dress pan down in the Arnolfini episode, portrait pan up).",
+   "usage_rule": "Slow reveal along a vertical figure, garment or tall object (pan down a full-length robe, pan up a standing portrait).",
    "channel_usage": "occasional",
    "offered": true,
    "serves": [
@@ -395,16 +395,16 @@
     "point_at"
    ],
    "description": "The crop enlarges while its centre travels toward a region, so zoom and drift happen together.",
-   "usage_rule": "Used to travel from a pair or group to a specific detail (mirror push, chandelier push, hands push).",
+   "usage_rule": "Used to travel from a group or wider view to a specific detail (from a crowd to one face, from a table to a single object).",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
-   "use_when": "The sentence moves the eye from one thing to another, or from a group to one member of it: \"follow his hand to hers\", \"from the couple to the mirror\", \"up the dress to the fur\". The shot starts on the wider view (or on the first thing) and arrives on the second thing as it is named. Use it as the first shot of a `detail` beat whose thing is not in the frame yet.",
+   "use_when": "The sentence moves the eye from one thing to another, or from a group to one member of it: \"follow his gaze across the table\", \"from the crowd to the doorway\", \"down the slope to the frozen pond\". The shot starts on the wider view (or on the first thing) and arrives on the second thing as it is named. Use it as the first shot of a `detail` beat whose thing is not in the frame yet.",
    "needs": "The region of the second thing (where the move ends). The start is the frame the shot before ended on, or the whole picture.",
    "never_when": "The sentence stays on one thing (CAM-01), or the two things lie so close together that nothing travels. Never to add movement to a sentence that does not travel, and never a move that ends with the picture small between black bars (rule 13).",
-   "example": "Arnolfini b0140: \"Follow his hand to hers, at the very centre of the panel.\" (from his hand to hers)",
+   "example": "Religious scene example: \"Follow the beam of light from the high window down to the figure seated at the table.\" (from the window to the figure)",
    "slots": [
     {
      "name": "image",
@@ -699,14 +699,14 @@
     "context"
    ],
    "description": "Two images overlap and one fades into the other in the same frame area.",
-   "usage_rule": "Used for footage-to-painting change inside a panel; no dissolves were found in the Arnolfini episode, whose cuts are hard.",
+   "usage_rule": "Used for a state change or footage-to-painting overlap inside a panel; ordinary scene cuts remain hard.",
    "channel_usage": "occasional",
    "offered": true,
    "serves": [
     "compare",
     "outside"
    ],
-   "use_when": "The change from one shot to the next is a change of STATE, not of subject: the same view in its second state, or a detail of the painting and the real object it shows (the painted mirror and a photograph of a real convex mirror). The first picture melts into the second over about a second.",
+   "use_when": "The change from one shot to the next is a change of STATE, not of subject: the same view in its second state, or a detail of the painting and the real object it shows (a painted instrument and a photograph of a real period instrument). The first picture melts into the second over about a second.",
    "needs": "Both pictures, in the two shots; the dissolve is written as the `transition_in` of the second shot.",
    "never_when": "As a general softener between shots (the hard cut is the channel's habit and the default); at the start of a chapter; on every change of picture.",
    "example": "St. Eligius b0042: \"Mirrors like this were common in Netherlandish homes, where one hung opposite a window brightened the room.\" (from the painted mirror to a picture of a real one)",
@@ -1037,10 +1037,10 @@
    "serves": [
     "compare"
    ],
-   "use_when": "The sentence compares a detail of the painting with another work: \"Jan van Eyck painted such a mirror in his Arnolfini portrait\". The two pictures sit side by side on the matte, each with a caption.",
+   "use_when": "The sentence compares a detail of the painting with another work: \"Caravaggio borrows the reaching hand of God from Michelangelo's Creation of Adam\". The two pictures sit side by side on the matte, each with a caption.",
    "needs": "Both pictures: the other work in the picks of the beat, and the DETAIL of the painting that is compared, written as the `region` of the `left` slot (the compiler frames that region in its panel; with no region the panel shows the whole painting small and the detail is lost).",
    "never_when": "The other picture was not found (stay on the detail of the painting); two pictures that are not being compared; the comparison is with several works one after another (X-CMP-01).",
-   "example": "St. Eligius b0045: \"Jan van Eyck painted such a mirror in his Arnolfini portrait, and it is presumed to hold his own reflection.\"",
+   "example": "Comparison example: \"Caravaggio borrows the outstretched hand from Michelangelo's Creation of Adam, turning a gesture of creation into a call to follow.\" (detail of the hand on the left beside Michelangelo's fresco on the right)",
    "slots": [
     {
      "name": "left",
@@ -2723,7 +2723,7 @@
    "use_when": "Use EVERY time a detail sentence names a thing that is small on screen: an object, mark, carved figure, or a narrow or flat thing in a wide frame (a bench, a rug, a string of beads, a candle). The surroundings darken and the thing stays bright, even in consecutive shots or a near view.",
    "needs": "Start on the word naming the thing and continue to the shot end, at least 2.5 s. The region covers the thing itself and nothing else; if a stored region is loose, measure a tight region with ./crop and add it to out/regions.json. Leave room to darken: the thing is either under about 40% of both frame width and height (the compiler caps camera zoom at the sharp limit so tight small regions stay under 40% automatically) or a narrow or flat thing whose narrower side is under 20% of the frame's matching side. Keep the centre inside the frame, 5% from each edge, throughout; floor is 0.6 or more.",
    "never_when": "The thing fills the frame; the sentence concerns the whole picture, a face or figure, or something outside the painting; the opening shot or channel-name beat; two spotlights at the same moment; together with AN-01 on the same thing.",
-   "example": "Arnolfini b0044: \"Only one candle is lit, and it has been read as the seeing eye of God.\"",
+   "example": "Portrait example: \"On the lower shelf lies a lute with one snapped string, a quiet sign of discord in a world of learning.\" (spotlight on the snapped lute string)",
    "slots": [
     {
      "name": "image",
@@ -3163,7 +3163,7 @@
    "use_when": "For a list of visible things, hold one frame containing all and draw a ring on each at its spoken word, keeping each until the sentence ends. Also distinguish one of several similar nearby things. Also use for one thing among several of the same kind so close together that a pool of light would hold them all.",
    "needs": "A point and a tight radius around the named thing; keep it visible on screen.",
    "never_when": "The thing fills the frame; together with HI-01 on the same thing; two rings at once for things the narration does not name together; the thing is not on screen.",
-   "example": "Arnolfini b0026: \"Each bead catches the light, strung on fine green silk.\" (one bead among its close neighbours)",
+   "example": "Still life example: \"In the corner of the table, a single fly rests on the rim of the pewter dish.\" (a tight ring around one tiny detail among nearby objects)",
    "slots": [
     {
      "name": "image",
@@ -4037,14 +4037,14 @@
    "intents": [
     "quantify"
    ],
-   "description": "White measuring lines with numbers (60 cm, 82 cm) and a medium caption pop onto a picture.",
+   "description": "White measuring lines with numbers (90 cm, 120 cm) and a medium caption pop onto a picture.",
    "usage_rule": "Appears when the narration states a size or the thickness of a layer; all pieces appear within 0.2 s and stay at least 3.2 s.",
    "channel_usage": "occasional",
    "offered": true,
    "serves": [
     "figure"
    ],
-   "use_when": "The sentence states a real size with its number and unit: \"the panel is sixty by eighty-two centimetres\", \"the layer is forty micrometres thick\". Two measuring lines with the numbers pop onto the picture, with a caption for the medium.",
+   "use_when": "The sentence states a real size with its number and unit: \"the panel is ninety by one hundred and twenty centimetres\", \"the layer is forty micrometres thick\". Two measuring lines with the numbers pop onto the picture, with a caption for the medium.",
    "needs": "The number and its unit from the narration. The whole picture is in the frame with a margin above it: the width line and its number sit just above the picture, so on a frame that fills the screen's height (the default fit) the width number is cut off at the top edge; give the shot a camera about 15% wider than the fit.",
    "never_when": "A size that is not in the narration (never measure a size yourself); a count or a price (NUM-01); a date (STATIC-09).",
    "example": "No sentence in the two narrations calls for it.",
@@ -6318,7 +6318,7 @@
     "structure"
    ],
    "description": "A large white year centred over a blurred or dark image.",
-   "usage_rule": "Date captions on the matte (1433 / 1434 in the Arnolfini build).",
+   "usage_rule": "Date captions on the matte for a pivotal year named in the narration.",
    "channel_usage": "occasional",
    "offered": true,
    "serves": [
@@ -7835,7 +7835,7 @@
     "available": true,
     "impl": "bti.engine.techniques.diagrams.MirrorDiagram",
     "reason": null,
-    "notes": "Procedural convex-mirror optics. Chosen as the closest id for the episode's mirror diagram."
+    "notes": "Procedural convex-mirror optics diagram."
    },
    "preview": {
     "reel_start": 251.0,
@@ -9927,7 +9927,7 @@
     "transition"
    ],
    "description": "The picture changes instantly between two shots with no fade, dissolve or wipe.",
-   "usage_rule": "Default between every pair of base shots; all sampled cuts in the Arnolfini episode are hard (no dissolve at card-to-image or black-to-card).",
+   "usage_rule": "Default between every pair of base shots; standard cuts between shots and cards are hard cuts.",
    "channel_usage": "core",
    "offered": false,
    "hidden_reason": {
@@ -10740,7 +10740,7 @@
    "use_when": "The first time the narration speaks the proper name of a person or thing, or the unfamiliar name of an object such as a settle, and its subject is on screen, show that name on the naming word, long enough to read. On another picture name the subject the narration speaks of, not the picture itself.",
    "needs": "The name from the narration. Use sub for a shortened caution in the narration’s own words when identity is uncertain, or a plain fact from the same sentence. On a borrowed picture sub may give its record title, maker and date only when available, never the photographer or photograph year. A strip is never alone for a small thing: use HI-01; never light a person or face. A strip that names a thing on the main painting always comes with the light on that thing regardless of its size.",
    "never_when": "The name has been presented before; the subject is not on screen; the label invents certainty or a fact; the shot already has X-ANN-02; three or more parts are named in sequence (KEY-01). A face needs no label saying FACE, but a person named by the narration gets their name.",
-   "example": "Arnolfini b0003: \"The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini\" (COSTANZA TRENTA / most often named as the wife); Arnolfini b0024: \"Some historians see Saint Martha, patron of housewives\" (SAINT MARTHA / some historians see Saint Martha; Hours of Henry VIII).",
+   "example": "Portrait example: \"On the left stands Jean de Dinteville, the French ambassador to England\" (JEAN DE DINTEVILLE / French ambassador to England); Landscape example: \"Above the inn hangs a painted tavern sign with a stag\" (TAVERN SIGN / with a spotlight on the small sign).",
    "slots": [
     {
      "name": "text",
@@ -11129,7 +11129,7 @@
     "structure",
     "point_at"
    ],
-   "description": "Plain white words (for example CANDLE, ROUNDELS, MOURNING DRESS, DOG) placed near their details over the black matte, with no strip.",
+   "description": "Plain white words (for example GLOBE, LUTE, SUNDIAL, SKULL) placed near their details over the black matte, with no strip.",
    "usage_rule": "In the closing pull-out the details are named again, one at a time, as the narration recalls them.",
    "channel_usage": "occasional",
    "offered": true,
@@ -11139,7 +11139,7 @@
    "use_when": "The beat is in the closing and recalls details seen earlier, by name, over the last wide view: \"come back to the hands and the scales\". Plain white words appear beside their details, one after another, as the narration names them.",
    "needs": "The names, in the narration's words, and the place of each detail in the picture (regions).",
    "never_when": "Anywhere but the closing; details the video never showed; more than five names; names that are not in the narration.",
-   "example": "Arnolfini b0194: \"Come back to the hands at the centre, and to the line above the mirror, Jan van Eyck was here, 1434.\"",
+   "example": "Portrait closing example: \"Step back and take in the globe, the broken lute, the instruments, and the stretched skull at their feet.\"",
    "slots": [
     {
      "name": "image",
@@ -11930,7 +11930,7 @@
    "use_when": "The sentence compares the same detail with two or more other pictures one after another: the painting stays in one half and the other half changes from picture to picture, one for each work named.",
    "needs": "Two or more other pictures in the picks, in the order the narration names them, and the region of the painting that is being compared, written as the `region` of the `anchor` slot (the compiler frames it in its panel; with no region the whole painting sits small in the panel).",
    "never_when": "One other picture only (LAY-01); pictures that are not being compared with the same thing.",
-   "example": "Arnolfini b0193: \"His work was studied, copied and sought abroad, and his influence has been traced to Durer, and to Velazquez in Las Meninas.\" (the panel stays left while Dürer, then Las Meninas, take the right)",
+   "example": "Influence example: \"His dramatic lighting echoed across Europe, shaping later night scenes by Georges de La Tour and Rembrandt.\" (the main painting stays left while La Tour, then Rembrandt, take the right)",
    "slots": [
     {
      "name": "anchor",
@@ -14381,7 +14381,7 @@
     "context"
    ],
    "description": "A time axis with dates on the dark ground of the channel: a hairline axis grows from the left, ticks fade in, and each dated item grows a stalk from the axis and fades in its year and a short label at its own time. The technique chooses, for every item, the side of the axis, the length of the stalk and the place of the label so that no label touches another label or another stalk and every label stays inside the frame (two items or twelve, two in the same year, BC and AD together). At `focus_s` the accented item brightens, gets a dot on the axis, and the others dim.",
-   "usage_rule": "Use it when the narration places events in time: a run of dated events (\"in 1425 ... in 1431 ... in 1434\"), a span, the order of things. It is a dark shot of its own (no picture). Give `items`, one per dated moment the narration names: `date` (a whole year, negative for BC), `label` (a few words of your own, at most 48 characters, never a sentence of the narration), `at` (seconds from the start of the shot, or the word that names the event so that its stalk grows on that word), `side` (leave `auto`: the technique picks the side, the stalk length and the label's place) and `accent` true on the one moment the sentence is about (it brightens at `focus_s`, the others dim). Leave `from`, `to` empty and `tick_every` 0 unless the axis must run wider than the items (empty `from`/`to` = the items' range with one year of margin; a date outside the axis is an error). One to 12 items; items too close together to be laid out are refused. The default data is an example (Van Eyck, 1425 to 1434): ALWAYS replace all of `items`. Dates come from the narration and the project's sources: leave an item out rather than guess a year. Let the shot last about one second per item plus three.",
+   "usage_rule": "Use it when the narration places events in time: a run of dated events (\"in 1510 ... in 1515 ... in 1522\"), a span, the order of things. It is a dark shot of its own (no picture). Give `items`, one per dated moment the narration names: `date` (a whole year, negative for BC), `label` (a few words of your own, at most 48 characters, never a sentence of the narration), `at` (seconds from the start of the shot, or the word that names the event so that its stalk grows on that word), `side` (leave `auto`: the technique picks the side, the stalk length and the label's place) and `accent` true on the one moment the sentence is about (it brightens at `focus_s`, the others dim). Leave `from`, `to` empty and `tick_every` 0 unless the axis must run wider than the items (empty `from`/`to` = the items' range with one year of margin; a date outside the axis is an error). One to 12 items; items too close together to be laid out are refused. The default data is only a sample: ALWAYS replace all of `items`. Dates come from the narration and the project's sources: leave an item out rather than guess a year. Let the shot last about one second per item plus three.",
    "channel_usage": "occasional",
    "offered": true,
    "serves": [
@@ -14607,7 +14607,7 @@
     "context"
    ],
    "description": "Relations between people on the dark ground of the channel: names with a smaller second line (dates or role), hairline connectors drawn one after another, a marriage as a short horizontal line between two names of one row, descent running down in right angles, relations such as patron or painter drawn the same way, and small italic edge labels. When `row` and `col` are left out the technique lays the tree out itself: generations by descent, spouses side by side, crossings reduced, everything inside the frame (the text is made smaller when the tree is wide).",
-   "usage_rule": "Use it when the narration explains who is related to whom or who worked for whom: a family, a patron and the painters he hired, a workshop, who married whom, who painted or bought which work. It is a dark shot of its own (no picture). `nodes`: `id` (short, no spaces), `name`, `sub` (a smaller second line: dates or a role), `strong` true for the one or two names the sentence is about, `at` (seconds from the start of the shot, or the word that names the person so that the name appears on it). `edges`: `from`, `to` (ids), `kind` (`descent` from parent to child, `marriage` between two names, `link` for any other relation such as patron to painter or painter to work), `label` (two or three words in small italic, for example 'married 1426'), `at` (when the line is drawn, from `from` to `to`). Leave `row` and `col` at -1: the technique lays the tree out itself (parents above children, spouses side by side); give both for every name only to place them by hand. Two to 14 names, at most five generations, a person has at most two marriages; a tree that cannot fit is refused. The default data is an example (Philip the Good, Van Eyck, the Arnolfini): ALWAYS replace `nodes` and `edges` together. Names, dates and relations come from the narration and the project's sources: leave out anything you are unsure of rather than guess. Let the shot last about one second per name plus three.",
+   "usage_rule": "Use it when the narration explains who is related to whom or who worked for whom: a family, a patron and the painters he hired, a workshop, who married whom, who painted or bought which work. It is a dark shot of its own (no picture). `nodes`: `id` (short, no spaces), `name`, `sub` (a smaller second line: dates or a role), `strong` true for the one or two names the sentence is about, `at` (seconds from the start of the shot, or the word that names the person so that the name appears on it). `edges`: `from`, `to` (ids), `kind` (`descent` from parent to child, `marriage` between two names, `link` for any other relation such as patron to painter or painter to work), `label` (two or three words in small italic, for example 'commissioned 1512'), `at` (when the line is drawn, from `from` to `to`). Leave `row` and `col` at -1: the technique lays the tree out itself (parents above children, spouses side by side); give both for every name only to place them by hand. Two to 14 names, at most five generations, a person has at most two marriages; a tree that cannot fit is refused. The default data is only a sample: ALWAYS replace `nodes` and `edges` together. Names, dates and relations come from the narration and the project's sources: leave out anything you are unsure of rather than guess. Let the shot last about one second per name plus three.",
    "channel_usage": "occasional",
    "offered": true,
    "serves": [
@@ -14616,7 +14616,7 @@
    "use_when": "One passage ties three or more people together: a family, a patron and the painters he hired, who married whom. A dark shot of its own draws the names with a line between them as the narration says each tie.",
    "needs": "The names and the ties between them, all from the narration. At least three people.",
    "never_when": "Two people only (say it, or label it); a tie the narration does not state; before second 30.",
-   "example": "No sentence in the two narrations calls for it (Arnolfini b0138 ties only two people).",
+   "example": "No sentence in the two narrations calls for it (a line tying only two people does not need a tree).",
    "slots": [],
    "params": [
     {
@@ -15075,7 +15075,7 @@
     "establish"
    ],
    "description": "A map of real geography (Natural Earth, bundled, no network) drawn like an atlas plate: paper land, a blue-grey or sepia sea that is darker toward the coast with two water lines, an ink coastline, small place marks with italic labels that appear on the word that names them, a dotted route drawn with a travelling head, an optional tinted country, sea names, and a slow push from a wide view to a view fitted to the places.",
-   "usage_rule": "Use it for a country, a region or a journey that a sentence names (where a painter lived or travelled, where a work was made, shipped or kept, a country's extent): views 300 km wide and wider. It replaces STATIC-06, AN-04 and X-ANN-05 for new work (they stay valid for old storyboards). Do NOT use it for a spot inside a city (a street, a house, a quarter): Natural Earth has no coastline detail closer than about 300 km, so show such a spot with a street-map picture from the picks (step Chọn hình); a narrower view only gets the warning `map_view_coarse`. Give: `places` (id, name, lonlat [longitude, latitude], `at` = seconds from the start of the shot or a word anchor so the mark lands on the word that names the place), `route` (from/to place ids, `via` points that bend it; pass [] for no route; a sea route needs `via` points in open water, or the dotted line is drawn across land), `region_iso` (ISO codes of today's countries to tint; [] for none) and `region_label`. The default data is an example (Bruges to Lucca with Belgium): ALWAYS set places, route and region_iso together, or the example's route and region remain. Coordinates are yours to supply; leave a place out rather than guess it. The view runs from `view_start_width_km` to the end view (`fit` of all places with `view_end_margin_pct`, or `manual` with a centre and width). Let the shot last 6 to 10 s.",
+   "usage_rule": "Use it for a country, a region or a journey that a sentence names (where a painter lived or travelled, where a work was made, shipped or kept, a country's extent): views 300 km wide and wider. It replaces STATIC-06, AN-04 and X-ANN-05 for new work (they stay valid for old storyboards). Do NOT use it for a spot inside a city (a street, a house, a quarter): Natural Earth has no coastline detail closer than about 300 km, so show such a spot with a street-map picture from the picks (step Chọn hình); a narrower view only gets the warning `map_view_coarse`. Give: `places` (id, name, lonlat [longitude, latitude], `at` = seconds from the start of the shot or a word anchor so the mark lands on the word that names the place), `route` (from/to place ids, `via` points that bend it; pass [] for no route; a sea route needs `via` points in open water, or the dotted line is drawn across land), `region_iso` (ISO codes of today's countries to tint; [] for none) and `region_label`. The default data is only a sample route: ALWAYS set places, route and region_iso together, or the example's route and region remain. Coordinates are yours to supply; leave a place out rather than guess it. The view runs from `view_start_width_km` to the end view (`fit` of all places with `view_end_margin_pct`, or `manual` with a centre and width). Let the shot last 6 to 10 s.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
@@ -15548,7 +15548,7 @@
     "context"
    ],
    "description": "Small text labels beside the parts of a picture a sentence names, one after another: no box, no line, each label fades in on the word that names its detail, sits outside the detail's region on the chosen side, follows the base shot's camera and keeps its size. The picture dims a little so the letters stand out. The technique places the labels: they never touch each other or leave the frame, they prefer the darker ground under the text, and a label that had to be pushed away from its detail gets a hairline to it.",
-   "usage_rule": "Use it when a sentence NAMES parts of the picture one after another (the candle, the mirror, the inscription, the dog): a key to the picture, the way a good art channel writes 'Theology', 'Medicine' on the panels of a ceiling. Overlay on any shot that shows one picture through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots); validation refuses it on cards, diagrams and maps. Give `labels`: a list (1 to 12) of {`text` (what is written, up to 60 characters), `ref` (a region name of the shot's picture, or [x, y] in source pixels), `side` (auto, n, ne, e, se, s, sw, w, nw: the side of the detail the text sits on; auto lets the technique choose), `at` (seconds from the start of the overlay, or a word anchor so the label lands on the word that names it), `style` (italic, regular, caps)}. The default labels are an example for the Arnolfini Portrait: ALWAYS set `labels` yourself, with regions that exist on the picture. Placement, spacing and keeping inside the frame are the technique's job, not yours. Put at most five labels on screen at a time; details that lie close together are better shown in two shots. Let the overlay last 4 to 10 s (at least 2.5 s) and leave about 2.5 s from the last named word to the end of the shot.",
+   "usage_rule": "Use it when a sentence NAMES parts of the picture one after another (the globe, the sundial, the lute, the open book): a key to the picture, the way a good art channel writes 'Theology', 'Medicine' on the panels of a ceiling. Overlay on any shot that shows one picture through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots); validation refuses it on cards, diagrams and maps. Give `labels`: a list (1 to 12) of {`text` (what is written, up to 60 characters), `ref` (a region name of the shot's picture, or [x, y] in source pixels), `side` (auto, n, ne, e, se, s, sw, w, nw: the side of the detail the text sits on; auto lets the technique choose), `at` (seconds from the start of the overlay, or a word anchor so the label lands on the word that names it), `style` (italic, regular, caps)}. The default labels are only a sample: ALWAYS set `labels` yourself, with regions that exist on the picture. Placement, spacing and keeping inside the frame are the technique's job, not yours. Put at most five labels on screen at a time; details that lie close together are better shown in two shots. Let the overlay last 4 to 10 s (at least 2.5 s) and leave about 2.5 s from the last named word to the end of the shot.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
@@ -15785,16 +15785,16 @@
     "context"
    ],
    "description": "A figure stated large over the dimmed picture, alone or against others: up to four rows, each a small italic label, the figure in big numerals with its units, and a count of small round marks that run out one after another so that a ratio can be seen at a glance; a caption says what one mark stands for and a small line gives the source.",
-   "usage_rule": "Use it when a sentence STATES a figure or compares figures (a price, a count, a size, 600 pelts against 2,000, a record): one to four rows. Overlay on any shot, with or without a picture. Give `rows`: a list (1 to 4) of {`label` (a few words, shown small above the figure), `value` (the figure as written, e.g. \"2,000\" or \"$450.3M\"; text, up to 16 characters), `units` (e.g. pelts), `count` (how many marks to run out, 0 for none; one mark should stand for a round quantity and the caption should say which), `at` (seconds from the start of the overlay, or a word anchor on the word that states the figure)}; `caption` (one short line, e.g. \"each dot is fifty squirrel pelts\") and `source` (a small line, e.g. \"Source: Christie's\"; empty for none). Rows run in order; give each about 2 s more than the one before. The default data is an example (600 against 2,000 squirrel pelts): ALWAYS set rows, caption and source together. Let the overlay last 5 to 9 s, long enough for the last row's marks (1.1 s) and the caption to appear.",
+   "usage_rule": "Use it when a sentence STATES a figure or compares figures (a price, a count, a size, 12 ships against 42, a record): one to four rows. Overlay on any shot, with or without a picture. Give `rows`: a list (1 to 4) of {`label` (a few words, shown small above the figure), `value` (the figure as written, e.g. \"2,000\" or \"$450.3M\"; text, up to 16 characters), `units` (e.g. ships), `count` (how many marks to run out, 0 for none; one mark should stand for a round quantity and the caption should say which), `at` (seconds from the start of the overlay, or a word anchor on the word that states the figure)}; `caption` (one short line, e.g. \"each dot is two ships\") and `source` (a small line, e.g. \"Source: Christie's\"; empty for none). Rows run in order; give each about 2 s more than the one before. The default data is only a sample: ALWAYS set rows, caption and source together. Let the overlay last 5 to 9 s, long enough for the last row's marks (1.1 s) and the caption to appear.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "figure"
    ],
-   "use_when": "The sentence has a quantity as its point: a count, a price, a size, a ratio (\"600 pieces of belly fur against 2,000\"). The figure shows large over the picture of the thing counted, with a row of small marks when a ratio helps.",
-   "needs": "The figure and its unit from the narration, and a picture of the THING COUNTED (squirrel fur for pelts, caravels for ships): an outside picture in the picks of the beat, or a detail of the painting when the thing is in it. One to four rows.",
+   "use_when": "The sentence has a quantity as its point: a count, a price, a size, a ratio (\"42 ships anchored in the harbour\", \"two hundred years of wages\"). The figure shows large over the picture of the thing counted, with a row of small marks when a ratio helps.",
+   "needs": "The figure and its unit from the narration, and a picture of the THING COUNTED (caravels for ships, gold coins for a price): an outside picture in the picks of the beat, or a detail of the painting when the thing is in it. One to four rows.",
    "never_when": "The picture under the figure has nothing to do with the thing counted (a figure about ships over the saint's face); a year (STATIC-09); a number that is only a date or a name; a figure that is not in the narration.",
-   "example": "Arnolfini b0153: \"An ordinary gown took about 600 pieces of belly fur, and this one may have used 2,000.\" (the finished video put the two figures over the squirrel picture). St. Eligius b0028, \"its harbour held 42 British caravels\", needs a picture of caravels, not the saint.",
+   "example": "St. Eligius b0028: \"On one day in 1457 its harbour held 42 British caravels and three Venetian galleys.\" (needs a picture of caravels under the figure, not the saint)",
    "slots": [],
    "params": [
     {
@@ -15998,7 +15998,7 @@
     "context"
    ],
    "description": "One line of a document, an inscription or a signature stays lit while everything else dims; the lit window follows the base shot's camera, has a soft edge and no outline. Below it the line's meaning appears in today's words (italic) and the line as written (small capitals). Several lines can be lit one after another.",
-   "usage_rule": "Use it when a sentence READS or QUOTES a line that is visible in the picture: an inscription, a signature, a letter, a ledger, an inventory. Overlay on any shot that shows one picture or document through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots; let the camera move in on the line); validation refuses it on cards, diagrams and maps. Give `lit`: a list (1 to 6) of {`ref` (a region name of the picture; its ellipse gives the window) or `box` (\"x0, y0, x1, y1\" in source pixels, which wins over `ref`), `at` (seconds from the start of the overlay, or a word anchor), `hold_s` (how long it stays lit; 0 = until the next line is lit, or to the end)}; `reading` (the line in today's words), `original` (the line as written; it is shown in capitals), `reading_at` (seconds from the start of the overlay when the reading appears; the original follows 0.4 s later, so say it after the narrator starts the line). The default data is an example (Jan van Eyck's signature on the Arnolfini Portrait): ALWAYS set lit, reading, original and reading_at together. Let the overlay last 5 to 9 s (at least 3 s).",
+   "usage_rule": "Use it when a sentence READS or QUOTES a line that is visible in the picture: an inscription, a signature, a letter, a ledger, an inventory. Overlay on any shot that shows one picture or document through a camera (the CAM-0x, STATIC-01 and X-LAY-01 shots; let the camera move in on the line); validation refuses it on cards, diagrams and maps. Give `lit`: a list (1 to 6) of {`ref` (a region name of the picture; its ellipse gives the window) or `box` (\"x0, y0, x1, y1\" in source pixels, which wins over `ref`), `at` (seconds from the start of the overlay, or a word anchor), `hold_s` (how long it stays lit; 0 = until the next line is lit, or to the end)}; `reading` (the line in today's words), `original` (the line as written; it is shown in capitals), `reading_at` (seconds from the start of the overlay when the reading appears; the original follows 0.4 s later, so say it after the narrator starts the line). The default data is only a sample inscription: ALWAYS set lit, reading, original and reading_at together. Let the overlay last 5 to 9 s (at least 3 s).",
    "channel_usage": "core",
    "offered": true,
    "serves": [

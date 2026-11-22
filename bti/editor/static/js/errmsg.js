@@ -906,3 +906,9 @@ Object.assign(BUILD, INTROOPEN_ISSUES);
 
 // worker listmark
 Object.assign(BUILD, { year_already_on_screen: (i) => `Năm ${i.args?.year ?? ""} đã hiện trong nhãn. Hãy bỏ năm lớn.` , strip_without_light: (i) => `${fdShot(i.args || {})}: Nhãn gọi tên vật chưa được rọi sáng. Hãy thêm đèn rọi hoặc vòng khoanh.` });
+
+// ---- worker voiceplain (2026-11-22): attribution phrases in narration (bti/script/sourcenames.py, validate.py)
+export const VOICEPLAIN_ISSUES = {
+  attribution_phrase: (i) => `Dòng ${w(i.beat)} dùng cụm từ quy cho học giả hoặc cách đọc${Array.isArray(i.found) && i.found.length ? ' ("' + i.found.join('", "') + '")' : ''}. Hãy kể bằng giọng của kênh và nói rõ điều chưa chắc bằng từ giản dị.`,
+};
+Object.assign(BUILD, VOICEPLAIN_ISSUES);

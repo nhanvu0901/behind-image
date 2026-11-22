@@ -48,8 +48,9 @@ def by_book(b):
 
 
 NOTE_WORDS = ("restored and reviewed rendering of a machine-translated book", "unmarked prose says what the book says", "names corrected",
-              "ideas and readings of the picture may be used as readings of the picture", "never as established fact", "never in the author's name",
-              "one reading among others", "NO number, date or quotation", "unless another source of this dossier confirms it",
+              "ideas and interpretations may be used as uncertain possibilities", "never as established fact", "never in the author's name",
+              "state them cautiously in the narrator's own voice", "never attributed to outsiders",
+              "NO number, date or quotation", "unless another source of this dossier confirms it",
               "[…] marks a passage that could not be restored", "never guess what it said")
 
 
@@ -118,7 +119,7 @@ def test_flag_no_normal_source_for_each_mix(tmp_path):
     f, t = flag([("payne_gae", "normal", PLAIN), ("grovier_nws", "restored", RESTORED_TEXT)], exclude=["payne_gae"])   # the normal one left out
     assert f is True and "NO FULLY TRUSTED SOURCE" in t
     assert "every fact of this painting needs care" in t and '"established"' in t and '"likely"' in t
-    assert "tells it as a reading, not as an established fact" in t and "whose claim" not in t
+    assert "states it cautiously as a possibility, not as an established fact" in t and "whose claim" not in t
 
 
 def test_words_of_a_restored_source_do_not_count_the_marks(tmp_path):

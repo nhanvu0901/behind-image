@@ -80,7 +80,7 @@ def cut_note(words: int, budget: int, written: NChapter) -> str:
     aim = max(1, round(budget * 0.95))
     return (f"{CUT_MARK} It has {words} words and the budget of this chapter is {budget}, a ceiling. Write the chapter again with at most {budget} words "
             f"(aim for {aim}): that is {words - aim} words fewer. Keep its order, its best lines and the facts it rests on; cut the least necessary detail first: "
-            "a second example, a repeated explanation, a reading of a small point. Add nothing new. Here is your previous answer:\n\n" + render_chapter(written))
+            "a second example, a repeated explanation, a side note on a minor point. Add nothing new. Here is your previous answer:\n\n" + render_chapter(written))
 
 
 def _fill(template: str, values: dict[str, str]) -> str:
