@@ -49,3 +49,11 @@ def test_a_stopping_warning_stops_the_run_with_its_sentence_and_the_flicker_does
 def test_the_codes_are_warnings_in_the_engines_list_so_the_sorting_test_of_the_run_finds_them():
     for code in VC.CODES:
         assert "(warning)" in SB.ISSUE_CODES[code], code
+
+
+def test_model_viewer_findings_stop_storyboard_approval():
+    from bti.draft.review import ISSUE_CODES
+    for code in ISSUE_CODES.values():
+        verdict, stopping, _ = checks.vet("storyboard", [issue(code)])
+        assert verdict == "warning" and stopping[0]["code"] == code
+        assert VI.search(stopping[0]["why_vi"])

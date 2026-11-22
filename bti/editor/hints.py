@@ -199,6 +199,8 @@ HINTS: dict[str, dict] = {
     "turn_not_escalated": _t("after_fix", "That turn did not end as `escalate` (or an agent run of it that failed): only such a turn can be handed to the pictures agent; send POST /api/projects/{pid}/picks/auto with the lines instead."),
 
     # --- draft (storyboard) step
+    # worker viewreview
+    "review_failed": _t("after_fix", "Read the job detail, fix the reported review or edit problem, then call storyboard.review again."),
     "draft_not_ready": _t("after_fix", "Make the voice (timing.json) and approve the picks first: GET /api/projects/{pid}/state shows which is missing."),
     "timing_missing": _t("after_fix", "Make the voice first (POST /api/projects/{pid}/voice/generate): timing.json is missing."),
     "timing_corrupt": _t("after_fix", "Make the voice again (POST /api/projects/{pid}/voice/generate): timing.json cannot be read."),

@@ -912,3 +912,13 @@ export const VOICEPLAIN_ISSUES = {
   attribution_phrase: (i) => `Dòng ${w(i.beat)} dùng cụm từ quy cho học giả hoặc cách đọc${Array.isArray(i.found) && i.found.length ? ' ("' + i.found.join('", "') + '")' : ''}. Hãy kể bằng giọng của kênh và nói rõ điều chưa chắc bằng từ giản dị.`,
 };
 Object.assign(BUILD, VOICEPLAIN_ISSUES);
+// worker viewreview: remaining findings after the viewer review.
+Object.assign(BUILD, {
+  review_picture_mismatch: (i) => `${fdShot(i.args || {})}: Hình chưa cho thấy điều lời dẫn đang nói.`,
+  review_text_wrong: (i) => `${fdShot(i.args || {})}: Chữ trên hình chưa đúng hoặc bị lặp.`,
+  review_context_missing: (i) => `${fdShot(i.args || {})}: Tên hoặc chi tiết chưa được giới thiệu rõ.`,
+  review_picture_repeated: (i) => `${fdShot(i.args || {})}: Hình bị lặp ở những câu không liên quan.`,
+});
+Object.assign(STAGE_CODES.draft, {
+  review_failed: 'Không xem lại được storyboard. Hãy thử lại sau khi kiểm tra cảnh và kết nối agent.',
+});

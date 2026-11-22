@@ -427,7 +427,8 @@ def test_the_codes_of_the_lists_are_codes_the_checks_really_make():
     src = {"outline": (root / "script" / "validate.py").read_text(encoding="utf-8"), "narration": (root / "script" / "validate.py").read_text(encoding="utf-8"),
            "picks": (root / "picks" / "doc.py").read_text(encoding="utf-8"),
            "storyboard": (root / "engine" / "storyboard.py").read_text(encoding="utf-8") + (root / "engine" / "registry.py").read_text(encoding="utf-8")
-                         + (root / "engine" / "viewchecks.py").read_text(encoding="utf-8")}          # fixdraft: the viewer checks are in their own module
+                         + (root / "engine" / "viewchecks.py").read_text(encoding="utf-8")
+                             + (root / "draft" / "review.py").read_text(encoding="utf-8")}          # fixdraft: the viewer checks are in their own module
     for gate in reasons.GATES:
         for code in list(checks.STOPS[gate]) + list(checks.TOLERATED[gate]):
             assert re.search(r'["\']%s["\']' % code, src[gate]), (gate, code)

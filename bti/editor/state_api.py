@@ -181,6 +181,9 @@ SPECS: list[Spec] = [
               "voice put it; the opening shot is missing or no longer needed): listed only then. No model and no cost. Moves them to where the voice puts them, puts the opening "
               "shot in or takes it out, and applies the identity style again with the project's title (`title.json`) on the channel-name beat; no shot of the model or the owner is changed except the start of the shot after the opening shot. "
               "One batch in the change log (undoable: `bti undo` gives back the whole document the batch changed, the shots, the end of the video and the identity). Advances when something can be moved; approving the storyboard and the export are refused (`storyboard_off_voice`) until it is done."),
+    Spec("storyboard.review", "edit", "Xem lại storyboard", "POST", P + "/draft/review", long_job=True, follow=LONGJOBS, role="draft",
+         cost=("model", "about 10 to 15 minutes plus any repairs"),
+         when="After a storyboard is saved, with voice timing and approved picks. Reviews the current revision and repairs flagged shots up to twice; advances until the current revision is reviewed."),
     Spec("storyboard.approve", "edit", "Duyệt storyboard", "POST", P + "/approve", gate=True,
          when="While the storyboard is not approved (or was edited after). The route refuses while validation errors remain: call storyboard.validate first, and while the storyboard "
               "does not fit the voice (`storyboard_off_voice`: call storyboard.retime). Advances."),
@@ -196,7 +199,7 @@ SPECS: list[Spec] = [
          when="The newest batch that can be undone now: it still has its copies, nothing undid it, and nothing it changed was changed since. `step` is the step of its document."),
     Spec("draft.edit", "edit", "Nhờ agent sửa", "POST", P + "/draft/edit", long_job=True, follow=LONGJOBS, role="edit.fast",
          cost=("model", "from about 30 seconds to about 20 minutes"),
-         when="While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`)."),
+         when="While the storyboard is readable. Ready unless a draft job runs, the pictures agent is working (one agent run at a time), an automatic run goes on or the agent cannot run. The caller supplies the instruction and the scope (`fill`). A whole-storyboard edit that changes the storyboard is followed by a viewer review within the same job (additional model time)."),
     Spec("identity.set", "edit", "Chọn kiểu mở đầu", "PUT", P + "/identity",
          when="While the storyboard is readable. The caller supplies the style (`fill`); GET .../identity lists them. Optional body field `video_title` (`--set video_title=...`): the video's title shown under the channel name, one line of at most 90 characters (an empty text takes it away); with a title the style may also be left out of a direct call to the route. Refused with `storyboard_off_voice` while the storyboard does not fit the voice (call storyboard.retime first; title.set stores a title in that case all the same)."),
     Spec("draft.cancel", "edit", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a draft job of the project runs."),
@@ -891,6 +894,23 @@ def b_storyboard_validate(c: Ctx):
     return E() if _sb_ok(c) else None
 
 
+def b_storyboard_review(c: Ctx):
+    if not _sb_ok(c) or c.imported or c.sb_old_narration or c.sb_approval == "fresh":
+        return None
+    from bti.draft.review import load_report
+    if load_report(c.d, c.sb_rev) is not None:
+        return E(body={"actor": c.actor("draft")}, advances=False)
+    needs = ["no_running_job"] if c.agent_busy("draft") else []
+    if not c.draft_ready["voice"]:
+        needs.append("voice_done")
+    if not c.draft_ready["picks"]:
+        needs.append("picks_approved")
+    if c.sb_off:
+        needs.append("storyboard_fits_voice")
+    needs += _model_needs(c, "draft")
+    return E(needs, {"actor": c.actor("draft")}, advances=True)
+
+
 def b_storyboard_approve(c: Ctx):
     if not _sb_ok(c) or c.sb_approval == "fresh" or c.sb_old_narration:
         return None
@@ -1032,7 +1052,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
     "picks.auto": b_picks_auto, "picks.retry_missing": b_picks_retry_missing, "picks.tighten": b_picks_tighten, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
-    "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
+    "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.review": b_storyboard_review, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
     "draft.edit": b_draft_edit, "identity.set": b_identity_set,
     "export.start": b_export_start, "auto.run": b_auto_run, "output.build": b_output_build,

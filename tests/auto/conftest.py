@@ -140,3 +140,11 @@ def live(root):
     c.close()
     server.should_exit = True
     th.join(15)
+
+
+@pytest.fixture(autouse=True)
+def _no_real_viewer_review(monkeypatch):
+    from bti.draft import review
+    def forbidden(*args, **kwargs):
+        pytest.fail("viewer review must use a fake in tests")
+    monkeypatch.setattr(review, "_review_round", forbidden)

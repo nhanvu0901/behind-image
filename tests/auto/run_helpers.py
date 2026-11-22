@@ -83,6 +83,7 @@ class World:
 
     def __init__(self, c, monkeypatch, delay: float = 0.04):
         import bti.draft.run as draft_run
+        import bti.draft.review as viewer_review
         import bti.editor.jobs as jobs_mod
         import bti.export.run as export_run
         import bti.voice.run as voice_run
@@ -110,6 +111,7 @@ class World:
                                                            else {"state": "none", "detail": "Chưa có bản nháp.", "proposal": None}))
         monkeypatch.setattr(voice_run, "start", lambda d, pid, *a, **k: self._job("voice", d, pid, lambda: self.flags.update(voice=True)))
         monkeypatch.setattr(draft_run, "start", lambda pid, d, *a, **k: self._job("draft", d, pid, self._write_proposal))
+        monkeypatch.setattr(viewer_review, "start", lambda pid, d, *a, **k: self._job("draft", d, pid, self._write_review, record="review"))
         monkeypatch.setattr(export_run, "start", lambda d, *a, **k: self._job("export", d, Path(d).name, lambda: self.flags.update(export=True)))
         monkeypatch.setattr(jobs_mod, "render_preview", lambda *a, **k: "/api/projects/x/files/cache/previews/p.mp4")
         monkeypatch.setattr(service, "search", lambda *a, **k: {"items": [], "errors": []})
@@ -138,10 +140,17 @@ class World:
         shutil.copy(DEMO_SRC / "timing.json", d / "timing.json")
         self.flags["draft"] = True
 
-    def _job(self, kind: str, d, pid: str, effect) -> dict:
+    def _write_review(self) -> None:
+        from bti.draft.review import save_report
+        from bti.editor.common import compute_rev
+        d = self.c.root / self.pid
+        sb = json.loads((d / "storyboard.json").read_text(encoding="utf-8"))
+        save_report(d, {"revision": compute_rev(sb), "rounds": 0, "history": [], "warnings": []})
+
+    def _job(self, kind: str, d, pid: str, effect, *, record=None) -> dict:
         from bti.longjob import Part, PartError, manager
-        self.calls.append(kind)
-        seconds = self.hold.get(kind, self.delay)
+        self.calls.append(record or kind)
+        seconds = self.hold.get(record or kind, self.delay)
 
         def run(ctx):
             end = time.time() + seconds
