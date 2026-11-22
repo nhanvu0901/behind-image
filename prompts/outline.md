@@ -11,11 +11,12 @@ THE JOB
 2. Write three different hook options: concrete, specific, something a viewer can see or a puzzle they can feel in the first twenty seconds. Choose one.
    For the cold open (`ROLE: cold_open`, `CARD: no`), plan every outline field so the narrator can follow these cold-open rules:
    - budget 60 to 145 words total (never over 145 words);
-   - open with a short first line (25 words at most) that points directly at something visible in the picture;
-   - speak both the painting's name and the painter's name in ordinary speech (not only inside a quotation or translated inscription) within about the first 60 words, and the year when it is certain and matters;
-   - set the contradiction, puzzle or question the video is about before about word 72 (second 30), with its concrete evidence right after;
-   - end the cold open on an open question that the rest of the video works on, never on a plan of the video ("in this video", "today we will", "let's find out");
-   - plan SHOW in order: the whole painting at the very start is the program's (before the voice starts), so list the first visible detail first, then the contradicting thing, and end with the pull back to the whole painting on the closing question.
+   - The first sentence, at most 25 words, names the painting and the painter in plain words outside quotations; give the year when certain.
+   - In the next sentence or two introduce who or what is shown by position, identifying each person before or as their name is used; never introduce someone only as the wife of a person not yet presented.
+   - In one sentence point to two or three strange things visible in the painting, concrete and supported by the sources.
+   - By about word 72 set the open question, with both sides of the contradiction together in one sentence so the viewer need not remember earlier numbers. End on that question.
+   - Use plain words, never a plan of the video or stock phrases. See the forbidden phrase list in HOW THIS CHANNEL NARRATES.
+   - Plan SHOW from the whole painting, to the people and concrete details, then pull back to the whole painting for the closing question.
 3. Build the fact table. Each fact is one checkable statement and lists the source paragraph ids it rests on. Do not write a fact that has no paragraph behind it, and do not use outside knowledge. Use the certainty words like this:
    - established: sources agree, or the statement is a description of the picture or a document;
    - likely: one source states it, or sources lean the same way but call it probable;

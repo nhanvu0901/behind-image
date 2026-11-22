@@ -1045,3 +1045,9 @@ export const CODE_IDFIX = {
   strip_without_light: 'Nhãn vật chưa có đèn rọi',
 };
 Object.assign(CODE, CODE_IDFIX);
+
+// worker introopen: first sentence identifies the painting and painter.
+export const CODE_INTROOPEN = {
+  cold_open_first_sentence_names: "Câu đầu thiếu tên tranh hoặc họa sĩ",
+};
+Object.assign(CODE, CODE_INTROOPEN);

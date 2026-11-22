@@ -865,7 +865,7 @@ export const INTRORULES_ISSUES = {
   },
   cold_open_first_line_long: (i) => {
     const a = i.args || {};
-    return `Câu mở đầu (${w(a.beat ?? i.beat)}) dài ${a.words ?? '?'} từ (nên tối đa ${a.max ?? 25} từ) để người xem kịp thấy ngay chi tiết đầu tiên.`;
+    return `Câu mở đầu (${w(a.beat ?? i.beat)}) dài ${a.words ?? '?'} từ (nên tối đa ${a.max ?? 25} từ) và cần nêu tên tranh cùng họa sĩ.`;
   },
   cold_open_no_early_turn: (i) => {
     const a = i.args || {};
@@ -878,7 +878,7 @@ export const INTRORULES_ISSUES = {
   cold_open_roadmap: (i) => {
     const a = i.args || {};
     const found = Array.isArray(a.found) && a.found.length ? ` ("${a.found.join('", "')}")` : '';
-    return `Dòng ${w(a.beat ?? i.beat)} có câu giới thiệu kế hoạch video${found}. Hãy đi thẳng vào bức tranh và câu hỏi mở.`;
+    return `Dòng ${w(a.beat ?? i.beat)} có cụm từ sáo hoặc câu giới thiệu kế hoạch video${found}. Hãy đi thẳng vào bức tranh và câu hỏi mở.`;
   },
   cold_open_word_count: (i) => {
     const a = i.args || {};
@@ -897,3 +897,9 @@ export const IDFIX_SENTENCES = {
 };
 export const IDFIX_CODES = Object.keys(IDFIX_SENTENCES);
 Object.assign(BUILD, IDFIX_SENTENCES);
+
+// worker introopen: first sentence identifies the painting and painter.
+export const INTROOPEN_ISSUES = {
+  cold_open_first_sentence_names: () => "Câu đầu cần nêu tên tranh và họa sĩ bằng lời dẫn, ngoài câu trích.",
+};
+Object.assign(BUILD, INTROOPEN_ISSUES);

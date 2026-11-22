@@ -68,18 +68,18 @@ def _warn_codes(n: Narration, o: Outline, brief: dict | None = ARNOLFINI_BRIEF) 
     return sorted(i["code"] for i in iss if i["level"] == "warning" and i["code"].startswith("cold_open_"))
 
 
-def test_real_texts_current_arnolfini_warns_and_study_rewrite_passes():
+def test_real_texts_current_arnolfini_warns_and_study_rewrite_warns():
     n_bad, o_bad = _cold_doc(CURRENT_ARNOLFINI_C01)
     bad_codes = set(_warn_codes(n_bad, o_bad))
     assert {
         "cold_open_missing_name",
-        "cold_open_first_line_long",
+        "cold_open_first_sentence_names",
         "cold_open_no_closing_question",
         "cold_open_word_count",
     } <= bad_codes
 
     n_ok, o_ok = _cold_doc(STUDY_REWRITE_C01)
-    assert _warn_codes(n_ok, o_ok) == []
+    assert {"cold_open_first_sentence_names", "cold_open_roadmap"} <= set(_warn_codes(n_ok, o_ok))
 
 
 def test_missing_name_and_quotation_and_translated_inscription_filtering():
@@ -198,3 +198,29 @@ def test_narration_api_surfaces_cold_open_issues(tmp_path):
     assert r.status_code == 200
     codes = {i["code"] for i in client.get("/api/projects/arn/narration").json()["issues"]}
     assert {"cold_open_missing_name", "cold_open_roadmap", "cold_open_no_closing_question", "cold_open_word_count"} <= codes
+
+
+def test_new_open_and_first_sentence_name_checks():
+    text = ("This is the Arnolfini Portrait, painted by Jan van Eyck in 1434. "
+            "The man is thought to be Giovanni Arnolfini, an Italian merchant in Bruges. "
+            "The woman beside him is usually named as his wife, Costanza. But Costanza died in 1433. "
+            "And above the mirror, Van Eyck wrote the date he was here: 1434. "
+            "A mirror that shows two more people, a single candle burning, a pair of shoes left on the floor: every object here seems to carry a message. "
+            "So is this a wedding, or a memory of a woman already gone?")
+    n, o = _cold_doc([("b0001", text)])
+    assert _warn_codes(n, o) == []
+    n, o = _cold_doc([("b0001", '"The Arnolfini Portrait, by Jan van Eyck." It shows two people, but what is their story?')])
+    assert "cold_open_first_sentence_names" in _warn_codes(n, o)
+
+
+def test_stock_phrases_and_prompt_list_agree():
+    voice = Path("prompts/rules_voice.md").read_text().lower()
+    for phrase in cold_open.STOCK_PHRASES:
+        assert phrase in voice
+        assert cold_open.find_roadmap("This " + phrase.upper() + " is here.")
+
+
+def test_first_sentence_can_span_beats():
+    n, o = _cold_doc([("b0001", "This is the Arnolfini Portrait,"), ("b0002", "painted by Jan van Eyck in 1434. But what happened here?")])
+    assert "cold_open_first_sentence_names" not in _warn_codes(n, o)
+    assert "cold_open_first_line_long" not in _warn_codes(n, o)

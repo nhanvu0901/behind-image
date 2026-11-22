@@ -238,9 +238,13 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
             out.append(issue("warning", "cold_open_late_name",
                              f"Cold open {cid} speaks {what} after the first {cold_open.EARLY_WINDOW_WORDS} words; speak both within the first {cold_open.EARLY_WINDOW_WORDS} words.",
                              chapter=cid, args={"chapter": cid, "late": co["late_names"], "title": co["title"], "artist": co["artist"], "max_words": cold_open.EARLY_WINDOW_WORDS}))
+        if co["first_sentence_missing"]:
+            out.append(issue("warning", "cold_open_first_sentence_names",
+                             f"The first sentence of cold open {cid} must name the painting and painter outside quotations.",
+                             chapter=cid, beat=co["first_beat_id"], args={"chapter": cid, "beat": co["first_beat_id"], "missing": co["first_sentence_missing"]}))
         if co["first_beat_words"] > cold_open.MAX_FIRST_LINE_WORDS:
             out.append(issue("warning", "cold_open_first_line_long",
-                             f"First line {co['first_beat_id']} in {cid} has {co['first_beat_words']} words (more than {cold_open.MAX_FIRST_LINE_WORDS}); keep the opening line brief and visual.",
+                             f"First line {co['first_beat_id']} in {cid} has {co['first_beat_words']} words (more than {cold_open.MAX_FIRST_LINE_WORDS}); keep the opening sentence brief.",
                              chapter=cid, beat=co["first_beat_id"],
                              args={"chapter": cid, "beat": co["first_beat_id"], "words": co["first_beat_words"], "max": cold_open.MAX_FIRST_LINE_WORDS}))
         if not co["has_early_turn"]:
@@ -253,7 +257,7 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
                              chapter=cid, beat=co["last_beat_id"], args={"chapter": cid, "beat": co["last_beat_id"]}))
         for bid, found in co["roadmap"]:
             out.append(issue("warning", "cold_open_roadmap",
-                             f"Beat {bid} in {cid} uses a plan-of-the-video phrase ({'; '.join(repr(x) for x in found[:3])}); open on the painting and question instead.",
+                             f"Beat {bid} in {cid} uses a stock or plan-of-the-video phrase ({'; '.join(repr(x) for x in found[:3])}); open on the painting and question instead.",
                              chapter=cid, beat=bid, args={"chapter": cid, "beat": bid, "found": found[:3]}))
         if co["total_words"] < cold_open.MIN_WORDS or co["total_words"] > cold_open.MAX_WORDS:
             out.append(issue("warning", "cold_open_word_count",

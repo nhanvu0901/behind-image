@@ -25,46 +25,34 @@ HOW TO FOLLOW THE OUTLINE
 
 THE COLD OPEN (chapter with ROLE: cold_open)
 - Keep the cold open between 60 and 145 words in total.
-- Make the first line short (at most 25 words) and point it at something the viewer can already see in the picture.
-- Speak both the painting's name and the painter's name in ordinary speech (not only inside a quotation or a translated inscription) within about the first 60 words; give the year too when it is certain and matters.
-- Set the contradiction, puzzle or question the video is about before about word 72 (second 30), with its concrete evidence right after.
-- End the cold open on an open question (`?` in its last line) that the rest of the video works on. Never use a plan-of-the-video phrase ("in this video", "today we will", "let's find out").
-- For `show` hints: the program shows the whole painting briefly before the voice starts. Move your `show` hints from that first detail to the contradicting thing, then pull back to the whole painting with the closing question.
+- The first sentence, at most 25 words, names the painting and the painter in plain words outside quotations; give the year when certain.
+- In the next sentence or two introduce who or what is shown by position, identifying each person before or as their name is used; never introduce someone only as the wife of a person not yet presented.
+- In one sentence point to two or three strange things visible in the painting, concrete and supported by the sources.
+- By about word 72 set the open question, with both sides of the contradiction together in one sentence so the viewer need not remember earlier numbers. End on that question.
+- Use plain words, never a plan of the video or stock phrases. See the forbidden phrase list in HOW THIS CHANNEL NARRATES.
+- For `show` hints, start with the whole painting and people, move to the concrete details, then pull back to the whole painting on the question.
 
-Worked example (good — *The Arnolfini Portrait*, 130 words):
+Worked example (good — *The Arnolfini Portrait*):
+```
+## c01 COLD OPEN
+This is the Arnolfini Portrait, painted by Jan van Eyck in 1434. The man is thought to be Giovanni Arnolfini, an Italian merchant in Bruges. The woman beside him is usually named as his wife, Costanza. But Costanza died in 1433. And above the mirror, Van Eyck wrote the date he was here: 1434. A mirror that shows two more people, a single candle burning, a pair of shoes left on the floor: every object here seems to carry a message. So is this a wedding, or a memory of a woman already gone?
+```
+The first sentence names the painting and painter; the people are introduced before the details and the closing question holds both sides together.
+
+Counter-example (avoid):
 ```
 ## c01 COLD OPEN
 Look at the ornate Latin writing on the back wall of this room, right above the round mirror.
->> facts: f01 | show: the back wall and round mirror pushing into the Latin inscription
 
 In The Arnolfini Portrait of 1434, Jan van Eyck wrote his own name across the wall in Latin. In English the line says, Jan van Eyck was here, 1434.
->> facts: f01 | show: close detail of the Latin inscription above the mirror
 
 So the painter tells us he stood in this room in that year. Yet another date sits uneasily beside it.
->> facts: f01, f02 | show: the couple and the mirror together
 
 The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini. She died in 1433, a full year before the date on the wall.
->> facts: f03 | show: the woman in green, her face and gathered skirt
 
 Repeated close looking at this small panel has still not settled what it means. Is this a wedding happening before our eyes, or a memory of a woman already gone?
->> facts: f02, f03 | show: slow pull back to the whole painting
 ```
-Why this works: first beat is 18 words pointing at a real detail; painting name, painter, and 1434 are spoken in ordinary speech at words 19–29 (outside the translated inscription in the next sentence); the "Yet" turn lands at word 60; concrete evidence follows at 1433; total 130 words; closes on the open question with the pull back to the whole painting.
-
-Counter-example (avoid — earlier Arnolfini draft, 149 words):
-```
-## c01 COLD OPEN
-Look at the back wall of this room, just above the round mirror. There, in ornate Latin script, a line of writing runs across the wall. In English it says, Jan van Eyck was here, 1434.
-
-So the painter tells us, in his own lettering, that he stood in this room in that year. But another date sits uneasily beside it.
-
-The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini. She died in 1433, a full year before the date on the wall.
-
-This small panel is crowded with detail, and repeated close looking has not settled what it means. So which is it, a wedding happening in front of us, or a memory of a woman already gone?
-
-Let your eye drop from the lettering, past the mirror, to the two people standing in the room below.
-```
-Why this fails: the first beat is 36 words (over 25); the painting's title is never spoken; Jan van Eyck is spoken only inside the translated inscription ("In English it says, ..."); 149 words runs past 145; and the last beat drops the open question into a flat transition line instead of closing on `?`.
+Why this fails: it instructs the viewer before orienting them; the painter is named only as the writer of a signature; two names arrive in one breath without introducing the man beside her; the viewer must subtract dates said 20 seconds apart; and it uses "ornate", "sits uneasily", and "close looking".
 
 {{NOTES}}
 

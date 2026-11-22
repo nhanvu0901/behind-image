@@ -1,11 +1,11 @@
 """Cold-open checks on `c01` (chapter with role `cold_open`). Pure functions on strings and chapter objects: no model, no project, no I/O.
 
 Rules checked on the cold-open chapter:
-  * first line short (<= 25 words) and pointing at something visible;
+  * first sentence short (<= 25 words), naming the painting and painter outside quotations;
   * painting's title (by distinguishing words) and painter's name (by surname) both spoken outside quotations, and both within the first 72 words;
   * an early contradiction/turn ("but" / "yet") within the first 72 words;
   * closes on an open question ("?" in the cold open's last line);
-  * no plan-of-the-video phrases ("in this video", "today we will", "let's find out", ...);
+  * no stock or plan-of-the-video phrases;
   * cold-open word count between 60 and 145 words.
 """
 from __future__ import annotations
@@ -48,19 +48,18 @@ _INSCRIPTION_QUOTE = re.compile(
 )
 
 _EARLY_TURN = re.compile(r"\b(?:but|yet)\b", re.I)
-_ROADMAP = [
-    re.compile(p, re.I)
-    for p in (
-        r"\bin\s+this\s+(?:video|episode|film|essay|talk)\b",
-        r"\btoday\s+we(?:'re|\s+are|\s+will|'ll)(?:\s+going\s+to)?\s+(?:look|examine|explore|dive|see|uncover|discover|find|show|talk)\b",
-        r"\btoday\s+we\s+will\b",
-        r"\btoday\s+we(?:'re|\s+are)\s+going\s+to\b",
-        r"\blet(?:'s|\s+us)\s+(?:find\s+out|explore|take\s+a\s+look\s+at|dive\s+in|dive\s+into)\b",
-        r"\bwe(?:'re|\s+are|\s+will|'ll)\s+(?:going\s+to\s+)?(?:explore|examine|dive\s+into|look\s+at)\b",
-        r"\bwelcome\s+back\b",
-        r"\bin\s+the\s+next\s+(?:few|\d+)\s+minutes\b",
-    )
-]
+STOCK_PHRASES = (
+    "today we", "in this video", "let's find out", "let's dive", "join me",
+    "sits uneasily", "close looking", "ornate", "testament to", "delve", "tapestry of",
+    "hidden meaning", "secrets of", "uncover", "more than meets the eye", "stands as",
+)
+_ROADMAP = [re.compile(r"\b" + re.escape(p).replace(r"\ ", r"\s+") + r"\b", re.I) for p in STOCK_PHRASES]
+_ROADMAP += [re.compile(p, re.I) for p in (
+    r"\bin\s+this\s+(?:episode|film|essay|talk)\b",
+    r"\blet(?:'s|\s+us)\s+(?:explore|take\s+a\s+look\s+at)\b",
+    r"\bwe(?:'re|\s+are|\s+will|'ll)\s+(?:going\s+to\s+)?(?:explore|examine|dive\s+into|look\s+at)\b",
+    r"\bwelcome\s+back\b", r"\bin\s+the\s+next\s+(?:few|\d+)\s+minutes\b",
+)]
 
 
 def _words_folded(text: str) -> list[str]:
@@ -186,6 +185,9 @@ def inspect(ch: NChapter | None, brief: dict | None) -> dict:
     last_beat = non_empty[-1]
     early_text, total_words = first_n_words(non_empty, EARLY_WINDOW_WORDS)
     full_text = " ".join((b.text or "").strip() for b in non_empty)
+    end = re.search(r"[.!?][\"”’')\]]*(?=\s|$)", full_text)
+    first_sentence = full_text[:end.end()] if end else full_text
+    unquoted_first = strip_quotations(first_sentence)
     unquoted_full = strip_quotations(full_text)
     unquoted_early = strip_quotations(early_text)
 
@@ -221,7 +223,8 @@ def inspect(ch: NChapter | None, brief: dict | None) -> dict:
         "present": True,
         "chapter": ch.id,
         "first_beat_id": first_beat.id,
-        "first_beat_words": count_words(first_beat.text),
+        "first_beat_words": count_words(first_sentence),
+        "first_sentence_missing": [name for name, ok in (("title", title_spoken(unquoted_first, title)), ("artist", painter_spoken(unquoted_first, artist))) if not ok],
         "last_beat_id": last_beat.id,
         "has_closing_question": "?" in last_beat.text,
         "has_early_turn": bool(_EARLY_TURN.search(early_text)),

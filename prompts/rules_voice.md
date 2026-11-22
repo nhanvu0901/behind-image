@@ -34,11 +34,14 @@ Two examples of a long sentence split in two for the ear:
   Split in two (15 and 15 words): "Early scholars saw this as a private wedding ceremony taking place in a bedchamber. Newer archival research suggests a wealthy merchant granting legal authority to his wife."
 
 7. A STRUCTURE FOR THE WHOLE.
-Open inside the picture on something specific that the viewer can see right away, never on a summary or a greeting.
- - The program holds the whole painting briefly before your first word. Start with a short first line (at most 25 words) pointing at a visible detail.
- - Speak both the painting's name and the painter's name in ordinary speech (outside quotations or translated inscriptions) within about the first 60 words, and give the year too when it is certain and matters.
- - Set the contradiction, puzzle or question before about word 72 (second 30), with concrete evidence right after.
- - Close the cold open (60 to 145 words total) on an open question that the rest of the video works on, paired with the pull back to the whole painting — never on a plan of the video ("in this video", "today we will", "let's find out").
+The program holds the whole painting briefly before the first word. For the cold open (60 to 145 words):
+- The first sentence, at most 25 words, names the painting and the painter in plain words outside quotations; give the year when certain.
+- In the next sentence or two introduce who or what is shown by position, identifying each person before or as their name is used; never introduce someone only as the wife of a person not yet presented.
+- In one sentence point to two or three strange things visible in the painting, concrete and supported by the sources.
+- By about word 72 set the open question, with both sides of the contradiction together in one sentence so the viewer need not remember earlier numbers. End on that question.
+- Use plain words, never a plan of the video or stock phrases. See the forbidden phrase list in HOW THIS CHANNEL NARRATES.
+- Pull back to the whole painting on the closing question.
+Forbidden phrases: "today we", "in this video", "let's find out", "let's dive", "join me", "sits uneasily", "close looking", "ornate", "testament to", "delve", "tapestry of", "hidden meaning", "secrets of", "uncover", "more than meets the eye", "stands as".
 Chapters turn on a new object, a new problem or a change of scale; each ends by handing the viewer a reason to read on. The close answers the opening question as far as the sources allow, or says honestly where they stop. Never end with a slogan, a call to action or a moral. Write fresh sentences: never copy a sentence from a source text, and never copy phrases from other channels.
 
 8. THE VIEWER HAS NEVER HEARD OF YOUR SOURCES.

@@ -130,7 +130,7 @@ TOLERATED: dict[str, frozenset[str]] = {
     "outline": frozenset({"fact_unused", "no_hook_choice", "budget_sum", "outline_note"}),
     "narration": frozenset({
         "spoken_chars", "beat_too_long", "long_sentence", "no_show", "chapter_off_budget",
-        "cold_open_late_name", "cold_open_first_line_long", "cold_open_no_early_turn", "cold_open_word_count",
+        "cold_open_late_name", "cold_open_first_sentence_names", "cold_open_first_line_long", "cold_open_no_early_turn", "cold_open_word_count",
     }),
     # a flagged picture (size, licence or the like) is not a reason to stop: the owner said copyright is not a blocker, and a picture from the owner's own books always carries
     # the flag "unknown". The run goes on and writes the count into its log.
