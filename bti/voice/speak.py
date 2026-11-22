@@ -133,7 +133,8 @@ COUNT_NOUNS = {"people", "men", "women", "pieces", "copies", "words", "years", "
                "kilometres", "kilometers", "metres", "meters", "inches", "feet", "tons", "tonnes", "grams", "kilograms",
                "square", "cubic", "per", "times", "km", "cm", "mm", "kg", "lb", "lbs", "ft", "mph", "percent"}
 YEAR_NOT_AFTER = {"about", "approximately", "over", "nearly", "some", "than", "only", "around", "roughly", "almost", "just",
-                  "estimated", "fewer", "less", "more", "exactly", "all", "of"}
+                  "estimated", "fewer", "less", "more", "exactly", "all"}
+QUANTITY_BEFORE_OF = {"total", "sum", "number", "crowd", "army", "fleet", "group", "population", "budget", "debt", "ransom", "out", "amount", "count", "quantity"}
 CURRENCY = {"$": ("dollar", "dollars", "cent", "cents"), "£": ("pound", "pounds", "penny", "pence"),
             "€": ("euro", "euros", "cent", "cents"), "¥": ("yen", "yen", "sen", "sen")}
 ABBR = {   # lower-cased core (no final period) -> spoken
@@ -322,7 +323,8 @@ def _convert(toks: list[str], i: int, prev_core: str) -> tuple[int, str]:
     if _RE_NUM.match(core):
         n = core
         year_like = ("," not in n and len(n) == 4 and 1000 <= int(n) <= 2099 and nxt_low not in COUNT_NOUNS
-                     and prev_core.lower() not in YEAR_NOT_AFTER)
+                     and prev_core.lower() not in YEAR_NOT_AFTER
+                     and not (prev_core.lower() == "of" and i >= 2 and _split(toks[i - 2])[1].lower() in QUANTITY_BEFORE_OF))
         if nxt_low in YEAR_LABELS and "," not in n:
             year_like = True
         return 1, _num_spoken(n, year_ok=year_like)

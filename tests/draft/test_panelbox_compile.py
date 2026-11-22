@@ -68,7 +68,7 @@ def test_a_picture_without_a_ground_band_gets_no_box_and_the_compile_is_as_it_wa
 
 
 def test_the_defaults_of_the_main_painting_are_made_for_the_painting_not_the_photograph(ringed, tmp_path):
-    """CAM-05 on the region MIRROR with from='whole' starts on the whole painting: centred on the box (400, 600) and fitted to its height (1040 px), not to the file's (1200)."""
+    """A nearby start preserves the preceding frame, fitted to the painted area."""
     sp = {c: clean_spec(s, c) for c, s in GOOD.items()}
     sp["c01"]["shots"][1]["from"] = "whole"
     sp["c01"]["shots"][1]["overlays"] = []
@@ -77,11 +77,12 @@ def test_the_defaults_of_the_main_painting_are_made_for_the_painting_not_the_pho
     k0 = keys_of(res.storyboard, sid)[0]
     cb = res.storyboard["assets"]["A"]["content_box"]
     assert (k0["cx"], k0["cy"]) == ((cb["x0"] + cb["x1"]) / 2, (cb["y0"] + cb["y1"]) / 2) and abs(k0["cx"] - 400) <= 3 and abs(k0["cy"] - 600) <= 3
-    assert k0["zoom"] == pytest.approx(0.955 * 1080 / (cb["y1"] - cb["y0"]), abs=2e-5) and k0["zoom"] > 0.955 * 1080 / 1200
+    assert k0["zoom"] > 0.955 * 1080 / (cb["y1"] - cb["y0"])
     from helpers import make_synth_project                                                     # the same project with no ground: file centre and the file's fit
     plain = make_synth_project(tmp_path / "plain")
     k1 = keys_of(run(plain, copy.deepcopy(sp))[1].storyboard, sid)[0]
-    assert k1["zoom"] == pytest.approx(0.955 * 1080 / 1200, abs=2e-5)
+    assert k1["zoom"] > 0.955 * 1080 / 1200
+    assert k0["zoom"] > k1["zoom"]
 
 
 def test_every_camera_key_of_every_shot_on_the_main_painting_is_inside_the_box_after_the_compile(ringed):

@@ -777,6 +777,7 @@ class _Compiler:
         main_asset_doc = self.assets.get(self.main) or {}
         main_box = CB.box_of(main_asset_doc, self.inp.project_dir) if isinstance(main_asset_doc, dict) else None
         prev_main_frame: tuple[float, float, float] | None = None
+        prev_main_region = None
         for i, r in enumerate(recs):
             t1 = recs[i + 1]["t0"] if i + 1 < len(recs) else end_t
             shot = copy.deepcopy(r["shot"])
@@ -870,13 +871,15 @@ class _Compiler:
             elif boxcam:
                 shot.setdefault("params", {})["camera"] = CAM.build_main_camera(
                     shot.get("technique"), boxcam_region, boxcam_from, main_asset_doc, main_box,
-                    prev_main_frame, r["t0"], t1, ovs, self.tm, fit_pct=self.fit_pct(),
+                    prev_main_frame, r["t0"], t1, ovs, self.tm, fit_pct=self.fit_pct(), prev_region=prev_main_region,
                 )
             if r["kind"] not in ("card", "title") and SB.primary_slot(shot)[1] == self.main:
                 cam_list = (shot.get("params") or {}).get("camera") if isinstance(shot.get("params"), dict) else None
                 last_k = cam_list[-1] if isinstance(cam_list, list) and cam_list else None
                 if isinstance(last_k, dict) and all(isinstance(last_k.get(f), (int, float)) and not isinstance(last_k.get(f), bool) for f in ("cx", "cy", "zoom")):
                     prev_main_frame = (float(last_k["cx"]), float(last_k["cy"]), float(last_k["zoom"]))
+                    image_slot = (shot.get("slots") or {}).get("image") or {}
+                    prev_main_region = image_slot.get("region") if isinstance(image_slot, dict) else None
                 else:
                     prev_main_frame = None
             else:

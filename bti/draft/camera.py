@@ -88,7 +88,7 @@ def naming_overlay_time(overlays: list | None, region_name: str | None, tm: Timi
     return min(hits) if hits else None
 
 
-def build_main_camera(tid: str, region_name: str | None, from_ref: str | None, asset: dict, box,
+def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, asset: dict, box,
                       prev_frame: tuple[float, float, float] | None, t0: float, t1: float,
                       overlays: list | None = None, tm: Timing | None = None, *,
                       fit_pct: float = VC.WHOLE_FIT_PCT, frame_fill: float | None = None,
@@ -232,3 +232,29 @@ def build_main_camera(tid: str, region_name: str | None, from_ref: str | None, a
     # Default (`CAM-05` Zoom and shift): travel from `from_ref` (default "previous", else "whole") -> `end`.
     eff_from = from_ref or "previous"
     return travel_to_end(resolve_from(eff_from), "inout_cubic")
+
+
+_UNSET_REGION = object()
+
+
+def build_main_camera(tid: str, region_name: str | None, from_ref: str | None, asset: dict, box,
+                      prev_frame: tuple[float, float, float] | None, t0: float, t1: float,
+                      overlays: list | None = None, tm: Timing | None = None, *,
+                      fit_pct: float = VC.WHOLE_FIT_PCT, frame_fill: float | None = None,
+                      sharp_zoom: float | None = None, prev_region=_UNSET_REGION) -> list[dict]:
+    keys = _build_main_camera(tid, region_name, from_ref, asset, box, prev_frame, t0, t1,
+                              overlays, tm, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom)
+    if prev_frame is None or not keys:
+        return keys
+
+    def frame(key):
+        return (key["cx"], key["cy"], key["zoom"])
+
+    def close(a, b, limit):
+        return _dist_fw(a, b) <= limit and abs(b[2] / max(1e-6, a[2]) - 1.0) <= limit
+
+    if (prev_region is not _UNSET_REGION and prev_region == region_name) or close(prev_frame, frame(keys[-1]), 0.03):
+        return [_key(0.0, prev_frame), _key(1.0, prev_frame)]
+    if close(prev_frame, frame(keys[0]), 0.12):
+        keys[0].update(cx=prev_frame[0], cy=prev_frame[1], zoom=prev_frame[2])
+    return keys

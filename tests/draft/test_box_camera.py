@@ -199,10 +199,10 @@ def test_all_five_offered_camera_techniques_and_early_arrival(proj):
     t_arr_hi = a_hi + cams_hi[1]["at"]["rel"] * (b_hi - a_hi)
     assert t_arr_hi <= tm.word_start(16) - 0.30 + 0.02
 
-    # Without overlay -> arrives at <= 45% of shot using 3 keys
-    s_no, a_no, b_no = by_sid[sh[5]["id"]]
-    cams_no = s_no["params"]["camera"]
-    assert len(cams_no) == 3 and cams_no[1]["at"]["rel"] <= 0.45 + 1e-4
+    # A repeated region holds the previous shot even with an explicit from="whole".
+    cams_no = sh[5]["params"]["camera"]
+    previous = sh[4]["params"]["camera"][-1]
+    assert all(tuple(k[f] for f in ("cx", "cy", "zoom")) == tuple(previous[f] for f in ("cx", "cy", "zoom")) for k in cams_no)
 
     # Pull-back CAM-03 ends at whole-painting zoom (wider than start)
     s_pull = by_sid[sh[2]["id"]][0]
