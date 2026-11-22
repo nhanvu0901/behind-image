@@ -30,7 +30,6 @@ MIN_CARD_S = 1.0
 BREATH_S = 1.2                   # air after the last word of the cold open, before the beat starts
 OPENING_MIN_FIRST_WORD_S = 1.2   # the opening shot exists when the first word starts this late or later
 OPENING_LEAD_S = 0.35            # the model's first shot starts this long before the first word
-OPENING_PUSH = 1.03              # the whole painting drifts in by at most 3 %
 OPENING_ID = "s0000"
 OPENING_TECHNIQUE = "CAM-01"
 OPENING_INTENT = "establish"
@@ -80,8 +79,7 @@ def opening_span(chapters: list, words: list) -> dict | None:
 
 
 def whole_camera(w, h, canvas: dict | None, fit_pct: float = DEFAULT_FIT_PCT, box=None) -> list | None:
-    """The two camera keys of the opening shot: the ENTIRE painting inside the frame, centred, a push of at most 3 % that never puts an edge
-    of the painting outside the frame. zoom = the smaller of fit-by-height and fit-by-width at `fit_pct` (the style's
+    """The two camera keys of the opening shot: the ENTIRE painting inside the frame, centred and held still. zoom = the smaller of fit-by-height and fit-by-width at `fit_pct` (the style's
     `matte.painting_height_pct`) of the canvas; None when the painting's size is not known.
     `box` (panelbox): the painted area `(x0, y0, x1, y1)` of the picture, in its pixels (`bti.media.contentbox`): the painting that is fitted and centred is
     the box, not the file (a museum photograph has a black ground round the painting); without one, or one that is not inside the picture, the whole picture."""
@@ -92,17 +90,15 @@ def whole_camera(w, h, canvas: dict | None, fit_pct: float = DEFAULT_FIT_PCT, bo
     ch = float(c["h"]) if _num(c.get("h")) and c["h"] > 0 else 1080.0
     b = CB.clean(dict(zip(CB.FIELDS, box)), w, h) if isinstance(box, (list, tuple)) and len(box) == 4 else None
     if b is not None:
-        cx, cy, z, edge = CB.whole_frame(b, fit_pct, cw, ch)
+        cx, cy, z, _ = CB.whole_frame(b, fit_pct, cw, ch)
         cx, cy = round(cx, 2), round(cy, 2)
     else:
         z = min(fit_pct / 100.0 * ch / float(h), fit_pct / 100.0 * cw / float(w))
-        edge = min(ch / float(h), cw / float(w))          # the painting exactly touching the frame
         cx, cy = round(float(w) / 2, 2), round(float(h) / 2, 2)
-    z_end = min(z * OPENING_PUSH, edge)
 
     def key(rel, zoom):
         return {"at": {"rel": rel}, "cx": cx, "cy": cy, "zoom": round(zoom, 5), "ease": "linear"}
-    return [key(0.0, z), key(1.0, max(z, z_end))]
+    return [key(0.0, z), key(1.0, z)]
 
 
 def opening_shot(asset_key: str, asset: dict | None, canvas: dict | None, fit_pct: float, base_params: dict | None) -> dict:

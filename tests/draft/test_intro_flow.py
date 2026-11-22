@@ -75,7 +75,7 @@ def test_the_whole_painting_is_inside_the_frame_in_both_camera_keys(w, h):
     for k in cam:
         assert w * k["zoom"] <= 1920 + 1e-6 and h * k["zoom"] <= 1080 + 1e-6, (w, h, k)          # no edge of the painting outside the frame
         assert k["cx"] == cam[0]["cx"] and k["cy"] == cam[0]["cy"]
-    assert 1.0 <= cam[1]["zoom"] / cam[0]["zoom"] <= 1.03 + 1e-4                                   # a push of at most 3 %
+    assert cam[1]["zoom"] == cam[0]["zoom"]
     assert cam[0]["zoom"] == pytest.approx(min(0.955 * 1080 / h, 0.955 * 1920 / w), abs=1e-5)     # the smaller of fit-by-height and fit-by-width
     assert Z.whole_camera(None, 100, None) is None and Z.whole_camera(0, 100, None) is None
 
@@ -83,6 +83,30 @@ def test_the_whole_painting_is_inside_the_frame_in_both_camera_keys(w, h):
 def test_a_painting_that_already_fills_the_frame_is_never_pushed_out_of_it():
     cam = Z.whole_camera(1920, 1080, {"w": 1920, "h": 1080}, 100.0)
     assert cam[0]["zoom"] == 1.0 and cam[1]["zoom"] == 1.0            # at 100 % there is no room for a push: the edges stay on the frame
+
+
+def test_opening_holds_the_same_frame_with_and_without_a_content_box():
+    for box in (None, (60, 80, 740, 1120)):
+        first, last = Z.whole_camera(800, 1200, None, 95.5, box)
+        assert [first["at"], last["at"]] == [{"rel": 0.0}, {"rel": 1.0}]
+        assert tuple(first[k] for k in ("cx", "cy", "zoom")) == tuple(last[k] for k in ("cx", "cy", "zoom"))
+
+
+def test_first_narrated_move_starts_promptly_only_after_opening(tmp_path):
+    from bti.engine.vfx import ease
+
+    shots = specs()
+    shots["c01"]["shots"][0]["technique"] = "CAM-05"
+    shots["c01"]["shots"][0]["slots"] = {"image": {"asset": "A", "region": "MIRROR"}}
+    shots["c01"]["shots"][1]["slots"] = {"image": {"asset": "A"}}
+    with_opening = compile_specs(load_inputs(make_project(tmp_path, intro_timing(2.0), "with")), shots, draw=False, identity=False)
+    without_opening = compile_specs(load_inputs(make_project(tmp_path, intro_timing(0.35), "without")), shots, draw=False, identity=False)
+    opening, first, later = with_opening.storyboard["shots"][:3]
+    first_keys = first["params"]["camera"]
+    assert tuple(first_keys[0][k] for k in ("cx", "cy", "zoom")) == tuple(opening["params"]["camera"][-1][k] for k in ("cx", "cy", "zoom"))
+    assert first_keys[0]["ease"] == "out_quad"
+    assert ease(first_keys[0]["ease"], 0.3 / 7.0) >= 0.03
+    assert later["params"]["camera"][0]["ease"] == without_opening.storyboard["shots"][1]["params"]["camera"][0]["ease"]
 
 
 # --------------------------------------------------------------------------------------------------------- the compiler writes it

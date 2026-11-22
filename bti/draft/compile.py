@@ -873,6 +873,12 @@ class _Compiler:
                     shot.get("technique"), boxcam_region, boxcam_from, main_asset_doc, main_box,
                     prev_main_frame, r["t0"], t1, ovs, self.tm, fit_pct=self.fit_pct(), prev_region=prev_main_region,
                 )
+                camera = shot["params"]["camera"]
+                if shots and Z.is_opening(shots[-1]) and len(camera) > 1:
+                    first_frame = tuple(camera[0][k] for k in ("cx", "cy", "zoom"))
+                    next_frame = tuple(camera[1][k] for k in ("cx", "cy", "zoom"))
+                    if first_frame != next_frame:
+                        camera[0]["ease"] = "out_quad"
             if r["kind"] not in ("card", "title") and SB.primary_slot(shot)[1] == self.main:
                 cam_list = (shot.get("params") or {}).get("camera") if isinstance(shot.get("params"), dict) else None
                 last_k = cam_list[-1] if isinstance(cam_list, list) and cam_list else None
