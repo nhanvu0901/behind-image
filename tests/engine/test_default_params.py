@@ -103,7 +103,7 @@ def test_ring_default_radius_is_relative_to_the_visible_frame(arnolfini):
     assert 0 < whole < 4386 * 0.15                                   # was 1307 px of a 4386 px wide picture: covered everything
     close = arnolfini.default_params("AN-01", {"asset": "A", "camera": {"zoom": 1.0}})["radius"]
     assert close == pytest.approx(0.234 * 1920 / 2, rel=0.02)
-    assert arnolfini.default_params("AN-01", {"asset": "A", "region": "DOG"})["radius"] == 330
+    assert arnolfini.default_params("AN-01", {"asset": "A", "region": "DOG"})["radius"] == pytest.approx(379.5)
 
 
 def test_norm_folds_accents():
@@ -111,3 +111,9 @@ def test_norm_folds_accents():
     assert norm("Dürer,") == "durer" and norm("Velázquez") == "velazquez" and norm("it's") == "its"
     tm = Timing({"duration": 1, "words": [{"w": "Dürer", "s": 0, "e": 1}, {"w": "Durer", "s": 1, "e": 2}]})
     assert tm.stale({"w": 0, "text": "Durer"}) is None and tm.stale({"w": 0, "text": "Dorer"})
+
+
+def test_ring_radius_covers_tall_region(arnolfini):
+    asset = arnolfini._saved['assets']['A']
+    asset['regions']['TALL_TEST'] = {'x': 1000, 'y': 1000, 'rx': 16, 'ry': 80}
+    assert arnolfini.default_params('AN-01', {'asset': 'A', 'region': 'TALL_TEST', 'camera': {'zoom': 1.0}})['radius'] == pytest.approx(92)

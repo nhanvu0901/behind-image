@@ -1132,7 +1132,7 @@ def _small_detail_not_lit(c):
                         target=regs.get(ref) if isinstance(ref,str) else None
                         tx=float(target.get("rx") or 0) if isinstance(target,dict) else 0
                         ty=float(target.get("ry") or 0) if isinstance(target,dict) else 0
-                        if pt and x-rx <= pt[0]-tx and pt[0]+tx <= x+rx and y-ry <= pt[1]-ty and pt[1]+ty <= y+ry:
+                        if pt and ((x-rx <= pt[0]-tx and pt[0]+tx <= x+rx and y-ry <= pt[1]-ty and pt[1]+ty <= y+ry) or (tid in ("HI-01", "X-HI-01", "AN-01") and isinstance(target, dict) and pt[0]-tx <= x-rx and x+rx <= pt[0]+tx and pt[1]-ty <= y-ry and y+ry <= pt[1]+ty)):
                             found=True
                             break
                     if found: break
@@ -1349,7 +1349,7 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         return []
     out: list[dict] = []
     for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer,
-               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown):         # the last four: catalogue pass, silent on beats without kinds
+               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown, _year_already_on_screen):         # the last four: catalogue pass, silent on beats without kinds
         try:
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
@@ -1667,7 +1667,7 @@ def _region_framing(c: _Ctx) -> list[dict]:
 STRIP_TECHNIQUE = "X-ANN-01"
 STRIP_LIGHTS = frozenset({"HI-01", "X-HI-01", "AN-01"})
 STRIP_FILL_SHARE = 0.60
-HINTS["strip_without_light"] = "Add HI-01 (or AN-01) on that detail during the strip, unless its region covers more than 60% of the frame width or height."
+HINTS["strip_without_light"] = "Add HI-01 (or AN-01) on that detail during the strip."
 
 
 def _cast_aliases(cast: list) -> list[list[str]]:
@@ -1706,6 +1706,21 @@ def _strip_fill_at(rbox: tuple[float, float, float, float], cx: float, cy: float
     return ws, hs, (iw / ow) if ow > 1e-6 else ws, (ih / oh) if oh > 1e-6 else hs
 
 
+def _pointer_targets_region(regs, ref, name):
+    """A region pointer may name the target or an enclosing region."""
+    target = regs.get(name)
+    pointer = regs.get(ref) if isinstance(ref, str) else None
+    if not isinstance(target, dict):
+        return False
+    box = region_box(target)
+    if not box:
+        return False
+    if isinstance(pointer, dict):
+        pbox = region_box(pointer)
+        return bool(pbox and ((pbox[0] <= box[0] and pbox[1] <= box[1] and pbox[2] >= box[2] and pbox[3] >= box[3]) or (box[0] <= pbox[0] and box[1] <= pbox[1] and box[2] >= pbox[2] and box[3] >= pbox[3])))
+    return isinstance(ref, (tuple, list)) and len(ref) == 2 and box[0] <= ref[0] <= box[2] and box[1] <= ref[1] <= box[3]
+
+
 def _strip_without_light(c: _Ctx) -> list[dict]:
     """Warn when a main-painting shot carries an `X-ANN-01` strip for a non-cast thing without an overlapping `HI-01`, `X-HI-01`, or `AN-01` in that shot.
     Projects without a `names` list in `picks.json` are skipped so stored legacy storyboards with unlit person strips are not misjudged."""
@@ -1732,7 +1747,7 @@ def _strip_without_light(c: _Ctx) -> list[dict]:
         strips = [(j, ov) for j, ov in enumerate(ovs) if isinstance(ov, dict) and ov.get("technique") == STRIP_TECHNIQUE]
         if not strips:
             continue
-        lights = [lsp for o in ovs if isinstance(o, dict) and o.get("technique") in STRIP_LIGHTS for lsp in (_overlay_span(c, o, sp),) if lsp is not None]
+        lights = [(o, lsp) for o in ovs if isinstance(o, dict) and o.get("technique") in STRIP_LIGHTS for lsp in (_overlay_span(c, o, sp),) if lsp is not None]
         rname, dom = _shot_target(shot, sp[0], sp[1], main, regs, rows)
         bid = dom["id"] if dom else None
         rbox = region_box(regs[rname]) if rname is not None else None
@@ -1744,15 +1759,13 @@ def _strip_without_light(c: _Ctx) -> list[dict]:
             text = str((ov.get("params") or {}).get("text") or "").strip()
             if not tokens(text) or _is_cast_text(text, aliases):
                 continue
-            if any(min(osp[1], lsp[1]) > max(osp[0], lsp[0]) + 1e-6 for lsp in lights):
+            if any(min(osp[1], lsp[1]) > max(osp[0], lsp[0]) + 1e-6 and (rname is None or _pointer_targets_region(regs, (light.get("params") or {}).get("at"), rname)) for light, lsp in lights):
                 continue
             ws = hs = None
             if keys and rbox is not None:
                 cx, cy, z = camera_at(keys, 0.5 * (osp[0] + osp[1]))
                 if z > 0:
                     ws, hs, w_vis, h_vis = _strip_fill_at(rbox, cx, cy, z, pbox)
-                    if (ws > STRIP_FILL_SHARE + 1e-9 or hs > STRIP_FILL_SHARE + 1e-9) and min(w_vis, h_vis) >= THIN_ON_SCREEN - 1e-9:
-                        continue
             detail = " (region %s takes %.0f%% x %.0f%% of the frame)" % (rname, 100.0 * ws, 100.0 * hs) if rname and ws is not None and hs is not None else ""
             out.append(_issue("strip_without_light", "shots[%d].overlays[%d]" % (i, j),
                               "Strip %r on shot %s names a non-cast thing on the main painting without HI-01, X-HI-01, or AN-01 on screen%s." % (text, c.sid(i), detail),
@@ -1764,5 +1777,34 @@ def _strip_without_light(c: _Ctx) -> list[dict]:
 CODES.update({
     "camera_off_region": "At the end of a main-painting shot that points at a region, the region box is not wholly inside the frame (warning). args: shot, region, beat, miss_px, cx, cy, zoom.",
     "thing_arrives_late": "A named region is wholly inside the frame for less than 2.0 s and less than 55% of the shot (warning). args: shot, region, beat, seconds, shot_seconds, share, min_seconds, min_share.",
-    "strip_without_light": "An X-ANN-01 strip naming a non-cast thing on the main painting has no HI-01, X-HI-01, or AN-01 on screen during the strip, unless its region covers > 60% of frame width or height (and is not thin) at strip midpoint (warning). args: shot, overlay, text, region, beat, width_share, height_share, min_share.",
+    "strip_without_light": "An X-ANN-01 strip naming a non-cast thing on the main painting has no HI-01, X-HI-01, or AN-01 on screen during the strip (warning). args: shot, overlay, text, region, beat, width_share, height_share, min_share.",
 })
+
+
+# listmark: detect a duplicated year while both overlays are visible.
+HINTS["year_already_on_screen"] = "Remove the large year while the same year appears in a label or caption."
+CODES["year_already_on_screen"] = "A large year duplicates a simultaneously visible label or caption (warning). args: shot, year."
+
+def _year_already_on_screen(c):
+    out = []
+    for i, shot in enumerate(c.shots):
+        sp = c.spans[i]
+        if not sp:
+            continue
+        ovs = shot.get("overlays") or []
+        labels = [o for o in ovs if o.get("technique") in ("ID-LABEL-01", "X-ANN-01", "X-ANN-02")]
+        for o in ovs:
+            if o.get("technique") != "STATIC-09":
+                continue
+            year = str((o.get("params") or {}).get("year") or "").strip()
+            window = _overlay_span(c, o, sp)
+            if not year or not window:
+                continue
+            for label in labels:
+                other = _overlay_span(c, label, sp)
+                params = label.get("params") or {}
+                texts = (params.get(key) for key in ("text", "title", "sub", "artist_year"))
+                if other and min(window[1], other[1]) > max(window[0], other[0]) and any(re.search(r"(?<!\d)" + re.escape(year) + r"(?!\d)", str(t)) for t in texts):
+                    out.append(_issue("year_already_on_screen", "shots[%d]" % i, "Year %s is already in a visible label on shot %s." % (year, c.sid(i)), shot=c.sid(i), year=year))
+                    break
+    return out

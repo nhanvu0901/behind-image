@@ -3154,13 +3154,13 @@
     "point_at"
    ],
    "description": "One or two rings are drawn around a small detail, held, then fade.",
-   "usage_rule": "Distinguish one of several similar things so close together that a spotlight would cover them all; otherwise use HI-01.",
+   "usage_rule": "For a list of visible things, hold one frame containing all and draw a ring on each at its spoken word, keeping each until the sentence ends. Also distinguish one of several similar nearby things.",
    "channel_usage": "core",
    "offered": true,
    "serves": [
     "detail"
    ],
-   "use_when": "One thing among several of the same kind so close together that a pool of light would hold them all, such as one coin in a row of coins. Otherwise use HI-01.",
+   "use_when": "For a list of visible things, hold one frame containing all and draw a ring on each at its spoken word, keeping each until the sentence ends. Also distinguish one of several similar nearby things. Also use for one thing among several of the same kind so close together that a pool of light would hold them all.",
    "needs": "A point and a tight radius around the named thing; keep it visible on screen.",
    "never_when": "The thing fills the frame; together with HI-01 on the same thing; two rings at once for things the narration does not name together; the thing is not on screen.",
    "example": "Arnolfini b0026: \"Each bead catches the light, strung on fine green silk.\" (one bead among its close neighbours)",
@@ -6325,9 +6325,9 @@
     "dates",
     "whole"
    ],
-   "use_when": "The sentence turns on one year: the year of the work, or a turning point that the narration names as one (\"in 1476 Charles the Bold was defeated\"). The year shows large in the middle of the picture for about three seconds.",
+   "use_when": "The sentence turns on one year: the year of the work, or a turning point that the narration names as one (\"in 1476 Charles the Bold was defeated\"). The year shows large in the middle of the picture for about three seconds. Only when that year is not already on screen.",
    "needs": "The year, as the narration says it, and a calm, dark place in the picture to put it (`x_pct`, `y_pct`): the year is drawn straight over the picture with no dimming, so over a busy part (faces, brocade) it is hard to read.",
-   "never_when": "Every year that is mentioned in passing; in the same passage as TIME-01 (the axis shows the years); two years in one sentence.",
+   "never_when": "Every year that is mentioned in passing; in the same passage as TIME-01 (the axis shows the years); two years in one sentence. A year already visible in the painting label or a caption.",
    "example": "St. Eligius b0055: \"In 1476 Charles the Bold, the last duke, was defeated in Switzerland.\"",
    "slots": [],
    "params": [
@@ -10738,7 +10738,7 @@
     "compare"
    ],
    "use_when": "The first time the narration speaks the proper name of a person or thing, or the unfamiliar name of an object such as a settle, and its subject is on screen, show that name on the naming word, long enough to read. On another picture name the subject the narration speaks of, not the picture itself.",
-   "needs": "The name from the narration. Use sub for a shortened caution in the narration’s own words when identity is uncertain, or a plain fact from the same sentence. On a borrowed picture sub may give its record title, maker and date only when available, never the photographer or photograph year. A strip is never alone for a small thing: use HI-01; never light a person or face. A strip that names a thing on the main painting always comes with the light on that thing unless its region covers more than 60% of the frame's width or height.",
+   "needs": "The name from the narration. Use sub for a shortened caution in the narration’s own words when identity is uncertain, or a plain fact from the same sentence. On a borrowed picture sub may give its record title, maker and date only when available, never the photographer or photograph year. A strip is never alone for a small thing: use HI-01; never light a person or face. A strip that names a thing on the main painting always comes with the light on that thing regardless of its size.",
    "never_when": "The name has been presented before; the subject is not on screen; the label invents certainty or a fact; the shot already has X-ANN-02; three or more parts are named in sequence (KEY-01). A face needs no label saying FACE, but a person named by the narration gets their name.",
    "example": "Arnolfini b0003: \"The woman most often named as the wife in green is Costanza Trenta, first wife of the merchant Giovanni Arnolfini\" (COSTANZA TRENTA / most often named as the wife); Arnolfini b0024: \"Some historians see Saint Martha, patron of housewives\" (SAINT MARTHA / some historians see Saint Martha; Hours of Henry VIII).",
    "slots": [
@@ -10929,7 +10929,7 @@
     "outside",
     "compare"
    ],
-   "use_when": "A shot shows another artwork or a museum object for the first time and has no X-ANN-01 subject strip: the title in capitals and, in a smaller line, the maker and the date. It shows in the first seconds of that picture.",
+   "use_when": "A shot shows another artwork or a museum object for the first time and has no X-ANN-01 subject strip: the title in capitals and, in a smaller line, the maker and the date. It stays while the picture is on screen.",
    "needs": "The title, the maker and the date from the picture's own record in `inputs/assets.json` (`title`, `artist`, `year`).",
    "never_when": "A shot with X-ANN-01; a photographer or year of a photograph as the artwork maker or date; data that is not in the picture's record (never write a maker or a date from memory); the main painting; the same picture a second time; a picture that is not an artwork or an object (a street view, a portrait photograph of a person).",
    "example": "St. Eligius b0049: \"He was born at Baerle, probably in 1415.\" (the label of the painter's own Head of Christ, which the owner picked for the line)",

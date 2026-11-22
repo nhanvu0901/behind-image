@@ -903,3 +903,6 @@ export const INTROOPEN_ISSUES = {
   cold_open_first_sentence_names: () => "Câu đầu cần nêu tên tranh và họa sĩ bằng lời dẫn, ngoài câu trích.",
 };
 Object.assign(BUILD, INTROOPEN_ISSUES);
+
+// worker listmark
+Object.assign(BUILD, { year_already_on_screen: (i) => `Năm ${i.args?.year ?? ""} đã hiện trong nhãn. Hãy bỏ năm lớn.` , strip_without_light: (i) => `${fdShot(i.args || {})}: Nhãn gọi tên vật chưa được rọi sáng. Hãy thêm đèn rọi hoặc vòng khoanh.` });

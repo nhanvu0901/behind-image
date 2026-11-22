@@ -302,3 +302,32 @@ def test_a_locked_card_is_never_regenerated(proj):
     res = compile_specs(load_inputs(proj), {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     cards = [s for s in res.storyboard["shots"] if s["technique"] == "X-CARD-01"]
     assert len(cards) == 1 and clean(cards[0]) == clean(card)
+
+
+def test_borrowed_caption_lasts_to_end_but_main_strip_keeps_default(proj):
+    inp, specs = good(proj)
+    specs['c01']['shots'][1]['overlays'] = [{'technique': 'X-ANN-01', 'start_word': 12, 'params': {'text': 'Mirror'}}]
+    main = compile_specs(inp, specs, draw=False, identity=False)
+    shot = main.storyboard['shots'][1]
+    strip = next(o for o in shot['overlays'] if o['technique'] == 'X-ANN-01')
+    main_dur = strip['dur']
+    assert main_dur < times(inp, main.storyboard)[2] - inp.timing['words'][12]['s']
+    specs['c01']['shots'][1]['slots'] = {'image': {'asset': 'B'}}
+    borrowed = compile_specs(inp, specs, draw=False, identity=False)
+    strip = next(o for o in borrowed.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-01')
+    tm = Timing({'duration': inp.timing['duration'], 'words': inp.timing['words']})
+    assert tm.resolve(strip['start']) + strip['dur'] == pytest.approx(times(inp, borrowed.storyboard)[2], abs=0.001)
+
+
+def test_main_object_strip_gets_light_and_cast_does_not(proj):
+    inp, specs = good(proj)
+    inp.picks['names'] = [{'name': 'Jan van Eyck'}]
+    specs['c01']['shots'][1]['overlays'] = [{'technique': 'X-ANN-01', 'start_word': 12, 'dur': 2, 'params': {'text': 'Mirror'}}]
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    overlays = result.storyboard['shots'][1]['overlays']
+    light = next(o for o in overlays if o['technique'] == 'HI-01')
+    strip = next(o for o in overlays if o['technique'] == 'X-ANN-01')
+    assert light['params']['at'] == 'MIRROR' and light['start'] == strip['start'] and light['dur'] == strip['dur']
+    specs['c01']['shots'][1]['overlays'][0]['params']['text'] = 'Jan van Eyck'
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    assert not any(o['technique'] == 'HI-01' for o in result.storyboard['shots'][1]['overlays'])

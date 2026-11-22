@@ -123,7 +123,7 @@ def test_large_region_over_60pct_exempt_and_thin_or_clipped_caught(tmp_path):
                       {"at": {"rel": 1.0}, "cx": 1965.3, "cy": 2592.0, "zoom": 0.50985, "ease": "linear"}]),
     ]
     got = [i["args"]["shot"] for i in SB.validate(sb, tm, bundle, d) if i["code"] == "strip_without_light"]
-    assert got == ["s0003", "s0004"]
+    assert got == ["s0001", "s0002", "s0003", "s0004"]
 
 
 def test_outside_picture_and_missing_cast_list_behavior(tmp_path):
@@ -154,7 +154,7 @@ def test_namefirst_fixture_real_settle_and_stored_arnolfini_clean():
 
     # In tests/engine/fixtures/namefirst, s0040 already has manual o4 HI-01 -> only s0030 ("Tabard") warns.
     issues_as_is = V.check(sb, tm, bundle, folder, starts, end, lambda *_: None)
-    assert [i["args"]["shot"] for i in issues_as_is if i["code"] == "strip_without_light"] == ["s0030"]
+    assert [i["args"]["shot"] for i in issues_as_is if i["code"] == "strip_without_light"] == ["s0030", "s0049", "s0074"]
 
     # Removing manual o4 HI-01 from s0040 catches Settle (`SETTLE_CUSHION`, 15.6% x 60.8%) too!
     sb_no_o4 = copy.deepcopy(sb)
@@ -163,7 +163,7 @@ def test_namefirst_fixture_real_settle_and_stored_arnolfini_clean():
             s["overlays"] = [o for o in s["overlays"] if o.get("technique") != "HI-01"]
     issues_no_o4 = V.check(sb_no_o4, tm, bundle, folder, starts, end, lambda *_: None)
     assert [(i["args"]["shot"], i["args"]["text"]) for i in issues_no_o4 if i["code"] == "strip_without_light"] == [
-        ("s0030", "Tabard"), ("s0040", "Settle")
+        ("s0030", "Tabard"), ("s0040", "Settle"), ("s0049", "Crown glass"), ("s0074", "Pattens")
     ]
 
     # Stored legacy Arnolfini without picks.names produces zero false strip_without_light warnings.
@@ -193,7 +193,7 @@ def test_auto_run_stops_summary_prioritizes_and_docs_present():
 
     repo = Path(__file__).resolve().parents[2]
     task = (repo / "skills" / "storyboard_draft" / "TASK.template.md").read_text(encoding="utf-8")
-    assert len(task) < 35_500 and "strip_without_light" in task and "60%" in task
+    assert len(task) < 35_500 and "strip_without_light" in task and "of any size" in task
     techs = json.loads((repo / "style" / "gae" / "techniques.json").read_text(encoding="utf-8"))
     xann = next(t for t in techs["techniques"] if t["id"] == "X-ANN-01")
-    assert "60%" in xann["needs"]
+    assert "regardless of its size" in xann["needs"]

@@ -78,10 +78,10 @@ def test_warnings_stop_automatic_storyboard_gate():
         assert len(result['stopping']) == 1
 
 
-def test_region_covering_extra_area_does_not_point_inside_small_box(tmp_path):
+def test_region_covering_extra_area_points_inside_small_box(tmp_path):
     c=context(tmp_path, overlay=ov(at='LOOSE',rx=500,ry=500))
     c.assets['A']['regions']['LOOSE']={'x':960,'y':540,'rx':500,'ry':500}
-    assert len(V._small_detail_not_lit(c)) == 1
+    assert V._small_detail_not_lit(c) == []
 
 
 def test_large_ellipse_clipped_at_edge_uses_visible_area(tmp_path):
@@ -166,3 +166,17 @@ def test_face_and_figure_shapes_are_not_flagged_as_thin(tmp_path, name, w, h, re
     d.mkdir()
     assert V._small_detail_not_lit(_region_frame_ctx(d, w, h, reg)) == []
     assert V.region_frame_info(reg, w, h)['needs_spotlight'] is False
+
+
+def test_containing_region_is_a_pointer(tmp_path):
+    c = context(tmp_path, overlay=ov('AN-01', at='PARENT'))
+    c.assets['A']['regions']['PARENT'] = {'x': 960, 'y': 540, 'rx': 150, 'ry': 150}
+    assert V._small_detail_not_lit(c) == []
+
+
+def test_year_already_shown_in_label(tmp_path):
+    c = context(tmp_path, overlay=ov('STATIC-09', year='1434'))
+    c.shots[0]['overlays'].append(ov('ID-LABEL-01', title='Arnolfini', artist_year='Jan van Eyck, 1434'))
+    assert len(V._year_already_on_screen(c)) == 1
+    c.shots[0]['overlays'][0]['params']['year'] = '1476'
+    assert V._year_already_on_screen(c) == []

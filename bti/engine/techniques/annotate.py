@@ -104,7 +104,7 @@ class Ring(OverlayRenderer):
         d["at"] = name if name is not None else ([asset["w"] / 2, asset["h"] / 2] if asset.get("w") else [0, 0])
         z = _ctx_zoom(context, asset)
         diam = bundle.sv("ring", "diameter_pct_width", 23.4)
-        d["radius"] = float(reg.get("rx") or round(diam / 100.0 * _visible_w(context, asset) / 2))      # relative to the visible frame
+        d["radius"] = max(1.15 * max(float(reg.get("rx") or 0), float(reg.get("ry") or 0)), 0.012 * 1920.0 / z) if reg else float(round(diam / 100.0 * _visible_w(context, asset) / 2))      # relative to the visible frame
         return d
 
 

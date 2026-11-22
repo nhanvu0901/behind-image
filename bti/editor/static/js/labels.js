@@ -1051,3 +1051,6 @@ export const CODE_INTROOPEN = {
   cold_open_first_sentence_names: "Câu đầu thiếu tên tranh hoặc họa sĩ",
 };
 Object.assign(CODE, CODE_INTROOPEN);
+
+// worker listmark
+Object.assign(CODE, { year_already_on_screen: "Năm đã hiện trong nhãn" });

@@ -833,7 +833,8 @@ class _Compiler:
                 elif os_.get("dur") is not None:
                     te = ts + float(os_["dur"])
                 elif default_window is not None:
-                    te = default_window[1]
+                    borrowed = SB.primary_slot(shot)[1] != self.main
+                    te = t1 if os_["technique"] == "X-ANN-02" or (os_["technique"] == "X-ANN-01" and borrowed) else default_window[1]
                 if te is not None:
                     if te > t1:
                         te = t1
@@ -845,6 +846,8 @@ class _Compiler:
                 o["start"] = {"w": sw, "off": round(ts - a["s"], 4), "text": a["w"]}
                 if te is not None:
                     o["dur"] = round(te - ts, 3)
+                if os_["technique"] == "AN-01" and te is not None and "hold_s" not in (os_.get("params") or {}):
+                    o["params"]["hold_s"] = max(0.0, te - ts - float(o["params"].get("draw_s") or 0) - float(o["params"].get("fade_s") or 0))
                 old_match = next((x for x in (r.get("old_shot") or {}).get("overlays") or []
                                   if x.get("technique") == o["technique"] and (x.get("start") or {}).get("w") == sw), None)
                 if old_match and old_match.get("id"):
@@ -858,6 +861,26 @@ class _Compiler:
                 used_o.add(o["id"])
                 ovs.append(o)
                 omap.append(j - 1)
+            # Add a light for a named non-cast object on the main painting.
+            if r["kind"] == "agent" and not r.get("verbatim") and SB.primary_slot(shot)[1] == self.main and isinstance(self.inp.picks.get("names"), list):
+                region = ((shot.get("slots") or {}).get("image") or {}).get("region")
+                aliases = VC._cast_aliases(self.inp.picks["names"])
+                if region and region in (main_asset_doc.get("regions") or {}):
+                    for strip in list(ovs):
+                        text = str((strip.get("params") or {}).get("text") or "")
+                        if strip.get("technique") != "X-ANN-01" or not VC.tokens(text) or VC._is_cast_text(text, aliases):
+                            continue
+                        if any(o.get("technique") in VC.STRIP_LIGHTS and VC._pointer_targets_region(main_asset_doc.get("regions") or {}, (o.get("params") or {}).get("at"), region) and min(self.tm.resolve(o["start"]) + (o.get("dur") or 0), self.tm.resolve(strip["start"]) + (strip.get("dur") or 0)) > max(self.tm.resolve(o["start"]), self.tm.resolve(strip["start"])) for o in ovs):
+                            continue
+                        light = self.build_overlay(r["zone"], r["n"], 0, {"technique": "HI-01", "params": {"at": region}}, shot)
+                        if light:
+                            counter += 1
+                            while "o%d" % counter in used_o:
+                                counter += 1
+                            light.update(id="o%d" % counter, start=copy.deepcopy(strip["start"]), dur=strip.get("dur"))
+                            used_o.add(light["id"])
+                            ovs.append(light)
+                            omap.append(None)
             shot["overlays"] = ovs
             shot["id"] = r["id"]
             shot["start"] = copy.deepcopy(r["anchor"])
@@ -1146,7 +1169,7 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
-    pointfix = {"name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light"}
+    pointfix = {"name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light", "year_already_on_screen"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
         required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
         rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items
