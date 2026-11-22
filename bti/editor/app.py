@@ -295,7 +295,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
             resolved = p.resolve()
             issues = p.validate()
             timing = p.timing()
-        return {"storyboard": resolved, "timing": timing, "issues": issues, "rev": compute_rev(sb),
+        from bti.draft.review import issues_for
+        rev = compute_rev(sb)
+        issues += issues_for(pdir(pid), rev)
+        return {"storyboard": resolved, "timing": timing, "issues": issues, "rev": rev,
                 "render_key": render_key(pid)}
 
     def save_result(pid: str, p) -> dict:

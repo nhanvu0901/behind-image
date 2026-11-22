@@ -25,7 +25,7 @@ EXPECTED = {
     "voiced": ["title.generate", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],
     "picks_approved": ["title.generate", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
     "proposal_waiting": ["title.generate", "proposal.apply", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
-    "drafted": ["storyboard.approve", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
+    "drafted": ["storyboard.review", "storyboard.approve", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
     "storyboard_approved": ["export.start", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
     "exported": [*SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "export.start", "picks.suggest", "draft.start"],
 }
@@ -176,7 +176,10 @@ def test_every_action_names_a_real_route(at, stage):
 
 
 @pytest.mark.parametrize("stage,aid", _cases())
-def test_every_example_body_is_accepted_by_its_route(at, stage, aid):
+def test_every_example_body_is_accepted_by_its_route(at, stage, aid, monkeypatch):
+    if aid == "storyboard.review":
+        from bti.draft import review
+        monkeypatch.setattr(review, "start", lambda *args, **kwargs: {"id": "fake-review", "meta": {}})
     c, pid, st = at(stage)
     a = action(st, aid)
     if a["body"] is None and a["method"] != "GET":

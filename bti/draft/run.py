@@ -1230,6 +1230,12 @@ def start(pid: str, project_dir: Path, *, provider: str = "agy", model: str | No
         parts = make_edit_parts(project_dir, model=model, instruction=instruction,
                                 edit_scope=edit_scope, followup=followup, turn_id=turn_id,
                                 base_rev=effective_base_rev, mode=mode, **kw)
+        if scope_kind == "all":
+            # A whole-video request is followed by viewer review in this same
+            # draft job, so no second agent job can enter between the rounds.
+            from .review import after_full_edit_parts
+            review_model = _resolve(project_dir, "draft", None).model
+            parts.extend(after_full_edit_parts(project_dir, review_model, turn_id))
         try:
             rec = m.start(kind=KIND, pid=pid, project_dir=project_dir, parts=parts,
                           meta={"provider": provider, "model": res_edit.model, "agent": res_edit.public(), "mode": "edit", "turn_id": turn_id,

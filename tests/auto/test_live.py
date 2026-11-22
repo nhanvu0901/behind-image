@@ -11,7 +11,7 @@ def test_the_run_calls_the_app_over_http_on_the_port_it_was_reached_at(live, mon
     set_auto(live, enabled=True)
     started = start_run(live)
     job, run = finish_run(live, started)
-    assert actions_of(run) == ["draft.start", "proposal.apply", "storyboard.approve", "export.start"] and run["reason"] == "exported" and run["outcome"] == "done"
+    assert actions_of(run) == ["draft.start", "proposal.apply", "storyboard.review", "storyboard.approve", "export.start"] and run["reason"] == "exported" and run["outcome"] == "done"
     assert job["state"] == "done" and job["meta"]["result"]["reason"] == "exported"
     sb = live.get(P).json()["storyboard"]
     assert sb["approvals"]["storyboard"]["by"] == "agent:auto"                       # the gate was approved over HTTP as the actor of the run

@@ -57,3 +57,28 @@ def box(tmp_path, monkeypatch):
     b = BH.make_box(tmp_path, monkeypatch)
     yield b
     BH.cleanup(b)
+
+
+@pytest.fixture(autouse=True)
+def _fake_viewer_for_other_draft_tests(request, monkeypatch):
+    """Existing edit tests exercise editing; replace its follow-up viewer with a clean fake.
+
+    Dedicated viewer tests exercise the real orchestration with fake frames and
+    providers. No draft test should render real frames or call a model.
+    """
+    if request.node.path.name == "test_viewer_review.py":
+        return
+    import json
+    from bti.draft import review
+    from bti.editor.common import compute_rev
+    from bti.longjob import Part
+
+    def fake_after(project_dir, model, turn_id):
+        def run(ctx):
+            from bti.draft.thread import load_thread
+            turn = next((t for t in load_thread(project_dir) if t.get("id") == turn_id), None)
+            if turn and turn.get("status") == "applied":
+                sb = json.loads((project_dir / "storyboard.json").read_text(encoding="utf-8"))
+                review.save_report(project_dir, {"revision": compute_rev(sb), "rounds": 0, "warnings": [], "history": []})
+        return [Part(key="fake_viewer", title="Xem lại giả", run=run)]
+    monkeypatch.setattr(review, "after_full_edit_parts", fake_after)

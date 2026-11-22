@@ -103,6 +103,23 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
     return {"job_id": job["id"], **_who(job)}
 
 
+@router.post("/review")
+def post_review(pid: str, request: Request, body: dict = Body(None)):
+    d = _pdir(request, pid)
+    from bti.draft import review
+    from bti.longjob import Busy
+    from bti.auto import RUN_ACTOR
+    actor = body.get("actor") if isinstance(body, dict) else None
+    try:
+        manager = getattr(request.app.state, "longjob_manager", None)
+        job = review.start(pid, d, manager=manager, run_ok=actor == RUN_ACTOR)
+    except DraftError as e:
+        raise ApiError(409, e.message, code=e.code, **(e.extra or {}))
+    except Busy as e:
+        raise ApiError(409, "a draft is already running", code="busy", job_id=e.job_id)
+    return {"job_id": job["id"], **_who(job)}
+
+
 @router.post("/edit")
 def post_edit(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
@@ -303,7 +320,13 @@ def get_thread(pid: str, request: Request):
                 active_job_id = act.get("id")
     except Exception:
         pass
-    return {"turns": turns, "active_job_id": active_job_id}
+    from bti.draft.review import load_report
+    from .common import compute_rev, read_json
+    try:
+        review = load_report(d, compute_rev(read_json(d / "storyboard.json")))
+    except (OSError, ValueError):
+        review = None
+    return {"turns": turns, "active_job_id": active_job_id, "review": review}
 
 
 @router.delete("/thread")

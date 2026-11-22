@@ -68,6 +68,11 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                                "hơn 34% số dòng nói về thứ ngoài bức tranh chỉ có tranh chính, chưa tìm được hình của chính thứ đó"),
     },
     "storyboard": {
+        # worker viewreview: the viewer model found a remaining substantive issue.
+        "review_picture_mismatch": ("the picture does not show the spoken subject", "hình chưa cho thấy điều lời dẫn đang nói"),
+        "review_text_wrong": ("on-screen text is wrong or duplicated", "chữ trên hình chưa đúng hoặc bị lặp"),
+        "review_context_missing": ("a name or detail lacks its introduction or meaning", "tên hoặc chi tiết chưa được giới thiệu rõ"),
+        "review_picture_repeated": ("a picture repeats for unrelated lines", "hình bị lặp ở những câu không liên quan"),
         "audio_missing": ("the audio file does not exist", "thiếu tệp âm thanh"),
         "asset_size_mismatch": ("a picture's recorded size differs from its file: regions and camera keys are in the wrong space",
                                 "kích thước ghi của một hình khác kích thước thật"),

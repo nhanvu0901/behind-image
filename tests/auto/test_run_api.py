@@ -14,9 +14,9 @@ EXPECTED = {
     "outline_waiting": (["outline.approve", "narration.generate", "narration.approve", "voice.generate"], "nothing_to_do"),
     "narration_approved": (["voice.generate"], "nothing_to_do"),
     "voiced": ([], "nothing_to_do"),
-    "picks_approved": (["draft.start", "proposal.apply", "storyboard.approve", "export.start"], "exported"),
-    "proposal_waiting": (["proposal.apply", "storyboard.approve", "export.start"], "exported"),
-    "drafted": (["storyboard.approve", "export.start"], "exported"),
+    "picks_approved": (["draft.start", "proposal.apply", "storyboard.review", "storyboard.approve", "export.start"], "exported"),
+    "proposal_waiting": (["proposal.apply", "storyboard.review", "storyboard.approve", "export.start"], "exported"),
+    "drafted": (["storyboard.review", "storyboard.approve", "export.start"], "exported"),
     "storyboard_approved": (["export.start"], "exported"),
     "exported": ([], "exported"),
 }
@@ -67,7 +67,7 @@ def test_a_whole_project_from_the_first_step_to_the_export_once_the_pictures_are
     make_picks(client)
     world.flags["picks_ok"] = True
     _, second = run_to_end(client)
-    assert actions_of(second) == ["draft.start", "proposal.apply", "storyboard.approve", "export.start"] and second["reason"] == "exported"
+    assert actions_of(second) == ["draft.start", "proposal.apply", "storyboard.review", "storyboard.approve", "export.start"] and second["reason"] == "exported"
     assert second["id"] != first["id"]
 
 
@@ -190,8 +190,8 @@ def test_the_step_limit(client, world):
     job, run = run_to_end(client, max_steps=2)
     assert actions_of(run) == ["draft.start", "proposal.apply"] and run["outcome"] == "limit" and run["reason"] == "step_limit"
     assert result_of(job)["steps_taken"] == 2 and job["state"] == "done"
-    _, more = run_to_end(client, max_steps=2)                                                      # and it goes on from there
-    assert actions_of(more) == ["storyboard.approve", "export.start"] and more["reason"] == "exported"
+    _, more = run_to_end(client, max_steps=3)                                                      # and it goes on from there
+    assert actions_of(more) == ["storyboard.review", "storyboard.approve", "export.start"] and more["reason"] == "exported"
 
 
 def test_until_a_step(client, world):

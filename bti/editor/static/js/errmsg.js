@@ -906,3 +906,14 @@ Object.assign(BUILD, INTROOPEN_ISSUES);
 
 // worker listmark
 Object.assign(BUILD, { year_already_on_screen: (i) => `Năm ${i.args?.year ?? ""} đã hiện trong nhãn. Hãy bỏ năm lớn.` , strip_without_light: (i) => `${fdShot(i.args || {})}: Nhãn gọi tên vật chưa được rọi sáng. Hãy thêm đèn rọi hoặc vòng khoanh.` });
+
+// worker viewreview: remaining findings after the viewer review.
+Object.assign(BUILD, {
+  review_picture_mismatch: (i) => `${fdShot(i.args || {})}: Hình chưa cho thấy điều lời dẫn đang nói.`,
+  review_text_wrong: (i) => `${fdShot(i.args || {})}: Chữ trên hình chưa đúng hoặc bị lặp.`,
+  review_context_missing: (i) => `${fdShot(i.args || {})}: Tên hoặc chi tiết chưa được giới thiệu rõ.`,
+  review_picture_repeated: (i) => `${fdShot(i.args || {})}: Hình bị lặp ở những câu không liên quan.`,
+});
+Object.assign(STAGE_CODES.draft, {
+  review_failed: 'Không xem lại được storyboard. Hãy thử lại sau khi kiểm tra cảnh và kết nối agent.',
+});

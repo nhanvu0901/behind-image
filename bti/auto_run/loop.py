@@ -200,6 +200,11 @@ class Run:
         if not todo:
             return self._nothing_to_do(st, acts), None
         a = todo[0]
+        # A human may approve directly, but the automatic run must never bypass
+        # a required viewer review merely because its agent is unavailable.
+        pending_review = next((x for x in acts if x["id"] == "storyboard.review" and x.get("ready") is False), None)
+        if a["id"] == "storyboard.approve" and pending_review is not None:
+            return self._nothing_to_do(st, [pending_review]), None
         refusal = self._allowed(a, auto)
         if refusal is not None:
             return refusal, None

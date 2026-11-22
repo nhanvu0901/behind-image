@@ -28,6 +28,7 @@ The engine draws exactly what the storyboard says; it never decides.
 | `storyboard.restore` | edit | Khôi phục bản gần nhất |  |  |  |
 | `storyboard.validate` | edit | Kiểm tra |  |  |  |
 | `storyboard.retime` | edit | Khớp lại với giọng đọc |  |  |  |
+| `storyboard.review` | edit | Xem lại storyboard |  | model: about 10 to 15 minutes plus any repairs | yes |
 | `storyboard.approve` | edit | Duyệt storyboard | yes |  |  |
 | `storyboard.preview` | edit | Xem thử |  |  | yes |
 | `storyboard.put` | edit | Lưu storyboard |  |  |  |

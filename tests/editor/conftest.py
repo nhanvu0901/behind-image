@@ -33,3 +33,11 @@ def client(root):
 @pytest.fixture()
 def state(client):
     return client.get(f"/api/projects/{PID}").json()
+
+
+@pytest.fixture(autouse=True)
+def _no_real_viewer_review(monkeypatch):
+    from bti.draft import review
+    def forbidden(*args, **kwargs):
+        pytest.fail("viewer review must use a fake in tests")
+    monkeypatch.setattr(review, "_review_round", forbidden)

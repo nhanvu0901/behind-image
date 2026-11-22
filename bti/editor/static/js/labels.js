@@ -1054,3 +1054,11 @@ Object.assign(CODE, CODE_INTROOPEN);
 
 // worker listmark
 Object.assign(CODE, { year_already_on_screen: "Năm đã hiện trong nhãn" });
+
+// worker viewreview: remaining findings after the viewer review.
+Object.assign(CODE, {
+  review_picture_mismatch: 'Hình chưa khớp lời dẫn',
+  review_text_wrong: 'Chữ trên hình chưa đúng',
+  review_context_missing: 'Thiếu lời giới thiệu',
+  review_picture_repeated: 'Hình bị lặp',
+});
