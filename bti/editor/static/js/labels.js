@@ -1054,3 +1054,9 @@ Object.assign(CODE, CODE_INTROOPEN);
 
 // worker listmark
 Object.assign(CODE, { year_already_on_screen: "Năm đã hiện trong nhãn" });
+
+// worker subjdraft: subject visibility and year label.
+Object.assign(CODE, {
+  subject_not_on_screen: 'Chưa thấy chủ thể được nhắc đến',
+  year_already_on_screen: 'Năm đã hiện trong nhãn',
+});

@@ -101,6 +101,8 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                               "có hiệu ứng chỉ có một hai mục để hiện nên không có ý nghĩa"),
         "figure_on_wrong_picture": ("a large figure is laid over another picture although the picks of its line hold the picture of the thing counted (the first video laid 42 ships over the saint)",
                                     "có con số lớn nằm trên hình không phải thứ được đếm"),
+        # worker subjdraft: a named subject must be visible.
+        "subject_not_on_screen": ("the named subject is not visible when spoken", "có chủ thể chưa hiện khi lời dẫn nhắc đến"),
         # pointfix: a viewer needs to locate details and read labels.
         "name_not_shown": ("a first-presented person has no on-screen name", "có người được giới thiệu nhưng chưa hiện tên"),
         "year_already_on_screen": ("a large year is already visible in a simultaneous label or caption", "năm đã hiện trong nhãn"),

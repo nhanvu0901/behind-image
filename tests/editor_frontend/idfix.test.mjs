@@ -16,7 +16,7 @@ test('strip_without_light renders clean Vietnamese issue sentence and label', ()
   assert.match(msg.text, /s0040/);
   assert.match(msg.text, /Settle/);
   assert.match(msg.text, /HI-01/);
-  assert.match(msg.text, /60%/);
+  assert.match(msg.text, /AN-01/);
 
   const fallback = issueText({ code: 'strip_without_light', level: 'warn', args: {} });
   assert.match(fallback.text, /HI-01/);

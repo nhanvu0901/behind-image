@@ -1341,6 +1341,264 @@ def _name_not_shown(c):
                               beat=bid, name=name, shot=c.sid(i)))
     return out
 
+def _primary_slot(shot: dict) -> tuple[str | None, str | None]:
+    """(slot name, asset key) of a shot's main slot: `image`, else the first slot with an asset."""
+    slots = shot.get("slots") or {}
+    if not isinstance(slots, dict):
+        return None, None
+    img = slots.get("image")
+    if isinstance(img, dict) and isinstance(img.get("asset"), str):
+        return "image", img["asset"]
+    for k, v in slots.items():
+        if isinstance(v, dict) and isinstance(v.get("asset"), str):
+            return k, v["asset"]
+    return None, None
+
+
+def _parse_holds(s) -> list[float] | None:
+    if not isinstance(s, str):
+        return None
+    try:
+        vals = [float(x) for x in s.replace("\n", " ").split(";") if x.strip()]
+    except ValueError:
+        return None
+    return vals or None
+
+
+def _state_weight_b(pp: dict, tau: float) -> float:
+    """Blend weight of slot `b` (0..1) in `STATE-01` at `tau = t - t0` seconds."""
+    holds = _parse_holds(pp.get("holds")) or [1.5, 2.5, 1.5]
+    d = max(0.001, float(pp.get("dissolve_s") or 1.0))
+    first_b = pp.get("first") == "b"
+    starts, acc = [], 0.0
+    for h in holds[:-1]:
+        acc += h
+        starts.append(acc)
+        acc += d
+    s0 = s1 = len(starts)
+    q = 0.0
+    for k, s in enumerate(starts):
+        if tau < s:
+            s0, s1, q = k, k, 0.0
+            break
+        if tau < s + d:
+            s0, s1, q = k, k + 1, (tau - s) / d
+            break
+    wb0 = 1.0 if ((s0 % 2 == 1) != first_b) else 0.0
+    wb1 = 1.0 if ((s1 % 2 == 1) != first_b) else 0.0
+    return wb0 + (wb1 - wb0) * q
+
+
+def _shot_visible_panels(shot: dict, t: float, span: tuple[float, float], wanted: str, bundle, *, primary_asset: str | None = None) -> list[tuple[str | None, float, float, float, float, str]]:
+    """Visible `(cam_param, panel_w, panel_h, vis_x0, vis_x1, default_kind)` tuples showing `wanted` at `t`."""
+    tid = shot.get("technique")
+    slots = shot.get("slots") or {}
+    t0 = span[0]
+    panels: list[tuple[str | None, float, float, float, float, str]] = []
+    if tid == "LAY-01":
+        pp = {**bundle.param_defaults("LAY-01"), **(shot.get("params") or {})}
+        pw = float(pp.get("panel_w_px") or 900)
+        ph = float(pp.get("panel_h_px") or 740)
+        if (slots.get("left") or {}).get("asset") == wanted:
+            panels.append(("camera_left", pw, ph, 0.0, pw, "lay_left"))
+        if (slots.get("right") or {}).get("asset") == wanted:
+            right_x = float(pp.get("right_x_px") or 970)
+            delay = float(pp.get("slide_delay_s") or 0)
+            duration = max(0.001, float(pp.get("slide_s") or 0.85))
+            progress = EASE["out_cubic"](min(1.0, max(0.0, (t - t0 - delay - 0.05) / duration)))
+            x = 1930.0 - (1930.0 - right_x) * progress
+            vis_x0 = max(0.0, -x)
+            vis_x1 = min(pw, 1920.0 - x)
+            if vis_x1 - vis_x0 >= 0.6 * pw:
+                panels.append(("camera_right", pw, ph, vis_x0, vis_x1, "lay_right"))
+        return panels
+    if tid == "X-CMP-01":
+        pp = {**bundle.param_defaults("X-CMP-01"), **(shot.get("params") or {})}
+        pw = float(pp.get("panel_w_px") or 900)
+        ph = float(pp.get("panel_h_px") or 740)
+        if (slots.get("anchor") or {}).get("asset") == wanted:
+            default_kind = "xcmp_matte" if pp.get("anchor_fit", "matte") == "matte" else "cover"
+            panels.append(("camera_anchor", pw, ph, 0.0, pw, default_kind))
+        swaps = [(slots.get("swap_%d" % k) or {}).get("asset") for k in range(1, 7)]
+        swaps = [a for a in swaps if a]
+        if swaps:
+            tt = max(0.0, t - t0)
+            sps = max(0.001, float(pp.get("seconds_per_swap") or 2.5))
+            idx = min(int(tt // sps), len(swaps) - 1)
+            u = tt - idx * sps
+            mode = pp.get("swap_transition") or "cut"
+            dur = max(0.001, float(pp.get("dissolve_s" if mode == "dissolve" else "slide_s") or 0.5))
+            if idx == 0 or mode == "cut" or u >= dur:
+                if swaps[idx] == wanted:
+                    panels.append((None, pw, ph, 0.0, pw, "cover"))
+            else:
+                env = EASE["inout_sine" if mode == "dissolve" else "out_cubic"](min(1.0, max(0.0, u / dur)))
+                if env >= 0.6 and swaps[idx] == wanted:
+                    panels.append((None, pw, ph, 0.0, pw, "cover"))
+                if 1.0 - env >= 0.6 and swaps[idx - 1] == wanted:
+                    panels.append((None, pw, ph, 0.0, pw, "cover"))
+        return panels
+    if tid == "LAY-04":
+        pp = {**bundle.param_defaults("LAY-04"), **(shot.get("params") or {})}
+        if (slots.get("image") or {}).get("asset") == wanted:
+            panels.append(("camera", 1920.0, 1080.0, 0.0, 1920.0, "main"))
+        if (slots.get("inset") or {}).get("asset") == wanted:
+            delay = float(pp.get("inset_delay_s") or 0)
+            fade = max(0.001, float(pp.get("inset_fade_s") or 0.4))
+            if (t - t0 - delay) / fade >= 0.6:
+                iw = float(pp.get("inset_w_px") or 560)
+                ih = float(pp.get("inset_h_px") or 315)
+                panels.append(("inset_camera", iw, ih, 0.0, iw, "cover"))
+        return panels
+    if tid == "STATE-01":
+        pp = {**bundle.param_defaults("STATE-01"), **(shot.get("params") or {})}
+        wb = _state_weight_b(pp, max(0.0, t - t0))
+        ka = (slots.get("a") or {}).get("asset")
+        kb = (slots.get("b") or {}).get("asset")
+        if (ka == wanted and 1.0 - wb >= 0.4) or (kb == wanted and wb >= 0.4):
+            panels.append(("camera", 1920.0, 1080.0, 0.0, 1920.0, "main"))
+        return panels
+    primary = primary_asset if primary_asset is not None else _primary_slot(shot)[1]
+    if primary == wanted:
+        panels.append(("camera", 1920.0, 1080.0, 0.0, 1920.0, "main"))
+    return panels
+
+
+def panel_has_asset(shot, asset, t, t0, bundle):
+    """Whether most of an asset's LAY-01 panel is on screen at the given time."""
+    if shot.get("technique") != "LAY-01":
+        return False
+    return bool(_shot_visible_panels(shot, t, (t0, t0 + 1.0), asset, bundle))
+
+
+def subject_visible_at(shot: dict, span: tuple[float, float], t: float, subject: dict, *, main: str | None, assets: dict,
+                       subjects: list, bundle, keys_fn, primary_asset: str | None = None, project_dir=None) -> bool | None:
+    """Whether `subject` is visible in `shot` at time `t`; None when geometry cannot be checked (missing size or region box)."""
+    where = subject.get("where") or {}
+    region = where.get("region")
+    wanted = where.get("asset") or (main if region else None)
+    if not wanted:
+        return False
+    panels = _shot_visible_panels(shot, t, span, wanted, bundle, primary_asset=primary_asset)
+    if not panels:
+        return False
+    whole_main = (wanted == main and not region and subject.get("kind") == "work")
+    if not region and not whole_main:
+        return True
+    main_doc = assets.get(main) or {}
+    w, h = main_doc.get("width"), main_doc.get("height")
+    size = (float(w), float(h)) if (_num(w) and _num(h) and float(w) > 0 and float(h) > 0) else None
+    regions = main_doc.get("regions") or {}
+    if whole_main:
+        if not size:
+            return None
+        from bti.media import contentbox as CB
+        box = CB.box_of(main_doc, project_dir) or (0.0, 0.0, size[0], size[1])
+    else:
+        box = region_box(regions.get(region))
+        if not box:
+            return None
+    area = (box[2] - box[0]) * (box[3] - box[1])
+    if area <= 0:
+        return None
+    checked_any = False
+    tid = shot.get("technique")
+    for cam_param, pw, ph, vis_x0, vis_x1, default_kind in panels:
+        keys = keys_fn(cam_param) if cam_param else None
+        if not keys and size:
+            if default_kind == "lay_left":
+                zoom = 0.94 * ph / size[1]
+            elif default_kind in ("lay_right", "cover"):
+                zoom = max(pw / size[0], ph / size[1])
+            elif default_kind == "xcmp_matte":
+                zoom = 0.94 * min(pw / size[0], ph / size[1])
+            elif default_kind == "main" and tid in ("STATIC-01", "CAM-01", "CAM-03", "CAM-04", "CAM-05", "X-LAY-01", "LAY-04", "STATE-01"):
+                zoom = 0.955 * 1080.0 / size[1]
+            else:
+                zoom = None
+            if zoom:
+                keys = [(span[0], size[0] / 2.0, size[1] / 2.0, zoom, "linear")]
+        if not keys:
+            continue
+        checked_any = True
+        cx, cy, z = camera_at(keys, t)
+        if z <= 0:
+            continue
+        fx0 = cx + (vis_x0 - pw / 2.0) / z
+        fx1 = cx + (vis_x1 - pw / 2.0) / z
+        fy0 = cy - ph / (2.0 * z)
+        fy1 = cy + ph / (2.0 * z)
+        def overlap(b):
+            return max(0.0, min(fx1, b[2]) - max(fx0, b[0])) * max(0.0, min(fy1, b[3]) - max(fy0, b[1]))
+        vis_frame_area = max(0.0, fx1 - fx0) * max(0.0, fy1 - fy0)
+        ok = overlap(box) >= (0.95 if whole_main else 0.60) * area
+        if ok and subject.get("kind") == "person" and vis_frame_area > 0 and overlap(box) < 0.15 * vis_frame_area:
+            for other in subjects:
+                if not isinstance(other, dict) or other.get("id") == subject.get("id"):
+                    continue
+                other_box = region_box(regions.get((other.get("where") or {}).get("region")))
+                if other_box and overlap(other_box) > 0.50 * vis_frame_area:
+                    ok = False
+                    break
+        if ok:
+            return True
+    return False if checked_any else None
+
+
+HINTS["subject_not_on_screen"] = "Show the subject itself when it is named."
+
+
+def _subject_not_on_screen(c):
+    picks = _picks_doc(c.project_dir)
+    subjects = picks.get("subjects")
+    if not isinstance(subjects, list):
+        return []
+    by_id = {s.get("id"): s for s in subjects if isinstance(s, dict)}
+    main = picks.get("main_asset")
+    out = []
+    for beat in getattr(c.tm, "beats", []) or []:
+        entry = (picks.get("beats") or {}).get(beat.get("id")) or {}
+        if not isinstance(entry, dict):
+            continue
+        next_occurrence = {}
+        for item in entry.get("about") or []:
+            if not isinstance(item, dict):
+                continue
+            subject = by_id.get(item.get("id"))
+            phrase = tokens(item.get("words"))
+            if not subject or subject.get("kind") in ("idea", "text") or not phrase:
+                continue
+            lo = beat.get("w0")
+            hi = beat.get("w1")
+            if not isinstance(lo, int) and _num(beat.get("start")):
+                lo = next((i for i, w in enumerate(c.tm.words) if w.get("s", -1) >= beat["start"]), len(c.tm.words))
+            if not isinstance(hi, int) and _num(beat.get("end")):
+                hi = next((i for i, w in enumerate(c.tm.words) if w.get("s", -1) >= beat["end"]), len(c.tm.words))
+            if not isinstance(lo, int) or not isinstance(hi, int):
+                continue
+            occurrence_key = (item.get("id"), tuple(phrase))
+            match = next((n for n in range(max(0, lo, next_occurrence.get(occurrence_key, lo)), min(hi, len(c.tm.words)) - len(phrase) + 1)
+                          if [norm(w.get("w", "")) for w in c.tm.words[n:n + len(phrase)]] == phrase), None)
+            if match is None:
+                continue
+            next_occurrence[occurrence_key] = match + len(phrase)
+            t = c.tm.word_start(match)
+            i = next((n for n, sp in enumerate(c.spans) if sp and sp[0] <= t < sp[1]), None)
+            if i is None:
+                continue
+            visible = subject_visible_at(
+                c.shots[i], c.spans[i], t, subject,
+                main=main, assets=c.assets, subjects=subjects, bundle=c.bundle,
+                keys_fn=lambda p, idx=i, sp=c.spans[i]: c.keys_of(idx, sp, p),
+                primary_asset=c.primary(i), project_dir=c.project_dir,
+            )
+            if visible is False:
+                out.append(_issue("subject_not_on_screen", "shots[%d]" % i,
+                                  "Line %s names %s, but the subject is not visible in shot %s." % (beat.get("id"), subject.get("name"), c.sid(i)),
+                                  beat=beat.get("id"), subject=subject.get("id"), name=subject.get("name"), shot=c.sid(i)))
+    return out
+
+
 def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> list[dict]:
     """The viewer checks of a storyboard whose shots start at `starts` (seconds, None when unresolvable) and end at `end_t`. Never raises."""
     try:
@@ -1349,7 +1607,7 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         return []
     out: list[dict] = []
     for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer,
-               _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown, _year_already_on_screen):         # the last four: catalogue pass, silent on beats without kinds
+               _subject_not_on_screen, _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown, _year_already_on_screen):         # the last four: catalogue pass, silent on beats without kinds
         try:
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
@@ -1381,6 +1639,7 @@ CODES = {
     "explainer_early": "A base explanatory component (MAP-01, TIME-01, TREE-01, STATE-01) starts in the first 30 seconds (warning). args: shot, technique, start, end, limit.",
 }
 CODES.update(CATALOGUE_ISSUES)       # catalogue pass: the four checks of what the kinds of a beat call for (their sentences: `CATALOGUE_SENTENCES` of errmsg.js)
+CODES["subject_not_on_screen"] = "The named subject is not visible at its spoken words (warning). args: beat, subject, name, shot."
 CODES.update({"name_not_shown": "A cast name is not shown on its picture during its first presentation (warning). args: beat, name, shot."})
 
 

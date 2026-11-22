@@ -906,3 +906,25 @@ Object.assign(BUILD, INTROOPEN_ISSUES);
 
 // worker listmark
 Object.assign(BUILD, { year_already_on_screen: (i) => `Năm ${i.args?.year ?? ""} đã hiện trong nhãn. Hãy bỏ năm lớn.` , strip_without_light: (i) => `${fdShot(i.args || {})}: Nhãn gọi tên vật chưa được rọi sáng. Hãy thêm đèn rọi hoặc vòng khoanh.` });
+
+// worker subjdraft: subject visibility, year_already_on_screen, and strip_without_light (no 60% size exemption).
+export const SUBJDRAFT_SENTENCES = {
+  subject_not_on_screen: (i) => {
+    const a = i.args || {};
+    const what = a.name ? ` “${a.name}”` : '';
+    return `${fdShot(a)}: chưa thấy chủ thể${what} khi lời dẫn nhắc đến. Hãy chọn khung hình có chủ thể.`;
+  },
+  year_already_on_screen: (i) => {
+    const a = i.args || {};
+    const y = a.year ? ` ${a.year}` : '';
+    return `${fdShot(a)}: năm${y} đã hiện trong nhãn đang mở. Hãy bỏ con số năm lớn.`;
+  },
+};
+export const SUBJDRAFT_CODES = Object.keys(SUBJDRAFT_SENTENCES);
+Object.assign(BUILD, SUBJDRAFT_SENTENCES, {
+  strip_without_light: (i) => {
+    const a = i.args || {};
+    const what = a.text ? ` “${a.text}”` : '';
+    return `${fdShot(a)}: nhãn${what} gọi tên một vật (không phải nhân vật) trên tranh chính nhưng lúc nhãn hiện chưa có đèn rọi (HI-01/X-HI-01) hay vòng tròn (AN-01) cùng xuất hiện. Hãy thêm HI-01 hoặc AN-01 vào vật đó.`;
+  },
+});
