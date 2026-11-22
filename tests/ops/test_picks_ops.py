@@ -545,3 +545,39 @@ def test_set_region_rejects_bad_tight_thing_and_rough(client, extra, where):
     r = pk(client, [{"op": "set_region", "asset": "A", "region": "BAD", "x": 200, "y": 200, "rx": 40, "ry": 40, **extra}])
     assert r.status_code == 422 and paths(r) == where
     untouched(client, r, before)
+
+
+def test_subject_table_and_line_about_are_logged_and_undoable(client):
+    subjects = [
+        {"id": "sitter", "kind": "person", "name": "Sitter", "also": ["the merchant"], "strip": True, "where": {"region": "HEAD"}},
+        {"id": "scroll", "kind": "text", "name": "The Charter", "strip": False, "where": None},
+        {"id": "patron", "kind": "person", "name": "Patron", "strip": True, "where": {"asset": "B"}},
+    ]
+    response = pk(client, [{"op": "set_subjects", "subjects": subjects},
+                           {"op": "set_about", "beat": "b0001", "about": [{"id": "sitter", "words": "the sitter"}]}])
+    assert response.status_code == 200, response.text
+    assert picks(client)["subjects"] == subjects
+    assert picks(client)["beats"]["b0001"]["about"] == [{"id": "sitter", "words": "the sitter"}]
+    undo = client.post("/api/projects/%s/changes/%s/undo" % (PID, response.json()["batch"]),
+                       json={"base_rev": pk_rev(client), "actor": "human"})
+    assert undo.status_code == 200, undo.text
+    after_undo = picks(client)
+    assert "subjects" not in after_undo
+    assert "about" not in after_undo["beats"]["b0001"]
+
+
+def test_set_subjects_and_set_about_reject_invalid_strips_and_blank_fields(client):
+    assert pk(client, [{"op": "set_subjects", "subjects": [
+        {"id": "s1", "kind": "person", "name": "Ada", "strip": True, "where": {"region": "HEAD"}},
+    ]}]).status_code == 200
+    before = snapshot(client.pdir)
+    for bad_op in (
+        {"op": "set_subjects", "subjects": [{"id": "i1", "kind": "idea", "name": "faith", "strip": True, "where": None}]},
+        {"op": "set_subjects", "subjects": [{"id": "t1", "kind": "text", "name": "Bible", "strip": True, "where": None}]},
+        {"op": "set_subjects", "subjects": [{"id": "p1", "kind": "person", "name": "   ", "strip": False, "where": None}]},
+        {"op": "set_subjects", "subjects": [{"id": "p2", "kind": "person", "name": "Ada", "also": ["   "], "strip": True, "where": None}]},
+        {"op": "set_about", "beat": "b0001", "about": [{"id": "s1", "words": "   "}]},
+    ):
+        r = pk(client, [bad_op])
+        assert r.status_code == 422, (bad_op, r.text)
+        untouched(client, r, before)

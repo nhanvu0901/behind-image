@@ -125,6 +125,47 @@ def resolve_names(plan: dict, picks: dict, got: dict, regions: dict, dropped: se
         out.append(row)
     return out
 
+def resolve_subjects(plan: dict, picks: dict, got: dict, regions: dict, dropped: set) -> list[dict]:
+    """Resolve subject pictures; a missing picture uses that subject's own fallback."""
+    result = []
+    for entry in plan.get("subjects") or []:
+        row = copy.deepcopy(entry)
+        where = row["where"]
+        if where is None:
+            result.append(row)
+            continue
+        if "asset" in where:
+            result.append(row)
+            continue
+        if "region" in where:
+            old = where["region"]
+            target = None if old in dropped else regions.get(old, old)
+            row["where"] = {"region": target} if target else None
+            result.append(row)
+            continue
+        selected = (picks.get(where.get("want")) or {}).get("pick")
+        key = (selected["source"], selected["source_id"]) if selected else None
+        target = got.get(key)
+        if target:
+            row["where"] = {"asset": target}
+            result.append(row)
+            continue
+        row["where"] = None
+        result.append(row)
+    return result
+
+
+def subject_operations(current: dict, rows: list[dict], about: dict[str, list[dict]]) -> list[dict]:
+    """Merge new subjects and preserve old cast presentations for a partial run."""
+    existing, old_about = pdoc.subject_view(current)
+    ids = {row["id"] for row in rows}
+    merged = [row for row in existing if row.get("id") not in ids] + rows
+    operations = [{"op": "set_subjects", "subjects": merged}]
+    for bid, mentions in {**old_about, **about}.items():
+        operations.append({"op": "set_about", "beat": bid, "about": mentions})
+    return operations
+
+
 def final_regions(plan: dict, choice: dict) -> tuple[dict, list[str]]:
     """The boxes to make/update: `name -> {...}` (`tight` stored pixels when confirmed, else rough fractional box), and the names dropped."""
     keep, dropped = {}, []
@@ -266,7 +307,22 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
     """For each line of the plan: what to write (`items`), what is missing and why. A box the agent dropped (`dropped`, said in the line's
     notes) or that could not be made (`lost`) shows the whole painting instead."""
     lines = []
-    for ln in plan["lines"]:
+    subjects = {s["id"]: s for s in plan.get("subjects", [])}
+    wanted_items = {"%s.%d" % (line["beat"], n): item for line in plan["lines"]
+                    for n, item in enumerate(line["show"], 1) if isinstance(item, dict)}
+    existing_picks = getattr(inp, "picks", {}) or {}
+    existing_subj_list, existing_about = pdoc.subject_view(existing_picks) if existing_picks else ([], {})
+    all_subjects = {**{s["id"]: s for s in existing_subj_list}, **subjects}
+    beat_order = [b["id"] for b in (getattr(inp, "beats", None) or []) if isinstance(b, dict) and b.get("id")]
+    def existing_role(asset):
+        if (existing_picks.get("assets", {}).get(asset) or {}).get("kind") == "video":
+            return "video"
+        for beat in (existing_picks.get("beats") or {}).values():
+            for item in beat.get("items") or []:
+                if item.get("asset") == asset and item.get("role") in ("map", "document", "context"):
+                    return item["role"]
+        return "context"
+    for line_index, ln in enumerate(plan["lines"]):
         b = inp.beat(ln["beat"])
         items, missing, notes = [], [], []
 
@@ -308,10 +364,73 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                     missing.append({"want": p["id"], "what": p["what"], "code": p["code"] or "no_candidates",
                                     "why": texts.why(p["code"] or "no_candidates", what=p["what"], source=p.get("source") or "", seconds=p.get("seconds"),
                                                      detail=p["reason"])})
+        reused = False
+        if not ln["show"]:
+            seen_ids = set()
+            for mention in ln.get("about") or []:
+                sid = mention.get("id")
+                if not sid or sid in seen_ids:
+                    continue
+                seen_ids.add(sid)
+                subject = subjects.get(sid) or {}
+                where = subject.get("where") or {}
+                if subject and subject.get("where") is None and subject.get("kind") not in ("idea", "text"):
+                    what = subject.get("name") or "picture"
+                    missing.append({"want": None, "what": what, "code": "agent_none",
+                                    "why": texts.why("agent_none", what=what, source="", seconds=None, detail="")})
+                elif "region" in where:
+                    painting({"type": "detail", "region": where["region"]})
+                    reused = True
+                elif "asset" in where:
+                    items.append({"asset": where["asset"], "region": None, "role": existing_role(where["asset"]), "note": ""})
+                    reused = True
+                elif "want" in where:
+                    picked = picks.get(where["want"]) or {}
+                    choice = picked.get("pick")
+                    key = (choice["source"], choice["source_id"]) if choice else None
+                    if key in got:
+                        items.append({"src": key, "asset": None, "region": None, "role": _role(wanted_items.get(where["want"], {"type": "context"})), "note": ""})
+                        reused = True
+                    else:
+                        code = picked.get("code") or "import_failed"
+                        what = picked.get("what") or subject.get("name") or "picture"
+                        missing.append({"want": where["want"], "what": what, "code": code,
+                                        "why": texts.why(code, what=what, source="", seconds=None, detail="")})
         fallback = ln.get("fallback")
-        if fallback and ln["show"] and not items:                  # nothing asked for was found: the line shows the part of the painting its plan named
+        if missing and not items and "subjects" in plan:
+            if line_index > 0:
+                prev_about = plan["lines"][line_index - 1].get("about") or []
+            elif ln["beat"] in beat_order:
+                pos = beat_order.index(ln["beat"])
+                prev_about = existing_about.get(beat_order[pos - 1], []) if pos > 0 else []
+            else:
+                prev_about = []
+            candidates = list(reversed(ln.get("about") or [])) + list(reversed(prev_about))
+            for mention in candidates:
+                prior = all_subjects.get(mention.get("id")) or {}
+                if prior.get("kind") == "idea":
+                    continue
+                place = prior.get("where") or {}
+                region = place.get("region")
+                if region and region not in dropped and region not in lost and names.get(region, region):
+                    painting({"type": "detail", "region": region})
+                    break
+                if "asset" in place:
+                    items.append({"asset": place["asset"], "region": None, "role": existing_role(place["asset"]), "note": ""})
+                    break
+                if "want" in place:
+                    picked = picks.get(place["want"]) or {}
+                    choice = picked.get("pick")
+                    key = (choice["source"], choice["source_id"]) if choice else None
+                    if key in got:
+                        items.append({"src": key, "asset": None, "region": None, "role": _role(wanted_items.get(place["want"], {"type": "context"})), "note": ""})
+                        break
+            if not items:
+                whole()
+            reused = True
+        elif fallback and ln["show"] and not items:
             painting(fallback)
-        lines.append({"beat": ln["beat"], "no": b["no"], "chapter": b["chapter"], "reason": ln["reason"], "show": ln["show"], "items": items,
+        lines.append({"beat": ln["beat"], "no": b["no"], "chapter": b["chapter"], "reason": ln["reason"], "show": ln["show"] or ([{"type": "reuse"}] if reused else []), "items": items,
                       "missing": missing, "notes": notes, "kinds": list(ln.get("kinds") or [])})
     return lines
 
@@ -370,7 +489,7 @@ def _ops_for(lines: list[dict], main_key: str) -> list[dict]:
             continue
         items = []
         for it in ln["items"]:
-            asset = main_key if it["asset"] == "main" else "$" + refs[it["src"]]
+            asset = main_key if it["asset"] == "main" else ("$" + refs[it["src"]] if it.get("src") else it["asset"])
             item_data = {"asset": asset, "region": it["region"], "role": it["role"], **({"note": it["note"]} if it["note"] else {})}
             if it.get("step") in (2, 3):
                 item_data["step"] = it["step"]
@@ -398,8 +517,11 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
     main_key = inp.painting.key
     w = Writer(pdir, actor, redo=inp.redo)
     left = {b["beat"] for b in plan["lines"] if b["beat"] not in prev and not w.settled(b["beat"])}      # lines this part still has to write
+    subject_want_ids = ({s["where"]["want"] for s in plan["subjects"]
+                         if isinstance(s.get("where"), dict) and isinstance(s["where"].get("want"), str)}
+                        if "subjects" in plan else set())
     progress(0.02, "Đang tải các hình đã chọn.")
-    got, failed = download_all(pdir, {k: p for k, p in picks.items() if p["beat"] in left}, fetch_asset=fetch_asset, cancelled=cancelled,
+    got, failed = download_all(pdir, {k: p for k, p in picks.items() if p["beat"] in left or k in subject_want_ids}, fetch_asset=fetch_asset, cancelled=cancelled,
                                clock=clock, deadline=deadline, progress=lambda k, n, note: progress(0.02 + 0.5 * k / max(1, n), note))
     if cancelled():
         return {"stopped": "cancelled"}
@@ -467,8 +589,8 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
             ln["state"] = "written"
             prev[ln["beat"]] = {"reason": line_note(ln), "kind": "pictures" if ln["show"] else "keep",
                                 "clips": sum(1 for i in ln["items"] if i["role"] == "video"), "missing": ln["missing"], "no": ln["no"],
-                                "outside_without": bool(set(ln.get("kinds") or ()) & set(pdoc.OUTSIDE_KINDS) and not any(i["role"] in ("context", "document", "map", "video")
-                                                                                                                      for i in ln["items"]))}
+                                "outside_without": bool(set(ln.get("kinds") or ()) & set(pdoc.OUTSIDE_KINDS) and (("subjects" in plan and ln["missing"]) or not any(i["role"] in ("context", "document", "map", "video")
+                                                                                                                      for i in ln["items"])))}
         run_state["imported"] = int(run_state.get("imported") or 0) + w.created_assets
         w.created_assets = 0
         run_state["batches"] = list(run_state.get("batches") or []) + w.batches
@@ -482,6 +604,24 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
         run_state["lines_removed"] = sum(1 for c in sent["changes"] if c["what"].startswith("Bỏ đoạn "))
         run_state["stale_cleaned"] = True
         run_state["batches"] = list(run_state.get("batches") or []) + w.batches
+        save_run(run_state)
+    if "subjects" in plan and not stopped:
+        current = pdoc.load_or_new(pdir)
+        resolved = resolve_subjects(plan, picks, got, names, set(dropped) | lost)
+        ids = {row["id"] for row in resolved}
+        planned_ids = {row["id"] for row in plan["subjects"]}
+        if ids != planned_ids:
+            raise WriteError("write_refused", "a subject picture and its own fallback are unavailable")
+        about = {ln["beat"]: next(x for x in plan["lines"] if x["beat"] == ln["beat"]).get("about", [])
+                 for ln in lines if ln["state"] in ("prev", "written")}
+        subject_ops = subject_operations(current, resolved, about)
+        try:
+            for i in range(0, len(subject_ops), 200):
+                w.send(subject_ops[i:i + 200], "Agent chọn hình: đối tượng của lời dẫn")
+        except OpError as e:
+            raise WriteError("write_refused", str(e.detail)) from e
+        run_state["batches"] = list(run_state.get("batches") or []) + w.batches
+        w.batches = []
         save_run(run_state)
     # ---- the result
     result = {"lines_total": 0, "lines_done": 0, "lines_with_pictures": 0, "lines_kept": 0, "lines_without": [], "missing": list(problems),

@@ -141,6 +141,56 @@ Every error body has `code`, `detail` (one English sentence), `fix` (one English
 
 The document is `picks.json` (schema `bti.picks/1`): `main_asset`, `assets` (with `regions`), and per narration line `beats` with `items` (`asset`, `region`, `role`, `note`), `status` and `note`. A line with no pictures shows the main picture again.
 
+### `set_subjects`
+
+Replace the project's subject table.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `set_subjects` | yes | The operation name. |
+| `subjects` | list of a subject | yes |  |
+
+Example:
+
+```json
+{
+  "op": "set_subjects",
+  "subjects": [
+    {
+      "id": "memory",
+      "kind": "idea",
+      "name": "memory",
+      "strip": false,
+      "where": null
+    }
+  ]
+}
+```
+
+Sentence in `changes`: `Đã đổi danh sách đối tượng`
+
+### `set_about`
+
+Set the subjects of a narration line in spoken order.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `set_about` | yes | The operation name. |
+| `beat` | text | yes | A narration line (beat) id, such as b0003. |
+| `about` | list of a subject and its spoken words | yes | Subjects in spoken order. |
+
+Example:
+
+```json
+{
+  "op": "set_about",
+  "beat": "b0001",
+  "about": []
+}
+```
+
+Sentence in `changes`: `Đoạn {n}: đã đổi đối tượng`
+
 ### `set_main`
 
 Choose the main picture (the whole painting) of the video.

@@ -47,6 +47,8 @@ revision itself, a refused batch writes nothing, and every batch can be undone (
 <!-- BEGIN GENERATED: ops -->
 | operation | what it does |
 |---|---|
+| `set_subjects` | Replace the project's subject table. |
+| `set_about` | Set the subjects of a narration line in spoken order. |
 | `set_main` | Choose the main picture (the whole painting) of the video. |
 | `set_region` | Set (add or replace) a named region of an asset: a point, with an optional radius, in pixels of the stored picture. |
 | `remove_region` | Remove a named region of an asset (the pictures of a line that use it must be changed in the same batch, before this operation). |

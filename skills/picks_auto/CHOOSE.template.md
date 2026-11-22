@@ -23,14 +23,14 @@ You write one JSON file, `out/choice.json`. A program imports the pictures you c
 2. **Write `out/choice.json`.** Only that file is read back.
 3. **Run `{{CHECK_CMD}}` until it prints `0 error(s)`.** You get one repair message if you forget; after that the job stops and the owner sees that the agent failed.
 4. **Decide every wanted picture and every box.** Nothing may be left out (the check lists what is missing).
-5. **Never pick a picture you are not sure shows what the line says.** If no candidate is right, the answer is `null` with a reason. A wrong picture on screen is worse than a line the owner fills in by hand, and the program tells the owner plainly which lines have no picture. Why: the owner trusts the proposal only if what is in it is right.
+5. **Never pick a picture you are not sure shows the subject itself.** For a subject-bound want, check the picture and its record; set `shows_subject: true` only for a confident match. Otherwise pick null. For each selected subject-bound context picture set `period_picture` to true for a period picture, or false for a modern photograph and also set `no_period_picture` to true only after no usable period picture remains. If no candidate is right, the answer is `null` with a reason. A wrong picture on screen is worse than a line the owner fills in by hand, and the program tells the owner plainly which lines have no picture. Why: the owner trusts the proposal only if what is in it is right.
 6. **Reasons are Vietnamese, with all their accents** (the owner reads them; the check refuses an English reason), one short sentence, plain words.
 
 ## 2. The files
 
 | File | What it is |
 |---|---|
-| `inputs/wants.json` | The wanted pictures. Each has an `id` (`b0006.2` is the second picture of line b0006), the line (`line_text`) and why the plan wants it (`line_reason`), what it should show (`what`, Vietnamese), the sort of picture (`kind`), the name of the thing (`entity`, when the plan gave one) and the time the line speaks of (`period`: `"then"` wants a picture made in that time, `"now"` a photograph of today), what the line does (`kinds`, when the plan gave it: an `outside` line wants the thing itself, a `journey` line a map of its `places`), the words that were searched, `sheet` (the contact sheet to open) and `candidates` (at most eight): each with its `n` (the number on the sheet), `title`, `source`, `author`, `licence`, `flag`, size, `page_url`, and `media` (`image` or `video`; for a video the sheet shows a still). A candidate that Wikipedia or the web found also has `page_title` (the article or page it was found on), `site` (the website's name) and `snippet` (a few words about it: read them, they often name the picture); the licence of a web picture is unknown (`flag`: `unknown`). A map has no sheet: its candidate is a place, with its title. |
+| `inputs/wants.json` | The wanted pictures. Each has an `id` (`b0006.2` is the second picture of line b0006), the line (`line_text`) and why the plan wants it (`line_reason`), what it should show (`what`, Vietnamese), the sort of picture (`kind`), the requested distinct `aspect` when present, the name of the thing (`entity`, when the plan gave one) and the time the line speaks of (`period`: `"then"` wants a picture made in that time, `"now"` a photograph of today), what the line does (`kinds`, when the plan gave it: an `outside` line wants the thing itself, a `journey` line a map of its `places`), the words that were searched, `sheet` (the contact sheet to open) and `candidates` (at most eight): each with its `n` (the number on the sheet), `title`, `source`, `author`, `licence`, `flag`, size, `page_url`, and `media` (`image` or `video`; for a video the sheet shows a still). A candidate that Wikipedia or the web found also has `page_title` (the article or page it was found on), `site` (the website's name) and `snippet` (a few words about it: read them, they often name the picture); the licence of a web picture is unknown (`flag`: `unknown`). A map has no sheet: its candidate is a place, with its title. |
 | `images/w_<id>.jpg` | The **contact sheet** of a wanted picture: its candidates as numbered thumbnails. |
 | `images/books_<k>.jpg` | Contact sheets of the pictures in the owner's own books about this painting, numbered **B1, B2 ...** (listed in `inputs/wants.json`, `books`). Any wanted picture may pick one of them. |
 | `inputs/regions.json` | The regions used by the plan (new ones and any non-tight existing ones), each with `thing` (English), `what` (Vietnamese), the lines that use it, `cutout_size` `[w, h]`, and `cutout`: the file `images/d_<NAME>.jpg` — cut from the full-resolution painting (+15% margin, inside the painted surface), scaled to 1,024 px long side, with a 100-px coordinate grid in the cut-out's own pixels. |
@@ -52,10 +52,7 @@ For each wanted picture, open its contact sheet, read the candidates' details an
 8. **A picture of the owner's books (B1 ...)** is the owner's own: very often exactly right for a detail, an X-ray, a related work or a portrait that the book prints. Use one when it is exactly right. **Never use the main painting itself** (a full view of it) for a context line: a context line shows something *other than* the main painting.
 9. **When two candidates are right**, take the better reproduction. **When you are not sure**, answer `null`: say what you saw and why it is not enough.
 10. **Say in the reason what the picture is and from when**, in Vietnamese and in one short sentence: "Chân dung Philip the Good do Rogier van der Weyden vẽ khoảng năm 1450." or "Ảnh chụp hôm nay của nhà thờ Noyon, vì không có hình nào thời đó." The owner reads it to see at once why this picture is on screen.
-11. **Candidates from step 2 and step 3 (second session).** Each candidate of round two shows its `step`:
-    - A **step 2** picture is right when it shows the same kind of thing as the line, made in the period (or near it), and is said for what it is in the reason ("Xưởng thợ vàng trong một tiểu họa thế kỷ 15, không phải xưởng của bức tranh.").
-    - A **step 3** picture is right when it is a real surviving object of the kind the line names, from the period (a balance scale, a coin, a salt cellar in a museum). A photograph, taken in a museum, of a real object made in the period (a coin, a cup, a jewel, scales, a tapestry, a manuscript page) is NOT a modern photograph in the sense of the rule: for a step-3 want it is the right answer; what stays refused is a photograph of people, places or reconstructions of today, a film still, a stock picture.
-    - A modern photograph of people, places or reconstructions of today, a film still or a stock picture is still never right. When nothing fits, `null` remains the right answer.
+11. **Older plans may have wider-search candidates marked step 2 or 3.** For a subject-bound want, a candidate is right only when it shows that same subject, never merely something similar. A photograph of an actual historical object in a museum still depicts that historical object; classify a modern photograph of people or places as modern. A modern image may be chosen only after no usable period image exists.
 
 For each **region** in `inputs/regions.json` (the second look at full resolution):
 
@@ -80,20 +77,20 @@ Never answer a box you have not measured on its cut-out, and never confirm a box
 ```json
 {"schema": "bti.picks.choice/1",
  "wants": [
-   {"id": "b0003.1", "pick": 2,
+   {"id": "b0003.1", "pick": 2, "shows_subject": true, "period_picture": true,
     "reason": "Bản chụp chính bức chân dung của họa sĩ, rõ nét, thuộc phạm vi công cộng."},
    {"id": "b0005.1", "pick": null,
-    "reason": "Cả sáu hình đều là bản đồ của vùng khác, không phải Bruges."},
+    "reason": "Cả sáu hình đều là bản đồ của vùng khác, không phải Venice."},
    {"id": "b0009.1", "pick": "B3",
     "reason": "Hình trong sách của bạn in đúng bản chụp tia X của bức tranh."}],
  "regions": [
-   {"name": "CARVED_SAINT", "action": "tight", "box": [298, 162, 398, 392], "confirmed": true,
-    "reason": "Khung sát tượng thánh khắc trên thành ghế, bỏ phần bàn chải và ghế xung quanh."},
+   {"name": "BELL_TOWER", "action": "tight", "box": [298, 162, 398, 392], "confirmed": true,
+    "reason": "Khung sát tháp chuông ở xa, bỏ phần mái nhà và mây xung quanh."},
    {"name": "WRONG_DETAIL", "action": "drop",
     "reason": "Chi tiết này không có trong vùng tranh như lời dẫn nêu."}]}
 ```
 
-- `wants`: one entry for each wanted picture. `pick`: the **number** of a candidate on that picture's own sheet, **`"B<number>"`** for a picture of the owner's books, or **`null`** when none is right. `reason`: one short Vietnamese sentence: why this picture shows what the line says, or why none does.
+- `wants`: one entry for each wanted picture. For each selected subject-bound picture include `"shows_subject": true` after checking the image and its record, and for a subject-bound context picture include `"period_picture": true` (or `"period_picture": false, "no_period_picture": true` when choosing a modern photograph after confirming no usable period picture exists). `pick`: the **number** of a candidate on that picture's own sheet, **`"B<number>"`** for a picture of the owner's books, or **`null`** when none is right. `reason`: one short Vietnamese sentence: why this picture shows what the line says, or why none does.
 - `regions`: one entry for each region in `inputs/regions.json`. `action`: `"tight"` (with cut-out pixel `box` `[x0, y0, x1, y1]`, and `"confirmed": true` after checking `look/check_*.jpg`), `"wider"` (once, with Vietnamese `reason`), or `"drop"` (with Vietnamese `reason`).
 
 ## 5. The two helper commands

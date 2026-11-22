@@ -517,3 +517,51 @@ def test_a_map_want_that_names_places_is_searched_by_the_first_one_and_never_fai
     assert [q for q, k, n in osm.searches] == ["Lyon, France"] and w["status"] == "found" and w["places"] == ["Lyon, France", "Lübeck, Germany"] and w["kinds"] == ["outside", "journey"]
     nameless = {"id": "b0008.3", "beat": "b0008", "n": 3, "type": "map", "places": ["Lyon, France"]}
     assert asearch._new_want(nameless)["what"] == "Lyon, France"
+
+
+def test_subject_search_uses_modern_photos_only_if_period_search_has_no_candidates(env, monkeypatch):
+    period = FakeSource("commons", [])
+    modern = FakeSource("pexels", [meta("pexels", "p1", "Modern city", "bruges")])
+    install_sources(monkeypatch, {"commons": period, "pexels": modern}, keys=("pexels",))
+    subject_want = want(kind="place", period="then", entity="city", entity_name="Bruges", alt=[])
+    state, _ = run_search(env, [subject_want], wiki_search=lambda *a, **kw: {"candidates": []})
+    assert state["wants"]["b0001.1"]["candidates"][0]["source"] == "pexels"
+    period.items = [meta("commons", "File:a.jpg", "Old city", "bruges")]
+    modern.searches.clear()
+    state, _ = run_search(env, [subject_want], wiki_search=lambda *a, **kw: {"candidates": []})
+    assert modern.searches == []
+
+
+def test_modern_retry_is_only_for_subjects_whose_period_candidates_were_rejected(env, monkeypatch):
+    modern = FakeSource("pexels", [meta("pexels", "p1", "Modern city", "bruges")])
+    install_sources(monkeypatch, {"commons": FakeSource("commons"), "pexels": modern}, keys=("pexels",))
+    wants = [want(kind="place", period="then", entity="city", entity_name="Bruges", alt=[])]
+    selection = {"wants": {"b0001.1": {"pick": None, "reason": "Không rõ."}}}
+    retry = asearch.modern_after_rejection(env.pdir, wants, selection, main_key="A", cancelled=lambda: False,
+                                            fetch_thumb=fake_thumb, clock=time.time)
+    assert retry["wants"]["b0001.1"]["candidates"][0]["source"] == "pexels"
+    modern.searches.clear()
+    selection["wants"]["b0001.1"]["pick"] = ("c", 1)
+    retry = asearch.modern_after_rejection(env.pdir, wants, selection, main_key="A", cancelled=lambda: False,
+                                            fetch_thumb=fake_thumb, clock=time.time)
+    assert not retry["wants"] and not modern.searches
+
+
+def test_period_search_with_a_limited_source_is_marked_incomplete_even_if_candidates_exist(env, monkeypatch):
+    limited = mhttp.MediaHTTPError('HTTP 429', 429, retry_after=120)
+    commons = FakeSource('commons', [meta('commons', 'File:a.jpg', 'Period portrait', 'portrait')])
+    met = FakeSource('met', fail=limited)
+    install_sources(monkeypatch, {'commons': commons, 'met': met}, keys=())
+    subject_want = want(kind='portrait', search='portrait', alt=[], period='then', entity='artist', entity_name='Artist')
+    state, _ = run_search(env, [subject_want], wiki_search=lambda *a, **kw: {'items': [], 'errors': []})
+    row = state['wants']['b0001.1']
+    assert row['candidates']
+    assert row['period_incomplete'] is True
+
+
+def test_modern_retry_does_not_run_when_period_search_was_incomplete():
+    subject = want(kind='portrait', period='then', entity='artist', entity_name='Artist')
+    state = {'wants': {'b0001.1': {'period_incomplete': True}}}
+    assert asearch.modern_retry_wants([subject], state) == []
+    state['wants']['b0001.1']['period_incomplete'] = False
+    assert asearch.modern_retry_wants([subject], state) == [subject]

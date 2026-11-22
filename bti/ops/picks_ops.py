@@ -46,6 +46,15 @@ CAST_ENTRY = S.plain_object({
     required=["name", "also", "line", "where", "sure", "words"], title="one named figure")
 CAST = S.array(CAST_ENTRY, "Replace the cast entries for this line; other lines are kept.", max_items=100)
 
+
+SUBJECT_ID = S.string("A stable subject id.", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$")
+SUBJECT = S.plain_object({"id": SUBJECT_ID, "kind": S.string(enum=["person", "thing", "place", "work", "idea", "text"]),
+    "name": S.string(min_length=1, max_length=160), "also": S.array(S.string(min_length=1, max_length=160), max_items=30), "sub": S.string(max_length=400), "strip": S.boolean(),
+    "where": S.any_of(CAST_WHERE, {"type": "null"})},
+    required=["id", "kind", "name", "strip", "where"], title="a subject")
+ABOUT = S.array(S.plain_object({"id": SUBJECT_ID, "words": S.string(min_length=1, max_length=400)},
+    required=["id", "words"], title="a subject and its spoken words"), "Subjects in spoken order.", max_items=100)
+
 ITEM = S.plain_object({
     "asset": ASSET,
     "region": S.string("A region of that asset to show, or null for the whole picture.", pattern=REGION["pattern"], nullable=True,
@@ -142,6 +151,60 @@ def _say_beat(ctx, bid: str, variant: str = "default", **vars) -> None:
 
 
 # ---------------------------------------------------------------- operations
+@op("picks", "set_subjects", summary="Replace the project's subject table.",
+    schema=S.obj("set_subjects", ["subjects"], {"subjects": S.array(SUBJECT, max_items=1000)}),
+    example={"op": "set_subjects", "subjects": [{"id": "memory", "kind": "idea", "name": "memory", "strip": False, "where": None}]},
+    sentences="Đã đổi danh sách đối tượng")
+def set_subjects(ctx, o):
+    ctx.whole_document("set_subjects")
+    rows = []
+    seen = set()
+    for i, subject in enumerate(o["subjects"]):
+        row = dict(subject)
+        if row["id"] in seen:
+            ctx.bad("subjects[%d].id" % i, "the id is repeated")
+        seen.add(row["id"])
+        if row["kind"] in ("idea", "text") and row["strip"]:
+            ctx.bad("subjects[%d].strip" % i, "ideas and texts do not have a strip")
+        if not row["name"].strip():
+            ctx.bad("subjects[%d].name" % i, "the name cannot be blank")
+        if "also" in row:
+            if any(not a.strip() for a in row["also"]):
+                ctx.bad("subjects[%d].also" % i, "each alternate name must be non-empty")
+            row["also"] = list(row["also"])
+        where = row["where"]
+        if where is None:
+            pass
+        elif set(where) == {"region"}:
+            main = ctx.doc.get("main_asset")
+            if where["region"] not in ((ctx.doc.get("assets", {}).get(main) or {}).get("regions") or {}):
+                ctx.bad("subjects[%d].where.region" % i, "no such region on the main painting")
+        elif set(where) == {"asset"}:
+            row["where"] = {"asset": _asset(ctx, where["asset"], "subjects[%d].where.asset" % i)}
+        else:
+            ctx.bad("subjects[%d].where" % i, "give exactly one region or asset")
+        rows.append(row)
+    ctx.touch("subjects")
+    ctx.doc["subjects"] = rows
+    ctx.say({"part": "subjects"})
+
+
+@op("picks", "set_about", summary="Set the subjects of a narration line in spoken order.",
+    schema=S.obj("set_about", ["beat", "about"], {"beat": BEAT, "about": ABOUT}),
+    example={"op": "set_about", "beat": "b0001", "about": []},
+    sentences="Đoạn {n}: đã đổi đối tượng")
+def set_about(ctx, o):
+    bid = _beat(ctx, o["beat"])
+    known = {s["id"] for s in ctx.doc.get("subjects") or []}
+    for i, row in enumerate(o["about"]):
+        if row["id"] not in known:
+            ctx.bad("about[%d].id" % i, "no such subject")
+        if not row["words"].strip():
+            ctx.bad("about[%d].words" % i, "words cannot be blank")
+    ctx.touch("beat:" + bid)
+    _entry(ctx, bid)["about"] = [dict(row) for row in o["about"]]
+    _say_beat(ctx, bid)
+
 @op("picks", "set_main",
     summary="Choose the main picture (the whole painting) of the video.",
     schema=S.obj("set_main", ["asset"], {"asset": ASSET}),

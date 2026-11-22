@@ -27,9 +27,9 @@ This project already has **{{N_REGIONS}} non-tight regions** on the main paintin
 ```json
 {"schema": "bti.picks.tighten/1",
  "regions": [
-   {"name": "CHAIR_SAINT", "action": "tight", "box": [298, 162, 398, 392],
-    "thing": "carved woman standing on a dragon", "confirmed": true,
-    "reason": "Khung ôm sát tượng nhỏ khắc trên thành ghế."},
+   {"name": "BELL_TOWER", "action": "tight", "box": [298, 162, 398, 392],
+    "thing": "stone bell tower above village roofs", "confirmed": true,
+    "reason": "Khung ôm sát tháp chuông đá trên nền trời."},
    {"name": "GHOST", "action": "drop",
     "reason": "Không tìm thấy chi tiết này trong vùng tranh cũ."}]}
 ```
