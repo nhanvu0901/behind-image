@@ -240,6 +240,25 @@ def normalize(d: Any) -> dict:
     return result
 
 
+def subject_view(d: dict) -> tuple[list[dict], dict[str, list[dict]]]:
+    """Read modern subjects or adapt an old first-presentation cast without rewriting it."""
+    if isinstance(d.get("subjects"), list):
+        return ([{**copy.deepcopy(subject), "also": copy.deepcopy(subject.get("also") or [])} for subject in d["subjects"] if isinstance(subject, dict)], {bid: copy.deepcopy(beat["about"])
+                for bid, beat in (d.get("beats") or {}).items()
+                if isinstance(beat, dict) and isinstance(beat.get("about"), list)})
+    subjects, about = [], {}
+    for i, row in enumerate(d.get("names") or [], 1):
+        if not isinstance(row, dict) or not isinstance(row.get("name"), str) or not isinstance(row.get("line"), str):
+            continue
+        sid = "legacy_%d" % i
+        subject = {"id": sid, "kind": "person", "name": row["name"], "also": copy.deepcopy(row.get("also") or []), "strip": True, "where": copy.deepcopy(row.get("where"))}
+        if not row.get("sure") and row.get("words"):
+            subject["sub"] = row["words"]
+        subjects.append(subject)
+        about.setdefault(row["line"], []).append({"id": sid, "words": row["name"]})
+    return subjects, about
+
+
 def doc_problem(d: Any) -> str | None:
     """None when `d`, sent by a client, has the right shape; else what is wrong. Strict: nothing is coerced."""
     if not isinstance(d, dict):
@@ -273,14 +292,13 @@ def doc_problem(d: Any) -> str | None:
                 return f"picks.subjects[{i}] must be an object"
             sid, kind, name, where = (subject.get(k) for k in ("id", "kind", "name", "where"))
             if not (isinstance(sid, str) and sid.strip() and sid not in subject_ids
-                    and kind in ("person", "thing", "place", "work", "idea")
+                    and kind in ("person", "thing", "place", "work", "idea", "text")
                     and isinstance(name, str) and name.strip() and isinstance(subject.get("strip"), bool)
-                    and ("sub" not in subject or isinstance(subject["sub"], str))):
+                    and ("sub" not in subject or isinstance(subject["sub"], str))
+                    and ("also" not in subject or (isinstance(subject["also"], list) and all(isinstance(a, str) and a.strip() for a in subject["also"])))
+                    and (kind not in ("idea", "text") or not subject["strip"])):
                 return f"picks.subjects[{i}] needs a unique id, kind, name and strip"
-            if where is None:
-                if kind != "idea":
-                    return f"picks.subjects[{i}].where may be null only for an idea"
-            elif not (isinstance(where, dict) and len(where) == 1 and next(iter(where), None) in ("region", "asset")
+            if where is not None and not (isinstance(where, dict) and len(where) == 1 and next(iter(where), None) in ("region", "asset")
                       and isinstance(next(iter(where.values()), None), str) and next(iter(where.values())).strip()):
                 return f"picks.subjects[{i}].where must name one region or asset"
             subject_ids.add(sid)
@@ -325,7 +343,7 @@ def doc_problem(d: Any) -> str | None:
             return f"picks.beats.{bid}.note must be a string"
         if "about" in b:
             about = b["about"]
-            if not isinstance(about, list) or any(not isinstance(a, dict) or a.get("id") not in subject_ids
+            if not isinstance(about, list) or any(not isinstance(a, dict) or not isinstance(a.get("id"), str) or a.get("id") not in subject_ids
                     or not isinstance(a.get("words"), str) or not a["words"].strip() for a in about):
                 return f"picks.beats.{bid}.about must list known subjects and their spoken words"
         kinds = b.get("kinds")
@@ -560,7 +578,9 @@ def outside_without_picture(d: dict, bid: str) -> bool:
     if not b or b.get("status") == "skip" or not set(b.get("kinds") or ()) & set(OUTSIDE_KINDS):
         return False
     main = d.get("main_asset")
-    return all(i["asset"] == main for i in b["items"])
+    if all(i["asset"] == main for i in b["items"]):
+        return True
+    return isinstance(d.get("subjects"), list) and bool(b.get("missing"))
 
 
 def outside_summary(d: dict | None, beat_ids: list[str] | None = None) -> dict:

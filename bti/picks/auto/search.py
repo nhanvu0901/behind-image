@@ -104,13 +104,13 @@ def new_state() -> dict:
 
 def entity_of(want: dict) -> str:
     """The name under which an encyclopedia knows the thing a context want is about (`entity` of the plan; empty in a plan that has none)."""
-    return " ".join(str(want.get("entity") or "").split())
+    return " ".join(str(want.get("entity_name") or want.get("entity") or "").split())
 
 
 def _new_want(w: dict) -> dict:
     return {"id": w["id"], "beat": w["beat"], "n": w["n"], "type": w["type"], "kind": w.get("kind"), "what": w.get("what") or place_of(w),
             "queries": queries_for(w), "entity": entity_of(w), "period": w.get("period") or "then", "kinds": list(w.get("kinds") or []),
-            "places": list(w.get("places") or []), "wider": list(w.get("wider") or []),
+            "places": list(w.get("places") or []), "wider": list(w.get("wider") or []), **({"aspect": w["aspect"]} if w.get("aspect") else {}),
             "status": "pending", "code": None, "source": None, "seconds": None, "detail": "", "candidates": []}
 
 
@@ -395,6 +395,15 @@ def search_want(pdir: Path, want: dict, state: dict, *, main_key: str, search, f
         if cancelled():
             return
         web_ask(pdir, w, state, web, w["queries"][0], ask_take=ask.take, clock=clock, skipped=skipped)
+    period_incomplete = bool(skipped or failed)
+    if (want.get("entity_name") and want.get("type") == "context" and want.get("period", "then") == "then"
+            and not any(by_source.values()) and not skipped and not failed and w["queries"]):
+        # Only a clean empty period search can open the modern-photo fallback.
+        for source in ("pexels", "pixabay"):
+            if env.has_key(KEYED[source]):
+                ask(source, w["queries"][0], FIRST_LIMIT)
+        if any(by_source.get(source) for source in ("pexels", "pixabay")):
+            w["modern_fallback"] = True
     by_source = _order(by_source)
     extra = any(k in by_source for k in ("wikipedia", "web"))
     cap = PER_WANT_WEB if extra else PER_WANT
@@ -405,6 +414,8 @@ def search_want(pdir: Path, want: dict, state: dict, *, main_key: str, search, f
     if cancelled():
         return
     finish_want(w, chosen, by_source=by_source, skipped=skipped, failed=failed, no_thumb=no_thumb)
+    if want.get("entity_name") and want.get("type") == "context" and want.get("period", "then") == "then":
+        w["period_incomplete"] = period_incomplete or bool(no_thumb and not w.get("modern_fallback"))
     if w.get("web_short") and not chosen:
         w["code"] = "web_budget"
 
@@ -449,6 +460,41 @@ def run(pdir: Path, plan: dict, state: dict | None, wants: list[dict], *, main_k
         save(st)
     save(st)
     return st
+
+
+def modern_retry_wants(wants: list[dict], state: dict) -> list[dict]:
+    """A source failure or unavailable thumbnail is not proof that period pictures do not exist."""
+    rows = state.get("wants") or {}
+    return [want for want in wants if want.get("entity_name") and want["id"] in rows
+            and not rows[want["id"]].get("modern_fallback") and not rows[want["id"]].get("period_incomplete", True)]
+
+
+def modern_after_rejection(pdir: Path, wants: list[dict], choice: dict, *, main_key: str, cancelled, fetch_thumb, clock,
+                           search=None) -> dict:
+    """Search modern photographs only after the chooser rejected a subject's period candidates."""
+    result = new_state()
+    search = search or service.search
+    for want in wants:
+        selected = (choice.get("wants") or {}).get(want["id"])
+        if not (want.get("type") == "context" and want.get("entity_name") and selected is not None and selected.get("pick") is None):
+            continue
+        if cancelled():
+            break
+        modern = {**want, "kind": "photo", "period": "now"}
+        row = _new_want(modern)
+        result["wants"][want["id"]] = row
+        ask, by_source, _, skipped, failed = make_asker(pdir, modern, result, main_key=main_key, search=search,
+                                                         clock=clock, cancelled=cancelled, round_no=2)
+        for source in ("pexels", "pixabay"):
+            if env.has_key(KEYED[source]):
+                ask(source, modern["search"], FIRST_LIMIT)
+        pool = _interleave(_order(by_source), PER_WANT)
+        candidates, no_thumb = pick_with_thumbs(pdir, modern, pool, PER_WANT, fetch_thumb=fetch_thumb,
+                                                 limited=result["limited"], clock=clock, cancelled=cancelled)
+        finish_want(row, candidates, by_source=by_source, skipped=skipped, failed=failed, no_thumb=no_thumb)
+        row["modern_fallback"] = True
+    result["wants"] = {wid: row for wid, row in result["wants"].items() if row.get("candidates")}
+    return result
 
 
 # ---------------------------------------------------------------------------------------------------------------- the owner's books

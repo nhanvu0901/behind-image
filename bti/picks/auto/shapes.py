@@ -21,7 +21,7 @@ The plan (`bti.picks.plan/1`):
                          {"type": "detail", "region": "HEAD"},
                          {"type": "context", "search": "english words", "alt": ["other words"], "kind": "portrait", "entity": "Philip the Good",
                           "period": "then", "what": "<what it should show, Vietnamese>"},
-                         {"type": "map", "places": ["Lübeck, Germany", "Bruges, Belgium"], "what": "..."},
+                         {"type": "map", "places": ["Florence, Italy", "Rome, Italy"], "what": "..."},
                          {"type": "clip", "search": "english words", "what": "...", "seconds": 6}],
                 "fallback": {"type": "detail", "region": "HEAD"}}]}
 
@@ -214,6 +214,7 @@ class PlanCtx:
     painting_title: str = ""
     existing_names: list = field(default_factory=list)
     require_names: bool = False
+    existing_subjects: list = field(default_factory=list)
     line_texts: dict = field(default_factory=dict)      # beat id -> English/Vietnamese line text (used to verify "X and Y" in `thing`)
 
     def __post_init__(self):
@@ -222,7 +223,7 @@ class PlanCtx:
 
     def to_json(self) -> dict:
         out = {"beats": self.beats, "targets": self.targets, "existing_regions": self.existing_regions,
-               "painting_title": self.painting_title, "existing_names": self.existing_names, "require_names": self.require_names}
+               "painting_title": self.painting_title, "existing_names": self.existing_names, "require_names": self.require_names, "existing_subjects": self.existing_subjects}
         if self.line_texts:
             out["line_texts"] = dict(self.line_texts)
         return out
@@ -232,7 +233,7 @@ class PlanCtx:
         return cls(beats=list(d.get("beats") or []), targets=list(d.get("targets") or []),
                    existing_regions={k: list(v) for k, v in (d.get("existing_regions") or {}).items()},
                    painting_title=str(d.get("painting_title") or ""), existing_names=list(d.get("existing_names") or []), require_names=d.get("require_names") is True,
-                   line_texts={str(k): str(v) for k, v in (d.get("line_texts") or {}).items()})
+                   line_texts={str(k): str(v) for k, v in (d.get("line_texts") or {}).items()}, existing_subjects=list(d.get("existing_subjects") or []))
 
 
 def _text(v: Any, lo: int, hi: int) -> str | None:
@@ -285,7 +286,7 @@ def clean_thing(raw: Any, where: str, line_texts: list[str] | None = None, *, ch
     """Check `thing` (2 to 8 English words naming the ONE thing a region points at)."""
     s = _text(raw, 2, THING_MAX)
     if s is None:
-        return None, "%s: `thing` must be 2 to 8 English words naming the one thing the region shows (for example \"convex mirror on back wall\") [thing_missing]" % where
+        return None, "%s: `thing` must be 2 to 8 English words naming the one thing the region shows (for example \"stone bridge over river\") [thing_missing]" % where
     if _vietnamese(s):
         return None, "%s: `thing` (%r) must be written in English (use the narration's English words; keep Vietnamese in `what`) [thing_not_english]" % (where, s[:50])
     words = _THING_WORD_RE.findall(s)
@@ -340,7 +341,7 @@ def _clean_wider(raw: Any, where: str, painting_title: str, errors: list) -> lis
     return out if len(out) == len(raw) else None
 
 
-def _item(it: Any, where: str, regions: dict, errors: list, notes: list, painting_title: str = "") -> dict | None:
+def _item(it: Any, where: str, regions: dict, errors: list, notes: list, painting_title: str = "", subject_ids: set[str] | None = None) -> dict | None:
     if not isinstance(it, dict):
         errors.append("%s must be an object like {\"type\": \"whole\"}" % where)
         return None
@@ -387,7 +388,7 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list, paintin
                 alts = alts[:MAX_ALT]
         entity = None
         if it.get("entity") is not None:
-            entity = _text(it.get("entity"), 2, 120)
+            entity = _text(it.get("entity"), 1 if subject_ids is not None and isinstance(it.get("entity"), str) and it["entity"] in subject_ids else 2, 120)
             if entity is None:
                 errors.append("%s: `entity` must be the name under which an encyclopedia knows the thing (\"Philip the Good\", \"Noyon Cathedral\"), 2 to 120 characters" % where)
         period = it.get("period", DEFAULT_PERIOD)
@@ -400,6 +401,8 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list, paintin
         out = {"type": "context", "search": search, "alt": alts, "kind": kind_of, "what": _short(what, WHAT_MAX), "period": period}
         if entity:
             out["entity"] = entity
+        if isinstance(it.get("aspect"), str) and it["aspect"].strip():
+            out["aspect"] = it["aspect"].strip()
         if wider:
             out["wider"] = wider
         return out
@@ -408,7 +411,7 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list, paintin
         if raw_places is None and it.get("place") is not None:
             raw_places = [it.get("place")]                       # a plan made before `places` existed
         if not isinstance(raw_places, list) or not raw_places or len(raw_places) > MAX_PLACES:
-            errors.append("%s: `places` must be a list of 1 to %d place names, each with its country (for example [\"Lübeck, Germany\", \"Bruges, Belgium\"])"
+            errors.append("%s: `places` must be a list of 1 to %d place names, each with its country (for example [\"Florence, Italy\", \"Rome, Italy\"])"
                           % (where, MAX_PLACES))
             return None
         places = []
@@ -420,7 +423,7 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list, paintin
             if name not in places:
                 places.append(name)
         what = _text(it.get("what"), 2, WHAT_MAX + 80) or ("Bản đồ " + ", ".join(places[:3]))
-        return {"type": "map", "place": places[0], "places": places, "what": _short(what, WHAT_MAX)}       # `place` stays: the map search reads it
+        return {"type": "map", "place": places[0], "places": places, "what": _short(what, WHAT_MAX), **({"entity": it["entity"]} if isinstance(it.get("entity"), str) else {}), **({"aspect": it["aspect"].strip()} if isinstance(it.get("aspect"), str) and it["aspect"].strip() else {})}       # `place` stays: the map search reads it
     # clip
     search = _text(it.get("search"), 3, 120)
     what = _text(it.get("what"), 3, WHAT_MAX + 80)
@@ -438,7 +441,7 @@ def _item(it: Any, where: str, regions: dict, errors: list, notes: list, paintin
         fixed = min(CLIP_SECONDS[1], max(CLIP_SECONDS[0], float(sec)))
         notes.append("%s: a clip lasts 4 to 10 seconds, so %g s becomes %g s" % (where, float(sec), fixed))
         sec = fixed
-    return {"type": "clip", "search": search, "what": _short(what, WHAT_MAX), "seconds": float(sec)}
+    return {"type": "clip", "search": search, "what": _short(what, WHAT_MAX), "seconds": float(sec), **({"entity": it["entity"]} if isinstance(it.get("entity"), str) else {}), **({"aspect": it["aspect"].strip()} if isinstance(it.get("aspect"), str) and it["aspect"].strip() else {})}
 
 
 # ---------------------------------------------------------------------------------------------------------------- what each kind of line must ask for
@@ -447,7 +450,7 @@ KIND_TABLE = {
     "detail": ("points at a thing that is in the painting", "a `detail` item"),
     "whole": ("speaks of the painting as one object (its date, its size, where it hangs, its fate)", "a `whole` item"),
     "outside": ("is about a person, a place, an object, an event or a custom that is NOT in the painting",
-                "at least one `context` (or `clip`) item, and a line-level `fallback` (a `detail` or `whole` item shown when nothing is found)"),
+                "one subject picture, or reuse an earlier picture of that subject; a new search has a line-level `fallback`"),
     "compare": ("sets the painting or one detail beside another work", "a `context` item of kind `work` and a `detail` or `whole` item"),
     "journey": ("is about a movement or a tie between two or more places", "a `map` item with `places` (two or more names)"),
     "dates": ("gives three or more dated events of one story", "a `detail` or `whole` item (the storyboard adds the time axis)"),
@@ -457,7 +460,7 @@ KIND_TABLE = {
     "relations": ("ties three or more people together (family, patrons)", "a `detail`, `whole` or `context` item"),
     "idea": ("gives a reading or an opinion that no picture can show", "a `detail` or `whole` item"),
 }
-CONTEXT_ITEM = '{"type": "context", "search": "<the thing and what sort of picture>", "entity": "<its name>", "period": "then", "kind": %s, "what": "<Vietnamese>"}'
+CONTEXT_ITEM = '{"type": "context", "search": "<the thing and what sort of picture>", "entity": "<subject id>", "period": "then", "kind": %s, "what": "<Vietnamese>"}'
 DETAIL_ITEM = '{"type": "detail", "region": "<NAME>"}'
 FALLBACK_ITEM = '"fallback": {"type": "whole"} (or {"type": "detail", "region": "<NAME>"} for the part of the painting nearest to what the line says)'
 CODES_OF_KINDS = ("kinds_missing", "kinds_shape", "kinds_unknown", "kinds_too_many", "kinds_repeated", "outside_only_painting", "outside_no_fallback",
@@ -522,7 +525,7 @@ def kind_problems(kinds: list[str], show: list[dict], fallback: dict | None, whe
         for n, m in maps:
             if len(m["places"]) < 2:
                 out.append("%s.show[%d]: the map of a \"journey\" needs two or more names in `places` and this one has %d (%s). Give the places the line moves between "
-                           "or ties together, each with its country (\"Lübeck, Germany\", \"Bruges, Belgium\"); one place is not a journey [journey_one_place]"
+                           "or ties together, each with its country (\"Florence, Italy\", \"Rome, Italy\"); one place is not a journey [journey_one_place]"
                            % (where, n, len(m["places"]), m["places"][0]))
     elif maps:
         n = maps[0][0]
@@ -684,6 +687,100 @@ def _cast_names(raw, lines, ctx, errors):
         result.append({"name": name, "also": also, "line": bid, "where": dict(place), "sure": sure, "words": words})
     return result
 
+def _subjects(raw, raw_lines, known, ctx, errors):
+    """Validate the subject table and each line's exact spoken references."""
+    if not isinstance(raw, list):
+        errors.append("`subjects` must be a list")
+        return None
+    subjects, ids = [], set()
+    for i, row in enumerate(raw):
+        at = "subjects[%d]" % i
+        if not isinstance(row, dict):
+            errors.append(at + ": expected an object")
+            continue
+        sid, kind, name, where = (row.get(k) for k in ("id", "kind", "name", "where"))
+        if not (isinstance(sid, str) and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,39}", sid) and sid not in ids
+                and kind in ("person", "thing", "place", "work", "idea", "text") and isinstance(name, str) and name.strip()
+                and isinstance(row.get("strip"), bool) and (kind not in ("idea", "text") or not row["strip"])
+                and ("also" not in row or (isinstance(row["also"], list) and all(isinstance(a, str) and a.strip() for a in row["also"])))
+                and ("sub" not in row or isinstance(row["sub"], str))):
+            errors.append(at + ": give a unique id, kind, name, strip and where")
+            continue
+        ids.add(sid)
+        if where is None:
+            pass
+        elif isinstance(where, dict) and set(where) == {"region"} and isinstance(where["region"], str) and where["region"] in known:
+            pass
+        elif isinstance(where, dict) and set(where) == {"asset"} and any(isinstance(x, dict) and x.get("id") == sid and x.get("where") == where for x in ctx.existing_subjects):
+            pass
+        elif isinstance(where, dict) and set(where) == {"want"} and isinstance(where["want"], str):
+            found = any(where["want"] == "%s.%d" % (ln.get("beat"), n) and isinstance(item, dict)
+                        and item.get("type") in ("context", "map", "clip") and item.get("entity") == sid
+                        for ln in raw_lines if isinstance(ln, dict) for n, item in enumerate(ln.get("show") if isinstance(ln.get("show"), list) else [], 1))
+            if not found:
+                errors.append(at + ": where.want must name a requested picture for this subject")
+        else:
+            errors.append(at + ": where must be a painting region, requested picture, or null for a missing picture")
+        subjects.append(dict(row))
+    by_id = {row["id"]: row for row in subjects}
+    primary_seen = set()
+    aspects = set()
+    for line in raw_lines:
+        if not isinstance(line, dict) or not isinstance(line.get("show"), list):
+            continue
+        for n, item in enumerate(line["show"], 1):
+            if not isinstance(item, dict) or item.get("type") not in ("context", "map", "clip"):
+                continue
+            sid = item.get("entity")
+            subject = by_id.get(sid) if isinstance(sid, str) else None
+            wid = "%s.%d" % (line.get("beat"), n)
+            if subject is None:
+                errors.append("%s: each want must name a subject id in entity" % wid)
+            else:
+                is_primary = sid not in primary_seen and subject.get("where") == {"want": wid}
+                aspect = item.get("aspect")
+                text = " ".join(ctx.line_texts.get(line.get("beat"), "").split()).casefold()
+                if is_primary:
+                    primary_seen.add(sid)
+                else:
+                    norm_aspect = " ".join(aspect.split()).casefold() if isinstance(aspect, str) else ""
+                    if not (norm_aspect and text and norm_aspect in text and (sid, norm_aspect) not in aspects):
+                        errors.append("%s: another picture needs a different aspect stated in the line" % wid)
+                    else:
+                        aspects.add((sid, norm_aspect))
+                if item.get("type") == "map" and subject["kind"] != "place":
+                    errors.append("%s: a map must be bound to a place or route subject" % wid)
+                if item.get("type") == "context":
+                    if item.get("wider"):
+                        errors.append("%s: do not search wider for a different subject; use alternate queries for this subject" % wid)
+                    allowed = {"person": {"portrait"}, "work": {"work"}, "place": {"place"},
+                               "thing": {"object", "document"}, "idea": {"work", "document", "object"}, "text": {"document"}}
+                    if item.get("kind") not in allowed[subject["kind"]]:
+                        errors.append("%s: search kind does not match the subject kind" % wid)
+                    if item.get("period", "then") != "then":
+                        errors.append("%s: search the period first; consider a modern photograph only if no period picture is usable" % wid)
+    for line in raw_lines:
+        if not isinstance(line, dict):
+            continue
+        bid, about = line.get("beat"), line.get("about")
+        if not isinstance(about, list):
+            errors.append("line %s: `about` must be a list" % bid)
+            continue
+        text = " ".join(ctx.line_texts.get(bid, "").split()).casefold()
+        for mention in about:
+            if not (isinstance(mention, dict) and isinstance(mention.get("id"), str) and mention.get("id") in ids and isinstance(mention.get("words"), str)
+                    and mention["words"].strip() and (not text or " ".join(mention["words"].split()).casefold() in text)):
+                errors.append("line %s: about must name a known subject and its exact spoken words" % bid)
+        if len(about) == 1 and isinstance(about[0], dict):
+            subject = next((x for x in subjects if x["id"] == about[0].get("id")), None)
+            fallback = line.get("fallback")
+            if subject and isinstance(fallback, dict) and subject["kind"] not in ("idea", "text") and isinstance(subject.get("where"), dict):
+                region = subject["where"].get("region")
+                if region and fallback != {"type": "detail", "region": region}:
+                    errors.append("line %s: fallback must show the subject's own region" % bid)
+    return subjects
+
+
 def check_plan(obj: Any, ctx: PlanCtx) -> Report:
     """Check a decoded `out/plan.json` against the narration lines of this job. The returned `value` is the plan with the rules applied."""
     rep = Report()
@@ -739,6 +836,7 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
                 err.append(and_err)
         err.append("`lines` must be a list with one entry for every line you must cover")
         return rep
+    subjects = _subjects(obj["subjects"], raw_lines, known, ctx, err) if "subjects" in obj else None
     target_set = set(ctx.targets)
     seen: dict[str, dict] = {}
     no_kinds: list[str] = []                                     # lines that left `kinds` out, listed in one sentence
@@ -775,7 +873,8 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
         n_before = len(err)
         items: list[dict] = []
         for n, it in enumerate(show_raw):
-            got = _item(it, "%s.show[%d]" % (where, n), known, err, notes, painting_title=ctx.painting_title)
+            got = _item(it, "%s.show[%d]" % (where, n), known, err, notes, painting_title=ctx.painting_title,
+                        subject_ids={subject["id"] for subject in subjects} if subjects is not None else None)
             if got is None:
                 continue
             if got in items:
@@ -792,10 +891,45 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
                 err.append(problem)
         sound = len(err) == n_before
         if kinds and sound:                                      # the pictures are only compared with the kinds when each of them is sound by itself
-            err.extend(kind_problems(kinds, items, fallback, where))
+            problems = kind_problems(kinds, items, fallback, where)
+            if subjects is not None:
+                problems = [problem for problem in problems if "[wider_missing]" not in problem]
+            if subjects is not None and not items:
+                by_id = {subject["id"]: subject for subject in subjects}
+                order = {beat: index for index, beat in enumerate(ctx.targets)}
+                mentions = ln.get("about") if isinstance(ln.get("about"), list) else []
+                reusable_outside = []
+                reusable_any = []
+                for mention in mentions:
+                    if not isinstance(mention, dict):
+                        continue
+                    subject = by_id.get(mention.get("id")) or {}
+                    if subject and subject.get("where") is None and subject.get("kind") not in ("idea", "text"):
+                        reusable_outside.append({})
+                        reusable_any.append({})
+                        continue
+                    place = subject.get("where") or {}
+                    if not isinstance(place, dict):
+                        continue
+                    want_id = place.get("want")
+                    if "region" in place:
+                        reusable_any.append(place)
+                    elif "asset" in place or (isinstance(want_id, str) and order.get(want_id.rsplit(".", 1)[0], len(order)) < order[bid]):
+                        reusable_outside.append(place)
+                        reusable_any.append(place)
+                if reusable_outside:
+                    problems = [problem for problem in problems if "[outside_only_painting]" not in problem and "[outside_no_fallback]" not in problem]
+                    map_wants = {"%s.%d" % (row.get("beat"), n) for row in raw_lines if isinstance(row, dict)
+                                 for n, item in enumerate(row.get("show") if isinstance(row.get("show"), list) else [], 1)
+                                 if isinstance(item, dict) and item.get("type") == "map"}
+                    if any(place.get("want") in map_wants for place in reusable_outside):
+                        problems = [problem for problem in problems if "[journey_no_map]" not in problem]
+                if reusable_any:
+                    problems = [problem for problem in problems if "[figure_no_picture]" not in problem]
+            err.extend(problems)
         if kinds and sound:
             judged[bid] = (where, len(items))
-        seen[bid] = {"beat": bid, "reason": reason, "kinds": kinds or [], "show": items, **({"fallback": fallback} if fallback else {})}
+        seen[bid] = {"beat": bid, "reason": reason, "kinds": kinds or [], "show": items, **({"fallback": fallback} if fallback else {}), **({"about": ln["about"]} if subjects is not None and isinstance(ln.get("about"), list) else {})}
     asked = sum(1 for ln in seen.values() for i in ln["show"] if i["type"] in ("context", "map", "clip"))
     if asked > MAX_WANTS:
         err.append("the plan asks for %d pictures from elsewhere (context, map, clip); ask for at most %d: a line about something outside the painting asks for its picture, "
@@ -819,24 +953,39 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
     if err:
         return rep
     lines = [seen[b] for b in ctx.targets]                # ctx.targets is in narration order
+    def subject_wants():
+        return {"%s.%d" % (line["beat"], n): item for line in lines for n, item in enumerate(line["show"], 1)
+                if item.get("type") in ("context", "map", "clip") and item.get("entity")}
+    before_clips = subject_wants() if subjects is not None else {}
     notes.extend(apply_clip_rule(lines, ctx.chapters))
+    after_clips = subject_wants() if subjects is not None else {}
+    for wid, item in before_clips.items():
+        if after_clips.get(wid) != item:
+            err.append("%s: the clip rule changed a subject picture or its want id; revise the plan to keep subject references correct" % wid)
     for ln in lines:                                             # a clip the rule took out may have been the only picture an `outside` line asked for
         where, asked_n = judged.get(ln["beat"], (None, 0))
         if where and len(ln["show"]) != asked_n:
-            err.extend(kind_problems(ln["kinds"], ln["show"], ln.get("fallback"), where + " after the clip rule"))
+            problems = kind_problems(ln["kinds"], ln["show"], ln.get("fallback"), where + " after the clip rule")
+            err.extend(problem for problem in problems if subjects is None or "[wider_missing]" not in problem)
     if err:
         return rep
     used = {i["region"] for ln in lines for i in ln["show"] + ([ln["fallback"]] if ln.get("fallback") else []) if i["type"] == "detail"}
+    if subjects is not None:
+        used.update(s["where"]["region"] for s in subjects if isinstance(s.get("where"), dict) and "region" in s["where"])
     for name in regions:
         if name not in used:
             notes.append("region %s is not used by any line, so it will not be made" % name)
-    if ctx.require_names and "names" not in obj:
-        err.append("`names` is required: list the figures to introduce, or write []")
+    if ctx.require_names and "names" not in obj and "subjects" not in obj:
+        err.append("`subjects` is required: list the narration's subjects, or write []")
     cast = _cast_names(obj.get("names"), lines, ctx, err)
     if err:
         return rep
+    if subjects is not None:
+        rep.warnings.extend("subject %s has no picture of its own" % subject["id"] for subject in subjects if subject.get("where") is None and subject["kind"] not in ("idea", "text"))
     rep.warnings.extend(pacing_warnings(lines, ctx))
     rep.value = {"schema": PLAN_SCHEMA, "regions": {n: r for n, r in regions.items() if n in used}, "lines": lines}
+    if subjects is not None:
+        rep.value["subjects"] = subjects
     if cast is not None:
         rep.value["names"] = cast
     return rep
@@ -847,11 +996,14 @@ def wants_of(plan: dict) -> list[dict]:
     """The pictures the plan asks for that must be found elsewhere (context, map, clip), numbered per line: `b0006.2` is the second
     picture of line b0006. In the order of the narration. Each carries the line's `kinds`, and a context picture its `entity` (when given) and `period`."""
     out = []
+    subject_names = {s["id"]: s["name"] for s in plan.get("subjects", [])}
     for ln in plan["lines"]:
         for n, it in enumerate(ln["show"], 1):
             if it["type"] in ("context", "map", "clip"):
                 row = {"id": "%s.%d" % (ln["beat"], n), "beat": ln["beat"], "n": n, **it, "kinds": list(ln.get("kinds") or [])}
                 if it["type"] == "context":
+                    if it.get("entity") in subject_names:
+                        row["entity_name"] = subject_names[it["entity"]]
                     row["period"] = it.get("period") or DEFAULT_PERIOD           # `entity` comes with the item when the plan gave it
                     if it.get("wider"):
                         row["wider"] = list(it["wider"])
@@ -868,9 +1020,21 @@ class ChoiceCtx:
     books: int = 0                                    # how many book pictures were shown (B1..Bn)
     regions: list = field(default_factory=list)       # the names of the boxes it was shown
     cutouts: dict = field(default_factory=dict)       # region name -> second-look cutout geometry metadata (empty in second webround)
+    subject_wants: dict = field(default_factory=dict)  # want id -> subject id, for explicit identity confirmation
+    period_wants: list = field(default_factory=list)
+    modern_wants: list = field(default_factory=list)
+    incomplete_wants: list = field(default_factory=list)
 
     def to_json(self) -> dict:
         out = {"wants": self.wants, "books": self.books, "regions": self.regions}
+        if self.subject_wants:
+            out["subject_wants"] = dict(self.subject_wants)
+        if self.period_wants:
+            out["period_wants"] = list(self.period_wants)
+        if self.modern_wants:
+            out["modern_wants"] = list(self.modern_wants)
+        if self.incomplete_wants:
+            out["incomplete_wants"] = list(self.incomplete_wants)
         if self.cutouts:
             out["cutouts"] = self.cutouts
         return out
@@ -878,7 +1042,7 @@ class ChoiceCtx:
     @classmethod
     def from_json(cls, d: dict) -> "ChoiceCtx":
         return cls(wants=dict(d.get("wants") or {}), books=int(d.get("books") or 0),
-                   regions=list(d.get("regions") or []), cutouts=dict(d.get("cutouts") or {}))
+                   regions=list(d.get("regions") or []), cutouts=dict(d.get("cutouts") or {}), subject_wants=dict(d.get("subject_wants") or {}), period_wants=list(d.get("period_wants") or []), modern_wants=list(d.get("modern_wants") or []), incomplete_wants=list(d.get("incomplete_wants") or []))
 
 
 def parse_pick(v: Any, n: int, books: int) -> tuple[tuple | None, str | None]:
@@ -928,6 +1092,14 @@ def check_choice(obj: Any, ctx: ChoiceCtx, *, ws_root: Path | None = None, state
         if problem:
             err.append("%s: pick %s" % (where, problem))
             continue
+        if wid in ctx.subject_wants and pick is not None and w.get("shows_subject") is not True:
+            err.append("%s: confirm `shows_subject: true` only after checking the picture shows subject %s" % (where, ctx.subject_wants[wid]))
+            continue
+        if wid in ctx.period_wants and pick is not None:
+            period = w.get("period_picture")
+            if not isinstance(period, bool) or (not period and w.get("no_period_picture") is not True) or (wid in ctx.modern_wants and period) or (wid in ctx.incomplete_wants and not period):
+                err.append("%s: state whether this is a period picture; for a modern photo confirm no period picture is usable" % where)
+                continue
         reason = _text(w.get("reason"), 3, REASON_MAX * 2)
         if reason is None:
             err.append("%s: `reason` must say in one short sentence why this picture shows what the line says, or why none fits (Vietnamese)" % where)
@@ -935,7 +1107,7 @@ def check_choice(obj: Any, ctx: ChoiceCtx, *, ws_root: Path | None = None, state
         if not _vietnamese(reason):
             err.append("%s: `reason` must be written in Vietnamese, with its accents (the owner reads it); it says %r" % (where, reason[:60]))
             continue
-        wants[wid] = {"pick": pick, "reason": _short(reason, REASON_MAX)}
+        wants[wid] = {"pick": pick, "reason": _short(reason, REASON_MAX), **({"shows_subject": True} if wid in ctx.subject_wants and pick is not None else {}), **({"period_picture": w["period_picture"], "no_period_picture": w.get("no_period_picture", False)} if wid in ctx.period_wants and pick is not None else {})}
     left = [w for w in ctx.wants if w not in wants]
     if left and not any("wants[" in e for e in err):
         more = " and %d more" % (len(left) - 12) if len(left) > 12 else ""

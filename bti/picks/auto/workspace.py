@@ -142,6 +142,8 @@ def _common(inp: Inputs, root: Path, mode: str, ctx_json: dict) -> dict:
             rows.append(row)
         lines.append({"id": c["id"], "title": c["title"], "role": c["role"], "lines": rows})
     narr = {"note": "Your lines are those with `target: true`. The others are not yours: they keep what they have.", "chapters": lines}
+    if isinstance(inp.picks.get("subjects"), list):
+        narr["existing_subjects"] = inp.picks["subjects"]
     if isinstance(inp.picks.get("names"), list):
         narr["existing_names"] = [n for n in inp.picks["names"] if isinstance(n, dict) and n.get("line") not in inp.targets]
     _json(root / "inputs" / "narration.json", narr)
@@ -180,7 +182,9 @@ def plan_regions_to_tighten(inp: Inputs, plan: dict) -> list[str]:
     from bti.media import contentbox as pcb
     surface = tighten.surface_box((inp.painting.width, inp.painting.height), inp.painting.content_box) if inp.painting.content_box is not None else None
     seen: list[str] = []
-    for ln in plan["lines"]:
+    subject_regions = [s["where"]["region"] for s in plan.get("subjects", []) if isinstance(s.get("where"), dict) and "region" in s["where"]]
+    lines = list(plan["lines"]) + [{"show": [{"type": "detail", "region": name}]} for name in subject_regions]
+    for ln in lines:
         for it in list(ln["show"]) + ([ln["fallback"]] if ln.get("fallback") else []):
             if it["type"] == "detail":
                 name = it["region"]
@@ -250,7 +254,15 @@ def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, 
                 "lines": lines, "line_texts": line_texts, "cutout": dest,
                 "cutout_size": list(geom["cutout_size"]), "rough_px": list(geom["rough_px"]),
             })
-    ctx = shapes.ChoiceCtx(wants={wid: len(w["candidates"]) for wid, w in shown.items()}, books=len(books), regions=used, cutouts=cutouts)
+    subject_wants = {"%s.%d" % (ln["beat"], n): item["entity"] for ln in plan["lines"]
+                     for n, item in enumerate(ln["show"], 1) if isinstance(item, dict) and item.get("entity")
+                     and any(subject.get("id") == item["entity"] for subject in plan.get("subjects", []))}
+    ctx = shapes.ChoiceCtx(wants={wid: len(w["candidates"]) for wid, w in shown.items()}, books=len(books), regions=used, cutouts=cutouts,
+                           subject_wants={wid: sid for wid, sid in subject_wants.items() if wid in shown},
+                           period_wants=[wid for wid, sid in subject_wants.items() if wid in shown and shown[wid].get("type") == "context"],
+                           modern_wants=[wid for wid in subject_wants if wid in shown and shown[wid].get("modern_fallback")
+                                         and all(c.get("source") in ("pexels", "pixabay") for c in shown[wid]["candidates"])],
+                           incomplete_wants=[wid for wid in subject_wants if wid in shown and shown[wid].get("period_incomplete")])
     cmds = _common(inp, root, "choose", {"choice": ctx.to_json()})
     # the wanted pictures
     by_line = {ln["beat"]: ln for ln in plan["lines"]}
@@ -267,6 +279,8 @@ def build_choose(inp: Inputs, plan: dict, search: dict, limits, *, books: list, 
                                **({"step": c["step"]} if c.get("step") in (2, 3) else {})} for c in w["candidates"]]}
         if w.get("entity"):
             row["entity"] = w["entity"]
+        if w.get("aspect"):
+            row["aspect"] = w["aspect"]
         if w.get("period") and w["type"] == "context":
             row["period"] = w["period"]
         if w.get("kinds"):                              # what the line does (the plan's `kinds`): an `outside` line wants the thing itself

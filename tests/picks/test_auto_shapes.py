@@ -364,3 +364,103 @@ def test_new_planning_session_requires_an_explicit_cast_list():
     data = copy.deepcopy(PLAN)
     data['names'] = []
     assert shapes.check_plan(data, context).ok
+
+
+def test_subject_plan_preserves_spoken_subjects_and_rejects_unrelated_fallback():
+    data = copy.deepcopy(PLAN)
+    data['subjects'] = [{'id': 'figure', 'kind': 'person', 'name': 'the figure', 'strip': False, 'where': {'region': 'HEAD'}}]
+    for row in data['lines']:
+        row['about'] = []
+    data['lines'][0]['about'] = [{'id': 'figure', 'words': 'the figure'}]
+    data['subjects'].append({'id': 'painter', 'kind': 'person', 'name': 'painter', 'strip': True, 'where': {'want': 'b0003.1'}})
+    data['lines'][2]['show'][0]['entity'] = 'painter'
+    data['lines'][3]['show'] = []
+    data['lines'][3]['kinds'] = ['idea']
+    context = ctx()
+    context.line_texts = {'b0001': 'The figure looks outward.'}
+    rep = shapes.check_plan(data, context)
+    assert rep.ok, rep.text()
+    assert rep.value['subjects'] == data['subjects']
+    assert rep.value['lines'][0]['about'] == data['lines'][0]['about']
+    bad = copy.deepcopy(data)
+    bad['lines'][0]['about'][0]['words'] = 'the stranger'
+    assert not shapes.check_plan(bad, context).ok
+
+
+def test_subject_search_refuses_unrelated_wants_and_repeated_searches():
+    data = copy.deepcopy(PLAN)
+    data['subjects'] = [{'id': 'painter', 'kind': 'person', 'name': 'the painter', 'strip': True, 'where': {'want': 'b0003.1'}}]
+    for row in data['lines']:
+        row['about'] = []
+    data['lines'][2]['about'] = [{'id': 'painter', 'words': 'the painter'}]
+    data['lines'][2]['show'][0]['entity'] = 'painter'
+    data['lines'][3]['show'] = []
+    data['lines'][3]['kinds'] = ['idea']
+    context = ctx()
+    context.line_texts = {'b0003': 'The painter worked here.'}
+    assert shapes.check_plan(data, context).ok
+    unrelated = copy.deepcopy(data)
+    unrelated['lines'][2]['show'][0]['entity'] = 'other'
+    assert not shapes.check_plan(unrelated, context).ok
+    duplicate = copy.deepcopy(data)
+    duplicate['lines'][3]['show'] = [copy.deepcopy(data['lines'][2]['show'][0])]
+    duplicate['lines'][3]['kinds'] = ['outside']
+    duplicate['lines'][3]['fallback'] = {'type': 'whole'}
+    assert not shapes.check_plan(duplicate, context).ok
+
+
+def test_outside_line_may_reuse_previous_subject_without_another_search():
+    data = copy.deepcopy(PLAN)
+    data['subjects'] = [{'id': 'painter', 'kind': 'person', 'name': 'painter', 'strip': True, 'where': {'want': 'b0003.1'}}]
+    for row in data['lines']:
+        row['about'] = []
+    data['lines'][2]['show'][0]['entity'] = 'painter'
+    data['lines'][2]['about'] = [{'id': 'painter', 'words': 'painter'}]
+    data['lines'][3]['show'] = []
+    data['lines'][3]['kinds'] = ['outside']
+    data['lines'][3]['about'] = [{'id': 'painter', 'words': 'the painter'}]
+    context = ctx()
+    context.line_texts = {'b0003': 'The painter worked here.', 'b0004': 'The painter travelled.'}
+    rep = shapes.check_plan(data, context)
+    assert rep.ok, rep.text()
+    assert [want['id'] for want in shapes.wants_of(rep.value)] == ['b0003.1']
+
+
+def test_subject_document_search_does_not_require_unrelated_wider_pictures():
+    context = shapes.PlanCtx(beats=[{'id': 'b0001', 'chapter': 'c01', 'words': 10}], targets=['b0001'],
+                             line_texts={'b0001': 'The charter records the law.'})
+    data = {'subjects': [{'id': 'charter', 'kind': 'text', 'name': 'charter', 'strip': False, 'where': {'want': 'b0001.1'}}],
+            'regions': [], 'lines': [{'beat': 'b0001', 'reason': 'Văn bản gốc.', 'kinds': ['outside'],
+             'about': [{'id': 'charter', 'words': 'charter'}], 'fallback': {'type': 'whole'},
+             'show': [{'type': 'context', 'search': 'the charter manuscript', 'what': 'Văn bản hiến chương',
+                       'kind': 'document', 'entity': 'charter', 'period': 'then'}]}]}
+    result = shapes.check_plan(data, context)
+    assert result.ok, result.text()
+
+
+def test_one_character_subject_id_can_bind_context_search():
+    context = shapes.PlanCtx(beats=[{'id': 'b0001', 'chapter': 'c01', 'words': 10}], targets=['b0001'],
+                             line_texts={'b0001': 'Ada painted.'})
+    data = {'subjects': [{'id': 'a', 'kind': 'person', 'name': 'Ada', 'strip': True, 'where': {'want': 'b0001.1'}}],
+            'regions': [], 'lines': [{'beat': 'b0001', 'reason': 'Chân dung họa sĩ.', 'kinds': ['outside'],
+             'about': [{'id': 'a', 'words': 'Ada'}], 'fallback': {'type': 'whole'},
+             'show': [{'type': 'context', 'search': 'Ada painter portrait', 'what': 'Chân dung họa sĩ',
+                       'kind': 'portrait', 'entity': 'a', 'period': 'then'}]}]}
+    result = shapes.check_plan(data, context)
+    assert result.ok, result.text()
+
+
+def test_clip_rule_cannot_silently_drop_a_subject_picture():
+    beats = [{'id': 'b0001', 'chapter': 'c01', 'words': 10}, {'id': 'b0002', 'chapter': 'c01', 'words': 10}]
+    context = shapes.PlanCtx(beats=beats, targets=['b0001', 'b0002'])
+    subjects = [{'id': 'river', 'kind': 'place', 'name': 'river', 'strip': False, 'where': {'want': 'b0001.1'}},
+                {'id': 'author', 'kind': 'person', 'name': 'author', 'strip': True, 'where': {'want': 'b0002.1'}},
+                {'id': 'boat', 'kind': 'thing', 'name': 'boat', 'strip': False, 'where': {'want': 'b0002.2'}}]
+    lines = [{'beat': 'b0001', 'reason': 'Cảnh dòng sông.', 'kinds': ['outside'], 'about': [], 'fallback': {'type': 'whole'},
+              'show': [{'type': 'clip', 'entity': 'river', 'search': 'river water', 'what': 'Dòng sông'}]},
+             {'beat': 'b0002', 'reason': 'Họa sĩ và con thuyền.', 'kinds': ['outside'], 'about': [], 'fallback': {'type': 'whole'},
+              'show': [{'type': 'context', 'entity': 'author', 'kind': 'portrait', 'search': 'author portrait', 'what': 'Chân dung họa sĩ'},
+                       {'type': 'clip', 'entity': 'boat', 'search': 'river boat', 'what': 'Con thuyền'}]}]
+    result = shapes.check_plan({'subjects': subjects, 'regions': [], 'lines': lines}, context)
+    assert not result.ok
+    assert 'subject' in result.text().lower()

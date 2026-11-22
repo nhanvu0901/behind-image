@@ -293,6 +293,45 @@ def make_parts(r: _Run):
                 rep = rep_fb                                      # keep unconfirmed regions as non-tight rather than discarding valid choices
             else:
                 raise _fail(out, ctx)
+        # A subject whose period candidates were all rejected gets a separate, free modern-photo search and a second visual choice.
+        rejected_wants = asearch.modern_retry_wants(shapes.wants_of(plan), st)
+        if rejected_wants:
+            retry = asearch.modern_after_rejection(r.pdir, rejected_wants, rep.value, main_key=r.inp.painting.key,
+                     cancelled=ctx.cancelled, fetch_thumb=r.s.get("fetch_thumb") or asearch.default_fetch_thumb,
+                     clock=r.s.get("clock") or time.time, search=r.s.get("search"))
+            if ctx.cancelled():
+                return None
+            if retry["wants"]:
+                for wid, row in retry["wants"].items():
+                    row["earlier"] = ((rep.value.get("wants") or {}).get(wid) or {}).get("reason", "")
+                try:
+                    second_ws, _ = workspace.build_choose(r.inp, plan, retry, lim["choose"], books=[], second=True)
+                except workspace.WorkspaceError as e:
+                    raise PartError(e.code, texts.vi(e.code, e.message))
+                second_out, second_rep = _session(r, ctx, second_ws, "choose_modern", "Agent đang chọn ảnh hiện đại", lim["choose"])
+                if second_out.status == "cancelled" or ctx.cancelled():
+                    shutil.rmtree(second_ws.root, ignore_errors=True)
+                    shutil.rmtree(ws.root, ignore_errors=True)
+                    return None
+                if second_out.status == "tampered" or not second_rep.ok:
+                    raise _fail(second_out, ctx)
+                for wid, row in retry["wants"].items():
+                    existing = st["wants"][wid]["candidates"]
+                    offset = max([int(candidate.get("n") or 0) for candidate in existing] or [0])
+                    for n, candidate in enumerate(row["candidates"], 1):
+                        candidate["n"] = offset + n
+                        candidate["round"] = 1
+                    existing.extend(row["candidates"])
+                    st["wants"][wid]["modern_fallback"] = True
+                    selected = second_rep.value["wants"][wid]
+                    pick = selected.get("pick")
+                    if pick and pick[0] == "c":
+                        selected = {**selected, "pick": ("c", offset + pick[1])}
+                    rep.value["wants"][wid] = selected
+                st["key"] = r.key
+                store.write(r.pdir, "search.json", st)
+                r.search = st
+                _finish_workspace(second_ws, True)
         store.write(r.pdir, "choice.json", {"schema": store.SCHEMA, "key": r.key, "model": r.model, "agent": r.res.public(), "choice": rep.value,
                                             "shown": shown_of(st), "regions": regions_of(plan),
                                             "session": {"steps": out.steps, "turns": out.turns, "repairs": out.repairs, "status": out.status,

@@ -8,7 +8,7 @@ from bti.ops import doc as opsdoc
 from bti.ops import registry, schemacheck
 from bti.ops.errors import ERRORS
 
-PICKS = ["set_main", "set_region", "remove_region", "set_picks", "add_pick", "remove_stale_beats", "remove_pick", "skip_beat", "import", "set_content_box", "clear_content_box"]
+PICKS = ["set_subjects", "set_about", "set_main", "set_region", "remove_region", "set_picks", "add_pick", "remove_stale_beats", "remove_pick", "skip_beat", "import", "set_content_box", "clear_content_box"]
 STORYBOARD = ["set_technique", "set_params", "set_slot", "add_overlay", "set_overlay", "remove_overlay", "split_shot", "merge_shots",
               "move_boundary", "replace_range", "lock", "unlock"]
 ALL = [("picks", n) for n in PICKS] + [("storyboard", n) for n in STORYBOARD]

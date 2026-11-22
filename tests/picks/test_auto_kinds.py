@@ -310,21 +310,18 @@ def example_lines():
 
 def test_the_template_has_the_worked_examples_of_the_brief_and_each_one_passes_the_check():
     ex = example_lines()
-    assert sorted(ex) == ["b0006", "b0007", "b0008", "b0022", "b0028", "b0030", "b0043", "b0045", "b0048", "b0049"]
-    assert {b: ex[b]["kinds"] for b in ex} == {"b0006": ["detail"], "b0007": ["outside"], "b0008": ["outside", "journey"], "b0028": ["outside", "figure"], "b0030": ["outside"],
-                                              "b0045": ["compare"], "b0049": ["dates"], "b0048": ["inscription"], "b0043": ["construction"], "b0022": ["idea"]}
+    assert {b: ex[b]["kinds"] for b in ex} == {"b0006": ["detail"], "b0007": ["outside"], "b0008": ["journey"], "b0022": ["idea"]}
     ids = sorted(ex)
-    ctx = shapes.PlanCtx(beats=[{"id": b, "chapter": "c01", "words": 40} for b in ids], targets=ids, existing_regions=dict(EXISTING))
+    regions = {**EXISTING, "VILLAGE": [0.1, 0.2, 0.3, 0.4]}
+    context = shapes.PlanCtx(beats=[{"id": b, "chapter": "c01", "words": 40} for b in ids], targets=ids, existing_regions=regions)
     rows = [{"beat": b, "reason": "Lý do ngắn.", **ex[b]} for b in ids]
-    rep = shapes.check_plan({"regions": [], "lines": rows}, ctx)
-    assert rep.ok, rep.text()
-    # the narration's lines are quoted as they are in the narration of the first test video
+    result = shapes.check_plan({"regions": [], "lines": rows}, context)
+    assert result.ok, result.text()
     text = TEMPLATE.read_text(encoding="utf-8")
-    for quote in ("Look at the counter along the front edge, open to the street.", "even forbade goldsmiths to attract custom by sneezing or sniffling.",
-                  "set up in Bruges.", "42 British caravels and three Venetian galleys.", "Jan van Eyck painted such a mirror in his Arnolfini portrait",
-                  "He became a citizen of Bruges on 6 July 1444.", "Petrus Christus made me in the year 1449.", "did not know the new laws of perspective from Florence.",
-                  "One reading sees the saint".replace("One", "So one"), "stands a gold salt cellar in the shape of a pelican in her piety"):
-        assert quote in text, quote
+    assert "The village sits beside the river." in text
+    assert "The painter travelled to Rome." in text
+    assert "The saint embodies hope." in text
+    assert "Arnolfini" not in text
 
 
 def test_the_json_example_of_the_template_is_a_valid_plan():
@@ -335,21 +332,21 @@ def test_the_json_example_of_the_template_is_a_valid_plan():
     ctx = shapes.PlanCtx(beats=[{"id": b, "chapter": "c01", "words": 20} for b in ids], targets=ids)
     rep = shapes.check_plan(obj, ctx)
     assert rep.ok, rep.text()
-    assert [ln["kinds"] for ln in rep.value["lines"]] == [["whole"], ["detail"], ["outside"], ["detail", "inscription"], ["journey"], ["idea"]]
+    assert [ln["kinds"] for ln in rep.value["lines"]] == [["detail"]]
+    assert rep.value["subjects"][0]["id"] == "village"
+    assert rep.value["lines"][0]["about"][0]["words"] == "the village"
 
 
 def test_the_template_says_the_rules_the_brief_asks_for():
     t = TEMPLATE.read_text(encoding="utf-8")
-    assert t.index("1. **Say what each line does.**") < t.index("2. **A line about something outside the painting shows something other than the main painting")
+    assert t.index("1. **Say what each line does.**") < t.index("2. **A line about something outside the painting wants a picture of the subject")
     for must in ("born at Limoges", "Bruges was the commercial capital", "at most 60 pictures from elsewhere", "Philip the Good portrait Rogier van der Weyden",
-                 "different in kind", "Never put the main painting's own title in a search", "a picture made in that period comes first", "`period: \"now\"`",
-                 "never stays on the painting for lack of one", "one picture per line is the usual number", "A map only when the line is about *where*",
+                 "different in kind", "Never put the main painting's own title in a search", "a picture made in that period comes first", "`period: \"then\"`",
+                 "reuses its subject’s picture when possible", "one picture per line is the usual number", "A map only when the line is about *where*",
                  "the short name under which the thing is known", "moneylender and his wife", "royal gold cup", "codex behem"):
         assert must.lower() in t.lower(), must
     assert "keep the ones that matter" not in t and "at most 30 pictures" not in t
     choose_t = (REPO / "skills" / "picks_auto" / "CHOOSE.template.md").read_text(encoding="utf-8")
-    for must_choose in ("a photograph, taken in a museum, of a real object made in the period",
-                        "is not a modern photograph in the sense of the rule",
-                        "for a step-3 want it is the right answer",
-                        "what stays refused is a photograph of people, places or reconstructions of today"):
+    for must_choose in ("a candidate is right only when it shows that same subject",
+                        "a modern image may be chosen only after no usable period image exists"):
         assert must_choose.lower() in choose_t.lower(), must_choose

@@ -92,7 +92,7 @@ def test_the_briefing_is_filled_in_and_says_what_a_good_choice_is(pdir, tmp_path
     ext = ".cmd" if os.name == "nt" else ""
     check = ".\\check.cmd" if os.name == "nt" else "./check"
     assert check in task and "The Test Painting" in task and "A. Painter" in task and "**140 steps**" in task and "**30 minutes**" in task
-    for rule in ("A line about the painting shows the part it speaks of", "A line about something outside the painting shows something other than the main painting",
+    for rule in ("A line about the painting shows the part it speaks of", "A line about something outside the painting wants a picture of the subject",
                  "The same framing does not stay on screen for more than about half a minute", "Ask for the work itself, not for pictures about it",
                  "A map only when the line is about *where*", "Nothing invented", "at most one clip per chapter", "4 to 10 seconds"):
         assert rule in task, rule
@@ -106,7 +106,7 @@ def test_the_choose_briefing_says_what_a_good_choice_is(pdir, tmp_path):
     task = (ws.root / "TASK.md").read_text(encoding="utf-8")
     assert "{{" not in task
     for rule in ("Does it show the thing itself?", "Prefer a public-domain reproduction of the named work", "over illustrations or pictures about it",
-                 "Never pick a picture you are not sure shows what the line says", "Never use the main painting itself", "tight", "wider", "drop",
+                 "Never pick a picture you are not sure shows the subject itself", "Never use the main painting itself", "tight", "wider", "drop",
                  "A flagged picture"):
         assert rule in task, rule
 

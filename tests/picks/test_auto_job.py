@@ -656,3 +656,84 @@ def test_cast_is_written_with_pictures_and_partial_redo_preserves_other_lines(en
     names = env.picks()['names']
     assert names[0] == one[0] and names[1]['line'] == 'b0003'
     assert names[1]['where']['asset'] in env.picks()['assets']
+
+
+def test_subject_plan_search_choice_and_write_end_to_end(env):
+    import re
+    from bti.picks.auto import inputs
+    inp = inputs.load(env.pdir)
+    word = re.search(r'[A-Za-z]+', inp.beat('b0003')['text']).group()
+    data = plan()
+    data['subjects'] = [{'id': 'painter', 'kind': 'person', 'name': word, 'strip': True, 'where': {'want': 'b0003.1'}}]
+    for row in data['lines']:
+        row['about'] = []
+    row = next(row for row in data['lines'] if row['beat'] == 'b0003')
+    row['about'] = [{'id': 'painter', 'words': word}]
+    row['show'][0]['entity'] = 'painter'
+    env.agent.plan = data
+    picked = choice()
+    for entry in picked['wants']:
+        entry['shows_subject'] = True
+        entry['period_picture'] = True
+    env.agent.choice = picked
+    job = env.run(beats=['b0003'])
+    assert job['state'] == 'done', job
+    picks = env.picks()
+    assert picks['subjects'][0]['where']['asset'] in picks['assets']
+    assert picks['beats']['b0003']['about'] == [{'id': 'painter', 'words': word}]
+
+
+def test_subject_job_retries_modern_photo_after_period_candidates_rejected(env, monkeypatch):
+    import re
+    from auto_helpers import FakeSource, install_sources, meta
+    from bti.picks.auto import inputs
+    sources = dict(env.sources)
+    sources['pexels'] = FakeSource('pexels', [meta('pexels', 'p1', 'Modern portrait', 'portrait')])
+    install_sources(monkeypatch, sources, keys=('pexels',))
+    word = re.search(r'[A-Za-z]+', inputs.load(env.pdir).beat('b0003')['text']).group()
+    data = plan()
+    data['subjects'] = [{'id': 'painter', 'kind': 'person', 'name': word, 'strip': True, 'where': {'want': 'b0003.1'}}]
+    for row in data['lines']:
+        row['about'] = []
+    row = next(row for row in data['lines'] if row['beat'] == 'b0003')
+    row['about'] = [{'id': 'painter', 'words': word}]
+    row['show'][0]['entity'] = 'painter'
+    env.agent.plan = data
+    calls = []
+    def select(root, turn):
+        calls.append(root)
+        return {'wants': [{'id': 'b0003.1', 'pick': None if len(calls) == 1 else 1,
+                           'shows_subject': True, 'period_picture': len(calls) == 1, 'no_period_picture': len(calls) > 1,
+                           'reason': 'Chân dung phù hợp.'}], 'regions': []}
+    env.agent.choice = select
+    job = env.run(beats=['b0003'])
+    assert job['state'] == 'done', job
+    assert len(calls) == 2
+    d = env.picks()
+    assert d['subjects'][0]['where']['asset'] in d['assets']
+    assert sources['pexels'].searches
+
+
+def test_subject_job_reuses_one_picture_for_two_lines(env):
+    import re
+    from bti.picks.auto import inputs
+    inp = inputs.load(env.pdir)
+    names = {bid: re.search(r'[A-Za-z]+', inp.beat(bid)['text']).group() for bid in ('b0003', 'b0004')}
+    data = plan()
+    data['subjects'] = [{'id': 'painter', 'kind': 'person', 'name': names['b0003'], 'strip': True, 'where': {'want': 'b0003.1'}}]
+    for row in data['lines']:
+        row['about'] = []
+    first, second = data['lines'][2:4]
+    first['show'][0]['entity'] = 'painter'
+    first['about'] = [{'id': 'painter', 'words': names['b0003']}]
+    second.update(show=[], kinds=['outside'], about=[{'id': 'painter', 'words': names['b0004']}])
+    env.agent.plan = data
+    picked = choice()
+    for item in picked['wants']:
+        item.update(shows_subject=True, period_picture=True)
+    env.agent.choice = picked
+    job = env.run(beats=['b0003', 'b0004'])
+    assert job['state'] == 'done', job
+    picks = env.picks()
+    assert picks['beats']['b0003']['items'][0]['asset'] == picks['beats']['b0004']['items'][0]['asset']
+    assert picks['beats']['b0004']['about'][0]['id'] == 'painter'
