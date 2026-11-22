@@ -69,7 +69,7 @@ class _Run:
         self.pdir, self.pid, self.inp, self.res = Path(pdir), pid, inp, resolved
         self.limits = limits
         self.s = seams
-        self.key = store.run_key(inp.narration_rev, inp.painting.key, inp.requested, inp.redo, inp.owner_note)
+        self.key = store.run_key(inp.narration_rev, inp.painting.key, inp.requested, inp.redo, inp.owner_note, limited=inp.limited)
         self.state: dict | None = None
         self.resumed = False
         self.plan: dict | None = None
@@ -405,6 +405,8 @@ def make_parts(r: _Run):
         if res.get("stopped") == "cancelled":                      # a cancelled write is not a finished run: it resumes from what was written
             return None
         sentence = texts.result_sentence(res["lines_done"], res["lines_total"], len(res["lines_without"]))
+        if res["lines_removed"]:
+            sentence += " Đã bỏ %d đoạn không còn trong lời dẫn." % res["lines_removed"]
         out = {k: v for k, v in res.items() if k != "reasons"}
         if r.web_on:                                            # how many web searches the run made (kept in search.json and in last.json too)
             out["web"] = st.get("web") or asearch.Web.from_state(st, True, r.web_max).public()

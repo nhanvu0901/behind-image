@@ -44,10 +44,13 @@ def write(pdir: Path, name: str, obj: dict) -> None:
     sstore.write_json_atomic(cache_dir(pdir) / name, obj, levels=LEVELS)
 
 
-def run_key(narration_rev: str, main_key: str, requested: list[str], redo: bool, owner_note: str = "") -> str:
+def run_key(narration_rev: str, main_key: str, requested: list[str], redo: bool, owner_note: str = "", *, limited: bool = False) -> str:
     """What a run is for: the narration, the main painting, the lines the REQUEST covers (not the lines that are left to do: those change as
     the run writes), whether it chooses again, and the owner's words."""
-    raw = json.dumps({"narration": narration_rev, "main": main_key, "requested": sorted(requested), "redo": bool(redo), "note": owner_note}, sort_keys=True)
+    data = {"narration": narration_rev, "main": main_key, "requested": sorted(requested), "redo": bool(redo), "note": owner_note}
+    if limited:
+        data["limited"] = True
+    raw = json.dumps(data, sort_keys=True)
     return hashlib.sha1(raw.encode("utf-8")).hexdigest()[:20]
 
 

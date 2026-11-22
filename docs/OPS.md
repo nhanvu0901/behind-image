@@ -289,6 +289,24 @@ Example:
 
 Sentence in `changes`: `Đoạn {n}: thêm {pic}`
 
+### `remove_stale_beats`
+
+Remove picks for lines no longer in the current narration, including their names.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `remove_stale_beats` | yes | The operation name. |
+
+Example:
+
+```json
+{
+  "op": "remove_stale_beats"
+}
+```
+
+Sentence in `changes`: `Bỏ đoạn {beat} không còn trong lời dẫn`
+
 ### `remove_pick`
 
 Remove one picture of a narration line, by its position among the pictures of the line (counting from 0, as the earlier operations of the batch left them).

@@ -51,6 +51,7 @@ class Inputs:
     owner_note: str = ""
     redo: bool = False
     requested: list = field(default_factory=list)      # the lines the request covers (all of them, or the ones it names): what a resumed run is matched on
+    limited: bool = False
 
     def beat(self, bid: str) -> dict:
         return next(b for b in self.beats if b["id"] == bid)
@@ -130,4 +131,4 @@ def load(pdir: Path, requested: list | None = None, *, redo: bool = False, owner
     ident = context.identity(pdir)
     return Inputs(pdir=pdir, identity=ident, details=context.details(pdir), facts=dict(nv["facts"]), chapters=chapters, beats=beats, picks=picks,
                   painting=painting, targets=targets, narration_rev=nv["rev"], owner_note=(owner_note or "").strip()[:1000], redo=bool(redo),
-                  requested=sorted(wanted))
+                  requested=sorted(wanted), limited=requested is not None)

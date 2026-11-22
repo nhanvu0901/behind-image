@@ -261,6 +261,25 @@ def add_pick(ctx, o):
     _say_beat(ctx, bid, pic=_pic(ctx, item["asset"]))
 
 
+@op("picks", "remove_stale_beats",
+    summary="Remove picks for lines no longer in the current narration, including their names.",
+    schema=S.obj("remove_stale_beats", [], {}),
+    example={"op": "remove_stale_beats"},
+    sentences="Bỏ đoạn {beat} không còn trong lời dẫn")
+def remove_stale_beats(ctx, o):
+    ctx.whole_document("remove_stale_beats")
+    if not ctx.facts.present:
+        ctx.bad("", "the current narration is required")
+    stale = set(ctx.doc["beats"]) - ctx.facts.beat_set
+    for bid in sorted(stale):
+        ctx.touch("beat:" + bid)
+        del ctx.doc["beats"][bid]
+        ctx.say({"beat": bid}, beat=bid)
+    if stale and "names" in ctx.doc:
+        ctx.touch("names")
+        ctx.doc["names"] = [n for n in ctx.doc["names"] if n.get("line") not in stale]
+
+
 @op("picks", "remove_pick",
     summary="Remove one picture of a narration line, by its position among the pictures of the line (counting from 0, as the earlier operations of the batch left them).",
     schema=S.obj("remove_pick", ["beat", "index"], {

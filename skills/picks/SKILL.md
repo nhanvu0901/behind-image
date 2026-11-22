@@ -52,6 +52,7 @@ revision itself, a refused batch writes nothing, and every batch can be undone (
 | `remove_region` | Remove a named region of an asset (the pictures of a line that use it must be changed in the same batch, before this operation). |
 | `set_picks` | Replace all the pictures of one narration line (use skip_beat to show the main picture instead). |
 | `add_pick` | Add one picture to a narration line, at the end or at a position. |
+| `remove_stale_beats` | Remove picks for lines no longer in the current narration, including their names. |
 | `remove_pick` | Remove one picture of a narration line, by its position among the pictures of the line (counting from 0, as the earlier operations of the batch left them). |
 | `skip_beat` | Make a narration line show the main picture again (it keeps no pictures of its own). |
 | `import` | Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here. A download is polite and patient (one request a second to a host; a refusal of "too many requests" is waited for, up to about six minutes before the error `source_rate_limited`): send a batch with an import with a long timeout. |

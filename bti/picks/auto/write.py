@@ -433,6 +433,7 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
             chapters.setdefault(ln["chapter"], []).append(ln)
     titles = {c["id"]: c["title"] for c in inp.chapters}
     stopped = None
+    cleanup = not inp.limited and not run_state.get("stale_cleaned")
     for k, (cid, group) in enumerate(chapters.items()):
         progress(0.55 + 0.4 * k / max(1, len(chapters)), "Đang ghi chương %s (%d/%d)." % (titles.get(cid) or cid, k + 1, len(chapters)))
         if cancelled():
@@ -444,10 +445,17 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
         writable = [ln for ln in group if (not ln["show"]) or ln["items"]]       # a line with nothing found stays as it was
         name = "Agent chọn hình: chương %s, %d đoạn" % (titles.get(cid) or cid, len(writable))
         try:
-            if writable:
-                w.send(_ops_for(writable, main_key), name)
+            if writable or cleanup:
+                batch_ops = ([{"op": "remove_stale_beats"}] if cleanup else []) + _ops_for(writable, main_key)
+                sent = w.send(batch_ops, name)
+                if cleanup:
+                    run_state["lines_removed"] = sum(1 for c in sent["changes"] if c["what"].startswith("Bỏ đoạn "))
+                    run_state["stale_cleaned"] = True
+                    cleanup = False
             ok = writable
         except OpError:
+            if cleanup:
+                raise WriteError("write_refused", "could not remove obsolete lines")
             ok = []
             for ln in writable:                                 # isolate the line that the document refuses
                 try:
@@ -466,11 +474,20 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
         run_state["batches"] = list(run_state.get("batches") or []) + w.batches
         w.batches = []
         save_run(run_state)
+    if cleanup and not stopped:
+        try:
+            sent = w.send([{"op": "remove_stale_beats"}], "Agent chọn hình: bỏ đoạn cũ")
+        except OpError as e:
+            raise WriteError("write_refused", str(e.detail)) from e
+        run_state["lines_removed"] = sum(1 for c in sent["changes"] if c["what"].startswith("Bỏ đoạn "))
+        run_state["stale_cleaned"] = True
+        run_state["batches"] = list(run_state.get("batches") or []) + w.batches
+        save_run(run_state)
     # ---- the result
     result = {"lines_total": 0, "lines_done": 0, "lines_with_pictures": 0, "lines_kept": 0, "lines_without": [], "missing": list(problems),
               "pictures_imported": int(run_state.get("imported") or 0), "regions_made": int(run_state.get("regions_made") or 0),
               "regions_tight": int(run_state.get("regions_tight") or 0), "regions_dropped": list(dropped), "clips": 0, "batches": list(run_state.get("batches") or []), "stopped": stopped,
-              "lines_by_others": 0, "reasons": {}, "outside_without": []}
+              "lines_by_others": 0, "lines_removed": int(run_state.get("lines_removed") or 0), "reasons": {}, "outside_without": []}
     for ln in lines:
         st = ln["state"]
         if st == "others":

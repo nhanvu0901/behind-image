@@ -8,7 +8,7 @@ from bti.ops import doc as opsdoc
 from bti.ops import registry, schemacheck
 from bti.ops.errors import ERRORS
 
-PICKS = ["set_main", "set_region", "remove_region", "set_picks", "add_pick", "remove_pick", "skip_beat", "import", "set_content_box", "clear_content_box"]
+PICKS = ["set_main", "set_region", "remove_region", "set_picks", "add_pick", "remove_stale_beats", "remove_pick", "skip_beat", "import", "set_content_box", "clear_content_box"]
 STORYBOARD = ["set_technique", "set_params", "set_slot", "add_overlay", "set_overlay", "remove_overlay", "split_shot", "merge_shots",
               "move_boundary", "replace_range", "lock", "unlock"]
 ALL = [("picks", n) for n in PICKS] + [("storyboard", n) for n in STORYBOARD]
@@ -48,6 +48,9 @@ def test_example_applies_on_a_fixture_project(client, doc, name):
     r = (pk if doc == "picks" else sb)(client, [d.example])
     assert r.status_code == 200, r.text
     j = r.json()
+    if name == "remove_stale_beats":            # the fixture's picks hold no line outside the narration: nothing to remove
+        assert j["applied"] == 1
+        return
     assert j["applied"] == 1 and j["batch"] and j["changes"] and j["changes"][0]["what"]
     assert all("!" not in c["what"] for c in j["changes"])
 
