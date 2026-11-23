@@ -56,7 +56,8 @@ def test_the_tracked_file_is_the_contract():
     c = AG.load_choices()
     assert c.problems == () and c.default == "gemini"
     assert [(a.id, a.label, a.model) for a in c.agents] == [("gemini", "Gemini 3.8 Flash", "agy:gemini-3.8-flash-high"),
-                                                           ("opus", "Opus 5.5 High", "claude:claude-opus-5-5@high")]
+                                                           ("opus", "Opus 5.5 High", "claude:claude-opus-5-5@high"),
+                                                           ("argon", "Gemini Orchestrator Argon", "agy:gemini-pro-orchestrator-g1-pro")]
     assert {k: list(v) for k, v in c.steps.items()} == {"script": ["script.outline", "script.narration", "script.title"], "picks": ["picks"],      # titlestep: the title is the third role of step 2
                                                         "storyboard": ["draft", "edit.fast", "edit.deep"]}
     assert c.step_of("edit.deep") == "storyboard" and c.step_of("library.restore") is None

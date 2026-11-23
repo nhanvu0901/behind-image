@@ -96,7 +96,8 @@ def test_the_real_file_lists_the_two_agents_with_their_availability(c, monkeypat
     monkeypatch.setattr(models_mod, "claude_status", lambda refresh=False: {"ok": False, "kind": "auth", "reason": "not_signed_in",
                                                                             "message": "Claude Code trên máy chủ chưa đăng nhập. Đăng nhập một lần."})
     d = c.get("/api/agents").json()
-    assert [(x["id"], x["label"], x["available"]) for x in d["agents"]] == [("gemini", "Gemini 3.8 Flash", True), ("opus", "Opus 5.5 High", False)]
+    assert [(x["id"], x["label"], x["available"]) for x in d["agents"]] == [("gemini", "Gemini 3.8 Flash", True), ("opus", "Opus 5.5 High", False),
+                                                                          ("argon", "Gemini Orchestrator Argon", True)]
     assert d["agents"][1]["reason"].startswith("Claude Code trên máy chủ chưa đăng nhập")
     assert c.get("/api/agents?refresh=1").status_code == 200
 
