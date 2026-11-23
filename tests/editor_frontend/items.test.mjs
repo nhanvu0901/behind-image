@@ -44,7 +44,7 @@ test('add, remove and move keep the registry limits and never change the list th
   assert.equal(JSON.stringify(two), snapshot, 'the original list is untouched');
   assert.equal(three[2].label_side, 'auto');
   const one = removeItem(PLACES, three, 0);
-  assert.deepEqual(one.map((p) => p.id), ['lucca', '']);
+  assert.deepEqual(one.map((p) => p.id), ['city_b', '']);
   const lone = removeItem(PLACES, [two[0]], 0);
   assert.equal(lone.length, 1, 'min_items 1: the last place stays');
   assert.equal(canRemoveItem(PLACES, [two[0]]), false);
@@ -53,9 +53,9 @@ test('add, remove and move keep the registry limits and never change the list th
   for (let i = 0; i < 14; i++) many = addItem(PLACES, many);
   assert.equal(many.length, PLACES.max_items);
   assert.equal(canAddItem(PLACES, many), false);
-  assert.deepEqual(moveItem(two, 0, 1).map((p) => p.id), ['lucca', 'bruges']);
-  assert.deepEqual(moveItem(two, 0, -1).map((p) => p.id), ['bruges', 'lucca'], 'the first row cannot go up');
-  assert.deepEqual(moveItem(two, 1, 1).map((p) => p.id), ['bruges', 'lucca'], 'the last row cannot go down');
+  assert.deepEqual(moveItem(two, 0, 1).map((p) => p.id), ['city_b', 'city_a']);
+  assert.deepEqual(moveItem(two, 0, -1).map((p) => p.id), ['city_a', 'city_b'], 'the first row cannot go up');
+  assert.deepEqual(moveItem(two, 1, 1).map((p) => p.id), ['city_a', 'city_b'], 'the last row cannot go down');
   assert.deepEqual(moveItem(two, 5, 1), two, 'a row that does not exist');
 });
 
@@ -63,7 +63,7 @@ test('typing into a field gives the typed value of that field', () => {
   const two = defaultParams(MAP.params).places;
   const a = setItemField(PLACES, two, 1, 'lonlat', '10.5, 43.8');
   assert.deepEqual(a[1].lonlat, [10.5, 43.8]);
-  assert.deepEqual(two[1].lonlat, [10.5027, 43.8429], 'the original is untouched');
+  assert.deepEqual(two[1].lonlat, [11.5, 50.5], 'the original is untouched');
   assert.deepEqual(setItemField(PLACES, two, 0, 'lonlat', '3.2 51.2')[0].lonlat, [3.2, 51.2], 'a space also separates the pair');
   assert.equal(setItemField(PLACES, two, 0, 'lonlat', 'abc')[0].lonlat, 'abc', 'text that is not a pair stays, and the form shows the problem');
   assert.equal(setItemField(PLACES, two, 0, 'at', '2.5')[0].at, 2.5);
@@ -92,9 +92,9 @@ test('the form says in Vietnamese which row and which field is wrong', () => {
   const two = defaultParams(MAP.params).places;
   assert.equal(itemsProblem(PLACES, two), null);
   const bad = setItemField(PLACES, two, 1, 'lonlat', '10.5, 95');
-  assert.equal(itemsProblem(PLACES, bad), 'mục thứ 2 (Lucca), ô "lonlat": vĩ độ phải từ -85 đến 85');
+  assert.equal(itemsProblem(PLACES, bad), 'mục thứ 2 (City B), ô "lonlat": vĩ độ phải từ -85 đến 85');
   const noName = setItemField(PLACES, two, 0, 'name', '');
-  assert.match(itemsProblem(PLACES, noName), /^mục thứ 1 \(bruges\), ô "name": bắt buộc nhập$/);
+  assert.match(itemsProblem(PLACES, noName), /^mục thứ 1 \(city_a\), ô "name": bắt buộc nhập$/);
   assert.match(itemsProblem(PLACES, setItemField(PLACES, two, 0, 'id', 'a b')), /ô "id": Gõ một mã ngắn/);
   assert.match(itemsProblem(PLACES, []), /cần ít nhất 1 mục/);
   assert.match(itemsProblem(PLACES, 'x'), /danh sách/);

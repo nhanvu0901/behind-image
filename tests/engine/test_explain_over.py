@@ -157,13 +157,13 @@ def test_each_usage_rule_gives_the_fields_in_one_line_and_says_which_sentence_it
 
 def test_the_default_data_is_the_mock_up_example_on_the_arnolfini_regions():
     d = {x["name"]: x["default"] for x in spec("KEY-01")["params"]}
-    assert [(lb["text"], lb["ref"], lb["side"], lb["at"]) for lb in d["labels"]] == [("One candle, lit", "LIT", "w", 0.7), ("Latin inscription", "INSCR", "n", 1.6), ("Convex mirror", "MIRROR", "s", 2.5),
-                                                                                    ("Amber beads", "AMBER", "w", 3.4), ("A brush", "BRUSH", "e", 4.3)]
+    assert [(lb["text"], lb["ref"], lb["side"], lb["at"]) for lb in d["labels"]] == [("First detail", "DETAIL_1", "w", 0.7), ("Second detail", "DETAIL_2", "n", 1.6), ("Third detail", "DETAIL_3", "s", 2.5),
+                                                                                    ("Fourth detail", "DETAIL_4", "w", 3.4), ("Fifth detail", "DETAIL_5", "e", 4.3)]
     assert d["cap_pct"] == 2.4 and d["dim_picture_to"] == 0.78 and d["leader"] == "auto" and d["shadow"] is True
     d = {x["name"]: x["default"] for x in spec("NUM-01")["params"]}
-    assert [(r["value"], r["count"], r["at"]) for r in d["rows"]] == [("600", 12, 1.0), ("2,000", 40, 2.9)] and d["cap_pct"] == 8 and d["dim_picture_to"] == 0.38 and d["align"] == "left"
+    assert [(r["value"], r["count"], r["at"]) for r in d["rows"]] == [("100", 10, 1.0), ("400", 40, 2.9)] and d["cap_pct"] == 8 and d["dim_picture_to"] == 0.38 and d["align"] == "left"
     d = {x["name"]: x["default"] for x in spec("DOC-01")["params"]}
-    assert d["lit"][0]["ref"] == "INSCR" and d["dim_to"] == 0.34 and d["reading"] == "Jan van Eyck was here. 1434" and d["reading_at"] == 2.4 and d["ramp_s"] == 0.7
+    assert d["lit"][0]["ref"] == "LINE_1" and d["dim_to"] == 0.34 and d["reading"] == "Modern reading of the line" and d["reading_at"] == 2.4 and d["ramp_s"] == 0.7
 
 
 # ================================================================================ validation of the lists
@@ -582,8 +582,8 @@ def test_a_displaced_label_has_a_leader_that_ends_at_its_detail_and_a_label_besi
     assert np.array_equal(one("auto"), one("none"))
 
 
-ARNOLFINI_KEY_REGIONS = {"LIT": {"x": 1856, "y": 420, "rx": 215, "ry": 215}, "INSCR": {"x": 2220, "y": 1390, "rx": 420, "ry": 120}, "MIRROR": {"x": 2220, "y": 1790, "rx": 440, "ry": 440},
-                         "AMBER": {"x": 1810, "y": 1650}, "BRUSH": {"x": 2700, "y": 1560}}
+DEFAULT_KEY_REGIONS = {"DETAIL_1": {"x": 1856, "y": 420, "rx": 215, "ry": 215}, "DETAIL_2": {"x": 2220, "y": 1390, "rx": 420, "ry": 120}, "DETAIL_3": {"x": 2220, "y": 1790, "rx": 440, "ry": 440},
+                       "DETAIL_4": {"x": 1810, "y": 1650}, "DETAIL_5": {"x": 2700, "y": 1560}}
 
 
 def test_the_default_example_has_no_leader_whatever_the_mode_says(tmp_path):
@@ -591,7 +591,7 @@ def test_the_default_example_has_no_leader_whatever_the_mode_says(tmp_path):
     camera = [{"at": {"rel": 0.0}, "cx": 2220, "cy": 1410, "zoom": 0.5, "ease": "linear"}, {"at": {"rel": 1.0}, "cx": 2220, "cy": 1410, "zoom": 0.5, "ease": "linear"}]
     frames = {}
     for mode in ("auto", "none", "hairline"):
-        p = make_project(tmp_path, "KEY-01", {"leader": mode}, camera=camera, regions=dict(REGIONS, **ARNOLFINI_KEY_REGIONS), name="def_" + mode)
+        p = make_project(tmp_path, "KEY-01", {"leader": mode}, camera=camera, regions=dict(REGIONS, **DEFAULT_KEY_REGIONS), name="def_" + mode)
         assert errors(p) == []
         frames[mode] = frame(p, 4.8)
     assert np.array_equal(frames["auto"], frames["none"]), "no label is displaced or in doubt: no line"
@@ -1063,21 +1063,24 @@ def bounds_cases(tid, pd):
                     cases.append(items)
         cases.append(copy.deepcopy(pd["default"]))
         if pd["name"] == "labels":
-            cases.append([dict(pd["default"][0], text="Label %d" % i, ref=["LIT", "INSCR", "MIRROR", "AMBER", "BRUSH", "HANDS"][i % 6], side="auto", at=0.2 * i) for i in range(12)])
+            cases.append([dict(pd["default"][0], text="Label %d" % i, ref=["DETAIL_1", "DETAIL_2", "DETAIL_3", "DETAIL_4", "DETAIL_5", "LINE_1"][i % 6], side="auto", at=0.2 * i) for i in range(12)])
         if pd["name"] == "rows":
             cases.append([dict(pd["default"][0], value="%d" % (i + 1), count=60, at=0.5 * i) for i in range(4)])
         if pd["name"] == "lit":
-            cases.append([dict(pd["default"][0], ref=["INSCR", "MIRROR", "HANDS", "LIT", "AMBER", "BRUSH"][i], at=0.8 * i, hold_s=1.5 if i % 2 else 0) for i in range(6)])
+            cases.append([dict(pd["default"][0], ref=["DETAIL_1", "DETAIL_2", "DETAIL_3", "DETAIL_4", "DETAIL_5", "LINE_1"][i], at=0.8 * i, hold_s=1.5 if i % 2 else 0) for i in range(6)])
     return cases
 
 
 @pytest.mark.parametrize("tid", IDS)
 def test_every_param_at_its_bounds_validates_and_draws(tmp_path, tid):
-    """Every number at its min and max, every enum value, every bool, and the extremes of every field of every list: validates and draws, on the Arnolfini regions of the
-    default data (a picture with those regions is the example the default data is written for)."""
-    reg = json.loads((REPO / "tests/engine" / "arnolfini_regions.json").read_text(encoding="utf-8")) if (REPO / "tests/engine/arnolfini_regions.json").exists() else None
-    regions = reg or dict(REGIONS, LIT={"x": 1856, "y": 420, "rx": 215, "ry": 215}, INSCR={"x": 2220, "y": 1390, "rx": 420, "ry": 120}, MIRROR={"x": 2220, "y": 1790, "rx": 440, "ry": 440},
-                          AMBER={"x": 1810, "y": 1650}, BRUSH={"x": 2700, "y": 1560}, HANDS={"x": 2420, "y": 2540, "rx": 360, "ry": 270})
+    """Every number at its min and max, every enum value, every bool, and the extremes of every field of every list: validates and draws, on the
+    default regions (a picture with those regions is what the default data is written for)."""
+    reg = json.loads((REPO / "tests/engine" / "arnolfini_regions.json").read_text(encoding="utf-8")) if (REPO / "tests/engine" / "arnolfini_regions.json").exists() else None
+    base_regions = dict(REGIONS, DETAIL_1={"x": 1856, "y": 420, "rx": 215, "ry": 215}, DETAIL_2={"x": 2220, "y": 1390, "rx": 420, "ry": 120}, DETAIL_3={"x": 2220, "y": 1790, "rx": 440, "ry": 440},
+                        DETAIL_4={"x": 1810, "y": 1650}, DETAIL_5={"x": 2700, "y": 1560}, LINE_1={"x": 2220, "y": 1390, "rx": 420, "ry": 120},
+                        LIT={"x": 1856, "y": 420, "rx": 215, "ry": 215}, INSCR={"x": 2220, "y": 1390, "rx": 420, "ry": 120}, MIRROR={"x": 2220, "y": 1790, "rx": 440, "ry": 440},
+                        AMBER={"x": 1810, "y": 1650}, BRUSH={"x": 2700, "y": 1560}, HANDS={"x": 2420, "y": 2540, "rx": 360, "ry": 270})
+    regions = dict(base_regions, **(reg or {}))
     camera = [{"at": {"rel": 0.0}, "cx": 1500, "cy": 1100, "zoom": 0.9, "ease": "linear"}, {"at": {"rel": 1.0}, "cx": 1500, "cy": 1100, "zoom": 1.0, "ease": "linear"}]
     p = make_project(tmp_path, tid, {}, camera=camera, regions=regions, name="bounds_" + tid[:3])
     sb = p.storyboard()
@@ -1110,7 +1113,7 @@ def test_an_element_shorter_than_its_minimum_is_an_error(tmp_path, tid, params):
 
 @pytest.mark.parametrize("tid", IDS)
 def test_no_socket_is_opened_while_the_overlay_is_drawn(tmp_path, monkeypatch, tid):
-    p = make_project(tmp_path, tid, {}, name="sock_" + tid[:3], regions=dict(REGIONS, LIT=REGIONS["A"], INSCR=REGIONS["WIDE"], MIRROR=REGIONS["B"], AMBER=REGIONS["POINT"], BRUSH=REGIONS["POINT"]))
+    p = make_project(tmp_path, tid, {}, name="sock_" + tid[:3], regions=dict(REGIONS, DETAIL_1=REGIONS["A"], DETAIL_2=REGIONS["WIDE"], DETAIL_3=REGIONS["B"], DETAIL_4=REGIONS["POINT"], DETAIL_5=REGIONS["POINT"], LINE_1=REGIONS["WIDE"]))
 
     def forbid(*a, **k):
         raise AssertionError("a socket was opened while %s drew a frame" % tid)
@@ -1122,7 +1125,7 @@ def test_no_socket_is_opened_while_the_overlay_is_drawn(tmp_path, monkeypatch, t
 
 
 def test_the_draw_check_and_the_default_params_of_each_technique_pass(tmp_path):
-    regions = dict(REGIONS, LIT=REGIONS["A"], INSCR=REGIONS["WIDE"], MIRROR=REGIONS["B"], AMBER=REGIONS["POINT"], BRUSH=REGIONS["POINT"])
+    regions = dict(REGIONS, DETAIL_1=REGIONS["A"], DETAIL_2=REGIONS["WIDE"], DETAIL_3=REGIONS["B"], DETAIL_4=REGIONS["POINT"], DETAIL_5=REGIONS["POINT"], LINE_1=REGIONS["WIDE"])
     for tid in IDS:
         p = make_project(tmp_path, tid, {}, regions=regions, name="dc_" + tid[:3])
         assert p.draw_check() == [], tid
@@ -1133,7 +1136,7 @@ def test_the_draw_check_and_the_default_params_of_each_technique_pass(tmp_path):
         sb["shots"][0]["overlays"][0]["params"] = d2
         assert [i for i in errors(p, sb) if i["code"] != "region_undefined"] == [], tid
     k = make_project(tmp_path, "KEY-01", {}, regions=regions, name="dk").default_params("KEY-01", {"asset": {"regions": {"MOUTH": {"x": 5, "y": 5, "rx": 40, "ry": 10, "label": "Mouth"}}}})
-    assert [(x["text"], x["ref"]) for x in k["labels"]] == [("Mouth", "MOUTH")], "the default labels follow the regions of the picture when it has not the Arnolfini ones"
+    assert [(x["text"], x["ref"]) for x in k["labels"]] == [("Mouth", "MOUTH")], "the default labels follow the regions of the picture when it has not the default ones"
     dd = make_project(tmp_path, "DOC-01", {}, regions=regions, name="dd").default_params("DOC-01", {"asset": {"regions": {"EYE": {"x": 9, "y": 9, "rx": 20, "ry": 20}, "SIGN": {"x": 5, "y": 5, "rx": 80, "ry": 10}}}})
     assert dd["lit"][0]["ref"] == "SIGN", "the widest region is the line"
 
@@ -1142,7 +1145,7 @@ def test_validate_accepts_only_what_the_overlays_can_draw(tmp_path):
     """The rule of the registry (R2B-012) for the three overlays, run here because the full sweep is a slow test: every odd value of every param (wrong but well typed,
     extreme, empty, degenerate) is either refused by `validate` or drawn."""
     from test_validate_draw_sweep import odd_values
-    regions = dict(REGIONS, LIT=REGIONS["A"], INSCR=REGIONS["WIDE"], MIRROR=REGIONS["B"], AMBER=REGIONS["POINT"], BRUSH=REGIONS["POINT"])
+    regions = dict(REGIONS, DETAIL_1=REGIONS["A"], DETAIL_2=REGIONS["WIDE"], DETAIL_3=REGIONS["B"], DETAIL_4=REGIONS["POINT"], DETAIL_5=REGIONS["POINT"], LINE_1=REGIONS["WIDE"])
     for tid in IDS:
         p = make_project(tmp_path, tid, {}, regions=regions, name="odd_" + tid[:3])
         sb = p.storyboard()
@@ -1168,7 +1171,7 @@ def test_validate_accepts_only_what_the_overlays_can_draw(tmp_path):
 def test_a_frame_costs_what_the_other_overlays_cost(tmp_path):
     """A guard against a slow path (the milliseconds per frame are in docs/qa/FIX_comp_over.md): a warm 1920 px frame under 0.4 s each."""
     import time
-    regions = dict(REGIONS, LIT=REGIONS["A"], INSCR=REGIONS["WIDE"], MIRROR=REGIONS["B"], AMBER=REGIONS["POINT"], BRUSH=REGIONS["POINT"])
+    regions = dict(REGIONS, DETAIL_1=REGIONS["A"], DETAIL_2=REGIONS["WIDE"], DETAIL_3=REGIONS["B"], DETAIL_4=REGIONS["POINT"], DETAIL_5=REGIONS["POINT"], LINE_1=REGIONS["WIDE"])
     for tid in IDS:
         p = make_project(tmp_path, tid, {}, regions=regions, name="cost_" + tid[:3])
         frame(p, 5.0)

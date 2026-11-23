@@ -99,7 +99,7 @@ def test_the_time_registry_entry_is_complete_and_the_default_data_is_the_example
     assert sp["kind"] == "base" and sp["engine"]["available"] and sp["label_vi"] and sp["description"] and sp["usage_rule"] and sp["slots"] == []
     assert sp["timing"]["min_s"] == 3.0 and sp["timing"]["default_s"] == 8.0
     d = TIME_DEFAULT_PARAMS
-    assert [(i["date"], i["at"], i["accent"]) for i in d["items"]] == [(1425, 0.8, False), (1426, 1.7, False), (1431, 2.6, False), (1432, 3.5, False), (1433, 4.4, False), (1434, 5.3, True)]
+    assert [(i["date"], i["at"], i["accent"]) for i in d["items"]] == [(1500, 0.8, False), (1510, 1.7, False), (1520, 2.6, False), (1530, 3.5, False), (1540, 4.4, False), (1550, 5.3, True)]
     assert d["focus_s"] == 6.0 and d["dim_to"] == 0.55 and d["from"] == "" and d["to"] == "" and d["tick_every"] == 0
     for pd in sp["params"]:
         assert R.check_problem(pd, pd["default"]) is None, pd["name"]
@@ -199,12 +199,20 @@ def test_labels_never_touch_each_other_or_leave_the_frame(case):
 
 
 def test_the_layout_of_the_default_data_is_the_mock_ups(tmp_path):
-    """The mock-up alternates the sides (up, down, up, down, up, down) with stalks of 13 percent of the height, except 1432 below and 1433 above (24 percent)."""
+    """The neutral default items alternate sides cleanly; the mock-up layout (unevenly spaced items with 1432 below and 1433 above at 24 percent) is checked too."""
     (places, ok), a, b = solved(TIME_DEFAULT_PARAMS["items"])
-    assert ok and (a, b) == (1424, 1435)
+    assert ok and (a, b) == (1499, 1551)
     assert [pl.side for pl in places] == ["up", "down", "up", "down", "up", "down"]
-    assert [round(pl.length / H, 2) for pl in places] == [0.13, 0.13, 0.13, 0.24, 0.24, 0.13]
+    clear(places)
     assert places[0].anchor == places[5].anchor == "c"
+    crowded = [item(1425, "Painter to Philip the Good", 0.8), item(1426, "Giovanni marries Costanza Trenta", 1.7),
+               item(1431, "Van Eyck settles in Bruges", 2.6), item(1432, "The Ghent Altarpiece", 3.5),
+               item(1433, "Costanza is dead", 4.4), item(1434, "The Arnolfini Portrait", 5.3, accent=True)]
+    (places2, ok2), a2, b2 = solved(crowded)
+    assert ok2 and (a2, b2) == (1424, 1435)
+    assert [pl.side for pl in places2] == ["up", "down", "up", "down", "up", "down"]
+    assert [round(pl.length / H, 2) for pl in places2] == [0.13, 0.13, 0.13, 0.24, 0.24, 0.13]
+    assert places2[0].anchor == places2[5].anchor == "c"
 
 
 def test_a_forced_side_is_kept_and_two_items_of_one_year_never_share_a_place():
@@ -437,7 +445,7 @@ def test_the_tree_registry_entry_is_complete_and_the_default_data_is_the_example
     assert sp["kind"] == "base" and sp["engine"]["available"] and sp["label_vi"] and sp["description"] and sp["usage_rule"] and sp["slots"] == []
     assert sp["timing"]["min_s"] == 3.0
     d = TREE_DEFAULT
-    assert [x["id"] for x in d["nodes"]] == ["duke", "jan", "fam", "gio", "cos", "pic"] and [x["at"] for x in d["nodes"]] == [0.5, 1.5, 2.4, 3.3, 4.2, 5.6]
+    assert [x["id"] for x in d["nodes"]] == ["patron", "artist", "family", "sitter_a", "sitter_b", "work"] and [x["at"] for x in d["nodes"]] == [0.5, 1.5, 2.4, 3.3, 4.2, 5.6]
     assert [(e["kind"], e["at"]) for e in d["edges"]] == [("link", 1.0), ("descent", 2.8), ("marriage", 3.8), ("link", 5.0), ("link", 5.2)]
     assert all(x["row"] == -1 and x["col"] == -1 for x in d["nodes"]), "the default is laid out by the technique"
     for pd in sp["params"]:
@@ -657,11 +665,11 @@ def test_a_three_generation_family_with_two_marriages_is_laid_out_as_a_family(tm
 def test_the_default_example_is_laid_out_like_the_mock_up():
     res = solved_tree(TREE_DEFAULT["nodes"], TREE_DEFAULT["edges"])
     n = {nd["id"]: nl for nd, nl in zip(TREE_DEFAULT["nodes"], res.nodes)}
-    assert [n[k]["row"] for k in ("duke", "fam", "jan", "gio", "cos", "pic")] == [0, 0, 1, 1, 1, 2]
-    assert n["duke"]["x"] == pytest.approx(n["jan"]["x"], abs=1), "the duke is straight above the painter"
-    assert n["fam"]["x"] == pytest.approx((n["gio"]["x"] + n["cos"]["x"]) / 2, abs=40), "the family stands over the middle of the couple (as in the mock-up)"
-    assert n["pic"]["x"] == pytest.approx((n["jan"]["x"] + n["gio"]["x"]) / 2, abs=40) or n["jan"]["x"] < n["pic"]["x"] < n["cos"]["x"]
-    assert [round(n[k]["base1"] / H, 2) for k in ("duke", "jan", "pic")] == pytest.approx([0.19, 0.51, 0.84], abs=0.03), "rows at about 19, 52 and 84 percent of the height (the mock-up's)"
+    assert [n[k]["row"] for k in ("patron", "family", "artist", "sitter_a", "sitter_b", "work")] == [0, 0, 1, 1, 1, 2]
+    assert n["patron"]["x"] == pytest.approx(n["artist"]["x"], abs=1), "the patron is straight above the artist"
+    assert n["family"]["x"] == pytest.approx((n["sitter_a"]["x"] + n["sitter_b"]["x"]) / 2, abs=40), "the family stands over the middle of the couple (as in the mock-up)"
+    assert n["work"]["x"] == pytest.approx((n["artist"]["x"] + n["sitter_a"]["x"]) / 2, abs=40) or n["artist"]["x"] < n["work"]["x"] < n["sitter_b"]["x"]
+    assert [round(n[k]["base1"] / H, 2) for k in ("patron", "artist", "work")] == pytest.approx([0.19, 0.51, 0.84], abs=0.03), "rows at about 19, 52 and 84 percent of the height (the mock-up's)"
     assert res.nodes[0]["metrics"]["s1"] > res.nodes[3]["metrics"]["s1"], "strong names are larger"
 
 
