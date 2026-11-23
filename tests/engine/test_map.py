@@ -26,6 +26,12 @@ from conftest import REPO
 GEO = REPO / "style" / "gae" / "geo"
 BRUGES, LUCCA = (3.2247, 51.2093), (10.5027, 43.8429)
 STATIC = {"push_s": 0, "grain": 0, "vignette": 0, "graticule_deg": 0, "sea_names": False, "region_iso": [], "region_label": ""}
+BRUGES_LUCCA = {
+    "places": [{"id": "bruges", "name": "Bruges", "lonlat": list(BRUGES), "at": 1.0, "label_side": "auto"},
+               {"id": "lucca", "name": "Lucca", "lonlat": list(LUCCA), "at": 2.3, "label_side": "auto"}],
+    "route": [{"from": "bruges", "to": "lucca", "via": "5.5, 48.8; 7.6, 46.0", "shape": "curve", "at": 2.6, "draw_s": 3.0, "head": "dot"}],
+    "region_iso": ["BE"], "region_label": "Belgium",
+}
 
 
 def spec():
@@ -200,7 +206,7 @@ def test_narrow_views_use_the_fine_outlines_and_still_separate_land_from_sea(tmp
 
 
 def test_places_and_labels_appear_at_their_times_and_not_before(tmp_path):
-    p = make_project(tmp_path, dict(STATIC, route=[], view_start_width_km=3800, view_end_mode="manual", view_end_center="6.86, 47.66", view_end_width_km=3800))
+    p = make_project(tmp_path, dict(STATIC, places=BRUGES_LUCCA["places"], route=[], view_start_width_km=3800, view_end_mode="manual", view_end_center="6.86, 47.66", view_end_width_km=3800))
     v = renderer(p).view_at(0)
     bx, by = (int(round(float(a))) for a in v.to_px(*BRUGES))
     lx, ly = (int(round(float(a))) for a in v.to_px(*LUCCA))
@@ -363,7 +369,7 @@ def test_a_place_label_has_no_ink_under_it_in_the_default_example(tmp_path):
 
 def test_a_crowded_place_gets_its_label_farther_out_not_on_the_ink(tmp_path):
     """A mark on a coast with a country's outline beside it: none of the eight sides is clear, so the label is put farther out; it stays near its mark and clear of ink."""
-    p = make_project(tmp_path)
+    p = make_project(tmp_path, BRUGES_LUCCA)
     r = renderer(p)
     pl = r.places[0]                                                    # Bruges, on the coast of Belgium
     dx, dy = r.label_at["bruges"]
@@ -385,7 +391,7 @@ def test_the_region_name_goes_inside_a_big_country_and_outside_a_small_one(tmp_p
                                      "route": [{"from": "paris", "to": "lyon", "via": "", "shape": "straight", "at": 1.0, "draw_s": 2.0, "head": "dot"}], "region_iso": ["FR"],
                                      "region_label": "France", "view_start_width_km": 2600, "view_end_mode": "manual", "view_end_center": "2.5, 46.5", "view_end_width_km": 1800},
                           name="france")
-    belgium = make_project(tmp_path, name="belgium")
+    belgium = make_project(tmp_path, BRUGES_LUCCA, name="belgium")
     for p, inside in ((france, True), (belgium, False)):
         r = renderer(p)
         assert r.region_offset is not None
@@ -504,7 +510,7 @@ def test_every_param_at_its_bounds_validates_and_draws(tmp_path):
             d = copy.deepcopy(sb)
             d["shots"][0]["params"][pd["name"]] = v
             e = errors(p, d)
-            if pd["name"] == "places" and v and any(pl["id"] == "bruges" for pl in v) is False:
+            if pd["name"] == "places" and v and any(pl["id"] == "city_a" for pl in v) is False:
                 e = [x for x in e if x["code"] != "map_route_unknown_place"]
             if pd["name"] == "route" and v == []:
                 assert e == [], (pd["name"], v, e)
@@ -670,8 +676,8 @@ def test_the_registry_entry_is_complete_and_the_default_data_is_the_example():
                  "view_end_margin_pct", "view_end_center", "view_end_width_km", "push_s", "sea", "sea_names", "graticule_deg", "grain", "vignette"):
         assert need in names, need
     d = {x["name"]: x["default"] for x in sp["params"]}
-    assert [pl["id"] for pl in d["places"]] == ["bruges", "lucca"] and d["places"][0]["lonlat"] == [3.2247, 51.2093] and d["places"][1]["lonlat"] == [10.5027, 43.8429]
-    assert d["region_iso"] == ["BE"] and d["sea"] == "blue_grey" and d["view_start_width_km"] == 3800 and d["view_end_mode"] == "fit" and d["view_end_margin_pct"] == 19
+    assert [pl["id"] for pl in d["places"]] == ["city_a", "city_b"] and d["places"][0]["lonlat"] == [2.0, 47.0] and d["places"][1]["lonlat"] == [11.5, 50.5]
+    assert d["region_iso"] == [] and d["region_label"] == "" and d["sea"] == "blue_grey" and d["view_start_width_km"] == 3800 and d["view_end_mode"] == "fit" and d["view_end_margin_pct"] == 19
     assert d["places"][0]["at"] == 1.0 and d["places"][1]["at"] == 2.3 and d["route"][0]["at"] == 2.6 and d["route"][0]["draw_s"] == 3.0 and d["push_s"] == 6.0
     assert all(R.check_problem(x, x["default"]) is None for x in sp["params"])
     assert (REPO / "style/gae" / sp["preview"]["clip"]).stat().st_size > 1000 and (REPO / "style/gae" / sp["preview"]["thumb"]).stat().st_size > 1000
@@ -688,14 +694,14 @@ def test_the_rules_between_params(tmp_path):
         return [(i["code"], i["path"]) for i in errors(p, d)]
     assert codes() == []
     assert codes(places=[]) == [("param_item_count", "shots[0].params.places")]
-    assert codes(places=[{"id": "x", "name": "X", "lonlat": [0, 0]}]) == [("map_route_unknown_place", "shots[0].params.route")] * 2, "the default route still names Bruges and Lucca"
+    assert codes(places=[{"id": "x", "name": "X", "lonlat": [0, 0]}]) == [("map_route_unknown_place", "shots[0].params.route")] * 2, "the default route still names city_a and city_b"
     assert codes(places=[{"id": "x", "name": "X", "lonlat": [0, 0]}], route=[]) == []
     assert codes(places=[{"id": "x", "name": "X", "lonlat": [0, 0]}] * 2, route=[]) == [("map_duplicate_place", "shots[0].params.places")]
-    assert codes(route=[{"from": "bruges", "to": "nowhere"}]) == [("map_route_unknown_place", "shots[0].params.route")]
-    assert codes(route=[{"from": "bruges", "to": "lucca", "via": "1, 2; x"}]) == [("item_field_bad_form", "shots[0].params.route")]
-    assert codes(route=[{"from": "bruges", "to": "lucca", "via": "1, 200"}]) == [("map_bad_via", "shots[0].params.route")]
-    assert codes(route=[{"from": "bruges", "to": "lucca", "via": "; ".join("1, 2" for _ in range(13))}]) == [("map_bad_via", "shots[0].params.route")]
-    assert codes(route=[{"from": "bruges", "to": "lucca", "via": "1, 2;"}]) == []
+    assert codes(route=[{"from": "city_a", "to": "nowhere"}]) == [("map_route_unknown_place", "shots[0].params.route")]
+    assert codes(route=[{"from": "city_a", "to": "city_b", "via": "1, 2; x"}]) == [("item_field_bad_form", "shots[0].params.route")]
+    assert codes(route=[{"from": "city_a", "to": "city_b", "via": "1, 200"}]) == [("map_bad_via", "shots[0].params.route")]
+    assert codes(route=[{"from": "city_a", "to": "city_b", "via": "; ".join("1, 2" for _ in range(13))}]) == [("map_bad_via", "shots[0].params.route")]
+    assert codes(route=[{"from": "city_a", "to": "city_b", "via": "1, 2;"}]) == []
     assert codes(view_start_center="a") == [("param_bad_form", "shots[0].params.view_start_center")]
     assert codes(view_start_center="1, 2; 3, 4") == [("param_bad_form", "shots[0].params.view_start_center")] or codes(view_start_center="1, 2; 3, 4") == [("map_bad_center", "shots[0].params.view_start_center")]
     assert codes(view_end_center="190, 10") == [("map_bad_center", "shots[0].params.view_end_center")]
@@ -735,7 +741,7 @@ def test_the_draw_check_and_the_defaults_of_the_technique_pass(tmp_path):
     sb["shots"][0]["params"] = d
     assert errors(p, sb) == []
     d["places"][0]["name"] = "changed"
-    assert p.default_params("MAP-01", {})["places"][0]["name"] == "Bruges", "defaults are copied on every call"
+    assert p.default_params("MAP-01", {})["places"][0]["name"] == "City A", "defaults are copied on every call"
 
 
 def test_a_place_name_with_a_line_break_draws(tmp_path):
@@ -775,8 +781,8 @@ def test_validate_accepts_only_what_the_map_can_draw(tmp_path):
 # ----------------------------------------------------------------------------- fix round 1
 def test_a_sea_name_lies_wholly_on_water_with_clearance(tmp_path):
     """Fix round 1, point 3: whatever sea name is printed, in any frame of the push, no pixel of land lies within 8 px of its text, and it is inside the frame. The names
-    of the default example are looked at in the start, the middle and the end view, and at the times of the stills."""
-    p = make_project(tmp_path)
+    of the worked example are looked at in the start, the middle and the end view, and at the times of the stills."""
+    p = make_project(tmp_path, BRUGES_LUCCA)
     r = renderer(p)
     names = set()
     for t in (0.3, 1.4, 2.6, 4.2, 6.4, 7.6):
@@ -891,9 +897,9 @@ def test_the_usage_rule_says_what_the_map_is_for_and_how_to_draw_a_sea_route():
 
 
 def test_strokes_and_the_shade_never_get_heavier_than_in_the_default_end_view(tmp_path):
-    """Fix round 1, point 5(c): the widths that live in map space scale with the zoom since the start view, held to the zoom of the default example's end view
+    """Fix round 1, point 5(c): the widths that live in map space scale with the zoom since the start view, held to the zoom of the worked example's end view
     (3,800 to 2,348 km: 1.617), however far the push goes; the hairlines are the same in px at every zoom."""
-    default = renderer(make_project(tmp_path))
+    default = renderer(make_project(tmp_path, BRUGES_LUCCA))
     k_end = default.scale_k(default.end)
     assert k_end == pytest.approx(maps.K_MAX, abs=0.001) and k_end <= maps.K_MAX + 1e-12
     far = make_project(tmp_path, dict(STATIC, places=[{"id": "a", "name": "A", "lonlat": [10.78, 59.9], "at": 50}], route=[], view_start_width_km=20000, view_end_mode="manual",

@@ -44,8 +44,8 @@ test('the rows of the time axis: a new row is valid, the limits are the registry
   for (let i = 0; i < 14; i++) many = addItem(ITEMS, many);
   assert.equal(many.length, ITEMS.max_items);
   assert.equal(canAddItem(ITEMS, many), false);
-  assert.deepEqual(removeItem(ITEMS, six, 0).map((x) => x.date), [1426, 1431, 1432, 1433, 1434]);
-  assert.deepEqual(moveItem(six, 0, 1).map((x) => x.date).slice(0, 2), [1426, 1425]);
+  assert.deepEqual(removeItem(ITEMS, six, 0).map((x) => x.date), [1510, 1520, 1530, 1540, 1550]);
+  assert.deepEqual(moveItem(six, 0, 1).map((x) => x.date).slice(0, 2), [1510, 1500]);
   assert.equal(setItemField(ITEMS, six, 0, 'date', '-500')[0].date, -500, 'BC is a negative year');
   assert.equal(setItemField(ITEMS, six, 0, 'date', '99999')[0].date, 3000, 'held to the registry maximum');
   assert.equal(setItemField(ITEMS, six, 0, 'side', 'up')[0].side, 'up');

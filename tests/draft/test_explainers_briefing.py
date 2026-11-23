@@ -64,20 +64,20 @@ def test_the_catalogue_prints_the_fields_and_one_filled_example_that_the_registr
 
 def test_the_examples_are_the_registry_defaults_with_the_filled_in_fields_left_out(md):
     t = example_of(md, "TIME-01")
-    assert [x["date"] for x in t["items"]] == [1425, 1426, 1431, 1432, 1433, 1434] and t["items"][-1]["accent"] is True and "side" not in t["items"][0]
+    assert [x["date"] for x in t["items"]] == [1500, 1510, 1520, 1530, 1540, 1550] and t["items"][-1]["accent"] is True and "side" not in t["items"][0]
     tr = example_of(md, "TREE-01")
-    assert [n["id"] for n in tr["nodes"]] == ["duke", "jan", "fam", "gio", "cos", "pic"] and "row" not in tr["nodes"][0]
-    assert any(e.get("kind") == "marriage" and e["label"] == "married 1426" for e in tr["edges"])
+    assert [n["id"] for n in tr["nodes"]] == ["patron", "artist", "family", "sitter_a", "sitter_b", "work"] and "row" not in tr["nodes"][0]
+    assert any(e.get("kind") == "marriage" and e["label"] == "married" for e in tr["edges"])
     st = example_of(md, "STATE-01")
     assert st == {"label_a": "Colour", "label_b": "Infrared", "holds": "1.5; 2.5; 1.5"}
     mp = example_of(md, "MAP-01")
-    assert [p["id"] for p in mp["places"]] == ["bruges", "lucca"] and mp["region_iso"] == ["BE"] and mp["route"][0]["from"] == "bruges"
+    assert [p["id"] for p in mp["places"]] == ["city_a", "city_b"] and "region_iso" not in mp and mp["route"][0]["from"] == "city_a"
     ky = example_of(md, "KEY-01")
-    assert [x["ref"] for x in ky["labels"]] == ["LIT", "INSCR", "MIRROR", "AMBER", "BRUSH"] and ky["labels"][1]["side"] == "n" and all("style" not in x for x in ky["labels"])
+    assert [x["ref"] for x in ky["labels"]] == ["DETAIL_1", "DETAIL_2", "DETAIL_3", "DETAIL_4", "DETAIL_5"] and ky["labels"][1]["side"] == "n" and all("style" not in x for x in ky["labels"])
     nm = example_of(md, "NUM-01")
-    assert [(r["value"], r["count"]) for r in nm["rows"]] == [("600", 12), ("2,000", 40)] and nm["caption"] == "each dot is fifty squirrel pelts"
+    assert [(r["value"], r["count"]) for r in nm["rows"]] == [("100", 10), ("400", 40)] and nm["caption"] == "each dot represents ten units"
     dc = example_of(md, "DOC-01")
-    assert dc["lit"] == [{"ref": "INSCR"}] and dc["reading"] == "Jan van Eyck was here. 1434" and dc["original"].startswith("Johannes de eyck")
+    assert dc["lit"] == [{"ref": "LINE_1"}] and dc["reading"] == "Modern reading of the line" and dc["original"] == "Original text as written"
 
 
 def test_no_other_technique_gets_an_example_line(md):

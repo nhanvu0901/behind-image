@@ -110,12 +110,12 @@ test('the form says in Vietnamese which row and which field is wrong', () => {
   const labels = defaultParams(KEY.params).labels;
   assert.equal(itemsProblem(LABELS, labels), null);
   assert.match(itemsProblem(LABELS, setItemField(LABELS, labels, 1, 'text', '')), /^mục thứ 2, ô "text": bắt buộc nhập$/);
-  assert.match(itemsProblem(LABELS, setItemField(LABELS, labels, 0, 'ref', '')), /mục thứ 1 \(One candle, lit\), ô "ref": bắt buộc nhập/);
+  assert.match(itemsProblem(LABELS, setItemField(LABELS, labels, 0, 'ref', '')), /mục thứ 1 \(First detail\), ô "ref": bắt buộc nhập/);
   assert.match(itemsProblem(LABELS, setItemField(LABELS, labels, 0, 'text', 'x'.repeat(61))), /ô "text": Gõ một dòng, 1 đến 60 ký tự/);
   assert.match(itemsProblem(LABELS, []), /cần ít nhất 1 mục/);
   const rows = defaultParams(NUM.params).rows;
   assert.equal(itemsProblem(ROWS, rows), null);
-  assert.match(itemsProblem(ROWS, setItemField(ROWS, rows, 1, 'value', '')), /mục thứ 2 \(This gown\), ô "value": bắt buộc nhập/);
+  assert.match(itemsProblem(ROWS, setItemField(ROWS, rows, 1, 'value', '')), /mục thứ 2 \(Second figure\), ô "value": bắt buộc nhập/);
   assert.match(itemsProblem(ROWS, setItemField(ROWS, rows, 0, 'units', 'x'.repeat(25))), /ô "units": Gõ một dòng, tối đa 24 ký tự/);
   assert.match(itemsProblem(ROWS, [...rows, ...rows, ...rows]), /nhiều nhất 4 mục/);
   const lit = defaultParams(DOC.params).lit;

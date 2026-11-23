@@ -515,7 +515,7 @@
     {
      "name": "label_text",
      "type": "string",
-     "default": "The Arnolfini Portrait",
+     "default": "Title of the work",
      "min": null,
      "max": null,
      "unit": null,
@@ -525,7 +525,7 @@
     {
      "name": "label_sub",
      "type": "string",
-     "default": "Jan van Eyck, 1434",
+     "default": "Artist, year",
      "min": null,
      "max": null,
      "unit": null,
@@ -3778,8 +3778,8 @@
      "name": "labels",
      "type": "lines",
      "default": [
-      "BRUGES",
-      "LUCCA"
+      "CITY A",
+      "CITY B"
      ],
      "min": null,
      "max": null,
@@ -4070,7 +4070,7 @@
     {
      "name": "width_label",
      "type": "string",
-     "default": "60 cm",
+     "default": "Width",
      "min": null,
      "max": null,
      "unit": null,
@@ -4080,7 +4080,7 @@
     {
      "name": "height_label",
      "type": "string",
-     "default": "82 cm",
+     "default": "Height",
      "min": null,
      "max": null,
      "unit": null,
@@ -4090,7 +4090,7 @@
     {
      "name": "medium_caption",
      "type": "string",
-     "default": "OIL ON OAK PANEL",
+     "default": "MEDIUM ON SUPPORT",
      "min": null,
      "max": null,
      "unit": null,
@@ -5240,7 +5240,7 @@
     {
      "name": "text",
      "type": "string",
-     "default": "Jan van Eyck, The Arnolfini Portrait, 1434",
+     "default": "Artist, Title, year",
      "min": null,
      "max": null,
      "unit": null,
@@ -5788,7 +5788,7 @@
     {
      "name": "from_label",
      "type": "string",
-     "default": "BRUGES",
+     "default": "CITY A",
      "min": null,
      "max": null,
      "unit": null,
@@ -5812,7 +5812,7 @@
     {
      "name": "to_label",
      "type": "string",
-     "default": "LUCCA",
+     "default": "CITY B",
      "min": null,
      "max": null,
      "unit": null,
@@ -6213,7 +6213,7 @@
     {
      "name": "text",
      "type": "string",
-     "default": "CANDLE",
+     "default": "DETAIL",
      "min": null,
      "max": null,
      "unit": null,
@@ -6334,7 +6334,7 @@
     {
      "name": "year",
      "type": "string",
-     "default": "1434",
+     "default": "1500",
      "min": null,
      "max": null,
      "unit": null,
@@ -6946,10 +6946,10 @@
      "name": "layers",
      "type": "lines",
      "default": [
-      "OAK PANEL | #785a3c | 200",
-      "CHALK GROUND | #ebe6e6 | 70",
-      "IMPRIMATURA | #aa9678 | 60",
-      "PAINT LAYERS | #287828 | 160",
+      "SUPPORT | #785a3c | 200",
+      "GROUND | #ebe6e6 | 70",
+      "UNDERLAYER | #aa9678 | 60",
+      "PAINT LAYER | #287828 | 160",
       "VARNISH | #dcbe5a | 50"
      ],
      "min": null,
@@ -6958,7 +6958,7 @@
      "values": null,
      "measured": null,
      "pattern": "[^|]{0,60}\\|\\s*#[0-9a-fA-F]{6}\\s*\\|\\s*\\d{1,5}(\\.\\d{1,3})?\\s*",
-     "pattern_hint": "Mỗi dòng: TÊN | #màu | độ dày, ví dụ OAK PANEL | #785a3c | 200"
+     "pattern_hint": "Mỗi dòng: TÊN | #màu | độ dày, ví dụ SUPPORT | #785a3c | 200"
     },
     {
      "name": "section_box",
@@ -7295,8 +7295,8 @@
      "name": "pieces",
      "type": "lines",
      "default": [
-      "MIRROR | 0.45 | 1450,80",
-      "DOG | 0.5 | 1450,620",
+      "DETAIL_1 | 0.45 | 1450,80",
+      "DETAIL_2 | 0.5 | 1450,620",
       "2200,820 | 0.55 | 180,80"
      ],
      "min": null,
@@ -7305,7 +7305,7 @@
      "values": null,
      "measured": null,
      "pattern": "[^|]{1,60}\\|\\s*\\d{1,3}(\\.\\d{1,3})?\\s*\\|\\s*-?\\d{1,5}(\\.\\d{1,3})?\\s*,\\s*-?\\d{1,5}(\\.\\d{1,3})?\\s*",
-     "pattern_hint": "Mỗi dòng: VÙNG | thu phóng | x,y, ví dụ MIRROR | 0.45 | 1450,80"
+     "pattern_hint": "Mỗi dòng: VÙNG | thu phóng | x,y, ví dụ DETAIL_1 | 0.45 | 1450,80"
     },
     {
      "name": "piece_px",
@@ -7776,7 +7776,7 @@
     {
      "name": "caption",
      "type": "string",
-     "default": "CONVEX MIRROR: WIDE VIEW, SMALL IMAGE",
+     "default": "OPTICAL DIAGRAM",
      "min": null,
      "max": null,
      "unit": null,
@@ -9999,7 +9999,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "FASHIONS AND FABRICS",
+     "default": "CHAPTER TITLE",
      "min": null,
      "max": null,
      "unit": null,
@@ -10174,7 +10174,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "THE ARNOLFINI PORTRAIT",
+     "default": "TITLE OF THE WORK",
      "min": null,
      "max": null,
      "unit": null,
@@ -10184,7 +10184,7 @@
     {
      "name": "artist",
      "type": "string",
-     "default": "JAN VAN EYCK",
+     "default": "ARTIST NAME",
      "min": null,
      "max": null,
      "unit": null,
@@ -10194,7 +10194,7 @@
     {
      "name": "year",
      "type": "string",
-     "default": "1434",
+     "default": "1500",
      "min": null,
      "max": null,
      "unit": null,
@@ -10753,7 +10753,7 @@
     {
      "name": "text",
      "type": "string",
-     "default": "BLUE UNDERGARMENT",
+     "default": "DETAIL NAME",
      "min": null,
      "max": null,
      "unit": null,
@@ -10951,7 +10951,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "VIRGIN AND CHILD WITH CANON VAN DER PAELE",
+     "default": "TITLE OF THE WORK",
      "min": null,
      "max": null,
      "unit": null,
@@ -10961,7 +10961,7 @@
     {
      "name": "artist_year",
      "type": "string",
-     "default": "JAN VAN EYCK, 1434",
+     "default": "ARTIST, YEAR",
      "min": null,
      "max": null,
      "unit": null,
@@ -11152,7 +11152,7 @@
     {
      "name": "text",
      "type": "string",
-     "default": "CANDLE",
+     "default": "DETAIL",
      "min": null,
      "max": null,
      "unit": null,
@@ -12898,7 +12898,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "The Arnolfini Portrait",
+     "default": "Title of the work",
      "min": null,
      "max": null,
      "unit": null,
@@ -12910,7 +12910,7 @@
     {
      "name": "artist_year",
      "type": "string",
-     "default": "Jan van Eyck, 1434",
+     "default": "Artist, year",
      "min": null,
      "max": null,
      "unit": null,
@@ -13049,7 +13049,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "The Arnolfini Portrait",
+     "default": "Title of the work",
      "min": null,
      "max": null,
      "unit": null,
@@ -13061,7 +13061,7 @@
     {
      "name": "sub",
      "type": "string",
-     "default": "Jan van Eyck · 1434",
+     "default": "Artist · year",
      "min": null,
      "max": null,
      "unit": null,
@@ -14015,7 +14015,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "5. The Mirror",
+     "default": "1. Chapter title",
      "min": null,
      "max": null,
      "unit": null,
@@ -14244,7 +14244,7 @@
     {
      "name": "title",
      "type": "string",
-     "default": "5. The Mirror",
+     "default": "1. Chapter title",
      "min": null,
      "max": null,
      "unit": null,
@@ -14398,43 +14398,43 @@
      "type": "items",
      "default": [
       {
-       "date": 1425,
-       "label": "Painter to Philip the Good",
+       "date": 1500,
+       "label": "First event",
        "side": "auto",
        "at": 0.8,
        "accent": false
       },
       {
-       "date": 1426,
-       "label": "Giovanni marries Costanza Trenta",
+       "date": 1510,
+       "label": "Second event",
        "side": "auto",
        "at": 1.7,
        "accent": false
       },
       {
-       "date": 1431,
-       "label": "Van Eyck settles in Bruges",
+       "date": 1520,
+       "label": "Third event",
        "side": "auto",
        "at": 2.6,
        "accent": false
       },
       {
-       "date": 1432,
-       "label": "The Ghent Altarpiece",
+       "date": 1530,
+       "label": "Fourth event",
        "side": "auto",
        "at": 3.5,
        "accent": false
       },
       {
-       "date": 1433,
-       "label": "Costanza is dead",
+       "date": 1540,
+       "label": "Fifth event",
        "side": "auto",
        "at": 4.4,
        "accent": false
       },
       {
-       "date": 1434,
-       "label": "The Arnolfini Portrait",
+       "date": 1550,
+       "label": "Key event",
        "side": "auto",
        "at": 5.3,
        "accent": true
@@ -14468,7 +14468,7 @@
        "unit": null,
        "values": null,
        "pattern": ".{1,48}",
-       "pattern_hint": "Gõ một dòng, 1 đến 48 ký tự: tên ngắn của mốc, ví dụ Van Eyck đến Bruges."
+       "pattern_hint": "Gõ một dòng, 1 đến 48 ký tự: tên ngắn của mốc, ví dụ Họa sĩ đến thành phố."
       },
       {
        "name": "side",
@@ -14624,17 +14624,17 @@
      "type": "items",
      "default": [
       {
-       "id": "duke",
-       "name": "Philip the Good",
-       "sub": "Duke of Burgundy",
+       "id": "patron",
+       "name": "Patron",
+       "sub": "court or city",
        "row": -1,
        "col": -1,
        "at": 0.5,
        "strong": true
       },
       {
-       "id": "jan",
-       "name": "Jan van Eyck",
+       "id": "artist",
+       "name": "Artist",
        "sub": "painter",
        "row": -1,
        "col": -1,
@@ -14642,36 +14642,36 @@
        "strong": true
       },
       {
-       "id": "fam",
-       "name": "The Arnolfini",
-       "sub": "merchants from Lucca",
+       "id": "family",
+       "name": "Family",
+       "sub": "house or guild",
        "row": -1,
        "col": -1,
        "at": 2.4,
        "strong": true
       },
       {
-       "id": "gio",
-       "name": "Giovanni di Nicolao",
-       "sub": "Arnolfini",
+       "id": "sitter_a",
+       "name": "First sitter",
+       "sub": "role",
        "row": -1,
        "col": -1,
        "at": 3.3,
        "strong": false
       },
       {
-       "id": "cos",
-       "name": "Costanza Trenta",
-       "sub": "dead by 1433",
+       "id": "sitter_b",
+       "name": "Second sitter",
+       "sub": "dates",
        "row": -1,
        "col": -1,
        "at": 4.2,
        "strong": false
       },
       {
-       "id": "pic",
-       "name": "The Arnolfini Portrait",
-       "sub": "1434",
+       "id": "work",
+       "name": "Title of the work",
+       "sub": "1500",
        "row": -1,
        "col": -1,
        "at": 5.6,
@@ -14696,7 +14696,7 @@
        "unit": null,
        "values": null,
        "pattern": "[A-Za-z0-9_-]{1,24}",
-       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ jan."
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ artist."
       },
       {
        "name": "name",
@@ -14769,38 +14769,38 @@
      "type": "items",
      "default": [
       {
-       "from": "duke",
-       "to": "jan",
+       "from": "patron",
+       "to": "artist",
        "kind": "link",
-       "label": "court painter, 1425",
+       "label": "patron of",
        "at": 1.0
       },
       {
-       "from": "fam",
-       "to": "gio",
+       "from": "family",
+       "to": "sitter_a",
        "kind": "descent",
        "label": "",
        "at": 2.8
       },
       {
-       "from": "gio",
-       "to": "cos",
+       "from": "sitter_a",
+       "to": "sitter_b",
        "kind": "marriage",
-       "label": "married 1426",
+       "label": "married",
        "at": 3.8
       },
       {
-       "from": "jan",
-       "to": "pic",
+       "from": "artist",
+       "to": "work",
        "kind": "link",
        "label": "paints",
        "at": 5.0
       },
       {
-       "from": "gio",
-       "to": "pic",
+       "from": "sitter_a",
+       "to": "work",
        "kind": "link",
-       "label": "buys",
+       "label": "commissions",
        "at": 5.2
       }
      ],
@@ -14822,7 +14822,7 @@
        "unit": null,
        "values": null,
        "pattern": "[A-Za-z0-9_-]{1,24}",
-       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ jan."
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ artist."
       },
       {
        "name": "to",
@@ -14834,7 +14834,7 @@
        "unit": null,
        "values": null,
        "pattern": "[A-Za-z0-9_-]{1,24}",
-       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ jan."
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ artist."
       },
       {
        "name": "kind",
@@ -15092,21 +15092,21 @@
      "type": "items",
      "default": [
       {
-       "id": "bruges",
-       "name": "Bruges",
+       "id": "city_a",
+       "name": "City A",
        "lonlat": [
-        3.2247,
-        51.2093
+        2.0,
+        47.0
        ],
        "at": 1.0,
        "label_side": "auto"
       },
       {
-       "id": "lucca",
-       "name": "Lucca",
+       "id": "city_b",
+       "name": "City B",
        "lonlat": [
-        10.5027,
-        43.8429
+        11.5,
+        50.5
        ],
        "at": 2.3,
        "label_side": "auto"
@@ -15130,7 +15130,7 @@
        "unit": null,
        "values": null,
        "pattern": "[A-Za-z0-9_-]{1,24}",
-       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ bruges."
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ city_a."
       },
       {
        "name": "name",
@@ -15191,9 +15191,9 @@
      "type": "items",
      "default": [
       {
-       "from": "bruges",
-       "to": "lucca",
-       "via": "5.5, 48.8; 7.6, 46.0",
+       "from": "city_a",
+       "to": "city_b",
+       "via": "5.0, 49.0; 8.5, 50.0",
        "shape": "curve",
        "at": 2.6,
        "draw_s": 3.0,
@@ -15218,7 +15218,7 @@
        "unit": null,
        "values": null,
        "pattern": "[A-Za-z0-9_-]{1,24}",
-       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ bruges."
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ city_a."
       },
       {
        "name": "to",
@@ -15230,7 +15230,7 @@
        "unit": null,
        "values": null,
        "pattern": "[A-Za-z0-9_-]{1,24}",
-       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ bruges."
+       "pattern_hint": "Gõ một mã ngắn không dấu, không khoảng trắng (chữ, số, gạch nối), ví dụ city_a."
       },
       {
        "name": "via",
@@ -15295,9 +15295,7 @@
     {
      "name": "region_iso",
      "type": "lines",
-     "default": [
-      "BE"
-     ],
+     "default": [],
      "min": null,
      "max": null,
      "unit": "ISO 3166-1 alpha-2",
@@ -15306,12 +15304,12 @@
      "min_items": 0,
      "max_items": 8,
      "pattern": "[A-Za-z]{2}",
-     "pattern_hint": "Gõ mã nước hai chữ cái theo chuẩn ISO, mỗi dòng một nước. Ví dụ: BE"
+     "pattern_hint": "Gõ mã nước hai chữ cái theo chuẩn ISO, mỗi dòng một nước. Ví dụ: FR"
     },
     {
      "name": "region_label",
      "type": "string",
-     "default": "Belgium",
+     "default": "",
      "min": null,
      "max": null,
      "unit": null,
@@ -15572,36 +15570,36 @@
      "type": "items",
      "default": [
       {
-       "text": "One candle, lit",
-       "ref": "LIT",
+       "text": "First detail",
+       "ref": "DETAIL_1",
        "side": "w",
        "at": 0.7,
        "style": "italic"
       },
       {
-       "text": "Latin inscription",
-       "ref": "INSCR",
+       "text": "Second detail",
+       "ref": "DETAIL_2",
        "side": "n",
        "at": 1.6,
        "style": "italic"
       },
       {
-       "text": "Convex mirror",
-       "ref": "MIRROR",
+       "text": "Third detail",
+       "ref": "DETAIL_3",
        "side": "s",
        "at": 2.5,
        "style": "italic"
       },
       {
-       "text": "Amber beads",
-       "ref": "AMBER",
+       "text": "Fourth detail",
+       "ref": "DETAIL_4",
        "side": "w",
        "at": 3.4,
        "style": "italic"
       },
       {
-       "text": "A brush",
-       "ref": "BRUSH",
+       "text": "Fifth detail",
+       "ref": "DETAIL_5",
        "side": "e",
        "at": 4.3,
        "style": "italic"
@@ -15802,16 +15800,16 @@
      "type": "items",
      "default": [
       {
-       "label": "An ordinary gown",
-       "value": "600",
-       "units": "pelts",
-       "count": 12,
+       "label": "First figure",
+       "value": "100",
+       "units": "units",
+       "count": 10,
        "at": 1.0
       },
       {
-       "label": "This gown",
-       "value": "2,000",
-       "units": "pelts",
+       "label": "Second figure",
+       "value": "400",
+       "units": "units",
        "count": 40,
        "at": 2.9
       }
@@ -15885,7 +15883,7 @@
     {
      "name": "caption",
      "type": "string",
-     "default": "each dot is fifty squirrel pelts",
+     "default": "each dot represents ten units",
      "min": null,
      "max": null,
      "unit": null,
@@ -15897,7 +15895,7 @@
     {
      "name": "source",
      "type": "string",
-     "default": "Source: the sample narration of the Arnolfini video",
+     "default": "Source: historical record",
      "min": null,
      "max": null,
      "unit": null,
@@ -16022,7 +16020,7 @@
      "type": "items",
      "default": [
       {
-       "ref": "INSCR",
+       "ref": "LINE_1",
        "box": "",
        "at": 1.0,
        "hold_s": 0
@@ -16123,7 +16121,7 @@
     {
      "name": "reading",
      "type": "string",
-     "default": "Jan van Eyck was here. 1434",
+     "default": "Modern reading of the line",
      "min": null,
      "max": null,
      "unit": null,
@@ -16135,7 +16133,7 @@
     {
      "name": "original",
      "type": "string",
-     "default": "Johannes de eyck fuit hic · 1434",
+     "default": "Original text as written",
      "min": null,
      "max": null,
      "unit": null,

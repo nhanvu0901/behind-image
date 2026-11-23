@@ -122,6 +122,30 @@ def test_no_arnolfini_mentions_in_offered_technique_text_fields():
             assert not arnolfini_words.search(t.get(field) or ""), (tid, field)
 
 
+def test_no_arnolfini_mentions_in_param_defaults():
+    banned = re.compile(r"arnolfini|van\s*eyck|costanza|giovanni|bruges|lucca|1434|1433|pelts|van der paele|philip the good", re.I)
+
+    def walk(val):
+        if isinstance(val, str):
+            assert not banned.search(val), val
+        elif isinstance(val, list):
+            for x in val:
+                walk(x)
+        elif isinstance(val, dict):
+            for x in val.values():
+                walk(x)
+
+    for tid, t in ALL.items():
+        for p in t.get("params") or []:
+            walk(p.get("default"))
+            if p.get("pattern_hint"):
+                assert not banned.search(p["pattern_hint"]), (tid, p["name"], "pattern_hint")
+            for f in p.get("fields") or []:
+                walk(f.get("default"))
+                if f.get("pattern_hint"):
+                    assert not banned.search(f["pattern_hint"]), (tid, p["name"], f["name"], "pattern_hint")
+
+
 def test_an_example_never_tells_the_model_what_an_earlier_video_did_not_use():
     """fixes4: on the first real draft the model read, for AN-03, "(the finished video used only a camera move here)" and wrote in its notes "a camera move on the shelves serves this
     line, as it did in the finished reference video": the example named the answer the technique is there to replace. An example is the sentence, never what a video did with it."""
