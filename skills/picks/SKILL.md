@@ -105,9 +105,9 @@ Fixture project `ops1` (a project with a narration of six lines and four picture
 # fixture: ops
 $ bti schema ops picks
 operations of the picks (send them with: bti ops <project> picks --file ops.json):
-  set_main: Choose the main picture (the whole painting) of the video.
-    required: asset
-    example: {"op":"set_main","asset":"B"}
+  set_subjects: Replace the project's subject table.
+    required: subjects
+    example: {"op":"set_subjects","subjects":[{"id":"memory","kind":"idea","name":"memory","strip":false,"where":null}]}
 ...
 (bti schema ops picks --json gives every JSON Schema)
 $ cat > ops.json <<'EOF'
