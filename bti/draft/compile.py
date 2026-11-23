@@ -22,6 +22,7 @@ Shot numbers count from 1 within a chapter's file. Nothing here calls a model.
 from __future__ import annotations
 
 import copy
+import math
 import re
 import statistics
 from dataclasses import dataclass, field
@@ -51,6 +52,14 @@ NARRATION_GRAM = 5
 EPS = 1e-6
 REGION_CAMERAS = ("CAM-01", "CAM-03", "CAM-05")
 CARD_KIND = "card"
+
+
+def _bounded_duration(start, end):
+    """A millisecond duration whose floating-point end cannot exceed the bound."""
+    duration = math.floor(max(0.0, end - start) * 1000) / 1000
+    while duration > 0 and start + duration > end:
+        duration = max(0.0, duration - 0.001)
+    return duration
 
 
 @dataclass
@@ -1078,7 +1087,7 @@ class _Compiler:
         for idx, (sub, name, name_wi, name_t, beat_end, name_key) in enumerate(to_emit):
             next_name = next((ev[3] for ev in to_emit[idx + 1:] if ev[3] > name_t), t1)
             end_t = min(t1, next_name) if borrowed_single else min(t1, next_name, max(beat_end, name_t + 3.2))
-            dur = round(end_t - name_t, 3)
+            dur = _bounded_duration(name_t, end_t)
             if dur < 0.05:
                 continue
             obj = self.build_overlay(rec["zone"], rec["n"], 0,
@@ -1115,7 +1124,7 @@ class _Compiler:
                 elif sub.get("kind") != "person" and small:
                     defs.append(("HI-01", {"at": region}))
             for tid, params in defs:
-                dur = round(min(t1, sentence_end) - t, 3)
+                dur = _bounded_duration(self.words[wi]["s"] + round(t - self.words[wi]["s"], 4), min(t1, sentence_end))
                 if dur < 0.05:
                     continue
                 obj = self.build_overlay(rec["zone"], rec["n"], 0, {"technique": tid, "params": params}, shot)

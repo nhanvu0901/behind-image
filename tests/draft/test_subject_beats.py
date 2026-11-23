@@ -241,7 +241,7 @@ def test_strip_uses_camera_after_frame_fitting(proj, monkeypatch):
     assert not any(o['technique'] == 'X-ANN-01' and o['params'].get('text') == 'w12' for s in result.storyboard['shots'] for o in s.get('overlays', []))
 
 
-def test_whole_painting_label_is_not_added_over_a_detail(proj):
+def test_painting_label_is_added_over_its_detail(proj):
     from bti.draft.compile import compile_specs, _Compiler
     from bti.draft.inputs import load_inputs
     from helpers import GOOD, clean_spec
@@ -249,9 +249,9 @@ def test_whole_painting_label_is_not_added_over_a_detail(proj):
     inp.picks['subjects'] = [{'id': 'painting', 'kind': 'work', 'name': 'w12', 'strip': True, 'where': {'asset': 'A'}}]
     inp.picks['beats']['b0002']['about'] = [{'id': 'painting', 'words': 'w12'}]
     result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
-    # The example shot zooms tightly toward a region of the painting.
+    # The picture is still the painting when the shot zooms to a detail.
     strip = [o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-01' and o['params'].get('text') == 'w12']
-    assert strip == []
+    assert len(strip) == 1
 
 
 def test_subject_strips_do_not_overlap_when_two_names_are_spoken(proj):
@@ -588,3 +588,29 @@ def test_template_generic_and_repair_loop_prioritizes_subject_warning():
     res = CompileResult({'shots': []}, [{'level': 'warn', 'code': 'shot_short', 'message': 'short'},
                                         {'level': 'warn', 'code': 'subject_not_on_screen', 'message': 'subject hidden'}], [], [], {}, False)
     assert 'warning subject_not_on_screen: subject hidden' in summary_text(res, limit=1)
+
+
+def test_generated_overlay_duration_does_not_overshoot_fractional_shot_end():
+    from bti.draft.compile import _bounded_duration
+    start, end = 95.123, 98.7904
+    duration = _bounded_duration(start, end)
+    assert start + duration <= end
+    assert duration > 3.66
+
+
+def test_generated_strip_stays_inside_fractional_cut(proj):
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import load_inputs
+    from bti.engine.timing import Timing
+    from helpers import GOOD, clean_spec, shot
+    inp = load_inputs(proj)
+    inp.timing['words'][15]['s'] = 7.9006
+    inp.picks['subjects'] = [{'id': 'v', 'kind': 'place', 'name': 'w12', 'strip': True, 'where': {'region': 'MIRROR'}}]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'v', 'words': 'w12'}]
+    specs = {c: clean_spec(s, c) for c, s in GOOD.items()}
+    specs['c01']['shots'].insert(2, clean_spec({'schema': 'bti.draft/1', 'chapter': 'c01', 'shots': [shot('b0002', 15)]}, 'c01')['shots'][0])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    tm = Timing(inp.timing)
+    strips = [o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-01']
+    assert len(strips) == 1
+    assert tm.resolve(strips[0]['start']) + strips[0]['dur'] <= tm.resolve(result.storyboard['shots'][2]['start'])

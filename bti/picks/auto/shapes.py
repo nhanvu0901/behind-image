@@ -766,6 +766,8 @@ def _subjects(raw, raw_lines, known, ctx, errors):
         if not isinstance(about, list):
             errors.append("line %s: `about` must be a list" % bid)
             continue
+        if len({m.get("id") for m in about if isinstance(m, dict) and isinstance(m.get("id"), str)}) > 3:
+            errors.append("line %s: `about` has at most 3 subjects; keep only what the line is about, not passing names" % bid)
         text = " ".join(ctx.line_texts.get(bid, "").split()).casefold()
         for mention in about:
             if not (isinstance(mention, dict) and isinstance(mention.get("id"), str) and mention.get("id") in ids and isinstance(mention.get("words"), str)

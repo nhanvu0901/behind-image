@@ -1478,26 +1478,29 @@ def subject_visible_at(shot: dict, span: tuple[float, float], t: float, subject:
     region = where.get("region")
     wanted = where.get("asset") or (main if region else None)
     if not wanted:
-        return False
+        # Unknown location cannot establish absence. Recognize a named main work
+        # for labels when its title appears in the asset's catalogue title.
+        title = tokens((assets.get(main) or {}).get("title"))
+        name_tokens = tokens(subject.get("name"))
+        if name_tokens[:1] == ["the"]:
+            name_tokens = name_tokens[1:]
+        title_matches = name_tokens and any(title[i:i + len(name_tokens)] == name_tokens for i in range(len(title) - len(name_tokens) + 1))
+        if subject.get("kind") == "work" and title_matches:
+            wanted = main
+        else:
+            return None
     panels = _shot_visible_panels(shot, t, span, wanted, bundle, primary_asset=primary_asset)
     if not panels:
         return False
-    whole_main = (wanted == main and not region and subject.get("kind") == "work")
-    if not region and not whole_main:
+    if not region:
         return True
     main_doc = assets.get(main) or {}
     w, h = main_doc.get("width"), main_doc.get("height")
     size = (float(w), float(h)) if (_num(w) and _num(h) and float(w) > 0 and float(h) > 0) else None
     regions = main_doc.get("regions") or {}
-    if whole_main:
-        if not size:
-            return None
-        from bti.media import contentbox as CB
-        box = CB.box_of(main_doc, project_dir) or (0.0, 0.0, size[0], size[1])
-    else:
-        box = region_box(regions.get(region))
-        if not box:
-            return None
+    box = region_box(regions.get(region))
+    if not box:
+        return None
     area = (box[2] - box[0]) * (box[3] - box[1])
     if area <= 0:
         return None
@@ -1531,8 +1534,22 @@ def subject_visible_at(shot: dict, span: tuple[float, float], t: float, subject:
         def overlap(b):
             return max(0.0, min(fx1, b[2]) - max(fx0, b[0])) * max(0.0, min(fy1, b[3]) - max(fy0, b[1]))
         vis_frame_area = max(0.0, fx1 - fx0) * max(0.0, fy1 - fy0)
-        ok = overlap(box) >= (0.95 if whole_main else 0.60) * area
-        if ok and subject.get("kind") == "person" and vis_frame_area > 0 and overlap(box) < 0.15 * vis_frame_area:
+        candidates = [box]
+        if subject.get("kind") == "person":
+            names = [tokens(n) for n in [subject.get("name"), *(subject.get("also") or [])]]
+            for candidate in regions.values():
+                if not isinstance(candidate, dict):
+                    continue
+                words = tokens(candidate.get("thing"))
+                if not set(words) & {"face", "head", "figure"}:
+                    continue
+                if any(name and any(words[i:i + len(name)] == name for i in range(len(words) - len(name) + 1)) for name in names):
+                    other_box = region_box(candidate)
+                    if other_box:
+                        candidates.append(other_box)
+        ok = any(overlap(b) >= 0.60 * ((b[2]-b[0]) * (b[3]-b[1])) or
+                 (vis_frame_area > 0 and overlap(b) >= 0.60 * vis_frame_area) for b in candidates)
+        if ok and subject.get("kind") == "person" and vis_frame_area > 0 and max(overlap(b) for b in candidates) < 0.15 * vis_frame_area:
             for other in subjects:
                 if not isinstance(other, dict) or other.get("id") == subject.get("id"):
                     continue
@@ -1566,7 +1583,7 @@ def _subject_not_on_screen(c):
                 continue
             subject = by_id.get(item.get("id"))
             phrase = tokens(item.get("words"))
-            if not subject or subject.get("kind") in ("idea", "text") or not phrase:
+            if not subject or not subject.get("where") or subject.get("kind") in ("idea", "text") or not phrase:
                 continue
             lo = beat.get("w0")
             hi = beat.get("w1")

@@ -464,3 +464,12 @@ def test_clip_rule_cannot_silently_drop_a_subject_picture():
     result = shapes.check_plan({'subjects': subjects, 'regions': [], 'lines': lines}, context)
     assert not result.ok
     assert 'subject' in result.text().lower()
+
+
+def test_about_rejects_more_than_three_subjects():
+    data = copy.deepcopy(PLAN)
+    data['subjects'] = [{'id': str(i), 'kind': 'idea', 'name': str(i), 'strip': False, 'where': None} for i in range(4)]
+    for row in data['lines']:
+        row['about'] = []
+    data['lines'][0]['about'] = [{'id': str(i), 'words': str(i)} for i in range(4)]
+    assert 'at most 3' in only_errors(check(data))

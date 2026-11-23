@@ -1,0 +1,35 @@
+{
+  "width": 3840,
+  "height": 5253,
+  "regions": {
+    "MAN_FIGURE": {
+      "x": 1238,
+      "y": 2662,
+      "rx": 992,
+      "ry": 2108,
+      "label": "Toàn thân người đàn ông bên trái",
+      "tight": true,
+      "thing": "merchant standing on the left",
+      "rough": [
+        192,
+        420,
+        1997,
+        4886
+      ]
+    },
+    "MAN_HEAD": {
+      "x": 1091,
+      "y": 943,
+      "rx": 438,
+      "ry": 372,
+      "label": "Gương mặt và chiếc mũ rơm đen của Giovanni",
+      "tight": true,
+      "rough": [
+        615,
+        525,
+        1613,
+        1419
+      ]
+    }
+  }
+}
