@@ -943,3 +943,8 @@ Object.assign(BUILD, SUBJDRAFT_SENTENCES, {
     return `${fdShot(a)}: nhãn${what} gọi tên một vật (không phải nhân vật) trên tranh chính nhưng lúc nhãn hiện chưa có đèn rọi (HI-01/X-HI-01) hay vòng tròn (AN-01) cùng xuất hiện. Hãy thêm HI-01 hoặc AN-01 vào vật đó.`;
   },
 });
+
+// worker subjvis: a borrowed picture has no usable caption record.
+Object.assign(BUILD, {
+  borrowed_without_caption: (i) => `Hình mượn${i.args?.asset ? ` “${i.args.asset}”` : ''} chưa có thông tin phù hợp để ghi chú.`,
+});

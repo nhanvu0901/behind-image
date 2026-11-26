@@ -110,6 +110,8 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         "figure_on_wrong_picture": ("a large figure is laid over another picture although the picks of its line hold the picture of the thing counted (the first video laid 42 ships over the saint)",
                                     "có con số lớn nằm trên hình không phải thứ được đếm"),
         # worker subjdraft: a named subject must be visible.
+        # worker subjvis: outside image without a usable caption record.
+        "borrowed_without_caption": ("a borrowed picture has no usable record for a caption", "có hình mượn chưa có thông tin để ghi chú"),
         "subject_not_on_screen": ("the named subject is not visible when spoken", "có chủ thể chưa hiện khi lời dẫn nhắc đến"),
         # pointfix: a viewer needs to locate details and read labels.
         "name_not_shown": ("a first-presented person has no on-screen name", "có người được giới thiệu nhưng chưa hiện tên"),

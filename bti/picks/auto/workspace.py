@@ -35,6 +35,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from bti.picks import doc as pdoc
+
 from . import images, shapes, tighten
 from .inputs import Inputs
 
@@ -182,7 +184,7 @@ def plan_regions_to_tighten(inp: Inputs, plan: dict) -> list[str]:
     from bti.media import contentbox as pcb
     surface = tighten.surface_box((inp.painting.width, inp.painting.height), inp.painting.content_box) if inp.painting.content_box is not None else None
     seen: list[str] = []
-    subject_regions = [s["where"]["region"] for s in plan.get("subjects", []) if isinstance(s.get("where"), dict) and "region" in s["where"]]
+    subject_regions = [p["region"] for s in plan.get("subjects", []) for p in pdoc.subject_places(s) if "region" in p]
     lines = list(plan["lines"]) + [{"show": [{"type": "detail", "region": name}]} for name in subject_regions]
     for ln in lines:
         for it in list(ln["show"]) + ([ln["fallback"]] if ln.get("fallback") else []):

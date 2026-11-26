@@ -33,6 +33,7 @@ from bti.engine import registry as R
 from bti.engine import storyboard as SB
 from bti.engine import viewchecks as VC
 from bti.engine.timing import AnchorError, Timing, norm
+from bti.picks.doc import subject_places
 from bti.media import contentbox as CB          # panelbox: the painted area of the main painting
 
 from . import assetmerge as AM
@@ -957,6 +958,54 @@ class _Compiler:
                 doc = ID.with_video_title(doc, vt)
         return doc, origin, issues
 
+    def _borrowed_caption(self, shot, rec, t1):
+        """Caption an outside picture when the shot has no name or artwork strip."""
+        if shot.get("technique") not in ("X-LAY-01", "LAY-01", "X-CMP-01"):
+            return
+        overlays = shot.get("overlays") or []
+        if any(o.get("technique") in ("X-ANN-01", "X-ANN-02") for o in overlays):
+            return
+        slots = shot.get("slots") or {}
+        timeline = []
+        if shot.get("technique") == "X-CMP-01" and (slots.get("anchor") or {}).get("asset") == self.main:
+            swaps = [(slots.get("swap_%d" % i) or {}).get("asset") for i in range(1, 7)]
+            swaps = [key for key in swaps if key]
+            seconds = max(0.001, float((shot.get("params") or {}).get("seconds_per_swap") or 2.5))
+            for i, key in enumerate(swaps):
+                start = rec["t0"] + i * seconds
+                end = min(t1, start + seconds) if i < len(swaps) - 1 else t1
+                if key != self.main and start < end:
+                    timeline.append((key, start, end))
+        else:
+            keys = [slot.get("asset") for slot in slots.values() if isinstance(slot, dict)]
+            asset = next((k for k in keys if k and k != self.main), None)
+            if asset:
+                timeline.append((asset, rec["t0"], t1))
+        for asset, start, end in timeline:
+            record = self.assets.get(asset) or {}
+            title = str(record.get("title") or "").strip()
+            if not VC.usable_picture_title(record):
+                continue
+            artist, year = (str(record.get(k) or "").strip() for k in ("artist", "year"))
+            credit = record.get("credit") or {}
+            # Met's adapter uses artistDisplayName and objectDate: these describe
+            # the collection object. Other sources can describe the photograph.
+            if not isinstance(credit, dict) or credit.get("source") != "met":
+                artist, year = "", ""
+            if artist and (VC.PLACEHOLDER.search(artist) or artist.casefold() in VC.PLACEHOLDER_WHOLE):
+                artist = ""
+            obj = self.build_overlay(rec["zone"], rec["n"], 0, {"technique": "X-ANN-02", "params": {
+                "title": title, "artist_year": ", ".join(x for x in (artist, year) if x)}}, shot)
+            if obj:
+                used = {o.get("id") for o in overlays}
+                num = 1
+                while "o%d" % num in used:
+                    num += 1
+                anchor = shot["start"] if start == rec["t0"] else {"t": round(start, 3)}
+                obj.update(id="o%d" % num, start=anchor, dur=_bounded_duration(start, end))
+                overlays.append(obj)
+                shot["overlays"] = overlays
+
     def _subject_overlays(self, shot, rec, t1, names_seen):
         """Generate subject labels and pointers at their spoken words, when visible."""
         subjects = self.inp.picks.get("subjects")
@@ -985,7 +1034,7 @@ class _Compiler:
                     toks = tuple(VC.tokens(item.get("words", "")))
                     if toks:
                         all_names.add(toks)
-        all_regions = {(x.get("where") or {}).get("region") for x in subjects if isinstance(x, dict)} - {None}
+        all_regions = {p.get("region") for x in subjects if isinstance(x, dict) for p in subject_places(x)} - {None}
         shot["overlays"] = [o for o in (shot.get("overlays") or []) if not (
             (o.get("technique") == "X-ANN-01" and tuple(VC.tokens((o.get("params") or {}).get("text"))) in all_names) or
             (o.get("technique") in ("HI-01", "X-HI-01", "AN-01") and any((o.get("params") or {}).get("at") == target for target in all_regions)))]
@@ -1017,7 +1066,7 @@ class _Compiler:
                 end_word = next((n for n in range(wi, beat["w1"]) if re.search(r'[.!?][\"\'”’)]*$', self.words[n]["w"])), beat["w1"] - 1)
                 sentence_end = min(beat["end"], self.words[end_word]["e"])
                 sent_key = (beat["id"], sentence_end)
-                if (sub.get("where") or {}).get("region"):
+                if any(p.get("region") for p in subject_places(sub)):
                     sentence_subjects.setdefault(sent_key, set()).add(sub.get("id"))
                 if rec["t0"] <= t < t1:
                     found.append((sub, wi, t, sent_key, sentence_end))
@@ -1107,7 +1156,13 @@ class _Compiler:
             cam_keys = [(rec["t0"], float(info["w"]) / 2.0, float(info["h"]) / 2.0, 0.955 * 1080.0 / float(info["h"]), "linear")]
         pointer_seen = set()
         for sub, wi, t, sent_key, sentence_end in visible:
-            region = (sub.get("where") or {}).get("region")
+            shot_region = next((v.get("region") for v in (shot.get("slots") or {}).values()
+                                if isinstance(v, dict) and v.get("asset") == self.main and v.get("region")), None)
+            places = sorted(subject_places(sub), key=lambda p: p.get("region") != shot_region)
+            region = next((p["region"] for p in places if p.get("region") and
+                           VC.subject_visible_at(shot, (rec["t0"], t1), t, {**sub, "where": p},
+                               main=self.main, assets=self.assets, subjects=subjects, bundle=self.bundle,
+                               keys_fn=keys_of_param, primary_asset=asset, project_dir=self.inp.project_dir) is True), None)
             pointer_key = (sub.get("id"), sent_key)
             if pointer_key in pointer_seen:
                 continue
@@ -1294,6 +1349,7 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
                     continue
                 before = {id(ov): m for ov, m in zip(shot.get("overlays") or [], source["ov_map"])}
                 c._subject_overlays(shot, rec, source["t1"], names_seen)
+                c._borrowed_caption(shot, rec, source["t1"])
                 source["ov_map"] = [before.get(id(ov)) for ov in shot.get("overlays") or []]
         mapped: list = []
         errs_engine = c.eng.validate(doc)

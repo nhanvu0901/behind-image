@@ -50,7 +50,7 @@ CAST = S.array(CAST_ENTRY, "Replace the cast entries for this line; other lines 
 SUBJECT_ID = S.string("A stable subject id.", pattern=r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,39}$")
 SUBJECT = S.plain_object({"id": SUBJECT_ID, "kind": S.string(enum=["person", "thing", "place", "work", "idea", "text"]),
     "name": S.string(min_length=1, max_length=160), "also": S.array(S.string(min_length=1, max_length=160), max_items=30), "sub": S.string(max_length=400), "strip": S.boolean(),
-    "where": S.any_of(CAST_WHERE, {"type": "null"})},
+    "where": S.any_of(CAST_WHERE, S.array(CAST_WHERE, min_items=1), {"type": "null"})},
     required=["id", "kind", "name", "strip", "where"], title="a subject")
 ABOUT = S.array(S.plain_object({"id": SUBJECT_ID, "words": S.string(min_length=1, max_length=400)},
     required=["id", "words"], title="a subject and its spoken words"), "Subjects in spoken order.", max_items=100)
@@ -173,16 +173,19 @@ def set_subjects(ctx, o):
                 ctx.bad("subjects[%d].also" % i, "each alternate name must be non-empty")
             row["also"] = list(row["also"])
         where = row["where"]
-        if where is None:
-            pass
-        elif set(where) == {"region"}:
-            main = ctx.doc.get("main_asset")
-            if where["region"] not in ((ctx.doc.get("assets", {}).get(main) or {}).get("regions") or {}):
-                ctx.bad("subjects[%d].where.region" % i, "no such region on the main painting")
-        elif set(where) == {"asset"}:
-            row["where"] = {"asset": _asset(ctx, where["asset"], "subjects[%d].where.asset" % i)}
-        else:
-            ctx.bad("subjects[%d].where" % i, "give exactly one region or asset")
+        resolved = []
+        for place in pdoc.subject_places(row):
+            if set(place) == {"region"}:
+                main = ctx.doc.get("main_asset")
+                if place["region"] not in ((ctx.doc.get("assets", {}).get(main) or {}).get("regions") or {}):
+                    ctx.bad("subjects[%d].where.region" % i, "no such region on the main painting")
+                resolved.append(place)
+            elif set(place) == {"asset"}:
+                resolved.append({"asset": _asset(ctx, place["asset"], "subjects[%d].where.asset" % i)})
+            else:
+                ctx.bad("subjects[%d].where" % i, "give a region or asset")
+        if where is not None:
+            row["where"] = resolved if isinstance(where, list) else resolved[0]
         rows.append(row)
     ctx.touch("subjects")
     ctx.doc["subjects"] = rows

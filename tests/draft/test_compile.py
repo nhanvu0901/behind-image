@@ -331,3 +331,96 @@ def test_main_object_strip_gets_light_and_cast_does_not(proj):
     specs['c01']['shots'][1]['overlays'][0]['params']['text'] = 'Jan van Eyck'
     result = compile_specs(inp, specs, draw=False, identity=False)
     assert not any(o['technique'] == 'HI-01' for o in result.storyboard['shots'][1]['overlays'])
+
+
+def test_borrowed_image_gets_caption_from_its_record(proj):
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='A Landscape', artist='An Artist', year='1610', credit={'source': 'met'})
+    specs['c01']['shots'][1].update(technique='X-LAY-01', slots={'image': {'asset': 'B'}}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    overlays = result.storyboard['shots'][1]['overlays']
+    caption = next(o for o in overlays if o['technique'] == 'X-ANN-02')
+    assert caption['params']['title'] == 'A Landscape'
+    assert caption['params']['artist_year'] == 'An Artist, 1610'
+
+
+def test_borrowed_image_unusable_title_warns(proj):
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='example.org', artist='', year='')
+    specs['c01']['shots'][1].update(technique='X-LAY-01', slots={'image': {'asset': 'B'}}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    assert any(i['code'] == 'borrowed_without_caption' for i in result.issues)
+    assert not any(o['technique'] == 'X-ANN-02' for o in result.storyboard['shots'][1]['overlays'])
+
+
+def test_borrowed_picture_does_not_add_caption_beside_name(proj):
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='A Landscape', artist='An Artist', year='1610')
+    specs['c01']['shots'][1].update(technique='X-LAY-01', slots={'image': {'asset': 'B'}},
+                                   overlays=[{'technique': 'X-ANN-01', 'start_word': 12, 'params': {'text': 'Name'}}])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    overlays = result.storyboard['shots'][1]['overlays']
+    assert any(o['technique'] == 'X-ANN-01' for o in overlays)
+    assert not any(o['technique'] == 'X-ANN-02' for o in overlays)
+
+
+def test_borrowed_caption_omits_unverified_photographer_and_date(proj):
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='City view', artist='A Photographer', year='2016', credit={'source': 'commons'})
+    specs['c01']['shots'][1].update(technique='X-LAY-01', slots={'image': {'asset': 'B'}}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    caption = next(o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-02')
+    assert caption['params']['title'] == 'City view'
+    assert caption['params']['artist_year'] == ''
+
+
+def test_comparison_swap_captions_follow_each_picture(proj):
+    import copy
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='First view', credit={'source': 'commons'})
+    inp.picks['assets']['C'] = copy.deepcopy(inp.picks['assets']['B'])
+    inp.picks['assets']['C']['title'] = 'Second view'
+    specs['c01']['shots'][1].update(technique='X-CMP-01',
+        slots={'anchor': {'asset': 'A'}, 'swap_1': {'asset': 'B'}, 'swap_2': {'asset': 'C'}},
+        params={'seconds_per_swap': 2.5, 'swap_transition': 'cut'}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    captions = [o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-02']
+    assert [c['params']['title'] for c in captions] == ['First view', 'Second view']
+    assert captions[0]['dur'] == pytest.approx(2.5, abs=.001)
+
+
+def test_comparison_warns_when_one_swapped_picture_lacks_title(proj):
+    import copy
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='First view', credit={'source': 'commons'})
+    inp.picks['assets']['C'] = copy.deepcopy(inp.picks['assets']['B'])
+    inp.picks['assets']['C']['title'] = 'example.org'
+    specs['c01']['shots'][1].update(technique='X-CMP-01',
+        slots={'anchor': {'asset': 'A'}, 'swap_1': {'asset': 'B'}, 'swap_2': {'asset': 'C'}},
+        params={'seconds_per_swap': 2.5, 'swap_transition': 'cut'}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    assert any(i['code'] == 'borrowed_without_caption' and 'C' in i['message'] for i in result.issues)
+
+
+def test_existing_comparison_label_is_not_replaced_or_warned(proj):
+    import copy
+    inp, specs = good(proj)
+    inp.picks['assets']['B']['title'] = 'example.org'
+    inp.picks['assets']['C'] = copy.deepcopy(inp.picks['assets']['B'])
+    specs['c01']['shots'][1].update(technique='X-CMP-01',
+        slots={'anchor': {'asset': 'A'}, 'swap_1': {'asset': 'B'}, 'swap_2': {'asset': 'C'}},
+        params={'seconds_per_swap': 2.5, 'swap_transition': 'cut'},
+        overlays=[{'technique': 'X-ANN-02', 'start_word': 12, 'params': {'title': 'Chosen label', 'artist_year': ''}}])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    warnings = [i for i in result.issues if i['code'] == 'borrowed_without_caption' and i.get('chapter') == 'c01' and i.get('shot') == 2]
+    assert not warnings, (result.storyboard['shots'][1]['overlays'], warnings)
+
+
+def test_side_by_side_borrowed_picture_gets_record_caption(proj):
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='A woven fragment', artist='An Artist', year='1610', credit={'source': 'met'})
+    specs['c01']['shots'][1].update(technique='LAY-01', slots={'left': {'asset': 'A'}, 'right': {'asset': 'B'}}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    caption = next(o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-02')
+    assert caption['params']['title'] == 'A woven fragment'
+    assert caption['params']['artist_year'] == 'An Artist, 1610'

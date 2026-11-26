@@ -21,6 +21,8 @@ import re
 import threading
 from pathlib import Path
 
+from bti.picks.doc import subject_places
+
 from . import limits as L
 from .timing import norm
 from .vfx import EASE
@@ -550,6 +552,49 @@ def _asset_words(c: _Ctx, shot: dict) -> set:
         if isinstance(a, dict):
             for f in ("title", "artist", "year"):
                 out.update(tokens(a.get(f) if isinstance(a.get(f), str) else str(a.get(f) or "")))
+    return out
+
+
+def usable_picture_title(record):
+    title = str((record or {}).get("title") or "").strip()
+    return bool(title and not PLACEHOLDER.search(title) and title.casefold() not in PLACEHOLDER_WHOLE
+                and not re.fullmatch(r"(?:https?://)?[\w.-]+\.[a-z]{2,}/?", title, re.I))
+
+
+def _borrowed_without_caption(c):
+    main = _picks_doc(c.project_dir).get("main_asset")
+    if not main:
+        return []
+    out = []
+    for i, shot in enumerate(c.shots):
+        if shot.get("technique") not in ("X-LAY-01", "LAY-01", "X-CMP-01"):
+            continue
+        overlays = shot.get("overlays") or []
+        if any(o.get("technique") == "X-ANN-01" for o in overlays):
+            continue
+        slots = shot.get("slots") or {}
+        swaps = [(slots.get("swap_%d" % n) or {}).get("asset") for n in range(1, 7)] if shot.get("technique") == "X-CMP-01" else []
+        swaps = [key for key in swaps if key]
+        multiple_swaps = len(swaps) > 1
+        if not multiple_swaps and any(o.get("technique") == "X-ANN-02" for o in overlays):
+            continue
+        keys = [v.get("asset") for v in slots.values() if isinstance(v, dict)]
+        for key in dict.fromkeys(k for k in keys if k and k != main):
+            if multiple_swaps and key in swaps and c.spans[i]:
+                sp = c.spans[i]
+                seconds = max(0.001, float((shot.get("params") or {}).get("seconds_per_swap") or 2.5))
+                index = swaps.index(key)
+                start = sp[0] + index * seconds
+                end = min(sp[1], start + seconds) if index < len(swaps) - 1 else sp[1]
+                if end <= start:
+                    continue
+                moment = (start + end) / 2.0
+                if any(span and span[0] <= moment < span[1] for span in
+                       (_overlay_span(c, o, sp) for o in overlays if o.get("technique") == "X-ANN-02")):
+                    continue
+            if not usable_picture_title(c.assets.get(key)):
+                out.append(_issue("borrowed_without_caption", "shots[%d]" % i,
+                                  "Picture %s has no usable record for a caption." % key, shot=c.sid(i), asset=key))
     return out
 
 
@@ -1474,7 +1519,18 @@ def panel_has_asset(shot, asset, t, t0, bundle):
 def subject_visible_at(shot: dict, span: tuple[float, float], t: float, subject: dict, *, main: str | None, assets: dict,
                        subjects: list, bundle, keys_fn, primary_asset: str | None = None, project_dir=None) -> bool | None:
     """Whether `subject` is visible in `shot` at time `t`; None when geometry cannot be checked (missing size or region box)."""
-    where = subject.get("where") or {}
+    if shot.get("technique") == "MAP-01" and subject.get("kind") == "place":
+        labels = [tokens(p.get("name")) for p in (shot.get("params") or {}).get("places", []) if isinstance(p, dict)]
+        names = [tokens(n) for n in [subject.get("name"), *(subject.get("also") or [])]]
+        if any(label and name and all(word in name for word in label) for label in labels for name in names):
+            return True
+    places = subject_places(subject)
+    if isinstance(subject.get("where"), list):
+        results = [subject_visible_at(shot, span, t, {**subject, "where": place}, main=main, assets=assets,
+                                      subjects=subjects, bundle=bundle, keys_fn=keys_fn,
+                                      primary_asset=primary_asset, project_dir=project_dir) for place in places]
+        return True if True in results else None if None in results else False
+    where = places[0] if places else {}
     region = where.get("region")
     wanted = where.get("asset") or (main if region else None)
     if not wanted:
@@ -1535,34 +1591,71 @@ def subject_visible_at(shot: dict, span: tuple[float, float], t: float, subject:
             return max(0.0, min(fx1, b[2]) - max(fx0, b[0])) * max(0.0, min(fy1, b[3]) - max(fy0, b[1]))
         vis_frame_area = max(0.0, fx1 - fx0) * max(0.0, fy1 - fy0)
         candidates = [box]
+        head_candidates = []
         if subject.get("kind") == "person":
             names = [tokens(n) for n in [subject.get("name"), *(subject.get("also") or [])]]
             for candidate in regions.values():
                 if not isinstance(candidate, dict):
                     continue
                 words = tokens(candidate.get("thing"))
-                if not set(words) & {"face", "head", "figure"}:
+                if not set(words) & {"face", "head", "bust", "figure"}:
                     continue
                 if any(name and any(words[i:i + len(name)] == name for i in range(len(words) - len(name) + 1)) for name in names):
                     other_box = region_box(candidate)
                     if other_box:
                         candidates.append(other_box)
-        ok = any(overlap(b) >= 0.60 * ((b[2]-b[0]) * (b[3]-b[1])) or
+                        if set(words) & {"face", "head", "bust"}:
+                            head_candidates.append(other_box)
+        # A wide view can show a substantial part of a large object while its
+        # full region extends beyond the frame; people still need their head.
+        area_share = 0.40 if subject.get("kind") == "thing" else 0.60
+        ok = any(overlap(b) >= area_share * ((b[2]-b[0]) * (b[3]-b[1])) or
                  (vis_frame_area > 0 and overlap(b) >= 0.60 * vis_frame_area) for b in candidates)
+        own_region = any(isinstance(slot, dict) and slot.get("asset") == main and slot.get("region") == region
+                         for slot in (shot.get("slots") or {}).values())
+        # A named slot region in frame, or any complete region, is visible even
+        # when it occupies little of the frame.
+        if (own_region and overlap(box) > 0) or overlap(box) >= area * (1.0 - 1e-9):
+            return True
+        # For a tall figure, a crop inside its lower body is not an introduction.
+        # Prefer explicitly identified head regions; otherwise use the upper third.
+        if subject.get("kind") == "person":
+            tall = box[3] - box[1] > 1.5 * (box[2] - box[0])
+            heads = head_candidates or ([(box[0], box[1], box[2], box[1] + (box[3] - box[1]) / 3)] if tall else [])
+            if heads and overlap(box) < 0.60 * area:
+                ok = any(overlap(head) >= 0.35 * ((head[2]-head[0]) * (head[3]-head[1])) or overlap(head) >= 0.60 * vis_frame_area for head in heads)
+        if ok and subject.get("kind") == "person" and overlap(box) < 0.60 * area:
+            for slot in (shot.get("slots") or {}).values():
+                if not isinstance(slot, dict) or slot.get("asset") != main or slot.get("region") == region:
+                    continue
+                part_name = slot.get("region")
+                part = regions.get(part_name) or {}
+                words = set(tokens(part.get("thing"))) | set(tokens(str(part_name).replace("_", " ")))
+                part_box = region_box(part)
+                if words & {"hand", "hands", "foot", "feet"} and part_box and overlap(part_box) >= 0.60 * ((part_box[2]-part_box[0]) * (part_box[3]-part_box[1])):
+                    if not head_candidates or not any(overlap(head) >= 0.35 * ((head[2]-head[0]) * (head[3]-head[1])) for head in head_candidates):
+                        ok = False
+                        break
         if ok and subject.get("kind") == "person" and vis_frame_area > 0 and max(overlap(b) for b in candidates) < 0.15 * vis_frame_area:
             for other in subjects:
                 if not isinstance(other, dict) or other.get("id") == subject.get("id"):
                     continue
-                other_box = region_box(regions.get((other.get("where") or {}).get("region")))
-                if other_box and overlap(other_box) > 0.50 * vis_frame_area:
-                    ok = False
+                for place in subject_places(other):
+                    other_box = region_box(regions.get(place.get("region")))
+                    if other_box and overlap(other_box) > 0.50 * vis_frame_area:
+                        ok = False
+                        break
+                if not ok:
                     break
         if ok:
             return True
     return False if checked_any else None
 
 
-HINTS["subject_not_on_screen"] = "Show the subject itself when it is named."
+HINTS["borrowed_without_caption"] = "Add a usable title to the picture record."
+
+
+HINTS["subject_not_on_screen"] = "Show the subject itself during the sentence that names it."
 
 
 def _subject_not_on_screen(c):
@@ -1603,15 +1696,45 @@ def _subject_not_on_screen(c):
             i = next((n for n, sp in enumerate(c.spans) if sp and sp[0] <= t < sp[1]), None)
             if i is None:
                 continue
-            visible = subject_visible_at(
-                c.shots[i], c.spans[i], t, subject,
-                main=main, assets=c.assets, subjects=subjects, bundle=c.bundle,
-                keys_fn=lambda p, idx=i, sp=c.spans[i]: c.keys_of(idx, sp, p),
-                primary_asset=c.primary(i), project_dir=c.project_dir,
-            )
+            # The about entry applies to the sentence, not just the instant its
+            # matched word starts. Inspect every overlapping shot and camera key.
+            sentence_start = match
+            while sentence_start > lo and not re.search(r"[.!?][\"'”’)]*$", c.tm.words[sentence_start - 1].get("w", "")):
+                sentence_start -= 1
+            sentence_end = match + len(phrase) - 1
+            while sentence_end + 1 < hi and not re.search(r"[.!?][\"'”’)]*$", c.tm.words[sentence_end].get("w", "")):
+                sentence_end += 1
+            begin = c.tm.word_start(sentence_start)
+            last = c.tm.words[sentence_end]
+            end = float(last.get("e", beat.get("end", c.end_t)))
+            if end <= begin:
+                end = float(beat.get("end", c.end_t))
+            results = []
+            for j, sp in enumerate(c.spans):
+                if not sp:
+                    continue
+                a, b = max(begin, sp[0]), min(end, sp[1])
+                if b <= a:
+                    continue
+                count = max(1, int(math.ceil((b - a) / SAMPLE_S)))
+                sample = [a + (b - a) * n / count for n in range(count)] + [max(a, b - 1e-6)]
+                for camera in ("camera", "camera_left", "camera_right", "camera_anchor", "inset_camera"):
+                    sample.extend(k[0] for k in (c.keys_of(j, sp, camera) or []) if a <= k[0] < b)
+                for moment in sorted(set(sample)):
+                    results.append(subject_visible_at(
+                        c.shots[j], sp, moment, subject,
+                        main=main, assets=c.assets, subjects=subjects, bundle=c.bundle,
+                        keys_fn=lambda p, idx=j, span=sp: c.keys_of(idx, span, p),
+                        primary_asset=c.primary(j), project_dir=c.project_dir,
+                    ))
+                    if results[-1] is True:
+                        break
+                if results and results[-1] is True:
+                    break
+            visible = True if True in results else None if not results or None in results else False
             if visible is False:
                 out.append(_issue("subject_not_on_screen", "shots[%d]" % i,
-                                  "Line %s names %s, but the subject is not visible in shot %s." % (beat.get("id"), subject.get("name"), c.sid(i)),
+                                  "Line %s names %s, but the subject is not visible during the sentence containing shot %s." % (beat.get("id"), subject.get("name"), c.sid(i)),
                                   beat=beat.get("id"), subject=subject.get("id"), name=subject.get("name"), shot=c.sid(i)))
     return out
 
@@ -1624,7 +1747,7 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         return []
     out: list[dict] = []
     for fn in (_short_shots, _small_painting, _highlights, _captions, _texts_not_in_narration, _unused_pictures, _early_explainer,
-               _subject_not_on_screen, _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown, _year_already_on_screen):         # the last four: catalogue pass, silent on beats without kinds
+               _subject_not_on_screen, _borrowed_without_caption, _device_kinds, _figure_on_wrong_picture, _outside_on_painting, _outside_small, _small_detail_not_lit, _highlight_nothing_to_dim, _text_too_brief, _name_not_shown, _year_already_on_screen):         # the last four: catalogue pass, silent on beats without kinds
         try:
             out.extend(fn(c))
         except Exception:       # noqa: BLE001 - a structure the structural checks already report: say nothing more
@@ -1656,7 +1779,8 @@ CODES = {
     "explainer_early": "A base explanatory component (MAP-01, TIME-01, TREE-01, STATE-01) starts in the first 30 seconds (warning). args: shot, technique, start, end, limit.",
 }
 CODES.update(CATALOGUE_ISSUES)       # catalogue pass: the four checks of what the kinds of a beat call for (their sentences: `CATALOGUE_SENTENCES` of errmsg.js)
-CODES["subject_not_on_screen"] = "The named subject is not visible at its spoken words (warning). args: beat, subject, name, shot."
+CODES["borrowed_without_caption"] = "A borrowed picture has no usable caption record (warning). args: shot, asset."
+CODES["subject_not_on_screen"] = "The named subject is not visible during the sentence containing its spoken words (warning). args: beat, subject, name, shot."
 CODES.update({"name_not_shown": "A cast name is not shown on its picture during its first presentation (warning). args: beat, name, shot."})
 
 

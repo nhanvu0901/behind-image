@@ -259,6 +259,12 @@ def subject_view(d: dict) -> tuple[list[dict], dict[str, list[dict]]]:
     return subjects, about
 
 
+def subject_places(subject: dict) -> list[dict]:
+    """Normalize legacy single places and lists without changing the document."""
+    where = subject.get("where")
+    return where if isinstance(where, list) else [where] if isinstance(where, dict) else []
+
+
 def doc_problem(d: Any) -> str | None:
     """None when `d`, sent by a client, has the right shape; else what is wrong. Strict: nothing is coerced."""
     if not isinstance(d, dict):
@@ -298,9 +304,11 @@ def doc_problem(d: Any) -> str | None:
                     and ("also" not in subject or (isinstance(subject["also"], list) and all(isinstance(a, str) and a.strip() for a in subject["also"])))
                     and (kind not in ("idea", "text") or not subject["strip"])):
                 return f"picks.subjects[{i}] needs a unique id, kind, name and strip"
-            if where is not None and not (isinstance(where, dict) and len(where) == 1 and next(iter(where), None) in ("region", "asset")
-                      and isinstance(next(iter(where.values()), None), str) and next(iter(where.values())).strip()):
-                return f"picks.subjects[{i}].where must name one region or asset"
+            places = subject_places(subject)
+            if where is not None and (not places or any(not (isinstance(place, dict) and len(place) == 1
+                    and next(iter(place), None) in ("region", "asset")
+                    and isinstance(next(iter(place.values()), None), str) and next(iter(place.values())).strip()) for place in places)):
+                return f"picks.subjects[{i}].where must name one or more regions or assets"
             subject_ids.add(sid)
     assets = d.get("assets", {})
     if not isinstance(assets, dict) or len(assets) > MAX_ASSETS:
