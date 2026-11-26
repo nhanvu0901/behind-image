@@ -33,7 +33,9 @@ KINDS = S.array(S.string("What the line does.", enum=list(pdoc.LINE_KINDS)),
                 "the line has; send [] to remove it." % ", ".join(pdoc.LINE_KINDS), max_items=pdoc.MAX_KINDS)
 MISSING = S.array(S.plain_object({
     "what": S.string("The picture that was asked for and not found.", min_length=1, max_length=pdoc.MISSING_WHAT_MAX),
-    "code": S.string("Why it was not found (for example agent_none, no_candidates).", pattern="^" + pdoc.CODE_RE.pattern + "$", hint="lower-case words joined by _")},
+    "code": S.string("Why it was not found (for example agent_none, no_candidates).", pattern="^" + pdoc.CODE_RE.pattern + "$", hint="lower-case words joined by _"),
+    "queries": S.array(S.string("A search wording tried for this picture.", min_length=1, max_length=pdoc.MISSING_WHAT_MAX),
+                       "The search wordings tried (first and retry) before giving up.", max_items=4)},
     required=["what", "code"], title="a missing picture {what, code}"),
     "The pictures that were asked for the line and not found (at most %d). Leave it out to keep what the line has; send [] to remove it." % pdoc.MAX_MISSING,
     max_items=pdoc.MAX_MISSING)

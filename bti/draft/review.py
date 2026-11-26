@@ -12,10 +12,74 @@ ISSUE_CODES = {
     "picture_repeated": "review_picture_repeated",
 }
 CODES = frozenset(ISSUE_CODES)
+DRAFT_REPAIR_CODES = frozenset({"outside_on_painting", "outside_picture_brief", "outside_picture_dropped"})
 
 
 class ReviewError(ValueError):
     """The reviewer did not return a complete, usable answer."""
+
+
+def _draft_repair_issues(project_dir, ids) -> list[dict]:
+    """Read compiled draft warnings about unseen or brief outside pictures for repair rounds."""
+    try:
+        from bti.engine.api import open_project
+        issues = open_project(project_dir).validate()
+    except Exception:       # noqa: BLE001 - minimal test fixtures without timing/picks have no validate warnings
+        return []
+    return [i for i in issues if isinstance(i, dict) and i.get("code") in DRAFT_REPAIR_CODES]
+
+
+def _index_draft_issues(ids, raw_issues) -> dict[str, list[dict]]:
+    """Map draft warnings of `DRAFT_REPAIR_CODES` onto current shot ids."""
+    import re
+    expected = set(ids)
+    out: dict[str, list[dict]] = {}
+    seen: set[tuple[str, str, str]] = set()
+    for i in raw_issues or []:
+        if not isinstance(i, dict):
+            continue
+        code = i.get("code")
+        if code not in DRAFT_REPAIR_CODES:
+            continue
+        args = i.get("args") if isinstance(i.get("args"), dict) else {}
+        sid = args.get("shot") or i.get("shot")
+        if not (isinstance(sid, str) and sid in expected):
+            m = re.match(r"shots\[(\d+)\]", str(i.get("path") or ""))
+            idx = int(m.group(1)) if m else None
+            sid = ids[idx] if idx is not None and 0 <= idx < len(ids) else None
+        if not sid or sid not in expected:
+            continue
+        detail = str(i.get("message") or code).strip()[:350]
+        if not detail:
+            detail = code
+        key = (sid, code, detail)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.setdefault(sid, []).append({"code": code, "detail": detail})
+    return out
+
+
+def _build_repair_batches(ids, repair_map, prefix: str) -> list[tuple[list[str], str]]:
+    """Group flagged shots and their repair lines into bounded <= 2000-character edit instructions."""
+    batches: list[tuple[list[str], str]] = []
+    scope: list[str] = []
+    lines: list[str] = []
+    for sid in ids:
+        problems = repair_map.get(sid) or []
+        if not problems:
+            continue
+        block = "\n".join("%s: %s: %s" % (sid, p["code"], p["detail"].strip()) for p in problems)
+        if len(prefix) + len(block) > 2000:
+            raise ReviewError("problems for a shot exceed the edit limit")
+        if scope and len(prefix) + len("\n".join(lines)) + 1 + len(block) > 2000:
+            batches.append((scope, prefix + "\n".join(lines)))
+            scope, lines = [], []
+        scope.append(sid)
+        lines.append(block)
+    if scope:
+        batches.append((scope, prefix + "\n".join(lines)))
+    return batches
 
 
 def _validate(ids, answer):
@@ -45,7 +109,7 @@ def _validate(ids, answer):
     return found
 
 
-def review_and_repair(shot_ids, review, edit):
+def review_and_repair(shot_ids, review, edit, *, draft_issues=None):
     """Review every current shot and perform at most two scoped repairs.
 
     The caller must raise on failed or cancelled review/edit. A fresh review is
@@ -53,28 +117,25 @@ def review_and_repair(shot_ids, review, edit):
     a clean result.
     """
     history = []
+    prefix = "Fix these viewer-review problems using only the narration and project sources:\n"
     for round_index in range(3):
         ids = list(shot_ids())
         found = _validate(ids, review(ids))
         history.append(found)
-        flagged = [sid for sid in ids if found[sid]]
+        extra = _index_draft_issues(ids, draft_issues(ids) if draft_issues else [])
+        combined = {sid: list(found[sid]) + list(extra.get(sid, [])) for sid in ids}
+        flagged = [sid for sid in ids if combined[sid]]
         if not flagged or round_index == 2:
             warnings = [{"level": "warn", "code": ISSUE_CODES[p["code"]], "shot": sid, "message": p["detail"].strip()}
                         for sid in ids for p in found[sid]]
-            return {"rounds": round_index, "warnings": warnings, "history": history}
-        prefix = "Fix these viewer-review problems using only the narration and project sources:\n"
-        scope, lines = [], []
-        for sid in flagged:
-            block = "\n".join("%s: %s: %s" % (sid, p["code"], p["detail"].strip()) for p in found[sid])
-            if len(prefix) + len(block) > 2000:
-                raise ReviewError("problems for a shot exceed the edit limit")
-            if scope and len(prefix) + len("\n".join(lines)) + 1 + len(block) > 2000:
-                edit(scope, prefix + "\n".join(lines))
-                scope, lines = [], []
-            scope.append(sid)
-            lines.append(block)
-        if scope:
-            edit(scope, prefix + "\n".join(lines))
+            draft_warnings = [{"level": "warn", "code": p["code"], "shot": sid, "message": p["detail"].strip()}
+                              for sid in ids for p in extra.get(sid, [])]
+            out = {"rounds": round_index, "warnings": warnings, "history": history}
+            if draft_warnings:
+                out["draft_warnings"] = draft_warnings
+            return out
+        for scope, instruction in _build_repair_batches(ids, combined, prefix):
+            edit(scope, instruction)
     raise AssertionError("unreachable")
 
 
@@ -322,7 +383,7 @@ def _review_round(project_dir, directory, model, ctx):
     return rows, run_model_review(directory, rows, project_dir=project_dir, model=model, ctx=ctx)
 
 
-def run_job(project_dir, model, ctx, *, review_round=None, edit=None):
+def run_job(project_dir, model, ctx, *, review_round=None, edit=None, draft_issues=None):
     """Review the current revision and repair only flagged shots, within one job."""
     import json
     import uuid
@@ -333,6 +394,7 @@ def run_job(project_dir, model, ctx, *, review_round=None, edit=None):
     project_dir = Path(project_dir)
     review_round = review_round or _review_round
     edit = edit or scoped_edit
+    draft_issues_fn = draft_issues or (lambda cur_ids: _draft_repair_issues(project_dir, cur_ids))
     root = project_dir / "cache" / "draft" / "viewer_review" / uuid.uuid4().hex
     revision = _revision(project_dir)
     inputs = _input_signature(project_dir)
@@ -372,7 +434,7 @@ def run_job(project_dir, model, ctx, *, review_round=None, edit=None):
             actual = _revision(project_dir)
         revision = actual
 
-    result = review_and_repair(ids, review_shots, edit_shots)
+    result = review_and_repair(ids, review_shots, edit_shots, draft_issues=draft_issues_fn)
     if ctx.cancelled():
         raise Cancelled()
     with save_lock(project_dir):
@@ -403,7 +465,7 @@ def start(pid, project_dir, *, manager=None, run_ok=False):
                    meta={"mode": "review", "model": resolved.model, "agent": resolved.public()})
 
 
-def make_job_parts(project_dir, model, *, review_round=None, edit=None):
+def make_job_parts(project_dir, model, *, review_round=None, edit=None, draft_issues=None):
     """Separate review and repair rounds so each has its own long-job time limit."""
     import json
     import uuid
@@ -413,8 +475,9 @@ def make_job_parts(project_dir, model, *, review_round=None, edit=None):
     from . import run as draft_run
     project_dir = Path(project_dir)
     reviewer, editor = review_round or _review_round, edit or scoped_edit
+    draft_issues_fn = draft_issues or (lambda cur_ids: _draft_repair_issues(project_dir, cur_ids))
     root = project_dir / "cache" / "draft" / "viewer_review" / uuid.uuid4().hex
-    state = {"revision": None, "inputs": None, "history": [], "pending": [], "rounds": 0, "finished": False, "found": {}}
+    state = {"revision": None, "inputs": None, "history": [], "pending": [], "rounds": 0, "finished": False, "found": {}, "draft_extra": {}}
     prefix = "Fix these viewer-review problems using only the narration and project sources:\n"
 
     def check(ctx):
@@ -455,25 +518,17 @@ def make_job_parts(project_dir, model, *, review_round=None, edit=None):
             if [row["id"] for row in rows] != ids:
                 raise ReviewError("review omitted or reordered shots")
             found = _validate(ids, answer)
+            extra = _index_draft_issues(ids, draft_issues_fn(ids))
+            combined = {sid: list(found[sid]) + list(extra.get(sid, [])) for sid in ids}
             state["found"] = found
+            state["draft_extra"] = extra
             state["history"].append(found)
-            flagged = [sid for sid in ids if found[sid]]
+            flagged = [sid for sid in ids if combined[sid]]
             state["pending"] = []
             if not flagged or n == 2:
                 state["finished"] = True
                 return
-            scope, lines = [], []
-            for sid in flagged:
-                block = "\n".join("%s: %s: %s" % (sid, p["code"], p["detail"].strip()) for p in found[sid])
-                if len(prefix) + len(block) > 2000:
-                    raise ReviewError("problems for a shot exceed the edit limit")
-                if scope and len(prefix) + len("\n".join(lines)) + 1 + len(block) > 2000:
-                    state["pending"].append((scope, prefix + "\n".join(lines)))
-                    scope, lines = [], []
-                scope.append(sid)
-                lines.append(block)
-            if scope:
-                state["pending"].append((scope, prefix + "\n".join(lines)))
+            state["pending"] = _build_repair_batches(ids, combined, prefix)
         return part
 
     def repair(ctx):
@@ -500,7 +555,11 @@ def make_job_parts(project_dir, model, *, review_round=None, edit=None):
             raise ReviewError("review did not complete")
         warnings = [{"level": "warn", "code": ISSUE_CODES[p["code"]], "shot": sid, "message": p["detail"].strip()}
                     for sid, problems in state["found"].items() for p in problems]
+        draft_warnings = [{"level": "warn", "code": p["code"], "shot": sid, "message": p["detail"].strip()}
+                          for sid in state["found"] for p in (state.get("draft_extra") or {}).get(sid, [])]
         result = {"revision": state["revision"], "inputs": state["inputs"], "rounds": state["rounds"], "warnings": warnings, "history": state["history"]}
+        if draft_warnings:
+            result["draft_warnings"] = draft_warnings
         with save_lock(project_dir):
             check(ctx)
             save_report(project_dir, result)

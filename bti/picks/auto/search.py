@@ -32,6 +32,7 @@ is `pending` and a resumed run searches it.
 from __future__ import annotations
 
 import os
+import re
 import time
 from pathlib import Path
 from typing import Callable
@@ -69,6 +70,71 @@ SOURCES_BY_KIND = {
 CLIP_SOURCES = ("pexels", "pixabay", "commons")
 SOURCE_VI = {"commons": "Wikimedia Commons", "met": "Bảo tàng Metropolitan", "pexels": "Pexels", "pixabay": "Pixabay",
              "osm": "OpenStreetMap", "book": "sách của dự án", "wikipedia": "Wikipedia", "web": "tìm kiếm trên web"}
+
+_RETRY_DROP_WORDS = frozenset({
+    "a", "an", "the", "of", "in", "on", "at", "by", "from", "with", "near", "around",
+    "ancient", "antique", "archival", "authentic", "baroque", "beautiful", "bright", "bronze", "busy",
+    "byzantine", "carved", "century", "classical", "close", "closeup", "colorful", "colourful",
+    "contemporary", "dark", "deep", "detailed", "dramatic", "early", "elaborate", "engraved",
+    "famous", "fine", "formal", "fresco", "full", "gilded", "gilt", "golden", "gothic", "grand",
+    "great", "high", "historic", "historical", "illuminated", "illustrated", "imperial", "indoor",
+    "intricate", "large", "late", "little", "low", "luxury", "medieval", "mid", "middle", "miniature",
+    "modern", "monumental", "narrow", "northern", "official", "old", "original", "ornate", "outdoor",
+    "painted", "panorama", "panoramic", "period", "pre", "precious", "rare", "renaissance", "rich",
+    "royal", "rustic", "sacred", "scarlet", "silver", "small", "solemn", "southern", "tiny",
+    "traditional", "velvet", "vintage", "vivid", "western", "wide", "wooden", "young", "circa",
+})
+_RETRY_YEAR_RE = re.compile(r"^(?:\d{3,4}s?|\d{1,2}(?:st|nd|rd|th))$", re.I)
+_RETRY_BROAD_SUFFIXES = {
+    "place": ("historical view", "old engraving"),
+    "portrait": ("engraving", "painting"),
+    "work": ("painting", "reproduction"),
+    "document": ("manuscript", "print"),
+    "object": ("museum", "historical"),
+    "event": ("engraving", "illustration"),
+}
+
+
+def retry_query_for(want: dict, tried: list[str] | None = None) -> tuple[str | None, bool]:
+    """One deterministic retry wording when a search finds nothing: first the plain thing without adjectives/dates,
+    then a wider period or later depiction of the same thing. Returns `(query, wider_period)` or `(None, False)`."""
+    base = " ".join(str(want.get("search") or place_of(want) or "").split())
+    if not base:
+        return None, False
+    tried_cf = {" ".join(q.split()).casefold() for q in (tried or []) if isinstance(q, str) and q.strip()}
+    tried_cf.add(base.casefold())
+    if want.get("type") == "map":
+        if "," in base:
+            city = base.split(",")[0].strip()
+            if city and city.casefold() not in tried_cf:
+                return city, False
+        return None, False
+    tokens = base.split()
+    kept = [t for t in tokens if not _RETRY_YEAR_RE.fullmatch(t.strip(".,;:()")) and t.strip(".,;:()").lower() not in _RETRY_DROP_WORDS]
+    if not kept:
+        non_year = [t for t in tokens if not _RETRY_YEAR_RE.fullmatch(t.strip(".,;:()"))]
+        kept = non_year[-2:] if non_year else tokens[-1:]
+    plain = " ".join(kept).strip()
+    if plain and plain.casefold() not in tried_cf:
+        return plain, False
+    core_tokens = [t for t in (plain or base).split() if not _RETRY_YEAR_RE.fullmatch(t.strip(".,;:()"))]
+    core = " ".join(core_tokens).strip() or base
+    core_cf = {t.strip(".,;:()").casefold() for t in core.split()}
+    suffixes = _RETRY_BROAD_SUFFIXES.get(want.get("kind") or "other", ("historical engraving", "depiction"))
+    for suf in (*suffixes, "depiction", "historic"):
+        if all(sw in core_cf for sw in suf.split()):
+            continue
+        cand = ("%s %s" % (core, suf)).strip()
+        if cand.casefold() not in tried_cf:
+            return cand, True
+    return None, False
+
+
+def _free_retry_sources(want: dict, wider_period: bool) -> list[str]:
+    """Free sources for the one retry: a wider-period context search may include keyed free photo sources."""
+    if wider_period and want.get("type") == "context":
+        return sources_for({**want, "period": "now"})
+    return sources_for(want)
 
 
 def sources_for(want: dict) -> list[str]:
@@ -372,6 +438,9 @@ def search_want(pdir: Path, want: dict, state: dict, *, main_key: str, search, f
     (`web`) and fewer than three candidates found, it asks the web once (round one)."""
     w = state["wants"][want["id"]]
     limited = state["limited"]
+    first_q = " ".join(str((w["queries"][0] if w.get("queries") else place_of(want)) or "").split())
+    if first_q and not w.get("tried_queries"):
+        w["tried_queries"] = [first_q]
     ask, by_source, seen, skipped, failed = make_asker(pdir, want, state, main_key=main_key, search=search, clock=clock, cancelled=cancelled,
                                                        wiki_search=wiki_search or service.search)
     if want["type"] == "context":
@@ -414,9 +483,40 @@ def search_want(pdir: Path, want: dict, state: dict, *, main_key: str, search, f
     if cancelled():
         return
     finish_want(w, chosen, by_source=by_source, skipped=skipped, failed=failed, no_thumb=no_thumb)
+    if (not chosen and not cancelled() and not w.get("retried") and not (skipped and not by_source)
+            and not (failed and not by_source) and not w.get("web_short")):
+        retry_q, wider_period = retry_query_for(want, w.get("queries"))
+        if retry_q:
+            w["retried"] = True
+            w["retry_query"] = retry_q
+            w["tried_queries"] = [q for q in (first_q, retry_q) if q] if retry_q != first_q else ([first_q] if first_q else [])
+            r_ask, r_by_source, _r_seen, r_skipped, r_failed = make_asker(
+                pdir, want, state, main_key=main_key, search=search, clock=clock, cancelled=cancelled,
+                seen=seen, wiki_search=wiki_search or service.search,
+            )
+            if want["type"] == "context":
+                if cancelled():
+                    return
+                r_ask("wikipedia", retry_q, WIKI_LIMIT)
+            for src in _free_retry_sources(want, wider_period):
+                if cancelled():
+                    return
+                r_ask(src, retry_q, MORE_LIMIT)
+            r_by_source = _order(r_by_source)
+            r_extra = any(k in r_by_source for k in ("wikipedia", "web"))
+            r_cap = PER_WANT_WEB if r_extra else PER_WANT
+            r_pool = _interleave(r_by_source, r_cap + (SPARE_WEB if r_extra else 0))
+            r_spare = [c for c in r_pool[r_cap:] if c["source"] in ("web",) or c.get("via") in ("wikipedia", "web")]
+            r_pool = r_pool[:r_cap] + r_spare
+            r_chosen, r_no_thumb = pick_with_thumbs(pdir, want, r_pool, r_cap, fetch_thumb=fetch_thumb, limited=limited, clock=clock, cancelled=cancelled)
+            if cancelled():
+                return
+            finish_want(w, r_chosen, by_source=r_by_source, skipped=r_skipped, failed=r_failed, no_thumb=(r_no_thumb if r_chosen else no_thumb + r_no_thumb))
+            if wider_period and any(c.get("source") in ("pexels", "pixabay") for c in r_chosen):
+                w["modern_fallback"] = True
     if want.get("entity_name") and want.get("type") == "context" and want.get("period", "then") == "then":
         w["period_incomplete"] = period_incomplete or bool(no_thumb and not w.get("modern_fallback"))
-    if w.get("web_short") and not chosen:
+    if w.get("web_short") and not w.get("candidates"):
         w["code"] = "web_budget"
 
 
@@ -493,6 +593,67 @@ def modern_after_rejection(pdir: Path, wants: list[dict], choice: dict, *, main_
                                                  limited=result["limited"], clock=clock, cancelled=cancelled)
         finish_want(row, candidates, by_source=by_source, skipped=skipped, failed=failed, no_thumb=no_thumb)
         row["modern_fallback"] = True
+    result["wants"] = {wid: row for wid, row in result["wants"].items() if row.get("candidates")}
+    return result
+
+
+def retry_after_rejection(pdir: Path, wants: list[dict], state: dict, choice: dict, *, main_key: str, cancelled,
+                          fetch_thumb, clock, search=None, wiki_search=None) -> dict:
+    """Run at most one free retry search with a simplified/broader wording for wants that the chooser answered `null` (`agent_none`).
+    Records both tried wordings on `state['wants'][wid]['tried_queries']` even when the retry yields no new candidate."""
+    result = new_state()
+    result["limited"] = state.setdefault("limited", {})
+    search = search or service.search
+    wiki_fn = wiki_search or service.search
+    rows = state.get("wants") or {}
+    for want in wants:
+        wid = want["id"]
+        if want.get("type") not in ("context", "clip") or wid not in rows:
+            continue
+        selected = (choice.get("wants") or {}).get(wid)
+        if selected is None or selected.get("pick") is not None:
+            continue
+        w = rows[wid]
+        if w.get("retried"):
+            continue
+        first_q = " ".join(str((w.get("queries") or [want.get("search") or ""])[0] or "").split())
+        retry_q, wider_period = retry_query_for(want, w.get("queries"))
+        if not retry_q:
+            continue
+        w["retried"] = True
+        w["retry_query"] = retry_q
+        w["tried_queries"] = [q for q in (first_q, retry_q) if q] if retry_q != first_q else ([first_q] if first_q else [])
+        if cancelled():
+            break
+        seen = {(c["source"], c["source_id"]) for c in w.get("candidates") or [] if c.get("source") and c.get("source_id")}
+        retry_want = {**want, "search": retry_q, **({"period": "now"} if wider_period and want.get("type") == "context" else {})}
+        row = _new_want(retry_want)
+        row["queries"] = [retry_q]
+        row["earlier"] = selected.get("reason") or ""
+        result["wants"][wid] = row
+        ask, by_source, _, skipped, failed = make_asker(
+            pdir, retry_want, result, main_key=main_key, search=search, clock=clock, cancelled=cancelled,
+            seen=seen, wiki_search=wiki_fn,
+        )
+        if want["type"] == "context":
+            if cancelled():
+                break
+            ask("wikipedia", retry_q, WIKI_LIMIT)
+        for src in _free_retry_sources(want, wider_period):
+            if cancelled():
+                break
+            ask(src, retry_q, MORE_LIMIT)
+        by_source = _order(by_source)
+        extra = any(k == "wikipedia" for k in by_source)
+        cap = PER_WANT_WEB if extra else PER_WANT
+        pool = _interleave(by_source, cap + (SPARE_WEB if extra else 0))
+        spare = [c for c in pool[cap:] if c.get("via") == "wikipedia"]
+        pool = pool[:cap] + spare
+        candidates, no_thumb = pick_with_thumbs(pdir, retry_want, pool, cap, fetch_thumb=fetch_thumb,
+                                                 limited=result["limited"], clock=clock, cancelled=cancelled)
+        finish_want(row, candidates, by_source=by_source, skipped=skipped, failed=failed, no_thumb=no_thumb)
+        if wider_period and candidates and all(c.get("source") in ("pexels", "pixabay") for c in candidates):
+            row["modern_fallback"] = True
     result["wants"] = {wid: row for wid, row in result["wants"].items() if row.get("candidates")}
     return result
 

@@ -46,7 +46,7 @@ from .inputs import DraftError, DraftInputs, beat_picks
 CARD_S = Z.CARD_S
 TITLE_CARD_S = Z.TITLE_CARD_S
 MIN_CARD_S = Z.MIN_CARD_S
-PACE_SHORT_S, PACE_LONG_S = 1.5, 30.0
+PACE_SHORT_S, PACE_LONG_S = VC.MIN_SHOT_S, 30.0
 REPEAT_RUN = 4
 NARRATION_GRAM = 5
 EPS = 1e-6
@@ -142,8 +142,11 @@ class _Compiler:
         self.stamp_box()          # panelbox: the painted area of the main painting (kept in the storyboard's asset; every frame on it stays inside)
         self.eng.set_saved({"schema": SB.SCHEMA, "style": inp.style, "assets": self.assets, "shots": [], "end": {"t": max(1.0, self.t["duration"])}})
         self.beats_by_chapter: dict = {}
+        self.beats_by_id: dict = {}
         for b in self.t["beats"]:
             self.beats_by_chapter.setdefault(b["chapter"], []).append(b)
+            self.beats_by_id[b["id"]] = b
+        self._dropped_beats: set = set()
         self.in_scope = set(inp.in_scope())
         self.grams = None
         self.cur = self._resolve_current()
@@ -742,6 +745,227 @@ class _Compiler:
                              "t0": le, "anchor": anchor, "ov_specs": [], "zone": active["zone"]})
         return recs
 
+    def _is_editable_rec(self, r: dict) -> bool:
+        if r["kind"] not in ("agent", "filler") or r.get("verbatim"):
+            return False
+        if self.edit and self.inp.edit_shots is not None:
+            return r.get("old_id") is None or r.get("old_id") in self.inp.edit_shots
+        return True
+
+    def _is_borrowed_rec(self, r: dict) -> bool:
+        shot = r.get("shot") or {}
+        return VC.is_borrowed_shot(shot, self.main, self.bundle.spec(shot.get("technique")), self.bundle.style)
+
+    def _set_rec_t0(self, r: dict, new_t0: float) -> None:
+        old_t0 = r["t0"]
+        if not self.words:
+            r["t0"] = round(new_t0, 4)
+            r["anchor"] = {"t": round(new_t0, 4)}
+            return
+        exact = next((i for i, w in enumerate(self.words) if abs(w["s"] - new_t0) < 1e-4), None)
+        if exact is not None:
+            wi, off = exact, 0.0
+        else:
+            wi = self.tm.nearest_word(new_t0)
+            off = round(new_t0 - self.words[wi]["s"], 4)
+        r["t0"] = round(self.words[wi]["s"] + off, 4)
+        r["sw"] = wi
+        r["anchor"] = {"w": wi, "off": off, "text": self.words[wi]["w"]}
+        if r["t0"] > old_t0 + EPS:
+            for os_ in r.get("ov_specs") or []:
+                sw = os_.get("start_word")
+                if isinstance(sw, int) and 0 <= sw < len(self.words):
+                    ts = self.words[sw]["s"] + float(os_.get("off") or 0.0)
+                    if old_t0 - 0.05 <= ts < r["t0"] - EPS:
+                        os_["start_word"] = wi
+                        os_["off"] = off
+
+    def _beat_sentences(self, beat: dict) -> list[tuple[int, int]]:
+        w0, w1 = beat["w0"], beat["w1"]
+        if w0 >= w1 or not self.words:
+            return []
+        sents: list[tuple[int, int]] = []
+        s0 = w0
+        for n in range(w0, w1):
+            if re.search(r'[.!?][\"\'”’)]*$', self.words[n]["w"]):
+                sents.append((s0, n + 1))
+                s0 = n + 1
+        if s0 < w1:
+            sents.append((s0, w1))
+        return sents
+
+    def _match_subjects(self, rec: dict, beat: dict) -> list[dict]:
+        subjects = self.inp.picks.get("subjects")
+        if not isinstance(subjects, list):
+            return []
+        by_id = {s.get("id"): s for s in subjects if isinstance(s, dict) and s.get("id")}
+        entry = (self.inp.picks.get("beats") or {}).get(beat["id"]) or {}
+        about = entry.get("about") if isinstance(entry, dict) and isinstance(entry.get("about"), list) else []
+        shot = rec.get("shot") or {}
+        _, akey = SB.primary_slot(shot)
+        tid = shot.get("technique")
+        matched = []
+        for item in about:
+            if not isinstance(item, dict):
+                continue
+            sub = by_id.get(item.get("id"))
+            if not sub:
+                continue
+            where = sub.get("where") or {}
+            if akey and akey != self.main and where.get("asset") == akey:
+                matched.append((sub, item))
+            elif tid == "MAP-01":
+                places = " ".join(str(p) for p in ((shot.get("params") or {}).get("places") or [])).lower()
+                names = [sub.get("name") or "", item.get("words") or "", *(sub.get("also") or [])]
+                if sub.get("kind") == "place" or any(n and n.lower() in places for n in names if isinstance(n, str)):
+                    matched.append((sub, item))
+        return matched
+
+    def _mention_word_idx(self, beat: dict, phrase_str: str) -> int | None:
+        phrase = VC.tokens(phrase_str)
+        if not phrase or not self.words:
+            return None
+        return next((n for n in range(beat["w0"], beat["w1"] - len(phrase) + 1)
+                     if [norm(w["w"]) for w in self.words[n:n + len(phrase)]] == phrase), None)
+
+    def _shot_sentence_start(self, rec: dict) -> float:
+        beat = self.beats_by_id.get(rec.get("beat"))
+        if not beat or not self.words:
+            return rec["t0"]
+        sents = self._beat_sentences(beat)
+        if not sents:
+            return rec["t0"]
+        for _sub, item in self._match_subjects(rec, beat):
+            wi = self._mention_word_idx(beat, item.get("words") or "")
+            if wi is not None:
+                for sw0, sw1 in sents:
+                    if sw0 <= wi < sw1:
+                        return self.words[sw0]["s"]
+        sw = rec.get("sw", beat["w0"])
+        for sw0, sw1 in sents:
+            if sw0 <= sw < sw1:
+                return self.words[sw0]["s"]
+        return rec["t0"]
+
+    def _spoken_word_count(self, rec: dict, beat: dict, t0: float, t1: float) -> int:
+        sents = self._beat_sentences(beat)
+        matched = self._match_subjects(rec, beat)
+        if matched and sents:
+            matched_ids = {sub.get("id") for sub, _ in matched}
+            entry = (self.inp.picks.get("beats") or {}).get(beat["id"]) or {}
+            about = entry.get("about") if isinstance(entry, dict) and isinstance(entry.get("about"), list) else []
+            sent_subs: dict[tuple[int, int], set[str]] = {}
+            for item in about:
+                if not isinstance(item, dict) or not item.get("id"):
+                    continue
+                wi = self._mention_word_idx(beat, item.get("words") or "")
+                if wi is None:
+                    continue
+                for s in sents:
+                    if s[0] <= wi < s[1]:
+                        sent_subs.setdefault(s, set()).add(item["id"])
+                        break
+            exclusive_sents = [s for s, ids in sent_subs.items() if ids & matched_ids and ids <= matched_ids]
+            if exclusive_sents and len(exclusive_sents) == sum(1 for _s, ids in sent_subs.items() if ids & matched_ids):
+                return sum(s[1] - s[0] for s in exclusive_sents)
+            return sum(len(VC.tokens(item.get("words") or "")) for _sub, item in matched)
+        return sum(1 for w in self.words[beat["w0"]:beat["w1"]] if t0 - 1e-4 <= w["s"] < t1 - 1e-4)
+
+    def ensure_borrowed_duration(self, recs: list) -> list:
+        """Keep borrowed pictures and MAP-01 on screen >= 3.0 s by expanding back to their sentence start, then after;
+        only drop the picture with the fewest spoken words if a line cannot hold all of them at 3.0 s each."""
+        recs = list(recs)
+        end_t_total = self.t["duration"]
+
+        def _end_of(idx: int) -> float:
+            return recs[idx + 1]["t0"] if idx + 1 < len(recs) else end_t_total
+
+        # Phase 1: drop excess borrowed shots only when the line itself is shorter than n * 3.0 s
+        by_beat: dict[str, list[dict]] = {}
+        for r in recs:
+            if r.get("beat") and self._is_editable_rec(r) and self._is_borrowed_rec(r):
+                by_beat.setdefault(r["beat"], []).append(r)
+        for bid, group in by_beat.items():
+            beat = self.beats_by_id.get(bid)
+            if len(group) < 2 or not beat:
+                continue
+            beat_dur = beat["end"] - beat["start"]
+            while len(group) > 1 and beat_dur < len(group) * VC.OUTSIDE_MIN_SHOT_S - EPS:
+                victim = min(
+                    group,
+                    key=lambda r: (
+                        self._spoken_word_count(r, beat, r["t0"], _end_of(recs.index(r))),
+                        round(_end_of(recs.index(r)) - r["t0"], 4),
+                        -group.index(r),
+                    ),
+                )
+                v_idx = recs.index(victim)
+                v_t0 = victim["t0"]
+                recs.pop(v_idx)
+                group.remove(victim)
+                if v_idx < len(recs) and self._is_editable_rec(recs[v_idx]):
+                    same_chap_prev = v_idx > 0 and recs[v_idx - 1]["chapter"] == victim["chapter"]
+                    needs_beat_start = recs[v_idx].get("beat") == bid and (v_idx == 0 or recs[v_idx - 1].get("beat") != bid)
+                    if not same_chap_prev or needs_beat_start or recs[v_idx]["t0"] > v_t0 + EPS:
+                        if not same_chap_prev or needs_beat_start:
+                            self._set_rec_t0(recs[v_idx], v_t0)
+                _, akey = SB.primary_slot(victim.get("shot") or {})
+                tid = (victim.get("shot") or {}).get("technique")
+                prob = S.problem(
+                    "outside_picture_dropped", victim["chapter"], victim["n"],
+                    "line %s cannot hold %d outside pictures for %.1f s each (%.1f s total); %s was dropped"
+                    % (bid, len(group) + 1, VC.OUTSIDE_MIN_SHOT_S, beat_dur, akey or tid or "one picture"),
+                    level="warn",
+                )
+                prob["beat"] = bid
+                prob["args"] = {"beat": bid, "shot": victim["n"], "assets": [akey] if akey else [],
+                                "technique": tid, "min": VC.OUTSIDE_MIN_SHOT_S, "beat_seconds": round(beat_dur, 1)}
+                self.base_issues.append(prob)
+                self._dropped_beats.add(bid)
+
+        # Phase 2: expand any remaining borrowed shot under 3.0 s (sentence start from before, then after, then remaining before)
+        for _pass in range(2):
+            changed = False
+            for i in range(len(recs)):
+                r = recs[i]
+                if not self._is_editable_rec(r) or not self._is_borrowed_rec(r):
+                    continue
+                end_t = _end_of(i)
+                if end_t - r["t0"] >= VC.OUTSIDE_MIN_SHOT_S - EPS:
+                    continue
+                prev_min_end = r["t0"]
+                if i > 0 and recs[i - 1]["chapter"] == r["chapter"] and self._is_editable_rec(recs[i - 1]):
+                    prev = recs[i - 1]
+                    prev_floor = VC.OUTSIDE_MIN_SHOT_S if self._is_borrowed_rec(prev) else VC.MIN_SHOT_S
+                    prev_min_end = prev["t0"] + prev_floor
+                    sent_t0 = self._shot_sentence_start(r)
+                    if sent_t0 < r["t0"] - EPS:
+                        new_t0 = max(prev_min_end, sent_t0)
+                        if new_t0 < r["t0"] - EPS:
+                            self._set_rec_t0(r, new_t0)
+                            changed = True
+                end_t = _end_of(i)
+                need = VC.OUTSIDE_MIN_SHOT_S - (end_t - r["t0"])
+                if need > EPS and i + 1 < len(recs) and recs[i + 1]["chapter"] == r["chapter"] and self._is_editable_rec(recs[i + 1]):
+                    nxt = recs[i + 1]
+                    nxt_end = _end_of(i + 1)
+                    nxt_floor = VC.OUTSIDE_MIN_SHOT_S if self._is_borrowed_rec(nxt) else VC.MIN_SHOT_S
+                    slack_after = max(0.0, (nxt_end - nxt["t0"]) - nxt_floor)
+                    take = min(need, slack_after)
+                    if take > EPS:
+                        self._set_rec_t0(nxt, nxt["t0"] + take)
+                        changed = True
+                end_t = _end_of(i)
+                need = VC.OUTSIDE_MIN_SHOT_S - (end_t - r["t0"])
+                if need > EPS and prev_min_end < r["t0"] - EPS:
+                    new_t0 = max(prev_min_end, r["t0"] - need)
+                    if new_t0 < r["t0"] - EPS:
+                        self._set_rec_t0(r, new_t0)
+                        changed = True
+            if not changed:
+                break
+        return recs
+
     def assign_ids(self, recs: list) -> None:
         used = {r["old_id"] for r in recs if (r["kind"] in ("locked", "kept") or r.get("verbatim")) and r.get("old_id")}
         # the id of the opening shot belongs to that shot alone: no other shot takes it over, and it takes nobody's
@@ -1260,6 +1484,7 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
     recs, zones = c.plan(degrade)
     recs = c.apply_locked(recs, zones)
     recs.sort(key=lambda r: r["t0"])
+    recs = c.ensure_borrowed_duration(recs)
     # shots closer than the minimum length are not allowed: the later one is dropped, and the agent is told
     keep = []
     for i, r in enumerate(recs):
@@ -1297,7 +1522,8 @@ def _run(c: _Compiler, degrade: bool, draw: bool, max_passes: int) -> CompileRes
                 source["ov_map"] = [before.get(id(ov)) for ov in shot.get("overlays") or []]
         mapped: list = []
         errs_engine = c.eng.validate(doc)
-        mapped += [c.map_issue(i, origin) for i in errs_engine]
+        mapped += [c.map_issue(i, origin) for i in errs_engine
+                   if not (i.get("code") == "outside_picture_dropped" and (i.get("args") or {}).get("beat") in c._dropped_beats)]
         drawn = False
         if draw and not any(i["level"] == "error" for i in errs_engine):
             mapped += [c.map_issue(i, origin) for i in c.eng.draw_check(doc)]
@@ -1371,7 +1597,7 @@ def summary_text(result: CompileResult, limit: int = 40) -> str:
     """The issues as lines for the agent (`check`) and for repair turns: errors first, then warnings."""
     errs, warns = result.errors, result.warnings
     lines = []
-    pointfix = {"subject_not_on_screen", "name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light", "year_already_on_screen"}
+    pointfix = {"subject_not_on_screen", "name_not_shown", "small_detail_not_lit", "highlight_nothing_to_dim", "text_too_brief", "camera_off_region", "thing_arrives_late", "strip_without_light", "year_already_on_screen", "outside_on_painting", "outside_picture_brief", "outside_picture_dropped"}
     for tag, items in (("ERROR", errs), ("warning", warns)):
         required = [i for i in items if i["code"] in pointfix] if tag == "warning" else []
         rest = [i for i in items if i["code"] not in pointfix] if tag == "warning" else items

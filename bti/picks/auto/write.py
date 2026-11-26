@@ -78,7 +78,8 @@ def resolve_picks(plan: dict, search: dict, choice: dict, books: list[dict]) -> 
             w = (search.get("wants") or {}).get(wid) or {}
             ch = (choice.get("wants") or {}).get(wid)
             row = {"id": wid, "beat": ln["beat"], "item": it, "pick": None, "reason": "", "code": None, "source": w.get("source"),
-                   "seconds": w.get("seconds"), "what": it.get("what") or it.get("place") or ""}
+                   "seconds": w.get("seconds"), "what": it.get("what") or it.get("place") or "",
+                   "queries": [q for q in (w.get("tried_queries") or []) if isinstance(q, str) and q.strip()]}
             if ch is None:                                       # the want was not shown to the agent: nothing was found for it
                 row["code"] = w.get("code") or "no_candidates"
             elif ch["pick"] is None:
@@ -358,12 +359,18 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                         items.append(item_dict)
                         continue
                     code, detail, source, secs = failed.get(key, ("import_failed", "", None, None))
-                    missing.append({"want": p["id"], "what": p["what"], "code": code,
-                                    "why": texts.why(code, what=p["what"], source=source or "", seconds=secs, detail=detail)})
+                    entry_m = {"want": p["id"], "what": p["what"], "code": code,
+                               "why": texts.why(code, what=p["what"], source=source or "", seconds=secs, detail=detail)}
+                    if len(p.get("queries") or []) >= 2:
+                        entry_m["queries"] = list(p["queries"])
+                    missing.append(entry_m)
                 else:
-                    missing.append({"want": p["id"], "what": p["what"], "code": p["code"] or "no_candidates",
-                                    "why": texts.why(p["code"] or "no_candidates", what=p["what"], source=p.get("source") or "", seconds=p.get("seconds"),
-                                                     detail=p["reason"])})
+                    entry_m = {"want": p["id"], "what": p["what"], "code": p["code"] or "no_candidates",
+                               "why": texts.why(p["code"] or "no_candidates", what=p["what"], source=p.get("source") or "", seconds=p.get("seconds"),
+                                                detail=p["reason"])}
+                    if len(p.get("queries") or []) >= 2:
+                        entry_m["queries"] = list(p["queries"])
+                    missing.append(entry_m)
         reused = False
         if not ln["show"]:
             seen_ids = set()
@@ -394,8 +401,11 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                     else:
                         code = picked.get("code") or "import_failed"
                         what = picked.get("what") or subject.get("name") or "picture"
-                        missing.append({"want": where["want"], "what": what, "code": code,
-                                        "why": texts.why(code, what=what, source="", seconds=None, detail="")})
+                        entry_m = {"want": where["want"], "what": what, "code": code,
+                                   "why": texts.why(code, what=what, source="", seconds=None, detail="")}
+                        if len(picked.get("queries") or []) >= 2:
+                            entry_m["queries"] = list(picked["queries"])
+                        missing.append(entry_m)
         fallback = ln.get("fallback")
         if missing and not items and "subjects" in plan:
             if line_index > 0:
@@ -495,7 +505,11 @@ def _ops_for(lines: list[dict], main_key: str) -> list[dict]:
                 item_data["step"] = it["step"]
             items.append(item_data)
         ops.append({"op": "set_picks", "beat": ln["beat"], "items": items, "reason": line_note(ln), **kinds,
-                    "missing": [{"what": _cut(m["what"], pdoc.MISSING_WHAT_MAX), "code": m["code"]} for m in ln["missing"][:pdoc.MAX_MISSING]]})
+                    "missing": [{
+                        "what": _cut(m["what"], pdoc.MISSING_WHAT_MAX), "code": m["code"],
+                        **({"queries": [_cut(q, pdoc.MISSING_WHAT_MAX) for q in m["queries"][:4] if isinstance(q, str) and q.strip()]}
+                           if m.get("queries") else {}),
+                    } for m in ln["missing"][:pdoc.MAX_MISSING]]})
     return ops
 
 

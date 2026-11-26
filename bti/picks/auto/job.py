@@ -293,8 +293,51 @@ def make_parts(r: _Run):
                 rep = rep_fb                                      # keep unconfirmed regions as non-tight rather than discarding valid choices
             else:
                 raise _fail(out, ctx)
+        # A want whose search found nothing usable or whose candidates were all rejected gets one free retry with a simpler/broader wording.
+        want_list = shapes.wants_of(plan)
+        retried_before = {wid: bool((st.get("wants") or {}).get(wid, {}).get("retried")) for wid in st.get("wants") or {}}
+        retry = asearch.retry_after_rejection(
+            r.pdir, want_list, st, rep.value, main_key=r.inp.painting.key,
+            cancelled=ctx.cancelled, fetch_thumb=r.s.get("fetch_thumb") or asearch.default_fetch_thumb,
+            clock=r.s.get("clock") or time.time, search=r.s.get("search"), wiki_search=r.s.get("wiki_search"),
+        )
+        if ctx.cancelled():
+            return None
+        retried_now = any(bool(w.get("retried")) and not retried_before.get(wid) for wid, w in (st.get("wants") or {}).items())
+        if retry["wants"]:
+            try:
+                retry_ws, _ = workspace.build_choose(r.inp, plan, retry, lim["choose"], books=[], second=True)
+            except workspace.WorkspaceError as e:
+                raise PartError(e.code, texts.vi(e.code, e.message))
+            retry_out, retry_rep = _session(r, ctx, retry_ws, "choose_retry", "Agent đang chọn hình tìm lại", lim["choose"])
+            if retry_out.status == "cancelled" or ctx.cancelled():
+                shutil.rmtree(retry_ws.root, ignore_errors=True)
+                shutil.rmtree(ws.root, ignore_errors=True)
+                return None
+            if retry_out.status == "tampered" or not retry_rep.ok:
+                raise _fail(retry_out, ctx)
+            for wid, row in retry["wants"].items():
+                existing = st["wants"][wid]["candidates"]
+                offset = max([int(candidate.get("n") or 0) for candidate in existing] or [0])
+                for n, candidate in enumerate(row["candidates"], 1):
+                    candidate["n"] = offset + n
+                    candidate["round"] = 1
+                existing.extend(row["candidates"])
+                if row.get("modern_fallback"):
+                    st["wants"][wid]["modern_fallback"] = True
+                selected = retry_rep.value["wants"][wid]
+                pick = selected.get("pick")
+                if pick and pick[0] == "c":
+                    selected = {**selected, "pick": ("c", offset + pick[1])}
+                rep.value["wants"][wid] = selected
+            _finish_workspace(retry_ws, True)
+            retried_now = True
+        if retried_now:
+            st["key"] = r.key
+            store.write(r.pdir, "search.json", st)
+            r.search = st
         # A subject whose period candidates were all rejected gets a separate, free modern-photo search and a second visual choice.
-        rejected_wants = asearch.modern_retry_wants(shapes.wants_of(plan), st)
+        rejected_wants = asearch.modern_retry_wants(want_list, st)
         if rejected_wants:
             retry = asearch.modern_after_rejection(r.pdir, rejected_wants, rep.value, main_key=r.inp.painting.key,
                      cancelled=ctx.cancelled, fetch_thumb=r.s.get("fetch_thumb") or asearch.default_fetch_thumb,

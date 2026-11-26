@@ -26,7 +26,8 @@ from .timing import norm
 from .vfx import EASE
 
 # ----------------------------------------------------------------------------------------------------------- thresholds
-MIN_SHOT_S = 1.5            # the briefings: "none under 1.5 s" (the engine's own error floor, `shot_too_short`, is 0.2 s)
+MIN_SHOT_S = 2.5            # the briefings: "none under 2.5 s" (the engine's own error floor, `shot_too_short`, is 0.2 s)
+OUTSIDE_MIN_SHOT_S = 3.0    # a borrowed picture or MAP-01 must stay on screen for at least this long
 SMALL_COVER = 0.6           # the main painting covers less of the screen than this: it is "small between black bars"
 SMALL_SHARE = 0.06          # more than this share of the running time with the painting small raises `upright_whole_share`
 SMALL_SHOT_S = 1.0          # a shot counts in the report when the painting is small for at least this long in it
@@ -320,10 +321,52 @@ class _Ctx:
 
 
 # ----------------------------------------------------------------------------------------------------------- 1. a shot that flickers
+def is_program_shot(shot: dict, spec: dict | None = None, style=None) -> bool:
+    """True for shots written by the compiler for the opening hold, cards, or channel identity (which keep their own lengths)."""
+    if not isinstance(shot, dict):
+        return False
+    if shot.get("id") == "s0000":
+        return True
+    if spec is not None and spec.get("kind") == "card":
+        return True
+    if shot.get("source") == "identity":
+        return True
+    tid = shot.get("technique")
+    if not isinstance(tid, str) or not tid:
+        return False
+    if style is not None:
+        from bti.identity import read as read_identity
+        cfg = read_identity(style)
+        if cfg is not None:
+            return cfg.is_identity_technique(tid)
+    return tid.startswith("ID-")
+
+
+def is_borrowed_shot(shot: dict, main_asset: str | None, spec: dict | None = None, style=None) -> bool:
+    """True for a non-program shot whose main picture is not the main painting, or a MAP-01 shot."""
+    if not isinstance(shot, dict) or is_program_shot(shot, spec, style):
+        return False
+    if shot.get("technique") == "MAP-01":
+        return True
+    slots = shot.get("slots")
+    if not isinstance(slots, dict):
+        return False
+    primary = None
+    img = slots.get("image")
+    if isinstance(img, dict) and isinstance(img.get("asset"), str):
+        primary = img["asset"]
+    else:
+        for v in slots.values():
+            if isinstance(v, dict) and isinstance(v.get("asset"), str):
+                primary = v["asset"]
+                break
+    return bool(primary and main_asset and primary != main_asset)
+
+
 def _short_shots(c: _Ctx) -> list[dict]:
     out = []
     for i, sp in enumerate(c.spans):
-        if sp is None:
+        if sp is None or is_program_shot(c.shots[i], c.specs[i], c.bundle.style):
             continue
         d = sp[1] - sp[0]
         if 0.2 <= d < MIN_SHOT_S - 1e-6:
@@ -1641,11 +1684,16 @@ def check(sb: dict, tm, bundle, project_dir, starts: list, end_t, safe_rel) -> l
         out.extend(_strip_without_light(c))
     except Exception:       # noqa: BLE001
         pass
+    try:                                                          # pictime: borrowed pictures and MAP-01 stay >= 3.0 s; dropped multi-picture beat items warn
+        out.extend(_outside_picture_brief(c))
+        out.extend(_outside_picture_dropped(c))
+    except Exception:       # noqa: BLE001
+        pass
     return out
 
 
 CODES = {
-    "shot_short": "A shot lasts less than 1.5 s (warning): it flickers. args: shot, min, got.",
+    "shot_short": "A shot lasts less than %.1f s (warning): it flickers. args: shot, min, got." % MIN_SHOT_S,
     "upright_whole_share": "The main painting covers less than 60% of the screen (small between black bars) for more than 6% of the running time (warning). args: asset, share, seconds, count, limit, worst ([{shot, seconds}]).",
     "highlight_off_frame": "The lit spot of a spotlight (HI-01, X-HI-01) is at the edge of the frame or outside it during its window (warning). args: shot, overlay, technique, region, at (seconds), x_pct, y_pct.",
     "highlight_too_dark": "A spotlight leaves the frame at a mean luma under 32 on the 16..235 scale (warning). args: shot, overlay, technique, region, luma, luma_without, min, floor, floor_needed.",
@@ -2083,4 +2131,71 @@ def _year_already_on_screen(c):
                 if other and min(window[1], other[1]) > max(window[0], other[0]) and any(re.search(r"(?<!\d)" + re.escape(year) + r"(?!\d)", str(t)) for t in texts):
                     out.append(_issue("year_already_on_screen", "shots[%d]" % i, "Year %s is already in a visible label on shot %s." % (year, c.sid(i)), shot=c.sid(i), year=year))
                     break
+    return out
+
+
+# ----------------------------------------------------------------------------------------------------------- pictime: borrowed pictures stay >= 3.0 s
+HINTS.update({
+    "outside_picture_brief": ("Start this borrowed picture or map at the first word of the sentence that names it, "
+                              "or extend it so it stays on screen for at least %.1f seconds." % OUTSIDE_MIN_SHOT_S),
+    "outside_picture_dropped": ("Give each outside picture at least %.1f seconds (start from the first word of its sentence, "
+                                "or trim another shot in the line) so no chosen picture has to be dropped." % OUTSIDE_MIN_SHOT_S),
+})
+CODES.update({
+    "outside_picture_brief": "A borrowed picture or MAP-01 shot lasts less than %.1f s (warning). args: shot, asset, technique, min, got." % OUTSIDE_MIN_SHOT_S,
+    "outside_picture_dropped": "A line with multiple outside pictures dropped one because it could not hold all of them at %.1f s each (warning). args: beat, shot, assets, shown." % OUTSIDE_MIN_SHOT_S,
+})
+
+
+def _outside_picture_brief(c: _Ctx) -> list[dict]:
+    out: list[dict] = []
+    main = _main_painting(c)
+    for i, sp in enumerate(c.spans):
+        if sp is None or not is_borrowed_shot(c.shots[i], main, c.specs[i], c.bundle.style):
+            continue
+        d = sp[1] - sp[0]
+        if 0.2 <= d < OUTSIDE_MIN_SHOT_S - 1e-6:
+            key = c.primary(i)
+            tid = c.shots[i].get("technique")
+            what = key or tid or "an outside picture"
+            out.append(_issue("outside_picture_brief", "shots[%d]" % i,
+                              "Shot %s shows %s for only %.2f seconds: a borrowed picture or map needs at least %.1f seconds."
+                              % (c.sid(i), what, d, OUTSIDE_MIN_SHOT_S),
+                              shot=c.sid(i), asset=key, technique=tid, min=OUTSIDE_MIN_SHOT_S, got=_r(d, 2)))
+    return out
+
+
+def _outside_picture_dropped(c: _Ctx) -> list[dict]:
+    out: list[dict] = []
+    for r in _beat_rows(c):
+        if not r["kinds"] or r["entry"].get("status") == "skip":
+            continue
+        want_items: list[tuple[str, str]] = []
+        seen_assets: set[str] = set()
+        for it in r["entry"].get("items") or []:
+            if isinstance(it, dict) and it.get("role") in OUTSIDE_ROLES + ("map",) and isinstance(it.get("asset"), str):
+                if it["asset"] not in seen_assets:
+                    seen_assets.add(it["asset"])
+                    want_items.append((it["asset"], it.get("role")))
+        if len(want_items) < 2:
+            continue
+        first = None
+        shown: set[str] = set()
+        for i, shot in enumerate(c.shots):
+            sp = c.spans[i]
+            if sp is None or max(0.0, min(sp[1], r["t1"]) - max(sp[0], r["t0"])) <= 0:
+                continue
+            if first is None or sp[0] <= r["t0"] + 1e-6:
+                first = i
+            slots = shot.get("slots") if isinstance(shot.get("slots"), dict) else {}
+            shot_assets = {v.get("asset") for v in slots.values() if isinstance(v, dict) and isinstance(v.get("asset"), str)}
+            for asset, role in want_items:
+                if asset in shot_assets or (role == "map" and shot.get("technique") == "MAP-01"):
+                    shown.add(asset)
+        missing = [asset for asset, _ in want_items if asset not in shown]
+        if first is not None and shown and missing:
+            out.append(_issue("outside_picture_dropped", "shots[%d]" % first,
+                              "Line %s has %d outside pictures in its picks, but %s is not shown during the line."
+                              % (r["id"], len(want_items), ", ".join(missing)),
+                              beat=r["id"], shot=c.sid(first), assets=missing, shown=sorted(shown)))
     return out

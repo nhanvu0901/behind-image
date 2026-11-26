@@ -251,6 +251,10 @@
   }
  },
  "pacing": {
+  "min_shot_s": {
+   "value": 2.5,
+   "source": "owner decision 2026-11-26 (minimum shot duration; shots under 2.5 s flicker)"
+  },
   "median_shot_s": {
    "value": 7.0,
    "source": "demo_runs/claude_code/measurements.md (59 shots, thr 0.15)"

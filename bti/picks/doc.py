@@ -201,11 +201,16 @@ def _kinds(v: Any) -> list[str]:
 
 
 def _missing(v: Any) -> list[dict]:
-    """The well-formed entries `{what, code}` of a `missing` list (at most `MAX_MISSING`)."""
+    """The well-formed entries `{what, code}` (plus optional `queries`) of a `missing` list (at most `MAX_MISSING`)."""
     out: list[dict] = []
     for m in v if isinstance(v, list) else []:
         if isinstance(m, dict) and isinstance(m.get("what"), str) and m["what"].strip() and isinstance(m.get("code"), str) and CODE_RE.fullmatch(m["code"]):
-            out.append({"what": " ".join(m["what"].split())[:MISSING_WHAT_MAX], "code": m["code"]})
+            row = {"what": " ".join(m["what"].split())[:MISSING_WHAT_MAX], "code": m["code"]}
+            qs = [" ".join(q.split())[:MISSING_WHAT_MAX] for q in (m.get("queries") if isinstance(m.get("queries"), list) else [])
+                  if isinstance(q, str) and q.strip()]
+            if qs:
+                row["queries"] = qs[:4]
+            out.append(row)
     return out[:MAX_MISSING]
 
 
@@ -351,7 +356,10 @@ def doc_problem(d: Any) -> str | None:
             return f"picks.beats.{bid}.kinds must be a list of at most {MAX_KINDS} of: {', '.join(LINE_KINDS)}"
         missing = b.get("missing")
         if missing is not None and not (isinstance(missing, list) and len(missing) <= MAX_MISSING and all(
-                isinstance(m, dict) and isinstance(m.get("what"), str) and isinstance(m.get("code"), str) for m in missing)):
+                isinstance(m, dict) and isinstance(m.get("what"), str) and isinstance(m.get("code"), str)
+                and ("queries" not in m or (isinstance(m["queries"], list) and len(m["queries"]) <= 4
+                                            and all(isinstance(q, str) and bool(q.strip()) for q in m["queries"])))
+                for m in missing)):
             return f"picks.beats.{bid}.missing must be a list of at most {MAX_MISSING} objects like {{\"what\": \"...\", \"code\": \"agent_none\"}}"
         items = b.get("items", [])
         if not isinstance(items, list) or len(items) > MAX_ITEMS:
