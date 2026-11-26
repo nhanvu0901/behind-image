@@ -15,6 +15,11 @@
       "id": "argon",
       "label": "Gemini Orchestrator Argon",
       "model": "agy:gemini-pro-orchestrator-g1-pro"
+    },
+    {
+      "id": "opusmed",
+      "label": "Opus 5.5 Medium",
+      "model": "claude:claude-opus-5-5@medium"
     }
   ],
   "steps": {
