@@ -286,7 +286,8 @@ def test_a_want_with_no_candidates_is_written_with_the_fallback_and_listed_as_mi
     assert r["sentence"] == "Agent đã chọn hình cho 6/6 đoạn." and r["outside_without"] == ["b0003"]
     b = env.picks()["beats"]["b0003"]
     assert b["items"] == [{"asset": "A", "region": None, "role": "main", "note": ""}] and b["status"] == "picked"            # its fallback: the whole painting
-    assert b["kinds"] == ["outside"] and b["missing"] == [{"what": "Chân dung họa sĩ", "code": "no_candidates"}]
+    assert b["kinds"] == ["outside"] and b["missing"] == [{"what": "Chân dung họa sĩ", "code": "no_candidates",
+                                                            "queries": ["Jan van Eyck portrait", "Jan van Eyck portrait engraving"]}]
     assert "Chưa tìm được: Chân dung họa sĩ." in b["note"]
     assert "images/w_b0003_1.jpg" not in env.agent.calls[1]["files"]                                                         # the agent was not shown an empty sheet
     assert store.read(env.pdir, "search.json")["wants"]["b0003.1"]["status"] == "none"
@@ -306,7 +307,29 @@ def test_a_picture_the_agent_answered_null_for_is_written_with_the_fallback_the_
     assert r["lines_done"] == 6 and r["lines_without"] == [] and [(m["beat"], m["code"]) for m in r["missing"]] == [("b0003", "agent_none")]
     b = env.picks()["beats"]["b0003"]
     assert [(i["asset"], i["region"], i["role"]) for i in b["items"]] == [("A", "HEAD", "detail")]
-    assert b["kinds"] == ["outside"] and b["missing"] == [{"what": "Chân dung họa sĩ", "code": "agent_none"}] and "Chưa tìm được" in b["note"]
+    assert b["kinds"] == ["outside"] and b["missing"] == [{"what": "Chân dung họa sĩ", "code": "agent_none",
+                                                            "queries": ["Jan van Eyck portrait", "Jan van Eyck portrait engraving"]}] and "Chưa tìm được" in b["note"]
+
+
+def test_agent_none_retries_once_and_picks_new_candidate_or_records_both_wordings(env):
+    from auto_helpers import meta
+    env.sources["commons"].items.append(meta("commons", "File:Engraving.jpg", "Engraving", "engraving"))
+    seen_roots = []
+
+    def select(ws_root, turn):
+        if ws_root not in seen_roots:
+            seen_roots.append(ws_root)
+        if len(seen_roots) == 1:
+            return choice(wants=[{"id": "b0003.1", "pick": None, "reason": "Không hình nào đúng người."}, *CHOICE["wants"][1:]])
+        return {"schema": "bti.picks.choice/1", "wants": [{"id": "b0003.1", "pick": 1, "reason": "Bản khắc chân dung đúng."}], "regions": []}
+
+    env.agent.choice = select
+    job = env.run()
+    assert job["state"] == "done", job.get("error")
+    assert len(env.agent.calls) == 3
+    b = env.picks()["beats"]["b0003"]
+    assert b["items"][0]["role"] == "context" and b["items"][0]["asset"] != "A"
+    assert "missing" not in b
 
 
 def test_a_fallback_box_the_choosing_session_drops_shows_the_whole_painting(env):
@@ -389,7 +412,7 @@ def test_a_candidate_with_no_thumbnail_cannot_be_chosen_and_the_main_painting_is
     job = env.run()
     r = result(job)
     assert r["lines_without"] == [] and [(m["beat"], m["code"]) for m in r["missing"]] == [("b0003", "no_thumbs")]
-    assert env.picks()["beats"]["b0003"]["missing"] == [{"what": "Chân dung họa sĩ", "code": "no_thumbs"}]
+    assert env.picks()["beats"]["b0003"]["missing"] == [{"what": "Chân dung họa sĩ", "code": "no_thumbs", "queries": ["Jan van Eyck portrait", "Jan van Eyck portrait engraving"]}]
     # the main painting itself, found by the search, is dropped from the candidates
     from bti.media import assets as massets
     src = env.sources["commons"]

@@ -565,3 +565,65 @@ def test_modern_retry_does_not_run_when_period_search_was_incomplete():
     assert asearch.modern_retry_wants([subject], state) == []
     state['wants']['b0001.1']['period_incomplete'] = False
     assert asearch.modern_retry_wants([subject], state) == [subject]
+
+
+# ---------------------------------------------------------------------------------------------------------------- pictime: one retry on empty / agent_none
+def test_retry_query_for_strips_adjectives_then_widens_period():
+    q1, wide1 = asearch.retry_query_for({"type": "context", "kind": "object", "search": "15th century gilded Venetian glass chalice"}, [])
+    assert q1 == "Venetian glass chalice" and wide1 is False
+    q2, wide2 = asearch.retry_query_for({"type": "context", "kind": "place", "search": "Bruges canal"}, ["Bruges canal"])
+    assert q2 == "Bruges canal historical view" and wide2 is True
+    qm, widem = asearch.retry_query_for({"type": "map", "place": "Bruges, Belgium"}, [])
+    assert qm == "Bruges" and widem is False
+
+
+def test_empty_search_retries_once_with_free_sources_and_records_both_wordings(env, monkeypatch, paid):
+    class ExactSource(FakeSource):
+        def search(self, query, kind="image", limit=24):
+            self.searches.append((query, kind, limit))
+            return [{k: v for k, v in m.items() if k != "_q"}
+                    for m in self.items if m.get("_q", "") == query.lower() and m.get("kind", "image") == kind][:limit]
+
+    web_calls = []
+    commons = ExactSource("commons", [meta("commons", "File:chalice.jpg", "Glass chalice", "glass chalice")])
+    met = FakeSource("met", [])
+    install_sources(monkeypatch, {"commons": commons, "met": met}, keys=())
+    w = want(kind="object", search="15th century gilded glass chalice", alt=[])
+    web = asearch.Web(on=True, max=5, search=lambda p, q, l: (web_calls.append(q), {"items": [], "errors": []})[1])
+    st, _ = run_search(env, [w], web=web, wiki_search=lambda *a, **kw: {"items": [], "errors": []})
+    row = st["wants"]["b0001.1"]
+    assert row["status"] == "found" and row["retried"] is True
+    assert row["tried_queries"] == ["15th century gilded glass chalice", "glass chalice"]
+    assert [q for q, _, _ in commons.searches] == ["15th century gilded glass chalice", "glass chalice"]
+    assert web_calls == ["15th century gilded glass chalice"]       # retry never calls paid web search
+
+    # Second failure stops after one retry and still records both wordings
+    commons2 = FakeSource("commons", [])
+    install_sources(monkeypatch, {"commons": commons2, "met": FakeSource("met")}, keys=())
+    st2, _ = run_search(env, [w], wiki_search=lambda *a, **kw: {"items": [], "errors": []})
+    row2 = st2["wants"]["b0001.1"]
+    assert row2["status"] == "none" and row2["code"] == "no_candidates" and row2["retried"] is True
+    assert row2["tried_queries"] == ["15th century gilded glass chalice", "glass chalice"]
+    assert len(commons2.searches) == 2
+
+
+def test_retry_after_rejection_runs_once_for_agent_none_on_free_sources(env, monkeypatch):
+    commons = FakeSource("commons", [
+        meta("commons", "File:wrong.jpg", "Wrong", "old velvet hat"),
+        meta("commons", "File:good.jpg", "Plain hat", "hat engraving"),
+    ])
+    install_sources(monkeypatch, {"commons": commons, "met": FakeSource("met")}, keys=())
+    w = want(kind="object", search="old velvet hat", alt=[])
+    st, _ = run_search(env, [w], wiki_search=lambda *a, **kw: {"items": [], "errors": []})
+    assert [c["source_id"] for c in st["wants"]["b0001.1"]["candidates"]] == ["File:wrong.jpg"]
+    selection = {"wants": {"b0001.1": {"pick": None, "reason": "Không đúng."}}}
+    retry = asearch.retry_after_rejection(env.pdir, [w], st, selection, main_key="A", cancelled=lambda: False,
+                                            fetch_thumb=fake_thumb, clock=time.time,
+                                            wiki_search=lambda *a, **kw: {"items": [], "errors": []})
+    assert st["wants"]["b0001.1"]["retried"] is True
+    assert st["wants"]["b0001.1"]["tried_queries"] == ["old velvet hat", "hat"]
+    # Second call does not retry a third time
+    commons.searches.clear()
+    retry_again = asearch.retry_after_rejection(env.pdir, [w], st, selection, main_key="A", cancelled=lambda: False,
+                                                  fetch_thumb=fake_thumb, clock=time.time)
+    assert retry_again["wants"] == {} and commons.searches == []

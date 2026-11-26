@@ -132,6 +132,11 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
         # --- idfix (2026-11-21): a non-cast strip on the main painting needs a light unless its region covers > 60% of the frame (bti/engine/viewchecks.py)
         "strip_without_light": ("an X-ANN-01 strip naming a non-cast thing on the main painting has no HI-01, X-HI-01, or AN-01 on screen during the strip",
                                 "nhãn gọi tên vật trên tranh chính chưa có đèn rọi hay vòng tròn cùng xuất hiện trong lúc hiện nhãn"),
+        # --- pictime (2026-11-26): borrowed pictures and MAP-01 must stay on screen at least 3.0 s
+        "outside_picture_brief": ("a borrowed picture or map stays on screen for less than 3.0 seconds, so the viewer barely sees it",
+                                  "có hình ngoài tranh hoặc bản đồ hiện quá ngắn (dưới 3 giây), người xem chưa kịp nhìn"),
+        "outside_picture_dropped": ("a narration line with several outside pictures could not hold all of them at 3.0 seconds each, so one picture had to be dropped",
+                                    "có dòng nhiều hình ngoài tranh nhưng không đủ thời lượng nên phải bỏ bớt một hình"),
     },
 }
 # gate -> codes that never stop the run (they stay in the log)
@@ -147,7 +152,7 @@ TOLERATED: dict[str, frozenset[str]] = {
     # the flag "unknown". The run goes on and writes the count into its log.
     # panelbox: the painted area of the main painting was not sure (`content_box_unsure`): the whole picture is used, which is the old behaviour; the warning stays in the log
     "picks": frozenset({"asset_flag", "content_box_unsure"}),
-    # fixdraft: `shot_short` (under 1.5 s) is a flash, not a defect of substance: the video is still watchable and the owner sees it in the list
+    # fixdraft: `shot_short` (under 2.5 s) is a flash, not a defect of substance: the video is still watchable and the owner sees it in the list
     "storyboard": frozenset({"project_name_differs", "unknown_source", "unknown_intent", "first_shot_transition", "shot_short"}),
 }
 # gate -> {code: share}: the warning stops the run only when MORE than this share of the lines of the document has it (the code is also in STOPS, for the sentence)

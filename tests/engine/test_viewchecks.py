@@ -81,7 +81,9 @@ def test_the_first_draft_of_the_real_run_raises_the_checks_a_draft_can_show(real
 def test_the_draft_after_the_first_round_of_requests_also_raises_the_short_shot_the_captions_and_the_map(real, timing):
     doc, issues, viewer = run(real, timing, "after_round1")
     got = by_code(viewer)
-    assert [i["args"]["shot"] for i in got["shot_short"]] == ["s0073"] and got["shot_short"][0]["args"]["got"] == pytest.approx(1.1, abs=0.06)
+    assert {i["args"]["shot"] for i in got["shot_short"]} == {"s0073", "s0112"}
+    by_s = {i["args"]["shot"]: i["args"]["got"] for i in got["shot_short"]}
+    assert by_s["s0073"] == pytest.approx(1.1, abs=0.06) and by_s["s0112"] == pytest.approx(2.44, abs=0.06)
     caps = {(i["args"]["shot"], i["args"]["kind"]): i for i in got["caption_placeholder"]}
     assert set(caps) == {("s0112", "placeholder"), ("s0036", "placeholder"), ("s0089", "metadata")}
     assert caps[("s0112", "placeholder")]["args"]["text"] == "UNKNOWN AUTHOR UNKNOWN AUTHOR, 1950"
@@ -95,7 +97,9 @@ def test_the_draft_after_the_first_round_of_requests_also_raises_the_short_shot_
 
 def test_the_final_storyboard_of_the_real_run_raises_none_of_them(real, timing):
     doc, issues, viewer = run(real, timing, "final")
-    assert viewer == [], [(i["code"], i["path"]) for i in viewer]
+    non_short = [i for i in viewer if i["code"] != "shot_short"]
+    assert non_short == [], [(i["code"], i["path"]) for i in non_short]
+    assert {i["args"]["shot"] for i in viewer if i["code"] == "shot_short"} == {"s0108", "s0114", "s0115", "s0117", "s0118", "s0155"}
     assert not [i for i in issues if i["level"] == "error"]
 
 
@@ -105,7 +109,7 @@ def test_the_state_before_the_third_round_raises_the_highlights_that_made_the_sc
     assert {i["args"]["shot"] for i in got["highlight_off_frame"]} == {"s0126", "s0076", "s0158"}
     dark = {(i["args"]["shot"], i["args"]["overlay"]) for i in got["highlight_too_dark"]}
     assert {("s0145", "o37"), ("s0097", "o1"), ("s0159", "o52")} <= dark             # the three black stretches of the exported file (5:56, 11:09 and the oranges)
-    assert set(got) == {"highlight_off_frame", "highlight_too_dark"}, "the cameras were already corrected, nothing else is left"
+    assert set(got) == {"highlight_off_frame", "highlight_too_dark", "shot_short"}, "only highlights and <2.5s shots remain"
     assert all(i["args"]["luma"] < VC.HI_MIN_LUMA for i in got["highlight_too_dark"])
 
 
@@ -198,12 +202,54 @@ WIDE = cam((500, 750, 1.92), (500, 800, 1.92))      # the painting at full width
 SMALL = cam((500, 750, 0.5), (500, 750, 0.55))      # 1000 x 1500 px at zoom 0.5: 26% of the screen's width
 
 
-def test_a_shot_under_one_and_a_half_seconds_raises_and_one_of_exactly_that_does_not(tmp_path):
-    shots = [shot(1, 0, camera=WIDE), shot(2, 10.0, camera=WIDE), shot(3, 11.4, camera=WIDE), shot(4, 20.0, camera=WIDE), shot(5, 21.5, camera=WIDE)]
+def test_a_shot_under_two_and_a_half_seconds_raises_and_one_of_exactly_that_does_not(tmp_path):
+    shots = [shot(1, 0, camera=WIDE), shot(2, 10.0, camera=WIDE), shot(3, 12.0, camera=WIDE), shot(4, 20.0, camera=WIDE), shot(5, 22.5, camera=WIDE)]
     doc, tm, d = make(tmp_path, shots, end=30.0, n_words=60)
     got = [i for i in viewer_of(doc, tm, d) if i["code"] == "shot_short"]
-    assert [(i["args"]["shot"], i["args"]["got"]) for i in got] == [("s2", 1.4)]
+    assert [(i["args"]["shot"], i["args"]["min"], i["args"]["got"]) for i in got] == [("s2", 2.5, 2.0)]
     assert got[0]["level"] == "warn" and got[0]["hint"] and got[0]["message"].endswith(got[0]["hint"])
+
+
+def test_opening_and_identity_shots_under_two_and_a_half_seconds_are_not_flagged(tmp_path):
+    shots = [
+        {"id": "s0000", "start": {"t": 0.0}, "technique": "CAM-01", "slots": {"image": {"asset": "A"}}, "params": {"camera": WIDE}, "source": "agent"},
+        {"id": "s0001", "start": {"t": 1.6}, "technique": "CAM-01", "slots": {"image": {"asset": "A"}}, "params": {"camera": WIDE}, "source": "agent"},
+        {"id": "s0002", "start": {"t": 10.0}, "technique": "ID-MARK-01", "slots": {"image": {"asset": "A"}}, "params": {"title": "1. Test", "camera": WIDE}, "intent": "structure", "source": "identity"},
+        {"id": "s0003", "start": {"t": 11.8}, "technique": "X-CARD-01", "slots": {}, "params": {"title": "2. Card"}, "intent": "structure", "source": "agent"},
+        {"id": "s0004", "start": {"t": 13.6}, "technique": "CAM-01", "slots": {"image": {"asset": "A"}}, "params": {"camera": WIDE}, "source": "agent"},
+    ]
+    doc, tm, d = make(tmp_path, shots, end=25.0, n_words=50)
+    assert [i for i in viewer_of(doc, tm, d) if i["code"] == "shot_short"] == []
+
+
+def test_borrowed_picture_and_map_under_three_seconds_raise_outside_picture_brief(tmp_path):
+    shots = [
+        shot(1, 0.0, camera=WIDE),
+        {"id": "s2", "start": {"t": 5.0}, "technique": "X-LAY-01", "slots": {"image": {"asset": "B"}}, "params": {}},
+        {"id": "s3", "start": {"t": 7.6}, "technique": "MAP-01", "slots": {}, "params": {"places": [{"id": "a", "name": "Bruges", "lonlat": [3.2, 51.2]}, {"id": "b", "name": "Lucca", "lonlat": [10.5, 43.8]}]}},
+        shot(4, 10.2, camera=WIDE),
+        {"id": "s5", "start": {"t": 15.0}, "technique": "X-LAY-01", "slots": {"image": {"asset": "B"}}, "params": {}},
+        shot(6, 18.0, camera=WIDE),
+    ]
+    doc, tm, d = make(tmp_path, shots, end=25.0, n_words=50)
+    brief = [i for i in viewer_of(doc, tm, d) if i["code"] == "outside_picture_brief"]
+    assert [(i["args"]["shot"], i["args"]["got"]) for i in brief] == [("s2", 2.6), ("s3", 2.6)]
+
+
+def test_outside_picture_dropped_when_multi_picture_line_misses_an_asset(tmp_path):
+    picks = {
+        "schema": "bti.picks/1", "main_asset": "A",
+        "assets": {"A": {"kind": "image", "width": 1000, "height": 1500}, "B": {"kind": "image", "width": 800, "height": 600}, "C": {"kind": "image", "width": 800, "height": 600}},
+        "beats": {"b0001": {"kinds": ["outside"], "items": [{"asset": "B", "role": "context"}, {"asset": "C", "role": "context"}]}},
+    }
+    shots = [
+        {"id": "s1", "start": {"t": 0.0}, "technique": "X-LAY-01", "slots": {"image": {"asset": "B"}}, "params": {}},
+        shot(2, 5.0, camera=WIDE),
+    ]
+    doc, tm, d = make(tmp_path, shots, end=10.0, n_words=20, picks=picks)
+    tm = Timing({"duration": 10.0, "words": tm.words, "beats": [{"id": "b0001", "start": 0.0, "end": 10.0}]})
+    dropped = [i for i in viewer_of(doc, tm, d) if i["code"] == "outside_picture_dropped"]
+    assert len(dropped) == 1 and dropped[0]["args"]["beat"] == "b0001" and dropped[0]["args"]["assets"] == ["C"]
 
 
 def test_a_shot_under_the_engines_own_floor_is_an_error_and_not_also_a_flicker_warning(tmp_path):

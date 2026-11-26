@@ -943,3 +943,17 @@ Object.assign(BUILD, SUBJDRAFT_SENTENCES, {
     return `${fdShot(a)}: nhãn${what} gọi tên một vật (không phải nhân vật) trên tranh chính nhưng lúc nhãn hiện chưa có đèn rọi (HI-01/X-HI-01) hay vòng tròn (AN-01) cùng xuất hiện. Hãy thêm HI-01 hoặc AN-01 vào vật đó.`;
   },
 });
+
+// ---- worker pictime (2026-11-26): borrowed pictures and maps must stay on screen at least 3.0 s.
+export const PICTIME_SENTENCES = {
+  outside_picture_brief: (i) => {
+    const a = i.args || {};
+    return `${fdShot(a)}: hình ngoài tranh chỉ hiện ${fdVn(a.got, 1)} giây, quá ngắn (cần ít nhất ${fdVn(a.min || 3, 1)} giây). Hãy cho cảnh bắt đầu từ đầu câu nhắc đến nó.`;
+  },
+  outside_picture_dropped: (i) => {
+    const a = i.args || {};
+    return `Dòng ${a.beat ?? '?'} có nhiều hình ngoài tranh nhưng không đủ chỗ cho mỗi hình ${fdVn(a.min || 3, 1)} giây nên phải bỏ bớt một hình.`;
+  },
+};
+export const PICTIME_CODES = Object.keys(PICTIME_SENTENCES);
+Object.assign(BUILD, PICTIME_SENTENCES);

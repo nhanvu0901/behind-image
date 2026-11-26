@@ -378,3 +378,53 @@ def test_review_job_keeps_provider_rate_limit_and_retry_time(tmp_path):
         make_job_parts(tmp_path, "fake", review_round=rate_limited)[0].run(ctx)
     assert error.value.code == "agy_rate_limit"
     assert ctx.meta["retry_after_seconds"] == 60
+
+
+def test_review_repairs_outside_on_painting_and_brief_warnings_within_round_limit():
+    edits = []
+    draft_rounds = iter([
+        [{"level": "warn", "code": "outside_on_painting", "path": "shots[1]", "args": {"shot": "s2"},
+          "message": "Line b2 outside picture shown 0.0 s of 10.4 s."}],
+        [{"level": "warn", "code": "outside_picture_brief", "path": "shots[1]", "args": {"shot": "s2"},
+          "message": "Shot s2 shows city for only 1.6 s."}],
+        [{"level": "warn", "code": "outside_picture_brief", "path": "shots[1]", "args": {"shot": "s2"},
+          "message": "Shot s2 shows city for only 2.2 s."}],
+    ])
+    result = review_and_repair(
+        lambda: ["s1", "s2"],
+        lambda ids: {"shots": [{"id": sid, "problems": []} for sid in ids]},
+        lambda shots, instruction: edits.append((shots, instruction)),
+        draft_issues=lambda ids: next(draft_rounds),
+    )
+    assert len(edits) == 2
+    assert edits[0][0] == ["s2"] and "outside_on_painting" in edits[0][1]
+    assert edits[1][0] == ["s2"] and "outside_picture_brief" in edits[1][1]
+    assert result["rounds"] == 2
+    assert result["warnings"] == []
+    assert result["draft_warnings"][0]["code"] == "outside_picture_brief"
+
+
+def test_make_job_parts_repairs_outside_on_painting_when_model_finds_no_issue(tmp_path):
+    import json
+    from types import SimpleNamespace
+    from bti.draft.review import make_job_parts, load_report
+    from bti.editor.common import compute_rev
+    sb = {"shots": [{"id": "s1"}, {"id": "s2"}]}
+    (tmp_path / "storyboard.json").write_text(json.dumps(sb), encoding="utf-8")
+    edits = []
+    draft_rounds = iter([
+        [{"level": "warn", "code": "outside_on_painting", "path": "shots[1]", "args": {"shot": "s2"},
+          "message": "Line b2 outside picture shown 1.6 s."}],
+        [],
+    ])
+    parts = make_job_parts(
+        tmp_path, "mock",
+        review_round=lambda *_: ([{"id": "s1"}, {"id": "s2"}], {"shots": [{"id": "s1", "problems": []}, {"id": "s2", "problems": []}]}),
+        edit=lambda project, shots, instruction, **kw: edits.append((shots, instruction)),
+        draft_issues=lambda ids: next(draft_rounds),
+    )
+    ctx = SimpleNamespace(cancelled=lambda: False, progress=lambda *_: None)
+    for part in parts:
+        part.run(ctx)
+    assert len(edits) == 1 and edits[0][0] == ["s2"] and "outside_on_painting" in edits[0][1]
+    assert load_report(tmp_path, compute_rev(sb))["rounds"] == 1

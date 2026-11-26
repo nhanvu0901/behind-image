@@ -1072,3 +1072,10 @@ Object.assign(CODE, {
   subject_not_on_screen: 'Chưa thấy chủ thể được nhắc đến',
   year_already_on_screen: 'Năm đã hiện trong nhãn',
 });
+
+// ---- worker pictime (2026-11-26): borrowed picture duration warnings
+export const CODE_PICTIME = {
+  outside_picture_brief: 'Hình ngoài tranh hiện quá ngắn',
+  outside_picture_dropped: 'Dòng phải bỏ bớt hình ngoài tranh vì không đủ thời lượng',
+};
+Object.assign(CODE, CODE_PICTIME);

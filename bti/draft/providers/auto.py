@@ -11,13 +11,15 @@ Rules:
   * the main painting with a region: zoom-and-shift or push-in to the region, with a spotlight or a ring on it;
   * another image of the project: a context still with a label strip (title, artist, year);
   * two pictures with role `compare`: the two-panel layout;
-  * a beat shorter than 1.5 s is not a shot of its own (the previous shot continues).
+  * a beat shorter than 2.5 s is not a shot of its own (the previous shot continues).
 """
 from __future__ import annotations
 
+from bti.engine import viewchecks as VC
+
 from ..inputs import SPEC_SCHEMA, DraftInputs, beat_picks, narration_notes
 
-MIN_BEAT_S = 1.5
+MIN_BEAT_S = VC.MIN_SHOT_S
 MIN_SEGMENT_S = 3.0
 WHOLE_CYCLE = ("CAM-01", "STATIC-01", "CAM-05", "CAM-03")
 DETAIL_CYCLE = ("CAM-05", "CAM-01")
