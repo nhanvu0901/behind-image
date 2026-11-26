@@ -1001,8 +1001,17 @@ class _Compiler:
                 num = 1
                 while "o%d" % num in used:
                     num += 1
-                anchor = shot["start"] if start == rec["t0"] else {"t": round(start, 3)}
-                obj.update(id="o%d" % num, start=anchor, dur=_bounded_duration(start, end))
+                anchor = copy.deepcopy(shot["start"])
+                delta = start - rec["t0"]
+                if "w" in anchor:
+                    anchor["off"] = round(float(anchor.get("off") or 0) + delta, 4)
+                elif "t" in anchor:
+                    anchor["t"] = round(float(anchor["t"]) + delta, 4)
+                obj.update(id="o%d" % num, start=anchor)
+                # An omitted end follows the shot boundary when word timings or
+                # adjacent cards move; a fixed duration would overrun the shot.
+                if end < t1 - EPS:
+                    obj["dur"] = _bounded_duration(start, end)
                 overlays.append(obj)
                 shot["overlays"] = overlays
 
