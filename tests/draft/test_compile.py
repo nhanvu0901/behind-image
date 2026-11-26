@@ -424,3 +424,24 @@ def test_side_by_side_borrowed_picture_gets_record_caption(proj):
     caption = next(o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-02')
     assert caption['params']['title'] == 'A woven fragment'
     assert caption['params']['artist_year'] == 'An Artist, 1610'
+
+
+def test_comparison_swap_caption_start_follows_shot_when_voice_moves(proj):
+    import copy
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='First view', credit={'source': 'commons'})
+    inp.picks['assets']['C'] = copy.deepcopy(inp.picks['assets']['B'])
+    inp.picks['assets']['C']['title'] = 'Second view'
+    specs['c01']['shots'][1].update(technique='X-CMP-01',
+        slots={'anchor': {'asset': 'A'}, 'swap_1': {'asset': 'B'}, 'swap_2': {'asset': 'C'}},
+        params={'seconds_per_swap': 2.5, 'swap_transition': 'cut'}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    shot = result.storyboard['shots'][1]
+    caption = next(o for o in shot['overlays'] if o['technique'] == 'X-ANN-02' and o['params']['title'] == 'Second view')
+    shifted = copy.deepcopy(inp.timing['words'])
+    for word in shifted:
+        word['s'] += 5
+        word['e'] += 5
+    tm = Timing({'words': shifted})
+    assert tm.resolve(caption['start']) - tm.resolve(shot['start']) == pytest.approx(2.5)
+    assert 'dur' not in caption and 'end' not in caption
