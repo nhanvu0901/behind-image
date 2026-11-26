@@ -454,3 +454,24 @@ def test_picks_auto_templates_have_no_arnolfini_specifics():
         low = body.casefold()
         for phrase in banned:
             assert phrase.casefold() not in low, f"{name} still mentions {phrase!r}"
+
+
+def test_subject_where_accepts_multiple_places_and_rejects_bad_lists():
+    from bti.picks.doc import doc_problem
+    subject = {"id": "s", "kind": "person", "name": "A", "strip": True, "where": {"region": "HEAD"}}
+    assert doc_problem({"subjects": [subject]}) is None
+    subject["where"] = [{"region": "HEAD"}, {"asset": "B"}]
+    assert doc_problem({"subjects": [subject]}) is None
+    for invalid in ([], [{"region": ""}], [{"region": "HEAD", "asset": "B"}], [None]):
+        subject["where"] = invalid
+        assert doc_problem({"subjects": [subject]}) is not None
+
+
+def test_resolve_subject_retains_all_available_places():
+    from bti.picks.auto.write import resolve_subjects
+    plan = {'subjects': [{'id': 's', 'kind': 'person', 'name': 'A', 'strip': True,
+                          'where': [{'region': 'HEAD'}, {'want': 'b0001.1'}]}]}
+    chosen = {'b0001.1': {'pick': {'source': 'museum', 'source_id': '123'}}}
+    assert resolve_subjects(plan, chosen, {('museum', '123'): 'B'}, {'HEAD': 'HEAD_2'}, set())[0]['where'] == [
+        {'region': 'HEAD_2'}, {'asset': 'B'}]
+    assert resolve_subjects(plan, chosen, {}, {}, set())[0]['where'] == [{'region': 'HEAD'}]

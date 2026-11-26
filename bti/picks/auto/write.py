@@ -132,26 +132,22 @@ def resolve_subjects(plan: dict, picks: dict, got: dict, regions: dict, dropped:
     for entry in plan.get("subjects") or []:
         row = copy.deepcopy(entry)
         where = row["where"]
-        if where is None:
-            result.append(row)
-            continue
-        if "asset" in where:
-            result.append(row)
-            continue
-        if "region" in where:
-            old = where["region"]
-            target = None if old in dropped else regions.get(old, old)
-            row["where"] = {"region": target} if target else None
-            result.append(row)
-            continue
-        selected = (picks.get(where.get("want")) or {}).get("pick")
-        key = (selected["source"], selected["source_id"]) if selected else None
-        target = got.get(key)
-        if target:
-            row["where"] = {"asset": target}
-            result.append(row)
-            continue
-        row["where"] = None
+        places = []
+        for place in pdoc.subject_places(row):
+            if "asset" in place:
+                places.append(place)
+            elif "region" in place:
+                old = place["region"]
+                target = None if old in dropped else regions.get(old, old)
+                if target:
+                    places.append({"region": target})
+            elif "want" in place:
+                selected = (picks.get(place["want"]) or {}).get("pick")
+                key = (selected["source"], selected["source_id"]) if selected else None
+                target = got.get(key)
+                if target:
+                    places.append({"asset": target})
+        row["where"] = (places if isinstance(where, list) else places[0]) if places else None
         result.append(row)
     return result
 
@@ -380,7 +376,16 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                     continue
                 seen_ids.add(sid)
                 subject = subjects.get(sid) or {}
-                where = subject.get("where") or {}
+                places = pdoc.subject_places(subject)
+                def available(place):
+                    if "region" in place:
+                        region = place["region"]
+                        return region not in dropped and region not in lost and bool(names.get(region, region))
+                    if "asset" in place:
+                        return True
+                    choice = (picks.get(place.get("want")) or {}).get("pick")
+                    return bool(choice and (choice["source"], choice["source_id"]) in got)
+                where = next((place for place in places if available(place)), places[0] if places else {})
                 if subject and subject.get("where") is None and subject.get("kind") not in ("idea", "text"):
                     what = subject.get("name") or "picture"
                     missing.append({"want": None, "what": what, "code": "agent_none",
@@ -420,21 +425,23 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                 prior = all_subjects.get(mention.get("id")) or {}
                 if prior.get("kind") == "idea":
                     continue
-                place = prior.get("where") or {}
-                region = place.get("region")
-                if region and region not in dropped and region not in lost and names.get(region, region):
-                    painting({"type": "detail", "region": region})
-                    break
-                if "asset" in place:
-                    items.append({"asset": place["asset"], "region": None, "role": existing_role(place["asset"]), "note": ""})
-                    break
-                if "want" in place:
-                    picked = picks.get(place["want"]) or {}
-                    choice = picked.get("pick")
-                    key = (choice["source"], choice["source_id"]) if choice else None
-                    if key in got:
-                        items.append({"src": key, "asset": None, "region": None, "role": _role(wanted_items.get(place["want"], {"type": "context"})), "note": ""})
+                for place in pdoc.subject_places(prior):
+                    region = place.get("region")
+                    if region and region not in dropped and region not in lost and names.get(region, region):
+                        painting({"type": "detail", "region": region})
                         break
+                    if "asset" in place:
+                        items.append({"asset": place["asset"], "region": None, "role": existing_role(place["asset"]), "note": ""})
+                        break
+                    if "want" in place:
+                        picked = picks.get(place["want"]) or {}
+                        choice = picked.get("pick")
+                        key = (choice["source"], choice["source_id"]) if choice else None
+                        if key in got:
+                            items.append({"src": key, "asset": None, "region": None, "role": _role(wanted_items.get(place["want"], {"type": "context"})), "note": ""})
+                            break
+                if items:
+                    break
             if not items:
                 whole()
             reused = True
@@ -531,8 +538,8 @@ def run(pdir: Path, inp: ainputs.Inputs, plan: dict, search: dict, choice: dict,
     main_key = inp.painting.key
     w = Writer(pdir, actor, redo=inp.redo)
     left = {b["beat"] for b in plan["lines"] if b["beat"] not in prev and not w.settled(b["beat"])}      # lines this part still has to write
-    subject_want_ids = ({s["where"]["want"] for s in plan["subjects"]
-                         if isinstance(s.get("where"), dict) and isinstance(s["where"].get("want"), str)}
+    subject_want_ids = ({p["want"] for s in plan["subjects"] for p in pdoc.subject_places(s)
+                         if isinstance(p.get("want"), str)}
                         if "subjects" in plan else set())
     progress(0.02, "Đang tải các hình đã chọn.")
     got, failed = download_all(pdir, {k: p for k, p in picks.items() if p["beat"] in left or k in subject_want_ids}, fetch_asset=fetch_asset, cancelled=cancelled,

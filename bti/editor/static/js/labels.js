@@ -1088,3 +1088,5 @@ export const MUSIC_LABELS = {
   roles: { bed: 'Nhạc nền', swell: 'Nhạc dâng', ident: 'Tên kênh', ending: 'Kết' },
 };
 Object.assign(EXPORT_LABELS.stale, { music: 'Nhạc đã thay đổi.' });
+// worker subjvis: borrowed picture caption.
+Object.assign(CODE, { borrowed_without_caption: 'Hình mượn chưa có ghi chú' });

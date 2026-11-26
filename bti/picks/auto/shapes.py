@@ -707,20 +707,22 @@ def _subjects(raw, raw_lines, known, ctx, errors):
             errors.append(at + ": give a unique id, kind, name, strip and where")
             continue
         ids.add(sid)
-        if where is None:
-            pass
-        elif isinstance(where, dict) and set(where) == {"region"} and isinstance(where["region"], str) and where["region"] in known:
-            pass
-        elif isinstance(where, dict) and set(where) == {"asset"} and any(isinstance(x, dict) and x.get("id") == sid and x.get("where") == where for x in ctx.existing_subjects):
-            pass
-        elif isinstance(where, dict) and set(where) == {"want"} and isinstance(where["want"], str):
-            found = any(where["want"] == "%s.%d" % (ln.get("beat"), n) and isinstance(item, dict)
-                        and item.get("type") in ("context", "map", "clip") and item.get("entity") == sid
-                        for ln in raw_lines if isinstance(ln, dict) for n, item in enumerate(ln.get("show") if isinstance(ln.get("show"), list) else [], 1))
-            if not found:
-                errors.append(at + ": where.want must name a requested picture for this subject")
-        else:
-            errors.append(at + ": where must be a painting region, requested picture, or null for a missing picture")
+        places = pdoc.subject_places(row)
+        if where is not None and not places:
+            errors.append(at + ": where must contain at least one place")
+        for where in places:
+            if isinstance(where, dict) and set(where) == {"region"} and isinstance(where["region"], str) and where["region"] in known:
+                pass
+            elif isinstance(where, dict) and set(where) == {"asset"} and any(isinstance(x, dict) and x.get("id") == sid and where in pdoc.subject_places(x) for x in ctx.existing_subjects):
+                pass
+            elif isinstance(where, dict) and set(where) == {"want"} and isinstance(where["want"], str):
+                found = any(where["want"] == "%s.%d" % (ln.get("beat"), n) and isinstance(item, dict)
+                            and item.get("type") in ("context", "map", "clip") and item.get("entity") == sid
+                            for ln in raw_lines if isinstance(ln, dict) for n, item in enumerate(ln.get("show") if isinstance(ln.get("show"), list) else [], 1))
+                if not found:
+                    errors.append(at + ": where.want must name a requested picture for this subject")
+            else:
+                errors.append(at + ": where must be a painting region, requested picture, or null for a missing picture")
         subjects.append(dict(row))
     by_id = {row["id"]: row for row in subjects}
     primary_seen = set()
@@ -737,7 +739,7 @@ def _subjects(raw, raw_lines, known, ctx, errors):
             if subject is None:
                 errors.append("%s: each want must name a subject id in entity" % wid)
             else:
-                is_primary = sid not in primary_seen and subject.get("where") == {"want": wid}
+                is_primary = sid not in primary_seen and {"want": wid} in pdoc.subject_places(subject)
                 aspect = item.get("aspect")
                 text = " ".join(ctx.line_texts.get(line.get("beat"), "").split()).casefold()
                 if is_primary:
@@ -776,9 +778,9 @@ def _subjects(raw, raw_lines, known, ctx, errors):
         if len(about) == 1 and isinstance(about[0], dict):
             subject = next((x for x in subjects if x["id"] == about[0].get("id")), None)
             fallback = line.get("fallback")
-            if subject and isinstance(fallback, dict) and subject["kind"] not in ("idea", "text") and isinstance(subject.get("where"), dict):
-                region = subject["where"].get("region")
-                if region and fallback != {"type": "detail", "region": region}:
+            if subject and isinstance(fallback, dict) and subject["kind"] not in ("idea", "text") and pdoc.subject_places(subject):
+                regions = [p["region"] for p in pdoc.subject_places(subject) if "region" in p]
+                if regions and fallback not in [{"type": "detail", "region": region} for region in regions]:
                     errors.append("line %s: fallback must show the subject's own region" % bid)
     return subjects
 
@@ -910,15 +912,13 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
                         reusable_outside.append({})
                         reusable_any.append({})
                         continue
-                    place = subject.get("where") or {}
-                    if not isinstance(place, dict):
-                        continue
-                    want_id = place.get("want")
-                    if "region" in place:
-                        reusable_any.append(place)
-                    elif "asset" in place or (isinstance(want_id, str) and order.get(want_id.rsplit(".", 1)[0], len(order)) < order[bid]):
-                        reusable_outside.append(place)
-                        reusable_any.append(place)
+                    for place in pdoc.subject_places(subject):
+                        want_id = place.get("want")
+                        if "region" in place:
+                            reusable_any.append(place)
+                        elif "asset" in place or (isinstance(want_id, str) and order.get(want_id.rsplit(".", 1)[0], len(order)) < order[bid]):
+                            reusable_outside.append(place)
+                            reusable_any.append(place)
                 if reusable_outside:
                     problems = [problem for problem in problems if "[outside_only_painting]" not in problem and "[outside_no_fallback]" not in problem]
                     map_wants = {"%s.%d" % (row.get("beat"), n) for row in raw_lines if isinstance(row, dict)
@@ -973,7 +973,7 @@ def check_plan(obj: Any, ctx: PlanCtx) -> Report:
         return rep
     used = {i["region"] for ln in lines for i in ln["show"] + ([ln["fallback"]] if ln.get("fallback") else []) if i["type"] == "detail"}
     if subjects is not None:
-        used.update(s["where"]["region"] for s in subjects if isinstance(s.get("where"), dict) and "region" in s["where"])
+        used.update(p["region"] for s in subjects for p in pdoc.subject_places(s) if "region" in p)
     for name in regions:
         if name not in used:
             notes.append("region %s is not used by any line, so it will not be made" % name)

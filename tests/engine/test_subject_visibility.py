@@ -37,7 +37,7 @@ def test_borrowed_portrait_must_be_the_named_asset_and_ideas_are_ignored(tmp_pat
     assert check('B') == []
 
 
-def test_crowded_scene_flags_small_person_beside_dominant_figure(tmp_path):
+def test_complete_small_person_region_is_visible_beside_dominant_figure(tmp_path):
     words = [{'w': 'saint', 's': 1, 'e': 1.7}]
     timing = Timing({'words': words, 'beats': [{'id': 'b', 'start': 0, 'end': 3, 'w0': 0, 'w1': 1}]})
     picks = {'main_asset': 'A', 'subjects': [
@@ -50,7 +50,7 @@ def test_crowded_scene_flags_small_person_beside_dominant_figure(tmp_path):
         'camera': [{'at': {'rel': n}, 'cx': 500, 'cy': 500, 'zoom': 1.92} for n in (0, 1)]}}
     c = VC._Ctx({'assets': {'A': {'width': 1000, 'height': 1000, 'regions': regs}}, 'shots': [shot]}, timing,
                 R.load_bundle('gae'), tmp_path, [0], 3, SB.safe_rel)
-    assert [i['args']['subject'] for i in VC._subject_not_on_screen(c)] == ['saint']
+    assert VC._subject_not_on_screen(c) == []
 
 
 def test_visibility_uses_the_words_of_the_current_line_without_word_indices(tmp_path):
@@ -99,7 +99,7 @@ def test_text_is_not_mistaken_for_a_visible_subject(tmp_path):
 
 
 def test_repeated_words_are_checked_at_each_spoken_occurrence(tmp_path):
-    tm = Timing({'words': [{'w': 'painter', 's': 1, 'e': 2}, {'w': 'painter', 's': 5, 'e': 6}],
+    tm = Timing({'words': [{'w': 'painter.', 's': 1, 'e': 2}, {'w': 'painter', 's': 5, 'e': 6}],
                  'beats': [{'id': 'b', 'start': 0, 'end': 7, 'w0': 0, 'w1': 2}]})
     picks = {'main_asset': 'A', 'subjects': [{'id': 'painter', 'kind': 'person', 'name': 'Painter', 'strip': True, 'where': {'asset': 'B'}}],
              'beats': {'b': {'about': [{'id': 'painter', 'words': 'painter'}, {'id': 'painter', 'words': 'painter'}]}}}
@@ -138,7 +138,8 @@ def test_subject_in_comparison_panel_is_absent_before_slide_in(tmp_path):
     (tmp_path / 'picks.json').write_text(json.dumps(picks), encoding='utf-8')
     shot = {'id': 's', 'technique': 'LAY-01', 'slots': {'left': {'asset': 'A'}, 'right': {'asset': 'B'}}, 'params': {}}
     c = VC._Ctx({'assets': {}, 'shots': [shot]}, tm, R.load_bundle('gae'), tmp_path, [0], 3, SB.safe_rel)
-    assert [i['args']['subject'] for i in VC._subject_not_on_screen(c)] == ['portrait']
+    assert VC._subject_not_on_screen(c) == []
+    assert not VC.panel_has_asset(shot, 'B', .1, 0, c.bundle)
 
 
 def test_comparison_panel_camera_must_contain_named_region(tmp_path):
@@ -162,7 +163,10 @@ def test_region_in_unrevealed_part_of_sliding_panel_is_not_visible(tmp_path):
     shot = {'id': 's', 'technique': 'LAY-01', 'slots': {'left': {'asset': 'B'}, 'right': {'asset': 'A'}}, 'params': {'camera_right': camera}}
     asset = {'width': 1000, 'height': 1000, 'regions': {'SAINT': {'x': 950, 'y': 500, 'rx': 40, 'ry': 100}}}
     c = VC._Ctx({'assets': {'A': asset}, 'shots': [shot]}, tm, R.load_bundle('gae'), tmp_path, [0], 3, SB.safe_rel)
-    assert [i['args']['subject'] for i in VC._subject_not_on_screen(c)] == ['saint']
+    assert VC._subject_not_on_screen(c) == []
+    assert VC.subject_visible_at(shot, c.spans[0], .5, picks['subjects'][0], main='A', assets=c.assets,
+                                 subjects=picks['subjects'], bundle=c.bundle, keys_fn=lambda p: c.keys_of(0, c.spans[0], p),
+                                 primary_asset=c.primary(0)) is False
 
 
 def test_region_in_sliding_panel_is_visible_after_slide_completes(tmp_path):
@@ -178,7 +182,7 @@ def test_region_in_sliding_panel_is_visible_after_slide_completes(tmp_path):
 
 
 def test_xcmp_swap_panel_visibility_follows_swap_schedule(tmp_path):
-    tm = Timing({'words': [{'w': 'first', 's': 1.0, 'e': 1.5}, {'w': 'second', 's': 3.5, 'e': 4.0}],
+    tm = Timing({'words': [{'w': 'first.', 's': 1.0, 'e': 1.5}, {'w': 'second', 's': 3.5, 'e': 4.0}],
                  'beats': [{'id': 'b', 'start': 0, 'end': 5, 'w0': 0, 'w1': 2}]})
     subjects = [{'id': 's1', 'kind': 'work', 'name': 'first', 'strip': True, 'where': {'asset': 'S1'}},
                 {'id': 's2', 'kind': 'work', 'name': 'second', 'strip': True, 'where': {'asset': 'S2'}}]
@@ -197,7 +201,7 @@ def test_xcmp_swap_panel_visibility_follows_swap_schedule(tmp_path):
 
 
 def test_lay04_inset_visibility_respects_delay(tmp_path):
-    tm = Timing({'words': [{'w': 'clip', 's': .2, 'e': .5}, {'w': 'clip', 's': 2.0, 'e': 2.5}],
+    tm = Timing({'words': [{'w': 'clip.', 's': .2, 'e': .5}, {'w': 'clip', 's': 2.0, 'e': 2.5}],
                  'beats': [{'id': 'b', 'start': 0, 'end': 4, 'w0': 0, 'w1': 2}]})
     picks = {'main_asset': 'A', 'subjects': [{'id': 'clip', 'kind': 'thing', 'name': 'clip', 'strip': False, 'where': {'asset': 'V'}}],
              'beats': {'b': {'about': [{'id': 'clip', 'words': 'clip'}, {'id': 'clip', 'words': 'clip'}]}}}
@@ -270,3 +274,97 @@ def test_another_persons_face_does_not_make_subject_visible():
     subject = {'id': 's', 'kind': 'person', 'name': 'Ada', 'where': {'region': 'FIGURE'}}
     assert VC.subject_visible_at(shot, (0, 4), 1, subject, main='A', assets={'A': asset}, subjects=[subject],
                                  bundle=R.load_bundle('gae'), keys_fn=lambda _: [(0, 1400, 500, 3, 'linear')]) is False
+
+
+def test_visibility_checks_each_of_several_places():
+    subject = {'id': 's', 'kind': 'person', 'name': 'Someone', 'where': [{'asset': 'B'}, {'asset': 'C'}]}
+    shot = {'technique': 'X-LAY-01', 'slots': {'image': {'asset': 'C'}}, 'params': {}}
+    assert VC.subject_visible_at(shot, (0, 5), 2, subject, main='A', assets={}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: None) is True
+
+
+def test_person_figure_bust_is_visible_but_hand_is_not():
+    subject = {'id': 'p', 'kind': 'person', 'name': 'Person', 'where': {'region': 'BODY'}}
+    assets = {'A': {'width': 1000, 'height': 2000, 'regions': {'BODY': {'x': 500, 'y': 1000, 'rx': 300, 'ry': 900}}}}
+    def visible(cx, cy):
+        shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A'}}, 'params': {}}
+        keys = [(0, cx, cy, 2.5, 'linear'), (5, cx, cy, 2.5, 'linear')]
+        return VC.subject_visible_at(shot, (0, 5), 2, subject, main='A', assets=assets, subjects=[subject],
+                                     bundle=R.load_bundle('gae'), keys_fn=lambda _: keys)
+    assert visible(500, 350) is True
+    assert visible(500, 1300) is False
+
+
+def test_map_naming_a_place_shows_the_place():
+    subject = {'id': 'city', 'kind': 'place', 'name': 'Exampleville', 'where': {'asset': 'B'}}
+    shot = {'technique': 'MAP-01', 'slots': {}, 'params': {'places': [{'id': 'city', 'name': 'Exampleville'}]}}
+    assert VC.subject_visible_at(shot, (0, 5), 2, subject, main='A', assets={}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: None) is True
+
+
+def test_picture_region_is_subject_place_when_part_is_on_screen():
+    subject = {'id': 's', 'kind': 'thing', 'name': 'window', 'where': {'region': 'WINDOW'}}
+    assets = {'A': {'width': 2000, 'height': 2000, 'regions': {'WINDOW': {'x': 1000, 'y': 1000, 'rx': 700, 'ry': 700}}}}
+    shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A', 'region': 'WINDOW'}}, 'params': {}}
+    keys = [(0, 1650, 1650, 1.5, 'linear'), (5, 1650, 1650, 1.5, 'linear')]
+    assert VC.subject_visible_at(shot, (0, 5), 2, subject, main='A', assets=assets, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: keys) is True
+
+
+def test_bust_visible_when_neither_figure_nor_frame_overlap_reaches_sixty_percent():
+    asset = {'width': 3840, 'height': 5253, 'regions': {'BODY': {'x': 1238, 'y': 2662, 'rx': 992, 'ry': 2108}}}
+    subject = {'id': 'p', 'kind': 'person', 'name': 'Person', 'where': {'region': 'BODY'}}
+    shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A'}}, 'params': {}}
+    keys = [(0, 1545, 1050, .62, 'linear'), (5, 1545, 1050, .62, 'linear')]
+    assert VC.subject_visible_at(shot, (0, 5), 2, subject, main='A', assets={'A': asset}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: keys) is True
+
+
+def test_raised_hand_region_is_not_a_person_introduction():
+    asset = {'width': 2000, 'height': 3000, 'regions': {
+        'BODY': {'x': 1000, 'y': 1500, 'rx': 500, 'ry': 1300},
+        'HAND': {'x': 1300, 'y': 600, 'rx': 120, 'ry': 120, 'thing': 'raised hand'}}}
+    subject = {'id': 'p', 'kind': 'person', 'name': 'Person', 'where': {'region': 'BODY'}}
+    shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A', 'region': 'HAND'}}, 'params': {}}
+    keys = [(0, 1300, 600, 4, 'linear'), (5, 1300, 600, 4, 'linear')]
+    assert VC.subject_visible_at(shot, (0, 5), 2, subject, main='A', assets={'A': asset}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: keys) is False
+
+
+def test_subject_shown_in_another_shot_during_same_sentence_does_not_warn(tmp_path):
+    words = [{'w': 'The', 's': 0, 'e': .5}, {'w': 'visitor', 's': .5, 'e': 1},
+             {'w': 'enters.', 's': 2, 'e': 2.5}, {'w': 'Then', 's': 3, 'e': 3.5}, {'w': 'leaves.', 's': 4, 'e': 4.5}]
+    tm = Timing({'words': words, 'beats': [{'id': 'b', 'start': 0, 'end': 5, 'w0': 0, 'w1': 5}]})
+    picks = {'main_asset': 'A', 'subjects': [{'id': 'p', 'kind': 'person', 'name': 'visitor', 'where': {'asset': 'B'}}],
+             'beats': {'b': {'about': [{'id': 'p', 'words': 'visitor'}]}}}
+    (tmp_path / 'picks.json').write_text(json.dumps(picks), encoding='utf-8')
+    shots = [{'id': 's1', 'technique': 'X-LAY-01', 'slots': {'image': {'asset': 'A'}}, 'params': {}},
+             {'id': 's2', 'technique': 'X-LAY-01', 'slots': {'image': {'asset': 'B'}}, 'params': {}}]
+    c = VC._Ctx({'assets': {}, 'shots': shots}, tm, R.load_bundle('gae'), tmp_path, [0, 1.5], 5, SB.safe_rel)
+    assert VC._subject_not_on_screen(c) == []
+    c.spans = [(0, 3), (3, 5)]
+    assert [i['args']['shot'] for i in VC._subject_not_on_screen(c)] == ['s1']
+
+
+def test_small_person_region_wholly_in_frame_is_visible():
+    asset = {'width': 1000, 'height': 1000, 'regions': {'FIGURE': {'x': 300, 'y': 300, 'rx': 20, 'ry': 50}}}
+    subject = {'id': 's', 'kind': 'person', 'name': 'person', 'where': {'region': 'FIGURE'}}
+    shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A'}}, 'params': {}}
+    assert VC.subject_visible_at(shot, (0, 3), 1, subject, main='A', assets={'A': asset}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: [(0, 500, 500, 1.92, 'linear')]) is True
+
+
+def test_partial_own_person_region_in_frame_counts():
+    asset = {'width': 1000, 'height': 1000, 'regions': {'FIGURE': {'x': 500, 'y': 500, 'rx': 200, 'ry': 400}}}
+    subject = {'id': 's', 'kind': 'person', 'name': 'person', 'where': {'region': 'FIGURE'}}
+    shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A', 'region': 'FIGURE'}}, 'params': {}}
+    assert VC.subject_visible_at(shot, (0, 3), 1, subject, main='A', assets={'A': asset}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: [(0, 500, 850, 3, 'linear')]) is True
+
+
+def test_large_thing_with_substantial_portion_in_wider_frame_is_visible():
+    asset = {'width': 4000, 'height': 5000, 'regions': {'CURTAIN': {'x': 3400, 'y': 2200, 'rx': 500, 'ry': 2200}}}
+    subject = {'id': 's', 'kind': 'thing', 'name': 'curtain', 'where': {'region': 'CURTAIN'}}
+    shot = {'technique': 'CAM-01', 'slots': {'image': {'asset': 'A'}}, 'params': {}}
+    assert VC.subject_visible_at(shot, (0, 3), 1, subject, main='A', assets={'A': asset}, subjects=[subject],
+                                 bundle=R.load_bundle('gae'), keys_fn=lambda _: [(0, 2000, 1450, .52, 'linear')]) is True
