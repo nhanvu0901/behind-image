@@ -58,6 +58,7 @@ class Inputs:
     audio: Path
     audio_sig: str
     project_meta: dict
+    music: dict | None = None
 
 
 def _inside(project_dir: Path, rel) -> Path | None:
@@ -204,6 +205,7 @@ def state(project_dir, manager=None) -> dict:
     if reason:
         return {"state": "stale", "detail": {"storyboard": "Cần xuất lại: storyboard đã đổi sau lần xuất trước (chỉ dựng lại các đoạn đã đổi).",
                                              "audio": "Cần xuất lại: giọng đọc đã đổi sau lần xuất trước.",
+                                             "music": "Cần xuất lại: nhạc đã thay đổi.",
                                              "files": "Cần xuất lại: tệp đã xuất không còn đủ."}[reason], "reason": reason}
     return {"state": "done", "detail": "Đã xuất video."}
 
@@ -226,6 +228,12 @@ def stale_reason(project_dir: Path, m: dict) -> str | None:
             return "audio"
     except OSError:
         return "audio"
+    try:
+        from bti.music.export import signature as music_signature
+        if music_signature(project_dir) != m.get("music_sig"):
+            return "music"
+    except Exception:
+        return "music"
     return None
 
 
@@ -244,6 +252,11 @@ def start(project_dir: Path, *, manager=None, tools: render.Tools | None = None,
     if off:
         raise ExportError("storyboard_off_voice", retime.off_voice_message(off), 409, problems=off[:20])
     starts, end = (timeline or engine_timeline)(project_dir, inp.rev)
+    try:
+        from bti.music.export import prepare as prepare_music
+        inp.music = prepare_music(project_dir, inp.timing, inp.storyboard, end)
+    except Exception as exc:
+        raise ExportError("music_invalid", "music cannot be prepared: %s" % exc, 409) from exc
     specs = plan.plan_parts(starts, end, settings.fps, settings.part_seconds)
     keys = part_keys_for(project_dir, inp, specs, settings)
     pdir = cache_dir(project_dir) / "parts"
@@ -284,6 +297,8 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
         ctx.progress(0.1)
         from bti.title import chosen_text                  # titlestep: the first line of the description is the video's title
         d = describe.build_description(inp.storyboard, inp.timing, inp.project_meta, duration=end, titles=describe.library_titles(), video_title=chosen_text(project_dir))
+        if inp.music and inp.music["credits"]:
+            d["description"] = d["description"].rstrip() + "\n\nMusic:\n" + "\n".join(inp.music["credits"]) + "\n"
         st["desc"] = d
         st["marks"] = mux.chapter_marks(inp.timing.get("chapters"), end)      # the marks inside the file stay as they are
         st["merged"] = d["merged_chapters"]
@@ -344,9 +359,24 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
             st["audio_duration"] = ainfo.get("duration")
         except check.ToolError:
             codec = None
+        source_audio = inp.audio
+        if inp.music and inp.music["cues"]:
+            from bti.music.mix import mix_command
+            mixed = cdir / "music-mix.partial.m4a"
+            mixed.unlink(missing_ok=True)
+            lines = []
+            rc = ctx.run_process(mix_command(tools.ffmpeg, inp.audio, inp.music["cues"], mixed, end), cwd=str(cdir), env=tools.env,
+                                 on_line=lambda ln: lines.append(ln.strip()[:200]) if ln.strip() else None)
+            if ctx.cancelled():
+                mixed.unlink(missing_ok=True)
+                return None
+            if rc != 0:
+                mixed.unlink(missing_ok=True)
+                raise ExportError("mux_failed", "music mix failed: " + " | ".join(lines[-3:])[-250:], 500)
+            source_audio, codec = mixed, "aac"
         tmp = cdir / "final.partial.mp4"
         tmp.unlink(missing_ok=True)
-        cmd = mux.mux_command(tools.ffmpeg, video, inp.audio, cdir / "chapters.ffmeta", tmp, end,
+        cmd = mux.mux_command(tools.ffmpeg, video, source_audio, cdir / "chapters.ffmeta", tmp, end,
                               audio_copy=(codec == "aac"), language=settings.language)
         tail: list[str] = []
         rc = ctx.run_process(cmd, cwd=str(cdir), env=tools.env, on_line=lambda ln: tail.append(ln.strip()[:200]) if ln.strip() else None)
@@ -384,6 +414,8 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
                     "parts": parts_info, "parts_total": len(parts_info), "parts_rendered": rendered_n, "parts_reused": reused_n,
                     "files": names, "report": card, "report_status": check.worst(card), "loudness": loud,
                     "credits": d["credits"], "notes": d["notes"], "created": store.now_iso(), "seconds": round(time.time() - st["t0"], 1)}
+        if inp.music is not None:
+            manifest["music_sig"] = inp.music["signature"]
         edir = export_dir(project_dir)
         with store.script_lock(project_dir):
             if not Path(project_dir).is_dir():

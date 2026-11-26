@@ -81,6 +81,10 @@ NEED_VI = {
 }
 
 
+# musicstep: an empty library does not block the run.
+NEED_VI["music_library"] = "thư viện nhạc có bản ghi dùng được"
+
+
 class _Info(dict):
     def __missing__(self, key: str) -> str:
         return "?"

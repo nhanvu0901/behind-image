@@ -59,7 +59,7 @@ def test_the_tracked_file_is_the_contract():
                                                            ("opus", "Opus 5.5 High", "claude:claude-opus-5-5@high"),
                                                            ("argon", "Gemini Orchestrator Argon", "agy:gemini-pro-orchestrator-g1-pro")]
     assert {k: list(v) for k, v in c.steps.items()} == {"script": ["script.outline", "script.narration", "script.title"], "picks": ["picks"],      # titlestep: the title is the third role of step 2
-                                                        "storyboard": ["draft", "edit.fast", "edit.deep"]}
+                                                        "storyboard": ["draft", "edit.fast", "edit.deep"], "music": ["music"]}
     assert c.step_of("edit.deep") == "storyboard" and c.step_of("library.restore") is None
 
 

@@ -943,3 +943,10 @@ Object.assign(BUILD, SUBJDRAFT_SENTENCES, {
     return `${fdShot(a)}: nhãn${what} gọi tên một vật (không phải nhân vật) trên tranh chính nhưng lúc nhãn hiện chưa có đèn rọi (HI-01/X-HI-01) hay vòng tròn (AN-01) cùng xuất hiện. Hãy thêm HI-01 hoặc AN-01 vào vật đó.`;
   },
 });
+
+// worker musicstep: errors from the optional music document and its job.
+Object.assign(STAGE_CODES.export, {
+  music_invalid: 'Nhạc không còn khớp video hoặc thư viện. Hãy chọn nhạc lại.',
+  music_no_output: 'Chưa chọn được nhạc. Hãy thử lại.',
+  agent_job_running: 'Agent đang làm việc khác trong dự án. Hãy chờ xong.',
+});

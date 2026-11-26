@@ -59,7 +59,7 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
 | `bti undo <project> <batch>` | Undo one batch of operations. |
 | `bti changes <project> [picks\|storyboard]` | The change log of the project, newest batch first. |
 | `bti schema ops picks\|storyboard` | The operations of a document with their schemas and examples. |
-| `bti doc [step]` | Print the skill document of a step (script, title, voice, picks, storyboard, export); without a step, AGENTS.md. |
+| `bti doc [step]` | Print the skill document of a step (script, title, voice, picks, storyboard, music, export); without a step, AGENTS.md. |
 
 Options of every command (before or after the sub-command):
 

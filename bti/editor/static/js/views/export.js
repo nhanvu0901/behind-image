@@ -4,7 +4,8 @@
 // until CORE merges them (docs/qa/BUILD_export.md, "Needs another agent").
 import { api } from '../api.js';
 import { describeError, isVietnamese, STAGE_CODES } from '../errmsg.js';
-import { EXPORT_LABELS } from '../labels.js';
+import { EXPORT_LABELS, MUSIC_LABELS } from '../labels.js';
+import { musicRows } from '../musiclogic.js';
 import { h, kids, toast, errorToast, errorInto, detailFold, confirmDialog } from '../util.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
 import { projectHash } from '../router.js';
@@ -63,6 +64,9 @@ const $ = (s) => root?.querySelector(s);
 
 async function load() {
   S.data = await api.get(`${P()}/export`);
+  try { S.music = await api.get(`${P()}/music`); } catch { S.music = null; }
+  if (!S.musicJob && isActive(S.music?.job)) S.musicJob = S.music.job;
+  if (S.musicJob) startMusicPolling();
   try { S.identity = await api.get(`${P()}/identity`); } catch { S.identity = null; }       // the style of the opening and the chapter marks (a line of the plan)
   if (!S.job && isActive(S.data.job)) S.job = S.data.job;
   if (!S.job && !S.last) {
@@ -99,6 +103,47 @@ async function poll() {
   } catch (e) {
     if (e?.status === 404) { S.job = null; await load().catch(() => {}); }
   } finally { if (S) S.busyPoll = false; }
+}
+
+function startMusicPolling() {
+  if (S.musicTimer) return;
+  S.musicTimer = scope.interval(pollMusic, POLL_MS);
+  pollMusic();
+}
+async function pollMusic() {
+  if (!S?.musicJob || S.musicPolling) return;
+  S.musicPolling = true;
+  try {
+    const j = await api.get(`/api/longjobs/${encodeURIComponent(S.musicJob.id)}`);
+    if (isActive(j)) return;
+    S.musicJob = null;
+    await load();
+    shell?.refreshPipeline?.();
+    toast(j.state === 'done' ? MUSIC_LABELS.chosen : MUSIC_LABELS.failed, j.state === 'done' ? 'ok' : 'err');
+  } catch (e) {
+    if (e?.status === 404) S.musicJob = null;
+  } finally { if (S) S.musicPolling = false; }
+}
+async function chooseMusic() {
+  if (S.musicBusy || S.musicJob) return;
+  S.musicBusy = true; paint();
+  try {
+    const r = await api.post(`${P()}/music/auto`, {});
+    S.musicJob = { id: r.job_id, state: 'queued' };
+    startMusicPolling();
+  } catch (e) { toast(errText(e).text, 'err', 9000); }
+  finally { if (S) { S.musicBusy = false; paint(); } }
+}
+async function clearMusic() {
+  if (!S.music || S.musicBusy || S.musicJob) return;
+  S.musicBusy = true; paint();
+  try {
+    await api.post(`${P()}/music/clear`, { base_rev: S.music.rev });
+    await load();
+    shell?.refreshPipeline?.();
+    toast(MUSIC_LABELS.cleared, 'ok');
+  } catch (e) { toast(errText(e).text, 'err', 9000); await load().catch(() => {}); }
+  finally { if (S) { S.musicBusy = false; paint(); } }
 }
 
 async function start() {
@@ -141,8 +186,26 @@ function paint() {
   root.replaceChildren(...kids(
     h('h1', { text: '6. Xuất video' }),
     h('div', { class: 'ex-sub muted', text: 'Dựng bản cuối từ storyboard đã duyệt và giọng đọc: video MP4, mô tả và mục lục.' }),
-    staleBox(d), blockedBox(d), lastErrorBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d)));
+    staleBox(d), blockedBox(d), lastErrorBox(), musicBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d)));
   paintJob();
+}
+
+function musicBox() {
+  const data = S.music;
+  if (!data) return null;
+  const rows = musicRows(data.cues);
+  const busy = S.musicBusy || isActive(S.musicJob);
+  return h('div', { class: 'box ex-music' }, h('h4', { text: MUSIC_LABELS.title }),
+    data.problem ? h('div', { class: 'hint warn', text: MUSIC_LABELS.invalid }) :
+      rows.length ? h('ol', { class: 'ex-music-list' }, rows.map(row => h('li', null,
+        h('div', null, h('b', { text: row.time }), ` · ${row.title} — ${row.composer} · ${row.role}`),
+        row.url ? h('audio', { controls: true, preload: 'metadata', src: api.url(row.url) }) : null))) :
+      h('div', { class: 'muted', text: MUSIC_LABELS.empty }),
+    !data.ready && !data.music ? h('div', { class: 'hint', text: MUSIC_LABELS.unavailable }) : null,
+    busy ? h('div', { class: 'hint', text: MUSIC_LABELS.choosing }) : null,
+    h('div', { class: 'ex-acts' },
+      h('button', { text: MUSIC_LABELS.choose, disabled: busy || !data.ready || null, onclick: chooseMusic }),
+      h('button', { text: MUSIC_LABELS.clear, disabled: busy || !data.music || null, onclick: clearMusic })));
 }
 
 function staleBox(d) {
@@ -233,7 +296,7 @@ export async function mount(host, ctx) {
   ensureCss();
   scope = ctx.scope; shell = ctx.shell;
   seen = jobWatcher();
-  S = { pid: ctx.pipeline.project, pipeline: ctx.pipeline, data: null, job: null, last: null, timer: null, busyPoll: false };
+  S = { pid: ctx.pipeline.project, pipeline: ctx.pipeline, data: null, music: null, musicJob: null, musicTimer: null, musicBusy: false, musicPolling: false, job: null, last: null, timer: null, busyPoll: false };
   root = h('div', { class: 'infov v-exp', 'data-step': 'export' });
   host.append(root);
   try { await load(); } catch (e) { errorInto(root, e); }

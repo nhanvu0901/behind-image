@@ -1072,3 +1072,13 @@ Object.assign(CODE, {
   subject_not_on_screen: 'Chưa thấy chủ thể được nhắc đến',
   year_already_on_screen: 'Năm đã hiện trong nhãn',
 });
+
+// worker musicstep: optional music in the export step.
+export const MUSIC_LABELS = {
+  title: 'Nhạc', empty: 'Chưa chọn nhạc.', choose: 'Chọn nhạc lại', clear: 'Bỏ nhạc',
+  choosing: 'Đang chọn nhạc…', unavailable: 'Thư viện nhạc đang trống hoặc chưa có storyboard.',
+  invalid: 'Không đọc được danh sách nhạc. Hãy chọn nhạc lại hoặc bỏ nhạc.',
+  chosen: 'Đã chọn nhạc.', cleared: 'Đã bỏ nhạc.', failed: 'Chọn nhạc chưa xong. Hãy thử lại.',
+  roles: { bed: 'Nhạc nền', swell: 'Nhạc dâng', ident: 'Tên kênh', ending: 'Kết' },
+};
+Object.assign(EXPORT_LABELS.stale, { music: 'Nhạc đã thay đổi.' });

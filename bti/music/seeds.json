@@ -1,0 +1,38 @@
+{
+  "medieval": {"composed": "1100-1400", "forces": "voices", "works": [
+    ["Hildegard von Bingen", "O vis aeternitatis"], ["Hildegard von Bingen", "O viridissima virga"],
+    ["Hildegard von Bingen", "O frondens virga"], ["Hildegard von Bingen", "Columba aspexit"],
+    ["Guillaume de Machaut", "Douce dame jolie"], ["Guillaume de Machaut", "Messe de Nostre Dame Kyrie"],
+    ["Pérotin", "Viderunt omnes"], ["Pérotin", "Sederunt principes"],
+    ["Guillaume de Machaut", "Dame de qui toute ma joie vient"], ["Hildegard von Bingen", "O presul vere civitatis"]]},
+  "renaissance": {"composed": "1400-1650", "forces": "voices or instruments", "works": [
+    ["John Dowland", "Lachrimae Pavane"], ["John Dowland", "Flow my tears"], ["John Dowland", "Frog Galliard"],
+    ["William Byrd", "Ave verum corpus"], ["William Byrd", "The Earl of Salisbury Pavane"],
+    ["Thomas Tallis", "If ye love me"], ["Thomas Tallis", "Spem in alium"],
+    ["Josquin des Prez", "Ave Maria virgo serena"], ["Orlande de Lassus", "Tristis est anima mea"],
+    ["Giovanni Pierluigi da Palestrina", "Sicut cervus"]]},
+  "baroque": {"composed": "1580-1760", "forces": "instrumental", "works": [
+    ["Johann Sebastian Bach", "Goldberg variations aria"], ["Johann Sebastian Bach", "Cello suite 1 prelude"],
+    ["Johann Sebastian Bach", "Air on the G string"], ["Johann Sebastian Bach", "Jesu joy of man's desiring"],
+    ["Johann Sebastian Bach", "Well tempered clavier prelude C major"], ["George Frideric Handel", "Sarabande D minor"],
+    ["Henry Purcell", "Dido's lament"], ["Antonio Vivaldi", "Winter Largo"],
+    ["Arcangelo Corelli", "Christmas concerto pastorale"], ["Jean-Philippe Rameau", "Les tendres plaintes"]]},
+  "classical": {"composed": "1730-1830", "forces": "instrumental", "works": [
+    ["Wolfgang Amadeus Mozart", "Piano sonata K 545 andante"], ["Wolfgang Amadeus Mozart", "Clarinet concerto adagio"],
+    ["Wolfgang Amadeus Mozart", "Piano concerto 21 andante"], ["Wolfgang Amadeus Mozart", "Eine kleine Nachtmusik romanze"],
+    ["Joseph Haydn", "String quartet Op 76 3 poco adagio"], ["Joseph Haydn", "Piano sonata Hob XVI 35 adagio"],
+    ["Ludwig van Beethoven", "Moonlight sonata adagio"], ["Ludwig van Beethoven", "Piano sonata 8 adagio cantabile"],
+    ["Ludwig van Beethoven", "Für Elise"], ["Christoph Willibald Gluck", "Dance of the blessed spirits"]]},
+  "romantic": {"composed": "1790-1910", "forces": "instrumental", "works": [
+    ["Frédéric Chopin", "Nocturne Op 9 No 2"], ["Frédéric Chopin", "Prelude Op 28 No 4"],
+    ["Frédéric Chopin", "Prelude Op 28 No 15"], ["Franz Schubert", "Impromptu Op 90 No 3"],
+    ["Robert Schumann", "Träumerei"], ["Johannes Brahms", "Intermezzo Op 118 No 2"],
+    ["Edvard Grieg", "Arietta Op 12"], ["Pyotr Ilyich Tchaikovsky", "October Autumn Song"],
+    ["Gabriel Fauré", "Pavane"], ["Erik Satie", "Gymnopédie No 1"]]},
+  "modern": {"composed": "1880-1950", "forces": "instrumental", "works": [
+    ["Claude Debussy", "Clair de lune"], ["Claude Debussy", "La fille aux cheveux de lin"],
+    ["Claude Debussy", "Arabesque No 1"], ["Maurice Ravel", "Pavane pour une infante défunte"],
+    ["Erik Satie", "Gnossienne No 1"], ["Erik Satie", "Je te veux"],
+    ["George Gershwin", "Prelude No 2"], ["Béla Bartók", "Romanian folk dances"],
+    ["Sergei Rachmaninoff", "Vocalise"], ["Maurice Ravel", "Jeux d eau"]]}
+}

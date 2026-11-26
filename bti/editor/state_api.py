@@ -50,6 +50,7 @@ NEEDS: dict[str, tuple[str, str]] = {
     "picks_saved_files": ("The saved files of the last run of the agent's choice of pictures (cache/picks_auto: plan, search, choice) are not in the project, so what the agent chose cannot be read again.",
                           "Call picks.auto for these lines (with redo true): it chooses again."),      # fixes4
     "storyboard": ("The project has no storyboard yet.", "Run draft.start, then proposal.apply."),
+    "music_library": ("The recording library is empty.", "Add CC0 or public-domain recordings to the music library."),
     "storyboard_readable": ("storyboard.json cannot be read.", "Call storyboard.restore."),
     "storyboard_approved": ("The storyboard is not approved, or it was edited after it was approved.", "Call storyboard.approve."),
     "history_copy": ("There is no good copy of the storyboard in history/.", "Make a new draft: draft.start."),
@@ -124,6 +125,11 @@ SPECS: list[Spec] = [
               "in the same call: its revision changes and its approval stops standing (the answer says so). While the storyboard does not fit the voice (`storyboard_off_voice`) the title is stored all the same, "
               "the storyboard is left as it is and the answer says it takes the title when `storyboard.retime` has fitted it to the voice."),
     Spec("title.cancel", "script", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a title job of the project runs."),
+    # musicstep: optional music accompanies the export, with no approval gate.
+    Spec("music.auto", "export", "Chọn nhạc lại", "POST", P + "/music/auto", long_job=True, follow=LONGJOBS, role="music",
+         cost=("model", "about 1 minute"), when="Once the storyboard and timing exist and the music library is nonempty. An agent chooses and places recordings; this is not a gate."),
+    Spec("music.set", "export", "Đặt nhạc", "PUT", P + "/music", when="Once the storyboard and timing exist. The caller supplies music and base_rev."),
+    Spec("music.clear", "export", "Bỏ nhạc", "POST", P + "/music/clear", when="Once a music document exists. The caller supplies base_rev."),
     # ---- voice
     Spec("voice.generate", "voice", "Tạo giọng đọc", "POST", P + "/voice/generate", long_job=True, follow=LONGJOBS,
          cost=("machine_time", "about 1 hour"),
@@ -703,6 +709,39 @@ def b_title_set(c: Ctx):
     return E(["documents_readable"] if c.script_error else [], fill=["text"], template={"base_rev": c.title_rev, "text": None, "actor": "cli:title"})
 
 
+# musicstep: the optional document is independent of storyboard approval.
+def b_music_auto(c: Ctx):
+    if not c.sb_exists or c.sb_corrupt:
+        return None
+    from bti.music import library, store as music_store
+    try:
+        has_library = bool(library.index())
+        has_document = music_store.read(c.d) is not None
+    except Exception:
+        has_library, has_document = False, False
+    needs = [] if has_library else ["music_library"]
+    if c.agent_busy("title"):
+        needs.append("no_running_job")
+    needs += _model_needs(c, "music")
+    return E(needs, {"actor": c.actor("music")}, advances=has_library and not has_document)
+
+
+def b_music_set(c: Ctx):
+    if not c.sb_exists or c.sb_corrupt:
+        return None
+    from bti.music import store as music_store
+    rev = music_store.revision(music_store.read(c.d))
+    return E(fill=["music"], template={"base_rev": rev, "music": None, "actor": "cli:music"})
+
+
+def b_music_clear(c: Ctx):
+    if not c.sb_exists or c.sb_corrupt:
+        return None
+    from bti.music import store as music_store
+    doc = music_store.read(c.d)
+    return E([], {"base_rev": music_store.revision(doc), "actor": "cli:music"}) if doc is not None else None
+
+
 def b_voice_generate(c: Ctx):
     if not c.open("voice") or c.imported:
         return None
@@ -1055,6 +1094,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.review": b_storyboard_review, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
     "draft.edit": b_draft_edit, "identity.set": b_identity_set,
+    "music.auto": b_music_auto, "music.set": b_music_set, "music.clear": b_music_clear,
     "export.start": b_export_start, "auto.run": b_auto_run, "output.build": b_output_build,
 }
 CANCELS = set(CANCEL_ID.values())

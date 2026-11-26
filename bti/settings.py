@@ -25,8 +25,9 @@ ROLES = (
     "edit.fast",
     "edit.deep",
     "picks",
+    "music",
 )
-AGENTIC_ROLES = {"draft", "edit.deep", "script.title"}
+AGENTIC_ROLES = {"draft", "edit.deep", "script.title", "music"}
 
 ROLE_LABELS = {
     "script.outline": "Dàn ý kịch bản",
@@ -36,6 +37,7 @@ ROLE_LABELS = {
     "edit.fast": "Sửa storyboard nhanh (1 lượt)",
     "edit.deep": "Sửa storyboard sâu (agent)",
     "picks": "Chọn hình ảnh",
+    "music": "Chọn nhạc",
 }
 
 

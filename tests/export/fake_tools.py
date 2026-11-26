@@ -81,6 +81,9 @@ def ffmpeg(argv):
                   "  Loudness range:\n    LRA:         3.6 LU\n    Threshold: -35.2 LUFS\n    LRA low:   -17.5 LUFS\n    LRA high:  -13.9 LUFS\n\n"
                   "  True peak:\n    Peak:       -1.6 dBFS", file=sys.stderr)
         return 0
+    if "-filter_complex" in argv:
+        save(argv[-1], {"kind": "audio", "codec": "aac", "duration": float(arg(argv, "-t", 10))})
+        return 0
     if "concat" in argv:
         return concat(argv)
     return mux(argv)
