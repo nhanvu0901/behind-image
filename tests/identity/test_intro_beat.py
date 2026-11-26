@@ -68,7 +68,8 @@ def test_the_block_reads_the_new_beat_the_numbers_and_the_earlier_form(style):
 def test_the_real_style_json_has_the_same_block():
     real = json.loads((Path(__file__).resolve().parents[2] / "style" / "gae" / "style.json").read_text(encoding="utf-8"))
     sd = read(real).style("raking")
-    assert sd.brand == "ID-BRAND-03" and sd.earlier == {"brand": ("ID-BRAND-01",)}
+    assert sd.brand == "ID-BRAND-04" and sd.brand_params == {"variant": "B"}
+    assert sd.earlier == {"brand": ("ID-BRAND-01", "ID-BRAND-03")}
     assert (sd.start_s["open"], sd.dur_s["open"], sd.start_s["label"], sd.dur_s["label"], sd.dur_s["brand"], sd.dur_s["mark"]) == (0.0, 1.35, 0.3, 7.7, 9.1, 3.2)
     assert sd.cross_cut == {"label": True}
     assert read(real).style("dim").brand == "ID-BRAND-02" and read(real).style("dim").dur_s["open"] == 5.0           # dim is left as it is

@@ -33,8 +33,8 @@ def test_the_family_is_the_seven_techniques_of_the_block_and_the_earlier_form_of
     cfg = ID.read(bundle.style)
     named = {t for s in cfg.styles.values() for t in (s.open, s.label_role, s.brand, s.mark) if t}
     assert len(named) == 7
-    earlier = {t for s in cfg.styles.values() for ids in s.earlier.values() for t in ids}       # ID-BRAND-01: the title slot of every video made before ID-BRAND-03
-    assert earlier == {"ID-BRAND-01"} and set(family(bundle)) == named | earlier
+    earlier = {t for s in cfg.styles.values() for ids in s.earlier.values() for t in ids}       # ID-BRAND-01 & ID-BRAND-03: earlier forms of raking before ID-BRAND-04
+    assert earlier == {"ID-BRAND-01", "ID-BRAND-03"} and set(family(bundle)) == named | earlier
 
 
 def test_every_identity_technique_is_listed_and_marked_program_only(bundle):

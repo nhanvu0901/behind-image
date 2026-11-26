@@ -177,3 +177,17 @@ The owner watched the first video of the test batch (`eligius`) and asked for a 
 
 **Fitting the storyboard to the voice again** (`bti/draft/retime.py`). `off_voice` lists what does not sit where the voice puts it (tolerance 0.05 s): the first shot not at 0, the opening shot missing or no longer needed, a chapter card that does not end where its silence ends or does not start where the compiler puts it, the beat that does not end where the card starts or starts before its silence, the number of cards, the document's `end`. `retime` puts them right and applies the identity again; the action `storyboard.retime` and the guard `storyboard_off_voice` (approving and exporting are refused until the storyboard fits) are described in `docs/AGENT_API.md`.
 
+## 11. Update 2026-11-26: default channel ident `ID-BRAND-04` variant B, automatic rest region, and readability
+
+After reviewing three prototype raking-sweep variants (`A`, `B`, `C`) on *The Arnolfini Portrait*, the owner selected **variant B** ("two-move handheld lamp path + relief + cut-letter bevel").
+
+- **Default style configuration (`style/gae/style.json`, `identity` block).** `raking.brand` is now `"ID-BRAND-04"` with `"brand_params": {"variant": "B"}`, while `"nominal.brand.dur_s"` stays `9.1` s so existing voice silences and cold-open timing do not move (`ID-BRAND-04` nominal timeline is `9.1` s in `style/gae/techniques.json`, scaled down cleanly on shorter beats). `earlier.brand` lists `["ID-BRAND-01", "ID-BRAND-03"]` so stored storyboards keep rendering without false `identity_technique_mismatch` warnings. Variants `"A"` and `"C"` remain selectable via `params.variant` (and owner choices of `"dim"`, or manual `"A"`/`"C"` overrides already on `ID-BRAND-04`, are preserved).
+- **How existing projects adopt it.** Any project compiles to the new default on a new draft (`draft`), on `storyboard.retime`, or when re-applying style `"raking"` (including via `PUT /identity` or title changes). Projects whose saved storyboard explicitly chose `"dim"` keep `"dim"`.
+- **Automatic rest-region selection (`bti.identity.choose_rest_region`).** When `apply_identity` or the draft compiler writes `ID-BRAND-04` from project data (`picks` + `timing`, with no per-painting hardcoded coordinates):
+  1. if `picks` give the cold open's final sentence (question) line a picture that is a region of `main_asset`, rest the light on that region;
+  2. else if any cold-open line is `about` a subject of kind `person` or `thing` whose `where` names a `tight: true` region on `main_asset`, rest on the first such region;
+  3. else leave `region: null` (light rests cleanly on the centre of the painting).
+  When the chosen region is outside the camera crop of the previous shot or on a non-main picture, `title_slot` frames the whole main painting (`whole_keys`); otherwise it continues the slow `BRAND_PUSH` zoom-in.
+- **Region clearance & bright-painting legibility.** `BrandRakingSweep` computes the vertical spotlight footprint at rest (`rest_box_pct`) across tall, wide, and square canvases and keeps the channel name (dimmed), video title, and museum label all visible at rest, clear of the lit region and of each other (splitting above/below when the region is central/upper, or placing all three cleanly below a top-edge spot or above a bottom-edge spot). Raking-sweep typography uses a tight two-tier glyph-hugging shadow (`_two_tier_glyph_shadow`) with no card, box, or strip so `#F1EADB` stays crisp even on high-key bright highlights.
+
+

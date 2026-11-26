@@ -465,12 +465,16 @@
     "label_vi": "Vệt sáng quét",
     "open": "ID-OPEN-01",
     "label": "ID-LABEL-01",
-    "brand": "ID-BRAND-03",
+    "brand": "ID-BRAND-04",
+    "brand_params": {
+     "variant": "B"
+    },
     "mark": "ID-MARK-01",
     "mark_transition": null,
     "earlier": {
      "brand": [
-      "ID-BRAND-01"
+      "ID-BRAND-01",
+      "ID-BRAND-03"
      ]
     },
     "nominal": {
@@ -516,6 +520,6 @@
    }
   },
   "min_element_s": 1.5,
-  "source": "docs/design/2026-11-18-identity-raking-light.md sections 3 to 5. nominal.<role>.start_s = seconds from the start of the VIDEO at which the element starts (the opening overlays go on the shot on screen then); dur_s = nominal length, the engine scales the times of a shorter element; a role with null is not used by that style; mark_transition is the entry transition of the mark shot (null = hard cut); earlier.<role> lists the techniques of an earlier form of the same style that a stored storyboard may still hold (raking: its title slot was ID-BRAND-01 before ID-BRAND-03): they are not reported as another style's, and they are replaced by the style's own technique when the identity is applied again."
+  "source": "docs/design/2026-11-18-identity-raking-light.md sections 3 to 5 and section 11. nominal.<role>.start_s = seconds from the start of the VIDEO at which the element starts (the opening overlays go on the shot on screen then); dur_s = nominal length, the engine scales the times of a shorter element; a role with null is not used by that style; mark_transition is the entry transition of the mark shot (null = hard cut); brand_params holds default parameters written when applying that brand technique (`variant: B` for ID-BRAND-04); earlier.<role> lists the techniques of an earlier form of the same style that a stored storyboard may still hold (raking: ID-BRAND-01 and ID-BRAND-03 before ID-BRAND-04): they are not reported as another style's, and they are replaced by the style's own technique when the identity is applied again."
  }
 }

@@ -83,7 +83,7 @@ def test_the_catalogue_is_reduced_to_what_a_small_edit_needs(box):
     cat = text.split("## The techniques you may choose from")[1].split("## How the usual requests")[0]
     assert "### CAM-01" in cat and "### STATIC-02" in cat and "### HI-01" in cat and "### AN-01" in cat      # on the scope's shot, and the usual overlays
     assert "- CAM-03 " in cat                                                                                  # a core treatment, in one line
-    for gone in ("ID-OPEN-01", "ID-BRAND-01", "ID-BRAND-03", "SHORT-01", "MAP-01", "TIME-01", "KEY-01", "NUM-01", "DOC-01", "STATE-01", "TREE-01"):
+    for gone in ("ID-OPEN-01", "ID-BRAND-01", "ID-BRAND-03", "ID-BRAND-04", "SHORT-01", "MAP-01", "TIME-01", "KEY-01", "NUM-01", "DOC-01", "STATE-01", "TREE-01"):
         assert "### %s " % gone not in cat and "- %s " % gone not in cat, gone                               # identity, shorts-only, devices nobody asked for (a use text may name them: "use KEY-01 instead")
     assert "- use when:" in cat and "- never when:" in cat                                                     # catalogue pass: the full entries say when to use a technique and when never
     for hidden in ("### X-HI-01", "### CAM-06", "- CAM-06 ", "### STATIC-04"):

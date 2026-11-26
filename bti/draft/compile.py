@@ -1436,7 +1436,8 @@ class _Compiler:
         if self.edit or cfg is None:
             return doc, None
         style_id = ID.chosen_style(self.inp.current, self.bundle.style) or cfg.default_style
-        new, report = ID.apply_identity(doc, style_id, self.bundle.style, self.tm, {"title": self.inp.title, "main_asset": self.main},
+        new, report = ID.apply_identity(doc, style_id, self.bundle.style, self.tm,
+                                        {"title": self.inp.title, "main_asset": self.main, "picks": self.inp.picks},
                                         defaults=self.bundle.param_defaults, project_dir=self.inp.project_dir)
         for o, a, b in zip(origin, doc["shots"], new["shots"]):
             o["technique"] = b.get("technique")

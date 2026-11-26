@@ -170,7 +170,7 @@ def put_identity(c, body, base=None):
 
 
 def beat(c):
-    return next(s for s in saved(c)["shots"] if s["technique"] == "ID-BRAND-03")
+    return next(s for s in saved(c)["shots"] if s["technique"] == "ID-BRAND-04")
 
 
 def test_the_video_title_is_set_changed_and_removed_through_the_route(rc):

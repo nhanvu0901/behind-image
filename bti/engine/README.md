@@ -198,8 +198,9 @@ Contract and numbers: `docs/design/2026-11-18-identity-raking-light.md` (section
 |---|---|---|---|
 | `ID-OPEN-01` | overlay | raking | the opening: black, the picture rises to `floor`, a band of light sweeps across and leaves it at `wake`, then 100 % (nominal 9.0 s) |
 | `ID-LABEL-01` | overlay | raking | two-line artwork label bottom left, no strip, soft shadow (4.5 s) |
-| `ID-BRAND-01` | base | raking | the channel name written by a band over the dimmed picture (5.0 s) |
-| `ID-BRAND-03` | base | raking | the channel name written by a band, then a second sweep writes the video's title (italic) and a small line under it; the name stays (9.1 s, 4.5 s with no lines) |
+| `ID-BRAND-01` | base | raking (earlier) | the channel name written by a band over the dimmed picture (5.0 s) |
+| `ID-BRAND-03` | base | raking (earlier) | the channel name written by a band, then a second sweep writes the video's title (italic) and a small line under it; the name stays (9.1 s, 4.5 s with no lines) |
+| `ID-BRAND-04` | base | raking | raking light sweep revealing surface relief and cut-letter bevels on the channel name, resting on a target region (`variant="B"` two-move handheld lamp path default, 9.1 s; `A` and `C` selectable) |
 | `ID-MARK-01` | base | raking | one chapter-mark line written by a band, then the picture is released (3.2 s) |
 | `ID-OPEN-02` | overlay | dim | the frame dims, the title (italic) and a small "ARTIST · YEAR" line fade in, then out (5.0 s) |
 | `ID-BRAND-02` | base | dim | the channel name fades in over the dimmed picture, then out (4.0 s) |

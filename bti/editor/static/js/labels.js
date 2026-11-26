@@ -661,7 +661,7 @@ export const SHOT_WORDS = {
   title: (t) => t,
   // text cards: "Thẻ tiêu đề: <title>"
   card: { 'X-CARD-01': 'Thẻ chương', 'X-CARD-02': 'Thẻ tiêu đề', 'X-CARD-03': 'Credit cuối phim', 'X-CARD-04': 'Thẻ câu hỏi', 'TXT-01': 'Tiêu đề chương', 'ID-MARK-01': 'Mốc chương', 'ID-MARK-02': 'Mốc chương',
-    'ID-BRAND-01': 'Tên kênh', 'ID-BRAND-02': 'Tên kênh', 'ID-BRAND-03': 'Tên kênh và tựa video' },
+    'ID-BRAND-01': 'Tên kênh', 'ID-BRAND-02': 'Tên kênh', 'ID-BRAND-03': 'Tên kênh và tựa video', 'ID-BRAND-04': 'Tên kênh và tựa video' },
   // overlays: a short phrase each ("vòng sáng"); the others use the lower-case `label_vi`
   overlay: {
     'HI-01': 'vòng sáng', 'AN-01': 'khoanh tròn', 'AN-02': 'viền quanh', 'AN-03': 'tia phối cảnh', 'AN-05': 'thước kích thước', 'AN-06': 'lưới', 'X-ANN-01': 'nhãn chi tiết',
@@ -1090,3 +1090,9 @@ export const MUSIC_LABELS = {
 Object.assign(EXPORT_LABELS.stale, { music: 'Nhạc đã thay đổi.' });
 // worker subjvis: borrowed picture caption.
 Object.assign(CODE, { borrowed_without_caption: 'Hình mượn chưa có ghi chú' });
+// worker introsweep: ID-BRAND-04 raking sweep ident variant labels.
+Object.assign(VALUE, {
+  A: 'Cách A — Quét chéo một nhịp',
+  B: 'Cách B — Đèn rọi hai nhịp',
+  C: 'Cách C — Đèn hạ góc quét',
+});

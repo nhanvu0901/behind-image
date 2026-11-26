@@ -24,7 +24,7 @@ KINDS = {"detail", "whole", "outside", "compare", "journey", "dates", "figure", 
 
 
 def test_the_catalogue_has_86_entries_and_the_26_of_the_table_are_offered():
-    assert len(ALL) == 86
+    assert len(ALL) == 87
     assert sorted(i for i, t in ALL.items() if t["offered"]) == sorted(OFFERED) and len(OFFERED) == 26
     assert BUNDLE.offered_ids() and sorted(BUNDLE.offered_ids()) == sorted(OFFERED)
 
@@ -46,14 +46,14 @@ def test_every_entry_is_offered_or_has_a_reason_and_never_both():
 
 def test_the_reasons_are_counted_as_decided():
     n = {c: sum(1 for t in ALL.values() if (t.get("hidden_reason") or {}).get("code") == c) for c in CODES}
-    assert sum(n.values()) == 60 and n["program"] == 13 and n["no_material"] == 17 and n["other_format"] == 14 and n["replaced"] == 7 and n["redundant"] == 9, n
+    assert sum(n.values()) == 61 and n["program"] == 14 and n["no_material"] == 17 and n["other_format"] == 14 and n["replaced"] == 7 and n["redundant"] == 9, n
 
 
 def test_the_identity_family_and_the_cards_are_written_by_the_program():
     from bti import identity as ID
     cfg = ID.read(BUNDLE.style)
     family = {t for t in ALL if cfg.is_identity_technique(t)}
-    assert family == {"ID-OPEN-01", "ID-OPEN-02", "ID-LABEL-01", "ID-BRAND-01", "ID-BRAND-02", "ID-BRAND-03", "ID-MARK-01", "ID-MARK-02"}
+    assert family == {"ID-OPEN-01", "ID-OPEN-02", "ID-LABEL-01", "ID-BRAND-01", "ID-BRAND-02", "ID-BRAND-03", "ID-BRAND-04", "ID-MARK-01", "ID-MARK-02"}
     for tid in family | {"X-CARD-01", "X-CARD-02", "TXT-01", "X-TR-01", "TR-04"}:
         assert ALL[tid]["hidden_reason"]["code"] == "program", tid
 
@@ -218,7 +218,7 @@ def test_the_document_says_hidden_techniques_are_errors_and_devices_follow_kinds
 def test_the_program_section_is_short_and_marks_every_entry_program_only(md):
     sec = md[md.index("## Written by the program"):]
     heads = [l for l in sec.splitlines() if l.startswith("### ")]
-    assert len(heads) == 13 and all("PROGRAM ONLY" in l for l in heads)
+    assert len(heads) == 14 and all("PROGRAM ONLY" in l for l in heads)
     assert "- params:" not in sec and len(sec) < 6_000, "no parameters: a model never writes them"
 
 

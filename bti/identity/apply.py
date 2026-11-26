@@ -152,6 +152,8 @@ class _Applier:
         self._defaults = defaults
         self.project_dir = project_dir
         self._boxes: dict[str, tuple | None] = {}
+        self._picks: dict | None = None
+        self._timing_raw: dict | None = None
         self.sb = _strip(storyboard)
         shots = self.sb.get("shots")
         self.shots = shots if isinstance(shots, list) else []
@@ -552,19 +554,113 @@ class _Applier:
             if ln < self.cfg.min_element_s - EPS:
                 self.skip(i, "too_short", "brand")
                 continue
+            defaults = self.defaults(self.sd.brand)
+            same_brand = (s.get("technique") == self.sd.brand)
+            main_k = self.main_asset()
+            has_region = ("region" in defaults)
+            picks = self.picks_data() if has_region else None
+            rest_region = self.rest_region_of(main_k, picks) if (has_region and picks is not None and main_k) else None
             prev = self.neighbour(i, -1)
             pic = self.camera_of(prev) if prev is not None else None
-            if pic:
+            if has_region and main_k:
+                if pic and pic[0] == main_k and self._region_framed(main_k, rest_region, pic[1][-1]):
+                    key, cam = pic
+                    last = cam[-1]
+                    cx, cy, z = last["cx"], last["cy"], last["zoom"]
+                    keys = [_key(0.0, cx, cy, z), _key(1.0, cx, cy, round(_clamp_zoom(z * BRAND_PUSH), 5))]
+                else:
+                    key = main_k
+                    keys = self.whole_keys(key)
+            elif pic:
                 key, cam = pic
                 last = cam[-1]
                 cx, cy, z = last["cx"], last["cy"], last["zoom"]
                 keys = [_key(0.0, cx, cy, z), _key(1.0, cx, cy, round(_clamp_zoom(z * BRAND_PUSH), 5))]
             else:
-                key = self.main_asset()
+                key = main_k
                 keys = self.whole_keys(key) if key else None
             wanted = {"camera": self.in_box(key, keys), "text": self.cfg.channel_name}
+            for k, v in self.sd.brand_params.items():
+                if k in defaults:
+                    cur_v = (s.get("params") or {}).get(k) if (same_brand and isinstance(s.get("params"), dict)) else None
+                    wanted[k] = cur_v if isinstance(cur_v, str) and cur_v else v
+            if has_region:
+                if picks is not None and main_k:
+                    wanted["region"] = rest_region
+                elif same_brand and isinstance(s.get("params"), dict) and "region" in s["params"]:
+                    wanted["region"] = s["params"]["region"]
+                else:
+                    wanted["region"] = None
             wanted.update(self.brand_texts())
             self.rewrite(s, self.sd.brand, key, wanted, None)
+
+    def picks_data(self) -> dict | None:
+        """Load picks once from `meta["picks"]` or `project_dir/picks.json`, if present."""
+        if self._picks is not None:
+            return self._picks
+        if isinstance(self.meta.get("picks"), dict):
+            self._picks = self.meta["picks"]
+            return self._picks
+        if self.project_dir is not None:
+            p = self.project_dir / "picks.json"
+            if p.is_file():
+                try:
+                    raw = json.loads(p.read_text(encoding="utf-8"))
+                    if isinstance(raw, dict):
+                        self._picks = raw
+                        return self._picks
+                except Exception:           # noqa: BLE001
+                    pass
+        return None
+
+    def _timing_meta(self) -> dict | None:
+        """Return timing mapping carrying `beats` and `chapters` (from `self.tm` or `project_dir/timing.json`)."""
+        beats = getattr(self.tm, "beats", None)
+        chapters = getattr(self.tm, "chapters", None)
+        if isinstance(beats, list) and beats and isinstance(chapters, list) and chapters:
+            return {"beats": beats, "chapters": chapters}
+        if self._timing_raw is not None:
+            return self._timing_raw
+        if self.project_dir is not None:
+            p = self.project_dir / "timing.json"
+            if p.is_file():
+                try:
+                    raw = json.loads(p.read_text(encoding="utf-8"))
+                    if isinstance(raw, dict):
+                        self._timing_raw = raw
+                        return raw
+                except Exception:           # noqa: BLE001
+                    pass
+        return {"beats": beats or [], "chapters": chapters or []}
+
+    def rest_region_of(self, main_k: str | None, picks: dict | None) -> str | None:
+        if not main_k or not isinstance(picks, dict):
+            return None
+        asset = self.image_asset(main_k) or {}
+        regions = asset.get("regions") if isinstance(asset.get("regions"), dict) else None
+        return choose_rest_region(self._timing_meta(), picks, main_k, regions)
+
+    def _region_framed(self, asset_key: str, region_name: str | None, cam_key: dict) -> bool:
+        """True when `cam_key` is a broad view on `asset_key` keeping `region_name` (or centre) inside the safe screen frame."""
+        a = self.image_asset(asset_key)
+        if not a or not (_num(a.get("width")) and _num(a.get("height")) and _num(a["width"]) > 0 and _num(a["height"]) > 0):
+            return True
+        w, h = float(a["width"]), float(a["height"])
+        box = self.box_of(asset_key) or (0.0, 0.0, w, h)
+        z_fit = self.cfg.fit_pct / 100.0 * 1080.0 / max(box[3] - box[1], 1.0)
+        z = float(cam_key["zoom"])
+        if z > z_fit * 1.35:
+            return False
+        if region_name:
+            reg = (a.get("regions") or {}).get(region_name) if isinstance(a.get("regions"), dict) else None
+            if not isinstance(reg, dict) or not (_num(reg.get("x")) and _num(reg.get("y"))):
+                return False
+            rx, ry = float(reg["x"]), float(reg["y"])
+        else:
+            rx, ry = (box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0
+        sx = 960.0 + (rx - float(cam_key["cx"])) * z
+        sy = 540.0 + (ry - float(cam_key["cy"])) * z
+        return 0.14 * 1920.0 <= sx <= 0.86 * 1920.0 and 0.14 * 1080.0 <= sy <= 0.86 * 1080.0
 
     def video_title(self) -> str:
         """The video's title (`identity.video_title` of the storyboard) in one line, "" when there is none."""
@@ -632,7 +728,7 @@ class _Applier:
         same = s.get("technique") == tech
         params = dict(s["params"]) if same and isinstance(s.get("params"), dict) else self.defaults(tech)
         for k, v in wanted.items():
-            if v is None:
+            if k == "camera" and v is None:
                 params.pop(k, None)           # no camera could be made: the picture is shown whole, still
             else:
                 params[k] = v
@@ -704,6 +800,80 @@ def fit_camera_to_box(asset: dict | None, keys: list | None, project_dir=None, *
                 k = {**k, "cx": cx, "cy": cy, "zoom": z_clamped}
         out.append(k)
     return (out, moved) if moved else (keys, [])
+
+
+def choose_rest_region(timing, picks: dict | None, main_asset: str | None, main_regions: dict | None = None) -> str | None:
+    """Automatic rest-region rule for ID-BRAND-04 from project data (no model calls, no painting-specific names):
+      1. If picks give the cold open's final sentence (question) line a region on the main painting, use that region.
+      2. Else if the cold open names a subject of kind `person` or `thing` on the main painting, use its `tight: true` region.
+      3. Else return None (rest on the centre of the painting).
+    """
+    if not isinstance(picks, dict):
+        return None
+    main_key = main_asset or picks.get("main_asset")
+    if not isinstance(main_key, str) or not main_key:
+        return None
+    regions = main_regions
+    if not isinstance(regions, dict):
+        asset_entry = (picks.get("assets") or {}).get(main_key)
+        regions = asset_entry.get("regions") if isinstance(asset_entry, dict) else None
+    if not isinstance(regions, dict) or not regions:
+        return None
+
+    beats_raw = getattr(timing, "beats", None) if timing is not None and not isinstance(timing, dict) else (timing.get("beats") if isinstance(timing, dict) else None)
+    chapters_raw = getattr(timing, "chapters", None) if timing is not None and not isinstance(timing, dict) else (timing.get("chapters") if isinstance(timing, dict) else None)
+    beats = [b for b in (beats_raw or []) if isinstance(b, dict) and isinstance(b.get("id"), str)]
+    chapters = [c for c in (chapters_raw or []) if isinstance(c, dict)]
+    if not beats:
+        return None
+
+    cold: list[dict] = []
+    if chapters:
+        c0 = chapters[0]
+        c0_id = c0.get("id")
+        if isinstance(c0_id, str) and c0_id:
+            cold = [b for b in beats if b.get("chapter") == c0_id]
+        if not cold and _num(c0.get("w1")):
+            cold = [b for b in beats if _num(b.get("w1")) and b["w1"] <= c0["w1"]]
+        if not cold and len(chapters) >= 2 and _num(chapters[1].get("start")):
+            cold = [b for b in beats if _num(b.get("end")) and b["end"] <= chapters[1]["start"] + 1e-6]
+    if not cold:
+        return None
+
+    picks_beats = picks.get("beats") if isinstance(picks.get("beats"), dict) else {}
+
+    # 1. Cold open's final sentence (question) line: picture region on the main painting.
+    last_entry = picks_beats.get(cold[-1]["id"])
+    if isinstance(last_entry, dict) and last_entry.get("status") != "skip":
+        for item in last_entry.get("items") or []:
+            if not isinstance(item, dict):
+                continue
+            item_asset = item.get("asset") or main_key
+            reg = item.get("region")
+            if item_asset == main_key and isinstance(reg, str) and isinstance(regions.get(reg), dict):
+                return reg
+
+    # 2. First subject of kind `person` or `thing` named in the cold open with a tight region on the main painting.
+    subjects = {s["id"]: s for s in (picks.get("subjects") or []) if isinstance(s, dict) and isinstance(s.get("id"), str)}
+    for beat in cold:
+        entry = picks_beats.get(beat["id"])
+        if not isinstance(entry, dict):
+            continue
+        for about in entry.get("about") or []:
+            if not isinstance(about, dict):
+                continue
+            subj = subjects.get(about.get("id"))
+            if not isinstance(subj, dict) or subj.get("kind") not in ("person", "thing"):
+                continue
+            where = subj.get("where")
+            if isinstance(where, dict) and isinstance(where.get("region"), str):
+                reg = where["region"]
+                r = regions.get(reg)
+                if isinstance(r, dict) and r.get("tight") is True:
+                    return reg
+
+    # 3. No matching region: light rests cleanly on the centre of the painting.
+    return None
 
 
 def apply_identity(storyboard: dict, style_id: str, style: dict, timing, meta: dict | None = None, *, defaults=None, project_dir=None) -> tuple[dict, dict]:

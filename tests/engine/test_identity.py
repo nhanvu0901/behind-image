@@ -96,9 +96,7 @@ def test_registry_entries_are_complete():
 
 
 def test_style_block_names_the_techniques_of_each_style():
-    """Changed by worker introflow (2026-11-20, the new opening): `raking` names `ID-BRAND-03` for the channel-name beat (nominal 9.1 s with the video's title) and lists
-    `ID-BRAND-01` as its EARLIER form (`earlier`: every video made before still holds it); its opening overlay is nominal 0 to 3.6 s and its label 1.2 s for 3.8 s (they sit on
-    the program's opening shot, which shows the whole painting before the first word), the chapter mark stays 3.2 s. `dim` is as it was."""
+    """`raking` defaults to `ID-BRAND-04` (variant B, nominal 9.1 s) and lists both `ID-BRAND-01` and `ID-BRAND-03` as EARLIER forms."""
     b = R.load_bundle("gae")
     idn = b.style["identity"]
     assert idn["channel_name"] == "RAKING LIGHT" and idn["default_style"] == "raking" and set(idn["styles"]) == {"raking", "dim"}
@@ -117,9 +115,11 @@ def test_style_block_names_the_techniques_of_each_style():
             used.append(tid)
             nom = st["nominal"][role]
             assert nom["dur_s"] == (new_look[role] if name == "raking" else NOMINAL[tid]) and nom.get("start_s", 0) >= 0, (name, role)
-    assert sorted(used) == sorted([t for t in IDS if t != "ID-BRAND-01"] + ["ID-BRAND-03"])
-    assert b.spec("ID-BRAND-03")["timing"]["default_s"] == 9.1 and idn["styles"]["raking"]["brand"] == "ID-BRAND-03"
-    assert idn["styles"]["raking"]["earlier"] == {"brand": ["ID-BRAND-01"]} and b.available("ID-BRAND-01")       # still a registered technique of the family
+    assert sorted(used) == sorted([t for t in IDS if t != "ID-BRAND-01"] + ["ID-BRAND-04"])
+    assert b.spec("ID-BRAND-04")["timing"]["default_s"] == 9.1 and idn["styles"]["raking"]["brand"] == "ID-BRAND-04"
+    assert idn["styles"]["raking"]["brand_params"] == {"variant": "B"}
+    assert idn["styles"]["raking"]["earlier"] == {"brand": ["ID-BRAND-01", "ID-BRAND-03"]}
+    assert b.available("ID-BRAND-01") and b.available("ID-BRAND-03")
     assert "earlier" not in idn["styles"]["dim"]
     assert idn["styles"]["raking"]["nominal"]["open"]["start_s"] == 0.0 and idn["styles"]["raking"]["nominal"]["label"]["start_s"] == 0.3
     assert idn["styles"]["raking"]["nominal"]["label"]["cross_cut"] is True
