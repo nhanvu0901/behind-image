@@ -27,3 +27,7 @@
 .v-exp .ex-desc { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; min-height: 200px; user-select: text; }
 .v-exp .files .file { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; padding: 4px 0; border-bottom: 1px solid var(--border); }
 .v-exp .files .file code { color: var(--muted); font-size: 11px; word-break: break-all; }
+/* worker musicstep */
+.v-exp .ex-music-list { margin: 0; padding-left: 22px; }
+.v-exp .ex-music-list li { margin: 6px 0; }
+.v-exp .ex-music-list audio { display: block; width: min(100%, 360px); height: 32px; margin-top: 3px; }

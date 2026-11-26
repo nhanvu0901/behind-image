@@ -65,3 +65,6 @@ run/
 
 # Change log of the typed operations (one folder per project; data, never in git)
 projects/*/changes/
+
+# Local music recordings and their machine-specific index
+/music/

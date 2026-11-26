@@ -991,6 +991,9 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(_retime_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
                                       load_style=lambda sid: engine.load_style(sid).get("style") or {}))
     # titlestep: the video's title (GET/PUT .../title, POST .../title/generate; the package is bti/title/); it also registers how a new title reaches an existing storyboard
+    from .music_api import make_router as _music_router
+    app.include_router(_music_router(pdir=pdir))
+
     from .title_api import make_router as _title_router
     app.include_router(_title_router(root, pdir=pdir, project=project, saved_storyboard=saved_storyboard, commit=commit, slock=slock,
                                      load_style=lambda sid: engine.load_style(sid).get("style") or {}))

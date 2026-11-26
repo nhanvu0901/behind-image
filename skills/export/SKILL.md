@@ -22,6 +22,9 @@ The finished video as one MP4, with a check sheet, a description that lists the 
 <!-- BEGIN GENERATED: actions -->
 | id | step | page button | gate | cost | long job |
 |---|---|---|---|---|---|
+| `music.auto` | export | Chọn nhạc lại |  | model: about 1 minute | yes |
+| `music.set` | export | Đặt nhạc |  |  |  |
+| `music.clear` | export | Bỏ nhạc |  |  |  |
 | `export.start` | export | Xuất video |  | machine_time: about 25 minutes | yes |
 | `export.cancel` | export | Dừng |  |  |  |
 | `auto.run` | export | Chạy tự động |  | machine_time: the sum of what it may start from where the project stands | yes |

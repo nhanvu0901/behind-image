@@ -44,7 +44,7 @@ BUILTIN = {
         {"id": "gemini", "label": "Gemini 3.8 Flash", "model": "agy:gemini-3.8-flash-high"},
         {"id": "opus", "label": "Opus 5.5 High", "model": "claude:claude-opus-5-5@high"},
     ],
-    "steps": {"script": ["script.outline", "script.narration", "script.title"], "picks": ["picks"], "storyboard": ["draft", "edit.fast", "edit.deep"]},
+    "steps": {"script": ["script.outline", "script.narration", "script.title"], "picks": ["picks"], "storyboard": ["draft", "edit.fast", "edit.deep"], "music": ["music"]},
 }
 
 

@@ -292,7 +292,7 @@ def test_the_run_log_is_a_file_of_the_project_and_the_list_says_the_same(client,
     assert on_disk["schema"] == "bti.autorun/1" and on_disk["steps"][0]["action"] == "export.start" and on_disk["ended"] and on_disk["outcome"] == "done"
     items = client.get(P + "/auto/runs").json()["items"]
     assert len(items) == 1 and items[0]["id"] == started["run_id"] and items[0]["state"] == "finished" and items[0]["steps_taken"] == 1
-    assert items[0]["outcome"] == "done" and items[0]["sentence"] == "Xong: video đã được xuất." and "steps" not in items[0]
+    assert items[0]["outcome"] == "done" and items[0]["sentence"] == "Xong: video đã được xuất. Không có nhạc; video dùng giọng đọc." and "steps" not in items[0]
     assert items[0]["link"] == "#/project/arn/export"
     assert client.get(P + "/auto/runs/20200101-000000-0000").status_code == 404
     assert client.get(P + "/auto/runs/..%2F..%2Fproject").status_code in (404, 422)

@@ -957,3 +957,9 @@ export const PICTIME_SENTENCES = {
 };
 export const PICTIME_CODES = Object.keys(PICTIME_SENTENCES);
 Object.assign(BUILD, PICTIME_SENTENCES);
+// worker musicstep: errors from the optional music document and its job.
+Object.assign(STAGE_CODES.export, {
+  music_invalid: 'Nhạc không còn khớp video hoặc thư viện. Hãy chọn nhạc lại.',
+  music_no_output: 'Chưa chọn được nhạc. Hãy thử lại.',
+  agent_job_running: 'Agent đang làm việc khác trong dự án. Hãy chờ xong.',
+});

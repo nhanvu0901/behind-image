@@ -79,6 +79,8 @@ class Run:
         self.stale = 0
         self.recent: list[str] = []
         self.tolerated: dict[tuple[str, str], dict] = {}          # (gate, code) -> {gate, code, count, lines?}: the warnings the run let through (the last look at each gate)
+        self.music_tried = False
+        self.music_warning = False
         self.done_steps = 0
         self.of = len(reasons.STEPS)
         self.t0 = clock()
@@ -196,10 +198,16 @@ class Run:
             kinds = sorted({str(j.get("kind")) for j in busy})
             return reasons.make("busy_elsewhere", pid=self.pid, step=st.get("current"),
                                 jobs_vi=", ".join(reasons.JOB_KIND_VI.get(k, k) for k in kinds), jobs_en=", ".join(kinds)), None
-        todo = [a for a in acts if a.get("ready") is True and a.get("advances") is True and not a["id"].startswith("auto.") and not a["id"].endswith(".cancel")]
+        todo = [a for a in acts if a.get("ready") is True and a.get("advances") is True and not a["id"].startswith("auto.") and not a["id"].endswith(".cancel")
+                and not (a["id"] == "music.auto" and self.music_tried)]
         if not todo:
             return self._nothing_to_do(st, acts), None
         a = todo[0]
+        if a["id"] == "export.start" and not self.music_tried:
+            music = next((x for x in acts if x["id"] == "music.auto"), None)
+            if music and any(n in ("music_library", "agent_usable") for n in music.get("needs", [])):
+                self.music_tried = True
+                self.music_warning = True
         # A human may approve directly, but the automatic run must never bypass
         # a required viewer review merely because its agent is unavailable.
         pending_review = next((x for x in acts if x["id"] == "storyboard.review" and x.get("ready") is False), None)
@@ -207,6 +215,9 @@ class Run:
             return self._nothing_to_do(st, [pending_review]), None
         refusal = self._allowed(a, auto)
         if refusal is not None:
+            if a["id"] == "music.auto":
+                self.music_tried, self.music_warning = True, True
+                return self._decide(st)
             return refusal, None
         return None, a
 
@@ -275,11 +286,16 @@ class Run:
         if counts:
             self.log.update_step(rec, tolerated=[{"code": c, "count": n} for c, n in counts.items()])
         t0 = self.clock()
+        if a["id"] == "music.auto":
+            self.music_tried = True
         rep = self.call(a["method"], a["path"], body)
         secs = round(self.clock() - t0, 2)
         if not rep.ok:
             err = self._error(rep)
             self.log.update_step(rec, status=rep.status, ok=False, code=err["code"], seconds=secs, note=(rec.get("note") or "") + (" " if rec.get("note") else "") + str(err.get("detail") or "")[:160])
+            if a["id"] == "music.auto":
+                self.music_warning = True
+                return
             self._refused(a, base, rep, err)
             return
         self.recent.append(sig)
@@ -340,6 +356,9 @@ class Run:
         if not rep.ok or not isinstance(rep.data, dict):
             self.log.update_step(rec, ok=False, job_state="unknown", code=self._error(rep)["code"], seconds=round(self.clock() - c["t0"], 2))
             self.child = None
+            if a["id"] == "music.auto":
+                self.music_warning = True
+                return
             self._finish(reasons.make("job_failed", error=self._error(rep), **base))
             return
         job = rep.data
@@ -359,6 +378,9 @@ class Run:
         if state == "done":
             self.stale = 0
             self.meta.update(child_job=None, child_progress=None)
+            return
+        if a["id"] == "music.auto":
+            self.music_warning = True
             return
         if state in ("cancelled", "interrupted"):
             self._finish(reasons.make("job_cancelled_elsewhere", **base))
@@ -380,6 +402,9 @@ class Run:
         if self.result is not None:
             return self.result
         result = reasons.add_tolerated(dict(result), list(self.tolerated.values()))
+        if self.music_warning:
+            result.setdefault("warnings", []).append({"code": "music_none", "detail": "Không có nhạc; video được xuất với giọng đọc."})
+            result["sentence"] = str(result.get("sentence") or "").rstrip() + " Không có nhạc; video dùng giọng đọc."
         result.setdefault("link", ("#/project/%s/%s" % (self.pid, result["step"])) if result.get("step") else None)
         result.update(steps_taken=self.steps, run_id=self.run_id, started=self.started, ended=runlog.now_iso(), seconds=round(self.clock() - self.t0, 1))
         self.result = result

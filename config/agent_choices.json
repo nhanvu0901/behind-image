@@ -1,13 +1,38 @@
 {
   "default": "gemini",
   "agents": [
-    {"id": "gemini", "label": "Gemini 3.8 Flash", "model": "agy:gemini-3.8-flash-high"},
-    {"id": "opus", "label": "Opus 5.5 High", "model": "claude:claude-opus-5-5@high"},
-    {"id": "argon", "label": "Gemini Orchestrator Argon", "model": "agy:gemini-pro-orchestrator-g1-pro"}
+    {
+      "id": "gemini",
+      "label": "Gemini 3.8 Flash",
+      "model": "agy:gemini-3.8-flash-high"
+    },
+    {
+      "id": "opus",
+      "label": "Opus 5.5 High",
+      "model": "claude:claude-opus-5-5@high"
+    },
+    {
+      "id": "argon",
+      "label": "Gemini Orchestrator Argon",
+      "model": "agy:gemini-pro-orchestrator-g1-pro"
+    }
   ],
   "steps": {
-    "script": ["script.outline", "script.narration", "script.title"],
-    "picks": ["picks"],
-    "storyboard": ["draft", "edit.fast", "edit.deep"]
+    "script": [
+      "script.outline",
+      "script.narration",
+      "script.title"
+    ],
+    "picks": [
+      "picks"
+    ],
+    "storyboard": [
+      "draft",
+      "edit.fast",
+      "edit.deep"
+    ],
+    "music": [
+      "music"
+    ]
   }
 }

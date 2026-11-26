@@ -121,6 +121,8 @@ def generated_parts() -> dict[str, dict[str, str]]:
         out["skills/%s/SKILL.md" % folder] = parts
     from bti.editor import state_api                  # titlestep: the title has a skill of its own (`bti doc title`); its actions are those whose id starts with `title.`
     out["skills/title/SKILL.md"] = {"actions": "\n".join(_actions_rows([s for s in state_api.SPECS if s.id.startswith("title.")]))}
+    # musicstep: the optional music document has its own skill and action list.
+    out["skills/music/SKILL.md"] = {"actions": "\n".join(_actions_rows([s for s in state_api.SPECS if s.id.startswith("music.")]))}
     return out
 
 
