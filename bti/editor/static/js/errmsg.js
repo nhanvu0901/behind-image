@@ -962,7 +962,10 @@ Object.assign(STAGE_CODES.export, {
   music_invalid: 'Nhạc không còn khớp video hoặc thư viện. Hãy chọn nhạc lại.',
   music_no_output: 'Chưa chọn được nhạc. Hãy thử lại.',
   agent_job_running: 'Agent đang làm việc khác trong dự án. Hãy chờ xong.',
-// worker subjvis: a borrowed picture has no usable caption record.
-Object.assign(BUILD, {
-  borrowed_without_caption: (i) => `Hình mượn${i.args?.asset ? ` “${i.args.asset}”` : ''} chưa có thông tin phù hợp để ghi chú.`,
 });
+// worker subjvis: a borrowed picture has no usable caption record.
+export const SUBJVIS_SENTENCES = {
+  borrowed_without_caption: (i) => `Hình mượn${i.args?.asset ? ` “${i.args.asset}”` : ''} chưa có thông tin phù hợp để ghi chú.`,
+};
+export const SUBJVIS_CODES = Object.keys(SUBJVIS_SENTENCES);
+Object.assign(BUILD, SUBJVIS_SENTENCES);
