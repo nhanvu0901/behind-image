@@ -176,10 +176,10 @@ def test_identity_is_idempotent_with_cross_cut_label(tmp_path):
     proj, t = _paint_project(tmp_path, lead=2.0)
     sb = compiled(proj).storyboard
     bundle = R.load_bundle("gae")
-    again, rep = ID.apply_identity(sb, "raking", bundle.style, t, {"main_asset": "A"}, defaults=bundle.param_defaults)
+    again, rep = ID.apply_identity(sb, "raking", bundle.style, t, {"main_asset": "A"}, defaults=bundle.param_defaults, project_dir=proj)
     assert rep["changed"] == [] and json.dumps(again, sort_keys=True) == json.dumps(sb, sort_keys=True)
-    as_dim, _ = ID.apply_identity(sb, "dim", bundle.style, t, {"main_asset": "A"}, defaults=bundle.param_defaults)
-    back, _ = ID.apply_identity(as_dim, "raking", bundle.style, t, {"main_asset": "A"}, defaults=bundle.param_defaults)
+    as_dim, _ = ID.apply_identity(sb, "dim", bundle.style, t, {"main_asset": "A"}, defaults=bundle.param_defaults, project_dir=proj)
+    back, _ = ID.apply_identity(as_dim, "raking", bundle.style, t, {"main_asset": "A"}, defaults=bundle.param_defaults, project_dir=proj)
     assert json.dumps(back, sort_keys=True) == json.dumps(sb, sort_keys=True)
 
 

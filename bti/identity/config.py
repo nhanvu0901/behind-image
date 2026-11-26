@@ -11,8 +11,9 @@ Shape of the block (every value may also be wrapped as `{"value": ..., "source":
       "channel_name": "RAKING LIGHT",
       "default_style": "raking",
       "styles": {
-        "raking": {"label_vi": "Vệt sáng quét", "open": "ID-OPEN-01", "label": "ID-LABEL-01", "brand": "ID-BRAND-03", "mark": "ID-MARK-01",
-                   "earlier": {"brand": ["ID-BRAND-01"]},
+        "raking": {"label_vi": "Vệt sáng quét", "open": "ID-OPEN-01", "label": "ID-LABEL-01", "brand": "ID-BRAND-04", "mark": "ID-MARK-01",
+                   "brand_params": {"variant": "B"},
+                   "earlier": {"brand": ["ID-BRAND-01", "ID-BRAND-03"]},
                    "nominal": {"open": {"start_s": 0.0, "dur_s": 3.6}, "label": {"start_s": 1.2, "dur_s": 3.8}, "brand": {"dur_s": 9.1}}},
         "dim":    {"label_vi": "Tối lại, hiện tên", "open": "ID-OPEN-02", "brand": "ID-BRAND-02", "mark": "ID-MARK-02",
                    "mark_transition": {"technique": "TR-01", "dur": 0.75}}
@@ -20,11 +21,12 @@ Shape of the block (every value may also be wrapped as `{"value": ..., "source":
     }
 
 A style may leave `label` out (the `dim` opening writes the title itself, `label: null`); `mark_transition` is optional (null: a hard
-cut). Optional: `nominal: {role: {start_s, dur_s}}` per style (where in the video the opening overlays start, and for how long) and
+cut). Optional: `nominal: {role: {start_s, dur_s}}` per style (where in the video the opening overlays start, and for how long),
+`brand_params` (default parameter overrides written on first application of `brand`, e.g. `{"variant": "B"}`), and
 `min_element_s` (no element is shorter).
 
 `earlier: {role: [technique, ...]}` (optional, per style) names the techniques of an EARLIER FORM of the same style: a storyboard made
-before the style's technique for that role changed still holds them (every video made before `ID-BRAND-03` has `ID-BRAND-01` as its
+before the style's technique for that role changed still holds them (every video made before `ID-BRAND-04` has `ID-BRAND-01` or `ID-BRAND-03` as its
 title slot under the style `raking`). Such a shot is the style's own, not another style's: `is_mismatch` does not report it, and
 `apply_identity` writes the style's current technique over it when the identity is applied again. Nothing else reads the key.
 """
@@ -70,6 +72,7 @@ class StyleDef:
     dur_s: dict = field(default_factory=dict)         # optional per-role nominal length (seconds)
     earlier: dict = field(default_factory=dict)       # role -> techniques of an earlier form of this style (still its own, see the module docstring)
     cross_cut: dict = field(default_factory=dict)     # role -> True when the opening overlay continues across cuts without blinking
+    brand_params: dict = field(default_factory=dict)  # optional default params applied with the style's `brand` technique
 
     def technique(self, role: str) -> str | None:
         return self.label_role if role == "label" else getattr(self, role)
@@ -172,6 +175,14 @@ def _earlier(entry: dict) -> dict:
     return out
 
 
+def _brand_params(entry: dict) -> dict:
+    """Optional flat parameter defaults for the style's `brand` technique (e.g. `{"variant": "B"}`)."""
+    raw = _plain(entry.get("brand_params"))
+    if not isinstance(raw, dict):
+        return {}
+    return {k: v for k, v in raw.items() if isinstance(k, str) and k and v is not None}
+
+
 def block_of(style) -> dict | None:
     """The `identity` block of a style.json document (the block itself is accepted too); None when there is none."""
     if not isinstance(style, dict):
@@ -201,7 +212,7 @@ def read(style) -> IdentityConfig | None:
         # `label` is the role of the two-line label; a style that names a display text there instead is not supported
         styles[sid] = StyleDef(id=sid, label=label, open=g("open"), label_role=g("label"), brand=g("brand"), mark=g("mark"),
                                transition=_transition(entry), start_s=_nominal(entry, "start_s"), dur_s=_nominal(entry, "dur_s"), earlier=_earlier(entry),
-                               cross_cut=_cross_cut(entry))
+                               cross_cut=_cross_cut(entry), brand_params=_brand_params(entry))
     if not styles:
         return None
     name = _plain(b.get("channel_name"))

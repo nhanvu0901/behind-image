@@ -28,6 +28,7 @@ Rules shared by all eight (the ids are not consecutive: ID-BRAND-03 came later, 
 from __future__ import annotations
 
 import math
+import os
 import struct
 import threading
 from typing import NamedTuple
@@ -338,6 +339,88 @@ def ink_layer(ctx, text, kind, cap_pct, tracking_pct=0.0, *, baseline_pct=None, 
     key = ("idtext", text, kind, float(cap_pct), float(tracking_pct), baseline_pct, centre_pct, float(x_pct), align, float(max_w_pct), bool(shadow), bool(kern))
     return ctx.layer(key, lambda: _build_ink(ctx.w, ctx.h, text, kind, float(cap_pct), float(tracking_pct), baseline_pct, centre_pct,
                                              float(x_pct), align, float(max_w_pct), bool(shadow), bool(kern)))
+
+
+def _measure_glyph_line(text, kind, cap_pct, tracking_pct, max_w_pct, W, H, *, kern=True):
+    """Shared glyph measurement for raking-sweep ink layers (fits within `max_w_pct` without wrapping)."""
+    ratio = vfx.cap_ratio(kind)
+    size = max(6, int(round(cap_pct / 100.0 * H / ratio)))
+    max_w = max_w_pct / 100.0 * W
+
+    def measure(sz):
+        ft = vfx.font(kind, sz)
+        trk = tracking_pct / 100.0 * sz
+        if trk > 0:
+            adv = [ft.getlength(c) for c in text]
+            return ft, trk, adv, sum(adv) + trk * (len(text) - 1)
+        if kern:
+            k = _kerning(kind)
+            if k is not None:
+                adv = [ft.getlength(c) for c in text]
+                for i in range(len(text) - 1):
+                    adv[i] += k.pair(text[i], text[i + 1]) * sz / k.upem
+                return ft, 0.0, adv, sum(adv)
+        return ft, 0.0, None, ft.getlength(text)
+
+    ft, trk, adv, width = measure(size)
+    if width > max_w > 0:
+        size = max(6, min(size - 1, int(size * max_w / width)))
+        ft, trk, adv, width = measure(size)
+        while width > max_w and size > 6:
+            size -= 1
+            ft, trk, adv, width = measure(size)
+    return ft, trk, adv, width, size, ratio
+
+
+def _two_tier_glyph_shadow(a: np.ndarray, W: int) -> np.ndarray:
+    """Two-tier dark glyph halo + soft drop shadow keeping #F1EADB legible over bright (~240/255) paintings without any box or strip."""
+    s_tight = max(1.0, 0.0014 * W)
+    s_wide = max(2.0, 0.0042 * W)
+    dy = max(1, int(round(0.0011 * W)))
+    a_drop = np.zeros_like(a)
+    a_drop[dy:, :] = a[:-dy, :]
+    sh1 = cv2.GaussianBlur(a, (0, 0), s_tight) * 0.78
+    sh2 = cv2.GaussianBlur(a_drop, (0, 0), s_wide) * 0.62
+    return np.clip(1.0 - (1.0 - sh1) * (1.0 - sh2), 0.0, 0.90).astype(np.float32)
+
+
+def _build_raking_ink(W, H, text, kind, cap_pct, tracking_pct, centre_pct, x_pct, max_w_pct, shadow, kern=True):
+    """Build a static one-line raking title/subtitle `vfx.Layer` with boosted glyph-hugging optical contrast."""
+    ft, trk, adv, width, size, ratio = _measure_glyph_line(text, kind, cap_pct, tracking_pct, max_w_pct, W, H, kern=kern)
+    asc, desc = ft.getmetrics()
+    sigma = max(2.0, 0.0042 * W)
+    m = int(4 * sigma) + 4
+    pad_x = m + int(size * 0.15)
+    img = Image.new("L", (int(math.ceil(width)) + 2 * pad_x, asc + desc + 2 * m), 0)
+    d = ImageDraw.Draw(img)
+    base_y = m + asc
+    if adv is None:
+        d.text((pad_x, base_y), text, font=ft, fill=255, anchor="ls")
+    else:
+        x = float(pad_x)
+        for c, a in zip(text, adv):
+            d.text((x, base_y), c, font=ft, fill=255, anchor="ls")
+            x += a + trk
+    a = np.asarray(img, np.float32) / 255.0
+    sh = _two_tier_glyph_shadow(a, W) if shadow else np.zeros_like(a)
+    out_a = a + sh * (1.0 - a)
+    ratio_a = np.divide(a, out_a, out=np.zeros_like(a), where=out_a > 1e-6)
+    rgba = np.empty(a.shape + (4,), np.uint8)
+    for i, c in enumerate(INK):
+        rgba[:, :, i] = np.clip(c * ratio_a + 0.5, 0, 255)
+    rgba[:, :, 3] = np.clip(out_a * 255.0 + 0.5, 0, 255)
+    cap_actual = size * ratio
+    baseline = centre_pct / 100.0 * H + cap_actual / 2.0
+    left = x_pct / 100.0 * W - width / 2.0
+    return vfx.Layer(rgba, int(round(left)) - pad_x, int(round(baseline)) - base_y)
+
+
+def _raking_ink_layer(ctx, text, kind, cap_pct, tracking_pct, centre_pct, x_pct=50.0, max_w_pct=TITLE_MAX_W_PCT, shadow=True, kern=True):
+    if not isinstance(text, str) or not text.strip():
+        return None
+    key = ("idraketext", text, kind, float(cap_pct), float(tracking_pct), float(centre_pct), float(x_pct), float(max_w_pct), bool(shadow), bool(kern))
+    return ctx.layer(key, lambda: _build_raking_ink(ctx.w, ctx.h, text, kind, float(cap_pct), float(tracking_pct),
+                                                    float(centre_pct), float(x_pct), float(max_w_pct), bool(shadow), bool(kern)))
 
 
 def _asset_texts(context):
@@ -748,4 +831,533 @@ class BrandTitle(_BandBase):
         name = bundle.sv("identity", "channel_name", None)
         if isinstance(name, str) and name.strip():
             d["text"] = name
+        return d
+
+
+# ----------------------------------------------------------------------------- ID-BRAND-04: the raking light sweep (variants A, B, C)
+def _ss_sine(p):
+    """Smooth 0 -> 1 sinusoidal ease."""
+    p = min(max(float(p), 0.0), 1.0)
+    return 0.5 * (1.0 - math.cos(math.pi * p))
+
+
+def _relief_gradients(ctx, key, img, level_idx):
+    """Cached normalized height-map gradients (H_lv x W_lv x 2, float32) from the painting's own luminance pyramid.
+
+    Two-scale difference-of-Gaussians height map suppresses JPEG/sensor grain while extracting physical paint ridges,
+    brushstrokes, drapery folds and cracks. Returns zeros cleanly on flat synthetic images.
+    """
+    path = ctx.asset_path(key)
+    try:
+        mt = os.stat(path).st_mtime_ns
+    except OSError:
+        mt = id(img)
+
+    def build():
+        lv = img.levels[level_idx]
+        bgr = lv.astype(np.float32) * (1.0 / 255.0)
+        lum = 0.0722 * bgr[:, :, 0] + 0.7152 * bgr[:, :, 1] + 0.2126 * bgr[:, :, 2]
+        with vfx.unlimited():
+            b0 = cv2.GaussianBlur(lum, (0, 0), 0.9, borderType=cv2.BORDER_REPLICATE)
+            b1 = cv2.GaussianBlur(lum, (0, 0), 2.8, borderType=cv2.BORDER_REPLICATE)
+            b2 = cv2.GaussianBlur(lum, (0, 0), 9.5, borderType=cv2.BORDER_REPLICATE)
+            hmap = 0.62 * (b0 - b1) + 0.38 * (b1 - b2)
+            gx = cv2.Scharr(hmap, cv2.CV_32F, 1, 0, borderType=cv2.BORDER_REPLICATE)
+            gy = cv2.Scharr(hmap, cv2.CV_32F, 0, 1, borderType=cv2.BORDER_REPLICATE)
+        mag = np.hypot(gx, gy)
+        scale = float(np.percentile(mag, 90))
+        if scale < 1e-4:
+            return np.zeros((lv.shape[0], lv.shape[1], 2), np.float32)
+        atten = (1.0 / scale) / (1.0 + 0.25 * (mag / scale))
+        return np.dstack([gx * atten, gy * atten]).astype(np.float32)
+
+    return ctx.cached(("id_relief_grad", path, mt, int(level_idx)), build)
+
+
+def _warp_relief_roi(img, grad2, cx, cy, zoom, ow, oh, ix0, iy0, ix1, iy1):
+    """Warp the cached gradient map into the painting's screen ROI and return (gx, gy, paint_mask)."""
+    k = int(round(math.log2(1.0 / zoom))) if zoom < 1.0 else 0
+    k = max(0, min(k, len(img.levels) - 1))
+    s = zoom * (2 ** k)
+    sx = cx / (2 ** k)
+    sy = cy / (2 ** k)
+    rw, rh = ix1 - ix0, iy1 - iy0
+    m_roi = np.array([[s, 0.0, ow / 2.0 - s * sx - ix0], [0.0, s, oh / 2.0 - s * sy - iy0]], np.float64)
+    warped = cv2.warpAffine(grad2, m_roi, (rw, rh), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0.0, 0.0))
+    x0, y0, x1, y1 = img.rect(cx, cy, zoom, ow, oh)
+    xs = np.arange(ix0, ix1, dtype=np.float32) + 0.5
+    ys = np.arange(iy0, iy1, dtype=np.float32) + 0.5
+    # 3-px inward feather inside the painting border prevents any bright rim halo at the frame edge.
+    ax = np.clip((np.minimum(xs - x0, x1 - xs) - 1.5) / 3.0, 0.0, 1.0)
+    ay = np.clip((np.minimum(ys - y0, y1 - ys) - 1.5) / 3.0, 0.0, 1.0)
+    paint_mask = (ay[:, None] * ax[None, :]).astype(np.float32)
+    return warped[:, :, 0], warped[:, :, 1], paint_mask
+
+
+def _tilted_pool(xs, ys, cx, cy, rx, ry, angle_deg, feather):
+    """Soft elliptical lamp pool tilted by `angle_deg`, evaluated on 1-D coordinate vectors (xs, ys)."""
+    a = math.radians(float(angle_deg))
+    ca, sa = math.cos(a), math.sin(a)
+    dx = xs[None, :] - float(cx)
+    dy = ys[:, None] - float(cy)
+    xr = dx * ca + dy * sa
+    yr = -dx * sa + dy * ca
+    d = np.sqrt((xr / max(float(rx), 1.0)) ** 2 + (yr / max(float(ry), 1.0)) ** 2)
+    fth = min(max(float(feather), 0.05), 0.95)
+    return (1.0 - vfx.smoothstep((d - (1.0 - fth)) / fth)).astype(np.float32)
+
+
+class _CutInk:
+    """Pre-rendered text layer with contour normals for directional cut-letter bevel highlights."""
+
+    def __init__(self, x0, y0, a, sh, ex, ey):
+        self.x0, self.y0 = int(x0), int(y0)
+        self.a = a
+        self.sh = sh
+        self.ex = ex
+        self.ey = ey
+        self.rgb = np.empty(a.shape + (3,), np.float32)
+        self.rgb[:, :, 0] = INK[2]
+        self.rgb[:, :, 1] = INK[1]
+        self.rgb[:, :, 2] = INK[0]
+
+
+def _build_cut_ink(W, H, text, kind, cap_pct, tracking_pct, centre_pct, x_pct, max_w_pct, shadow):
+    ratio = vfx.cap_ratio(kind)
+    size = max(6, int(round(cap_pct / 100.0 * H / ratio)))
+    max_w = max_w_pct / 100.0 * W
+
+    def measure(sz):
+        ft = vfx.font(kind, sz)
+        trk = tracking_pct / 100.0 * sz
+        if trk > 0:
+            adv = [ft.getlength(c) for c in text]
+            return ft, trk, adv, sum(adv) + trk * (len(text) - 1)
+        return ft, 0.0, None, ft.getlength(text)
+
+    ft, trk, adv, width = measure(size)
+    if width > max_w > 0:
+        size = max(6, min(size - 1, int(size * max_w / width)))
+        ft, trk, adv, width = measure(size)
+        while width > max_w and size > 6:
+            size -= 1
+            ft, trk, adv, width = measure(size)
+    asc, desc = ft.getmetrics()
+    sigma = max(2.0, 0.0042 * W)
+    m = int(4 * sigma) + 4
+    pad_x = m + int(size * 0.15)
+    img = Image.new("L", (int(math.ceil(width)) + 2 * pad_x, asc + desc + 2 * m), 0)
+    d = ImageDraw.Draw(img)
+    base_y = m + asc
+    if adv is None:
+        d.text((pad_x, base_y), text, font=ft, fill=255, anchor="ls")
+    else:
+        x = float(pad_x)
+        for c, a in zip(text, adv):
+            d.text((x, base_y), c, font=ft, fill=255, anchor="ls")
+            x += a + trk
+    a = np.asarray(img, np.float32) / 255.0
+    sh = _two_tier_glyph_shadow(a, W) if shadow else np.zeros_like(a)
+    # Smooth contour normals pointing outward from letterforms, used for crisp directional edge catch.
+    soft_a = cv2.GaussianBlur(a, (0, 0), 0.65)
+    gx = cv2.Sobel(soft_a, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(soft_a, cv2.CV_32F, 0, 1, ksize=3)
+    gn = np.hypot(gx, gy)
+    ex = np.divide(gx, np.maximum(gn, 1e-4)) * np.clip(gn * 1.4, 0.0, 1.0)
+    ey = np.divide(gy, np.maximum(gn, 1e-4)) * np.clip(gn * 1.4, 0.0, 1.0)
+    cap_actual = size * ratio
+    baseline = centre_pct / 100.0 * H + cap_actual / 2.0
+    left = x_pct / 100.0 * W - width / 2.0
+    return _CutInk(int(round(left)) - pad_x, int(round(baseline)) - base_y, a, sh, ex, ey)
+
+
+def _cut_ink_layer(ctx, text, kind, cap_pct, tracking_pct, centre_pct, x_pct=50.0, max_w_pct=MAX_LINE_W_PCT, shadow=True):
+    if not isinstance(text, str) or not text.strip():
+        return None
+    key = ("idcutink", text, kind, float(cap_pct), float(tracking_pct), float(centre_pct), float(x_pct), float(max_w_pct), bool(shadow))
+    return ctx.cached(key, lambda: _build_cut_ink(ctx.w, ctx.h, text, kind, float(cap_pct), float(tracking_pct),
+                                                   float(centre_pct), float(x_pct), float(max_w_pct), bool(shadow)),
+                      sizeof=lambda c: c.a.nbytes * 6 + 200)
+
+
+def _composite_cut_ink(frame, cut, reveal_fn, beam_fn, lx, ly, face_env=1.0, bevel_env=1.0):
+    """Draw static cut letters that catch the moving/grazing lamp along their leading contours."""
+    if cut is None or (face_env <= 0.001 and bevel_env <= 0.001):
+        return frame
+    lh, lw = cut.a.shape
+    fx0, fy0 = max(cut.x0, 0), max(cut.y0, 0)
+    fx1, fy1 = min(cut.x0 + lw, frame.shape[1]), min(cut.y0 + lh, frame.shape[0])
+    if fx1 <= fx0 or fy1 <= fy0:
+        return frame
+    sx0, sy0, sx1, sy1 = fx0 - cut.x0, fy0 - cut.y0, fx1 - cut.x0, fy1 - cut.y0
+    rev = reveal_fn(fx0, fy0, fx1, fy1) if reveal_fn is not None else np.ones((fy1 - fy0, fx1 - fx0), np.float32)
+    cols = np.nonzero(rev.max(axis=0) > 0.001)[0]
+    if not cols.size:
+        return frame
+    c0, c1 = int(cols[0]), int(cols[-1]) + 1
+    fx0_c, fx1_c = fx0 + c0, fx0 + c1
+    sx0_c, sx1_c = sx0 + c0, sx0 + c1
+    rev = rev[:, c0:c1]
+    a = cut.a[sy0:sy1, sx0_c:sx1_c]
+    sh = cut.sh[sy0:sy1, sx0_c:sx1_c]
+    ex = cut.ex[sy0:sy1, sx0_c:sx1_c]
+    ey = cut.ey[sy0:sy1, sx0_c:sx1_c]
+    bm = beam_fn(fx0_c, fy0, fx1_c, fy1) if beam_fn is not None else np.ones_like(rev)
+
+    reg = frame[fy0:fy1, fx0_c:fx1_c]
+    sh_a = (sh * rev * max(face_env, bevel_env * 0.45) * (1.0 - a * face_env))[:, :, None]
+    reg *= (1.0 - sh_a)
+
+    # Directional bevel along stroke contours facing the lamp.
+    bevel = -(ex * float(lx) + ey * float(ly))
+    edge_band = np.clip(np.hypot(ex, ey), 0.0, 1.0)
+    bw = bevel_env * (0.25 + 0.75 * bm)
+    catch = np.maximum(bevel, 0.0) * (72.0 * bw)
+    carve = np.maximum(-bevel, 0.0) * (36.0 * bw)
+
+    ink_bgr = np.empty((fy1 - fy0, fx1_c - fx0_c, 3), np.float32)
+    ink_bgr[:, :, 0] = np.clip(INK[2] + bm * 6.0 + catch * 0.72 - carve, 0.0, 255.0)
+    ink_bgr[:, :, 1] = np.clip(INK[1] + bm * 10.0 + catch * 0.90 - carve, 0.0, 255.0)
+    ink_bgr[:, :, 2] = np.clip(INK[0] + bm * 11.0 + catch * 1.00 - carve, 0.0, 255.0)
+
+    directional = np.clip(0.25 + 0.75 * np.maximum(bevel, 0.0), 0.0, 1.0)
+    alpha = np.clip(a * face_env + edge_band * directional * (1.0 - a) * 0.84 * bevel_env, 0.0, 1.0) * rev
+    alpha3 = alpha[:, :, None]
+    reg[...] = reg * (1.0 - alpha3) + ink_bgr * alpha3
+    return frame
+
+
+def _composite_slide_up(frame, layer, progress, fade_out=1.0, travel_px=22.0):
+    """Slide a museum-label layer cleanly up into its resting baseline, clipping softly below the line."""
+    if layer is None or progress <= 0.001 or fade_out <= 0.001:
+        return frame
+    p = min(max(float(progress), 0.0), 1.0)
+    u = 1.0 - (1.0 - p) ** 3
+    dy = int(round((1.0 - u) * travel_px))
+    env = min(1.0, p / 0.72) * float(fade_out)
+    lh, lw = layer.a.shape[:2]
+    x0, y0 = layer.x0, layer.y0 + dy
+    fx0, fy0 = max(x0, 0), max(y0, 0)
+    fx1, fy1 = min(x0 + lw, frame.shape[1]), min(y0 + lh, frame.shape[0])
+    if fx1 <= fx0 or fy1 <= fy0:
+        return frame
+    # Soft baseline clip at the resting bottom of the layer so the label emerges cleanly out of nothing.
+    y_rest_bottom = layer.y0 + lh - int(round(4.0 * SHADOW_SIGMA * frame.shape[1])) + 2
+    ys = np.arange(fy0, fy1, dtype=np.float32)
+    clip_y = np.clip((y_rest_bottom - ys) / 6.0, 0.0, 1.0)[:, None, None]
+    sl = (slice(fy0 - y0, fy1 - y0), slice(fx0 - x0, fx1 - x0))
+    a = layer.a[sl] * env * clip_y
+    reg = frame[fy0:fy1, fx0:fx1]
+    reg -= (reg - layer.rgb[sl]) * a
+    return frame
+
+
+@technique("ID-BRAND-04", "base")
+class BrandRakingSweep(_IdBase):
+    """The raking light sweep ident (variants A, B, C), acting out a museum lamp examining the painting surface.
+
+    Variant A: one slanted raking band sweeps across the darkened painting, revealing surface relief and catching the
+    cut-edge contours of the channel name, then settles onto `region` where the video title fades in and the museum label
+    line slides up before the light opens to the plain painting.
+    Variant B: a focused slanted lamp beam follows a two-move path (across the upper canvas/name, then pivoting onto
+    `region`) under a continuous slow camera push-in; the title wipes in with light and the label slides up before opening.
+    Variant C: no sweeping band; a studio lamp's elevation angle opens from extreme grazing (7 deg, strong impasto relief)
+    to frontal (90 deg, normal picture), with bevel-first channel name emergence and a soft focus on `region`.
+    """
+
+    def nominal_s(self):
+        return float(self.p["nominal_s"])
+
+    def _resolve_region(self, img):
+        reg = self.p.get("region")
+        if reg is None or reg == "":
+            return img.w / 2.0, img.h / 2.0, 0.11 * img.w, 0.11 * img.h
+        if isinstance(reg, str):
+            r = (self.ctx.asset(self.key).get("regions") or {}).get(reg)
+            if r is None:
+                rx_src, ry_src = self.ctx.point(reg, self.key)
+                return rx_src, ry_src, 0.11 * img.w, 0.11 * img.h
+            return float(r["x"]), float(r["y"]), float(r.get("rx") or 0.11 * img.w), float(r.get("ry") or 0.11 * img.h)
+        return float(reg[0]), float(reg[1]), 0.11 * img.w, 0.11 * img.h
+
+    def _region_screen(self, view):
+        rx_src, ry_src, rrx, rry = self._resolve_region(view.img)
+        sx, sy = view.to_screen(rx_src, ry_src)
+        W, H = self.ctx.w, self.ctx.h
+        sx = min(max(sx, 0.10 * W), 0.90 * W)
+        sy = min(max(sy, 0.14 * H), 0.86 * H)
+        scale = float(self.p["spot_scale"])
+        srx = min(max(rrx * view.z * 1.45 * scale, 0.08 * W), 0.25 * W)
+        sry = min(max(rry * view.z * 1.55 * scale, 0.095 * H), 0.185 * H)
+        return sx, sy, srx, sry
+
+    def __init__(self, tid, shot, ctx):
+        super().__init__(tid, shot, ctx)
+        p = self.p
+        self.variant = str(p.get("variant") or "B")
+        self.band = Band(ctx.w, ctx.h, p["band_width_pct"], p["feather"], p["angle_deg"], p["direction"])
+
+        # Compute rest-time screen bounding box once so all three texts stay visible (name dimmed) and clear of [r_top, r_bot].
+        t_rest = self.t0 + 0.62 * max(self.t1 - self.t0, 0.1)
+        v_rest = self.view(t_rest)
+        _, ry_rest, _, sry_rest = self._region_screen(v_rest)
+        ry_pct = 100.0 * ry_rest / ctx.h
+        sry_pct = 100.0 * sry_rest / ctx.h
+        r_top = ry_pct - sry_pct
+        r_bot = ry_pct + sry_pct
+        self.rest_box_pct = (r_top, r_bot)
+
+        self.fade_name_at_rest = False
+        if r_top >= 17.5 and r_bot <= 73.0:
+            name_y = min(21.0, max(10.5, r_top - 7.8))
+            title_y = max(60.0, r_bot + 6.8)
+            sub_y = min(87.5, title_y + 8.5)
+            title_y = sub_y - 8.5
+        elif r_top < 17.5:
+            name_y = min(65.0, max(50.0, r_bot + 8.0))
+            title_y = name_y + 13.5
+            sub_y = title_y + 8.5
+        else:
+            sub_y = min(72.0, r_top - 5.5)
+            title_y = sub_y - 8.5
+            name_y = max(10.5, min(21.0, title_y - 12.5))
+
+        self.name_y_pct = name_y
+        self.title_y_pct = title_y
+        self.sub_y_pct = sub_y
+        name = p["text"].upper() if isinstance(p["text"], str) else ""
+        title = p["title"].strip() if isinstance(p["title"], str) else ""
+        sub = p["subtitle"].strip().upper() if isinstance(p["subtitle"], str) else ""
+
+        self.name_cut = _cut_ink_layer(ctx, name, "eb_medium", float(p["cap_pct"]), float(p["tracking_pct"]),
+                                       name_y, shadow=bool(p["shadow"]))
+        self.title_layer = _raking_ink_layer(ctx, title, "eb_italic", float(p["title_cap_pct"]), 0.0,
+                                             title_y, max_w_pct=TITLE_MAX_W_PCT, shadow=bool(p["shadow"]), kern=True)
+        self.sub_layer = _raking_ink_layer(ctx, sub, "eb_regular", float(p["sub_cap_pct"]), float(p["sub_tracking_pct"]),
+                                           sub_y, max_w_pct=TITLE_MAX_W_PCT, shadow=bool(p["shadow"]), kern=False)
+
+    def _apply_surface(self, f, view, gain_q, warm_q, rel_q, az_rad, el_rad):
+        """Apply grazing surface relief and warm lamp tint inside the painting ROI only, keeping the matte neutral."""
+        W, H = self.ctx.w, self.ctx.h
+        p = self.p
+        strength = float(p["relief"])
+        gain_full = cv2.resize(gain_q, (W, H), interpolation=cv2.INTER_LINEAR)
+        f *= gain_full[:, :, None]
+
+        x0, y0, x1, y1 = view.img.rect(view.cx, view.cy, view.z, W, H)
+        ix0, ix1 = max(0, int(math.floor(x0)) - 1), min(W, int(math.ceil(x1)) + 1)
+        iy0, iy1 = max(0, int(math.floor(y0)) - 1), min(H, int(math.ceil(y1)) + 1)
+        if ix1 <= ix0 or iy1 <= iy0:
+            return f
+
+        # Warm lamp tint is confined to the painting surface (never turns the surrounding gallery matte brown).
+        warm_full = cv2.resize(warm_q, (W, H), interpolation=cv2.INTER_LINEAR)
+        xs_r = np.arange(ix0, ix1, dtype=np.float32) + 0.5
+        ys_r = np.arange(iy0, iy1, dtype=np.float32) + 0.5
+        ax_r = np.clip(np.minimum(xs_r - x0, x1 - xs_r), 0.0, 1.0)
+        ay_r = np.clip(np.minimum(ys_r - y0, y1 - ys_r), 0.0, 1.0)
+        rect_mask = (ay_r[:, None] * ax_r[None, :]).astype(np.float32)
+        reg = f[iy0:iy1, ix0:ix1]
+        a = (warm_full[iy0:iy1, ix0:ix1] * rect_mask)[:, :, None]
+        if float(a.max()) > 1e-4:
+            reg *= (1.0 - a * vfx._WARM_BGR)
+            reg += (255.0 * a) * vfx._WARM_BGR
+
+        if strength <= 1e-4 or float(rel_q.max()) <= 1e-4:
+            return f
+
+        k = int(round(math.log2(1.0 / view.z))) if view.z < 1.0 else 0
+        k = max(0, min(k, len(view.img.levels) - 1))
+        grad2 = _relief_gradients(self.ctx, self.key, view.img, k)
+        gx, gy, pmask = _warp_relief_roi(view.img, grad2, view.cx, view.cy, view.z, W, H, ix0, iy0, ix1, iy1)
+        rel_full = cv2.resize(rel_q, (W, H), interpolation=cv2.INTER_LINEAR)
+        rw = rel_full[iy0:iy1, ix0:ix1] * pmask
+
+        cot_el = math.cos(el_rad) / max(math.sin(el_rad), 0.27)
+        lx, ly = math.cos(az_rad), math.sin(az_rad)
+        u = -(gx * lx + gy * ly) * (strength * 0.22 * cot_el)
+        pos = np.maximum(u, 0.0)
+        neg = np.maximum(-u, 0.0)
+        delta = 0.65 * np.tanh(pos / 0.65) - 0.50 * np.tanh(neg / 0.50)
+        shade = 1.0 + delta * rw
+        reg *= shade[:, :, None]
+
+        crest = np.maximum(pos - 0.28, 0.0)
+        sheen = (0.11 * np.tanh(crest / 0.65) * rw)[:, :, None]
+        if float(sheen.max()) > 1e-4:
+            reg += sheen * gain_full[iy0:iy1, ix0:ix1, None] * (vfx._WARM_BGR * 255.0)
+        return f
+
+    def finish(self, f, t):
+        W, H = self.ctx.w, self.ctx.h
+        u = min(max(self.tau(t) / max(self.nominal, 0.1), 0.0), 1.0)
+        if u >= 0.999:
+            return f
+
+        p = self.p
+        floor = float(p["floor"])
+        wake = float(p["wake"])
+        warm = float(p["warm"])
+        angle_deg = float(p["angle_deg"])
+        feather = float(p["feather"])
+        view = self.view(t)
+        rx_s, ry_s, srx, sry = self._region_screen(view)
+
+        qres = 4
+        gw, gh = W // qres, H // qres
+        xs = (np.arange(gw, dtype=np.float32) + 0.5) * qres
+        ys = (np.arange(gh, dtype=np.float32) + 0.5) * qres
+
+        if self.variant == "A":
+            q_band = _ss_sine(ramp01(u, 0.05, 0.40))
+            s = self.band.s_grid(q_band, xs, ys)
+            b_band = self.band.profile(s)
+            r_band = vfx.smoothstep(-s / self.band.half)
+            p_rest = ss01(u, 0.34, 0.16)
+            p_open = ss01(u, 0.80, 0.18)
+
+            pool = _tilted_pool(xs, ys, rx_s, ry_s, srx * 1.15, sry * 1.25, angle_deg, 0.55)
+            beam = np.maximum(b_band, p_rest * pool)
+            bg = floor + (wake - floor) * r_band
+            gain_q = bg + (1.0 - bg) * beam
+            gain_q = (gain_q + (1.0 - gain_q) * p_open).astype(np.float32)
+            warm_q = (warm * beam * (1.0 - p_open)).astype(np.float32)
+            rel_q = (np.clip(0.20 * r_band + 0.88 * beam, 0.0, 1.0) * (1.0 - p_open)).astype(np.float32)
+
+            az_rad = math.radians(angle_deg)
+            if self.band.sign < 0:
+                az_rad += math.pi
+            el_deg = 14.0 + 76.0 * p_open
+            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, math.radians(el_deg))
+
+            name_out = 1.0 - ramp01(u, 0.80, 0.09)
+            name_rest = (1.0 - ss01(u, 0.46, 0.10)) if self.fade_name_at_rest else (1.0 - 0.22 * ss01(u, 0.46, 0.10))
+            face_env = name_rest * name_out
+            if q_band > 0.0 and face_env > 0.001:
+                _composite_cut_ink(
+                    f, self.name_cut,
+                    lambda x0, y0, x1, y1: self.band.reveal_box(q_band, x0, y0, x1, y1),
+                    lambda x0, y0, x1, y1: self.band.profile(self.band.s_grid(
+                        q_band, np.arange(x0, x1, dtype=np.float32) + 0.5, np.arange(y0, y1, dtype=np.float32) + 0.5)),
+                    math.cos(az_rad), math.sin(az_rad), face_env=face_env, bevel_env=face_env,
+                )
+
+            txt_out = 1.0 - ramp01(u, 0.80, 0.09)
+            title_env = ss01(u, 0.48, 0.10) * txt_out
+            if self.title_layer is not None and title_env > 0.001:
+                composite_layer_masked(f, self.title_layer, None, title_env)
+            sub_p = ramp01(u, 0.52, 0.08)
+            if self.sub_layer is not None and sub_p > 0.001 and txt_out > 0.001:
+                _composite_slide_up(f, self.sub_layer, sub_p, fade_out=txt_out)
+
+        elif self.variant == "B":
+            # Two-move handheld lamp path: Move 1 sweeps the upper painting and channel name; Move 2 pivots to rest on `region`.
+            name_y = self.name_y_pct / 100.0 * H
+            x_start, x_mid = 0.16 * W, 0.84 * W
+            p1 = _ss_sine(ramp01(u, 0.04, 0.29))
+            p2 = ss01(u, 0.33, 0.20)
+            p_in = ss01(u, 0.01, 0.07)
+            p_open = ss01(u, 0.85, 0.13)
+
+            if u < 0.33:
+                bx = x_start + (x_mid - x_start) * p1
+                by = name_y
+                brx, bry = 0.16 * W, 0.24 * H
+                az_rad = math.radians(angle_deg)
+            else:
+                arc = 0.06 * H * math.sin(math.pi * p2)
+                bx = x_mid + (rx_s - x_mid) * p2
+                by = name_y + (ry_s - name_y) * p2 + arc
+                brx = 0.16 * W + (srx * 1.15 - 0.16 * W) * p2
+                bry = 0.24 * H + (sry * 1.25 - 0.24 * H) * p2
+                az_rad = math.radians(angle_deg) * (1.0 - p2) + math.atan2(ry_s - name_y, rx_s - x_mid) * p2
+
+            beam_q = _tilted_pool(xs, ys, bx, by, brx, bry, angle_deg, max(feather, 0.52)) * p_in
+            # Behind Move 1, upper painting retains a subtle wake so the frame holds sculptural context.
+            q_reveal = _ss_sine(ramp01(u, 0.05, 0.27))
+            wake_q = self.band.reveal(self.band.s_grid(q_reveal, xs, ys))
+            bg = floor + (wake - floor) * wake_q * 0.85
+            gain_q = bg + (1.0 - bg) * beam_q
+            gain_q = (gain_q + (1.0 - gain_q) * p_open).astype(np.float32)
+            warm_q = (warm * beam_q * (1.0 - p_open)).astype(np.float32)
+            rel_q = (np.clip(0.18 * wake_q + 0.90 * beam_q, 0.0, 1.0) * (1.0 - p_open)).astype(np.float32)
+
+            el_deg = 14.0 + 76.0 * p_open
+            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, math.radians(el_deg))
+
+            name_out = 1.0 - ramp01(u, 0.85, 0.08)
+            name_rest = (1.0 - ss01(u, 0.48, 0.10)) if self.fade_name_at_rest else (1.0 - 0.30 * ss01(u, 0.48, 0.10))
+            face_env = name_rest * name_out
+            if q_reveal > 0.0 and face_env > 0.001:
+                _composite_cut_ink(
+                    f, self.name_cut,
+                    lambda x0, y0, x1, y1: self.band.reveal_box(q_reveal, x0, y0, x1, y1),
+                    lambda x0, y0, x1, y1: _tilted_pool(
+                        np.arange(x0, x1, dtype=np.float32) + 0.5, np.arange(y0, y1, dtype=np.float32) + 0.5,
+                        bx, by, brx, bry, angle_deg, max(feather, 0.52)),
+                    math.cos(az_rad), math.sin(az_rad), face_env=face_env, bevel_env=face_env,
+                )
+
+            txt_out = 1.0 - ramp01(u, 0.85, 0.08)
+            q_title = ramp01(u, 0.48, 0.10)
+            if self.title_layer is not None and q_title > 0.0 and txt_out > 0.001:
+                mask = None if q_title >= 1.0 else (lambda x0, y0, x1, y1: self.band.reveal_box(q_title, x0, y0, x1, y1))
+                composite_layer_masked(f, self.title_layer, mask, txt_out)
+            sub_p = ramp01(u, 0.53, 0.08)
+            if self.sub_layer is not None and sub_p > 0.001 and txt_out > 0.001:
+                _composite_slide_up(f, self.sub_layer, sub_p, fade_out=txt_out)
+
+        else:
+            # Variant C: Lamp elevation opens from low grazing (10 deg) to frontal (90 deg); no sweeping band.
+            p_mid = _ss_sine(ramp01(u, 0.06, 0.30))
+            p_hold = ramp01(u, 0.36, 0.42)
+            p_rest = ss01(u, 0.30, 0.22)
+            p_open = ss01(u, 0.78, 0.20)
+            el_deg = 10.0 + 11.0 * p_mid + 8.0 * p_hold + 61.0 * p_open
+            el_rad = math.radians(min(el_deg, 90.0))
+
+            # Directional raking falloff across the painting from the lamp side, levelling out as elevation reaches 90 deg.
+            nx = (xs[None, :] / W - 0.5) * 0.55 + (ys[:, None] / H - 0.5) * 0.25
+            falloff = np.clip(1.0 - nx * (0.34 * math.cos(el_rad)), 0.74, 1.22)
+            base_lvl = max(floor, 0.11) + 0.12 * p_mid + 0.05 * p_hold
+            pool = _tilted_pool(xs, ys, rx_s, ry_s, srx * 1.22, sry * 1.32, angle_deg, 0.58)
+            gain_q = np.clip(base_lvl * falloff, 0.0, 1.0)
+            gain_q = gain_q + (1.0 - gain_q) * (p_rest * pool * 0.96)
+            gain_q = (gain_q + (1.0 - gain_q) * p_open).astype(np.float32)
+
+            warm_q = (warm * (0.28 + 0.72 * p_rest * pool) * (1.0 - p_open)).astype(np.float32)
+            rel_q = ((0.68 + 0.32 * p_rest * pool) * (1.0 - p_open)).astype(np.float32)
+            az_rad = math.radians(angle_deg - 18.0)
+            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, el_rad)
+
+            name_out = 1.0 - ramp01(u, 0.78, 0.09)
+            bevel_env = ss01(u, 0.08, 0.14) * name_out
+            face_base = ss01(u, 0.14, 0.18)
+            face_rest = (1.0 - ss01(u, 0.36, 0.12)) if self.fade_name_at_rest else (1.0 - 0.20 * ss01(u, 0.42, 0.12))
+            face_env = face_base * face_rest * name_out
+            if bevel_env > 0.001 or face_env > 0.001:
+                _composite_cut_ink(
+                    f, self.name_cut, None, None,
+                    math.cos(az_rad), math.sin(az_rad), face_env=face_env, bevel_env=bevel_env,
+                )
+
+            txt_out = 1.0 - ramp01(u, 0.78, 0.09)
+            title_env = ss01(u, 0.37, 0.11) * txt_out
+            if self.title_layer is not None and title_env > 0.001:
+                composite_layer_masked(f, self.title_layer, None, title_env)
+            sub_p = ramp01(u, 0.42, 0.08)
+            if self.sub_layer is not None and sub_p > 0.001 and txt_out > 0.001:
+                _composite_slide_up(f, self.sub_layer, sub_p, fade_out=txt_out)
+
+        return f
+
+    @classmethod
+    def default_params(cls, tid, spec, context, bundle):
+        d = cls._defaults(tid, spec, context, bundle)
+        name = bundle.sv("identity", "channel_name", None)
+        if isinstance(name, str) and name.strip():
+            d["text"] = name
+        reg = context.get("region") or context.get("focus")
+        if reg is not None:
+            d["region"] = reg
         return d

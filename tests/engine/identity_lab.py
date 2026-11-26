@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-IDENTITY_IDS = ["ID-OPEN-01", "ID-LABEL-01", "ID-OPEN-02", "ID-BRAND-01", "ID-BRAND-02", "ID-MARK-01", "ID-MARK-02", "ID-BRAND-03"]
+IDENTITY_IDS = ["ID-OPEN-01", "ID-LABEL-01", "ID-OPEN-02", "ID-BRAND-01", "ID-BRAND-02", "ID-MARK-01", "ID-MARK-02", "ID-BRAND-03", "ID-BRAND-04"]
 
 
 def _shot(n, start, tech, asset, camera, extra=None, overlays=None, transition=None):
@@ -28,7 +28,7 @@ def append_identity_shots(sb: dict, asset: str, camera: list) -> dict:
     t = float(sb["end"]["t"])                      # the new shots start where the last old shot ended
     plan = [("CAM-01", 12.0, [("ID-OPEN-01", 0.0, 9.0), ("ID-LABEL-01", 6.2, 4.5)]),
             ("CAM-01", 6.0, [("ID-OPEN-02", 0.0, 5.0)]),
-            ("ID-BRAND-01", 5.0, []), ("ID-BRAND-02", 4.0, []), ("ID-MARK-01", 3.2, []), ("ID-MARK-02", 3.0, []), ("ID-BRAND-03", 9.1, [])]
+            ("ID-BRAND-01", 5.0, []), ("ID-BRAND-02", 4.0, []), ("ID-MARK-01", 3.2, []), ("ID-MARK-02", 3.0, []), ("ID-BRAND-03", 9.1, []), ("ID-BRAND-04", 9.1, [])]
     n = 0
     for tech, length, overlays in plan:
         n += 1
@@ -36,6 +36,8 @@ def append_identity_shots(sb: dict, asset: str, camera: list) -> dict:
         extra = {"title": "5. The Mirror"} if tech.startswith("ID-MARK") else ({"text": "RAKING LIGHT"} if tech.startswith("ID-BRAND") else None)
         if tech == "ID-BRAND-03":                                                        # the beat that writes the video's title: give it both lines
             extra = {"text": "RAKING LIGHT", "title": "The Mirror in the Arnolfini Portrait", "subtitle": "The Arnolfini Portrait \u00b7 Jan van Eyck, 1434"}
+        elif tech == "ID-BRAND-04":
+            extra = {"text": "RAKING LIGHT", "title": "The Mirror in the Portrait", "subtitle": "Portrait \u00b7 Painter, 1434", "variant": "B"}
         sb["shots"].append(_shot(n, t, tech, asset, camera, extra, ovs))
         t += length
     sb["end"] = {"t": round(t + 3.0, 3), "fade_s": 0}

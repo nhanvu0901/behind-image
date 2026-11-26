@@ -118,7 +118,7 @@ IDS = ["KEY-01", "NUM-01", "DOC-01"]
 def test_the_three_entries_are_the_last_of_the_registry_in_this_order_after_the_map():
     ids = [t["id"] for t in R.load_bundle("gae").techniques]
     assert ids[-4:] == ["MAP-01", "KEY-01", "NUM-01", "DOC-01"]
-    assert len(ids) == 86
+    assert len(ids) == 87
 
 
 @pytest.mark.parametrize("tid", IDS)

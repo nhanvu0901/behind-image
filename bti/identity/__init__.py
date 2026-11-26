@@ -5,10 +5,10 @@ the `identity` block of style.json lists. Contract: docs/design/2026-11-18-ident
 """
 from __future__ import annotations
 
-from .apply import REASONS, apply_identity, fit_camera_to_box, with_video_title
+from .apply import REASONS, apply_identity, choose_rest_region, fit_camera_to_box, with_video_title
 from .config import IdentityConfig, IdentityError, StyleDef, is_mismatch, need, options, read
 
-__all__ = ["apply_identity", "fit_camera_to_box", "with_video_title", "video_title_of", "REASONS", "IdentityConfig", "IdentityError", "StyleDef", "is_mismatch", "need", "options", "read", "chosen_style"]
+__all__ = ["apply_identity", "choose_rest_region", "fit_camera_to_box", "with_video_title", "video_title_of", "REASONS", "IdentityConfig", "IdentityError", "StyleDef", "is_mismatch", "need", "options", "read", "chosen_style"]
 
 
 def chosen_style(storyboard, style) -> str | None:

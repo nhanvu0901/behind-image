@@ -37,7 +37,8 @@ CAMERA = {
 }
 NAMES = {"MAP-01": "Bản đồ", "STATIC-06": "Bản đồ và tuyến", "TIME-01": "Trục thời gian", "TREE-01": "Sơ đồ quan hệ", "STATE-01": "Một tranh, hai trạng thái"}
 CARD = {"X-CARD-01": "Thẻ chương", "X-CARD-02": "Thẻ tiêu đề", "X-CARD-03": "Credit cuối phim", "X-CARD-04": "Thẻ câu hỏi", "TXT-01": "Tiêu đề chương", "ID-MARK-01": "Mốc chương",
-        "ID-MARK-02": "Mốc chương", "ID-BRAND-01": "Tên kênh", "ID-BRAND-02": "Tên kênh", "ID-BRAND-03": "Tên kênh và tựa video"}
+        "ID-MARK-02": "Mốc chương", "ID-BRAND-01": "Tên kênh", "ID-BRAND-02": "Tên kênh", "ID-BRAND-03": "Tên kênh và tựa video",
+        "ID-BRAND-04": "Tên kênh và tựa video"}
 OPENING = "Mở đầu: cả bức tranh"       # the program's opening shot (the shot with the reserved id `bti.draft.zones.OPENING_ID`)
 OVERLAY = {
     "HI-01": "vòng sáng", "AN-01": "khoanh tròn", "AN-02": "viền quanh", "AN-03": "tia phối cảnh", "AN-05": "thước kích thước", "AN-06": "lưới", "X-ANN-01": "nhãn chi tiết",

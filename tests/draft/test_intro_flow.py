@@ -139,7 +139,7 @@ def test_a_full_compile_writes_the_opening_shot_the_beat_and_the_cards(tmp_path,
     # the beat: 9.1 s, 1.5 s after the last word of the cold open, with the three texts; the card ends where the silence ends
     beat = by_technique(sb, "ID-BRAND")[0]
     i = sb["shots"].index(beat)
-    assert beat["technique"] == "ID-BRAND-03" and t1[i] - t0[i] == pytest.approx(9.1) and t0[i] == pytest.approx(timing["chapters"][0]["end"] + 1.5, abs=1e-3)
+    assert beat["technique"] == "ID-BRAND-04" and beat["params"]["variant"] == "B" and t1[i] - t0[i] == pytest.approx(9.1) and t0[i] == pytest.approx(timing["chapters"][0]["end"] + 1.5, abs=1e-3)
     assert beat["params"]["text"] == "RAKING LIGHT" and beat["params"]["title"] == "Intro" and beat["params"]["subtitle"] == "Some Painter, 1434"       # no video title: the painting's title (the project's, "intro" here) and artist, year
     marks = by_technique(sb, "ID-MARK")
     assert len(marks) == 2
@@ -283,7 +283,7 @@ def test_an_old_layout_storyboard_is_clean_and_retime_after_a_lead_of_5_s_insert
     assert ov == ["ID-OPEN-01", "ID-LABEL-01"]                             # the opening overlays moved onto the opening shot ...
     assert [o["technique"] for o in out["shots"][1]["overlays"] if o["technique"].startswith("ID-")] == ["ID-LABEL-01"]       # ... while label continuation stays on s0001 without ID-OPEN-01
     assert out["shots"][1]["start"] == {"w": 0, "off": -0.35, "text": "w0"}
-    assert by_technique(out, "ID-BRAND")[0]["technique"] == "ID-BRAND-03" and by_technique(out, "ID-BRAND")[0]["params"]["subtitle"] == "Some Painter, 1434"
+    assert by_technique(out, "ID-BRAND")[0]["technique"] == "ID-BRAND-04" and by_technique(out, "ID-BRAND")[0]["params"]["variant"] == "B" and by_technique(out, "ID-BRAND")[0]["params"]["subtitle"] == "Some Painter, 1434"
     tm2, a, b = times(out, new_t)
     k = out["shots"].index(by_technique(out, "ID-BRAND")[0])
     assert b[k] - a[k] == pytest.approx(9.1, abs=1e-3)

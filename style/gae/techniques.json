@@ -13965,6 +13965,291 @@
    ]
   },
   {
+   "id": "ID-BRAND-04",
+   "key": "brand_raking_sweep",
+   "name": "Raking light sweep over relief onto detail",
+   "label_vi": "Quét đèn rọi nổi bề mặt tranh",
+   "category": "card",
+   "kind": "base",
+   "intents": [
+    "structure"
+   ],
+   "description": "The painting dims and a grazing raking light reveals surface relief computed from the painting's own brushwork and folds. Variant B (default) follows a two-move handheld lamp path across the upper canvas onto a target region under a slow push-in, wiping in the video title and sliding the museum label; Variant A sweeps a straight slanted band; Variant C opens the lamp angle from extreme grazing to frontal.",
+   "usage_rule": "Default channel-name ident of the raking style (variant B, nominal 8.5 s); A and C remain selectable as parameters.",
+   "channel_usage": "core",
+   "offered": false,
+   "hidden_reason": {
+    "code": "program",
+    "use": [],
+    "note": "The program writes the channel-name beat and the video's title after the cold open; you never choose it."
+   },
+   "slots": [
+    {
+     "name": "image",
+     "type": "image",
+     "required": true,
+     "region": true
+    }
+   ],
+   "params": [
+    {
+     "name": "camera",
+     "type": "camera",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "shadow",
+     "type": "bool",
+     "default": true,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "variant",
+     "type": "enum",
+     "default": "B",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "A",
+      "B",
+      "C"
+     ],
+     "measured": null
+    },
+    {
+     "name": "region",
+     "type": "point",
+     "default": null,
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "text",
+     "type": "string",
+     "default": "RAKING LIGHT",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "title",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "subtitle",
+     "type": "string",
+     "default": "",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": null,
+     "measured": null,
+     "pattern": "^.{0,120}$",
+     "pattern_hint": "Gõ một dòng, tối đa 120 ký tự."
+    },
+    {
+     "name": "nominal_s",
+     "type": "number",
+     "default": 9.1,
+     "min": 1.5,
+     "max": 20.0,
+     "unit": "s",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "floor",
+     "type": "number",
+     "default": 0.1,
+     "min": 0.0,
+     "max": 0.8,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "wake",
+     "type": "number",
+     "default": 0.19,
+     "min": 0.0,
+     "max": 0.9,
+     "unit": "x brightness",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "relief",
+     "type": "number",
+     "default": 1.0,
+     "min": 0.0,
+     "max": 2.5,
+     "unit": "strength",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "direction",
+     "type": "enum",
+     "default": "left_to_right",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": [
+      "right_to_left",
+      "left_to_right"
+     ],
+     "measured": null
+    },
+    {
+     "name": "band_width_pct",
+     "type": "number",
+     "default": 18,
+     "min": 4,
+     "max": 60,
+     "unit": "% W",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "feather",
+     "type": "number",
+     "default": 0.45,
+     "min": 0.05,
+     "max": 1.0,
+     "unit": "ratio",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "angle_deg",
+     "type": "number",
+     "default": 12,
+     "min": -45,
+     "max": 45,
+     "unit": "deg",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "warm",
+     "type": "number",
+     "default": 0.16,
+     "min": 0.0,
+     "max": 1.0,
+     "unit": "alpha",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "spot_scale",
+     "type": "number",
+     "default": 1.0,
+     "min": 0.4,
+     "max": 2.5,
+     "unit": "ratio",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "cap_pct",
+     "type": "number",
+     "default": 7.5,
+     "min": 1.0,
+     "max": 20.0,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "tracking_pct",
+     "type": "number",
+     "default": 25,
+     "min": 0,
+     "max": 100,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "title_cap_pct",
+     "type": "number",
+     "default": 4.4,
+     "min": 1.0,
+     "max": 20.0,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_cap_pct",
+     "type": "number",
+     "default": 2.1,
+     "min": 1.0,
+     "max": 20.0,
+     "unit": "% H",
+     "values": null,
+     "measured": null
+    },
+    {
+     "name": "sub_tracking_pct",
+     "type": "number",
+     "default": 14,
+     "min": 0,
+     "max": 100,
+     "unit": "% em",
+     "values": null,
+     "measured": null
+    }
+   ],
+   "timing": {
+    "default_s": 9.1,
+    "min_s": 1.5,
+    "max_s": 20.0,
+    "anchor": "shot_start"
+   },
+   "engine": {
+    "status": "done",
+    "available": true,
+    "impl": "bti.engine.techniques.identity.BrandRakingSweep",
+    "reason": null,
+    "notes": "Draws the picture as CAM-01 draws it, computes multi-scale luminance relief gradients cached per pyramid level, illuminates with a grazing raking light (variant B default: two-move path + slow push-in; variant A: single straight sweep + rest on region; variant C: lamp elevation opening from 7 deg to 90 deg), and renders cut-letter bevel highlights on the channel name plus video title and museum label."
+   },
+   "preview": {
+    "reel_start": 0,
+    "reel_end": 9.1,
+    "clip": "previews/ID-BRAND-04.mp4",
+    "thumb": "previews/ID-BRAND-04.jpg"
+   },
+   "evidence": [
+    "docs/design/2026-11-18-identity-raking-light.md sections 2-4"
+   ]
+  },
+  {
    "id": "ID-MARK-01",
    "key": "mark_raking_light",
    "name": "Chapter mark written by light",
