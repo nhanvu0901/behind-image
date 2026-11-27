@@ -5,6 +5,17 @@ from pathlib import Path
 from bti.visual.validate import validate
 
 
+def sync_tighten(root: Path) -> None:
+    """Copy the session's latest region answers into the tighten helper's workspace."""
+    from bti.fsio import atomic_replace
+    source = root / 'out/tighten.json'
+    destination = root / 'tighten/out/tighten.json'
+    if source.is_file() and destination.parent.is_dir():
+        part = destination.with_name(destination.name + '.part')
+        part.write_bytes(source.read_bytes())
+        atomic_replace(part, destination)
+
+
 def run_check(root: Path) -> dict:
     root = Path(root)
     try:
@@ -20,10 +31,11 @@ def run_check(root: Path) -> dict:
             if (root / 'tighten').is_dir():
                 from bti.picks.auto import helper
                 try:
+                    sync_tighten(root)
                     report = helper.run_check(root / 'tighten')
-                    issues.extend({'rule': 'region', 'moment': None, 'message': e.replace('out/tighten.json', 'tighten/out/tighten.json')} for e in report.errors)
+                    issues.extend({'rule': 'region', 'moment': None, 'message': e.replace('look/', 'tighten/look/')} for e in report.errors)
                 except SystemExit as e:
-                    issues.append({'rule': 'region', 'moment': None, 'message': str(e).replace('out/tighten.json', 'tighten/out/tighten.json')})
+                    issues.append({'rule': 'region', 'moment': None, 'message': str(e).replace('look/', 'tighten/look/')})
             return {'ok': not issues, 'issues': issues}
         doc = json.loads((root / 'out/visual.json').read_text(encoding='utf-8'))
         timing = json.loads((root / 'inputs/timing.json').read_text(encoding='utf-8'))

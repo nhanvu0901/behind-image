@@ -44,14 +44,16 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
                 data = json.loads((ws / 'tighten/inputs/regions.json').read_text(encoding='utf-8'))['regions'][0]
                 w, h = data['cutout_size']
                 row = {'name': 'HEAD', 'action': 'tight', 'box': [int(w*.2), int(h*.2), int(w*.8), int(h*.8)], 'thing': 'a human face', 'confirmed': False}
-                target = ws / 'tighten/out/tighten.json'
+                target = ws / 'out/tighten.json'
                 target.write_text(json.dumps({'schema': 'bti.picks.tighten/1', 'regions': [row]}))
-                assert check(1) is not None
+                first_check = check(1)
+                assert 'tighten/look/check_' in first_check
+                assert 'tighten/out/tighten.json' not in first_check
                 row['confirmed'] = True
                 target.write_text(json.dumps({'schema': 'bti.picks.tighten/1', 'regions': [row]}))
                 assert check(2) is None
                 if wrong_path:
-                    target.replace(ws / 'out/tighten.json')
+                    target.replace(ws / 'tighten/out/tighten.json')
                 return SimpleNamespace(status='ok', steps=2, turns=2, repairs=1, elapsed=0)
             moments = [{'id': f'm{i:04}', 'line': b['id'], 'w0': b['w0'], 'w1': b['w1'], 'about': None, 'show': {'whole': True}, 'move': 'hold', 'from': 'whole', 'say': [], 'why': 'Toàn cảnh.'} for i, b in enumerate(beats)]
             if region:
@@ -91,8 +93,6 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
     assert all(doc.load(pdir)['beats'][b['id']]['items'] for b in beats)
     if region:
         assert doc.load(pdir)['assets']['A']['regions']['HEAD']['tight'] is True
-        if wrong_path:
-            assert 'tighten/out/tighten.json' in str(result)
     if map_view:
         assert store.load(pdir)['moments'][0]['show']['map']['picture'] in doc.load(pdir)['assets']
         assert doc.load(pdir)['beats'][beats[0]['id']]['items'][0]['role'] == 'map'
