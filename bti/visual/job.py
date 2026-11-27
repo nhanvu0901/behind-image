@@ -136,18 +136,29 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
                                           guard_factory=seams.get('guard_factory'))
         except DraftError as e:
             raise PartError(e.code, session.refuse_text(e)) from e
+        # Recover unambiguous misplaced outputs only after the session has ended.
+        from bti.fsio import atomic_replace
+        mode = json.loads((root / 'inputs/context.json').read_text(encoding='utf-8'))['mode']
+        paths = [('visual.json', 'out/visual.json'), ('regions.json', 'out/regions.json')] if mode == 'plan' else [('choice.json', 'out/choice.json'), ('tighten/out/choice.json', 'out/choice.json'), ('out/tighten.json', 'tighten/out/tighten.json')]
+        notes = []
+        for source, destination in paths:
+            src, dest = root / source, root / destination
+            if dest.parent.is_dir() and not dest.exists() and src.is_file():
+                atomic_replace(src, dest)
+                notes.append(f'Moved {source} to {destination}.')
         if outcome.retry_after_seconds:
             ctx.meta.update(draft_run.rate_limit_fields(outcome.retry_after_seconds))
         if outcome.status != 'ok' or problems():
             raise PartError(outcome.code or 'picks_auto_no_output', outcome.message or problems() or 'Agent không viết được kết quả.')
+        return notes
 
     def run_plan(ctx):
         ws = workspace.build_plan(inp, timing)
-        invoke(ws, ctx, limits_plan, 'Agent đang viết kịch bản hình')
+        notes = invoke(ws, ctx, limits_plan, 'Agent đang viết kịch bản hình')
         state['visual'] = json.loads((ws / 'out/visual.json').read_text(encoding='utf-8'))
         f = ws / 'out/regions.json'
         state['regions'] = json.loads(f.read_text(encoding='utf-8')) if f.exists() else {}
-        return {'moments': len(state['visual']['moments'])}
+        return {'moments': len(state['visual']['moments']), 'notes': notes}
 
     def run_search(ctx):
         visual = state['visual']
@@ -182,13 +193,13 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
             state['choice'] = {}
             return {'chosen': 0}
         ws = workspace.build_choose(pdir, visual, found, main=inp.picks['assets'][inp.painting.key], regions=state['regions'], limits=limits_choose)
-        invoke(ws, ctx, limits_choose, 'Agent đang chọn hình')
+        notes = invoke(ws, ctx, limits_choose, 'Agent đang chọn hình')
         state['choice'] = json.loads((ws / 'out/choice.json').read_text(encoding='utf-8'))
         if state['regions']:
             from bti.picks.auto import helper
             rep = helper.run_check(ws / 'tighten')
             state['region_choices'] = rep.value['regions']
-        return {'chosen': len(state['choice'])}
+        return {'chosen': len(state['choice']), 'notes': notes}
 
     def run_web(ctx):
         import time
@@ -217,13 +228,13 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         second_view = webround.second_search_view(found, first)
         second_visual = {**visual, 'wanted': [w for w in visual['wanted'] if w['id'] in new_ids]}
         ws = workspace.build_choose(pdir, second_visual, second_view)
-        invoke(ws, ctx, limits_choose, 'Agent đang chọn hình tìm thêm')
+        notes = invoke(ws, ctx, limits_choose, 'Agent đang chọn hình tìm thêm')
         second = json.loads((ws / 'out/choice.json').read_text(encoding='utf-8'))
         for wid, row in second.items():
             if row['pick'] is not None:
                 row['pick'] = found['round2']['map'][wid][row['pick'] - 1]
                 state['choice'][wid] = row
-        return {'chosen': len(second)}
+        return {'chosen': len(second), 'notes': notes}
 
     def run_write(ctx):
         writer = write.Writer(pdir, 'agent:' + resolved.model, redo=True)
