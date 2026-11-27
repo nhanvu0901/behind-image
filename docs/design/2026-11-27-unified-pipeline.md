@@ -95,6 +95,24 @@ Validity (checked when the model writes it, with messages a model can act on; no
 - V12 text on screen (`sub`, `read.text`, `labels`) comes from the narration or the picture's record; never a file
   name, a source name or a guess.
 
+### 4.2a What the validator proves and what stays a judgment (added after the first worker's report, 2026-11-27)
+The validator (`bti/visual/validate.py`) proves the mechanical part of each rule and says so; the rest is the
+planner's judgment, examined by the viewer review, never "proved" by matching text.
+- V1: a moment lies inside one line; a picture that runs over two lines is two moments with the same `show` (the
+  composer joins neighbours that show the same thing, rule C1).
+- V6: a thing with `strip: true` MUST carry `"term": true` on its cast entry (the planner's statement that the
+  narration uses an unfamiliar word for it); an idea or a text with `strip: true` is refused. Whether the word really
+  is unfamiliar is judgment.
+- V7: at most 6 words and no name or `also` inside: proved. "No more certainty than the narration": judgment.
+- V8: a `point` region exists on the main painting and is not a `shown_by` region of a cast member of kind person:
+  proved. Whether it lies in the frame is not the planner's concern: the composer frames the union of a list's targets.
+- V9, V10: counted and reported with the moments; not refused.
+- V11: a `map` has two or more places and a `pair` two pictures of the pool (or wants): proved. "A journey" is judgment.
+- V12: a text that equals an asset key, a file name, a pattern such as `DSC04385` or "image 872", or a bare domain is
+  refused; where the words come from is judgment.
+- `map` and `pair` are forms of SHOW, not intents. A SHOW is never "unknown": the planner always decides; the
+  converter of old projects writes `{"whole": true}` with a `why` that says the region was not recorded.
+
 ### 4.3 The storyboard
 `storyboard.json` keeps its schema. A composed storyboard carries `made_from` (hashes of the visual script, the timing
 and the style) and each composed shot its `moment`. A shot the owner edited by hand is `locked` and survives a
