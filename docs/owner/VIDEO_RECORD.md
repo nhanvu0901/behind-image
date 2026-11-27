@@ -64,6 +64,22 @@ owner wants; it is updated whenever a comment adds to it or changes it. The owne
 
 ## 2. Renders
 
+### 2026-11-27 (afternoon): Arnolfini, the unified pipeline, Opus 5.5 High
+- **File:** `~/Desktop/Claude Render/eyck-the-arnolfini-portrait.mp4` (793,634,581 bytes, 11:13). Project
+  `arnolfini-v3` on the visual path, code `8763389`. Visual script (126 moments), pictures, viewer review (2 rounds)
+  and music (9 cues) by Opus 5.5 High; composed by code; narration and voice kept from 11-22. The previous file is
+  kept as "(opus medium 26-11)". Sheets: `~/Desktop/Claude Render/arnolfini-visual-2026-11-27/`.
+- **Measured (scorecard after compose):** 134 shots; whole painting small 2.8% (was 11.4%); 21 borrowed pictures,
+  116 s, 17% (was 5, 20 s); longest stretch without one 79 s (was 554 s); 0 pointing marks (was 50); 6 name strips,
+  none repeating the name, none on an ordinary thing; 0 moments whose subject is not shown (was 40); every chapter
+  mark on a filling frame. Sound: -14.1 LUFS, peak -1.3 dB; the music is now audible (ident -21.6 dB mean against
+  speech -16.7, was -29 against -17).
+- **Known weaknesses (mine):** no pointing mark at all, even for small things (the carved saint); some borrowed
+  pictures without a caption (the silk, one van Eyck portrait); the couple from the waist up still returns often;
+  8 review findings left (5 picture mismatches, 2 missing context, 1 text); no picture found for the earliest
+  inventory.
+- **GOOD / NOT GOOD / WANTS (owner):** (waiting for the owner's comments)
+
 ### 2026-11-26 (night): Arnolfini, Opus 5.5 Medium, with music and ident B
 - **File:** `~/Desktop/Claude Render/eyck-the-arnolfini-portrait.mp4` (825,760,041 bytes, 11:13). Project
   `arnolfini-v3`, code `2af61c6` (tag `state-2026-11-26`). Picture choice, draft, viewer review (2 rounds) and music by
