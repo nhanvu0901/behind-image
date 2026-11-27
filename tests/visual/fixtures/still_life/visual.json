@@ -1,0 +1,282 @@
+{
+  "schema": "bti.visual/1",
+  "made_from": {
+    "narration": "fixture-narration",
+    "timing": "fixture-timing"
+  },
+  "cast": [
+    {
+      "id": "vase",
+      "kind": "thing",
+      "name": "vase",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "VASE"
+        }
+      ]
+    },
+    {
+      "id": "rose",
+      "kind": "thing",
+      "name": "rose",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "ROSE"
+        }
+      ]
+    },
+    {
+      "id": "pear",
+      "kind": "thing",
+      "name": "pear",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "PEAR"
+        }
+      ]
+    },
+    {
+      "id": "apple",
+      "kind": "thing",
+      "name": "apple",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "APPLE"
+        }
+      ]
+    },
+    {
+      "id": "cloth",
+      "kind": "thing",
+      "name": "cloth",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "CLOTH"
+        }
+      ]
+    },
+    {
+      "id": "plate",
+      "kind": "thing",
+      "name": "plate",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "PLATE"
+        }
+      ]
+    },
+    {
+      "id": "glass",
+      "kind": "thing",
+      "name": "glass",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "GLASS"
+        }
+      ]
+    },
+    {
+      "id": "lemon",
+      "kind": "thing",
+      "name": "lemon",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "LEMON"
+        }
+      ]
+    },
+    {
+      "id": "stem",
+      "kind": "thing",
+      "name": "stem",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "STEM"
+        }
+      ]
+    },
+    {
+      "id": "table",
+      "kind": "thing",
+      "name": "table",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "TABLE"
+        }
+      ]
+    }
+  ],
+  "wanted": [],
+  "moments": [
+    {
+      "id": "m0001",
+      "line": "b0001",
+      "w0": 0,
+      "w1": 5,
+      "about": "vase",
+      "show": {
+        "region": "VASE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy vase trong tranh."
+    },
+    {
+      "id": "m0002",
+      "line": "b0002",
+      "w0": 5,
+      "w1": 10,
+      "about": "rose",
+      "show": {
+        "region": "ROSE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy rose trong tranh."
+    },
+    {
+      "id": "m0003",
+      "line": "b0003",
+      "w0": 10,
+      "w1": 15,
+      "about": "pear",
+      "show": {
+        "region": "PEAR"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy pear trong tranh."
+    },
+    {
+      "id": "m0004",
+      "line": "b0004",
+      "w0": 15,
+      "w1": 20,
+      "about": "apple",
+      "show": {
+        "region": "APPLE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy apple trong tranh."
+    },
+    {
+      "id": "m0005",
+      "line": "b0005",
+      "w0": 20,
+      "w1": 25,
+      "about": "cloth",
+      "show": {
+        "region": "CLOTH"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy cloth trong tranh."
+    },
+    {
+      "id": "m0006",
+      "line": "b0006",
+      "w0": 25,
+      "w1": 30,
+      "about": "plate",
+      "show": {
+        "region": "PLATE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy plate trong tranh."
+    },
+    {
+      "id": "m0007",
+      "line": "b0007",
+      "w0": 30,
+      "w1": 35,
+      "about": "glass",
+      "show": {
+        "region": "GLASS"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy glass trong tranh."
+    },
+    {
+      "id": "m0008",
+      "line": "b0008",
+      "w0": 35,
+      "w1": 40,
+      "about": "lemon",
+      "show": {
+        "region": "LEMON"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy lemon trong tranh."
+    },
+    {
+      "id": "m0009",
+      "line": "b0009",
+      "w0": 40,
+      "w1": 45,
+      "about": "stem",
+      "show": {
+        "region": "STEM"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy stem trong tranh."
+    },
+    {
+      "id": "m0010",
+      "line": "b0010",
+      "w0": 45,
+      "w1": 50,
+      "about": "table",
+      "show": {
+        "region": "TABLE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy table trong tranh."
+    }
+  ]
+}

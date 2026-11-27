@@ -451,6 +451,30 @@ Example:
 
 Sentence in `changes`: `Chú thích của {pic}: đã lưu`
 
+### `set_picture_info`
+
+Set the cast shown by a picture and its period.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `set_picture_info` | yes | The operation name. |
+| `asset` | text | yes | An asset key of the picks document (such as A12), or a $ref made by an import earlier in the batch. |
+| `shows` | list of text | yes | Cast ids shown by this picture. |
+| `period` | one of `then`, `later`, `today`, `None` | yes | When the picture depicts its subject, or null if unknown. |
+
+Example:
+
+```json
+{
+  "op": "set_picture_info",
+  "asset": "B",
+  "shows": [],
+  "period": null
+}
+```
+
+Sentence in `changes`: `Thông tin của {pic}: đã lưu`
+
 ### `set_content_box`
 
 Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph round a panel. The camera of the video never leaves the box of the main painting; the program finds one by itself when a picture is imported or made the main one, and this replaces what it found.

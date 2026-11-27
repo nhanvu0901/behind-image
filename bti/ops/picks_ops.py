@@ -453,6 +453,27 @@ def set_caption(ctx, o):
     ctx.say({"asset": key}, pic=_pic(ctx, key))
 
 
+# visualdoc: the cast ids and period belong to the picture, shared by all uses.
+@op("picks", "set_picture_info",
+    summary="Set the cast shown by a picture and its period.",
+    schema=S.obj("set_picture_info", ["asset", "shows", "period"], {
+        "asset": ASSET, "shows": S.array(SUBJECT_ID, "Cast ids shown by this picture.", max_items=1000),
+        "period": S.string("When the picture depicts its subject, or null if unknown.", enum=["then", "later", "today", None], nullable=True)}),
+    example={"op": "set_picture_info", "asset": "B", "shows": [], "period": None},
+    sentences="Thông tin của {pic}: đã lưu")
+def set_picture_info(ctx, o):
+    ctx.whole_document("set_picture_info")
+    key = _asset(ctx, o["asset"], "asset")
+    if key == ctx.doc.get("main_asset"):
+        ctx.bad("asset", "picture pool fields belong to a borrowed picture")
+    if len(set(o["shows"])) != len(o["shows"]):
+        ctx.bad("shows", "list each cast id once")
+    ctx.touch("asset:" + key)
+    ctx.doc["assets"][key]["shows"] = list(o["shows"])
+    ctx.doc["assets"][key]["period"] = o["period"]
+    ctx.say({"asset": key}, pic=_pic(ctx, key))
+
+
 # ---------------------------------------------------------------- panelbox (2026-11-20): the painted area of a picture
 @op("picks", "set_content_box",
     summary="Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph "

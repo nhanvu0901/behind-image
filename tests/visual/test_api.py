@@ -1,0 +1,59 @@
+import json
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+from fastapi.testclient import TestClient
+from bti.editor.common import ApiError
+from bti.visual.api import router
+from test_validation import valid, timing
+
+
+def test_visual_routes_validate_and_check_revision(tmp_path):
+    project = tmp_path / "demo"
+    project.mkdir()
+    (project / "timing.json").write_text(json.dumps(timing()), encoding="utf-8")
+    app = FastAPI()
+    app.state.projects_root = tmp_path
+    @app.exception_handler(ApiError)
+    async def api_error(request: Request, exc: ApiError):
+        return JSONResponse({"detail": exc.detail, **exc.extra}, status_code=exc.status)
+    app.include_router(router)
+    client = TestClient(app)
+    assert client.get("/api/projects/demo/visual").json()["visual"] is None
+    body = {"visual": valid(), "base_rev": None, "actor": "agent:test"}
+    saved = client.put("/api/projects/demo/visual", json=body)
+    assert saved.status_code == 200
+    assert saved.json()["visual"] == valid()
+    assert client.put("/api/projects/demo/visual", json=body).status_code == 409
+    body["base_rev"] = saved.json()["rev"]
+    body["visual"]["moments"][0]["w1"] = 1
+    refused = client.put("/api/projects/demo/visual", json=body)
+    assert refused.status_code == 422
+    assert refused.json()["issues"]
+    assert client.get("/api/projects/demo/visual").json()["rev"] == saved.json()["rev"]
+
+
+def test_editor_app_mounts_visual_routes(tmp_path):
+    from bti.editor.app import create_app
+    (tmp_path / "demo").mkdir()
+    app = create_app(projects_root=tmp_path, engine_module=None, media_module=None, output_root=False)
+    client = TestClient(app)
+    response = client.get("/api/projects/demo/visual")
+    assert response.status_code == 200
+    assert response.json()["visual"] is None
+    (tmp_path / "demo" / "timing.json").write_text(json.dumps(timing()), encoding="utf-8")
+    saved = client.put("/api/projects/demo/visual", json={"visual": valid(), "base_rev": None, "actor": "agent:test"})
+    assert saved.status_code == 200
+    assert client.get("/api/projects/demo/visual").json()["rev"] == saved.json()["rev"]
+
+
+def test_review_notes_are_returned_without_refusing_a_save(tmp_path):
+    from bti.editor.app import create_app
+    project = tmp_path / "demo"
+    project.mkdir()
+    (project / "timing.json").write_text(json.dumps(timing()), encoding="utf-8")
+    client = TestClient(create_app(projects_root=tmp_path, engine_module=None, media_module=None, output_root=False))
+    doc = valid()
+    doc["moments"][0].update(about=None, show={"pair": [{"picture": "A"}, {"picture": "B"}]})
+    result = client.put("/api/projects/demo/visual", json={"visual": doc, "base_rev": None, "actor": "agent:test"})
+    assert result.status_code == 200
+    assert any(i["rule"] == "V11" and i["level"] == "review" for i in result.json()["issues"])
