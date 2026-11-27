@@ -36,6 +36,7 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import unquote, urljoin, urlparse, urlsplit, urlunsplit
 
+from bti.fsio import atomic_replace
 from .. import http
 from ..errors import MediaError, NotFound, RealModelsOff
 from ..imageinfo import image_size
@@ -299,7 +300,7 @@ def fetch_image(url: str, dest: Path, *, max_bytes: int = MAX_BYTES, opener: Cal
         if ext is None:
             raise NotAnImage("the file is not a JPEG, PNG, WebP or TIFF picture")
         final = dest.with_suffix(ext)
-        tmp.replace(final)
+        atomic_replace(tmp, final)
         return final
     except BaseException:
         tmp.unlink(missing_ok=True)
