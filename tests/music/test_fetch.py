@@ -4,7 +4,7 @@ from bti.music.fetch import licence, build_record, seed_plan
 
 def metadata(short, url="", terms=""):
     return {"LicenseShortName": {"value": short}, "LicenseUrl": {"value": url}, "UsageTerms": {"value": terms},
-            "Artist": {"value": "A Performer"}, "ObjectName": {"value": "A Piece"}}
+            "Artist": {"value": "A Performer"}, "Performer": {"value": "A Performer"}, "ObjectName": {"value": "A Piece"}}
 
 
 @pytest.mark.parametrize("short,url", [("CC0", "https://creativecommons.org/publicdomain/zero/1.0/"),
@@ -35,17 +35,32 @@ def test_seed_plan_covers_periods_and_sixty_distinct_recordings():
     assert {s["period"] for s in seeds} == {"medieval", "renaissance", "baroque", "classical", "romantic", "modern"}
 
 
-def test_fetch_stops_when_commons_rate_limits(tmp_path, monkeypatch, capsys):
+def test_category_fetch_waits_for_retry_after_and_resumes(tmp_path, monkeypatch):
     from urllib.error import HTTPError
     from bti.music import fetch
+    calls, waits = [], []
+    def request(url):
+        calls.append(url)
+        if len(calls) == 1:
+            raise HTTPError(url, 429, "Too Many Requests", {"Retry-After": "7"}, None)
+        return {"query": {"pages": []}}
+    monkeypatch.setattr(fetch, "_json", request)
+    monkeypatch.setattr(fetch.time, "sleep", waits.append)
+    assert fetch.fetch(5, tmp_path, 1000, categories=["Category:Example"]) == 0
+    assert len(calls) == 2 and 7 in waits
+    assert "Category%3AExample" in calls[-1]
+
+
+def test_category_fetch_follows_continuation(tmp_path, monkeypatch):
+    from bti.music import fetch
     calls = []
-    def limited(seed):
-        calls.append(seed)
-        raise HTTPError("https://commons.wikimedia.org", 429, "Too Many Requests", {}, None)
-    monkeypatch.setattr(fetch, "candidates", limited)
-    assert fetch.fetch(5, tmp_path, 1000, max_downloads=3) == 0
-    assert len(calls) == 1
-    assert "rate limit" in capsys.readouterr().out.lower()
+    def request(url):
+        calls.append(url)
+        return {"query": {"pages": []}, **({"continue": {"gcmcontinue": "next", "continue": "-||"}} if len(calls) == 1 else {})}
+    monkeypatch.setattr(fetch, "_json", request)
+    monkeypatch.setattr(fetch.time, "sleep", lambda _: None)
+    fetch.fetch(5, tmp_path, 1000, categories=["Category:Example"])
+    assert len(calls) == 2 and "gcmcontinue=next" in calls[1]
 
 
 def test_record_uses_actual_recording_title():
@@ -78,3 +93,91 @@ def test_existing_commons_api_fixture_licence_answers_are_filtered():
 def test_refuses_licence_url_that_only_looks_like_cc0():
     ok, _ = licence(metadata("CC0", "https://creativecommons.org/publicdomain/zero/1.0-not-a-licence"))
     assert not ok
+
+
+def test_performer_must_not_be_inferred_from_composer_artist():
+    seed = {"title": "Piece", "composer": "Johann Sebastian Bach", "composed": "1700", "period": "baroque", "forces": "piano"}
+    meta = metadata("CC0")
+    meta["Artist"] = {"value": "Johann Sebastian Bach"}
+    meta.pop("Performer")
+    row = build_record(seed, "id", "id.opus", meta, "https://commons.wikimedia.org/wiki/File:Piece.ogg", 60, -20)
+    assert not row.get("performer")
+    assert "performed by" not in row["credit"]
+
+
+def test_composer_surname_is_not_a_performer_credit(tmp_path, monkeypatch):
+    from bti.music import export
+    from bti.music import library, store
+    path = tmp_path / 'recording.opus'
+    path.write_bytes(b'audio')
+    row = {'id': 'one', 'file': path.name, 'title': 'Piece', 'composer': 'Henry Purcell',
+           'performer': 'Purcell', 'license': 'Public domain', 'duration': 60}
+    monkeypatch.setattr(library, 'directory', lambda: tmp_path)
+    monkeypatch.setattr(library, 'index', lambda: {'one': row})
+    monkeypatch.setattr(store, 'read', lambda _: {'cues': [{'recording': 'one', 'start': {'t': 0}, 'end': {'t': 5},
+        'offset': 0, 'role': 'bed', 'level': 'normal', 'fade_in': 0, 'fade_out': 0, 'why': 'Quiet.'}]})
+    assert 'performed by' not in export.prepare(tmp_path, {}, {}, 10)['credits'][0]
+
+
+def test_performer_can_be_read_from_recording_description():
+    seed = {"title": "Piece", "composer": "Johann Sebastian Bach", "composed": "", "period": "baroque", "forces": "piano"}
+    meta = metadata("CC0")
+    meta.pop("Performer")
+    meta["Artist"] = {"value": "Johann Sebastian Bach"}
+    meta["ImageDescription"] = {"value": "Kimiko Ishizaka - Bach- Well-Tempered Clavier"}
+    row = build_record(seed, "id", "id.opus", meta, "https://commons.wikimedia.org/wiki/File:Example.ogg", 60, -20)
+    assert row["performer"] == "Kimiko Ishizaka"
+
+
+def test_repeated_rate_limits_back_off_beyond_retry_after(monkeypatch):
+    from urllib.error import HTTPError
+    from bti.music import fetch
+    waits, calls = [], []
+    def request():
+        calls.append(1)
+        if len(calls) < 4:
+            raise HTTPError("https://commons.wikimedia.org", 429, "limited", {"Retry-After": "1"}, None)
+        return "ok"
+    monkeypatch.setattr(fetch.time, "sleep", waits.append)
+    assert fetch._retry(request) == "ok"
+    assert waits == [5, 10, 20]
+
+
+def test_category_fetch_resumes_unprocessed_files_in_same_page(tmp_path, monkeypatch):
+    from bti.music import fetch, library
+    calls = []
+    def page(n):
+        source = f"https://commons.wikimedia.org/wiki/File:{n}.ogg"
+        return {"ns": 6, "title": f"File:{n}.ogg", "imageinfo": [{"descriptionurl": source,
+                "url": f"https://upload.wikimedia.org/{n}.ogg", "size": 10, "mime": "audio/ogg", "extmetadata": metadata("CC0")}]}
+    def request(url):
+        calls.append(url)
+        return {"query": {"pages": [page(1), page(2)]}}
+    def download(url, destination, limit):
+        destination.write_bytes(b"audio")
+    def convert(source, destination):
+        destination.write_bytes(b"opus")
+        return 90, -20
+    monkeypatch.setattr(fetch, "_json", request)
+    monkeypatch.setattr(fetch, "_download", download)
+    monkeypatch.setattr(fetch, "_convert", convert)
+    monkeypatch.setattr(fetch.time, "sleep", lambda _: None)
+    assert fetch.fetch(1, tmp_path, 100, categories=["Category:Test"]) == 1
+    assert fetch.fetch(1, tmp_path, 100, categories=["Category:Test"]) == 1
+    assert len(calls) == 1
+    assert len(library.read(tmp_path)) == 2
+
+
+def test_resume_uses_current_category_character_metadata(tmp_path, monkeypatch):
+    import json
+    from bti.music import fetch, library
+    page = {"ns": 6, "title": "File:One.ogg", "imageinfo": [{"descriptionurl": "https://commons.wikimedia.org/wiki/File:One.ogg",
+            "url": "https://upload.wikimedia.org/one.ogg", "size": 10, "mime": "audio/ogg", "extmetadata": metadata("CC0")}]}
+    state = {"queue": [], "seen": ["Category:Test"], "bytes": 0,
+             "pending": [{"page": page, "category": "Category:Test", "composer": "", "period": "", "forces": "piano"}]}
+    (tmp_path / "fetch-state.json").write_text(json.dumps(state), encoding="utf8")
+    monkeypatch.setattr(fetch, "_download", lambda url, dest, limit: dest.write_bytes(b"audio"))
+    monkeypatch.setattr(fetch, "_convert", lambda source, dest: (dest.write_bytes(b"opus") and (90, -20)))
+    monkeypatch.setattr(fetch.time, "sleep", lambda _: None)
+    assert fetch.fetch(1, tmp_path, 100, categories=[("Category:Test", "", "", "unknown")]) == 1
+    assert library.read(tmp_path)[0]["forces"] == "unknown"

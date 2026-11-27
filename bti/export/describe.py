@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from .mux import chapter_marks, merge_short
+from .mux import chapter_marks, merge_short, pretty_chapter
 
 TEMPLATE = Path(__file__).with_name("description.template.txt")
 FLAGS = ("rejected", "unknown", "small")
@@ -143,7 +143,19 @@ def build_description(storyboard: dict, timing: dict, project_meta: dict, *, dur
     """`{description, chapters, credits, notes}`: the two texts and the lists they were made from. The first line is the video's title (`video_title_of`), then the painting,
     painter and year as before."""
     template = template if template is not None else TEMPLATE.read_text(encoding="utf-8")
-    marks, merged = merge_short(chapter_marks(timing.get("chapters"), duration))
+    marks = chapter_marks(timing.get("chapters"), duration)
+    # The mux helper prettifies all-uppercase labels; retain prose chapter names.
+    names = sorted(((float(c["start"]), c.get("name") or c.get("title") or "")
+                   for c in timing.get("chapters") or []
+                   if isinstance(c, dict) and isinstance(c.get("start"), (int, float))
+                   and 0 <= c["start"] < duration), key=lambda row: (row[0], pretty_chapter(row[1])))
+    if names:
+        names[0] = (0.0, names[0][1])
+    names = [row for i, row in enumerate(names) if (names[i + 1][0] if i + 1 < len(names) else duration) > row[0]]
+    for mark, (_, name) in zip(marks, names):
+        if name and "_" not in name:
+            mark["title"] = name
+    marks, merged = merge_short(marks)
     assets = storyboard.get("assets") or {}
     keys = used_assets(storyboard)
     credits = [credit_line(assets[k]) for k in keys]

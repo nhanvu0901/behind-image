@@ -54,29 +54,37 @@ def validate(doc, library, timing, duration, landmarks=None):
         try:
             if not isinstance(cue, dict):
                 raise ValueError("cue must be an object")
+            if "level_db" in cue:
+                error = MusicError("This music uses old numeric levels; choose the music again.", field="cues[%d]" % i)
+                error.fix = "Choose the music again."
+                raise error
             recording = cue.get("recording")
             if not isinstance(recording, str) or recording not in library:
                 raise ValueError("recording is not in the library")
             start, end = anchor(cue.get("start")), anchor(cue.get("end"))
-            offset, level = cue.get("offset"), cue.get("level_db")
+            offset, level = cue.get("offset"), cue.get("level")
             fade_in, fade_out = cue.get("fade_in"), cue.get("fade_out")
-            if not all(_number(x) for x in (start, end, offset, level, fade_in, fade_out)):
-                raise ValueError("times, offset, fades and level must be finite numbers")
+            if not all(_number(x) for x in (start, end, offset, fade_in, fade_out)):
+                raise ValueError("times, offset and fades must be finite numbers")
             length = end - start
             if start < 0 or end > duration or length <= 0:
                 raise ValueError("cue must lie within the video and have positive duration")
             recording_duration = library[recording].get("duration")
             if not _number(recording_duration) or offset < 0 or offset + length > recording_duration:
                 raise ValueError("recording is too short for the selected passage")
-            if not -60 <= level <= -6:
-                raise ValueError("level_db must be between -60 and -6")
+            if level not in ("soft", "normal", "strong"):
+                raise ValueError("level must be soft, normal, or strong")
             if min(fade_in, fade_out) < 0 or fade_in + fade_out > length:
                 raise ValueError("fades must fit within the cue")
             if cue.get("role") not in ("bed", "swell", "ident", "ending"):
                 raise ValueError("unknown cue role")
+            if recording_duration < 45 and cue["role"] != "swell":
+                raise ValueError("a recording under 45 seconds can only be used as a swell")
             if not isinstance(cue.get("why"), str) or not cue["why"].strip():
                 raise ValueError("cue needs a reason")
             result.append({**cue, "start": start, "end": end})
+        except MusicError:
+            raise
         except (ValueError, KeyError, IndexError, TypeError, OverflowError) as exc:
             raise MusicError(str(exc), field="cues[%d]" % i) from exc
     result.sort(key=lambda c: c["start"])

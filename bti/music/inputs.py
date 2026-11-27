@@ -16,7 +16,7 @@ def pauses(words, minimum=1.2):
     out = []
     for a, b in zip(words, words[1:]):
         end, start = a.get("e"), b.get("s")
-        if isinstance(end, (float, int)) and not isinstance(end, bool) and isinstance(start, (float, int)) and not isinstance(start, bool) and math.isfinite(end) and math.isfinite(start) and start - end > minimum:
+        if isinstance(end, (float, int)) and not isinstance(end, bool) and isinstance(start, (float, int)) and not isinstance(start, bool) and math.isfinite(end) and math.isfinite(start) and start - end >= minimum:
             out.append({"start": round(end, 4), "end": round(start, 4), "duration": round(start - end, 4)})
     return out
 
@@ -28,7 +28,8 @@ def load(pdir, *, need_library=True):
         timing = Timing.load(pdir / "timing.json")
         duration = timing.resolve(sb["end"])
         marks = landmarks(sb, timing)
-        rows = library.index()
+        rows = {key: {**row, "character": row.get("character") or row.get("forces") or "unknown"}
+                for key, row in library.index().items()}
         if need_library and not rows:
             raise MusicError("the music library is empty")
         project = context.project_json(pdir)

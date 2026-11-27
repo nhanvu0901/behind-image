@@ -57,3 +57,16 @@ def test_template_file_has_the_placeholders():
     t = describe.TEMPLATE.read_text(encoding="utf-8")
     for n in ("title", "artwork", "chapters", "books", "credits", "notes"):
         assert "{{%s}}" % n in t
+
+
+def test_chapter_keeps_narration_capitalization():
+    timing = {"chapters": [{"start": 0, "name": "THE ALCHEMIST'S SURFACE"}, {"start": 20, "name": "Next"}]}
+    result = describe.build_description({}, timing, {}, duration=40)
+    assert "THE ALCHEMIST'S SURFACE" in result["chapters"]
+
+
+def test_duplicate_chapter_start_preserves_surviving_name():
+    timing = {"chapters": [{"start": 0, "name": "FIRST"}, {"start": 0, "name": "SECOND"},
+                           {"start": 20, "name": "The Alchemist's Surface"}]}
+    result = describe.build_description({}, timing, {}, duration=40)
+    assert result["chapters"] == "00:00 SECOND\n00:20 The Alchemist's Surface\n"

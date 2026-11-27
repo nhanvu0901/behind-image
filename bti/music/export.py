@@ -59,6 +59,20 @@ def prepare(project_dir, timing_data, storyboard, duration):
     timing = Timing(timing_data)
     cues = validate(doc, rows, timing, duration, landmarks(storyboard, timing))
     root = library.directory()
+    from .inputs import pauses
+    gaps = pauses(timing.words)
+    words = [w for w in timing.words if isinstance(w, dict) and isinstance(w.get("s"), (int, float))
+             and isinstance(w.get("e"), (int, float)) and w["e"] > w["s"]]
+    last_word = max((w["e"] for w in words), default=duration)
+    speech = []
+    if words:
+        start = words[0]["s"]
+        for gap in gaps:
+            if gap["start"] > start:
+                speech.append([start, gap["start"]])
+            start = gap["end"]
+        if last_word > start:
+            speech.append([start, last_word])
     paths = []
     credits = []
     seen = set()
@@ -66,8 +80,14 @@ def prepare(project_dir, timing_data, storyboard, duration):
         row = rows[cue["recording"]]
         if row.get("license") not in ("CC0", "Public domain"):
             raise MusicError("recording licence is not CC0 or public domain")
-        paths.append((recording_path(root, row), cue))
+        paths.append((recording_path(root, row), {**cue, "pauses": gaps, "voice_end": last_word, "speech": speech}))
         if cue["recording"] not in seen:
             seen.add(cue["recording"])
-            credits.append("%s (%s)" % (row.get("credit", ""), row["license"]))
+            title = str(row.get("title") or "").strip()
+            composer = str(row.get("composer") or "").strip()
+            performer = str(row.get("performer") or "").strip()
+            credit = title + (" — " + composer if composer else "")
+            if performer and performer.casefold() not in {composer.casefold(), composer.split()[-1].casefold() if composer else ""}:
+                credit += "; performed by " + performer
+            credits.append("%s (%s)" % (credit, row["license"]))
     return {"cues": paths, "credits": credits, "signature": signature(project_dir)}
