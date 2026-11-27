@@ -37,6 +37,8 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw
 
+from bti.media import contentbox as CB
+
 from .. import vfx
 from ..base import OverlayRenderer
 from ..registry import technique
@@ -874,7 +876,7 @@ def _relief_gradients(ctx, key, img, level_idx):
     return ctx.cached(("id_relief_grad", path, mt, int(level_idx)), build)
 
 
-def _warp_relief_roi(img, grad2, cx, cy, zoom, ow, oh, ix0, iy0, ix1, iy1):
+def _warp_relief_roi(img, grad2, cx, cy, zoom, ow, oh, ix0, iy0, ix1, iy1, paint_rect=None):
     """Warp the cached gradient map into the painting's screen ROI and return (gx, gy, paint_mask)."""
     k = int(round(math.log2(1.0 / zoom))) if zoom < 1.0 else 0
     k = max(0, min(k, len(img.levels) - 1))
@@ -884,7 +886,7 @@ def _warp_relief_roi(img, grad2, cx, cy, zoom, ow, oh, ix0, iy0, ix1, iy1):
     rw, rh = ix1 - ix0, iy1 - iy0
     m_roi = np.array([[s, 0.0, ow / 2.0 - s * sx - ix0], [0.0, s, oh / 2.0 - s * sy - iy0]], np.float64)
     warped = cv2.warpAffine(grad2, m_roi, (rw, rh), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT, borderValue=(0.0, 0.0))
-    x0, y0, x1, y1 = img.rect(cx, cy, zoom, ow, oh)
+    x0, y0, x1, y1 = paint_rect if paint_rect is not None else img.rect(cx, cy, zoom, ow, oh)
     xs = np.arange(ix0, ix1, dtype=np.float32) + 0.5
     ys = np.arange(iy0, iy1, dtype=np.float32) + 0.5
     # 3-px inward feather inside the painting border prevents any bright rim halo at the frame edge.
@@ -1052,6 +1054,10 @@ def _composite_slide_up(frame, layer, progress, fade_out=1.0, travel_px=22.0):
     return frame
 
 
+REST_MIN_RY_PCT = 12.0   # phone-readable rest-spot vertical radius floor (% H; yields ~11% H visible half-light radius)
+REST_MIN_RX_PCT = 10.5   # paired horizontal radius floor (% W; preserves oval lamp pool)
+
+
 @technique("ID-BRAND-04", "base")
 class BrandRakingSweep(_IdBase):
     """The raking light sweep ident (variants A, B, C), acting out a museum lamp examining the painting surface.
@@ -1068,9 +1074,32 @@ class BrandRakingSweep(_IdBase):
     def nominal_s(self):
         return float(self.p["nominal_s"])
 
+    def _paint_rect_raw(self, view):
+        """Painted surface rectangle `(x0, y0, x1, y1)` in canvas px (respects `content_box` when present)."""
+        asset = self.ctx.asset(self.key) or {}
+        cb = CB.clean(asset.get("content_box"), view.img.w, view.img.h)
+        if cb is not None:
+            x0, y0 = view.to_screen(cb[0], cb[1])
+            x1, y1 = view.to_screen(cb[2], cb[3])
+            return (float(x0), float(y0), float(x1), float(y1))
+        return tuple(float(v) for v in view.img.rect(view.cx, view.cy, view.z, self.ctx.w, self.ctx.h))
+
+    def _paint_rect_visible(self, view):
+        """Painted surface rectangle clipped to the visible canvas `[0, W] x [0, H]`."""
+        W, H = float(self.ctx.w), float(self.ctx.h)
+        x0, y0, x1, y1 = self._paint_rect_raw(view)
+        vx0 = min(max(x0, 0.0), W - 1.0)
+        vy0 = min(max(y0, 0.0), H - 1.0)
+        vx1 = max(vx0 + 1.0, min(W, x1))
+        vy1 = max(vy0 + 1.0, min(H, y1))
+        return vx0, vy0, vx1, vy1
+
     def _resolve_region(self, img):
         reg = self.p.get("region")
         if reg is None or reg == "":
+            cb = CB.clean((self.ctx.asset(self.key) or {}).get("content_box"), img.w, img.h)
+            if cb is not None:
+                return (cb[0] + cb[2]) / 2.0, (cb[1] + cb[3]) / 2.0, 0.11 * (cb[2] - cb[0]), 0.11 * (cb[3] - cb[1])
             return img.w / 2.0, img.h / 2.0, 0.11 * img.w, 0.11 * img.h
         if isinstance(reg, str):
             r = (self.ctx.asset(self.key).get("regions") or {}).get(reg)
@@ -1084,11 +1113,16 @@ class BrandRakingSweep(_IdBase):
         rx_src, ry_src, rrx, rry = self._resolve_region(view.img)
         sx, sy = view.to_screen(rx_src, ry_src)
         W, H = self.ctx.w, self.ctx.h
-        sx = min(max(sx, 0.10 * W), 0.90 * W)
-        sy = min(max(sy, 0.14 * H), 0.86 * H)
+        vx0, vy0, vx1, vy1 = self._paint_rect_visible(view)
+        lo_x, hi_x = max(vx0, 0.10 * W), min(vx1, 0.90 * W)
+        sx = min(max(sx, lo_x), hi_x) if lo_x <= hi_x else min(max(sx, vx0), vx1)
+        lo_y, hi_y = max(vy0, 0.14 * H), min(vy1, 0.86 * H)
+        sy = min(max(sy, lo_y), hi_y) if lo_y <= hi_y else min(max(sy, vy0), vy1)
         scale = float(self.p["spot_scale"])
-        srx = min(max(rrx * view.z * 1.45 * scale, 0.08 * W), 0.25 * W)
-        sry = min(max(rry * view.z * 1.55 * scale, 0.095 * H), 0.185 * H)
+        min_rx = (REST_MIN_RX_PCT / 100.0) * W
+        min_ry = (REST_MIN_RY_PCT / 100.0) * H
+        srx = min(max(rrx * view.z * 1.45 * scale, min_rx), 0.25 * W)
+        sry = min(max(rry * view.z * 1.55 * scale, min_ry), 0.185 * H)
         return sx, sy, srx, sry
 
     def __init__(self, tid, shot, ctx):
@@ -1136,28 +1170,52 @@ class BrandRakingSweep(_IdBase):
         self.sub_layer = _raking_ink_layer(ctx, sub, "eb_regular", float(p["sub_cap_pct"]), float(p["sub_tracking_pct"]),
                                            sub_y, max_w_pct=TITLE_MAX_W_PCT, shadow=bool(p["shadow"]), kern=False)
 
-    def _apply_surface(self, f, view, gain_q, warm_q, rel_q, az_rad, el_rad):
-        """Apply grazing surface relief and warm lamp tint inside the painting ROI only, keeping the matte neutral."""
+    def _apply_surface(self, f, view, gain_q, warm_q, rel_q, az_rad, el_rad, matte_gain=None):
+        """Apply lamp gain, warm tint, and grazing surface relief inside the painted surface only, keeping the matte neutral."""
         W, H = self.ctx.w, self.ctx.h
         p = self.p
         strength = float(p["relief"])
         gain_full = cv2.resize(gain_q, (W, H), interpolation=cv2.INTER_LINEAR)
-        f *= gain_full[:, :, None]
 
-        x0, y0, x1, y1 = view.img.rect(view.cx, view.cy, view.z, W, H)
+        x0, y0, x1, y1 = self._paint_rect_raw(view)
         ix0, ix1 = max(0, int(math.floor(x0)) - 1), min(W, int(math.ceil(x1)) + 1)
         iy0, iy1 = max(0, int(math.floor(y0)) - 1), min(H, int(math.ceil(y1)) + 1)
-        if ix1 <= ix0 or iy1 <= iy0:
-            return f
+
+        if matte_gain is None or (x0 <= 0.0 and y0 <= 0.0 and x1 >= W and y1 >= H):
+            f *= gain_full[:, :, None]
+            if ix1 <= ix0 or iy1 <= iy0:
+                return f
+            xs_r = np.arange(ix0, ix1, dtype=np.float32) + 0.5
+            ys_r = np.arange(iy0, iy1, dtype=np.float32) + 0.5
+            ax_r = np.clip(np.minimum(xs_r - x0, x1 - xs_r), 0.0, 1.0)
+            ay_r = np.clip(np.minimum(ys_r - y0, y1 - ys_r), 0.0, 1.0)
+            rect_mask = (ay_r[:, None] * ax_r[None, :]).astype(np.float32)
+            reg = f[iy0:iy1, ix0:ix1]
+            roi_gain = gain_full[iy0:iy1, ix0:ix1]
+        else:
+            mg = float(matte_gain)
+            if ix1 <= ix0 or iy1 <= iy0:
+                f *= mg
+                return f
+            if iy0 > 0:
+                f[:iy0, :] *= mg
+            if iy1 < H:
+                f[iy1:, :] *= mg
+            if ix0 > 0:
+                f[iy0:iy1, :ix0] *= mg
+            if ix1 < W:
+                f[iy0:iy1, ix1:] *= mg
+            xs_r = np.arange(ix0, ix1, dtype=np.float32) + 0.5
+            ys_r = np.arange(iy0, iy1, dtype=np.float32) + 0.5
+            ax_r = np.clip(np.minimum(xs_r - x0, x1 - xs_r), 0.0, 1.0)
+            ay_r = np.clip(np.minimum(ys_r - y0, y1 - ys_r), 0.0, 1.0)
+            rect_mask = (ay_r[:, None] * ax_r[None, :]).astype(np.float32)
+            roi_gain = mg + (gain_full[iy0:iy1, ix0:ix1] - mg) * rect_mask
+            reg = f[iy0:iy1, ix0:ix1]
+            reg *= roi_gain[:, :, None]
 
         # Warm lamp tint is confined to the painting surface (never turns the surrounding gallery matte brown).
         warm_full = cv2.resize(warm_q, (W, H), interpolation=cv2.INTER_LINEAR)
-        xs_r = np.arange(ix0, ix1, dtype=np.float32) + 0.5
-        ys_r = np.arange(iy0, iy1, dtype=np.float32) + 0.5
-        ax_r = np.clip(np.minimum(xs_r - x0, x1 - xs_r), 0.0, 1.0)
-        ay_r = np.clip(np.minimum(ys_r - y0, y1 - ys_r), 0.0, 1.0)
-        rect_mask = (ay_r[:, None] * ax_r[None, :]).astype(np.float32)
-        reg = f[iy0:iy1, ix0:ix1]
         a = (warm_full[iy0:iy1, ix0:ix1] * rect_mask)[:, :, None]
         if float(a.max()) > 1e-4:
             reg *= (1.0 - a * vfx._WARM_BGR)
@@ -1169,7 +1227,7 @@ class BrandRakingSweep(_IdBase):
         k = int(round(math.log2(1.0 / view.z))) if view.z < 1.0 else 0
         k = max(0, min(k, len(view.img.levels) - 1))
         grad2 = _relief_gradients(self.ctx, self.key, view.img, k)
-        gx, gy, pmask = _warp_relief_roi(view.img, grad2, view.cx, view.cy, view.z, W, H, ix0, iy0, ix1, iy1)
+        gx, gy, pmask = _warp_relief_roi(view.img, grad2, view.cx, view.cy, view.z, W, H, ix0, iy0, ix1, iy1, paint_rect=(x0, y0, x1, y1))
         rel_full = cv2.resize(rel_q, (W, H), interpolation=cv2.INTER_LINEAR)
         rw = rel_full[iy0:iy1, ix0:ix1] * pmask
 
@@ -1185,7 +1243,7 @@ class BrandRakingSweep(_IdBase):
         crest = np.maximum(pos - 0.28, 0.0)
         sheen = (0.11 * np.tanh(crest / 0.65) * rw)[:, :, None]
         if float(sheen.max()) > 1e-4:
-            reg += sheen * gain_full[iy0:iy1, ix0:ix1, None] * (vfx._WARM_BGR * 255.0)
+            reg += sheen * roi_gain[:, :, None] * (vfx._WARM_BGR * 255.0)
         return f
 
     def finish(self, f, t):
@@ -1228,7 +1286,8 @@ class BrandRakingSweep(_IdBase):
             if self.band.sign < 0:
                 az_rad += math.pi
             el_deg = 14.0 + 76.0 * p_open
-            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, math.radians(el_deg))
+            matte_gain = floor + (1.0 - floor) * p_open
+            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, math.radians(el_deg), matte_gain=matte_gain)
 
             name_out = 1.0 - ramp01(u, 0.80, 0.09)
             name_rest = (1.0 - ss01(u, 0.46, 0.10)) if self.fade_name_at_rest else (1.0 - 0.22 * ss01(u, 0.46, 0.10))
@@ -1251,9 +1310,21 @@ class BrandRakingSweep(_IdBase):
                 _composite_slide_up(f, self.sub_layer, sub_p, fade_out=txt_out)
 
         elif self.variant == "B":
-            # Two-move handheld lamp path: Move 1 sweeps the upper painting and channel name; Move 2 pivots to rest on `region`.
+            # Two-move handheld lamp path confined to the painted surface: Move 1 sweeps across the painted width; Move 2 pivots to rest on `region`.
             name_y = self.name_y_pct / 100.0 * H
-            x_start, x_mid = 0.16 * W, 0.84 * W
+            vx0, vy0, vx1, vy1 = self._paint_rect_visible(view)
+            vw, vh = vx1 - vx0, vy1 - vy0
+            x_left = vx0 + 0.02 * vw
+            x_right = vx1 - 0.02 * vw
+            if self.band.sign < 0:
+                x_start, x_mid = x_right, x_left
+            else:
+                x_start, x_mid = x_left, x_right
+            by1 = min(max(name_y, vy0 + 0.14 * vh), vy1 - 0.14 * vh)
+            brx1 = max(srx * 1.15, min(0.16 * W, 0.38 * vw))
+            bry1 = max(sry * 1.25, min(0.24 * H, 0.42 * vh))
+            az0 = math.radians(angle_deg) + (math.pi if self.band.sign < 0 else 0.0)
+
             p1 = _ss_sine(ramp01(u, 0.04, 0.29))
             p2 = ss01(u, 0.33, 0.20)
             p_in = ss01(u, 0.01, 0.07)
@@ -1261,16 +1332,16 @@ class BrandRakingSweep(_IdBase):
 
             if u < 0.33:
                 bx = x_start + (x_mid - x_start) * p1
-                by = name_y
-                brx, bry = 0.16 * W, 0.24 * H
-                az_rad = math.radians(angle_deg)
+                by = by1
+                brx, bry = brx1, bry1
+                az_rad = az0
             else:
-                arc = 0.06 * H * math.sin(math.pi * p2)
-                bx = x_mid + (rx_s - x_mid) * p2
-                by = name_y + (ry_s - name_y) * p2 + arc
-                brx = 0.16 * W + (srx * 1.15 - 0.16 * W) * p2
-                bry = 0.24 * H + (sry * 1.25 - 0.24 * H) * p2
-                az_rad = math.radians(angle_deg) * (1.0 - p2) + math.atan2(ry_s - name_y, rx_s - x_mid) * p2
+                arc = min(0.06 * H, 0.10 * vh) * math.sin(math.pi * p2)
+                bx = min(max(x_mid + (rx_s - x_mid) * p2, vx0), vx1)
+                by = min(max(by1 + (ry_s - by1) * p2 + arc, vy0), vy1)
+                brx = brx1 + (srx * 1.15 - brx1) * p2
+                bry = bry1 + (sry * 1.25 - bry1) * p2
+                az_rad = az0 * (1.0 - p2) + math.atan2(ry_s - by1, rx_s - x_mid) * p2
 
             beam_q = _tilted_pool(xs, ys, bx, by, brx, bry, angle_deg, max(feather, 0.52)) * p_in
             # Behind Move 1, upper painting retains a subtle wake so the frame holds sculptural context.
@@ -1283,7 +1354,8 @@ class BrandRakingSweep(_IdBase):
             rel_q = (np.clip(0.18 * wake_q + 0.90 * beam_q, 0.0, 1.0) * (1.0 - p_open)).astype(np.float32)
 
             el_deg = 14.0 + 76.0 * p_open
-            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, math.radians(el_deg))
+            matte_gain = floor + (1.0 - floor) * p_open
+            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, math.radians(el_deg), matte_gain=matte_gain)
 
             name_out = 1.0 - ramp01(u, 0.85, 0.08)
             name_rest = (1.0 - ss01(u, 0.48, 0.10)) if self.fade_name_at_rest else (1.0 - 0.30 * ss01(u, 0.48, 0.10))
@@ -1328,7 +1400,8 @@ class BrandRakingSweep(_IdBase):
             warm_q = (warm * (0.28 + 0.72 * p_rest * pool) * (1.0 - p_open)).astype(np.float32)
             rel_q = ((0.68 + 0.32 * p_rest * pool) * (1.0 - p_open)).astype(np.float32)
             az_rad = math.radians(angle_deg - 18.0)
-            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, el_rad)
+            matte_gain = floor + (1.0 - floor) * p_open
+            f = self._apply_surface(f, view, gain_q, warm_q, rel_q, az_rad, el_rad, matte_gain=matte_gain)
 
             name_out = 1.0 - ramp01(u, 0.78, 0.09)
             bevel_env = ss01(u, 0.08, 0.14) * name_out

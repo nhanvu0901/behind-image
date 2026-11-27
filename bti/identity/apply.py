@@ -41,8 +41,10 @@ LABEL_MIN_S = 0.5           # shortest duration of one piece of a cross-cut labe
 LABEL_FIRST_NOMINAL_S = 1.5 # keeps the half-second fade-in smooth on a short opening shot
 MIN_ELEMENT_S = 1.5         # a channel-name beat or a chapter mark is never shorter (section 3); the block's `min_element_s` wins
 BRAND_PUSH = 1.03           # the picture under the channel name drifts in by 3 % over the beat
+BRAND_SWEEP_PUSH = 1.08     # gentle continuous push-in over ID-BRAND-04
 WHOLE_PUSH = 1.03           # the same for a mark that has no picture of its own to flow into
 MARK_WIDER = 1.04           # a mark starts 4 % wider than the shot it flows into
+FILL_COVER_MIN = 1.0 - CB.OFF_LIMIT   # >= 99% screen coverage on both axes (a frame that fills the screen)
 STRIP_TECHNIQUES = frozenset({"X-ANN-01", "X-ANN-02"})
 EPS = 1e-9
 
@@ -267,6 +269,64 @@ class _Applier:
         z = self.cfg.fit_pct / 100.0 * 1080.0 / (box[3] - box[1])
         cx, cy = round((box[0] + box[2]) / 2, 2), round((box[1] + box[3]) / 2, 2)
         return [_key(0.0, cx, cy, round(_clamp_zoom(z), 5)), _key(1.0, cx, cy, round(_clamp_zoom(z * WHOLE_PUSH), 5))]
+
+    def _paint_box(self, key) -> tuple[float, float, float, float] | None:
+        """Painted area `(x0, y0, x1, y1)` of `key`: `content_box` if available, else the full stored image bounds."""
+        box = self.box_of(key)
+        if box is not None:
+            return box
+        a = self.image_asset(key)
+        if not a or not (_num(a.get("width")) and _num(a.get("height")) and a["width"] > 0 and a["height"] > 0):
+            return None
+        return (0.0, 0.0, float(a["width"]), float(a["height"]))
+
+    @staticmethod
+    def _cover_zoom(box: tuple[float, float, float, float]) -> float:
+        """Minimum zoom at which a 1920x1080 frame fits completely inside `box` (width-filling for upright paintings)."""
+        bw = max(box[2] - box[0], 1.0)
+        bh = max(box[3] - box[1], 1.0)
+        return math.ceil(max(1920.0 / bw, 1080.0 / bh) * 1e5 - 1e-9) / 1e5
+
+    def _fills_screen(self, key, cam_key: dict) -> bool:
+        """True when `cam_key` on `key` fills at least `FILL_COVER_MIN` of the 1920x1080 frame on both axes."""
+        box = self._paint_box(key)
+        if box is None or not isinstance(cam_key, dict):
+            return False
+        if not (_num(cam_key.get("cx")) and _num(cam_key.get("cy")) and _num(cam_key.get("zoom")) and cam_key["zoom"] > 0):
+            return False
+        cx, cy, z = float(cam_key["cx"]), float(cam_key["cy"]), float(cam_key["zoom"])
+        vw, vh = 1920.0 / z, 1080.0 / z
+        fx0, fy0, fx1, fy1 = cx - vw / 2.0, cy - vh / 2.0, cx + vw / 2.0, cy + vh / 2.0
+        cov_w = max(0.0, min(box[2], fx1) - max(box[0], fx0)) / vw
+        cov_h = max(0.0, min(box[3], fy1) - max(box[1], fy0)) / vh
+        return cov_w >= FILL_COVER_MIN - 1e-6 and cov_h >= FILL_COVER_MIN - 1e-6
+
+    @staticmethod
+    def _clamp_fill_pose(box: tuple[float, float, float, float], cx: float, cy: float, z: float) -> tuple[float, float, float]:
+        """Clamp `(cx, cy, z)` so the 1920x1080 frame stays wholly inside `box` and fills the screen."""
+        z = _clamp_zoom(max(float(z), _Applier._cover_zoom(box)))
+        hw, hh = 960.0 / z, 540.0 / z
+
+        def _clamp_axis(c: float, lo: float, hi: float) -> float:
+            lo2 = math.ceil(lo * 100.0 - 1e-9) / 100.0
+            hi2 = math.floor(hi * 100.0 + 1e-9) / 100.0
+            if lo2 > hi2:
+                return round((lo + hi) / 2.0, 2)
+            return min(max(round(float(c), 2), lo2), hi2)
+
+        return (_clamp_axis(cx, box[0] + hw, box[2] - hw), _clamp_axis(cy, box[1] + hh, box[3] - hh), round(z, 5))
+
+    def filling_band_keys(self, key, target_xy: tuple[float, float] | None = None, *,
+                          push: float = WHOLE_PUSH, shift_frac: float = 0.0, ease: str = "linear") -> list | None:
+        """A width-filling (screen-filling) band of `key` centred near `target_xy` (or painting centre) with a gentle push."""
+        box = self._paint_box(key)
+        if box is None:
+            return None
+        tx, ty = target_xy if target_xy is not None else ((box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0)
+        cx0, cy0, z0 = self._clamp_fill_pose(box, tx, ty, self._cover_zoom(box))
+        z1_raw = _clamp_zoom(z0 * push)
+        cx1, cy1, z1 = self._clamp_fill_pose(box, cx0 + (tx - cx0) * shift_frac, cy0 + (ty - cy0) * shift_frac, z1_raw)
+        return [_key(0.0, cx0, cy0, z0, ease=ease), _key(1.0, cx1, cy1, z1)]
 
     def camera_of(self, s) -> tuple | None:
         """(asset key, camera keys) of a shot that looks at one picture through a camera, else None."""
@@ -563,22 +623,35 @@ class _Applier:
             prev = self.neighbour(i, -1)
             pic = self.camera_of(prev) if prev is not None else None
             if has_region and main_k:
-                if pic and pic[0] == main_k and self._region_framed(main_k, rest_region, pic[1][-1]):
-                    key, cam = pic
-                    last = cam[-1]
-                    cx, cy, z = last["cx"], last["cy"], last["zoom"]
-                    keys = [_key(0.0, cx, cy, z), _key(1.0, cx, cy, round(_clamp_zoom(z * BRAND_PUSH), 5))]
+                key = main_k
+                box = self._paint_box(key)
+                a_main = self.image_asset(key) or {}
+                reg_d = (a_main.get("regions") or {}).get(rest_region) if (rest_region and isinstance(a_main.get("regions"), dict)) else None
+                if box is not None:
+                    if isinstance(reg_d, dict) and _num(reg_d.get("x")) and _num(reg_d.get("y")):
+                        tx, ty = float(reg_d["x"]), float(reg_d["y"])
+                    else:
+                        tx, ty = (box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0
+                    if pic and pic[0] == main_k and self._region_framed(main_k, rest_region, pic[1][-1]):
+                        last = pic[1][-1]
+                        cx0, cy0, z0 = float(last["cx"]), float(last["cy"]), _clamp_zoom(last["zoom"])
+                        cx1, cy1, z1 = self._clamp_fill_pose(
+                            box, cx0 + (tx - cx0) * 0.35, cy0 + (ty - cy0) * 0.35, _clamp_zoom(z0 * BRAND_SWEEP_PUSH)
+                        )
+                        keys = [_key(0.0, cx0, cy0, z0, ease="inout_sine"), _key(1.0, cx1, cy1, z1)]
+                    else:
+                        keys = self.filling_band_keys(key, (tx, ty), push=BRAND_SWEEP_PUSH, shift_frac=0.35, ease="inout_sine")
                 else:
-                    key = main_k
-                    keys = self.whole_keys(key)
-            elif pic:
+                    keys = None
+            elif pic and self._fills_screen(pic[0], pic[1][-1]):
                 key, cam = pic
                 last = cam[-1]
                 cx, cy, z = last["cx"], last["cy"], last["zoom"]
                 keys = [_key(0.0, cx, cy, z), _key(1.0, cx, cy, round(_clamp_zoom(z * BRAND_PUSH), 5))]
             else:
                 key = main_k
-                keys = self.whole_keys(key) if key else None
+                target_xy = (pic[1][-1]["cx"], pic[1][-1]["cy"]) if (pic and pic[0] == key) else None
+                keys = self.filling_band_keys(key, target_xy, push=BRAND_PUSH) if key else None
             wanted = {"camera": self.in_box(key, keys), "text": self.cfg.channel_name}
             for k, v in self.sd.brand_params.items():
                 if k in defaults:
@@ -641,16 +714,17 @@ class _Applier:
         return choose_rest_region(self._timing_meta(), picks, main_k, regions)
 
     def _region_framed(self, asset_key: str, region_name: str | None, cam_key: dict) -> bool:
-        """True when `cam_key` is a broad view on `asset_key` keeping `region_name` (or centre) inside the safe screen frame."""
-        a = self.image_asset(asset_key)
-        if not a or not (_num(a.get("width")) and _num(a.get("height")) and _num(a["width"]) > 0 and _num(a["height"]) > 0):
+        """True when `cam_key` fills the screen on `asset_key` and keeps `region_name` (or centre) in the safe middle band."""
+        box = self._paint_box(asset_key)
+        if box is None:
             return True
-        w, h = float(a["width"]), float(a["height"])
-        box = self.box_of(asset_key) or (0.0, 0.0, w, h)
-        z_fit = self.cfg.fit_pct / 100.0 * 1080.0 / max(box[3] - box[1], 1.0)
-        z = float(cam_key["zoom"])
-        if z > z_fit * 1.35:
+        if not self._fills_screen(asset_key, cam_key):
             return False
+        z_cover = self._cover_zoom(box)
+        z = float(cam_key["zoom"])
+        if z > z_cover * 1.6:
+            return False
+        a = self.image_asset(asset_key) or {}
         if region_name:
             reg = (a.get("regions") or {}).get(region_name) if isinstance(a.get("regions"), dict) else None
             if not isinstance(reg, dict) or not (_num(reg.get("x")) and _num(reg.get("y"))):
@@ -660,7 +734,7 @@ class _Applier:
             rx, ry = (box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0
         sx = 960.0 + (rx - float(cam_key["cx"])) * z
         sy = 540.0 + (ry - float(cam_key["cy"])) * z
-        return 0.14 * 1920.0 <= sx <= 0.86 * 1920.0 and 0.14 * 1080.0 <= sy <= 0.86 * 1080.0
+        return 0.18 * 1920.0 <= sx <= 0.82 * 1920.0 and 0.28 * 1080.0 <= sy <= 0.70 * 1080.0
 
     def video_title(self) -> str:
         """The video's title (`identity.video_title` of the storyboard) in one line, "" when there is none."""
@@ -708,14 +782,25 @@ class _Applier:
                 continue
             nxt = self.neighbour(i, +1)
             pic = self.camera_of(nxt) if nxt is not None else None
-            if pic:
+            if pic and self._fills_screen(pic[0], pic[1][0]):
                 key, cam = pic
                 first = cam[0]
-                cx, cy, z = first["cx"], first["cy"], first["zoom"]
-                keys = [_key(0.0, cx, cy, round(_clamp_zoom(z / MARK_WIDER), 5)), _key(1.0, cx, cy, _clamp_zoom(z))]
+                cx, cy, z = float(first["cx"]), float(first["cy"]), _clamp_zoom(first["zoom"])
+                box = self._paint_box(key)
+                if box is not None:
+                    z_min = _clamp_zoom(self._cover_zoom(box))
+                    z0_raw = _clamp_zoom(max(z_min, z / MARK_WIDER))
+                    if z0_raw > z:
+                        cx0, cy0, z0 = cx, cy, round(z, 5)
+                    else:
+                        cx0, cy0, z0 = self._clamp_fill_pose(box, cx, cy, z0_raw)
+                else:
+                    cx0, cy0, z0 = cx, cy, round(_clamp_zoom(z / MARK_WIDER), 5)
+                keys = [_key(0.0, cx0, cy0, z0), _key(1.0, cx, cy, round(z, 5))]
             else:
                 key = self.main_asset()
-                keys = self.whole_keys(key) if key else None
+                target_xy = (pic[1][0]["cx"], pic[1][0]["cy"]) if (pic and pic[0] == key) else None
+                keys = self.filling_band_keys(key, target_xy, push=WHOLE_PUSH) if key else None
             tr = None
             if self.sd.transition:
                 tr = {"technique": self.sd.transition["technique"], "dur": round(min(self.sd.transition["dur"], max(0.0, ln - 0.05)), 3), "params": {}}
@@ -866,11 +951,13 @@ def choose_rest_region(timing, picks: dict | None, main_asset: str | None, main_
             if not isinstance(subj, dict) or subj.get("kind") not in ("person", "thing"):
                 continue
             where = subj.get("where")
-            if isinstance(where, dict) and isinstance(where.get("region"), str):
-                reg = where["region"]
-                r = regions.get(reg)
-                if isinstance(r, dict) and r.get("tight") is True:
-                    return reg
+            places = where if isinstance(where, list) else ([where] if isinstance(where, dict) else [])
+            for place in places:
+                if isinstance(place, dict) and place.get("asset") in (None, main_key) and isinstance(place.get("region"), str):
+                    reg = place["region"]
+                    r = regions.get(reg)
+                    if isinstance(r, dict) and r.get("tight") is True:
+                        return reg
 
     # 3. No matching region: light rests cleanly on the centre of the painting.
     return None
