@@ -29,7 +29,11 @@ import { missingLabel } from '../slots.js';
 import { nextOpenable } from '../stepper.js';
 import { projectHash } from '../router.js';
 import { mountSimple } from '../sbsimple.js';             // c4pages: the simple page (list of shots in words) over the same player, box and editor
-import { EDIT_PAGE_LABELS as PAGE } from '../labels.js';
+import { EDIT_PAGE_LABELS as PAGE, VISUAL_PAGE_LABELS as VL } from '../labels.js';
+import { isVisualStoryboard } from '../visualedit_logic.js';
+import { findStateAction, visualEditAction } from '../visualpage_logic.js';
+import { mountVisualBox } from '../visual_box.js';
+import { mountVisualEditPanels } from '../visual_edit_panels.js';
 
 let root = null, scope = null, shell = null;
 const $ = (s) => root.querySelector(s);
@@ -37,7 +41,7 @@ const st = ctx.store;
 const msg = (t) => setStatus(t);
 // c4pages: the page has two faces over the same player, request box and editor: "simple" (the list of shots in words, the default) and "hand" (the editor as it always was).
 // The owner's last choice is remembered per project; a link that needs the editor (?select=, ?open=, ?t=, ?zoom=, ?source= or ?mode=hand) opens it there.
-let mode = 'simple', simple = null, fitted = false;
+let mode = 'simple', simple = null, fitted = false, visBox = null, visPanels = null, visData = null;
 const MODE_KEY = (pid) => `bti.edit.mode.${pid}`;
 function initialMode(pid) {
   const q = new URLSearchParams(location.search);
@@ -162,12 +166,44 @@ const HTML = `
 function mountFirstDraft(host, mctx) {
   const pid = mctx.pipeline.project, sc = mctx.scope, sh = mctx.shell;
   const box = h('div', { class: 'draft-first', style: { maxWidth: '760px', margin: '24px auto', padding: '0 16px' } });
+  const composeSlot = h('div');
   const slot = h('div');
   box.append(h('h1', { text: `${mctx.step.n}. ${mctx.step.label}` }),
+    composeSlot,
     h('p', { class: 'muted', text: 'Dự án chưa có storyboard. Dựng một bản nháp từ giọng đọc và hình đã chọn: kết quả là một đề xuất, bạn xem rồi bấm "Áp dụng" để nó thành storyboard đầu tiên, sau đó sửa tiếp ở đây.' }),
     slot);
   host.append(box);
   const reopen = () => { sh.refreshPipeline(); sh.go(projectHash(pid, 'edit')); };
+  Promise.all([
+    api.get(`/api/projects/${encodeURIComponent(pid)}/visual`).catch(() => null),
+    api.get(`/api/projects/${encodeURIComponent(pid)}/state`).catch(() => null),
+  ]).then(([v, stRes]) => {
+    if (sc.signal?.aborted) return;
+    const act = findStateAction(stRes, 'storyboard.compose');
+    if (!act && !v?.visual?.moments) return;
+    const btn = h('button', {
+      type: 'button',
+      class: 'primary',
+      text: VL.step5.composeButton,
+      disabled: act && !act.ready ? true : null,
+      onclick: async () => {
+        btn.disabled = true; btn.textContent = VL.step5.composing;
+        try {
+          const url = act?.path || `/api/projects/${encodeURIComponent(pid)}/storyboard/compose`;
+          await api.send(act?.method || 'POST', url, act?.body || {});
+          toast(VL.step5.composeDone, 'ok');
+          reopen();
+        } catch (e) {
+          errorToast(e, VL.step5.composeFail, 8000);
+          btn.disabled = false; btn.textContent = VL.step5.composeButton;
+        }
+      },
+    });
+    composeSlot.replaceChildren(h('div', { class: 'box', style: { marginBottom: '16px', padding: '12px 14px', background: 'var(--panel)', border: '1px solid var(--border)', borderRadius: 'var(--radius)' } },
+      h('h3', { style: { margin: '0 0 6px' }, text: VL.step5.composeFirstTitle }),
+      h('p', { class: 'muted', style: { margin: '0 0 10px' }, text: VL.step5.composeFirstHelp }),
+      btn));
+  });
   mountDraftPanel(slot, { pid, scope: sc, onJobEnd: () => sh.refreshPipeline(), onProposal: (id) => { ctx.reset(); ctx.pid = pid; openProposals(reopen, id); } });
   return {};
 }
@@ -179,7 +215,7 @@ export async function mount(host, mctx) {
   root = h('div', { class: 'edit-root' });
   root.innerHTML = HTML;
   host.append(root);
-  simple = null; fitted = false; mode = initialMode(pid); root.dataset.mode = mode; placeBox(mode);
+  simple = null; fitted = false; visBox = null; visPanels = null; visData = null; mode = initialMode(pid); root.dataset.mode = mode; placeBox(mode);
   bus.clear(); ctx.reset();
   audio = new Audio(); audioOk = false; vStart = 0; vT0 = 0; raf = 0; saving = null; saveAgain = false; ctx.serverIssues = [];
   // the first listeners: derived state that every other module reads, and the rule "selecting moves the playhead into the item"
@@ -197,16 +233,70 @@ export async function mount(host, mctx) {
   initPreview(root, scope); initTimeline(root, scope); initInspector(root);
   try { setRegistry(await api.style(STYLE_ID)); }
   catch (e) { errorToast(e, 'Không tải được danh sách kỹ thuật: ', 9000); return view; }
-  await loadProject(pid);
+  const [, vRes, stRes] = await Promise.all([
+    loadProject(pid),
+    api.get(`/api/projects/${encodeURIComponent(pid)}/visual`).catch(() => null),
+    api.get(`/api/projects/${encodeURIComponent(pid)}/state`).catch(() => null),
+  ]);
+  visData = vRes?.visual || null;
+  let stateAnswer = stRes;
+  const isVis = isVisualStoryboard({ storyboard: st.draft, visual: visData });
+  if (isVis) root.dataset.visual = '1';
   if (!st.draft && mode === 'simple') { mode = 'hand'; root.dataset.mode = 'hand'; placeBox('hand'); }      // the project did not load: its message is shown where the editor puts it
   $('#btn-simple').onclick = () => setMode('simple');
   if (st.draft) {                                                                       // c4pages: the simple page; its selection is what the request box reads while it is showing
-    simple = mountSimple(root, { pid: ctx.pid, scope, shell, hooks: { approve, save, setMode, openInEditor, approving: () => approving, next: nextStep } });
+    simple = mountSimple(root, { pid: ctx.pid, scope, shell, visual: isVis ? visData : null, hooks: { approve, save, setMode, openInEditor, approving: () => approving, next: nextStep, onPaint: () => visPanels?.refresh?.({ storyboard: st.draft, issues: ctx.issues }) } });
     simple.selection.active = () => mode === 'simple';
+    if (isVis) {
+      visPanels = mountVisualEditPanels({
+        col: $('#shots-col'),
+        pid: ctx.pid,
+        scope,
+        visual: visData,
+        storyboard: st.draft,
+        timing: st.timing,
+        issues: ctx.issues,
+        onSelectShot: (sid) => simple?.select(sid),
+      });
+    }
   }
   const promptBox = $('#prompt-edit-container');
   if (promptBox) {
-    mountPromptEdit(promptBox, { pid: ctx.pid, scope, takeIn: takeInTurn, onPreview: ({ t0, t1 }) => previewClip(t0, t1), sel: simple?.selection || null });
+    if (isVis) {
+      const updateBoxLayout = (stData) => {
+        stateAnswer = stData;
+        const has = Boolean(visualEditAction(stateAnswer));
+        root.dataset.hasBox = has ? '1' : '0';
+      };
+      updateBoxLayout(stateAnswer);
+      visBox = mountVisualBox(promptBox, {
+        pid: ctx.pid,
+        scope,
+        state: stateAnswer,
+        getScope: () => {
+          const picked = simple?.selection?.get?.() || { ids: [] };
+          const ids = picked.ids || [];
+          const shots = st.draft?.shots || [];
+          const nums = ids.map((id) => shots.findIndex((s) => s.id === id) + 1).filter((n) => n > 0).sort((a, b) => a - b);
+          const text = nums.length === 1 ? VL.editBox.scopeShotOne(nums[0]) : nums.length ? VL.editBox.scopeShots(nums.slice(0, 6).join(', ')) : VL.editBox.scopeAll;
+          return { text, payload: ids.length ? { shots: ids } : { all: true } };
+        },
+        onDone: async () => {
+          await takeInTurn(null);
+          const [v2, s2] = await Promise.all([
+            api.get(`/api/projects/${encodeURIComponent(ctx.pid)}/visual`).catch(() => null),
+            api.get(`/api/projects/${encodeURIComponent(ctx.pid)}/state`).catch(() => null),
+          ]);
+          if (v2?.visual) visData = v2.visual;
+          updateBoxLayout(s2);
+          visBox?.updateState(s2);
+          visPanels?.refresh({ storyboard: st.draft, issues: ctx.issues });
+        },
+      });
+      simple?.selection?.onChange?.(() => visBox?.updateScope?.());
+    } else {
+      mountPromptEdit(promptBox, { pid: ctx.pid, scope, takeIn: takeInTurn, onPreview: ({ t0, t1 }) => previewClip(t0, t1), sel: simple?.selection || null });
+    }
   }
   const identityBox = $('#identity-container');          // "Kiểu mở đầu và mốc chương": changes the saved storyboard on the server, then it is taken in like a turn of the prompt box
   if (identityBox) mountIdentityPick(identityBox, { pid: ctx.pid, scope, takeIn: () => takeInTurn(null, { ok: '', merged: IDENTITY_LABELS.tookInMerged, fail: IDENTITY_LABELS.tookInFail }) });
@@ -222,7 +312,17 @@ const view = {
   isDirty: () => st.dirty,
   save: async () => { await save(); return !st.dirty; },
   dirtyMessage: () => 'Storyboard có chỗ sửa chưa lưu.',
-  pipelineChanged: () => { updateApprove(); if (mode === 'simple') simple?.paintBar(); },
+  pipelineChanged: () => {
+    updateApprove();
+    if (mode === 'simple') simple?.paintBar();
+    if (visBox && ctx.pid) {
+      api.get(`/api/projects/${encodeURIComponent(ctx.pid)}/state`).then((s2) => {
+        if (!root) return;
+        root.dataset.hasBox = visualEditAction(s2) ? '1' : '0';
+        visBox.updateState(s2);
+      }).catch(() => {});
+    }
+  },
 };
 
 async function loadProject(pid) {
