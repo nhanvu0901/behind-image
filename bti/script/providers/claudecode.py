@@ -39,7 +39,7 @@ from .antigravity import retry_at, wait_words
 
 FAMILY = "claude"
 EFFORTS = ("low", "medium", "high", "xhigh", "max")
-ID_RE = re.compile(r"claude:([A-Za-z0-9][A-Za-z0-9._-]{0,79})@(low|medium|high|xhigh|max)")
+ID_RE = re.compile(r"(?:claude|claudeapi):([A-Za-z0-9][A-Za-z0-9._-]{0,79})@(low|medium|high|xhigh|max)")
 MODEL_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,79}")
 STATUS_TIMEOUT_S = 15                  # `claude auth status` is a local check: it answers quickly or the page must not wait for it
 HELP_TIMEOUT_S = 30
@@ -72,6 +72,30 @@ def make_model_id(model: str, effort: str) -> str:
 
 def is_claude_id(model_id) -> bool:
     return parse_model_id(model_id) is not None
+
+
+API_KEY_MISSING = "Chưa có khóa Anthropic API. Hãy đặt ANTHROPIC_API_KEY vào tệp .env trên máy chủ rồi thử lại."
+
+
+def is_api_id(model_id) -> bool:
+    return isinstance(model_id, str) and model_id.startswith("claudeapi:") and is_claude_id(model_id)
+
+
+def api_key():
+    from bti.script.env import _dotenv
+    return _dotenv().get("ANTHROPIC_API_KEY") or None
+
+
+def session_env(model_id, env=None):
+    """Use the API key only for an explicitly selected API session."""
+    result = clean_env() if env is None else env
+    if is_api_id(model_id):
+        key = api_key()
+        if not key:
+            raise _err("config", API_KEY_MISSING, "claude_api_key_missing")
+        result.pop("CLAUDE_CODE_OAUTH_TOKEN", None)
+        result["ANTHROPIC_API_KEY"] = key
+    return result
 
 
 def label_for(model: str, effort: str) -> str:
@@ -415,11 +439,11 @@ def complete(spec: dict, system: str, user: str, *, timeout: float = 900, on_pro
     model, effort = spec.get("model"), spec.get("effort")
     if not (isinstance(model, str) and MODEL_RE.fullmatch(model) and effort in EFFORTS):
         raise _err("config", "Tên mô hình hoặc mức nỗ lực của Claude Code không hợp lệ.", "claude_model")
+    env0 = session_env(spec.get("id"))
     claude = find_claude()
     if not claude:
         raise _err("config", MISSING_HINT, "claude_missing")
-    env0 = clean_env()
-    check_cli(claude, env0)
+    check_cli(claude, clean_env())
     prompt = user
     sys_text = (system or "").strip() or None
     if sys_text and not arg_ok_for(claude, sys_text):      # cmd.exe would re-read it: it goes in with the task instead

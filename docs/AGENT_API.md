@@ -334,6 +334,7 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `busy` | later | A job of this kind is already running for the project: wait for it (GET /api/projects/{pid}/longjobs) or cancel it, then call again. |
 | `cancelled` | later | The job was cancelled: start it again to continue; finished parts are kept. |
 | `cannot` | no | The project lacks what this request needs (for example a new painting, or a change of narration or voice): do that step first. |
+| `claude_api_key_missing` | after_fix | Ask the owner to put ANTHROPIC_API_KEY in the server .env file, then call again. |
 | `claude_auth` | after_fix | Claude Code is not signed in on the server: the owner must run `claude auth login` there, then call again. |
 | `claude_config` | no | Claude Code on this machine cannot be used (too old or not running): choose the other agent. |
 | `claude_error` | later | Claude Code reported an error: call again; if it repeats choose the other agent. |

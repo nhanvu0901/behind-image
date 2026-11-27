@@ -227,6 +227,8 @@ HINTS: dict[str, dict] = {
     "agy_error": _t("later", "Call again, and if it repeats choose the other agent: agy reported an error."),
     "agy_no_result": _t("later", "Call again: agy stopped without an answer."),
     "agy_timeout": _t("later", "The agent ran past its time limit and was stopped: call again, or work on fewer chapters."),
+    # worker apikey
+    "claude_api_key_missing": _t("after_fix", "Ask the owner to put ANTHROPIC_API_KEY in the server .env file, then call again."),
     "claude_missing": _t("no", "Claude Code (the claude command) is not installed on the server: choose the other agent (PUT /api/projects/{pid}/agent)."),
     "claude_auth": _t("after_fix", "Claude Code is not signed in on the server: the owner must run `claude auth login` there, then call again."),
     "claude_config": _t("no", "Claude Code on this machine cannot be used (too old or not running): choose the other agent."),

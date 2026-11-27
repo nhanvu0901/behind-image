@@ -184,7 +184,7 @@ def resolve(model_id: str, path: Path | None = None) -> dict | None:
             tpl = next((m for m in raw if m["provider"] == "claudecode"), {})
             base = {"id": model_id, "label": claudecode.label_for(*parsed), "provider": "claudecode", "model": parsed[0], "effort": parsed[1],
                     "timeout": tpl.get("timeout", 900)}
-        return _claude_spec(base, _claude_cached())
+        return _claude_spec(base, None if claudecode.is_api_id(model_id) else _claude_cached())
     for m in raw:
         if m["provider"] != "antigravity" and m["id"] == model_id:
             return m
