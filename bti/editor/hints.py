@@ -348,6 +348,10 @@ HINTS: dict[str, dict] = {
     "output_disabled": _t("no", "This app was started without an output folder: ask the owner to set BTI_OUTPUT_ROOT or to start the app the usual way, then call again."),
     "output_not_applicable": _t("no", "A reference or imported project has no output folder: use a project made from the library."),
     "output_failed": _t("later", "The output folder could not be written (see `detail`): check that the disk has room and the folder is not open elsewhere, then call POST /api/projects/{pid}/output/build again."),
+    # scorecard: quality scorecard and contact sheets (bti/scorecard/)
+    "scorecard_not_ready": _t("after_fix", "Make the voice timing and storyboard first (GET /api/projects/{pid}/state shows what is missing), then call scorecard.make again."),
+    "scorecard_failed": _t("later", "The scorecard could not be built (see `detail`): check the storyboard and timing, then call POST /api/projects/{pid}/scorecard/make again."),
+    "sheet_not_found": _t("no", "Use a sheet name listed by GET /api/projects/{pid}/scorecard (`sheets`)."),
 }
 
 

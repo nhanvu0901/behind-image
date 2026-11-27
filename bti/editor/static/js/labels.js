@@ -1101,3 +1101,44 @@ Object.assign(VALUE, {
 Object.assign(CODE, { review_incomplete: "Chưa xem hết các cảnh" });
 // capwrite: the caption shown under a borrowed picture.
 export const CAPWRITE_LABEL = "Chú thích trên video";
+// ---- worker scorecard: quality scorecard and contact sheets on the export page
+export const SCORECARD_LABELS = {
+  title: 'Bảng chấm chất lượng',
+  make: 'Chấm điểm',
+  remake: 'Chấm lại',
+  making: 'Đang chấm…',
+  empty: 'Chưa có bảng chấm chất lượng. Bấm “Chấm điểm” để đo và tạo các tờ ảnh.',
+  notReady: 'Cần có storyboard và thời gian giọng đọc trước khi chấm điểm.',
+  stale: 'Storyboard hoặc bản xuất đã đổi sau lần chấm trước.',
+  doneToast: 'Đã chấm chất lượng xong.',
+  col: { metric: 'Chỉ số', value: 'Kết quả', target: 'Mục tiêu', status: 'Đánh giá' },
+  status: { ok: 'Đạt', warn: 'Ngoài mục tiêu', na: 'Chưa xuất' },
+  summary: (passed, total, failed) => (failed ? `${passed}/${total} mục đạt · ${failed} mục cần xem` : `${passed}/${total} mục đạt`),
+  sheetsTitle: 'Tờ ảnh tổng hợp',
+  sheetsHint: 'Bấm vào từng tờ ảnh để mở kích thước đầy đủ.',
+  sheetTile: (n, a, b) => (a != null && b != null ? `Tờ ${n} (cảnh ${a}–${b})` : `Tờ ${n}`),
+  metric: {
+    small_painting_share: 'Tranh chính nhỏ giữa hai dải đen',
+    marks_per_minute: 'Số dấu chỉ mỗi phút (đèn rọi, vòng tròn)',
+    biggest_mark: 'Dấu chỉ lớn nhất so với chiều cao khung',
+    marks_on_person: 'Dấu chỉ đặt lên người',
+    name_strips: 'Nhãn tên trên màn hình',
+    borrowed_pictures: 'Hình mượn ngoài tranh',
+    short_shots: 'Cảnh thường ngắn dưới 2,5 giây',
+    repeated_regions: 'Vùng tranh lặp lại nhiều nhất',
+    subject_not_shown: 'Đoạn nhắc chủ thể nhưng không chiếu',
+    unfilled_identity: 'Mốc chương hoặc tên kênh chưa phủ kín khung',
+    loudness: 'Độ lớn tiếng tổng thể',
+    pause_vs_speech: 'Nhạc trong khoảng lặng so với lời nói',
+  },
+  target: {
+    maxPct: (p) => `Tối đa ${p}%`,
+    maxRate: (n) => `Tối đa ${n}/phút`,
+    zero: '0',
+    strips: '0 lặp tên, 0 vật thường',
+    borrowed: (minS, maxGap) => `Từ ${minS} giây/hình · trống tối đa ${maxGap} giây`,
+    maxRepeat: (n) => `Tối đa ${n} lần`,
+    loudness: (t, tol) => `${t} ± ${tol} LUFS`,
+    pause: (lo, hi) => `${lo}–${hi} dB dưới lời`,
+  },
+};

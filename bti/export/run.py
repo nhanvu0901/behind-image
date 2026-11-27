@@ -426,6 +426,11 @@ def build_parts(project_dir: Path, inp: Inputs, specs, end: float, tools: render
             store.write_text_atomic(edir / names["description"], d["description"], 1)
             store.write_text_atomic(edir / names["chapters"], d["chapters"], 1)
             store.write_json_atomic(manifest_path(project_dir), manifest, 1)
+        try:
+            from bti.scorecard import make_for_project
+            make_for_project(project_dir, tools=tools, loudness=loud, sheets=True)
+        except Exception as exc:     # noqa: BLE001 - scorecard never fails an export
+            ctx.log("scorecard skipped: %s" % exc)
         sentence = _done_summary_vi(rendered_n, reused_n)
         ctx.log(sentence)
         ctx.progress(1.0, sentence)

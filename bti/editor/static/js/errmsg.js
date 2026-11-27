@@ -974,3 +974,11 @@ Object.assign(BUILD, SUBJVIS_SENTENCES);
 export const REVIEWFIX_SENTENCES = { review_incomplete: (i) => `Chưa xem được ${i.args?.count ?? "?"} cảnh.` };
 export const REVIEWFIX_CODES = Object.keys(REVIEWFIX_SENTENCES);
 Object.assign(BUILD, REVIEWFIX_SENTENCES);
+
+// ---- worker scorecard: quality scorecard and contact sheets
+STAGE_CODES.scorecard = {
+  scorecard_not_ready: 'Cần có storyboard và tệp thời gian giọng đọc trước khi chấm điểm.',
+  scorecard_failed: 'Chưa chấm điểm chất lượng được. Hãy kiểm tra storyboard và thử lại.',
+  sheet_not_found: 'Không tìm thấy tờ ảnh này.',
+};
+for (const [k, v] of Object.entries(STAGE_CODES.scorecard)) BY_CODE_HTTP[k] = () => v;

@@ -66,6 +66,8 @@ class Facts:
     export_manifest: dict | None = None
     export_ok: bool = False
     export_reason: str | None = None
+    scorecard_doc: dict | None = None
+    scorecard_rev: str | None = None
     approvals: dict = field(default_factory=dict)     # gate -> {by, at, stands} | None
     steps: list = field(default_factory=list)         # [{step, label, state}]
     current: str | None = None
@@ -321,6 +323,16 @@ def collect(pdir: Path, *, jobs: bool = True) -> Facts:
         f.export_manifest, f.export_ok, f.export_reason = export_done(pdir)
     except Exception as e:      # noqa: BLE001
         prob("the export cannot be read: %s" % str(e)[:150])
+
+    # the scorecard (7_quality)
+    try:
+        sc = _read_json(pdir / "scorecard" / "scorecard.json")
+        if isinstance(sc, dict) and sc.get("schema") == "bti.scorecard/1":
+            from . import parts as P
+            f.scorecard_doc = sc
+            f.scorecard_rev = P.scorecard_rev(f)
+    except Exception as e:      # noqa: BLE001
+        prob("the scorecard cannot be read: %s" % str(e)[:150])
 
     # who approved what
     f.approvals = {

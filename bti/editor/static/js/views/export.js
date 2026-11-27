@@ -4,8 +4,9 @@
 // until CORE merges them (docs/qa/BUILD_export.md, "Needs another agent").
 import { api } from '../api.js';
 import { describeError, isVietnamese, STAGE_CODES } from '../errmsg.js';
-import { EXPORT_LABELS, MUSIC_LABELS } from '../labels.js';
+import { EXPORT_LABELS, MUSIC_LABELS, SCORECARD_LABELS } from '../labels.js';
 import { musicRows } from '../musiclogic.js';
+import { scorecardRows, scorecardSummaryText } from '../scorecardlogic.js';
 import { h, kids, toast, errorToast, errorInto, detailFold, confirmDialog } from '../util.js';
 import { watchIdle, jobWatcher } from '../idlewatch.js';
 import { projectHash } from '../router.js';
@@ -68,6 +69,7 @@ async function load() {
   if (!S.musicJob && isActive(S.music?.job)) S.musicJob = S.music.job;
   if (S.musicJob) startMusicPolling();
   try { S.identity = await api.get(`${P()}/identity`); } catch { S.identity = null; }       // the style of the opening and the chapter marks (a line of the plan)
+  try { S.scorecard = await api.get(`${P()}/scorecard`); } catch { S.scorecard = null; }
   if (!S.job && isActive(S.data.job)) S.job = S.data.job;
   if (!S.job && !S.last) {
     // a failed or stopped run that left nothing behind: say what happened
@@ -179,6 +181,16 @@ async function copyText(text, btn) {
   } catch { toast('Không chép được. Hãy bôi đen và chép tay.', 'warn'); }
 }
 
+async function makeScorecard() {
+  if (S.scorecardBusy) return;
+  S.scorecardBusy = true; paint();
+  try {
+    S.scorecard = await api.post(`${P()}/scorecard/make`, {});
+    toast(SCORECARD_LABELS.doneToast, 'ok');
+  } catch (e) { toast(errText(e).text, 'err', 9000); }
+  finally { if (S) { S.scorecardBusy = false; paint(); } }
+}
+
 // ------------------------------------------------------------------ painting
 function paint() {
   if (!root) return;
@@ -186,7 +198,7 @@ function paint() {
   root.replaceChildren(...kids(
     h('h1', { text: '6. Xuất video' }),
     h('div', { class: 'ex-sub muted', text: 'Dựng bản cuối từ storyboard đã duyệt và giọng đọc: video MP4, mô tả và mục lục.' }),
-    staleBox(d), blockedBox(d), lastErrorBox(), musicBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d)));
+    staleBox(d), blockedBox(d), lastErrorBox(), musicBox(), planBox(d), h('div', { id: 'ex-job' }), resultBox(d), scorecardBox()));
   paintJob();
 }
 
@@ -291,12 +303,51 @@ function resultBox(d) {
         h('a', { class: 'lnk', href: api.url(f.url) + '?download=1', text: 'Tải về' }))))));
 }
 
+function scorecardBox() {
+  const data = S.scorecard;
+  if (!data) return null;
+  const sc = data.scorecard;
+  const rows = sc ? scorecardRows(sc) : [];
+  const sheets = data.sheets || [];
+  const busy = !!S.scorecardBusy;
+  const btnText = busy ? SCORECARD_LABELS.making : (data.exists ? SCORECARD_LABELS.remake : SCORECARD_LABELS.make);
+  return h('div', { class: 'box ex-scorecard-box' },
+    h('div', { class: 'ex-score-head' },
+      h('h4', { text: SCORECARD_LABELS.title }),
+      h('button', { id: 'ex-scorecard-make', text: btnText, disabled: busy || !data.ready || null, onclick: makeScorecard })),
+    data.stale ? h('div', { class: 'hint warn', text: SCORECARD_LABELS.stale }) : null,
+    !data.ready && !data.exists ? h('div', { class: 'muted', text: SCORECARD_LABELS.notReady }) : null,
+    sc ? h('div', { class: 'muted', style: { marginBottom: '6px' }, text: scorecardSummaryText(sc) }) :
+      (data.ready ? h('div', { class: 'muted', text: SCORECARD_LABELS.empty }) : null),
+    rows.length ? h('table', { class: 'ex-card ex-scorecard' },
+      h('thead', null, h('tr', null,
+        h('th', { text: SCORECARD_LABELS.col.metric }),
+        h('th', { text: SCORECARD_LABELS.col.value }),
+        h('th', { text: SCORECARD_LABELS.col.target }),
+        h('th', { text: SCORECARD_LABELS.col.status }))),
+      h('tbody', null, rows.map((r) => h('tr', { class: 'sc-' + r.status },
+        h('th', null, h('div', { text: r.label }), r.detail ? h('div', { class: 'muted ex-score-detail', text: r.detail }) : null),
+        h('td', { text: r.valueText }),
+        h('td', { class: 'muted', text: r.targetText }),
+        h('td', null, h('span', { class: 'badge ' + r.status, text: r.statusText })))))) : null,
+    sheets.length ? h('div', { style: { marginTop: '12px' } },
+      h('h4', { text: SCORECARD_LABELS.sheetsTitle }),
+      h('div', { class: 'muted', text: SCORECARD_LABELS.sheetsHint }),
+      h('div', { class: 'ex-sheets' }, sheets.map((sh, i) => {
+        const href = api.url(sh.url);
+        const cap = SCORECARD_LABELS.sheetTile(i + 1, sh.shots?.[0], sh.shots?.[1]);
+        return h('a', { class: 'ex-sheet', href, target: '_blank', rel: 'noopener', title: cap },
+          h('img', { src: href, loading: 'lazy', alt: cap }),
+          h('span', { text: cap }));
+      }))) : null);
+}
+
 // ------------------------------------------------------------------ mount
 export async function mount(host, ctx) {
   ensureCss();
   scope = ctx.scope; shell = ctx.shell;
   seen = jobWatcher();
-  S = { pid: ctx.pipeline.project, pipeline: ctx.pipeline, data: null, music: null, musicJob: null, musicTimer: null, musicBusy: false, musicPolling: false, job: null, last: null, timer: null, busyPoll: false };
+  S = { pid: ctx.pipeline.project, pipeline: ctx.pipeline, data: null, music: null, musicJob: null, musicTimer: null, musicBusy: false, musicPolling: false, scorecard: null, scorecardBusy: false, job: null, last: null, timer: null, busyPoll: false };
   root = h('div', { class: 'infov v-exp', 'data-step': 'export' });
   host.append(root);
   try { await load(); } catch (e) { errorInto(root, e); }

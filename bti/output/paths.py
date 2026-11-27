@@ -21,8 +21,8 @@ README_FILE = "README.md"
 INDEX_JSON = "index.json"
 INDEX_MD = "INDEX.md"
 
-# the six numbered parts, in the order of the pipeline, and the log
-PARTS = {"sources": "1_sources", "script": "2_script", "voice": "3_voice", "pictures": "4_pictures", "storyboard": "5_storyboard", "export": "6_export"}
+# the seven numbered parts, in the order of the pipeline, and the log
+PARTS = {"sources": "1_sources", "script": "2_script", "voice": "3_voice", "pictures": "4_pictures", "storyboard": "5_storyboard", "export": "6_export", "quality": "7_quality"}
 LOG_DIR = "log"
 
 

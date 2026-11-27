@@ -344,3 +344,44 @@ def write_contact_sheets(f, folder: Path, ffmpeg: list[str], env: dict | None = 
     d = folder / PARTS["storyboard"]
     names = sheets.contact_sheets(folder / FINAL_VIDEO, items, d, ffmpeg, title=f.title or f.pid, env=env, progress=progress, tmp_root=folder)
     return [rel(folder, d / n) for n in names]
+
+
+# ------------------------------------------------------------------------------------------------ 7_quality
+def scorecard_rev(f) -> str | None:
+    if f.scorecard_doc is None:
+        return None
+    sdir = f.pdir / "scorecard"
+    parts = [sha_of(sdir / "scorecard.json"), sha_of(sdir / "scorecard.md"), sha_of(sdir / "record.json"), sha_of(sdir / "record.md")]
+    sh_dir = sdir / "sheets"
+    if sh_dir.is_dir():
+        for p in sorted(sh_dir.glob("sheet_*.jpg")):
+            parts.append(p.name + ":" + (sha_of(p) or ""))
+    return sha(*parts)
+
+
+def write_quality(f, folder: Path) -> dict:
+    sdir = f.pdir / "scorecard"
+    if f.scorecard_doc is None or not (sdir / "scorecard.json").is_file():
+        raise FileNotFoundError("scorecard.json is missing")
+    d = folder / PARTS["quality"]
+    files: list[str] = []
+    names: set[str] = set()
+    for name in ("scorecard.json", "scorecard.md", "record.json", "record.md"):
+        src = sdir / name
+        if src.is_file():
+            fsutil.put_file(src, d / name, link=False)
+            names.add(name)
+            files.append(rel(folder, d / name))
+    fsutil.keep_only(d, names, suffixes=(".json", ".md"))
+    sh_src = sdir / "sheets"
+    sh_dst = d / "sheets"
+    sh_names: set[str] = set()
+    if sh_src.is_dir():
+        for p in sorted(sh_src.glob("sheet_*.jpg")):
+            if p.is_file():
+                fsutil.put_file(p, sh_dst / p.name, link=True)
+                sh_names.add(p.name)
+                files.append(rel(folder, sh_dst / p.name))
+    if sh_dst.is_dir():
+        fsutil.keep_only(sh_dst, sh_names, suffixes=(".jpg",))
+    return {"rev": f.scorecard_rev, "files": files, "counts": {"sheets": len(sh_names)}}

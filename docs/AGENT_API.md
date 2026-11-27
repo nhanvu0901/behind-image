@@ -205,6 +205,7 @@ loop:
 | `auto.run` | export | `POST /api/projects/{pid}/auto/run` |  | yes |  | machine_time: the sum of what it may start from where the project stands | Listed while automatic running is on for the project and no video is exported yet. Ready unless a job of the project runs (an automatic run included). Takes `until` (a step id) and `max_steps`; walks the project forward with the first allowed advancing action of this answer, until it is exported, or stops with a reason (see docs/AGENT_API.md, "Chạy tự động"). `cost` is the sum of what it may start: only the kinds the owner allowed. |
 | `auto.cancel` | export | `POST /api/longjobs/{job_id}/cancel` |  |  |  |  | While an automatic run of the project goes on. |
 | `output.build` | export | `POST /api/projects/{pid}/output/build` |  |  |  |  | Listed when the app has an output folder (`output/<artwork key>/`) and the project is not a reference project. Always ready: fills (or refills) the folder from the project as it stands (the video, the readable documents, the log, the index); the body `{"clean": true}` also removes the working folder's caches when the export stands. A project of the same painting as the folder's last project takes it over. |
+| `scorecard.make` | export | `POST /api/projects/{pid}/scorecard/make` |  |  |  | machine_time: a few seconds | Once the project has a readable storyboard and timing.json. Computes the quality scorecard, contact sheets and render record into scorecard/ and output/<key>/7_quality/; never gates anything. |
 <!-- END GENERATED: actions -->
 
 ## 3. The words of `needs`
@@ -478,7 +479,10 @@ word) and `stale_revision` (storyboard, operations) both stay, with one sentence
 | `route_not_found` | no | There is no such route: check the path and the method against docs/AGENT_API.md or GET /openapi.json. |
 | `save_refused` | after_fix | The engine refused the document: read `issues`, fix the values they name, then send it again. |
 | `scope_needs_storyboard` | after_fix | This needs an existing storyboard: apply the first draft proposal first (POST /api/projects/{pid}/proposals/{id}/apply). |
+| `scorecard_failed` | later | The scorecard could not be built (see `detail`): check the storyboard and timing, then call POST /api/projects/{pid}/scorecard/make again. |
+| `scorecard_not_ready` | after_fix | Make the voice timing and storyboard first (GET /api/projects/{pid}/state shows what is missing), then call scorecard.make again. |
 | `script_job_running` | later | Cancel the model job (POST /api/jobs/{job_id}/cancel) or wait until it is finished, then call again. |
+| `sheet_not_found` | no | Use a sheet name listed by GET /api/projects/{pid}/scorecard (`sheets`). |
 | `shot_not_found` | no | Use a shot id that exists in the storyboard (GET /api/projects/{pid}). |
 | `shot_too_short` | after_fix | Choose a time that leaves every piece at least 0.2 seconds long. |
 | `slot_kind_mismatch` | after_fix | Use an asset of the kind the slot takes (allowed lists the kinds). |
