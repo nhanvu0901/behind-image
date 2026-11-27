@@ -244,6 +244,8 @@ def test_the_state_lists_both_in_the_order_of_the_page_with_consistent_marks(api
     from bti.editor import state_api
     page = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.suggest", "picks.put", "picks.auto", "picks.retry_missing", "picks.tighten", "picks.edit", "picks.ops",
             "picks.approve", "picks.cancel"]
+    # planner: visual-script planning is an additional picks action.
+    page.insert(7, "visual.plan")
     assert [s.id for s in state_api.SPECS if s.step == "picks"] == page                                  # the catalogue: search and import, the agent, its retry of the downloads (fixes4), the box, the operations, approve
     st = api.get("/api/projects/%s/state" % api.pid).json()
     ids = [a["id"] for a in st["next_actions"] if a["id"].startswith("picks.")]

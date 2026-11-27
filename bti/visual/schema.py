@@ -15,8 +15,8 @@ PICTURE = obj({"picture": STR})
 WHOLE = obj({"whole": {"const": True}})
 FALLBACK = {"oneOf": [REGION, WHOLE]}
 SHOW = {"oneOf": [REGION, PICTURE, WHOLE, obj({"want": STR, "else": FALLBACK}),
-                  obj({"pair": {"type": "array", "items": PICTURE, "minItems": 2, "maxItems": 2}}),
-                  obj({"map": obj({"places": array(STR, 1)})})]}
+                  obj({"pair": {"type": "array", "items": {"oneOf": [PICTURE, obj({"want": STR, "else": FALLBACK})]}, "minItems": 2, "maxItems": 2}}),
+                  obj({"map": obj({"places": array(STR, 1), "picture": STR}, ["places"]), "else": FALLBACK})]}
 POINT = obj({"region": STR, "word": INDEX})
 LABEL = obj({"region": STR, "text": STR})
 INTENT = {"oneOf": [obj({"intro": STR, "word": INDEX}), obj({"point": array(POINT, 1)}),
@@ -24,7 +24,8 @@ INTENT = {"oneOf": [obj({"intro": STR, "word": INDEX}), obj({"point": array(POIN
                     obj({"number": obj({"text": STR, "of": STR})})]}
 CAST = obj({"id": STR, "kind": {"enum": ["person", "place", "work", "thing", "idea", "text"]},
             "name": STR, "also": array(STR), "strip": {"type": "boolean"},
-            "sub": {"type": "string"}, "shown_by": array({"oneOf": [REGION, PICTURE]})})
+            "sub": {"type": "string"}, "shown_by": array({"oneOf": [REGION, PICTURE]}), "term": {"type": "boolean"}},
+           ["id", "kind", "name", "also", "strip", "sub", "shown_by"])
 WANTED = obj({"id": STR, "subject": STR, "kind": {"enum": ["portrait", "work", "place", "object", "document"]},
               "search": STR, "alt": array(STR), "period": {"enum": ["then", "later", "today", None]},
               "status": {"enum": ["open", "found", "none"]}, "picture": {"type": ["string", "null"]}, "tried": array(STR)})

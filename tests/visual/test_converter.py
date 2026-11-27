@@ -37,7 +37,7 @@ def test_convert_map_from_named_legacy_places():
     storyboard = {"shots": [{"id": "s1", "start": {"w": 0}, "technique": "MAP-01",
                               "params": {"places": [{"name": "Lucca, Italy"}, {"name": "Bruges, Belgium"}]}}]}
     doc, _ = convert(storyboard, timing, picks, "n", "t")
-    assert doc["moments"][0]["show"] == {"map": {"places": ["Lucca, Italy", "Bruges, Belgium"]}}
+    assert doc["moments"][0]["show"] == {"map": {"places": ["Lucca, Italy", "Bruges, Belgium"]}, "else": {"whole": True}}
 
 
 def test_uncertain_main_picture_frame_is_marked_in_the_moment():

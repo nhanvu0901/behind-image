@@ -39,3 +39,23 @@ def put_visual(pid: str, request: Request, body: dict = Body(...)):
         current = store.load(project)
         raise ApiError(409, "base_rev is stale", code="stale_revision", current_rev=store.revision(current) if current else None)
     return {"visual": document, "rev": rev, "issues": issues}
+
+
+@router.post('/projects/{pid}/visual/plan')
+def plan_visual(pid: str, request: Request, body: dict = Body(default={})):
+    from bti.visual import job
+    from bti.picks.auto.inputs import AutoError
+    from bti.draft.inputs import DraftError
+    from bti.longjob import Busy
+    from bti.editor.auto_api import actor_of
+    from bti.auto import RUN_ACTOR
+    try:
+        result = job.start(pid, _pdir(request, pid), model=body.get('model'),
+                           manager=getattr(request.app.state, 'longjob_manager', None), by_run=actor_of(body) == RUN_ACTOR)
+    except AutoError as e:
+        raise ApiError(e.status, e.message, code=e.code, **e.extra)
+    except DraftError as e:
+        raise ApiError(409, e.message, code=e.code)
+    except Busy as e:
+        raise ApiError(409, 'A picks job is already running.', code='busy', job_id=e.job_id)
+    return {'job_id': result['id'], 'model': (result.get('meta') or {}).get('model'), 'agent': (result.get('meta') or {}).get('agent')}

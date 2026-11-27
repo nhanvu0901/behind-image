@@ -57,7 +57,7 @@ def test_point_person_and_bad_text():
 def test_bad_pair_and_map():
     doc = valid()
     doc["moments"][0]["about"] = None
-    doc["moments"][0]["show"] = {"map": {"places": ["Bruges"]}}
+    doc["moments"][0]["show"] = {"map": {"places": ["Bruges"]}, "else": {"whole": True}}
     assert "V11" in {i["rule"] for i in validate(doc, timing())}
 
 
@@ -104,7 +104,9 @@ def test_unverifiable_pair_semantics_are_returned_for_review():
 
 
 def test_thing_strip_needs_familiarity_review():
-    assert any(i["rule"] == "V6" and i.get("level") == "review" for i in validate(valid(), timing()))
+    doc = valid()
+    doc["cast"][0].update(strip=True, term=True)
+    assert any(i["rule"] == "V6" and i.get("level") == "review" for i in validate(doc, timing()))
 
 
 def test_missing_wanted_picture_checks_the_actual_fallback():
@@ -115,8 +117,92 @@ def test_missing_wanted_picture_checks_the_actual_fallback():
     assert "V3" in {issue["rule"] for issue in validate(doc, timing())}
 
 
-def test_point_in_borrowed_picture_region_is_not_assumed_missing():
+def test_point_in_main_painting_region_is_allowed():
     doc = valid()
-    doc["moments"][0].update(about=None, show={"picture": "B"}, say=[{"point": [{"region": "DETAIL", "word": 1}]}])
+    doc["moments"][0].update(about=None, show={"picture": "B"}, say=[{"point": [{"region": "RIVER", "word": 1}]}])
     picks = {"main_asset": "A", "assets": {"A": {"regions": {"RIVER": {}}}, "B": {"regions": {"DETAIL": {}}}}}
     assert not [i for i in validate(doc, timing(), picks) if i["rule"] == "V8" and i.get("level") != "review"]
+
+
+def test_thing_strip_requires_term_statement():
+    doc = valid()
+    doc['cast'][0]['strip'] = True
+    assert any(i['rule'] == 'V6' and i.get('level') != 'review' for i in validate(doc, timing()))
+    doc['cast'][0]['term'] = True
+    assert not any(i['rule'] in ('shape', 'V6') and i.get('level') != 'review' for i in validate(doc, timing()))
+
+
+def test_point_requires_main_painting_region_even_if_pool_has_region():
+    doc = valid()
+    doc['moments'][0].update(about=None, show={'picture': 'B'}, say=[{'point': [{'region': 'DETAIL', 'word': 1}]}])
+    picks = {'main_asset': 'A', 'assets': {'A': {'regions': {'RIVER': {}}}, 'B': {'regions': {'DETAIL': {}}}}}
+    assert any(i['rule'] == 'V8' and i.get('level') != 'review' for i in validate(doc, timing(), picks))
+
+
+def test_pair_must_reference_pool_pictures_or_wants():
+    doc = valid()
+    doc['moments'][0].update(about=None, show={'pair': [{'picture': 'A'}, {'want': 'w1', 'else': {'region': 'RIVER'}}]})
+    issues = validate(doc, timing(), {'assets': {'A': {}}})
+    assert any(i['rule'] == 'V11' and i.get('level') != 'review' for i in issues)
+    doc['wanted'] = [{'id': 'w1', 'subject': 'river', 'kind': 'object', 'search': 'river', 'alt': [], 'period': None, 'status': 'open', 'picture': None, 'tried': []}]
+    assert not any(i['rule'] in ('shape', 'V11') and i.get('level') != 'review' for i in validate(doc, timing(), {'assets': {'A': {}}}))
+
+
+def test_v12_rejects_asset_keys_and_camera_ids():
+    for text in ('A123', 'DSC04385', 'image 872', 'museum.example'):
+        doc = valid()
+        doc['cast'][0]['sub'] = text
+        assert any(i['rule'] == 'V12' and i.get('level') != 'review' for i in validate(doc, timing(), {'assets': {'A123': {}}})), text
+
+
+def test_whole_view_is_reported_even_at_start():
+    doc = valid()
+    doc['moments'][0].update(about=None, show={'whole': True})
+    assert any(i['rule'] == 'V9' and i.get('level') == 'review' for i in validate(doc, timing()))
+
+
+def test_map_requires_fallback_and_accepts_pool_picture():
+    doc = valid()
+    doc['moments'][0].update(about=None, show={'map': {'places': ['Paris', 'Rome']}})
+    assert any(i['rule'] == 'shape' for i in validate(doc, timing()))
+    doc['moments'][0]['show'] = {'map': {'places': ['Paris', 'Rome'], 'picture': 'M'}, 'else': {'whole': True}}
+    assert not any(i['rule'] in ('shape', 'V11') and i.get('level') != 'review' for i in validate(doc, timing(), {'assets': {'M': {}}}))
+    doc['moments'][0]['show']['map']['picture'] = 'missing'
+    assert any(i['rule'] == 'V11' and i.get('level') != 'review' for i in validate(doc, timing(), {'assets': {'M': {}}}))
+
+
+def test_show_references_real_region_or_pool_picture():
+    doc = valid()
+    doc['moments'][0].update(about=None, show={'region': 'MISSING'})
+    picks = {'main_asset': 'A', 'assets': {'A': {'regions': {'RIVER': {}}}, 'B': {}}}
+    assert any(i['rule'] == 'V3' and i.get('level') != 'review' for i in validate(doc, timing(), picks))
+    doc['moments'][0]['show'] = {'picture': 'C'}
+    assert any(i['rule'] == 'V3' and i.get('level') != 'review' for i in validate(doc, timing(), picks))
+
+
+def test_found_want_must_name_a_picture_in_pool():
+    doc = valid()
+    doc['wanted'] = [{'id': 'w1', 'subject': 'river', 'kind': 'object', 'search': 'river', 'alt': [], 'period': None, 'status': 'found', 'picture': 'MISSING', 'tried': ['river']}]
+    assert any(i['rule'] == 'V4' and i.get('level') != 'review' for i in validate(doc, timing(), {'assets': {'A': {}}}))
+
+
+def test_cast_depictions_must_exist_in_painting_or_pool():
+    doc = valid()
+    doc['cast'][0]['shown_by'] = [{'region': 'MISSING'}, {'picture': 'MISSING'}]
+    picks = {'main_asset': 'A', 'assets': {'A': {'regions': {'RIVER': {}}}}}
+    assert len([i for i in validate(doc, timing(), picks) if i['rule'] == 'V3' and i.get('level') != 'review']) >= 2
+
+
+def test_map_subject_is_not_rejected_by_matching_place_spelling():
+    doc = valid()
+    doc['cast'][0].update(kind='place', name='Bruges', shown_by=[])
+    doc['moments'][0]['show'] = {'map': {'places': ['Brugge, Belgium', 'Lucca, Italy']}, 'else': {'whole': True}}
+    assert not any(i['rule'] == 'V3' and i.get('level') != 'review' for i in validate(doc, timing()))
+
+
+def test_pair_want_accepts_a_region_fallback():
+    doc = valid()
+    doc['wanted'] = [{'id': 'w', 'subject': 'river', 'kind': 'object', 'search': 'river', 'alt': [], 'period': None, 'status': 'none', 'picture': None, 'tried': ['river']}]
+    doc['moments'][0].update(about=None, show={'pair': [{'picture': 'B'}, {'want': 'w', 'else': {'region': 'RIVER'}}]})
+    picks = {'main_asset': 'A', 'assets': {'A': {'regions': {'RIVER': {}}}, 'B': {}}}
+    assert not any(i['rule'] in ('shape', 'V11') and i.get('level') != 'review' for i in validate(doc, timing(), picks))
