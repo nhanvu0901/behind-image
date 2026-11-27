@@ -57,8 +57,7 @@ def test_points_only_mark_small_non_person_targets():
     visual["moments"][0]["show"] = {"whole": True}
     visual["moments"][0]["say"] = [{"point": [{"region": "VILLAGE", "word": 0}]}]
     sb, notes = compose(visual, timing, picks, {"id": "gae"})
-    assert sb["shots"][0]["overlays"][0]["technique"] == "HI-01"
-    assert sb["shots"][0]["overlays"][0]["params"]["floor"] >= 0.6
+    assert sb["shots"][0]["overlays"][0]["technique"] == "AN-01"
     visual["cast"][0]["kind"] = "person"
     sb, notes = compose(visual, timing, picks, {"id": "gae"})
     assert not any(o["technique"] in ("HI-01", "AN-01") for o in sb["shots"][0]["overlays"])
@@ -268,7 +267,7 @@ def test_region_shots_of_low_resolution_fixture_fill_the_frame():
                 assert key["zoom"] * 300 >= 1080 - 0.1
 
 
-def test_point_inside_person_box_is_not_marked():
+def test_point_inside_full_figure_can_be_marked():
     visual, timing, picks = fixture("landscape")
     regions = picks["assets"]["A"]["regions"]
     regions["FIGURE"] = {"x": 200, "y": 150, "rx": 170, "ry": 125}
@@ -277,7 +276,7 @@ def test_point_inside_person_box_is_not_marked():
     visual["moments"][0]["show"] = {"whole": True}
     visual["moments"][0]["say"] = [{"point": [{"region": "BOOK", "word": 0}]}]
     sb, _ = compose(visual, timing, picks, {"id": "gae"})
-    assert not any(o["technique"] == "HI-01" for o in sb["shots"][0]["overlays"])
+    assert any(o["technique"] == "AN-01" for o in sb["shots"][0]["overlays"])
 
 
 def test_point_partially_overlapping_person_is_not_assumed_person():
@@ -289,7 +288,7 @@ def test_point_partially_overlapping_person_is_not_assumed_person():
     visual["moments"][0]["show"] = {"whole": True}
     visual["moments"][0]["say"] = [{"point": [{"region": "BAND", "word": 0}]}]
     sb, notes = compose(visual, timing, picks, {"id": "gae"})
-    assert any(o["technique"] == "HI-01" for o in sb["shots"][0]["overlays"])
+    assert any(o["technique"] == "AN-01" for o in sb["shots"][0]["overlays"])
 
 
 def test_pair_uses_simultaneous_panels_and_captions():
@@ -349,7 +348,7 @@ def test_person_like_region_name_alone_does_not_block_a_mark():
     visual['moments'][0]['show'] = {'whole': True}
     visual['moments'][0]['say'] = [{'point': [{'region': 'HAND', 'word': 0}]}]
     sb, _ = compose(visual, timing, picks, {'id': 'gae'})
-    assert any(o['technique'] == 'HI-01' for o in sb['shots'][0]['overlays'])
+    assert any(o['technique'] == 'AN-01' for o in sb['shots'][0]['overlays'])
 
 
 def test_composed_storyboard_skips_legacy_view_checks(monkeypatch):
@@ -362,3 +361,45 @@ def test_composed_storyboard_skips_legacy_view_checks(monkeypatch):
     monkeypatch.setattr(storyboard.VC, "check", record)
     storyboard.validate(sb, Timing(timing), registry.load_bundle("gae"))
     assert calls == []
+
+
+def test_small_shown_thing_is_ringed_on_its_name_and_limited_per_video():
+    visual, timing, picks = fixture("landscape")
+    region = picks["assets"]["A"]["regions"]["VILLAGE"]
+    region.update(x=200, y=150, rx=5, ry=5)
+    for moment in visual["moments"][:3]:
+        moment.update(about="village", show={"region": "VILLAGE"}, move="hold", say=[])
+    for word in timing["words"]:
+        word["s"] *= 1.5
+        word["e"] *= 1.5
+    timing["duration"] *= 1.5
+    for i in (1, 6, 11):
+        timing["words"][i]["w"] = "village"
+    sb, _ = compose(visual, timing, picks, {"id": "gae"})
+    rings = [o for s in sb["shots"] for o in s["overlays"] if o["technique"] == "AN-01" and o["params"]["at"] == "VILLAGE"]
+    assert len(rings) == 2
+    assert [o["start"]["t"] for o in rings] == [timing["words"][1]["s"], timing["words"][6]["s"]]
+    assert all(o["dur"] <= 3 for o in rings)
+
+
+def test_point_mostly_overlapping_face_is_not_marked():
+    visual, timing, picks = fixture("landscape")
+    regions = picks["assets"]["A"]["regions"]
+    regions["FACE"] = {"x": 200, "y": 150, "rx": 12, "ry": 12}
+    regions["OBJECT"] = {"x": 205, "y": 150, "rx": 5, "ry": 5}
+    visual["cast"].append({"id": "p", "kind": "person", "name": "Person", "shown_by": [{"region": "FACE"}]})
+    visual["moments"][0].update(show={"whole": True}, say=[{"point": [{"region": "OBJECT", "word": 0}]}])
+    sb, _ = compose(visual, timing, picks, {"id": "gae"})
+    assert not any(o["technique"] == "AN-01" for o in sb["shots"][0]["overlays"])
+
+
+def test_shown_text_region_up_to_45_percent_gets_a_capped_ring():
+    visual, timing, picks = fixture("landscape")
+    visual["cast"][0].update(kind="text", name="signature")
+    picks["assets"]["A"]["regions"]["VILLAGE"].update(x=200, y=150, rx=5, ry=44)
+    visual["moments"][0].update(about="village", show={"region": "VILLAGE"}, say=[])
+    timing["words"][0]["w"] = "signature"
+    sb, _ = compose(visual, timing, picks, {"id": "gae"})
+    ring = next(o for o in sb["shots"][0]["overlays"] if o["technique"] == "AN-01")
+    zoom = max(k["zoom"] for k in sb["shots"][0]["params"]["camera"])
+    assert ring["params"]["radius"] * zoom <= 0.15 * 1080

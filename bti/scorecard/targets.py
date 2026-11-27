@@ -48,11 +48,14 @@ def load_targets(style_id: str = "gae", style_root: Path | None = None) -> dict[
         doc = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return out
+    compose = doc.get("compose", {}) if isinstance(doc, dict) else {}
+    if isinstance(compose, dict) and isinstance(compose.get("marks_per_min_max"), (int, float)):
+        out["marks_per_min_max"] = float(compose["marks_per_min_max"])
     block = doc.get("quality") if isinstance(doc, dict) else None
     if not isinstance(block, dict):
         return out
     for k, default in DEFAULT_TARGETS.items():
-        if k not in block:
+        if k not in block or (k == "marks_per_min_max" and "marks_per_min_max" in compose):
             continue
         raw = _unwrap(block[k])
         if isinstance(raw, (int, float)) and not isinstance(raw, bool):
