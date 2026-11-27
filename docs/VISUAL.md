@@ -86,3 +86,7 @@ invalid input with 422 and its `issues`. A successful write preserves the
 previous document in project history, records the actor, and returns review
 issues in `issues`. The validity
 limitations above apply to the server checks as well.
+
+## Composer pointers
+
+The composer draws a white ring at a small `point` target or a shown thing or inscription up to 45% of frame height. It excludes named people and targets mostly overlapping a person’s head, face or bust. A larger eligible shown region gets a maximum-size ring at its centre. The ring starts at the named word (or the moment's first word when no cast name or alias is spoken), lasts at most three seconds and no longer than the sentence, and is used at most twice per region per video. The scorecard judges the overall marks-per-minute target; size limits are in the style's compose table. Spotlights remain available for manual edits.

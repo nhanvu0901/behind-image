@@ -14,9 +14,30 @@ from bti.engine import techniques  # noqa: F401 - registers renderers
 from bti.engine.viewchecks import region_point_box, box_inside_frame, fit_frame_to_box
 from bti.media.contentbox import box_of
 from bti.engine.timing import Timing
-from bti.visual.helpers import point_is_person, sentence_for_word
+from bti.visual.helpers import sentence_for_word
 
 from .schedule import schedule
+
+
+def _mark_is_person(name, cast, regions):
+    """Protect named people and targets mostly overlapping a head, face or bust."""
+    target = region_point_box(regions.get(name))
+    for member in cast:
+        if member.get("kind") != "person":
+            continue
+        for where in member.get("shown_by", []):
+            person_region = where.get("region")
+            if name == person_region:
+                return True
+            if not person_region or not re.search(r"(?:^|_)(?:head|face|bust)(?:_|$)", person_region, re.I):
+                continue
+            outer = region_point_box(regions.get(person_region))
+            if target and outer:
+                area = (target[2] - target[0]) * (target[3] - target[1])
+                overlap = max(0, min(target[2], outer[2]) - max(target[0], outer[0])) * max(0, min(target[3], outer[3]) - max(target[1], outer[1]))
+                if area > 0 and overlap > area / 2:
+                    return True
+    return False
 
 
 def compose(visual, timing, picks, style, current=None):
@@ -127,6 +148,7 @@ def compose(visual, timing, picks, style, current=None):
     cast = {c["id"]: c for c in visual.get("cast", [])}
     shots = []
     prev, prev_region = None, None
+    ring_counts = {}
     for i, moment in enumerate(entries):
         start = moment["start"]
         end = min(entries[i + 1]["start"] if i + 1 < len(entries) else timing["duration"],
@@ -221,9 +243,23 @@ def compose(visual, timing, picks, style, current=None):
                                      "technique": tid, "intent": spec["intents"][0],
                                      "slots": {}, "params": values, "start": {"t": at},
                                      "dur": round(duration, 3), "locked": False, "source": "agent", "note": ""})
+            return True
 
         for item in list(members(moment)):
-            for intent in item.get("say", []):
+            intents = list(item.get("say", []))
+            subject = cast.get(item.get("about"), {})
+            item_region = item.get("show", {}).get("region")
+            explicit = {p.get("region") for intent in intents for p in intent.get("point", [])}
+            if subject.get("kind") in ("thing", "text") and item_region and item_region not in explicit:
+                tokens = [re.findall(r"\w+", words[i]["w"].casefold()) for i in range(item["w0"], item["w1"])]
+                tokens = [part[0] if part else "" for part in tokens]
+                matches = []
+                for alias in [subject.get("name", ""), *subject.get("also", [])]:
+                    parts = re.findall(r"\w+", alias.casefold())
+                    if parts:
+                        matches.extend(item["w0"] + j for j in range(len(tokens) - len(parts) + 1) if tokens[j:j + len(parts)] == parts)
+                intents.append({"point": [{"region": item_region, "word": min(matches) if matches else item["w0"]}]})
+            for intent in intents:
                 if "intro" in intent:
                     subject = cast.get(intent["intro"])
                     if not subject:
@@ -260,35 +296,35 @@ def compose(visual, timing, picks, style, current=None):
                         reg = assets[main].get("regions", {}).get(name, {})
                         keys = shot["params"].get("camera", []) if key == main else []
                         rx, ry = reg.get("rx", 0), reg.get("ry", 0)
-                        on_person = point_is_person(name, list(cast.values()), assets[main].get("regions", {}))
+                        on_person = _mark_is_person(name, list(cast.values()), assets[main].get("regions", {}))
+                        own_thing = (name == item.get("show", {}).get("region") and cast.get(item.get("about"), {}).get("kind") in ("thing", "text"))
                         small = bool(keys and rx and ry and not on_person)
-                        for frame in keys:
+                        for frame in keys[-1:]:
                             z = frame["zoom"]
                             width, height = 2 * rx * z / 1920, 2 * ry * z / 1080
                             x, y = (reg.get("x", 0) - frame["cx"]) * z, (reg.get("y", 0) - frame["cy"]) * z
-                            small = (small and width < config["mark_side_max"] and height < config["mark_height_max"]
-                                     and width * height < config["mark_area_max"]
+                            small = (small and (height <= config["ring_shown_height_max"] if own_thing else
+                                     width < config["mark_side_max"] and height < config["mark_height_max"] and width * height < config["mark_area_max"])
                                      and abs(x) + rx * z <= 960 and abs(y) + ry * z <= 540)
                         at = words[point["word"]]["s"]
                         if not small or at < start - 1e-6 or end - at < 0.3:
                             notes.append({"moment": item["id"], "rule": "C6", "what": "mark " + name + " omitted: person, large, outside frame, or too late"})
                             continue
-                        if len(points) == 1:
-                            overlay("HI-01", {"at": name, "rx": max(5, rx), "ry": max(5, ry), "floor": config["spotlight_floor"]}, at, end - at)
-                        else:
-                            z = max(k["zoom"] for k in keys)
-                            radius = max(5, config["ring_min_frame_width"] * 1920 / z, 1.15 * max(rx, ry))
-                            if radius * z > config["ring_max_frame_height"] * 1080:
-                                notes.append({"moment": item["id"], "rule": "C6", "what": "ring omitted: target exceeds maximum radius"})
-                                continue
-                            _, sentence_end = sentence_for_word(timing, point["word"])
-                            ring_end = min(end, words[sentence_end - 1]["e"])
-                            defaults = bundle.param_defaults("AN-01")
-                            wanted_hold = ring_end - at - defaults["draw_s"] - defaults["fade_s"]
-                            hold = max(0, min(20, wanted_hold))
-                            if wanted_hold > 20:
-                                notes.append({"moment": item["id"], "rule": "C6", "what": "ring " + name + " fades before sentence end because the engine caps its hold"})
-                            overlay("AN-01", {"at": name, "radius": radius, "hold_s": hold}, at, ring_end - at)
+                        if ring_counts.get(name, 0) >= config["ring_region_max"]:
+                            continue
+                        z = max(k["zoom"] for k in keys)
+                        radius = max(5, config["ring_min_frame_width"] * 1920 / z, 1.15 * max(rx, ry))
+                        if own_thing:
+                            radius = min(radius, config["ring_max_frame_height"] * 1080 / z)
+                        if radius * z > config["ring_max_frame_height"] * 1080 + 1e-6:
+                            notes.append({"moment": item["id"], "rule": "C6", "what": "ring omitted: target exceeds maximum radius"})
+                            continue
+                        _, sentence_end = sentence_for_word(timing, point["word"])
+                        ring_end = min(end, at + config["ring_duration_s"], words[sentence_end - 1]["e"])
+                        defaults = bundle.param_defaults("AN-01")
+                        hold = max(0, min(20, ring_end - at - defaults["draw_s"] - defaults["fade_s"]))
+                        if overlay("AN-01", {"at": name, "radius": radius, "hold_s": hold}, at, ring_end - at):
+                            ring_counts[name] = ring_counts.get(name, 0) + 1
                 elif "read" in intent and key == main and tid not in ("LAY-01", "MAP-01"):
                     data = intent["read"]
                     if data["region"] not in assets[main].get("regions", {}):

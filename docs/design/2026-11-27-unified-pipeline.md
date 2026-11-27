@@ -139,10 +139,7 @@ Constants live in ONE table (the style's `compose` block); checks and the scorec
   per word over three up to 4 s, about 3 s on the main painting, to the end of the shot on a borrowed picture.
 - C5 **Captions** (X-ANN-02) under every borrowed picture from the pool's `caption`, for as long as the picture is on
   screen, unless that shot carries an intro strip. No caption in the pool: none shown, one note.
-- C6 **Marks** only from `point`: a target is marked only when it is SMALL on screen at that moment (both sides under
-  40% of the frame and area under 8%; open to tuning on frames); one target: a spotlight (floor at least 0.6); several:
-  a ring on each at its word, all kept to the end of the sentence; ring radius between 1.2% of the frame width and 15%
-  of the frame height. Never on a person. A target that is not small gets no mark: the framing shows it.
+- C6 **Marks.** A white ring (AN-01) points at small `point` targets; a moment about a thing or inscription also rings its own shown region when its held-frame height is at most 45% of the frame. Other points retain the side and area limits in the compose table. Never mark a person's own named region or a target whose area overlaps a person's head, face or bust region by more than half. Figure and couple bounds do not by themselves identify an object as a person. Start at the target's spoken word, or the first word of the cast name or alias for a shown thing, falling back to the moment's first word. It lasts up to three seconds or the sentence end. Each region is ringed at most twice per video; the scorecard judges marks per minute. Radius stays between 1.2% of frame width and 15% of frame height; a larger shown object gets a maximum-size ring on its centre. The engine retains spotlight for hand edits.
 - C7 **Devices** only from their intent: `read` DOC-01, `labels` KEY-01, `number` NUM-01, `map` MAP-01, `pair` LAY-01.
 - C8 **Notes, not warnings.** Everything the composer had to bend (a moment joined, a picture shortened, a mark left
   out) is a `compose_note` with the moment id, shown to the owner and to the viewer review. The composer never fails

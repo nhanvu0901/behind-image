@@ -12,7 +12,10 @@
   "mark_side_max": 0.4,
   "mark_height_max": 0.3,
   "mark_area_max": 0.08,
-  "spotlight_floor": 0.6,
+  "ring_region_max": 2,
+  "ring_shown_height_max": 0.45,
+  "ring_duration_s": 3.0,
+  "marks_per_min_max": 3.0,
   "ring_min_frame_width": 0.012,
   "ring_max_frame_height": 0.15
  },
