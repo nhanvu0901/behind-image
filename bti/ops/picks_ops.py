@@ -257,8 +257,8 @@ def set_region(ctx, o):
         elif key not in ctx.placeholders and ((w and rb[2] > w) or (h and rb[3] > h)):
             ctx.bad("rough", "must lie inside %d x %d (the size of the stored picture)" % (w, h))
     regions = a.get("regions") or {}
-    if o["region"] not in regions and len(regions) >= 60:
-        ctx.bad("region", "an asset has at most 60 regions")
+    if o["region"] not in regions and len(regions) >= pdoc.MAX_REGIONS:
+        ctx.bad("region", "an asset has at most %d regions" % pdoc.MAX_REGIONS)
     rr = pdoc._region({k: o[k] for k in ("x", "y", "rx", "ry", "label", "tight", "thing", "rough") if k in o})
     ctx.touch("regions:" + key)
     a.setdefault("regions", {})[o["region"]] = rr

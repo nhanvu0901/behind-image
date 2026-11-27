@@ -472,14 +472,16 @@ class Writer:
         self.batches: list[str] = []
         self.created_assets = 0
 
-    def send(self, ops: list[dict], note: str) -> dict:
+    def send(self, ops: list[dict], note: str, *, expected_rev: str | None = None) -> dict:
         """One batch. A stale revision (the owner saved meanwhile) is read again once; any other refusal is raised as the `OpError` it is."""
         for attempt in (1, 2):
             _, rev = self.adapter.read()
+            if expected_rev is not None:
+                rev = expected_rev
             try:
                 res = ops_runner.run_batch(self.adapter, {"base_rev": rev, "actor": self.actor, "ops": ops, "note": note[:2000]}, self.log)
             except OpError as e:
-                if e.code == "stale_revision" and attempt == 1:
+                if e.code == "stale_revision" and attempt == 1 and expected_rev is None:
                     continue
                 raise
             if res.get("batch"):

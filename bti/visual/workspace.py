@@ -67,7 +67,15 @@ def build_plan(inp, timing: dict, *, root: Path | None = None, instruction: str 
     timing_file = inp.pdir / 'timing.json'
     narration_hash = hashlib.sha1(narration_file.read_bytes()).hexdigest() if narration_file.is_file() else inp.narration_rev
     timing_hash = hashlib.sha1(timing_file.read_bytes()).hexdigest() if timing_file.is_file() else hashlib.sha1(json.dumps(timing, sort_keys=True, separators=(',', ':'), ensure_ascii=False).encode('utf-8')).hexdigest()
-    _json(root / 'inputs/context.json', {'mode': 'plan', 'made_from': {'narration': narration_hash, 'timing': timing_hash}})
+    from bti.ops.log import ChangeLog
+    from bti.script.store import read_object
+    from bti.visual.regions import agent_regions
+    current_regions = inp.picks['assets'][p.key].get('regions', {})
+    storyboard = read_object(inp.pdir / 'storyboard.json', 'storyboard') or {}
+    eligible = sorted(agent_regions(ChangeLog(inp.pdir), p.key, current_regions))
+    _json(root / 'inputs/context.json', {'mode': 'plan', 'made_from': {'narration': narration_hash, 'timing': timing_hash},
+          'agent_regions': eligible, 'storyboard': storyboard,
+          'legacy_names': inp.picks.get('names', []), 'old_beats': inp.picks.get('beats', {})})
     windows = sys.platform == 'win32'
     for command in ('check', 'crop'):
         module = 'bti.visual.check' if command == 'check' else 'bti.picks.auto.helper'
@@ -83,7 +91,7 @@ def build_plan(inp, timing: dict, *, root: Path | None = None, instruction: str 
     return root
 
 
-def build_choose(pdir: Path, visual: dict, search: dict, *, root: Path | None = None, main: dict | None = None, regions: dict | None = None, limits=None) -> Path:
+def build_choose(pdir: Path, visual: dict, search: dict, *, root: Path | None = None, main: dict | None = None, regions: dict | None = None, limits=None, region_context: dict | None = None) -> Path:
     root = Path(root) if root else Path(tempfile.mkdtemp(prefix='bti-visual-choose-'))
     for part in ('inputs', 'images', 'out'):
         (root / part).mkdir(parents=True, exist_ok=True)
@@ -100,7 +108,7 @@ def build_choose(pdir: Path, visual: dict, search: dict, *, root: Path | None = 
     _json(root / 'inputs/wants.json', rows)
     _json(root / 'inputs/visual.json', visual)
     _json(root / 'inputs/search.json', search)
-    _json(root / 'inputs/context.json', {'mode': 'choose'})
+    _json(root / 'inputs/context.json', {'mode': 'choose', **(region_context or {})})
     windows = sys.platform == 'win32'
     f = root / ('check.cmd' if windows else 'check')
     if windows:

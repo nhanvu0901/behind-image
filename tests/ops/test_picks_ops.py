@@ -590,3 +590,47 @@ def test_set_and_clear_picture_caption(client):
     r = pk(client, [{'op': 'set_caption', 'asset': 'B', 'caption': ''}])
     assert r.status_code == 200, r.text
     assert 'caption' not in picks(client)['assets']['B']
+
+
+def test_region_limit_is_eighty(client):
+    ops = [{"op": "set_region", "asset": "A", "region": f"EXTRA_{i}", "x": 10, "y": 10} for i in range(78)]
+    result = pk(client, ops)
+    assert result.status_code == 200, result.text
+    result = pk(client, [{"op": "set_region", "asset": "A", "region": "TOO_MANY", "x": 10, "y": 10}])
+    assert result.status_code == 422
+    assert '80 regions' in result.text
+
+
+def test_region_replacement_batch_restores_old_and_removes_new_on_undo(client):
+    from bti.ops.log import ChangeLog
+    from bti.visual.regions import agent_regions, replacement_batch
+    created = pk(client, [{'op': 'set_region', 'asset': 'A', 'region': 'OLD_AGENT', 'x': 10, 'y': 10}])
+    assert created.status_code == 200
+    selected = pk(client, [{'op': 'set_picks', 'beat': 'b0001', 'items': [{'asset': 'A', 'region': 'OLD_AGENT', 'role': 'detail'}]}])
+    assert selected.status_code == 200, selected.text
+    old = picks(client)
+    assert 'OLD_AGENT' in agent_regions(ChangeLog(client.pdir), 'A', old['assets']['A']['regions'])
+    ops, _ = replacement_batch(old, 'A', {'OLD_AGENT'}, [{'op': 'set_region', 'asset': 'A', 'region': 'NEW_AGENT', 'x': 20, 'y': 20}], [{'op': 'set_subjects', 'subjects': []}, {'op': 'set_picks', 'beat': 'b0001', 'items': [{'asset': 'A', 'region': 'NEW_AGENT', 'role': 'detail'}]}])
+    response = pk(client, ops)
+    assert response.status_code == 200, response.text
+    now = picks(client)['assets']['A']['regions']
+    assert 'NEW_AGENT' in now and 'OLD_AGENT' not in now
+    undone = client.post('/api/projects/%s/changes/%s/undo' % (PID, response.json()['batch']), json={'base_rev': pk_rev(client), 'actor': 'human'})
+    assert undone.status_code == 200, undone.text
+    now = picks(client)['assets']['A']['regions']
+    assert 'OLD_AGENT' in now and 'NEW_AGENT' not in now
+    assert picks(client)['beats']['b0001']['items'][0]['region'] == 'OLD_AGENT'
+    pk(client, [{'op': 'set_region', 'asset': 'A', 'region': 'OLD_AGENT', 'x': 30, 'y': 30}], actor='human')
+    assert 'OLD_AGENT' not in agent_regions(ChangeLog(client.pdir), 'A', picks(client)['assets']['A']['regions'])
+
+
+def test_region_replacement_does_not_retry_after_revision_changes(client):
+    from bti.ops import OpError
+    from bti.picks.auto.write import Writer
+    writer = Writer(client.pdir, 'agent:test', redo=True)
+    old_rev = pk_rev(client)
+    assert pk(client, [{'op': 'set_region', 'asset': 'A', 'region': 'NEWER', 'x': 5, 'y': 5}], actor='human').status_code == 200
+    with pytest.raises(OpError) as error:
+        writer.send([{'op': 'remove_region', 'asset': 'A', 'region': 'HEAD'}], 'replacement', expected_rev=old_rev)
+    assert error.value.code == 'stale_revision'
+    assert 'HEAD' in picks(client)['assets']['A']['regions']

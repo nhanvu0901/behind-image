@@ -120,6 +120,9 @@ def _rough(v: Any) -> list[int] | None:
     return [x0, y0, x1, y1] if x1 > x0 and y1 > y0 else None
 
 
+MAX_REGIONS = 80  # Per asset, shared by typed operations and visual planning.
+
+
 def _region(r: Any) -> dict | None:
     if not isinstance(r, dict) or not all(isinstance(r.get(k), (int, float)) and not isinstance(r.get(k), bool)
                                           and math.isfinite(r[k]) for k in ("x", "y")):

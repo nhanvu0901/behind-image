@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'picks'))
 from auto_helpers import make_auto_project
 
 
-@pytest.mark.parametrize("repair,map_view,stale,region,cancel,wrong_path", [(False, False, False, False, False, False), (True, False, False, False, False, False), (False, True, False, False, False, False), (False, False, True, False, False, False), (False, False, False, True, False, False), (False, False, False, True, False, True), (False, False, False, False, True, False)])
-def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatch, repair, map_view, stale, region, cancel, wrong_path):
+@pytest.mark.parametrize("repair,map_view,stale,region,cancel,wrong_path,cleanup", [(False, False, False, False, False, False, False), (True, False, False, False, False, False, False), (False, True, False, False, False, False, False), (False, False, True, False, False, False, False), (False, False, False, True, False, False, False), (False, False, False, True, False, True, False), (False, False, False, False, True, False, False), (False, False, False, False, False, False, True)])
+def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatch, repair, map_view, stale, region, cancel, wrong_path, cleanup):
     from bti.picks import context, doc
     from bti.picks.auto import session
     from bti.longjob import LongJobManager
@@ -33,6 +33,11 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
             beats.append({'id': line['id'], 'w0': start, 'w1': len(words)})
     timing = {'words': words, 'beats': beats}
     (pdir / 'timing.json').write_text(json.dumps(timing), encoding='utf-8')
+    if cleanup:
+        from bti.picks.auto.write import Writer
+        writer = Writer(pdir, 'agent:test', redo=True)
+        writer.send([{'op': 'set_region', 'asset': 'A', 'region': 'OBSOLETE', 'x': 10, 'y': 10},
+                     {'op': 'set_picks', 'beat': beats[0]['id'], 'items': [{'asset': 'A', 'region': 'OBSOLETE', 'role': 'detail'}]}], 'setup')
     class FakeAgent:
         def run(self, ws, *, check, **kwargs):
             context_data = json.loads((ws / 'inputs/context.json').read_text(encoding='utf-8'))
@@ -91,6 +96,10 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
     assert result['state'] == 'done', result
     assert len(store.load(pdir)['moments']) == len(beats)
     assert all(doc.load(pdir)['beats'][b['id']]['items'] for b in beats)
+    if cleanup:
+        from bti.ops.log import ChangeLog
+        assert 'OBSOLETE' not in doc.load(pdir)['assets']['A']['regions']
+        assert any(any(op.get('op') == 'remove_region' and op.get('region') == 'OBSOLETE' for op in row['ops']) for row in ChangeLog(pdir).records('picks'))
     if region:
         assert doc.load(pdir)['assets']['A']['regions']['HEAD']['tight'] is True
     if map_view:

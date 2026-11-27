@@ -75,3 +75,55 @@ def test_choose_check_names_region_file_from_choose_root(tmp_path):
     report = run_check(tmp_path)
     assert 'out/tighten.json' in report['issues'][0]['message']
     assert all('tighten/out/' not in issue['message'] for issue in report['issues'])
+
+
+def test_plan_check_counts_kept_and_new_regions(tmp_path):
+    for name in ('inputs', 'out'):
+        (tmp_path / name).mkdir()
+    (tmp_path / 'inputs/timing.json').write_text(json.dumps(timing()))
+    existing = {f'R{i}': {} for i in range(80)}
+    (tmp_path / 'inputs/picks.json').write_text(json.dumps({'main_asset': 'A', 'assets': {'A': {'regions': existing}}}))
+    (tmp_path / 'out/visual.json').write_text(json.dumps(valid()))
+    (tmp_path / 'out/regions.json').write_text(json.dumps({'NEW': {'box': [.1, .1, .2, .2], 'what': 'a detail'}}))
+    report = run_check(tmp_path)
+    assert not report['ok']
+    assert any('80' in i['message'] and '1' in i['message'] and 'reuse' in i['message'].lower() for i in report['issues'])
+
+
+def test_choose_check_counts_additional_region_file(tmp_path):
+    for name in ('inputs', 'out'):
+        (tmp_path / name).mkdir()
+    (tmp_path / 'inputs/context.json').write_text(json.dumps({'mode': 'choose', 'kept_regions': 80, 'planned_regions': []}))
+    (tmp_path / 'inputs/visual.json').write_text(json.dumps({'cast': [], 'wanted': []}))
+    (tmp_path / 'inputs/search.json').write_text(json.dumps({'wants': {}}))
+    (tmp_path / 'out/choice.json').write_text('{}')
+    (tmp_path / 'out/regions.json').write_text(json.dumps({'NEW': {'box': [.1, .1, .2, .2], 'what': 'a detail'}}))
+    report = run_check(tmp_path)
+    assert not report['ok']
+    assert any('80' in i['message'] and '1' in i['message'] and 'reuse' in i['message'].lower() for i in report['issues'])
+
+
+def test_plan_count_excludes_unused_proven_agent_regions(tmp_path):
+    for name in ('inputs', 'out'):
+        (tmp_path / name).mkdir()
+    (tmp_path / 'inputs/timing.json').write_text(json.dumps(timing()))
+    existing = {f'R{i}': {} for i in range(80)}
+    existing['RIVER'] = existing.pop('R0')
+    (tmp_path / 'inputs/picks.json').write_text(json.dumps({'main_asset': 'A', 'assets': {'A': {'regions': existing}}}))
+    (tmp_path / 'inputs/context.json').write_text(json.dumps({'agent_regions': ['R1']}))
+    (tmp_path / 'out/visual.json').write_text(json.dumps(valid()))
+    (tmp_path / 'out/regions.json').write_text(json.dumps({'NEW': {'box': [.1, .1, .2, .2], 'what': 'a detail'}}))
+    assert run_check(tmp_path)['ok']
+
+
+def test_choose_tighten_file_reports_count_for_extra_names(tmp_path):
+    for name in ('inputs', 'out'):
+        (tmp_path / name).mkdir()
+    (tmp_path / 'inputs/context.json').write_text(json.dumps({'mode': 'choose', 'kept_regions': 80, 'existing_regions': [], 'planned_regions': []}))
+    (tmp_path / 'inputs/visual.json').write_text(json.dumps({'cast': [], 'wanted': []}))
+    (tmp_path / 'inputs/search.json').write_text(json.dumps({'wants': {}}))
+    (tmp_path / 'out/choice.json').write_text('{}')
+    (tmp_path / 'out/tighten.json').write_text(json.dumps({'regions': [{'name': 'EXTRA', 'action': 'tight'}]}))
+    report = run_check(tmp_path)
+    assert not report['ok']
+    assert any('80' in i['message'] and '1' in i['message'] and 'reuse' in i['message'].lower() for i in report['issues'])
