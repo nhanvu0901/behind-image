@@ -251,12 +251,14 @@ def test_zoom_rate_limit_both_directions():
     assert keys_in_ok[0]["zoom"] == pytest.approx(whole[2], abs=1e-4)
     assert keys_in_ok[1]["at"]["rel"] <= 0.45 + 1e-4
 
-    # 2. Zoom-out via CAM-05 exceeding ZOOM_RATE_MAX: WOMAN (2.0) -> COUPLE (0.3348) in 3.5 s (t_arr=1.575 s -> 1.64 oct/s) cuts to COUPLE push-on-end
+    # 2. Zoom-out via CAM-05 exceeding ZOOM_RATE_MAX: WOMAN (2.0) -> COUPLE (filling zoom 0.50) in 3.5 s (t_arr=1.575 s -> 1.27 oct/s) cuts to COUPLE without black bars
     couple_pose = VC.region_frame(asset["regions"]["COUPLE"], 3840, 5253)
+    assert couple_pose[2] == pytest.approx(VC.cover_zoom(3840, 5253), abs=1e-4)
     keys_out_fast = CAM.build_main_camera("CAM-05", "COUPLE", "WOMAN", asset, None, woman_pose, 0.0, 3.5)
     assert len(keys_out_fast) == 2
     assert keys_out_fast[0]["cx"] == pytest.approx(couple_pose[0], abs=0.5) and keys_out_fast[0]["cy"] == pytest.approx(couple_pose[1], abs=0.5)
-    assert keys_out_fast[-1]["zoom"] == pytest.approx(couple_pose[2], abs=1e-4)
+    assert keys_out_fast[0]["zoom"] == pytest.approx(couple_pose[2], abs=1e-4)
+    assert keys_out_fast[-1]["zoom"] >= couple_pose[2] - 1e-4
 
     # 3a. CAM-03 pulling back to whole painting over 2.0 s: full jump (2.0 -> 0.1963) would be 1.67 oct/s, so it starts nearer and stays <= ZOOM_RATE_MAX
     keys_pull_2s = CAM.build_main_camera("CAM-03", None, "WOMAN", asset, None, woman_pose, 0.0, 2.0)
@@ -287,21 +289,21 @@ def test_zoom_rate_limit_both_directions():
 def test_zoom_rate_limit_alone_with_no_sideways_way_in_both_directions():
     """Only the zoom rate decides here: the previous frame and the end frame have the same centre, so the sideways limit never fires."""
     import math
-    cx, cy = 1920.0, 2626.5
+    cx, cy = 2400.0, 3250.0
     asset = {
-        "width": 3840, "height": 5253,
+        "width": 4800, "height": 6500,
         "regions": {
-            "COUPLE": {"x": cx, "y": cy, "rx": 800.0, "ry": 1000.0, "label": "The couple"},       # wide end frame (zoom ~0.33)
+            "COUPLE": {"x": cx, "y": cy, "rx": 900.0, "ry": 720.0, "label": "The couple"},        # wide end frame (filling zoom ~0.465)
             "FACE": {"x": cx, "y": cy, "rx": 47.0, "ry": 60.0, "label": "A small thing"},          # tight end frame (zoom 2.0, the sharp limit)
         },
     }
-    wide = VC.region_frame(asset["regions"]["COUPLE"], 3840, 5253)
-    tight = VC.region_frame(asset["regions"]["FACE"], 3840, 5253)
+    wide = VC.region_frame(asset["regions"]["COUPLE"], 4800, 6500)
+    tight = VC.region_frame(asset["regions"]["FACE"], 4800, 6500)
     assert (wide[0], wide[1]) == (cx, cy) and (tight[0], tight[1]) == (cx, cy)
     octaves = abs(math.log2(tight[2] / wide[2]))
     assert octaves > 2.0
 
-    # in (wide -> tight): 3.5 s is too short (arrival at 45% = 1.575 s -> about 1.6 octaves/s): no travel, a start a little wider on the end region
+    # in (wide -> tight): 3.5 s is too short (arrival at 45% = 1.575 s -> ~1.34 octaves/s): no travel, a start a little wider on the end region
     fast_in = CAM.build_main_camera("CAM-05", "FACE", "previous", asset, None, wide, 0.0, 3.5)
     assert len(fast_in) == 2 and fast_in[0]["zoom"] < fast_in[-1]["zoom"]
     assert fast_in[-1]["zoom"] / fast_in[0]["zoom"] < 1.2 and fast_in[0]["zoom"] > wide[2] * 3.0
