@@ -110,6 +110,11 @@ planner's judgment, examined by the viewer review, never "proved" by matching te
 - V11: a `map` has two or more places and a `pair` two pictures of the pool (or wants): proved. "A journey" is judgment.
 - V12: a text that equals an asset key, a file name, a pattern such as `DSC04385` or "image 872", or a bare domain is
   refused; where the words come from is judgment.
+- **A map is resolved by the search step, like a wanted picture.** The planner writes `{"map": {"places": [...]},
+  "else": <region or whole>}`; step 4b resolves the places to a map record of the pool exactly as the present picture
+  job does for a map (the OpenStreetMap import, with its coordinates) and writes its key into the script:
+  `{"map": {"places": [...], "picture": "<pool key>"}, "else": ...}`. The composer draws MAP-01 from that pool
+  record. A map with no `picture` (not resolved) is shown as its `else`, with a note. Nothing guesses a coordinate.
 - `map` and `pair` are forms of SHOW, not intents. A SHOW is never "unknown": the planner always decides; the
   converter of old projects writes `{"whole": true}` with a `why` that says the region was not recorded.
 
