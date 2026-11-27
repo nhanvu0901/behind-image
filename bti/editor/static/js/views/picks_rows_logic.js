@@ -170,3 +170,8 @@ export function issueSentence(issue, { numberOf = () => null, assets = {} } = {}
     default: return issue?.level === 'error' ? W.issue.otherError : W.issue.otherWarn;
   }
 }
+
+// capwrite: edits belong to the asset, so every use shares the same caption.
+export function captionEditOp(asset, caption) {
+  return { op: 'set_caption', asset, caption: caption.trim() };
+}

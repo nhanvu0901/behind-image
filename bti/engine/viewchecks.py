@@ -598,14 +598,16 @@ def _asset_words(c: _Ctx, shot: dict) -> set:
     return out
 
 
-def usable_picture_title(record):
-    title = str((record or {}).get("title") or "").strip()
-    return bool(title and not PLACEHOLDER.search(title) and title.casefold() not in PLACEHOLDER_WHOLE
-                and not re.fullmatch(r"(?:https?://)?[\w.-]+\.[a-z]{2,}/?", title, re.I))
+def usable_picture_title(record, asset_id=""):
+    from bti.picks.doc import caption_valid
+    title = (record or {}).get("caption") or (record or {}).get("title") or ""
+    return (caption_valid(title, asset_id) and not PLACEHOLDER.search(title)
+            and title.strip().casefold() not in PLACEHOLDER_WHOLE)
 
 
 def _borrowed_without_caption(c):
-    main = _picks_doc(c.project_dir).get("main_asset")
+    picks = _picks_doc(c.project_dir)
+    main = picks.get("main_asset")
     if not main:
         return []
     out = []
@@ -635,7 +637,11 @@ def _borrowed_without_caption(c):
                 if any(span and span[0] <= moment < span[1] for span in
                        (_overlay_span(c, o, sp) for o in overlays if o.get("technique") == "X-ANN-02")):
                     continue
-            if not usable_picture_title(c.assets.get(key)):
+            record = dict(c.assets.get(key) or {})
+            caption = ((picks.get("assets") or {}).get(key) or {}).get("caption")
+            if caption:
+                record["caption"] = caption
+            if not usable_picture_title(record, key):
                 out.append(_issue("borrowed_without_caption", "shots[%d]" % i,
                                   "Picture %s has no usable record for a caption." % key, shot=c.sid(i), asset=key))
     return out

@@ -179,3 +179,9 @@ test('the check of the picks names a line by its number and a picture by its tit
     assert.doesNotMatch(t, /\bb\d{4}\b|MAIN|_/, t);
   }
 });
+
+test('caption edit creates an asset operation and supports clearing', async () => {
+  const { captionEditOp } = await import('../../bti/editor/static/js/views/picks_rows_logic.js');
+  assert.deepEqual(captionEditOp('B', '  A painted portrait  '), { op: 'set_caption', asset: 'B', caption: 'A painted portrait' });
+  assert.deepEqual(captionEditOp('B', ''), { op: 'set_caption', asset: 'B', caption: '' });
+});

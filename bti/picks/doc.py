@@ -152,6 +152,22 @@ def _content_box(v: Any) -> dict | None:
     return _contentbox.record(box, v.get("how") if v.get("how") in _contentbox.HOW else "set", note)
 
 
+def caption_valid(value: Any, asset_id: str = "") -> bool:
+    """Whether a short picture label is safe to show on screen."""
+    if not isinstance(value, str) or not value.strip() or len(value) > 60 or "\n" in value or "\r" in value:
+        return False
+    text = value.strip()
+    if text.casefold() == asset_id.strip().casefold() and asset_id.strip():
+        return False
+    if re.search(r"\.[a-z0-9]{2,5}(?:\b|$)", text, re.I):
+        return False
+    if re.search(r"\b(?:DSC|IMG)[_-]?\d+\b|\b(?:image|view)\s*#?\s*\d+\b", text, re.I):
+        return False
+    if re.fullmatch(r"(?:https?://)?(?:www\.)?[\w-]+(?:\.[\w-]+)+/?", text, re.I):
+        return False
+    return True
+
+
 def _asset(a: Any) -> dict | None:
     if not isinstance(a, dict) or not _s(a.get("file")):
         return None
@@ -168,6 +184,8 @@ def _asset(a: Any) -> dict | None:
     out = {"file": _s(a["file"]), "kind": "video" if a.get("kind") == "video" else "image", "title": _s(a.get("title")),
            "artist": _s(a.get("artist")), "year": _s(a.get("year")), "width": _int(a.get("width")),
            "height": _int(a.get("height")), "credit": credit, "regions": regions}
+    if isinstance(a.get("caption"), str) and a["caption"]:
+        out["caption"] = a["caption"]
     for k in ("original_width", "original_height"):          # the source's own size, kept apart from the stored one
         if _int(a.get(k)) > 0:
             out[k] = _int(a.get(k))
@@ -326,6 +344,8 @@ def doc_problem(d: Any) -> str | None:
         for f in ("title", "artist", "year"):
             if f in a and a[f] is not None and not isinstance(a[f], str):
                 return f"picks.assets.{k}.{f} must be a string"
+        if a.get("caption") not in (None, "") and not caption_valid(a["caption"], k):
+            return f"picks.assets.{k}.caption must be a short, clean picture label (at most 60 characters)"
         if a.get("content_box") is not None and _content_box(a["content_box"]) is None:
             return f"picks.assets.{k}.content_box must be an object with numbers x0 < x1 and y0 < y1"
         regions = a.get("regions", {})

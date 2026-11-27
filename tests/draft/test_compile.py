@@ -341,7 +341,7 @@ def test_borrowed_image_gets_caption_from_its_record(proj):
     overlays = result.storyboard['shots'][1]['overlays']
     caption = next(o for o in overlays if o['technique'] == 'X-ANN-02')
     assert caption['params']['title'] == 'A Landscape'
-    assert caption['params']['artist_year'] == 'An Artist, 1610'
+    assert caption['params']['artist_year'] == ''
 
 
 def test_borrowed_image_unusable_title_warns(proj):
@@ -423,7 +423,7 @@ def test_side_by_side_borrowed_picture_gets_record_caption(proj):
     result = compile_specs(inp, specs, draw=False, identity=False)
     caption = next(o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-02')
     assert caption['params']['title'] == 'A woven fragment'
-    assert caption['params']['artist_year'] == 'An Artist, 1610'
+    assert caption['params']['artist_year'] == ''
 
 
 def test_comparison_swap_caption_start_follows_shot_when_voice_moves(proj):
@@ -445,3 +445,16 @@ def test_comparison_swap_caption_start_follows_shot_when_voice_moves(proj):
     tm = Timing({'words': shifted})
     assert tm.resolve(caption['start']) - tm.resolve(shot['start']) == pytest.approx(2.5)
     assert 'dur' not in caption and 'end' not in caption
+
+
+def test_borrowed_written_caption_wins_and_filename_warns(proj):
+    inp, specs = good(proj)
+    inp.picks['assets']['B'].update(title='DSC04385.jpg', caption='Silk damask, Italy, about 1500')
+    specs['c01']['shots'][1].update(technique='X-LAY-01', slots={'image': {'asset': 'B'}}, overlays=[])
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    caption = next(o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-02')
+    assert caption['params']['title'] == 'Silk damask, Italy, about 1500'
+    del inp.picks['assets']['B']['caption']
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    assert not any(o['technique'] == 'X-ANN-02' for o in result.storyboard['shots'][1]['overlays'])
+    assert any(i['code'] == 'borrowed_without_caption' for i in result.issues)

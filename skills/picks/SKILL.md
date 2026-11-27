@@ -58,6 +58,7 @@ revision itself, a refused batch writes nothing, and every batch can be undone (
 | `remove_pick` | Remove one picture of a narration line, by its position among the pictures of the line (counting from 0, as the earlier operations of the batch left them). |
 | `skip_beat` | Make a narration line show the main picture again (it keeps no pictures of its own). |
 | `import` | Bring one found picture into the project (the same sources and code path as POST .../picks/import and .../picks/import-book-image). Imports run first, before anything is written; a dry run only checks the shape. Videos are cut by the long job, not here. A download is polite and patient (one request a second to a host; a refusal of "too many requests" is waited for, up to about six minutes before the error `source_rate_limited`): send a batch with an import with a long timeout. |
+| `set_caption` | Set or clear the short caption shown under a borrowed picture. |
 | `set_content_box` | Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph round a panel. The camera of the video never leaves the box of the main painting; the program finds one by itself when a picture is imported or made the main one, and this replaces what it found. |
 | `clear_content_box` | Take away the painted area of a picture, so that the program finds it again from the picture (the main painting gets the new finding when the picks are saved). |
 <!-- END GENERATED: ops -->

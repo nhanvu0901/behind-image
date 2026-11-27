@@ -760,3 +760,12 @@ def test_subject_job_reuses_one_picture_for_two_lines(env):
     picks = env.picks()
     assert picks['beats']['b0003']['items'][0]['asset'] == picks['beats']['b0004']['items'][0]['asset']
     assert picks['beats']['b0004']['about'][0]['id'] == 'painter'
+
+
+def test_choice_caption_is_written_to_the_picture():
+    # The operation builder carries the picture label with the import reference.
+    src = ('commons', 'example')
+    rows = [{'items': [{'src': src, 'asset': None, 'region': None, 'role': 'context', 'note': '', 'caption': 'A painted portrait'}],
+             'show': [{'type': 'context'}], 'beat': 'b0003', 'reason': 'Lý do.', 'missing': []}]
+    ops = awrite._ops_for(rows, 'A')
+    assert ops[1] == {'op': 'set_caption', 'asset': '$p1', 'caption': 'A painted portrait'}

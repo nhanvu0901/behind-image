@@ -1096,3 +1096,6 @@ Object.assign(VALUE, {
   B: 'Cách B — Đèn rọi hai nhịp',
   C: 'Cách C — Đèn hạ góc quét',
 });
+
+// capwrite: the caption shown under a borrowed picture.
+export const CAPWRITE_LABEL = "Chú thích trên video";

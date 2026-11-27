@@ -19,7 +19,7 @@ import { mountPromptEdit } from '../promptedit.js';          // c2box: the promp
 import * as L from './picks_logic.js';
 import { mountPicksAuto } from './picks_auto.js';                                // c3picks: "Để agent chọn hình"
 import { mountPickRows } from './picks_rows.js';                                // c4pages: the simple page (rows with their pictures); the hand tools below stay as they were
-import { voiceStarts, issueSentence } from './picks_rows_logic.js';
+import { voiceStarts, issueSentence, captionEditOp } from './picks_rows_logic.js';
 import { PICKS_PAGE_LABELS as PW } from '../labels.js';
 
 // ------------------------------------------------------------------ words
@@ -790,6 +790,10 @@ const rowsApi = {
   whyMissing: (beatId) => auto?.whyMissing?.(beatId) || '',
   thumb: (a, region, box) => thumb(a, region, box),
   videoUrl: (a) => api.fileUrl(S.pid, a.file),
+  setCaption: (key, value) => serverOp(async () => {
+    await api.post(`${P()}/ops`, { base_rev: R, actor: 'human', ops: [captionEditOp(key, value)] });
+    return api.get(P());
+  }),
   isDirty: () => dirty, busy: () => dirty || Q.busy === true,
   add: (beatId, item) => { const index = L.addItem(D, beatId, item); touch(); paintLeft(); paintMid(); return { beatId, index, asset: item.asset, region: item.region || null }; },
   /** Take back the picture "+" just added, when that line still has it at that place. */

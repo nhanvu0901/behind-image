@@ -473,3 +473,12 @@ def test_about_rejects_more_than_three_subjects():
         row['about'] = []
     data['lines'][0]['about'] = [{'id': str(i), 'words': str(i)} for i in range(4)]
     assert 'at most 3' in only_errors(check(data))
+
+
+def test_choice_caption_is_optional_and_kept():
+    raw = copy.deepcopy(CHOICE)
+    assert shapes.check_choice(raw, cctx(), state=_checked_state()).ok
+    raw['wants'][0]['caption'] = 'View from the belfry'
+    result = shapes.check_choice(raw, cctx(), state=_checked_state())
+    assert result.ok, result.text()
+    assert result.value['wants'][raw['wants'][0]['id']]['caption'] == 'View from the belfry'

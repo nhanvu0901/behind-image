@@ -226,3 +226,18 @@ def test_cast_document_refuses_duplicate_aliases_and_empty_picture():
     assert 'repeats' in doc.doc_problem(d)
     d['names'] = [{**one, 'where': {'asset': ''}}]
     assert 'picks.names' in doc.doc_problem(d)
+
+
+@pytest.mark.parametrize('caption', ['x' * 61, 'portrait.jpg', 'DSC04385', 'IMG_1234', 'image 872', 'view 1', 'example.org', 'B', 'two\nlines'])
+def test_caption_rejects_file_names_and_other_bad_labels(caption):
+    d = doc.empty()
+    d['assets'] = {'B': {'file': 'media/b.jpg', 'caption': caption}}
+    assert 'caption' in doc.doc_problem(d)
+
+
+@pytest.mark.parametrize('caption', ['Silk damask, Italy, about 1500', 'View from the belfry', 'Saint Margaret, Flemish, 15th century'])
+def test_caption_keeps_good_picture_labels(caption):
+    d = doc.empty()
+    d['assets'] = {'B': {'file': 'media/b.jpg', 'caption': caption}}
+    assert doc.doc_problem(d) is None
+    assert doc.normalize(d)['assets']['B']['caption'] == caption
