@@ -28,7 +28,9 @@ def narrate(jobs, d, notes="", chapters=None):
 
 
 @pytest.fixture()
-def approved(tproj):
+def approved(tproj, monkeypatch):
+    # These tests isolate the budget retry; repetition has its own tests.
+    monkeypatch.setattr(generate, "repetition_repairs", lambda *args: {})
     jobs = ScriptJobs()
     assert wait(jobs.start("outline", tproj.name, "mock", lambda j: generate.run_outline(j, tproj, MOCK, ""))).state == "done"
     o = store.load_outline(tproj)

@@ -578,6 +578,8 @@ function renderStatus() {
   const total = n ? n.chapters.reduce((a, c) => a + chapWords(c), 0) : 0;
   const target = o?.target_words || S.brief?.options.target_words || 0;
   $('#st-totals').innerHTML = '';
+  const rep = ST.narr.issues || [];
+  $('#st-totals').append(h('div', { class: 'muted', text: `Dữ kiện nói quá hai lần: ${rep.filter(i => i.code === 'fact_said_too_often').length} · Lần nhắc lại dùng cùng lời: ${rep.filter(i => i.code === 'return_same_words').length}` }));
   $('#st-totals').append(h('div', null, h('b', { text: `${total}` }), ` từ, khoảng `, h('b', { text: (total / wps / 60).toFixed(1) }), ' phút'), h('div', { class: 'muted', text: `mục tiêu ${target} từ (${(target / wps / 60).toFixed(1)} phút), ${wps} từ/giây` }));
   const bars = [];
   for (const c of o?.chapters || []) {

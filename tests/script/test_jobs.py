@@ -90,7 +90,8 @@ def test_narration_job_refuses_an_unapproved_or_stale_outline(tproj):
     assert j.state == "error" and j.error_kind == "conflict"
 
 
-def test_validation_retry_keeps_finished_chapters_and_uses_the_validators_message(approved):
+def test_validation_retry_keeps_finished_chapters_and_uses_the_validators_message(approved, monkeypatch):
+    monkeypatch.setattr(generate, "repetition_repairs", lambda *args: {})
     jobs, d = approved
     j = run(jobs, "narration", d, lambda job: generate.run_narration(job, d, MOCK, notes="[mock:bad c02]"))
     assert j.state == "done"

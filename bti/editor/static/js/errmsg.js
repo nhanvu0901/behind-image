@@ -982,3 +982,13 @@ STAGE_CODES.scorecard = {
   sheet_not_found: 'Không tìm thấy tờ ảnh này.',
 };
 for (const [k, v] of Object.entries(STAGE_CODES.scorecard)) BY_CODE_HTTP[k] = () => v;
+
+// worker saytwice: repetition checks of outline and narration.
+const SAYTWICE_SENTENCES = {
+  fact_in_too_many_chapters: (i) => `Dữ kiện ${w(i.fact)} có trong các chương ${(i.chapters || []).join(', ')}. Chỉ giữ một chỗ chính và tối đa một lần nhắc lại.`,
+  fact_said_too_often: (i) => `Dữ kiện ${w(i.fact)} được nhắc quá hai lần: ${(i.places || []).join('; ')}. Hãy cắt hoặc gộp để còn tối đa hai lần.`,
+  return_same_words: (i) => `Các dòng ${(i.beats || []).join(', ')} lặp cụm “${i.words || ''}” khi nói cùng dữ kiện. Hãy viết lần sau bằng lời mới và cho một lý do mới.`,
+  sentence_repeated: (i) => `Các dòng ${(i.beats || []).join(', ')} lặp cụm “${i.words || ''}”. Hãy viết lại câu sau.`,
+};
+export const SAYTWICE_CODES = Object.keys(SAYTWICE_SENTENCES);
+Object.assign(BUILD, SAYTWICE_SENTENCES);

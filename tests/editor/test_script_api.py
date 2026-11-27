@@ -266,7 +266,10 @@ def test_job_cancel_timeout_and_listing(c):
     assert j["error_kind"] == "rate_limit" and j["alternatives"] == []                                # only the mock is enabled
 
 
-def test_validation_retry_through_the_api(c):
+def test_validation_retry_through_the_api(c, monkeypatch):
+    # worker saytwice: isolate the format retry from the repetition repair.
+    from bti.script import generate
+    monkeypatch.setattr(generate, "repetition_repairs", lambda *args: {})
     narration_ready(c, "[mock:bad c04]")
     retry = [x for x in mock_mod.CALLS if x["retry"]]
     assert len(retry) == 1 and "Validation failed" in retry[0]["user"]

@@ -18,7 +18,7 @@ from .runner import Job, JobError
 from .stats import WPS_DEFAULT, count_words
 from .store import (NChapter, Narration, disk_rev, keep_paste, clear_paste, load_narration, load_outline, now_iso,
                     save_narration, save_outline, script_dir, script_lock)
-from .validate import markup_in, outline_gate
+from .validate import markup_in, outline_gate, repetition_issues
 
 PER_CALL_TIMEOUT = 300.0
 
@@ -178,6 +178,18 @@ def _cut_message(rec: dict) -> str:
     return f"giữ bản đầu {rec['words']} từ, vượt ngân sách {rec['budget']}: bản viết lại không dùng được hoặc không ngắn hơn"
 
 
+def repetition_repairs(narr: Narration, brief: dict | None) -> dict[str, str]:
+    """One repair request per later chapter, with the original evidence in each request."""
+    plan: dict[str, list[str]] = {}
+    for problem in repetition_issues(narr, brief):
+        chapters = problem["chapters"]
+        targets = chapters[2:] if problem["code"] == "fact_said_too_often" else chapters[-1:]
+        for cid in dict.fromkeys(targets):
+            plan.setdefault(cid, []).append(problem["message"])
+    return {cid: "Each point may be said at most twice. A return must use new words for a new reason; never repeat a sentence. Rewrite this chapter to fix these exact places: " + " ".join(items)
+            for cid, items in plan.items()}
+
+
 def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None = None, notes: str = "", *,
                   wps: float = WPS_DEFAULT, base_locked=_UNSET) -> None:
     """`base_locked`: the ids of the beats that were locked when the owner's request started (fixed by the route before the
@@ -270,3 +282,53 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
             written.append(cid)
         job.result = result_of(rev)
         job.set_chapter(cid, state="done", words=sum(len(b.text.split()) for b in new.beats), message=done_message)
+
+    # worker saytwice: one repair round after all selected chapters are written.
+    repairs = repetition_repairs(narr, brief)
+    repaired = []
+    for cid in [c.id for c in outline.chapters if c.id in repairs and c.id in want]:
+        if job.cancel.is_set():
+            raise JobError("cancelled", "cancelled")
+        old = narr.chapter(cid)
+        if old is None or any(b.locked for b in old.beats):
+            continue
+        before = narr.rev()
+        oc = outline.chapter(cid)
+        prior_message = next((c.get("message", "") for c in job.chapters if c["id"] == cid), "")
+        job.set_chapter(cid, state="retrying", message="viết lại để tránh lặp")
+        try:
+            prompt = build_prompt("script", pdir, notes=notes, chapters=[cid], narration=narr, outline=outline,
+                                  brief=brief, retry_message=repairs[cid], wps=wps)
+            text = call_model(spec, prompt["system"], prompt["user"], job)
+            res, ch, problem = _read_chapter(text, outline, oc, pdir, narr.counters["beat"])
+        except JobError as e:
+            if e.kind == "cancelled":
+                raise
+            job.set_chapter(cid, state="done", message="giữ bản trước: không viết lại được")
+            continue
+        if problem:
+            job.set_chapter(cid, state="done", message="giữ bản trước: bản viết lại không hợp lệ")
+            continue
+        if over_budget(chapter_words(ch), oc.word_budget) and chapter_words(ch) > chapter_words(old):
+            job.set_chapter(cid, state="done", message=(prior_message + "; " if prior_message else "") + "giữ bản trước: bản viết lại quá dài")
+            continue
+        with script_lock(pdir):
+            if job.stopped:
+                return
+            cur = load_narration(pdir)
+            if cur is None or cur.rev() != before:
+                narr = cur or narr
+                job.set_chapter(cid, state="done", message="giữ bản đã thay đổi trong lúc viết lại")
+                continue
+            taken = {b.id for c in cur.chapters if c.id != cid for b in c.beats}
+            for b in ch.beats:
+                if not b.id or b.id in taken:
+                    b.id = cur.new_beat_id()
+                taken.add(b.id)
+            cur.counters["beat"] = max(cur.counters["beat"], res.narration.counters["beat"])
+            cur.chapters = [NChapter(cid, oc.role, oc.title, oc.card, ch.beats) if c.id == cid else c for c in cur.chapters]
+            rev = save_narration(pdir, cur, backup=False)
+            narr = cur
+        repaired.append(cid)
+        job.result = {**result_of(rev), "repetition_repaired": repaired}
+        job.set_chapter(cid, state="done", words=chapter_words(ch), message=(prior_message + "; " if prior_message else "") + "đã viết lại để tránh lặp")

@@ -198,6 +198,9 @@ EXTRA_WORDS = {"error_kind", "transition_in",      # a field of a job record tha
                "content_box", "frame_moved_into_painting"}      # panelbox: a field of a picks asset (bti/picks/doc.py) and the warning of the draft compiler that moved a camera key (bti/draft/compile.py)
 
 
+# worker saytwice: narration job result field.
+EXTRA_WORDS |= {"repetition_repaired"}
+
 def test_every_name_in_code_ticks_is_a_word_the_app_has():
     known = vocabulary() | EXTRA_WORDS
     unknown = {}

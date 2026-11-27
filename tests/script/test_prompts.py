@@ -64,7 +64,7 @@ def test_the_old_rule_of_naming_the_authors_is_gone_from_every_prompt_file_and_n
 
 def test_the_script_prompt_tells_a_narrator_not_a_reviewer(tproj):
     t = build_prompt("script", tproj, outline=make_outline(approved=True))["text"]
-    for must in ("Follow the four voice principles", "NEVER speak the name of an author of a source", "\"the books\"", "\"both books\"", "\"the sources\"",
+    for must in ("Follow the five voice principles", "NEVER speak the name of an author of a source", "\"the books\"", "\"both books\"", "\"the sources\"",
                  "\"that passage\"", "\"the book says\"", "weigh the two possibilities directly in your own voice",
                  "Name a person only when that person belongs to the story itself", "Never speak a remark meant for the owner",
                  "Leave the fact out of the narration instead", "THE VIEWER HAS NEVER HEARD OF YOUR SOURCES", "not a review of books"):
@@ -78,9 +78,10 @@ def test_the_script_prompt_tells_a_narrator_not_a_reviewer(tproj):
 
 def test_the_voice_rules_keep_the_fact_table_attributions_out_of_the_spoken_text():
     v = (prompting.PROMPTS / "rules_voice.md").read_text(encoding="utf-8")
-    for principle in ("THE FOUR PRINCIPLES", "1. ORIENT BEFORE INTRIGUE.", "2. ONE NARRATOR, THE CHANNEL'S OWN VOICE.",
-                      "3. NEVER MENTION A GESTURE, OBJECT OR SIGN WITHOUT SAYING IN THE SAME SENTENCE WHAT IT IS OR MEANS.",
-                      "4. PLAIN, COMPLETE SENTENCES UNDERSTOOD AT FIRST HEARING."):
+    for principle in ("THE FIVE PRINCIPLES", "1. ORIENT BEFORE INTRIGUE.", "2. ONE NARRATOR, THE CHANNEL'S OWN VOICE.",
+                      "3. THE FIRST TIME YOU POINT AT A GESTURE, OBJECT OR SIGN, SAY IN THE SAME SENTENCE WHAT IT IS OR MEANS.",
+                      "4. PLAIN, COMPLETE SENTENCES UNDERSTOOD AT FIRST HEARING.",
+                      "5. SAY EACH POINT ONCE. RETURN TO IT AT MOST ONCE, IN NEW WORDS, FOR A NEW REASON."):
         assert principle in v, principle
     assert "what is known" in v and "never as what a book says" in v and "in the channel's own voice" in v
     assert "Never quote a book about the painting" in v
@@ -140,7 +141,7 @@ def test_script_prompt_layout_rules_and_context(tproj):
         assert must in t, must
     assert "## c02 THE ROOM\nword" not in t.split("YOUR TASK")[0].split("THE CHAPTERS ALREADY WRITTEN")[1]    # c02 is not given as context
     whole = build_prompt("script", tproj, outline=o, narration=None)["text"]
-    assert "Chapters to write now: c01, c02, c03" in whole and "THE CHAPTERS ALREADY WRITTEN" not in whole
+    assert "Chapters to write now: c01, c02, c03" in whole and "THE CHAPTERS ALREADY WRITTEN\n" not in whole
 
 
 def test_retry_message_is_appended(tproj):
