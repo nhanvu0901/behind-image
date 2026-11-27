@@ -71,7 +71,8 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
     main_regions = (assets.get(main) or {}).get("regions", {})
     narration = " ".join(w.get("w", "") for w in words)
     def forbidden_text(text):
-        if re.search(r"\b[\w-]+\.[a-z0-9]{2,5}\b", text, re.I):
+        if (text in assets or re.search(r"\b(?:DSC\d+|image\s+\d+)\b", text, re.I)
+                or re.search(r"\b[\w-]+\.[a-z0-9]{2,}\b", text, re.I)):
             return True
         for asset in assets.values():
             filename = str(asset.get("file", "")).replace("\\", "/").rsplit("/", 1)[-1]
@@ -89,20 +90,25 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
     for w in doc["wanted"]:
         if w["subject"] not in members:
             issue("V4", None, f"{w['id']}: choose one existing cast subject.")
-        if w["status"] == "found" and not w["picture"]:
-            issue("V4", None, f"{w['id']}: provide the found picture or change status.")
+        if w["status"] == "found" and (not w["picture"] or (picks is not None and w["picture"] not in assets)):
+            issue("V4", None, f"{w['id']}: provide a found picture in the pool or change status.")
+    if picks is not None:
+        for member in cast:
+            for place in member['shown_by']:
+                if ('region' in place and place['region'] not in main_regions) or ('picture' in place and place['picture'] not in assets):
+                    issue('V3', None, f"{member['id']}: use an existing painting region or pool picture in shown_by.", subject=member['id'])
     def depicts(show, member):
         if show_matches(show, member):
             return True
         if "want" in show:
             entry = wanted.get(show["want"], {})
             if entry.get("status") == "none":
-                return depicts(show["else"], member)
+                return depicts(show.get("else", {}), member)
             return entry.get("subject") == member["id"]
         if "pair" in show:
-            return any(show_matches(part, member) for part in show["pair"])
+            return any(depicts(part, member) if "want" in part else show_matches(part, member) for part in show["pair"])
         if "map" in show:
-            return member["kind"] == "place" and any(_contains(place, member["name"]) for place in show["map"]["places"])
+            return member["kind"] == "place"
         return False
     for index, m in enumerate(doc["moments"]):
         mid, w0, w1 = m["id"], m["w0"], m["w1"]
@@ -118,6 +124,12 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
             if end - start < 1.5:
                 issue("V2", mid, f"{mid}: extend the speech span to at least 1.5 seconds.")
         show, about = m["show"], m["about"]
+        if picks is not None:
+            refs = [show, *show.get('pair', [])]
+            refs += [ref['else'] for ref in list(refs) if 'else' in ref]
+            for ref in refs:
+                if ('region' in ref and ref['region'] not in main_regions) or ('picture' in ref and ref['picture'] not in assets):
+                    issue('V3', mid, f"{mid}: show an existing painting region or pool picture.")
         member = members.get(about)
         if about is not None and member is None:
             issue("V3", mid, f"{mid}: use a cast id for about or null.")
@@ -127,13 +139,14 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
             issue("V4", mid, f"{mid}: use a wanted id that exists.")
         if "region" in show:
             regions[show["region"]] += 1
-        if "whole" in show and index not in (0, len(doc["moments"]) - 1):
-            chapter_start = any(ch.get("w0") == w0 for ch in timing.get("chapters", []))
-            about_whole = bool(member and member["kind"] == "work")
-            if not chapter_start and not about_whole:
-                issue("V9", mid, f"{mid}: verify this whole view is the cold open end or otherwise allowed; choose a detail if not.", level="review")
+        if "whole" in show:
+            issue("V9", mid, f"{mid}: whole painting view; verify it serves the narration.", level="review")
+        if "map" in show and show["map"].get("picture") and show["map"]["picture"] not in assets:
+            issue("V11", mid, f"{mid}: map picture must exist in the pool.")
         if "map" in show and len(set(show["map"]["places"])) < 2:
             issue("V11", mid, f"{mid}: a map requires at least two distinct named places.")
+        if "pair" in show and any((part.get("picture") not in assets if "picture" in part else part.get("want") not in wanted) for part in show["pair"]):
+            issue("V11", mid, f"{mid}: each pair entry must name a pool picture or wanted picture.")
         if "pair" in show and show["pair"][0] == show["pair"][1]:
             issue("V11", mid, f"{mid}: compare two different pictures.")
         elif "pair" in show:
@@ -159,11 +172,10 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
                 region = point["region"]
                 if not valid or not w0 <= point["word"] < w1:
                     issue("V8", mid, f"{mid}: put point word inside the moment.")
-                if "picture" not in show and any(c["kind"] == "person" and {"region": region} in c["shown_by"] for c in cast):
+                if any(c["kind"] == "person" and {"region": region} in c["shown_by"] for c in cast):
                     issue("V8", mid, f"{mid}: do not point at person region {region}.")
-                visible_regions = (assets.get(show["picture"], {}).get("regions", {}) if "picture" in show else main_regions)
-                if visible_regions and region not in visible_regions and "pair" not in show and "map" not in show:
-                    issue("V8", mid, f"{mid}: use a region present on the displayed picture.")
+                if picks is not None and region not in main_regions:
+                    issue("V8", mid, f"{mid}: use a region present on the main painting.")
                 issue("V8", mid, f"{mid}: verify {region} is not a person and can be framed with the shown picture.", level="review")
             texts = []
             if "read" in intent:
@@ -182,7 +194,9 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
         sub = member["sub"]
         if len(sub.split()) > 6 or any(_contains(sub, name) for name in [member["name"], *member["also"]]):
             issue("V7", None, f"{member['id']}: shorten sub to six words and omit the name and aliases.", subject=member["id"])
-        if member["kind"] == "thing":
+        if member["kind"] == "thing" and member["strip"] and member.get("term") is not True:
+            issue("V6", None, f"{member['id']}: set term true for a named unfamiliar thing.", subject=member["id"])
+        if member["kind"] == "thing" and member["strip"]:
             issue("V6", None, f"{member['id']}: verify the strip is used only if the narration explains an unfamiliar term.", subject=member["id"], level="review")
         if member["kind"] in ("person", "place", "work") and member["name"][:1].isupper() and not member["strip"]:
             issue("V6", None, f"{member['id']}: verify whether this is a proper name that needs a strip.", subject=member["id"], level="review")

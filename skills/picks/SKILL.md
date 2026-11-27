@@ -33,6 +33,7 @@ if the owner allowed it) approves the picks, and the storyboard draft starts fro
 | `picks.suggest` | picks | Gợi ý hình (tốn tiền) |  | paid: You.com calls, charged per beat | yes |
 | `picks.put` | picks | Lưu chọn hình |  |  |  |
 | `picks.auto` | picks | Để agent chọn hình |  | model: about 20 minutes | yes |
+| `visual.plan` | picks | Viết kịch bản hình |  | model: about 30 minutes | yes |
 | `picks.retry_missing` | picks | Tải lại hình đã chọn |  |  | yes |
 | `picks.tighten` | picks | Đo lại khung chi tiết |  | model: about 5 minutes | yes |
 | `picks.edit` | picks | Nhờ agent sửa chọn hình |  | model: about 30 seconds | yes |

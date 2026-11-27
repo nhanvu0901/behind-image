@@ -149,6 +149,9 @@
           "places": [
             "Bruges"
           ]
+        },
+        "else": {
+          "whole": true
         }
       },
       "move": "hold",

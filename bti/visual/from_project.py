@@ -95,7 +95,7 @@ def convert(storyboard, timing, picks, narration_hash, timing_hash, diagnostics=
             places = [(p.get("name") if isinstance(p, dict) else p) for p in (shot.get("params") or {}).get("places", [])]
             places = [p for p in places if isinstance(p, str) and p.strip()]
             if len(places) >= 2:
-                show = {"map": {"places": places}}
+                show = {"map": {"places": places, **({"picture": key} if key and key != main else {})}, "else": {"whole": True}}
             else:
                 show = {"whole": True}
                 notes.append(f"{shot.get('id')}: map lacks two named places")

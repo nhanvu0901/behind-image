@@ -153,6 +153,9 @@ SPECS: list[Spec] = [
     Spec("picks.auto", "picks", "Để agent chọn hình", "POST", P + "/picks/auto", long_job=True, follow=LONGJOBS, role="picks",       # c3picks
          cost=("model", "about 20 minutes"),
          when="Once the picks step is open. Needs the approved narration, a main painting and a usable agent; refused while the picks are approved unless `redo` is true, and while another long job of the project runs (the agent's choice, a prompt-box turn or a draft: one at a time; an automatic run goes on: only the run itself, as the `actor` `agent:auto`, takes it, any other caller is refused with `agent_job_running`). It never approves and never calls the paid suggestion service. Advances while no line has pictures yet."),
+    # planner: visual-script planning action
+    Spec("visual.plan", "picks", "Viết kịch bản hình", "POST", P + "/visual/plan", long_job=True, follow=LONGJOBS, role="picks",
+         cost=("model", "about 30 minutes"), when="Needs approved narration, word timing, a main painting and an available agent. Replans from the narration and the full picture pool."),
     Spec("picks.retry_missing", "picks", "Tải lại hình đã chọn", "POST", P + "/picks/retry-missing", long_job=True, follow=LONGJOBS,         # fixes4
          when="Listed only while a line of the picks says that a picture the agent chose could not be downloaded (`missing` with the code `import_limited`: the source limited the downloads; a `web_budget` is not retried here). "
               "No model and no search: for each such line it reads what the agent chose in the saved files of the last run of picks.auto (cache/picks_auto: plan, search, choice, and the second choice when there is one), "
@@ -797,6 +800,23 @@ def b_picks_suggest(c: Ctx):
     return E(needs, fill=["beats", "confirm_paid"], template={"beats": None, "confirm_paid": None})
 
 
+# planner: ready only after the word timing is present.
+def b_visual_plan(c: Ctx):
+    if not _picks_open(c):
+        return None
+    needs = [] if c.narration_ok else ["narration_approved"]
+    if not c.has_timing:
+        needs.append("timing")
+    if c.picks_error:
+        needs.append("documents_readable")
+    elif not c.picks_main:
+        needs.append("main_asset")
+    if c.agent_busy("picks"):
+        needs.append("no_running_job")
+    needs += _model_needs(c, "picks")
+    return E(list(dict.fromkeys(needs)), {"actor": c.actor("picks")}, advances=False)
+
+
 def b_picks_auto(c: Ctx):                                                   # c3picks
     if not _picks_open(c):
         return None
@@ -1031,6 +1051,9 @@ def b_export_start(c: Ctx):
 RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit"})
 
 
+# planner: this action is explicitly started, not a step of the legacy auto run.
+RUN_MANUAL = RUN_MANUAL | frozenset({"visual.plan"})
+
 def cost_about(spec: Spec, c: Ctx | None = None) -> str:
     """What a cost line says: the spec's own words, and for `picks.auto` with the owner's switch for the web search ON, the paid searches it may make
     (`, up to 80 web searches (You.com)`). With the switch off the line is the spec's, so nothing paid is ever implied."""
@@ -1045,6 +1068,16 @@ def cost_about(spec: Spec, c: Ctx | None = None) -> str:
             has_parts = False
         if has_parts or c.work("export") in ("stale", "done"):
             return "only changed ~60 s parts (full export: about 25 minutes)"
+    # planner: the same owner switch also makes this action use paid web search.
+    if spec.id == "visual.plan":
+        from bti.picks import websettings
+        from bti.picks.auto import webround
+        try:
+            on = websettings.for_run()
+        except Exception:
+            on = {"on": False, "max": 0}
+        if on["on"]:
+            about += webround.cost_line(on["max"])
     if spec.id == "picks.auto":
         from bti.picks import websettings
         from bti.picks.auto import webround
@@ -1101,6 +1134,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "narration.approve": b_narration_approve, "title.generate": b_title_generate, "title.set": b_title_set, "voice.generate": b_voice_generate,
     "picks.search": b_picks_search, "picks.import": b_picks_import, "picks.import_book_image": b_picks_import_book_image,
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
+    "visual.plan": b_visual_plan,  # planner
     "picks.auto": b_picks_auto, "picks.retry_missing": b_picks_retry_missing, "picks.tighten": b_picks_tighten, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.review": b_storyboard_review, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
@@ -1227,6 +1261,17 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
     answer = {"project": pid, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
               "next_actions": build_actions(c), "jobs": jobs, "problems": problems,
               "auto": auto_mod.public(c.auto), "approvals": _try(lambda: approvals_of(c), {g: None for g in auto_mod.GATES})}      # c5cli
+    # planner: preserve every searched wording from the visual script for the owner.
+    if not c.imported:
+        from bti.visual import store as visual_store
+        from bti.visual.job import missing_sentences
+        visual = _try(lambda: visual_store.load(d), None)
+        if isinstance(visual, dict):
+            answer["visual_missing"] = _try(lambda: missing_sentences(visual), [])
+            if answer["visual_missing"]:
+                picks_step = next((step for step in answer["steps"] if step["step"] == "picks"), None)
+                if picks_step is not None:
+                    picks_step["detail"] = " ".join([picks_step.get("detail") or "", *answer["visual_missing"]]).strip()
     if not c.imported:                                               # titlestep: the video's title (state none | done | stale, the text, who chose it, how many candidates)
         from bti.title import view as title_view
         answer["title"] = title_view.summary(d)

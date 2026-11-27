@@ -53,7 +53,42 @@ def test_review_notes_are_returned_without_refusing_a_save(tmp_path):
     (project / "timing.json").write_text(json.dumps(timing()), encoding="utf-8")
     client = TestClient(create_app(projects_root=tmp_path, engine_module=None, media_module=None, output_root=False))
     doc = valid()
-    doc["moments"][0].update(about=None, show={"pair": [{"picture": "A"}, {"picture": "B"}]})
+    doc["cast"][0].update(strip=True, term=True)
     result = client.put("/api/projects/demo/visual", json={"visual": doc, "base_rev": None, "actor": "agent:test"})
     assert result.status_code == 200
-    assert any(i["rule"] == "V11" and i["level"] == "review" for i in result.json()["issues"])
+    assert any(i["rule"] == "V6" and i["level"] == "review" for i in result.json()["issues"])
+
+
+def test_visual_plan_action_starts_long_job(tmp_path, monkeypatch):
+    from bti.editor.app import create_app
+    from bti.visual import job
+    (tmp_path / 'demo').mkdir()
+    calls = []
+    def start(pid, pdir, **kwargs):
+        calls.append((pid, pdir, kwargs))
+        return {'id': '1234567890abcdef', 'meta': {'model': 'fake', 'agent': {}}}
+    monkeypatch.setattr(job, 'start', start)
+    app = create_app(projects_root=tmp_path, engine_module=None, media_module=None, output_root=False)
+    res = TestClient(app).post('/api/projects/demo/visual/plan', json={})
+    assert res.status_code == 200 and res.json()['job_id'] == '1234567890abcdef'
+    assert calls[0][0] == 'demo'
+
+
+def test_visual_plan_is_listed_in_state_actions():
+    from bti.editor.state_api import SPECS, BUILDERS
+    spec = next(s for s in SPECS if s.id == 'visual.plan')
+    assert spec.step == 'picks' and spec.path.endswith('/visual/plan') and spec.long_job
+    assert 'visual.plan' in BUILDERS
+
+
+def test_action_cost_mentions_web_when_owner_enabled_it(monkeypatch):
+    from bti.editor.state_api import SPECS, cost_about
+    from bti.picks import websettings
+    monkeypatch.setattr(websettings, 'for_run', lambda: {'on': True, 'max': 7})
+    spec = next(s for s in SPECS if s.id == 'visual.plan')
+    assert '7 web searches' in cost_about(spec)
+
+
+def test_visual_plan_is_not_counted_as_an_automatic_run_action():
+    from bti.editor.state_api import RUN_MANUAL
+    assert 'visual.plan' in RUN_MANUAL
