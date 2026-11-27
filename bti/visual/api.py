@@ -14,7 +14,10 @@ router = APIRouter(prefix="/api")
 def get_visual(pid: str, request: Request):
     project = _pdir(request, pid)
     document = store.load(project)
-    return {"visual": document, "rev": store.revision(document) if document is not None else None}
+    timing = read_object(project / "timing.json", "timing")
+    picks = read_object(project / "picks.json", "picks")
+    issues = validate(document, timing, picks) if document is not None and timing is not None else []
+    return {"visual": document, "rev": store.revision(document) if document is not None else None, "issues": issues}
 
 
 @router.put("/projects/{pid}/visual")
@@ -50,8 +53,10 @@ def plan_visual(pid: str, request: Request, body: dict = Body(default={})):
     from bti.editor.auto_api import actor_of
     from bti.auto import RUN_ACTOR
     try:
+        actor = actor_of(body)
+        web = {'on': False, 'max': 0} if actor != 'human' else None
         result = job.start(pid, _pdir(request, pid), model=body.get('model'),
-                           manager=getattr(request.app.state, 'longjob_manager', None), by_run=actor_of(body) == RUN_ACTOR)
+                           manager=getattr(request.app.state, 'longjob_manager', None), by_run=actor == RUN_ACTOR, web=web)
     except AutoError as e:
         raise ApiError(e.status, e.message, code=e.code, **e.extra)
     except DraftError as e:

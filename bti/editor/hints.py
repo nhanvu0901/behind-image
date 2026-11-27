@@ -352,6 +352,8 @@ HINTS: dict[str, dict] = {
     "scorecard_not_ready": _t("after_fix", "Make the voice timing and storyboard first (GET /api/projects/{pid}/state shows what is missing), then call scorecard.make again."),
     "scorecard_failed": _t("later", "The scorecard could not be built (see `detail`): check the storyboard and timing, then call POST /api/projects/{pid}/scorecard/make again."),
     "sheet_not_found": _t("no", "Use a sheet name listed by GET /api/projects/{pid}/scorecard (`sheets`)."),
+    # pipewire: export can reject music that no longer matches the project.
+    "music_invalid": _t("after_fix", "Correct the music issues listed in the response, then start the export again."),
 }
 
 
@@ -525,6 +527,7 @@ def autorun_tables() -> str:
                                                                                    if checks.SHARE_OF.get(c) == "outside" else "lines ")) if c in share else "") for c in stops]
         rows.append("| `%s` | %s | %s | %s |" % (gate, ", ".join(names), "; ".join("%s: %s" % (c, w[0]) for c, w in stops.items()).replace("|", "\\|"),
                                               ", ".join("`%s`" % c for c in sorted(checks.TOLERATED[gate])) or "none"))
+    rows += ["", "For `visual` projects the storyboard gate uses the scorecard's hard lines: marks on people, oversized marks, short shots, borrowed pictures under three seconds and repeated names in strip subtitles. Other scorecard results are logged. Missing wanted pictures do not stop the picks gate and are counted in the log. The table above describes the legacy path."]
     return "\n".join(rows)
 
 
@@ -536,6 +539,9 @@ def generated_parts() -> dict[str, str]:
 
 def render_doc(text: str, parts: dict[str, str] | None = None) -> str:
     """`text` with the generated parts replaced between their markers (a marker that is missing is an error)."""
+    # pipewire: keep the illustrative state answer in step with the new setting.
+    text = text.replace('  "project": "arn",\n  "stage":',
+                        '  "project": "arn",\n  "pipeline": {"value": "legacy", "rev": "example-revision"},\n  "stage":', 1)
     parts = parts or generated_parts()
     for name, body in parts.items():
         b, e = BEGIN.format(name=name), END.format(name=name)

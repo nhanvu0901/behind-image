@@ -350,3 +350,15 @@ def test_person_like_region_name_alone_does_not_block_a_mark():
     visual['moments'][0]['say'] = [{'point': [{'region': 'HAND', 'word': 0}]}]
     sb, _ = compose(visual, timing, picks, {'id': 'gae'})
     assert any(o['technique'] == 'HI-01' for o in sb['shots'][0]['overlays'])
+
+
+def test_composed_storyboard_skips_legacy_view_checks(monkeypatch):
+    visual, timing, picks = fixture("landscape")
+    sb, _ = compose(visual, timing, picks, {"id": "gae"})
+    calls = []
+    def record(*args, **kwargs):
+        calls.append(True)
+        return []
+    monkeypatch.setattr(storyboard.VC, "check", record)
+    storyboard.validate(sb, Timing(timing), registry.load_bundle("gae"))
+    assert calls == []

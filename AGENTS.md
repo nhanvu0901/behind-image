@@ -49,17 +49,19 @@ Read the last line, `next: ...`, and run it. It is the first action that is read
 <!-- BEGIN GENERATED: commands -->
 | command | what it does |
 |---|---|
-| `bti status [project]` | Where a project stands, what blocks it, what can be done now and the next command (no project: the list of projects). |
+| `bti status [project]` | Where a project stands, its visual or legacy pipeline, what blocks it, what can be done now and the next command (no project: the list of projects). |
 | `bti do <project> <action id> [--body FILE \| --set key=value ...] [--wait] [--yes-cost]` | Call one action of the state answer. An action that is not ready is refused with its needs; one that costs runs only with --yes-cost. |
 | `bti approve <project> <gate>` | Approve outline, narration, picks or storyboard; refused (exit 3) when the owner did not allow an agent to approve it. |
 | `bti ops <project> picks\|storyboard --file ops.json [--dry-run] [--note TEXT]` | Send a batch of typed operations (the command reads the current revision itself) and print the changes. |
-| `bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]` | Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); every step is in the run log. |
+| `bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]` | Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); it follows the project's visual or legacy pipeline and writes every step in the run log. |
 | `bti output <project> [--clean]` | Fill (or refill) the project's folder output/<artwork key>/ (the video, the readable documents, the log) from the project as it stands; --clean also removes the working folder's caches when the export stands. |
 | `bti job <id> [--wait] [--cancel]` | Look at a long job, follow it to its end, or stop it. |
 | `bti undo <project> <batch>` | Undo one batch of operations. |
 | `bti changes <project> [picks\|storyboard]` | The change log of the project, newest batch first. |
 | `bti schema ops picks\|storyboard` | The operations of a document with their schemas and examples. |
 | `bti doc [step]` | Print the skill document of a step (script, title, voice, picks, storyboard, music, export); without a step, AGENTS.md. |
+
+A new project uses `visual`; existing projects without a setting use `legacy`. `bti status <project>` shows the path. Set it with `bti do <project> pipeline.set --set pipeline=visual` or `--set pipeline=legacy`; the action supplies the current revision. The visual path plans `visual.json`, approves picks, composes and reviews the storyboard, makes a scorecard, chooses music and exports. The legacy path uses `picks.auto`, `draft.start` and `storyboard.review` before music and export.
 
 Options of every command (before or after the sub-command):
 
@@ -106,7 +108,7 @@ A job that ends (`bti do ... --wait`, `bti job ... --wait`) maps like this: `don
 |---|---|---|---|---|
 | `outline` | `outline.approve` | `POST /api/projects/{pid}/outline/approve` | writing the narration (a few minutes of a model) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
 | `narration` | `narration.approve` | `POST /api/projects/{pid}/narration/approve` | the voice (about an hour of machine time) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
-| `picks` | `picks.approve` | `POST /api/projects/{pid}/picks/approve` | the storyboard draft (about 20 minutes of a model) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
+| `picks` | `picks.approve` | `POST /api/projects/{pid}/picks/approve` | the visual composer, or the legacy storyboard draft (about 20 minutes of a model) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
 | `storyboard` | `storyboard.approve` | `POST /api/projects/{pid}/approve` | the export (about 25 minutes of machine time) | the owner on the page; an agent only when the owner turned automatic running on for the project and allowed this gate (`auto` of `bti status`) |
 <!-- END GENERATED: gates -->
 

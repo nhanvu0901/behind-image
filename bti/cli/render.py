@@ -154,6 +154,8 @@ def status_text(st: dict) -> list[str]:
     out = ["project: %s   stage: %s   current step: %s" % (st["project"], st.get("stage"), ("%s (%s)" % (cur["step"], cur.get("label"))) if cur else "none")]
     out += auto_line(st)
     out.append(approvals_line(st))
+    if st.get("pipeline"):
+        out.append("pipeline: %s" % st["pipeline"]["value"])
     tl = title_line(st)
     if tl:
         out.append(tl)

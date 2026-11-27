@@ -7,7 +7,7 @@
 # Exit codes: 0 ok / nothing to do, 11 failed, 12 code updated but our app did not start again, 20 lock timeout,
 #             30 no .git, 31 wrong branch, 32 tracked files modified,
 #             33 not a fast-forward, 34 fetch failed or origin/<Branch> missing, 36 server is not on the -Commit asked for.
-param([Parameter(Mandatory)][string]$Branch, [string]$Commit = '', [switch]$Restart, [switch]$Check,
+param([Parameter(Mandatory)][string]$Branch, [string]$Commit = '', [switch]$Restart, [switch]$Check, [string]$JobGuard = '',
       [string]$Root = 'D:\code\behind-the-image', [switch]$NoVenv,
       [int]$WaitMinutes = 20, [int]$StaleMinutes = 30)
 # 'Continue' on purpose: with 'Stop', Windows PowerShell 5.1 throws on any stderr text of a native command.
@@ -51,7 +51,14 @@ $remoteRef = "origin/$Branch"
 function Refuse($c, $msg) { throw "REFUSE|$c|$msg" }     # nothing has been changed when this is thrown before the merge
 # NOT named Git: PowerShell names are case-insensitive, so `& git` inside a function called Git would call itself forever.
 function GitR { & git.exe -C $Root @args }
+function Check-ProjectJobs {
+  if ($JobGuard) {
+    & powershell.exe -NoProfile -EncodedCommand $JobGuard
+    if ($LASTEXITCODE -ne 0) { Refuse 37 'REFUSED: a project job is running or its state could not be verified.' }
+  }
+}
 try {
+  Check-ProjectJobs
   if (-not (Test-Path "$Root\.git")) { Refuse 30 "REFUSED: $Root is not a git checkout (no .git folder). Nothing was changed." }
 
   "== fetch"
@@ -98,6 +105,7 @@ try {
   if ($Check) { "CHECK ONLY: nothing was changed (the fetch only updated origin/$Branch inside .git)."; throw 'STOP|' }
 
   # ---- act
+  Check-ProjectJobs
   if ($Restart) {
     "== stop our app"
     & "$Root\tools\deploy\stop_app.ps1" | Out-Host

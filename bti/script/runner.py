@@ -173,7 +173,8 @@ class ScriptJobs:
             write_record(job_file(self.projects_root, job.pid, job.id), job.public())
 
     def for_project(self, pid: str) -> list[dict]:
-        js = sorted((j for j in self._jobs.values() if j.pid == pid), key=lambda j: j.created, reverse=True)
+        with self._lock:
+            js = sorted((j for j in self._jobs.values() if j.pid == pid), key=lambda j: j.created, reverse=True)
         return [j.public() for j in js[:10]]
 
     def running(self, pid: str, kind: str | None = None) -> Job | None:
@@ -203,6 +204,10 @@ class ScriptJobs:
                 if busy:
                     raise BusyError(busy)
             self._jobs[job.id] = job
+            from bti import deploy_guard
+            if deploy_guard.active():
+                self._jobs.pop(job.id, None)
+                raise deploy_guard.DeployBusy()
             if len(self._jobs) > KEEP:
                 for k in sorted(self._jobs, key=lambda k: self._jobs[k].created)[: len(self._jobs) - KEEP]:
                     if self._jobs[k].state in ("done", "error", "cancelled"):

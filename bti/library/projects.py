@@ -124,7 +124,7 @@ def create_project(work_ids: list[str] | None, slug: str | None = None, projects
                    for s in doc["sources"]]
         proj = {"id": slug, "title": doc["identity"]["title"] or head["title"],
                 "artist": doc["identity"]["artist"], "year": doc["identity"]["year"],
-                "stage": "selected", "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
+                "stage": "selected", "pipeline": "visual", "created_at": dt.datetime.now().astimezone().isoformat(timespec="seconds"),
                 "sources": sources, "artwork_key": key, "dossier": "source/dossier.json",
                 "library_dossier": f"library/dossiers/{key}/dossier.json"}
         if len(set(keys)) > 1:

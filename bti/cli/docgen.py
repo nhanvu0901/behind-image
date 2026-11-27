@@ -24,7 +24,7 @@ END = "<!-- END GENERATED: {name} -->"
 SKILL_OF = {"script": "script", "voice": "voice", "picks": "picks", "edit": "storyboard", "export": "export"}
 # what a gate lets happen, from the design table (docs/design/2026-11-18-agent-first-design.html, "Cổng duyệt và chạy tự động")
 AFTER_GATE = {"outline": "writing the narration (a few minutes of a model)", "narration": "the voice (about an hour of machine time)",
-              "picks": "the storyboard draft (about 20 minutes of a model)", "storyboard": "the export (about 25 minutes of machine time)"}
+              "picks": "the visual composer, or the legacy storyboard draft (about 20 minutes of a model)", "storyboard": "the export (about 25 minutes of machine time)"}
 
 
 def _cell(text: str) -> str:
@@ -36,6 +36,7 @@ def commands_table() -> str:
     rows = ["| command | what it does |", "|---|---|"]
     for _name, usage, summary in M.COMMANDS:
         rows.append("| `%s` | %s |" % (_cell(usage), _cell(summary)))
+    rows += ["", "A new project uses `visual`; existing projects without a setting use `legacy`. `bti status <project>` shows the path. Set it with `bti do <project> pipeline.set --set pipeline=visual` or `--set pipeline=legacy`; the action supplies the current revision. The visual path plans `visual.json`, approves picks, composes and reviews the storyboard, makes a scorecard, chooses music and exports. The legacy path uses `picks.auto`, `draft.start` and `storyboard.review` before music and export."]
     rows += ["", "Options of every command (before or after the sub-command):", "", "| option | meaning |", "|---|---|"]
     for opt, text in M.COMMON_OPTIONS:
         rows.append("| `%s` | %s |" % (opt, _cell(text)))
@@ -82,7 +83,9 @@ def actions_table(step: str | None = None) -> str:
     """Every action id (or those of one pipeline step), from the catalogue of the state answer."""
     from bti.editor import state_api
     specs = [s for s in state_api.SPECS if step is None or s.step == step]
-    return "\n".join(_actions_rows(specs))
+    note = {"picks": "The visual path uses `visual.plan` and the picks gate; `picks.auto` and `picks.edit` are legacy actions.",
+            "edit": "The visual path composes the approved visual script and reviews its moments; the legacy path uses a model draft and proposal. Both paths keep hand operations and the storyboard gate."}.get(step)
+    return ((note + "\n\n") if note else "") + "\n".join(_actions_rows(specs))
 
 
 def ops_table(doc: str) -> str:

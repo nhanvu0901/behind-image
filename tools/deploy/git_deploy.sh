@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Deploy by git: push the current branch, then fast-forward the server's checkout to it.
-# Usage: tools/deploy/git_deploy.sh [--restart] [--check]
+# Usage: tools/deploy/git_deploy.sh [--restart] [--check] [--force-while-running]
 #   (default)   `git push` of the current branch to its upstream (never forced, no tags, no other branches), then
 #               tools/deploy/git_update.ps1 on the server: git fetch, refuse if anything is off, `git merge --ff-only`,
 #               refresh .venv when requirements.txt changed. The running app is left alone.
@@ -16,9 +16,10 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 . "$ROOT/tools/deploy/lib.sh"
-RESTART=0; CHECK=0
+RESTART=0; CHECK=0; FORCE_WHILE_RUNNING=0
 while [ $# -gt 0 ]; do a="$1"; shift; case "$a" in
   --restart) RESTART=1;; --check) CHECK=1;;
+  --force-while-running) FORCE_WHILE_RUNNING=1;;
   *) echo "unknown option $a" >&2; exit 1;; esac; done
 cd "$ROOT"
 
@@ -45,6 +46,15 @@ if [ "$UP_MERGE" != "refs/heads/$BRANCH" ]; then
 fi
 SHA="$(git rev-parse HEAD)"
 
+# Run the read-only preflight on the server itself, before pushing anything.
+check_jobs() {
+  [ "$FORCE_WHILE_RUNNING" -eq 1 ] && return 0
+  local encoded
+  encoded="$(python3 -c 'import base64, pathlib, sys; print(base64.b64encode(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").encode("utf-16le")).decode("ascii"))' "$ROOT/tools/deploy/check_running_jobs.ps1")"
+  rssh "powershell -NoProfile -EncodedCommand $encoded"
+}
+check_jobs
+
 if [ $CHECK -eq 1 ]; then
   echo "== check (nothing is pushed or changed)"
   AHEAD="$(git rev-list --count "$UP_REMOTE/$BRANCH..HEAD" 2>/dev/null || echo '?')"
@@ -60,7 +70,12 @@ rssh "if not exist $RW\\_deploy mkdir $RW\\_deploy"
 rscp "$ROOT/tools/deploy/git_update.ps1" "$HOST:$REMOTE/_deploy/git_update-$ID.ps1"
 
 echo "== update on the server (waits for the deploy lock)"
+check_jobs
 ARGS=""; [ $RESTART -eq 1 ] && ARGS="$ARGS -Restart"; [ $CHECK -eq 1 ] && ARGS="$ARGS -Check"
+if [ "$FORCE_WHILE_RUNNING" -eq 0 ]; then
+  GUARD_ENCODED="$(python3 -c 'import base64, pathlib, sys; print(base64.b64encode(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8").encode("utf-16le")).decode("ascii"))' "$ROOT/tools/deploy/check_running_jobs.ps1")"
+  ARGS="$ARGS -JobGuard $GUARD_ENCODED"
+fi
 rc=0
 rssh "powershell -NoProfile -ExecutionPolicy Bypass -File $RW\\_deploy\\git_update-$ID.ps1 -Root $RW -Branch $BRANCH -Commit $SHA$ARGS" || rc=$?
 exit $rc

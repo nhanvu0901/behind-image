@@ -35,7 +35,7 @@ FINAL_STATES = ("done", "error", "cancelled", "interrupted")
 
 # (name, usage, one line): the sub-commands, in the order the help and the documents list them
 COMMANDS: list[tuple[str, str, str]] = [
-    ("status", "bti status [project]", "Where a project stands, what blocks it, what can be done now and the next command (no project: the list of projects)."),
+    ("status", "bti status [project]", "Where a project stands, its visual or legacy pipeline, what blocks it, what can be done now and the next command (no project: the list of projects)."),
     ("do", "bti do <project> <action id> [--body FILE | --set key=value ...] [--wait] [--yes-cost]",
      "Call one action of the state answer. An action that is not ready is refused with its needs; one that costs runs only with --yes-cost."),
     ("approve", "bti approve <project> <gate>", "Approve outline, narration, picks or storyboard; refused (exit 3) when the owner did not allow an agent to approve it."),
@@ -43,7 +43,7 @@ COMMANDS: list[tuple[str, str, str]] = [
      "Send a batch of typed operations (the command reads the current revision itself) and print the changes."),
     ("run", "bti run <project> [--until STEP] [--max-steps N] [--wait] [--yes-cost]",
      "Run the project by itself (automatic running, a long job): take the first allowed action that moves it forward, over and over, until it is exported or "
-     "a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); every step is in the run log."),
+     "a reason stops it (a gate or a cost the owner did not allow, a warning, a failure, nothing left to do); it follows the project's visual or legacy pipeline and writes every step in the run log."),
     ("output", "bti output <project> [--clean]",
      "Fill (or refill) the project's folder output/<artwork key>/ (the video, the readable documents, the log) from the project as it stands; --clean also removes the working folder's caches when the export stands."),
     ("job", "bti job <id> [--wait] [--cancel]", "Look at a long job, follow it to its end, or stop it."),

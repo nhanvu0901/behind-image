@@ -113,6 +113,12 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     async def _api_error(request: Request, e: ApiError):
         return reply(request, {"detail": e.detail, **e.extra}, e.status)
 
+    from bti.deploy_guard import DeployBusy
+
+    @app.exception_handler(DeployBusy)
+    async def _deploy_busy(request: Request, e: DeployBusy):
+        return reply(request, {"detail": "A deploy is in progress; wait for it to finish.", "code": "project_busy"}, 409)
+
     @app.exception_handler(DataError)
     async def _data_error(request: Request, e: DataError):
         # the project's own data is unusable (missing or corrupt timing, unknown style...): the page can show the message
@@ -525,6 +531,10 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
         actor = gate_actor(pdir(pid), "storyboard", body)
         p = project(pid)
         with slock(pid):
+            from .pipeline_api import project_meta
+            from .state_api import visual_composition_needs
+            if project_meta(pdir(pid), strict=True).get("pipeline", "legacy") == "visual" and visual_composition_needs(pdir(pid)):
+                raise ApiError(422, "Hãy sửa kịch bản hình và tạo lại storyboard trước khi duyệt.", code="validation_failed")
             saved = saved_storyboard(pid)
             cur = compute_rev(saved)
             if rev != cur:
@@ -976,6 +986,14 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(voice_router)
     app.include_router(picks_router)
     from bti.visual.api import router as visual_router; app.include_router(visual_router)  # visualdoc
+    # pipewire: review2 provides these routers when its modules are integrated.
+    import importlib.util
+    if importlib.util.find_spec("bti.visual.edit") is not None:
+        from bti.visual.edit import router as visual_edit_router
+        app.include_router(visual_edit_router)
+    if importlib.util.find_spec("bti.visual.review") is not None:
+        from bti.visual.review import router as visual_review_router
+        app.include_router(visual_review_router)
     from bti.compose.api import router as compose_router; app.include_router(compose_router)  # composer
     from .tighten_api import router as tighten_router; app.include_router(tighten_router)
     app.include_router(draft_router)

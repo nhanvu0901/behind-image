@@ -119,6 +119,8 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
     base_rev = store.revision(before) if before else None
     from bti.picks import websettings
     web_config = seams.get('web') if isinstance(seams.get('web'), dict) else websettings.for_run()
+    if by_run:
+        web_config = {'on': False, 'max': 0}
     state = {}
     limits_plan = session.Limits(minutes=30, steps=140, repairs=2)
     limits_choose = session.Limits(minutes=30, steps=200, repairs=2)

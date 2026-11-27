@@ -16,18 +16,18 @@ EDIT_OPEN_NO_DRAFT = EDIT_OPEN[1:]       # titlestep: with no title written and 
 # The exact list of action ids at each stage, in the order the answer gives them: the repair of a damaged project, then what
 # moves the project forward, then the other calls that are ready, then the ones gated ahead (each group in the order of the steps).
 EXPECTED = {
-    "new": ["outline.generate", "outline.import", "title.set", "outline.approve", "narration.generate", "narration.import", "narration.ops",
+    "new": ["outline.generate", "pipeline.set", "outline.import", "title.set", "outline.approve", "narration.generate", "narration.import", "narration.ops",
             "narration.approve", "title.generate"],
-    "outline_waiting": ["outline.approve", "outline.generate", "outline.import", "narration.import", "title.set", "narration.generate",
+    "outline_waiting": ["outline.approve", "pipeline.set", "outline.generate", "outline.import", "narration.import", "title.set", "narration.generate",
                         "narration.ops", "narration.approve", "title.generate"],
     # titlestep: once the narration is approved the title is the first thing that advances (the step `script` comes before the voice); with a storyboard it is ready but does not advance
-    "narration_approved": ["title.generate", "voice.generate", *SCRIPT_REDO, "title.set", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],       # no main painting yet: picks.auto is gated (needs main_asset)
-    "voiced": ["title.generate", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],
-    "picks_approved": ["title.generate", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
-    "proposal_waiting": ["title.generate", "proposal.apply", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
-    "drafted": ["storyboard.review", "storyboard.approve", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
-    "storyboard_approved": ["export.start", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "picks.suggest", "draft.start"],
-    "exported": [*SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "export.start", "picks.suggest", "draft.start"],
+    "narration_approved": ["title.generate", "voice.generate", "pipeline.set", *SCRIPT_REDO, "title.set", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],       # no main painting yet: picks.auto is gated (needs main_asset)
+    "voiced": ["title.generate", "pipeline.set", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN, "picks.suggest", "picks.auto", "picks.approve"],
+    "picks_approved": ["title.generate", "pipeline.set", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
+    "proposal_waiting": ["title.generate", "proposal.apply", "pipeline.set", *SCRIPT_REDO, "title.set", "voice.generate", *PICKS_OPEN_MAIN, "picks.suggest", "draft.start"],
+    "drafted": ["storyboard.review", "storyboard.approve", "pipeline.set", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "music.set", "scorecard.make", "picks.suggest", "draft.start", "music.auto"],
+    "storyboard_approved": ["export.start", "pipeline.set", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "music.set", "scorecard.make", "picks.suggest", "draft.start", "music.auto"],
+    "exported": ["pipeline.set", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *PICKS_OPEN_MAIN, *EDIT_OPEN_NO_DRAFT, "music.set", "export.start", "scorecard.make", "picks.suggest", "draft.start", "music.auto"],
 }
 STAGE_OF = {"new": "selected", "outline_waiting": "selected", "narration_approved": "script", "voiced": "voiced",
             "picks_approved": "picked", "proposal_waiting": "picked", "drafted": "storyboard", "storyboard_approved": "approved",
@@ -73,7 +73,7 @@ def at(client, monkeypatch):
 @pytest.mark.parametrize("stage", STAGES)
 def test_the_exact_action_ids_at_each_stage(at, stage):
     c, pid, st = at(stage)
-    assert ids(st) == EXPECTED[stage]
+    assert ids(st) == EXPECTED[stage], repr(ids(st))
     assert st["project"] == pid and st["stage"] == STAGE_OF[stage]
 
 
@@ -384,3 +384,212 @@ def test_picks_tighten_appears_only_when_main_has_non_tight_regions_and_never_ad
         doc.save(c.root / pid, pd)
     st3 = c.get(f"/api/projects/{pid}/state").json()
     assert "picks.tighten" not in ids(st3)
+
+
+def test_pipeline_setting_is_revision_checked_and_visible(at):
+    c, pid, st = at("new")
+    assert st["pipeline"]["value"] == "legacy"
+    setting = next(a for a in st["next_actions"] if a["id"] == "pipeline.set")
+    rev = st["pipeline"]["rev"]
+    assert setting["body_template"]["base_rev"] == rev
+    r = c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": rev})
+    assert r.status_code == 200, r.text
+    assert c.get(f"/api/projects/{pid}/state").json()["pipeline"]["value"] == "visual"
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "legacy", "base_rev": rev}).status_code == 409
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "other", "base_rev": r.json()["rev"]}).status_code == 422
+
+
+@pytest.mark.parametrize("stage", ["narration_approved", "voiced", "picks_approved", "drafted"])
+def test_pipeline_offers_only_its_own_automatic_actions(at, stage):
+    c, pid, st = at(stage)
+    legacy = set(ids(st))
+    assert "visual.plan" not in legacy and "storyboard.compose" not in legacy
+    setting = st["pipeline"]
+    r = c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": setting["rev"]})
+    assert r.status_code == 200
+    visual = set(ids(c.get(f"/api/projects/{pid}/state").json()))
+    assert "visual.plan" in visual
+    assert not visual.intersection({"picks.auto", "picks.retry_missing", "picks.suggest", "picks.tighten", "draft.start", "proposal.apply", "draft.edit"})
+
+
+def test_visual_gate_waits_for_visual_script(at):
+    c, pid, st = at("voiced")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    st = c.get(f"/api/projects/{pid}/state").json()
+    gate = next(a for a in st["next_actions"] if a["id"] == "picks.approve")
+    assert "visual_script" in gate["needs"]
+
+
+def test_visual_composer_requires_picks_approval_and_detects_visual_changes(at, monkeypatch):
+    from bti.editor import state_api
+    monkeypatch.setattr(state_api, "visual_errors", lambda d: [])
+    c, pid, st = at("picks_approved")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    project = c.root / pid
+    (project / "visual.json").write_text(json.dumps({"moments": [], "wanted": []}), encoding="utf-8")
+    shutil.copy(DEMO_SRC / "timing.json", project / "timing.json")
+    st = c.get(f"/api/projects/{pid}/state").json()
+    compose = next(a for a in st["next_actions"] if a["id"] == "storyboard.compose")
+    assert compose["ready"] and compose["advances"]
+
+
+def test_picks_approval_invokes_recompose_for_visual_project(at, monkeypatch):
+    from bti.compose import api as compose_api
+    from bti.editor import state_api
+    from state_helpers import make_picks
+    c, pid, st = at("voiced")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    calls = []
+    monkeypatch.setattr(compose_api, "compose_if_approved", lambda p: calls.append(p))
+    monkeypatch.setattr(state_api, "visual_errors", lambda p: [])
+    (c.root / pid / "visual.json").write_text('{"wanted": []}', encoding="utf-8")
+    shutil.copy(DEMO_SRC / "timing.json", c.root / pid / "timing.json")
+    make_picks(c, pid)
+    assert calls == [c.root / pid]
+
+
+def test_visual_review_calls_visual_worker(at, monkeypatch):
+    import sys
+    import types
+    c, pid, st = at("drafted")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    calls = []
+    module = types.ModuleType("bti.visual.review")
+    module.start = lambda pid, d, **kw: (calls.append((pid, d)) or {"id": "fake", "meta": {}})
+    monkeypatch.setitem(sys.modules, "bti.visual.review", module)
+    r = c.post(f"/api/projects/{pid}/draft/review", json={"actor": "agent:auto"})
+    assert r.status_code == 200, r.text
+    assert calls == [(pid, c.root / pid)]
+
+
+@pytest.mark.parametrize("stage", STAGES)
+def test_the_exact_visual_action_ids_at_each_stage(at, stage, monkeypatch):
+    from bti.editor import state_api
+    monkeypatch.setattr(state_api, "visual_errors", lambda d: [])
+    monkeypatch.setattr(state_api, "visual_composition_needs", lambda d: [])
+    c, pid, st = at(stage)
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    if stage in {"picks_approved", "proposal_waiting", "drafted", "storyboard_approved", "exported"}:
+        (c.root / pid / "visual.json").write_text('{"wanted": [], "moments": []}', encoding="utf-8")
+    rows = ids(c.get(f"/api/projects/{pid}/state").json())
+    picks = ["picks.search", "picks.import", "picks.import_book_image", "picks.import_clip", "picks.put"]
+    edit = ["storyboard.validate", "storyboard.preview", "storyboard.put", "storyboard.ops", "identity.set"]
+    late = ["pipeline.set", *SCRIPT_REDO, "title.generate", "title.set", "voice.generate", *picks, "visual.plan", "picks.ops", *edit, "music.set"]
+    expected = {
+        "new": EXPECTED["new"],
+        "outline_waiting": EXPECTED["outline_waiting"],
+        "narration_approved": ["title.generate", "voice.generate", "pipeline.set", *SCRIPT_REDO, "title.set", *picks, "picks.ops", "visual.plan", "picks.approve"],
+        "voiced": ["title.generate", "pipeline.set", *SCRIPT_REDO, "title.set", "voice.generate", *picks, "picks.ops", "visual.plan", "picks.approve"],
+        "picks_approved": ["title.generate", "pipeline.set", *SCRIPT_REDO, "title.set", "voice.generate", *picks, "picks.ops", "visual.plan", "storyboard.compose"],
+        "proposal_waiting": ["title.generate", "storyboard.compose", "pipeline.set", *SCRIPT_REDO, "title.set", "voice.generate", *picks, "visual.plan", "picks.ops"],
+        "drafted": ["storyboard.compose", *late, "scorecard.make", "storyboard.review", "storyboard.approve", "music.auto"],
+        "storyboard_approved": ["storyboard.compose", "export.start", "scorecard.make", *late, "music.auto"],
+        "exported": ["storyboard.compose", "scorecard.make", *late, "export.start", "music.auto"],
+    }
+    if stage == "drafted":
+        import importlib.util
+        if importlib.util.find_spec("bti.visual.review") is not None:
+            expected[stage].remove("storyboard.review")
+            expected[stage].insert(1, "storyboard.review")
+    assert rows == expected[stage]
+
+
+def test_auto_picks_gate_leaves_compose_as_the_next_run_action(at, monkeypatch):
+    from bti import auto
+    from bti.compose import api as compose_api
+    from bti.editor import picks_api, state_api
+    c, pid, st = at("picks_approved")
+    p = c.root / pid
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    (p / "visual.json").write_text('{"wanted": [], "moments": []}', encoding="utf-8")
+    shutil.copy(DEMO_SRC / "timing.json", p / "timing.json")
+    settings = auto.view(p)
+    auto.update(p, {"enabled": True}, settings["rev"])
+    calls = []
+    monkeypatch.setattr(compose_api, "compose_if_approved", lambda d: calls.append(d))
+    monkeypatch.setattr(state_api, "visual_errors", lambda d: [])
+    monkeypatch.setattr(picks_api.service, "approve", lambda *args: None)
+    r = c.post(f"/api/projects/{pid}/picks/approve", json={"rev": "fake", "actor": "agent:auto"})
+    assert r.status_code == 200, r.text
+    assert calls == []
+
+
+def test_visual_review_is_not_ready_without_the_visual_worker(at):
+    import importlib.util
+    if importlib.util.find_spec("bti.visual.review") is not None:
+        pytest.skip("the visual review worker is already integrated")
+    c, pid, st = at("drafted")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    action = next(a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"] if a["id"] == "storyboard.review")
+    assert not action["ready"] and "visual_review_available" in action["needs"]
+
+
+def test_visual_scorecard_does_not_advance_before_review(at, monkeypatch):
+    from bti.editor import state_api
+    monkeypatch.setattr(state_api, "visual_composition_needs", lambda d: [])
+    c, pid, st = at("drafted")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    actions = c.get(f"/api/projects/{pid}/state").json()["next_actions"]
+    score = next(a for a in actions if a["id"] == "scorecard.make")
+    assert score["ready"] and not score["advances"]
+
+
+def test_visual_edit_builder_waits_for_timing_and_edit_step(tmp_path):
+    from types import SimpleNamespace
+    from bti.editor.state_api import b_visual_edit
+    (tmp_path / "visual.json").write_text('{"wanted": [], "moments": []}', encoding="utf-8")
+    c = SimpleNamespace(pipeline={"value": "visual"}, d=tmp_path, has_timing=False,
+                        open=lambda step: step == "edit", box_busy=lambda: False,
+                        agent=lambda role: {"usable": True}, actor=lambda role: "agent:fake")
+    row = b_visual_edit(c)
+    assert row is not None and "timing" in row["needs"]
+    c.open = lambda step: False
+    assert b_visual_edit(c) is None
+
+
+def test_visual_picks_gate_refuses_an_invalid_visual_script(at):
+    c, pid, st = at("voiced")
+    p = c.root / pid
+    shutil.copy(DEMO_SRC / "timing.json", p / "timing.json")
+    (p / "visual.json").write_text('{}', encoding="utf-8")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    gate = next(a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"] if a["id"] == "picks.approve")
+    assert not gate["ready"] and "visual_script_valid" in gate["needs"]
+    response = c.post(f"/api/projects/{pid}/picks/approve", json={"rev": None})
+    assert response.status_code == 422 and response.json()["code"] == "validation_failed"
+    assert c.get(f"/api/projects/{pid}/visual").json()["issues"]
+
+
+def test_visual_compose_is_not_ready_for_invalid_script(at):
+    c, pid, st = at("picks_approved")
+    p = c.root / pid
+    shutil.copy(DEMO_SRC / "timing.json", p / "timing.json")
+    (p / "visual.json").write_text('{}', encoding="utf-8")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    action = next(a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"] if a["id"] == "storyboard.compose")
+    assert not action["ready"] and "visual_script_valid" in action["needs"]
+
+
+def test_visual_export_rejects_old_storyboard(at, monkeypatch):
+    from bti.editor import state_api
+    c, pid, st = at("storyboard_approved")
+    p = c.root / pid
+    (p / "visual.json").write_text('{}', encoding="utf-8")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    monkeypatch.setattr(state_api, "visual_errors", lambda d: [])
+    action = next(a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"] if a["id"] == "export.start")
+    assert not action["ready"] and "visual_composed" in action["needs"]
+    response = c.post(f"/api/projects/{pid}/export/start")
+    assert response.status_code == 422 and response.json()["code"] == "validation_failed"
+
+
+def test_visual_review_and_scorecard_wait_for_current_composition(at, monkeypatch):
+    from bti.editor import state_api
+    c, pid, st = at("drafted")
+    p = c.root / pid
+    (p / "visual.json").write_text('{"wanted": [], "moments": []}', encoding="utf-8")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    monkeypatch.setattr(state_api, "visual_errors", lambda d: [])
+    actions = {a["id"]: a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"]}
+    for action in ("storyboard.review", "scorecard.make"):
+        assert not actions[action]["ready"] and "visual_composed" in actions[action]["needs"]

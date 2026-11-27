@@ -37,4 +37,7 @@ def save(project: Path, document: dict, *, base_rev: str | None, actor: str | No
             history = project / "history"
             history.mkdir(exist_ok=True)
             common.write_json_atomic(history / f"visual_change_{time.time_ns()}.json", {"actor": actor, "before": current_rev, "after": rev})
-        return rev
+    if current_rev != rev:
+        from bti.compose.api import compose_if_approved
+        compose_if_approved(project)
+    return rev

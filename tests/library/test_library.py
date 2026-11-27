@@ -203,6 +203,7 @@ def test_override_files_exist_and_are_not_overwritten():
 @pytest.mark.skipif(not (BUILT and HAVE["payne_gae"] and HAVE["hodge_aid"]), reason="needs library and PDFs")
 def test_create_project_several_works_and_refuse_overwrite(tmp_path):
     p = projects.create_project(["payne_gae/002", "hodge_aid/003"], "arn-test", tmp_path)
+    assert p["pipeline"] == "visual"
     assert p["id"] == "arn-test" and p["stage"] == "selected" and p["artwork_key"]
     assert [s["work_id"] for s in p["sources"]] == ["payne_gae/002", "hodge_aid/003"]
     d = tmp_path / "arn-test"

@@ -489,3 +489,86 @@ def test_old_runs_are_pruned(tmp_path):
     log = runlog.RunLog(d, runlog.new_run_id(), pid=PID, until=None, max_steps=1, actor="human")
     log.start()
     assert len(list(runlog.runs_dir(d).glob("*.json"))) == runlog.KEEP
+
+
+def test_visual_gate_stops_on_scorecard_hard_line(tmp_path):
+    gate = act("storyboard.approve", "edit", gate=True, body={"rev": "r"})
+    st = made_state([gate])
+    st["pipeline"] = {"value": "visual"}
+    card = {"stale": False, "scorecard": {"metrics": [
+        {"key": "short_shots", "value": 1, "items": [{"shot": "s1"}]},
+        {"key": "small_painting_share", "value": 0.5, "ok": False, "items": []},
+    ]}}
+    t = Scripted(PID, [st], docs={"/api/projects/arn/scorecard": card})
+    run, _ = make_run(tmp_path, t)
+    run.scorecard_seen.add("pre")
+    res = run.advance(run.clock() + 1e6)
+    assert res["reason"] == "quality_warning"
+    assert any(x["code"] == "small_painting_share" for x in res.get("tolerated", []))
+    assert not posts(t)
+
+
+def test_visual_run_records_scorecard_before_gate_and_after_export(tmp_path):
+    score = act("scorecard.make", "export", advances=False, body={})
+    gate = act("storyboard.approve", "edit", gate=True, body={"rev": "r"})
+    st = made_state([gate, score], current="edit")
+    st["pipeline"] = {"value": "visual"}
+    t = Scripted(PID, [st], docs={"/api/projects/arn/scorecard": {"stale": False, "scorecard": {"metrics": []}}},
+                 posts={score["path"]: Reply(200, {})})
+    run, _ = make_run(tmp_path, t)
+    stop, action = run._decide(st)
+    assert stop is None and action["id"] == "scorecard.make"
+    run._take(action, st)
+    stop, action = run._decide(st)
+    assert stop is None and action["id"] == "storyboard.approve"
+    done = exported()
+    done["pipeline"] = {"value": "visual"}
+    done["next_actions"] = [score]
+    stop, action = run._decide(done)
+    assert stop is None and action["id"] == "scorecard.make"
+    run._take(action, done)
+    stop, action = run._decide(done)
+    assert stop["reason"] == "exported" and action is None
+
+
+def test_visual_run_waits_for_review_before_making_scorecard(tmp_path):
+    review = act("storyboard.review", "edit", ready=False, needs=["visual_review_available"])
+    score = act("scorecard.make", "export", body={})
+    st = made_state([review, score], current="edit")
+    st["pipeline"] = {"value": "visual"}
+    run, _ = make_run(tmp_path, Scripted(PID, [st]))
+    stop, action = run._decide(st)
+    assert action is None and stop["reason"] == "nothing_to_do"
+    assert "visual_review_available" in stop["waiting_for"]
+
+
+def test_visual_run_walks_the_complete_order_with_fake_jobs(tmp_path):
+    plan = act("visual.plan", "picks")
+    picks = act("picks.approve", "picks", gate=True)
+    compose = act("storyboard.compose", "edit")
+    review = act("storyboard.review", "edit")
+    score = act("scorecard.make", "export", advances=False)
+    music = act("music.auto", "export")
+    gate = act("storyboard.approve", "edit", gate=True)
+    export = act("export.start", "export")
+    def visual_state(actions, current="edit", done=("artwork", "script", "voice", "picks")):
+        s = made_state(actions, current=current, done=done)
+        s["pipeline"] = {"value": "visual"}
+        return s
+    states = [visual_state([plan], "picks", ("artwork", "script", "voice")),
+              visual_state([picks], "picks", ("artwork", "script", "voice")),
+              visual_state([compose]), visual_state([review]),
+              *[visual_state([gate, score, music]) for _ in range(3)],
+              visual_state([export, score], "export", ("artwork", "script", "voice", "picks", "edit")),
+              *[visual_state([score], "export", ("artwork", "script", "voice", "picks", "edit", "export")) for _ in range(2)]]
+    card = {"stale": False, "scorecard": {"metrics": [
+        {"key": "marks_on_person", "value": 0}, {"key": "biggest_mark", "over_30_count": 0},
+        {"key": "short_shots", "value": 0}, {"key": "borrowed_pictures", "value": {"under_3s_count": 0}},
+        {"key": "name_strips", "value": {"sub_repeats": 0}},
+    ]}}
+    docs = {"/api/projects/arn/picks": {"issues": [], "narration": {"beat_ids": []}}, "/api/projects/arn/scorecard": card}
+    actions = [plan, picks, compose, review, score, music, gate, export]
+    t = Scripted(PID, states, docs=docs, posts={a["path"]: Reply(200, {}) for a in actions})
+    result, _, log = run_loop(tmp_path, t)
+    assert result["reason"] == "exported"
+    assert [step["action"] for step in log.rec["steps"]] == ["visual.plan", "picks.approve", "storyboard.compose", "storyboard.review", "scorecard.make", "music.auto", "storyboard.approve", "export.start", "scorecard.make"]

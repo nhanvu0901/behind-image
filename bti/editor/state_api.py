@@ -21,7 +21,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Body, Request
 
 from bti import agents as AG
 from bti import auto as auto_mod                      # c5cli: which gates and which kinds of spending an agent may use
@@ -29,13 +29,18 @@ from bti.script import store as sstore
 
 from . import hints as hints_mod
 from . import pipeline_api
-from .common import ApiError, compute_rev, read_json, safe_join, storyboard_approval, storyboard_shape_problem
+from .common import ApiError, compute_rev, read_json, safe_join, storyboard_approval, storyboard_shape_problem, write_json_atomic
 
 log = logging.getLogger("bti.editor")
 
 # ----------------------------------------------------------------------------------------------------------- the vocabulary of `needs`
 # An unmet condition of an action that is not `ready`: a stable word, what it means and how to meet it.
 NEEDS: dict[str, tuple[str, str]] = {
+    "visual_script": ("The visual script is not written yet.", "Run visual.plan first."),
+    "visual_composed": ("The storyboard does not match the current visual script and timing.", "Compose the storyboard again before approving or exporting."),
+    "visual_script_valid": ("The visual script has validation errors.", "Read GET /api/projects/{pid}/visual and correct its issues before approving pictures."),
+    "scorecard": ("The quality scorecard is missing or out of date.", "Call scorecard.make."),
+    "visual_review_available": ("The visual review worker is not installed.", "Install the visual review worker before reviewing this project."),
     "book_data": ("The project has no book data (it was imported from an earlier edit).", "Nothing: the script steps do not apply to this project."),
     "documents_readable": ("A document of the step cannot be read (see `problems`).", "Repair the file named in `problems`, then ask for the state again."),
     "outline": ("There is no outline yet.", "Make one: outline.generate or outline.import."),
@@ -93,6 +98,8 @@ JOBS = "GET /api/jobs/{job_id}"
 LONGJOBS = "GET /api/longjobs/{job_id}"
 
 SPECS: list[Spec] = [
+    Spec("pipeline.set", "artwork", "Chọn cách dựng", "PUT", P + "/pipeline-setting",
+         when="Choose visual or legacy with the current project revision."),
     # ---- script
     Spec("outline.generate", "script", "Lập dàn ý", "POST", P + "/outline/generate", long_job=True, follow=JOBS, role="script.outline",
          cost=("model", "a few minutes"),
@@ -274,6 +281,7 @@ class Ctx:
 
     def __init__(self, root: Path, pid: str, pipe: dict, jobs: list[dict], picks_provider: Any = None):
         self.root, self.pid, self.d = root, pid, root / pid
+        self.pipeline = pipeline_setting(self.d)
         self.pipe, self.jobs, self.picks_provider = pipe, jobs, picks_provider
         self.steps = {s["id"]: s for s in pipe.get("steps", [])}
         self.imported = bool(pipe.get("imported"))
@@ -303,7 +311,8 @@ class Ctx:
         self.sb_rev: str | None = None
         self.sb_approval = "none"
         self.has_history = False
-        self.has_audio = self.has_timing = True
+        self.has_audio = True
+        self.has_timing = (self.d / "timing.json").is_file()
         self.picks_ops_rev: str | None = None
         self.auto: dict = auto_mod.default_doc()          # c5cli: what the owner allowed (auto.json)
         self.sb_record: Any = None                        # c5cli: the storyboard's approval record
@@ -816,7 +825,7 @@ def b_visual_plan(c: Ctx):
     if c.agent_busy("picks"):
         needs.append("no_running_job")
     needs += _model_needs(c, "picks")
-    return E(list(dict.fromkeys(needs)), {"actor": c.actor("picks")}, advances=False)
+    return E(list(dict.fromkeys(needs)), {"actor": c.actor("picks")}, advances=not (c.d / "visual.json").is_file())
 
 
 def b_picks_auto(c: Ctx):                                                   # c3picks
@@ -888,6 +897,13 @@ def b_picks_approve(c: Ctx):
             needs.append("main_asset")
         if c.picks_issues:
             needs.append("picks_errors")
+    if c.pipeline["value"] == "visual":
+        if not (c.d / "visual.json").is_file():
+            needs.append("visual_script")
+        elif not c.has_timing:
+            needs.append("timing")
+        elif _try(lambda: visual_errors(c.d), None) != []:
+            needs.append("visual_script_valid")
     return E(list(dict.fromkeys(needs)), {"rev": c.picks_rev} if c.picks is not None else None, advances=True)
 
 
@@ -927,9 +943,19 @@ def b_storyboard_compose(c: Ctx):
     if not (c.d / "visual.json").is_file():
         return None
     needs = [] if (c.d / "timing.json").is_file() else ["timing"]
+    if c.has_timing and _try(lambda: visual_errors(c.d), None) != []:
+        needs.append("visual_script_valid")
+    if not c.picks_ok:
+        needs.append("picks_approved")
     if not c.picks_main:
         needs.append("main_asset")
-    return E(needs, {"base_rev": c.sb_rev}, advances=not c.sb_exists)
+    from bti.draft.inputs import canon_hash
+    visual = _try(lambda: read_json(c.d / "visual.json"), None)
+    timing = _try(lambda: read_json(c.d / "timing.json"), None) if c.has_timing else None
+    sb = _try(lambda: read_json(c.d / "storyboard.json"), {}) if c.sb_exists else {}
+    made_from = (sb.get("made_from") or {}) if isinstance(sb, dict) else {}
+    stale = made_from.get("visual") != canon_hash(visual) or made_from.get("timing") != canon_hash(timing)
+    return E(needs, {"base_rev": c.sb_rev}, advances=stale)
 
 
 def b_draft_start(c: Ctx):
@@ -974,8 +1000,14 @@ def b_storyboard_review(c: Ctx):
         return None
     from bti.draft.review import load_report
     if load_report(c.d, c.sb_rev) is not None:
-        return E(body={"actor": c.actor("draft")}, advances=False)
+        needs = visual_composition_needs(c.d) if c.pipeline["value"] == "visual" else []
+        return E(needs, body={"actor": c.actor("draft")}, advances=False)
     needs = ["no_running_job"] if c.agent_busy("draft") else []
+    if c.pipeline["value"] == "visual":
+        needs += visual_composition_needs(c.d)
+        import importlib.util
+        if importlib.util.find_spec("bti.visual.review") is None:
+            needs.append("visual_review_available")
     if not c.draft_ready["voice"]:
         needs.append("voice_done")
     if not c.draft_ready["picks"]:
@@ -989,7 +1021,13 @@ def b_storyboard_review(c: Ctx):
 def b_storyboard_approve(c: Ctx):
     if not _sb_ok(c) or c.sb_approval == "fresh" or c.sb_old_narration:
         return None
-    return E(["storyboard_fits_voice"] if c.sb_off else [], {"rev": c.sb_rev}, advances=True)
+    needs = ["storyboard_fits_voice"] if c.sb_off else []
+    if c.pipeline["value"] == "visual":
+        needs += visual_composition_needs(c.d)
+        from bti.scorecard import build
+        if build.is_stale(c.d, build.load_scorecard(c.d)):
+            needs.append("scorecard")
+    return E(needs, {"rev": c.sb_rev}, advances=True)
 
 
 def b_storyboard_retime(c: Ctx):
@@ -1046,6 +1084,8 @@ def b_export_start(c: Ctx):
     if not c.open("export"):
         return None
     needs = c.blocker_need("export")
+    if c.pipeline["value"] == "visual":
+        needs += visual_composition_needs(c.d)
     if c.sb_exists and not c.sb_corrupt and c.sb_approval != "fresh":
         needs.append("storyboard_approved")
     elif c.sb_off:                                   # introflow: an approved storyboard whose voice was made again since
@@ -1060,11 +1100,8 @@ def b_export_start(c: Ctx):
 
 
 # c6auto: the actions of a person's own content or choice that are never taken by the automatic run (so they are not part of its cost)
-RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit"})
+RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit", "visual.edit", "visual.review"})
 
-
-# planner: this action is explicitly started, not a step of the legacy auto run.
-RUN_MANUAL = RUN_MANUAL | frozenset({"visual.plan"})
 
 def cost_about(spec: Spec, c: Ctx | None = None) -> str:
     """What a cost line says: the spec's own words, and for `picks.auto` with the owner's switch for the web search ON, the paid searches it may make
@@ -1108,6 +1145,10 @@ def run_cost(c: Ctx) -> dict | None:
     (an agent that chooses the pictures) is in the sum without a change here. None when the run may start nothing that costs."""
     left: dict[str, list[tuple[str, str]]] = {}
     for s in SPECS:
+        if c.pipeline["value"] == "legacy" and s.id == "visual.plan":
+            continue
+        if c.pipeline["value"] == "visual" and s.id in {"picks.auto", "draft.start"}:
+            continue
         if s.cost and s.cost[0] != "paid" and s.long_job and s.id not in RUN_MANUAL and not s.id.startswith("auto.") and c.page_state(s.step) != "done" and auto_mod.spend_allowed(c.auto, s.cost[0]):
             left.setdefault(s.cost[0], []).append((s.id.split(".")[0], cost_about(s)))
     if not left:
@@ -1137,10 +1178,66 @@ def b_scorecard_make(c: Ctx):
     if not c.sb_exists or c.sb_corrupt:
         return None
     needs = [] if c.has_timing else ["timing"]
-    return E(needs, {}, advances=False)
+    if c.pipeline["value"] == "visual":
+        needs += visual_composition_needs(c.d)
+    from bti.scorecard import build
+    from bti.draft.review import load_report
+    reviewed = c.sb_approval == "fresh" or _try(lambda: load_report(c.d, c.sb_rev), None) is not None
+    advances = c.pipeline["value"] == "visual" and reviewed and build.is_stale(c.d, build.load_scorecard(c.d))
+    return E(needs, {}, advances=advances)
+
+
+def pipeline_setting(d: Path) -> dict:
+    project = pipeline_api.project_meta(d, strict=True)
+    return {"value": project.get("pipeline", "legacy"), "rev": sstore.revision(project)}
+
+
+def visual_errors(d: Path) -> list[dict]:
+    from bti.visual import store
+    from bti.visual.validate import validate
+    visual = store.load(d)
+    timing = sstore.read_object(d / "timing.json", "timing")
+    picks = sstore.read_object(d / "picks.json", "picks")
+    return [i for i in validate(visual, timing, picks) if i.get("level") != "review"]
+
+
+
+def visual_composition_needs(d: Path) -> list[str]:
+    from bti.draft.inputs import canon_hash
+    if not (d / "visual.json").is_file():
+        return ["visual_script"]
+    if not (d / "timing.json").is_file():
+        return ["timing"]
+    if _try(lambda: visual_errors(d), None) != []:
+        return ["visual_script_valid"]
+    visual = _try(lambda: read_json(d / "visual.json"), None)
+    timing = _try(lambda: read_json(d / "timing.json"), None)
+    sb = _try(lambda: read_json(d / "storyboard.json"), {})
+    made = (sb.get("made_from") or {}) if isinstance(sb, dict) else {}
+    if made.get("visual") != canon_hash(visual) or made.get("timing") != canon_hash(timing):
+        return ["visual_composed"]
+    return []
+
+def b_pipeline_set(c: Ctx):
+    return E(fill=["pipeline"], template={"pipeline": None, "base_rev": c.pipeline["rev"]})
+
+
+def b_visual_edit(c: Ctx):
+    if c.pipeline["value"] != "visual" or not _edit_open(c) or not (c.d / "visual.json").is_file():
+        return None
+    from bti.visual import store
+    visual = store.load(c.d)
+    needs = (["no_running_job"] if c.box_busy() else []) + _model_needs(c, "picks")
+    if not c.has_timing:
+        needs.append("timing")
+    return E(needs, fill=["instruction", "scope"], template={"instruction": None, "scope": None,
+             "base_rev": store.revision(visual), "actor": c.actor("picks")})
 
 
 BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
+    "pipeline.set": b_pipeline_set,
+    # review2 supplies the public action specs; storyboard.review is the single review action shown by this state machine.
+    "visual.edit": b_visual_edit, "visual.review": lambda c: None,
     "outline.generate": b_outline_generate, "outline.import": b_outline_import, "outline.approve": b_outline_approve,
     "narration.generate": b_narration_generate, "narration.import": b_narration_import, "narration.ops": b_narration_ops,
     "narration.approve": b_narration_approve, "title.generate": b_title_generate, "title.set": b_title_set, "voice.generate": b_voice_generate,
@@ -1195,6 +1292,11 @@ def build_actions(c: Ctx) -> list[dict]:
     rows: list[tuple[dict, bool]] = []
     for spec in SPECS:
         if spec.id in CANCELS:
+            continue
+        path = c.pipeline["value"]
+        if path == "legacy" and spec.id in {"visual.plan", "storyboard.compose"}:
+            continue
+        if path == "visual" and spec.id in {"picks.auto", "picks.retry_missing", "picks.suggest", "picks.tighten", "picks.edit", "draft.start", "proposal.apply", "draft.edit"}:
             continue
         e = _try(lambda: BUILDERS[spec.id](c))
         if e is not None:
@@ -1271,7 +1373,7 @@ def build_state(root: Path, pid: str, *, script_jobs=None, preview_jobs=None, lo
             if p.get("vi") and p["vi"] not in s["detail"]:
                 s["detail"] = (s["detail"] + " " + p["vi"]).strip()
     problems = [{k: v for k, v in p.items() if k != "vi"} for p in c.problems]
-    answer = {"project": pid, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
+    answer = {"project": pid, "pipeline": c.pipeline, "stage": pipe.get("stage"), "current": pipe.get("current"), "steps": steps,
               "next_actions": build_actions(c), "jobs": jobs, "problems": problems,
               "auto": auto_mod.public(c.auto), "approvals": _try(lambda: approvals_of(c), {g: None for g in auto_mod.GATES})}      # c5cli
     # planner: preserve every searched wording from the visual script for the owner.
@@ -1304,6 +1406,20 @@ def make_router(projects_root: Path, *, pdir: Callable[[str], Path], script_jobs
     """`pdir(pid)` is the app's own helper (404 for an unknown project); the registries are the app's, like pipeline_api's."""
     r = APIRouter(prefix="/api", tags=["state"])
     root = Path(projects_root)
+
+    @r.put("/projects/{pid}/pipeline-setting")
+    def put_pipeline_setting(pid: str, body: dict = Body(...)):
+        d = pdir(pid)
+        with auto_mod._lock(d):
+            project = pipeline_api.project_meta(d, strict=True)
+            rev = sstore.revision(project)
+            if body.get("base_rev") != rev:
+                raise ApiError(409, "project revision changed", code="stale_revision", rev=rev)
+            if body.get("pipeline") not in ("visual", "legacy"):
+                raise ApiError(422, "pipeline must be visual or legacy", code="invalid_field", field="pipeline")
+            project["pipeline"] = body["pipeline"]
+            write_json_atomic(d / "project.json", project)
+            return pipeline_setting(d)
 
     @r.get("/projects/{pid}/state")
     def get_state(pid: str, request: Request):
