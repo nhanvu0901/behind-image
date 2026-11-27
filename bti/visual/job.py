@@ -192,7 +192,22 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         if not visual['wanted'] and not state['regions']:
             state['choice'] = {}
             return {'chosen': 0}
-        ws = workspace.build_choose(pdir, visual, found, main=inp.picks['assets'][inp.painting.key], regions=state['regions'], limits=limits_choose)
+        from bti.ops.log import ChangeLog
+        from bti.visual.regions import agent_regions, cleanup_names
+        asset = inp.picks['assets'][inp.painting.key]
+        existing = asset.get('regions') or {}
+        story = read_object(pdir / 'storyboard.json', 'storyboard') or {}
+        removable = cleanup_names(existing, visual, story, agent_regions(ChangeLog(pdir), inp.painting.key, existing))
+        from bti.visual.regions import _strings
+        removable -= set(_strings(inp.picks.get('names', [])))
+        new_lines = {m['line'] for m in visual['moments']}
+        for bid, beat in inp.picks.get('beats', {}).items():
+            if bid not in new_lines:
+                removable -= set(_strings(beat))
+        kept = set(existing) - removable
+        region_context = {'kept_regions': len(kept), 'existing_regions': sorted(kept), 'planned_regions': sorted(state['regions'])}
+        state['region_context'] = region_context
+        ws = workspace.build_choose(pdir, visual, found, main=asset, regions=state['regions'], limits=limits_choose, region_context=region_context)
         notes = invoke(ws, ctx, limits_choose, 'Agent đang chọn hình')
         state['choice'] = json.loads((ws / 'out/choice.json').read_text(encoding='utf-8'))
         if state['regions']:
@@ -228,7 +243,7 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         first = {'wants': {wid: {'pick': row.get('pick')} for wid, row in state['choice'].items()}}
         second_view = webround.second_search_view(found, first)
         second_visual = {**visual, 'wanted': [w for w in visual['wanted'] if w['id'] in new_ids]}
-        ws = workspace.build_choose(pdir, second_visual, second_view)
+        ws = workspace.build_choose(pdir, second_visual, second_view, region_context=state.get('region_context'))
         notes = invoke(ws, ctx, limits_choose, 'Agent đang chọn hình tìm thêm')
         second = json.loads((ws / 'out/choice.json').read_text(encoding='utf-8'))
         for wid, row in second.items():
@@ -251,15 +266,6 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
             raise PartError('picks_auto_stale', 'Lời dẫn hoặc thời gian đã thay đổi trong lúc agent làm việc.')
         if doc.revision(current) != doc.revision(inp.picks):
             raise PartError('picks_auto_stale', 'Chọn hình đã thay đổi trong lúc agent làm việc.')
-        if state['regions']:
-            keep, dropped = write.final_regions({'regions': state['regions']}, {'regions': state['region_choices']})
-            if dropped:
-                raise PartError('validation_failed', 'Có vùng không tìm thấy trong tranh; hãy sửa kịch bản và chạy lại.')
-            ops, names, _ = write.region_ops(inp.painting.key, current['assets'][inp.painting.key], keep, inp.painting.width, inp.painting.height)
-            if any(names.get(k) != k for k in state['regions']):
-                raise PartError('picks_auto_stale', 'Tên vùng đã thay đổi; hãy chạy lại.')
-            if ops:
-                writer.send(ops, 'Agent viết kịch bản hình: vùng chi tiết')
         from bti.ops import OpError
         choices = {}
         for wid, choice in state['choice'].items():
@@ -296,11 +302,44 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
                 maps[req['id']] = result['created']['refs']['map']
         visual = apply_maps(visual, maps)
         current = doc.load_or_new(pdir)
-        issues = check.validate(visual, timing, current)
+        from bti.ops.log import ChangeLog
+        from bti.visual import regions as region_cleanup
+        key = inp.painting.key
+        asset = current['assets'][key]
+        old_regions = asset.get('regions') or {}
+        storyboard = read_object(pdir / 'storyboard.json', 'storyboard') or {}
+        eligible = region_cleanup.agent_regions(ChangeLog(pdir), key, old_regions)
+        removed = region_cleanup.cleanup_names(old_regions, visual, storyboard, eligible)
+        # Legacy cast names and lines outside the new script must not be broken.
+        removed -= set(region_cleanup._strings(current.get('names', [])))
+        new_lines = {m['line'] for m in visual['moments']}
+        for bid, beat in current.get('beats', {}).items():
+            if bid not in new_lines:
+                removed -= set(region_cleanup._strings(beat))
+        keep, dropped = write.final_regions({'regions': state['regions']}, {'regions': state.get('region_choices', {})})
+        if dropped:
+            raise PartError('validation_failed', 'Có vùng không tìm thấy trong tranh; hãy sửa kịch bản và chạy lại.')
+        without = {**asset, 'regions': {n: r for n, r in old_regions.items() if n not in removed}}
+        additions, names, _ = write.region_ops(key, without, keep, inp.painting.width, inp.painting.height)
+        if any(names.get(k) != k for k in state['regions']):
+            raise PartError('picks_auto_stale', 'Tên vùng đã thay đổi; hãy chạy lại.')
+        simulated = copy.deepcopy(current)
+        for name in removed:
+            simulated['assets'][key]['regions'].pop(name, None)
+        for op in additions:
+            simulated['assets'][key]['regions'][op['region']] = op
+        issues = check.validate(visual, timing, simulated)
         if any(i.get('level') != 'review' for i in issues):
             raise PartError('validation_failed', 'Kịch bản hình không hợp lệ sau khi tìm hình.')
-        proj = projection.project(visual, timing, inp.painting.key)
+        proj = projection.project(visual, timing, key)
         ops = projection.operations(proj)
+        if removed:
+            region_ops, ops = region_cleanup.replacement_batch(current, key, removed, additions, ops)
+            if len(region_ops) > 200:
+                raise PartError('validation_failed', 'Quá nhiều thay đổi vùng để lưu trong một lô; hãy dùng lại các vùng hiện có.')
+            writer.send(region_ops, 'Agent viết kịch bản hình: thay vùng chi tiết', expected_rev=doc.revision(current))
+        elif additions:
+            writer.send(additions, 'Agent viết kịch bản hình: vùng chi tiết')
         for offset in range(0, len(ops), 200):
             writer.send(ops[offset:offset + 200], 'Agent viết kịch bản hình: chọn hình theo đoạn')
         store.save(pdir, visual, base_rev=base_rev, actor='agent:' + resolved.model)

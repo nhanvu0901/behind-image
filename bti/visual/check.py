@@ -28,6 +28,34 @@ def run_check(root: Path) -> dict:
             visual = json.loads((root / 'inputs/visual.json').read_text(encoding='utf-8'))
             search = json.loads((root / 'inputs/search.json').read_text(encoding='utf-8'))
             issues = [{'rule': 'choice', 'moment': None, 'message': e} for e in choice_errors(choice, visual, search)]
+            extra_file = root / 'out/regions.json'
+            if extra_file.exists():
+                from bti.picks.doc import MAX_REGIONS
+                extra = json.loads(extra_file.read_text(encoding='utf-8'))
+                if not isinstance(extra, dict):
+                    raise ValueError('out/regions.json must be an object')
+                existing = set(context_data.get('existing_regions', []))
+                planned = set(context_data.get('planned_regions', []))
+                new = len((planned | set(extra)) - existing)
+                kept = context_data.get('kept_regions', len(existing))
+                if kept + new > MAX_REGIONS:
+                    issues.append({'rule': 'region', 'moment': None, 'message': f'{kept} kept regions + {new} new regions exceeds {MAX_REGIONS}; reuse existing regions.'})
+                elif extra:
+                    issues.append({'rule': 'region', 'moment': None, 'message': 'Add regions during planning, not choosing; reuse the planned regions.'})
+            tighten_file = root / 'out/tighten.json'
+            if tighten_file.exists() and 'kept_regions' in context_data:
+                from bti.picks.doc import MAX_REGIONS
+                response = json.loads(tighten_file.read_text(encoding='utf-8'))
+                rows = response.get('regions', []) if isinstance(response, dict) else []
+                extra_names = {row['name'] for row in rows if isinstance(row, dict) and isinstance(row.get('name'), str) and row.get('action') != 'drop'}
+                existing = set(context_data.get('existing_regions', []))
+                planned = set(context_data.get('planned_regions', []))
+                kept = context_data['kept_regions']
+                new = len((planned | extra_names) - existing)
+                if kept + new > MAX_REGIONS:
+                    issues.append({'rule': 'region', 'moment': None, 'message': f'{kept} kept regions + {new} new regions exceeds {MAX_REGIONS}; reuse existing regions.'})
+            if tighten_file.exists() and not (root / 'tighten').is_dir():
+                issues.append({'rule': 'region', 'moment': None, 'message': 'No regions were supplied for tightening; add them during planning.'})
             if (root / 'tighten').is_dir():
                 from bti.picks.auto import helper
                 try:
@@ -53,7 +81,22 @@ def run_check(root: Path) -> dict:
                 if problem:
                     raise ValueError(problem)
             main = picks['assets'][picks['main_asset']]
-            main.setdefault('regions', {}).update(regions)
+            from bti.picks.doc import MAX_REGIONS
+            existing = main.setdefault('regions', {})
+            from bti.visual.regions import cleanup_names
+            removable = cleanup_names(existing, doc, context_data.get('storyboard'), context_data.get('agent_regions', []))
+            from bti.visual.regions import _strings
+            removable -= set(_strings(context_data.get('legacy_names', [])))
+            moments = doc.get('moments', []) if isinstance(doc, dict) else []
+            lines = {m.get('line') for m in moments if isinstance(m, dict)} if isinstance(moments, list) else set()
+            for bid, beat in context_data.get('old_beats', {}).items():
+                if bid not in lines:
+                    removable -= set(_strings(beat))
+            kept = len(existing) - len(removable)
+            new = len(set(regions) - (set(existing) - removable))
+            if kept + new > MAX_REGIONS:
+                raise ValueError(f'{kept} kept regions + {new} new regions exceeds {MAX_REGIONS}; reuse existing regions.')
+            existing.update(regions)
         issues = validate(doc, timing, picks)
         if context_data.get('made_from') and doc.get('made_from') != context_data['made_from']:
             issues.append({'rule': 'shape', 'moment': None, 'message': 'Copy made_from from inputs/context.json.'})
