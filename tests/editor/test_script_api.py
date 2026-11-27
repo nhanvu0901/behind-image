@@ -353,3 +353,19 @@ def test_a_line_that_names_an_author_of_a_source_book_is_a_warning_the_page_and_
     assert c.get(P + "/narration").json()["issues"] == put["issues"]                                    # the page and the run read the same list
     r = c.post(P + "/narration/approve", json={"rev": put["rev"]})
     assert r.status_code == 200 and r.json()["approved"] is True                                       # a warning never blocks the approval by itself
+
+
+def test_api_key_missing_is_refused_before_a_script_job(c, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    r = c.post(P + "/outline/generate", json={"model": "claudeapi:claude-opus-5-5@high"})
+    assert r.status_code == 409 and r.json()["code"] == "claude_api_key_missing"
+    assert c.get(P + "/script/jobs").json() == []
+
+
+def test_selected_api_agent_reports_missing_key_before_a_script_job(c, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    rev = c.get(P + "/agent").json()["rev"]
+    assert c.put(P + "/agent", json={"agent": "opusapi", "base_rev": rev}).status_code == 200
+    r = c.post(P + "/outline/generate", json={})
+    assert r.status_code == 409 and r.json()["code"] == "claude_api_key_missing"
+    assert c.get(P + "/script/jobs").json() == []

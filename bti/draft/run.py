@@ -47,6 +47,8 @@ VI = {
     "agy_no_result": "agy dừng mà không trả kết quả.",
     "agy_timeout": "Agent chạy quá thời gian cho phép nên đã bị dừng.",
     # worker claudeprov: the second runner, Claude Code (`claude`)
+    # worker apikey
+    "claude_api_key_missing": "Chưa có khóa Anthropic API. Hãy đặt ANTHROPIC_API_KEY vào tệp .env trên máy chủ rồi thử lại.",
     "claude_missing": "Chưa cài Claude Code (lệnh `claude`) trên máy chủ. Cài Claude Code, đăng nhập một lần bằng lệnh `claude auth login`, rồi thử lại.",
     "claude_auth": "Claude Code trên máy chủ chưa đăng nhập. Hãy đăng nhập một lần trên máy chủ bằng lệnh `claude auth login`, rồi thử lại.",
     "claude_rate_limit": "Hạn mức của gói Claude Code đã dùng hết hoặc bị giới hạn. Đợi hết chu kỳ hoặc chọn agent khác.",
@@ -96,7 +98,7 @@ def provider_code(e, model_id: str | None) -> str:
 
 def _bad_model_name(model: str | None) -> bool:
     """A model name the request may not carry: not a plain id, or an id of the `claude:` family that is not `claude:<model>@<effort>`."""
-    return model is not None and (not MODEL_RE.fullmatch(model) or (model.startswith("claude:") and not _is_claude(model)))
+    return model is not None and (not MODEL_RE.fullmatch(model) or (model.startswith(("claude:", "claudeapi:")) and not _is_claude(model)))
 
 
 def _is_claude(model_id: str | None) -> bool:
@@ -122,6 +124,15 @@ def _check_agent_installed(model_id: str | None) -> None:
     """Before a job starts: the runner of this model must be installed, and Claude Code must not be known to be signed out."""
     if _is_claude(model_id):
         from .providers import claudecode
+        from bti.script.providers import ProviderError, claudecode as cc
+        if cc.is_api_id(model_id):
+            try:
+                cc.session_env(model_id)
+            except ProviderError as e:
+                raise DraftError(e.code, e.message) from e
+            if not claudecode.find_claude():
+                raise DraftError("claude_missing", "Claude Code is not installed on this machine")
+            return
         if not claudecode.find_claude():
             raise DraftError("claude_missing", "Claude Code (the `claude` command) is not installed on this machine")
         from bti.script import models as models_mod

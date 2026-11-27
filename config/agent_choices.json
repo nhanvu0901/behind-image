@@ -20,6 +20,16 @@
       "id": "opusmed",
       "label": "Opus 5.5 Medium",
       "model": "claude:claude-opus-5-5@medium"
+    },
+    {
+      "id": "opusapi",
+      "label": "Opus 5.5 High · API key",
+      "model": "claudeapi:claude-opus-5-5@high"
+    },
+    {
+      "id": "opusmedapi",
+      "label": "Opus 5.5 Medium · API key",
+      "model": "claudeapi:claude-opus-5-5@medium"
     }
   ],
   "steps": {

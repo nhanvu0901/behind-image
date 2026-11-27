@@ -110,6 +110,9 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         """The spec of a model that is NAMED (by the request, or by the agent the project uses): unknown 404, not usable 409."""
         if not isinstance(model_id, str) or not model_id.strip():
             raise ApiError(400, "model is required: name the model to run (see GET /api/models)", code="model_required", field="model")
+        from bti.script.providers import claudecode
+        if claudecode.is_api_id(model_id) and not claudecode.api_key():
+            raise ApiError(409, claudecode.API_KEY_MISSING, code="claude_api_key_missing", field="model")
         spec = models_mod.resolve(model_id, models_path)         # never runs `agy models` for a model that is not Antigravity
         if spec is None:
             raise ApiError(404, "unknown model", code="unknown_model", field="model")
@@ -131,6 +134,8 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
         try:
             return model_for(res.model), res
         except ApiError as e:
+            if e.extra.get("code") == "claude_api_key_missing":
+                raise
             if e.status not in (404, 409):
                 raise
             why = e.detail if e.status == 409 and isinstance(e.detail, str) and e.detail != "this model is not available" else \

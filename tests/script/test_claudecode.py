@@ -632,3 +632,31 @@ def test_the_tracked_file_has_exactly_one_claude_entry():
     rows = [m for m in raw if m["provider"] == "claudecode"]
     assert len(rows) == 1 and rows[0]["id"] == "claude:claude-opus-5-5@high" and rows[0]["label"] == "Claude Code: Opus 5.5 High"
     assert cc.parse_model_id(rows[0]["id"]) == (rows[0]["model"], rows[0]["effort"])
+
+
+def test_api_key_mode_uses_only_the_fake_key_from_the_configured_file(fake, tmp_path, monkeypatch):
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "fake-ignored-value")
+    keyfile = tmp_path / "fake-config"
+    keyfile.write_text("ANTHROPIC_API_KEY=fake-apikey-test-value\n", encoding="utf-8")
+    monkeypatch.setenv("BTI_ENV_FILE", str(keyfile))
+    api = {**SPEC, "id": "claudeapi:claude-opus-5-5@high"}
+    cc.complete(api, "system", "user", timeout=20)
+    assert fake.calls("call")[-1]["fake_api_key"]
+    assert all("ANTHROPIC_API_KEY" not in c["env"] for c in fake.calls() if c["argv"] == ["--help"])
+    cc.complete(SPEC, "system", "user", timeout=20)
+    assert "ANTHROPIC_API_KEY" not in fake.calls("call")[-1]["env"]
+
+
+def test_api_mode_without_key_refuses_before_program_start(fake, tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("BTI_ENV_FILE", str(tmp_path / "missing-config"))
+    with pytest.raises(ProviderError) as err:
+        cc.complete({**SPEC, "id": "claudeapi:claude-opus-5-5@high"}, "", "", timeout=20)
+    assert err.value.code == "claude_api_key_missing"
+    assert not fake.calls()
+
+
+def test_api_model_resolves_to_claude_provider():
+    api = "claudeapi:claude-opus-5-5@high"
+    assert cc.parse_model_id(api) == ("claude-opus-5-5", "high")
+    assert models_mod.resolve(api)["provider"] == "claudecode"

@@ -28,7 +28,7 @@ FIX_DRAFT = cfg.get("fixtures_draft") or "@@FIX_DRAFT@@"
 
 
 def log(extra=None):
-    d = {"argv": args, "cwd": os.getcwd(), "env": sorted(os.environ)}
+    d = {"argv": args, "cwd": os.getcwd(), "env": sorted(os.environ), "fake_api_key": os.environ.get("ANTHROPIC_API_KEY") == "fake-apikey-test-value"}
     d.update(extra or {})
     with open(os.path.join(here, "calls.jsonl"), "a", encoding="utf-8") as f:
         f.write(json.dumps(d) + "\n")

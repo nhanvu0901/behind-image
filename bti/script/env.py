@@ -8,7 +8,7 @@ from pathlib import Path
 from .brief import REPO_ROOT
 
 # The .env may be shared with other projects (the comic pipeline). Only these names are ever read from it.
-ALLOWED = ("OPENROUTER_API_KEY", "YDC_API_KEY", "GEMINI_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY")
+ALLOWED = ("OPENROUTER_API_KEY", "YDC_API_KEY", "GEMINI_API_KEY", "PEXELS_API_KEY", "PIXABAY_API_KEY", "ANTHROPIC_API_KEY")
 _cache: dict[str, tuple[float, dict]] = {}
 
 

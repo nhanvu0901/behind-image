@@ -982,3 +982,11 @@ STAGE_CODES.scorecard = {
   sheet_not_found: 'Không tìm thấy tờ ảnh này.',
 };
 for (const [k, v] of Object.entries(STAGE_CODES.scorecard)) BY_CODE_HTTP[k] = () => v;
+
+// worker apikey
+export const APIKEY_CODES = ['claude_api_key_missing'];
+const APIKEY_SENTENCE = 'Chưa có khóa Anthropic API. Hãy đặt ANTHROPIC_API_KEY vào tệp .env trên máy chủ rồi thử lại.';
+for (const stage of ['draft', 'picks', 'title', 'script', 'settings']) {
+  if (STAGE_CODES[stage]) STAGE_CODES[stage].claude_api_key_missing = APIKEY_SENTENCE;
+}
+BY_CODE_HTTP.claude_api_key_missing = () => APIKEY_SENTENCE;

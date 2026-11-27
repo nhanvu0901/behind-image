@@ -660,3 +660,35 @@ def test_every_complete_helper_example_in_template_is_permitted():
         for win in (False, True):
             for form in dcc._forms(name, win):
                 assert decide(form + args, win) == "allow", form + args
+
+
+def test_api_agent_receives_fake_key_and_plan_agent_does_not(fakec, ws, tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    keyfile = tmp_path / "fake-config"
+    keyfile.write_text("ANTHROPIC_API_KEY=fake-apikey-test-value\n", encoding="utf-8")
+    monkeypatch.setenv("BTI_ENV_FILE", str(keyfile))
+    api = "claudeapi:claude-opus-5-5@high"
+    assert R._agent_module(api) is dcc
+    assert dcc.run(ws.root, model=api, timeout=60, python=sys.executable).status == "ok"
+    assert fakec.calls("run")[-1]["fake_api_key"]
+    assert dcc.run(ws.root, model=MODEL, timeout=60, python=sys.executable).status == "ok"
+    assert "ANTHROPIC_API_KEY" not in fakec.calls("run")[-1]["env"]
+
+
+def test_api_agent_refuses_missing_key_before_program_start(fakec, ws, tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setenv("BTI_ENV_FILE", str(tmp_path / "missing-config"))
+    with pytest.raises(DraftError) as err:
+        dcc.run(ws.root, model="claudeapi:claude-opus-5-5@high", timeout=60)
+    assert err.value.code == "claude_api_key_missing"
+    assert not fakec.calls()
+
+
+def test_api_agent_preflight_does_not_require_plan_login(fakec, tmp_path, monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    keyfile = tmp_path / "fake-config"
+    keyfile.write_text("ANTHROPIC_API_KEY=fake-apikey-test-value\n", encoding="utf-8")
+    monkeypatch.setenv("BTI_ENV_FILE", str(keyfile))
+    fakec.mode("signed_out")
+    R._check_agent_installed("claudeapi:claude-opus-5-5@medium")
+    assert not fakec.calls()

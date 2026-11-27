@@ -162,6 +162,13 @@ def model_availability(model: str, refresh: bool = False) -> dict:
     from bti.script.providers import claudecode
     yes = {"available": True, "reason": None, "reason_code": None}
     try:
+        if claudecode.is_api_id(model):
+            if os.environ.get("BTI_NO_REAL_MODELS") == "1":
+                info = claudecode.availability()
+                return {"available": False, "reason": info["message"], "reason_code": info["reason"]}
+            if not claudecode.api_key():
+                return {"available": False, "reason": claudecode.API_KEY_MISSING, "reason_code": "claude_api_key_missing"}
+            return yes if claudecode.find_claude() else {"available": False, "reason": claudecode.MISSING_HINT, "reason_code": "not_installed"}
         if claudecode.is_claude_id(model):
             info = M.claude_status(refresh)
             if info.get("ok"):

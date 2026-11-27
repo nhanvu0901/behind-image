@@ -195,11 +195,14 @@ def run(ws_root: Path, *, model: str | None = None, timeout: float = 1800.0, max
     import types
     if os.environ.get("BTI_NO_REAL_MODELS") == "1":
         raise DraftError("real_models_off", "real models are disabled (BTI_NO_REAL_MODELS=1)")
+    try:
+        env = cc.session_env(model, clean_env(python))
+    except ProviderError as e:
+        raise DraftError(e.code, e.message) from e
     claude = claude or find_claude()
     if not claude:
         raise DraftError("claude_missing", "Claude Code (the `claude` command) is not installed on this machine")
-    env = clean_env(python)
-    check_cli(claude, env)
+    check_cli(claude, clean_env(python))
     cmd = build_command(claude, model, allow=allow)
     if not all(cc.arg_ok_for(claude, a) for a in cmd):
         raise DraftError("claude_config", "the `claude` found here is a Windows .cmd shim and an option of the run cannot pass through cmd.exe; install the native claude.exe")
