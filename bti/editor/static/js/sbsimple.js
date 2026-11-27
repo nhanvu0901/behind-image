@@ -17,8 +17,9 @@ import { mainAssetKey } from './shotsentence.js';
 import { emptySelection, applyClick, selectChapter, pruneSelection, followPlayhead, stepFocus } from './selectlogic.js';
 import { minSec, durationWords } from './editlogic.js';
 import { shotIndexAt } from './logic.js';
+import { momentWordsMap } from './visualedit_logic.js';
 
-export function mountSimple(root, { pid, scope, shell, hooks }) {
+export function mountSimple(root, { pid, scope, shell, hooks, visual = null }) {
   const st = ctx.store;
   const $ = (s) => root.querySelector(s);
   const bar = $('#sbar'), col = $('#shots-col'), panel = $('#sel-panel');
@@ -58,7 +59,10 @@ export function mountSimple(root, { pid, scope, shell, hooks }) {
   }
 
   // ---------------------------------------------------------------- the list
-  const buildNow = () => buildShotList({ draft: st.draft, chapters: st.timing?.chapters || [], words: st.timing?.words || [], issues: ctx.issues, env: envNow() });
+  const buildNow = () => {
+    const mw = visual ? momentWordsMap({ storyboard: st.draft, visual, words: st.timing?.words || [] }) : null;
+    return buildShotList({ draft: st.draft, chapters: st.timing?.chapters || [], words: st.timing?.words || [], issues: ctx.issues, env: envNow(), momentWords: mw });
+  };
 
   const BLOCKING = new Set(['incomplete', 'undrawable', 'asset']);
   const cannotDraw = (r) => !!r && r.problems.some((p) => BLOCKING.has(p.kind) && !p.overlay);          // the engine can only draw a stand-in with technical words for this shot
@@ -80,6 +84,7 @@ export function mountSimple(root, { pid, scope, shell, hooks }) {
         frame(r),
         h('span', { class: 'sr-text' },
           h('span', { class: 'sr-sentence', text: r.sentence }),
+          r.momentWords ? h('span', { class: 'sr-moment', text: `“${r.momentWords}”` }) : null,
           h('span', { class: 'sr-meta', text: meta }),
           ...r.problems.map((p) => h('span', { class: 'sr-prob', text: W.problems.line(p.text, !!p.overlay) })))));
   }
@@ -99,19 +104,21 @@ export function mountSimple(root, { pid, scope, shell, hooks }) {
   }
 
   function paintList() {
-    if (dead || !col || !st.draft) return;
+    const target = col?.querySelector('.ve-shots-host') || col;
+    if (dead || !target || !st.draft) return;
     list = buildNow();
     sel = pruneSelection(sel, list.order, list.chapterRows);
     if (!sel.ids.length && st.sel.shot && list.order.includes(st.sel.shot)) sel = { ids: [st.sel.shot], anchor: st.sel.shot, chapter: null };
     const top = $('#shots-scroll')?.scrollTop || 0;
     const scroller = h('div', { class: 'shots-scroll', id: 'shots-scroll', tabindex: -1 },
       list.rows.length ? h('ul', { class: 'shot-list', 'aria-label': W.listTitle }, list.groups.map(groupEl)) : h('div', { class: 'empty muted', text: W.noShots }));
-    col.replaceChildren(h('div', { class: 'shots-head' }, h('h2', { text: W.listTitle })), scroller, h('div', { class: 'shots-foot hint', text: W.listHint }));
+    target.replaceChildren(h('div', { class: 'shots-head' }, h('h2', { text: W.listTitle })), scroller, h('div', { class: 'shots-foot hint', text: W.listHint }));
     scroller.scrollTop = top;
     scroller.addEventListener('click', onListClick);
     scroller.addEventListener('keydown', onListKey);
     paintSelection();
     paintBar();
+    hooks.onPaint?.();
   }
 
   // ---------------------------------------------------------------- the selection

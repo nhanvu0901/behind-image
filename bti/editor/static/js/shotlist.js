@@ -69,7 +69,7 @@ export function problemsOf(issues, draft) {
  *  -> { rows: [{id, index, number, t0, t1, time, length, sentence, locked, problems, group}],
  *       groups: [{key, index, title, number, ids, t0, t1, problems}], order: [ids], chapterRows: {key: [ids]}, summary: {shots, seconds, problemShots, general} }
  *  `chapters`: timing.chapters ([{id?, name, start, end}] or word ranges); `words`: timing.words (for chapters that carry only word ranges). */
-export function buildShotList({ draft, chapters = [], words = [], issues = [], env = {} } = {}) {
+export function buildShotList({ draft, chapters = [], words = [], issues = [], env = {}, momentWords = null } = {}) {
   const shots = draft?.shots || [];
   const probs = problemsOf(issues, draft || { shots: [] });
   const byWord = chapters.some((c) => c.start == null);
@@ -83,8 +83,9 @@ export function buildShotList({ draft, chapters = [], words = [], issues = [], e
     const g = groupOf.get(key);
     const pr = probs.byShot.get(s.id) || [];
     g.ids.push(s.id); g.t1 = t1; g.problems += pr.length ? 1 : 0;
+    const mw = momentWords instanceof Map ? (momentWords.get(s.id) || '') : (momentWords?.[s.id] || '');
     return { id: s.id, index, number: index + 1, t0, t1, time: minSec(t0), length: durationWords(t1 - t0), sentence: shotSentence(s, env), locked: !!s.locked,
-      problems: pr, group: key };
+      problems: pr, group: key, momentWords: mw };
   });
   const problemShots = rows.filter((r) => r.problems.length).length;
   return {

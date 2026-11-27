@@ -21,6 +21,8 @@ import { mountPicksAuto } from './picks_auto.js';                               
 import { mountPickRows } from './picks_rows.js';                                // c4pages: the simple page (rows with their pictures); the hand tools below stay as they were
 import { voiceStarts, issueSentence, captionEditOp } from './picks_rows_logic.js';
 import { PICKS_PAGE_LABELS as PW } from '../labels.js';
+import { isVisualProject } from '../visualpage_logic.js';
+import { mountVisualScript } from './visual_script.js';
 
 // ------------------------------------------------------------------ words
 const LBL = PICKS_LABELS;
@@ -821,10 +823,22 @@ export async function mount(host, ctx) {
   mode = q.get('mode') === 'hand' ? 'hand' : 'simple';                          // c4pages: the page opens on the rows; ?mode=hand opens the hand tools (links and probes)
   root = h('div', { class: 'pk-root v-pk' }); root.innerHTML = BAR; root.dataset.mode = mode; host.append(root);
   root.append(h('div', { class: 'view-msg pk-loading', id: 'pk-loading', text: PW.loading }));
-  try { applyData(await api.get(P())); } catch (e) {
+  let picksRes, visualRes, stateRes;
+  try {
+    [picksRes, visualRes, stateRes] = await Promise.all([
+      api.get(P()),
+      api.get(`/api/projects/${encodeURIComponent(S.pid)}/visual`).catch(() => null),
+      api.get(`/api/projects/${encodeURIComponent(S.pid)}/state`).catch(() => null),
+    ]);
+  } catch (e) {
     root.replaceChildren(h('div', { class: 'view-msg pk-fail' }, failText(e), ' ', h('button', { class: 'small', id: 'pk-retry', text: PW.retry, onclick: () => shell.go(projectHash(S.pid, 'picks')) })));
     return {};
   }
+  if (isVisualProject({ visual: visualRes?.visual, state: stateRes, pipeline: ctx.pipeline })) {
+    root.remove();
+    return await mountVisualScript(host, { pid: S.pid, scope, shell, picksData: picksRes, visualData: visualRes, stateData: stateRes });
+  }
+  applyData(picksRes);
   root.querySelector('#pk-loading')?.remove();
   S.tab = D.main_asset ? 'search' : 'main';
   rows = mountPickRows({ top: $('#pk-top'), col: $('#pk-rows-col'), scope, api: rowsApi });

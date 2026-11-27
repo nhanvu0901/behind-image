@@ -17,6 +17,21 @@ def get_visual(pid: str, request: Request):
     return {"visual": document, "rev": store.revision(document) if document is not None else None}
 
 
+@router.get("/projects/{pid}/visual/words")
+def get_visual_words(pid: str, request: Request):
+    project = _pdir(request, pid)
+    timing = read_object(project / "timing.json", "timing")
+    if not isinstance(timing, dict):
+        return {"present": False, "words": [], "beats": [], "chapters": [], "duration": None}
+    return {
+        "present": True,
+        "words": timing.get("words") or [],
+        "beats": timing.get("beats") or [],
+        "chapters": timing.get("chapters") or [],
+        "duration": timing.get("duration"),
+    }
+
+
 @router.put("/projects/{pid}/visual")
 def put_visual(pid: str, request: Request, body: dict = Body(...)):
     project = _pdir(request, pid)
