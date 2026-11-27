@@ -122,3 +122,18 @@ def test_missing_picture_does_not_retry_replacement_shot():
     result = review_and_repair(lambda: rows, review, edit)
     assert reviews == [['s1']]
     assert len(result['warnings']) == 1 and 'Bruges' in result['warnings'][0]['message']
+
+
+def test_approval_only_change_does_not_invalidate_review(tmp_path):
+    import json
+    from bti.draft.review import _input_signature
+    (tmp_path / 'timing.json').write_text('{}', encoding='utf8')
+    picks = {'schema': 'bti.picks/1', 'main_asset': None, 'assets': {}, 'beats': {}, 'approval': {'approved': False}}
+    (tmp_path / 'picks.json').write_text(json.dumps(picks), encoding='utf8')
+    before = _input_signature(tmp_path)
+    picks['approval'] = {'approved': True, 'sha1': 'same-content', 'approved_at': 'now'}
+    (tmp_path / 'picks.json').write_text(json.dumps(picks), encoding='utf8')
+    assert _input_signature(tmp_path) == before
+    picks['beats']['b1'] = {'items': []}
+    (tmp_path / 'picks.json').write_text(json.dumps(picks), encoding='utf8')
+    assert _input_signature(tmp_path) != before

@@ -64,14 +64,15 @@ def test_edit_job_rechecks_repairs_saves_and_composes(tmp_path, monkeypatch, mis
             return state
         monkeypatch.setattr(search, 'run', fake_search)
     composed = []
-    monkeypatch.setattr(api, 'post_compose', lambda *a, **k: composed.append(True) or {})
+    monkeypatch.setattr(api, 'compose_if_approved', lambda *a, **k: composed.append('automatic'))
+    monkeypatch.setattr(api, 'compose_project', lambda *a, **k: composed.append('explicit') or {})
     manager = LongJobManager(); manager.configure(projects_root=root)
     rec = edit.start(pdir.name, pdir, instruction='Sửa cảnh', scope={'moments': ['m0']}, manager=manager,
                      guard_factory=lambda d: Guard(d, extra=lambda: None, repo_root=d.parent), python=sys.executable)
     result = manager.wait(rec['id'], 60)
     assert result['state'] == 'done', json.dumps(result, ensure_ascii=False, indent=2)
     assert store.load(pdir)['moments'][0]['why'] == 'Đã sửa.'
-    assert composed == [True]
+    assert composed == ['explicit']
     if missing:
         assert store.load(pdir)['wanted'][0]['status'] == ('found' if missing == 'found' else 'none')
         if missing == 'found':

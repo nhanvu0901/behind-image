@@ -588,3 +588,19 @@ def test_finished_voice_assembly_job_shows_detail_and_specific_fix(bti, at, monk
     assert reason in plain.out and 'limiter' in plain.out
     js=bti('job',jid,'--json').json
     assert reason in js['error'] and 'limiter' in js['fix']
+
+
+def test_visual_status_retries_plan_after_failed_job(bti, at, client):
+    from bti.longjob import Part, PartError, manager
+    from state_helpers import DEMO_SRC
+    import shutil
+    at('picks_approved')
+    shutil.copy(DEMO_SRC / 'timing.json', client.root / 'arn' / 'timing.json')
+    state = client.get(P + '/state').json()
+    assert client.put(P + '/pipeline-setting', json={'pipeline': 'visual', 'base_rev': state['pipeline']['rev']}).status_code == 200
+    def fail(ctx):
+        raise PartError('validation_failed', 'failure')
+    job = manager.start('picks', 'arn', client.root / 'arn', [Part('plan', 'Plan', fail)], meta={'action': 'auto', 'visual_action': 'plan'})
+    assert manager.wait(job)['state'] == 'error'
+    result = bti('status', 'arn').out
+    assert 'visual.plan' in result.splitlines()[-1], result

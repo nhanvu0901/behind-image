@@ -29,3 +29,24 @@ def test_application_exposes_visual_action_routes(tmp_path, monkeypatch, endpoin
     monkeypatch.setattr(review, 'start', lambda *a, **k: {'id': 'review-job'})
     client = TestClient(app)
     assert client.post('/api/projects/p1/visual/' + endpoint, json=body).status_code == 200
+
+
+def test_automatic_visual_review_disables_paid_search(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from bti.visual import review, store
+    from bti.draft import run
+    from bti.picks.auto import session
+    p = tmp_path / 'p1'; p.mkdir()
+    (p / 'storyboard.json').write_text('{}', encoding='utf-8')
+    monkeypatch.setattr(store, 'load', lambda p: {'moments': []})
+    monkeypatch.setattr(run, '_resolve', lambda *a: SimpleNamespace(model='fake', public=lambda: {}))
+    monkeypatch.setattr(run, 'other_agent_job', lambda *a, **k: None)
+    monkeypatch.setattr(session, 'check_installed', lambda *a: None)
+    captured = {}
+    monkeypatch.setattr(review, 'run_job', lambda *a, **kw: captured.update(kw))
+    class Manager:
+        def start(self, **kwargs):
+            kwargs['parts'][0].run(None)
+            return {'id': 'job'}
+    review.start('p1', p, manager=Manager(), run_ok=True)
+    assert captured['web'] == {'on': False, 'max': 0}

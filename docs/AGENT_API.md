@@ -211,7 +211,6 @@ loop:
 | `output.build` | export | `POST /api/projects/{pid}/output/build` |  |  |  |  | Listed when the app has an output folder (`output/<artwork key>/`) and the project is not a reference project. Always ready: fills (or refills) the folder from the project as it stands (the video, the readable documents, the log, the index); the body `{"clean": true}` also removes the working folder's caches when the export stands. A project of the same painting as the folder's last project takes it over. |
 | `scorecard.make` | export | `POST /api/projects/{pid}/scorecard/make` |  |  |  | machine_time: a few seconds | Once the project has a readable storyboard and timing.json. Computes the quality scorecard, contact sheets and render record into scorecard/ and output/<key>/7_quality/; never gates anything. |
 | `visual.edit` | edit | `POST /api/projects/{pid}/visual/edit` |  | yes | picks | model: several minutes and picture search (auto_ok false) | A visual script exists. Supply an instruction and moment, line or whole-script scope. |
-| `visual.review` | edit | `POST /api/projects/{pid}/visual/review` |  | yes | draft | model: about 10 to 15 minutes plus repairs | A composed storyboard and visual script exist. Review shots and repair their moments up to twice. |
 <!-- END GENERATED: actions -->
 
 ## 3. The words of `needs`

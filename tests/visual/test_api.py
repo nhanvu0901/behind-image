@@ -104,3 +104,24 @@ def test_agent_visual_plan_never_enables_paid_web(tmp_path, monkeypatch):
     r = TestClient(app).post('/api/projects/demo/visual/plan', json={'actor': 'cli:test'})
     assert r.status_code == 200
     assert calls[0]['web']['on'] is False
+
+
+def test_visual_edit_cost_discloses_enabled_web_search(monkeypatch):
+    from bti.editor.state_api import SPEC, cost_about
+    from bti.picks import websettings
+    monkeypatch.setattr(websettings, 'for_run', lambda: {'on': True, 'max': 7})
+    assert '7 web searches' in cost_about(SPEC['visual.edit'])
+
+
+def test_visual_edit_holds_project_agent_slot():
+    from bti.draft.run import other_agent_job
+    class Manager:
+        def active(self, pid, kind):
+            return {'id': 'edit', 'kind': 'picks', 'meta': {'action': 'edit', 'visual_action': 'edit'}} if kind == 'picks' else None
+    assert other_agent_job('p1', 'draft', Manager())['id'] == 'edit'
+
+
+def test_public_review_action_has_one_identifier():
+    from bti.editor.state_api import SPEC
+    assert 'storyboard.review' in SPEC
+    assert 'visual.review' not in SPEC

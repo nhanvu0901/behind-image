@@ -282,6 +282,9 @@ def start(pid, project_dir, *, manager=None, run_ok=False, model=None, **seams):
     other = draft_run.other_agent_job(pid, 'draft', manager, run_ok=run_ok)
     if other:
         raise inputs.AutoError('agent_job_running', 'Another agent is working on this project.', 409, job_id=other.get('id'))
+    if run_ok:
+        # Automatic runs never spend on web search, including review repairs.
+        seams['web'] = {'on': False, 'max': 0}
     def run(ctx):
         return run_job(pid, pdir, resolved.model, ctx, **seams)
     return manager.start(kind='draft', pid=pid, project_dir=pdir,

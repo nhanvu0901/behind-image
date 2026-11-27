@@ -42,7 +42,6 @@ The visual path composes the approved visual script and reviews its moments; the
 | `identity.set` | edit | Chọn kiểu mở đầu |  |  |  |
 | `draft.cancel` | edit | Dừng |  |  |  |
 | `visual.edit` | edit | Sửa kịch bản hình |  | model: several minutes and picture search | yes |
-| `visual.review` | edit | Xem lại video |  | model: about 10 to 15 minutes plus repairs | yes |
 <!-- END GENERATED: actions -->
 
 The first storyboard: `draft.start` (a model works in a scratch folder for about 20 minutes and writes a **proposal**; the app compares the project before and after and drops the result if anything else changed; `--set note="..."` gives the model the owner's wish for this draft, up to 600 characters, for example "fewer close-ups": add it only when the owner said something, and never put a rule of this document in it),

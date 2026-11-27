@@ -17,7 +17,7 @@ def load(project: Path) -> dict | None:
     return common.read_object(Path(project) / "visual.json", "visual")
 
 
-def save(project: Path, document: dict, *, base_rev: str | None, actor: str | None = None) -> str:
+def save(project: Path, document: dict, *, base_rev: str | None, actor: str | None = None, compose: bool = True) -> str:
     """Save exactly the supplied document, preserving a prior version in history."""
     project = Path(project)
     with common.script_lock(project):
@@ -37,7 +37,7 @@ def save(project: Path, document: dict, *, base_rev: str | None, actor: str | No
             history = project / "history"
             history.mkdir(exist_ok=True)
             common.write_json_atomic(history / f"visual_change_{time.time_ns()}.json", {"actor": actor, "before": current_rev, "after": rev})
-    if current_rev != rev:
+    if compose and current_rev != rev:
         from bti.compose.api import compose_if_approved
         compose_if_approved(project)
     return rev

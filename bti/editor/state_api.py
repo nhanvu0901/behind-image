@@ -246,9 +246,6 @@ SPECS: list[Spec] = [
     Spec("visual.edit", "edit", "Sửa kịch bản hình", "POST", P + "/visual/edit", long_job=True, follow=LONGJOBS, role="picks",
          cost=("model", "several minutes and picture search"), auto_ok=False,
          when="A visual script exists. Supply an instruction and moment, line or whole-script scope."),
-    Spec("visual.review", "edit", "Xem lại video", "POST", P + "/visual/review", long_job=True, follow=LONGJOBS, role="draft",
-         cost=("model", "about 10 to 15 minutes plus repairs"),
-         when="A composed storyboard and visual script exist. Review shots and repair their moments up to twice."),
     # END review2 actions
 ]
 SPEC: dict[str, Spec] = {s.id: s for s in SPECS}
@@ -262,7 +259,7 @@ OPEN = ("done", "current", "available", "waiting")        # page states of a ste
 BLOCKER_NEED = {"script": "narration_approved", "voice": "voice_done", "picks": "picks_approved", "edit": "storyboard_approved"}
 ACTIVE_JOB = ("queued", "waiting", "running")
 # what a running job of a kind blocks: the jobs kinds of one family run one at a time
-FAMILY = {"outline": "script", "narration": "script", "voice": "voice", "draft": "draft", "export": "export", "picks": "picks", "auto": "auto", "title": "title"}      # titlestep: `title`
+FAMILY = {"outline": "script", "narration": "script", "voice": "voice", "draft": "draft", "compose": "draft", "export": "export", "picks": "picks", "auto": "auto", "title": "title"}      # titlestep: `title`
 CANCEL_ID = {"outline": "outline.cancel", "narration": "narration.cancel", "voice": "voice.cancel", "draft": "draft.cancel",
              "export": "export.cancel", "picks": "picks.cancel", "auto": "auto.cancel", "title": "title.cancel"}
 SCRIPT_JOB_KINDS = ("outline", "narration")
@@ -614,7 +611,7 @@ def _load_agent_jobs(c: Ctx, longjobs: Any) -> None:
     if longjobs is None:
         return
     for j in longjobs.for_project(c.pid, c.d, kind="picks"):
-        if j.get("state") in ACTIVE_JOB and (j.get("meta") or {}).get("action") in ("auto", "tighten"):
+        if j.get("state") in ACTIVE_JOB and ((j.get("meta") or {}).get("action") in ("auto", "tighten") or (j.get("meta") or {}).get("visual_action") == "edit"):
             c.picks_agent_running = True
             return
 
@@ -951,6 +948,8 @@ def b_storyboard_compose(c: Ctx):
     if not (c.d / "visual.json").is_file():
         return None
     needs = [] if (c.d / "timing.json").is_file() else ["timing"]
+    if c.agent_busy("draft"):
+        needs.append("no_running_job")
     if c.has_timing and _try(lambda: visual_errors(c.d), None) != []:
         needs.append("visual_script_valid")
     if not c.picks_ok:
@@ -963,7 +962,7 @@ def b_storyboard_compose(c: Ctx):
     sb = _try(lambda: read_json(c.d / "storyboard.json"), {}) if c.sb_exists else {}
     made_from = (sb.get("made_from") or {}) if isinstance(sb, dict) else {}
     stale = made_from.get("visual") != canon_hash(visual) or made_from.get("timing") != canon_hash(timing)
-    return E(needs, {"base_rev": c.sb_rev}, advances=stale)
+    return E(needs, {"base_rev": c.sb_rev, "actor": c.actor("draft")}, advances=stale)
 
 
 def b_draft_start(c: Ctx):
@@ -1108,7 +1107,7 @@ def b_export_start(c: Ctx):
 
 
 # c6auto: the actions of a person's own content or choice that are never taken by the automatic run (so they are not part of its cost)
-RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit", "visual.edit", "visual.review"})
+RUN_MANUAL = frozenset({"picks.import_clip", "picks.tighten", "draft.edit", "picks.edit", "visual.edit"})
 
 
 def cost_about(spec: Spec, c: Ctx | None = None) -> str:
@@ -1126,7 +1125,7 @@ def cost_about(spec: Spec, c: Ctx | None = None) -> str:
         if has_parts or c.work("export") in ("stale", "done"):
             return "only changed ~60 s parts (full export: about 25 minutes)"
     # planner: the same owner switch also makes this action use paid web search.
-    if spec.id == "visual.plan":
+    if spec.id in {"visual.plan", "visual.edit"}:
         from bti.picks import websettings
         from bti.picks.auto import webround
         try:
@@ -1245,7 +1244,7 @@ def b_visual_edit(c: Ctx):
 BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "pipeline.set": b_pipeline_set,
     # review2 supplies the public action specs; storyboard.review is the single review action shown by this state machine.
-    "visual.edit": b_visual_edit, "visual.review": lambda c: None,
+    "visual.edit": b_visual_edit,
     "outline.generate": b_outline_generate, "outline.import": b_outline_import, "outline.approve": b_outline_approve,
     "narration.generate": b_narration_generate, "narration.import": b_narration_import, "narration.ops": b_narration_ops,
     "narration.approve": b_narration_approve, "title.generate": b_title_generate, "title.set": b_title_set, "voice.generate": b_voice_generate,
