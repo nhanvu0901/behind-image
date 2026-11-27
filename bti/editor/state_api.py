@@ -235,6 +235,14 @@ SPECS: list[Spec] = [
     Spec("scorecard.make", "export", "Chấm điểm chất lượng", "POST", P + "/scorecard/make",
          cost=("machine_time", "a few seconds"),
          when="Once the project has a readable storyboard and timing.json. Computes the quality scorecard, contact sheets and render record into scorecard/ and output/<key>/7_quality/; never gates anything."),
+    # BEGIN review2 actions
+    Spec("visual.edit", "edit", "Sửa kịch bản hình", "POST", P + "/visual/edit", long_job=True, follow=LONGJOBS, role="picks",
+         cost=("model", "several minutes and picture search"), auto_ok=False,
+         when="A visual script exists. Supply an instruction and moment, line or whole-script scope."),
+    Spec("visual.review", "edit", "Xem lại video", "POST", P + "/visual/review", long_job=True, follow=LONGJOBS, role="draft",
+         cost=("model", "about 10 to 15 minutes plus repairs"),
+         when="A composed storyboard and visual script exist. Review shots and repair their moments up to twice."),
+    # END review2 actions
 ]
 SPEC: dict[str, Spec] = {s.id: s for s in SPECS}
 assert len(SPEC) == len(SPECS), "duplicate action id"
