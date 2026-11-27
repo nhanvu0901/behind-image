@@ -155,7 +155,7 @@ def test_each_proper_alias_is_shown_once_and_descriptions_are_not_names(proj):
     specs = {c: clean_spec(s, c) for c, s in GOOD.items()}
     result = compile_specs(inp, specs, draw=False, identity=False)
     labels = [(o['params']['text'], o['start']['w']) for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
-    assert labels == [('w12', 12), ('w14', 14)]
+    assert labels == [('w12', 12)]
 
 
 def test_text_subject_never_has_model_or_generated_strip(proj):
@@ -182,7 +182,7 @@ def test_alias_is_only_introduced_once_when_repeated(proj):
     inp.picks['beats']['b0003'] = {'about': [{'id': 'person', 'words': 'w14'}]}
     result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     labels = [(o['params']['text'], o['start']['w']) for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
-    assert labels == [('w12', 12), ('w14', 14)]
+    assert labels == [('w12', 12)]
 
 
 def test_short_name_inside_full_name_waits_until_spoken_on_its_own(proj):
@@ -195,7 +195,7 @@ def test_short_name_inside_full_name_waits_until_spoken_on_its_own(proj):
     inp.picks['beats']['b0002']['about'] = [{'id': 'person', 'words': 'w12 w13'}, {'id': 'person', 'words': 'w12'}]
     result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     labels = [(o['params']['text'], o['start']['w']) for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
-    assert labels == [('w12 w13', 12), ('w12', 16)]
+    assert labels == [('w12 w13', 12)]
 
 
 def test_repeated_subject_in_two_sentences_gets_a_pointer_in_each(proj):
@@ -260,8 +260,11 @@ def test_subject_strips_do_not_overlap_when_two_names_are_spoken(proj):
     from bti.engine.timing import Timing
     from helpers import GOOD, clean_spec
     inp = load_inputs(proj)
-    inp.picks['subjects'] = [{'id': 'person', 'kind': 'person', 'name': 'w12', 'also': ['w16'], 'strip': True, 'where': {'asset': 'A'}}]
-    inp.picks['beats']['b0002']['about'] = [{'id': 'person', 'words': 'w12'}, {'id': 'person', 'words': 'w16'}]
+    inp.picks['subjects'] = [
+        {'id': 'person1', 'kind': 'person', 'name': 'w12', 'strip': True, 'where': {'asset': 'A'}},
+        {'id': 'person2', 'kind': 'person', 'name': 'w16', 'strip': True, 'where': {'asset': 'A'}},
+    ]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'person1', 'words': 'w12'}, {'id': 'person2', 'words': 'w16'}]
     result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
     strips = [o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-01']
     tm = Timing(inp.timing)
@@ -614,3 +617,86 @@ def test_generated_strip_stays_inside_fractional_cut(proj):
     strips = [o for o in result.storyboard['shots'][1]['overlays'] if o['technique'] == 'X-ANN-01']
     assert len(strips) == 1
     assert tm.resolve(strips[0]['start']) + strips[0]['dur'] <= tm.resolve(result.storyboard['shots'][2]['start'])
+
+
+def test_subject_strip_with_narration_phrasing_in_sub_is_not_dropped(proj):
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import load_inputs
+    from helpers import GOOD, clean_spec
+    inp = load_inputs(proj)
+    inp.picks['assets']['A']['regions']['FIGURE'] = {'x': 400, 'y': 600, 'rx': 150, 'ry': 450, 'label': 'Standing figure'}
+    inp.picks['assets']['A']['regions']['HEAD'] = {'x': 400, 'y': 260, 'rx': 80, 'ry': 80, 'label': 'Head'}
+    sub_text = ' '.join(w['w'] for w in inp.timing['words'][10:16])
+    inp.picks['subjects'] = [{
+        'id': 'sitter', 'kind': 'person', 'name': 'w12 w13', 'also': ['w12'],
+        'sub': sub_text, 'strip': True,
+        'where': [{'region': 'FIGURE'}, {'region': 'HEAD'}],
+    }]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'sitter', 'words': 'w12 w13'}]
+    specs = {c: clean_spec(s, c) for c, s in GOOD.items()}
+    specs['c01']['shots'][1]['slots'] = {'image': {'asset': 'A', 'region': 'HEAD'}}
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    assert not any(i['code'] == 'narration_on_screen' for i in result.errors)
+    strips = [o for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
+    assert len(strips) == 1
+    assert strips[0]['params']['text'] == 'w12 w13'
+    assert strips[0]['params']['sub'] == sub_text
+
+
+def test_subject_with_two_names_in_one_sentence_gets_one_strip(proj):
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import load_inputs
+    from helpers import GOOD, clean_spec
+    inp = load_inputs(proj)
+    inp.picks['subjects'] = [{'id': 'person', 'kind': 'person', 'name': 'w12', 'also': ['w14'], 'strip': True, 'where': {'asset': 'A'}}]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'person', 'words': 'w12'}, {'id': 'person', 'words': 'w14'}]
+    result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
+    strips = [o for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
+    assert [(o['params']['text'], o['start']['w']) for o in strips] == [('w12', 12)]
+    assert strips[0]['dur'] >= 3.0
+
+
+def test_later_alias_on_later_shot_gets_no_second_strip(proj):
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import load_inputs
+    from helpers import GOOD, clean_spec
+    inp = load_inputs(proj)
+    inp.timing['words'][22]['w'] = 'w14'
+    inp.picks['subjects'] = [{'id': 'person', 'kind': 'person', 'name': 'w12', 'also': ['w14'], 'strip': True, 'where': {'asset': 'A'}}]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'person', 'words': 'w12'}]
+    inp.picks['beats']['b0003'] = {'about': [{'id': 'person', 'words': 'w14'}]}
+    result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
+    strips = [o for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
+    assert [(o['params']['text'], o['start']['w']) for o in strips] == [('w12', 12)]
+
+
+def test_alias_spoken_first_while_visible_uses_spoken_alias_and_suppresses_canonical_name(proj):
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import load_inputs
+    from helpers import GOOD, clean_spec
+    inp = load_inputs(proj)
+    inp.picks['subjects'] = [{'id': 'person', 'kind': 'person', 'name': 'w22', 'also': ['w14'], 'strip': True, 'where': {'asset': 'B'}}]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'person', 'words': 'w14'}]
+    inp.picks['beats']['b0004']['about'] = [{'id': 'person', 'words': 'w22'}]
+    specs = {c: clean_spec(s, c) for c, s in GOOD.items()}
+    specs['c01']['shots'][1]['technique'] = 'X-LAY-01'
+    specs['c01']['shots'][1]['slots'] = {'image': {'asset': 'B'}}
+    specs['c01']['shots'][1]['overlays'] = []
+    inp.timing['words'][32]['w'] = 'w22'
+    result = compile_specs(inp, specs, draw=False, identity=False)
+    strips = [o for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
+    assert [(o['params']['text'], o['start']['w']) for o in strips] == [('w14', 14)]
+
+
+def test_subject_with_five_word_proper_name_is_not_dropped(proj):
+    from bti.draft.compile import compile_specs
+    from bti.draft.inputs import load_inputs
+    from helpers import GOOD, clean_spec
+    inp = load_inputs(proj)
+    long_name = ' '.join(w['w'] for w in inp.timing['words'][12:17])
+    inp.picks['subjects'] = [{'id': 'work', 'kind': 'work', 'name': long_name, 'strip': True, 'where': {'asset': 'A'}}]
+    inp.picks['beats']['b0002']['about'] = [{'id': 'work', 'words': long_name}]
+    result = compile_specs(inp, {c: clean_spec(s, c) for c, s in GOOD.items()}, draw=False, identity=False)
+    assert not any(i['code'] == 'narration_on_screen' for i in result.errors)
+    strips = [o for s in result.storyboard['shots'] for o in s.get('overlays', []) if o['technique'] == 'X-ANN-01']
+    assert [(o['params']['text'], o['start']['w']) for o in strips] == [(long_name, 12)]

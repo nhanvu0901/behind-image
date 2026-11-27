@@ -533,7 +533,7 @@ class _Compiler:
             shot["_banned"], shot["_ban"] = True, ("technique_not_offered", ban)
         return shot
 
-    def build_overlay(self, zone, n, j, os_, shot, carried: bool = False) -> dict | None:
+    def build_overlay(self, zone, n, j, os_, shot, carried: bool = False, check_narration: bool = True) -> dict | None:
         tid = os_["technique"]
         spec = self.bundle.spec(tid)
         if spec is not None and not self.bundle.offered(tid) and not carried:
@@ -542,9 +542,10 @@ class _Compiler:
         pslot, akey = SB.primary_slot(shot)
         info = self.info(akey) if akey else None
         mine = copy.deepcopy(os_.get("params") or {})
-        for p in self.screen_text_check(tid, mine, zone["id"], n, overlay=j):
-            self.base_issues.append(p)
-            return None
+        if check_narration:
+            for p in self.screen_text_check(tid, mine, zone["id"], n, overlay=j):
+                self.base_issues.append(p)
+                return None
         at = mine.get("at")
         region = at if isinstance(at, (str, list)) else None
         slots = {k: {"asset": v["asset"]} for k, v in (os_.get("slots") or {}).items()}
@@ -1325,7 +1326,7 @@ class _Compiler:
             other[0].get("id") == event[0].get("id") and other[2] <= event[2]
             and other[2] + len(VC.tokens(other[1])) >= event[2] + len(VC.tokens(event[1]))
             and len(VC.tokens(other[1])) > len(VC.tokens(event[1])) for other in name_events)]
-        name_events.sort(key=lambda event: event[2])
+        name_events.sort(key=lambda event: (event[2], -len(VC.tokens(event[1]))))
         if not found and not name_events:
             return
 
@@ -1359,21 +1360,22 @@ class _Compiler:
         to_emit = []
         planned_keys = set()
         for sub, name, name_wi, name_t, beat_end in name_events:
-            name_key = (sub.get("id"), tuple(VC.tokens(name)))
-            if name_key in names_seen or name_key in planned_keys or not subject_visible(sub, name_t):
+            sub_key = sub.get("id") or tuple(VC.tokens(sub.get("name")))
+            if sub_key in names_seen or sub_key in planned_keys or not subject_visible(sub, name_t):
                 continue
-            planned_keys.add(name_key)
-            to_emit.append((sub, name, name_wi, name_t, beat_end, name_key))
+            planned_keys.add(sub_key)
+            to_emit.append((sub, name, name_wi, name_t, beat_end, sub_key))
 
         borrowed_single = asset != self.main and shot.get("technique") not in ("LAY-01", "X-CMP-01")
-        for idx, (sub, name, name_wi, name_t, beat_end, name_key) in enumerate(to_emit):
+        for idx, (sub, name, name_wi, name_t, beat_end, sub_key) in enumerate(to_emit):
             next_name = next((ev[3] for ev in to_emit[idx + 1:] if ev[3] > name_t), t1)
             end_t = min(t1, next_name) if borrowed_single else min(t1, next_name, max(beat_end, name_t + 3.2))
             dur = _bounded_duration(name_t, end_t)
             if dur < 0.05:
                 continue
             obj = self.build_overlay(rec["zone"], rec["n"], 0,
-                                     {"technique": "X-ANN-01", "params": {"text": name, "sub": sub.get("sub") or ""}}, shot)
+                                     {"technique": "X-ANN-01", "params": {"text": name, "sub": sub.get("sub") or ""}}, shot,
+                                     check_narration=False)
             if obj:
                 used = {o.get("id") for o in overlays}
                 num = 1
@@ -1381,7 +1383,7 @@ class _Compiler:
                     num += 1
                 obj.update(id="o%d" % num, start={"w": name_wi, "off": 0.0, "text": self.words[name_wi]["w"]}, dur=dur)
                 overlays.append(obj)
-                names_seen.add(name_key)
+                names_seen.add(sub_key)
 
         can_point = (asset == self.main and shot.get("technique") not in ("LAY-01", "X-CMP-01"))
         cam_keys = keys_of_param("camera") if can_point else None
