@@ -429,6 +429,28 @@ Example:
 
 Sentences in `changes`: `default` = `Nhập hình từ {source}`; `main` = `Nhập hình từ {source} và đặt làm tranh chính`
 
+### `set_caption`
+
+Set or clear the short caption shown under a borrowed picture.
+
+| Field | Type | Required | Meaning |
+|---|---|---|---|
+| `op` | `set_caption` | yes | The operation name. |
+| `asset` | text | yes | An asset key of the picks document (such as A12), or a $ref made by an import earlier in the batch. |
+| `caption` | text | yes | A clean English picture label, or empty to clear. |
+
+Example:
+
+```json
+{
+  "op": "set_caption",
+  "asset": "B",
+  "caption": "Silk damask, Italy, about 1500"
+}
+```
+
+Sentence in `changes`: `Chú thích của {pic}: đã lưu`
+
 ### `set_content_box`
 
 Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph round a panel. The camera of the video never leaves the box of the main painting; the program finds one by itself when a picture is imported or made the main one, and this replaces what it found.

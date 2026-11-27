@@ -1207,18 +1207,12 @@ class _Compiler:
             if asset:
                 timeline.append((asset, rec["t0"], t1))
         for asset, start, end in timeline:
-            record = self.assets.get(asset) or {}
-            title = str(record.get("title") or "").strip()
-            if not VC.usable_picture_title(record):
+            record = self.inp.picks["assets"].get(asset) or {}
+            title = record.get("caption") or record.get("title") or ""
+            if not VC.usable_picture_title({"title": title}, asset):
                 continue
-            artist, year = (str(record.get(k) or "").strip() for k in ("artist", "year"))
-            credit = record.get("credit") or {}
-            # Met's adapter uses artistDisplayName and objectDate: these describe
-            # the collection object. Other sources can describe the photograph.
-            if not isinstance(credit, dict) or credit.get("source") != "met":
-                artist, year = "", ""
-            if artist and (VC.PLACEHOLDER.search(artist) or artist.casefold() in VC.PLACEHOLDER_WHOLE):
-                artist = ""
+            title = title.strip()
+            artist, year = "", ""
             obj = self.build_overlay(rec["zone"], rec["n"], 0, {"technique": "X-ANN-02", "params": {
                 "title": title, "artist_year": ", ".join(x for x in (artist, year) if x)}}, shot)
             if obj:

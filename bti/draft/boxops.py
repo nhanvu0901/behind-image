@@ -39,7 +39,7 @@ STATUSES = ("applied", "cannot", "escalate")
 # (one call cannot search or look), so the box does not import.
 EXCLUDED = {"storyboard": ("lock", "unlock", "replace_range"), "picks": ("import",)}
 # changes something shared by every line: outside any scope, so only a whole-video box may use them
-WHOLE_VIDEO_PICKS = ("set_main", "set_region", "remove_region")
+WHOLE_VIDEO_PICKS = ("set_caption", "set_main", "set_region", "remove_region")
 MAX_OPS = 40
 SYSTEM = "You edit a video project for its owner. Answer with a single JSON object and nothing else."
 

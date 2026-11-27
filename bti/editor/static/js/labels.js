@@ -1099,3 +1099,5 @@ Object.assign(VALUE, {
 
 // worker reviewfix: incomplete viewer review.
 Object.assign(CODE, { review_incomplete: "Chưa xem hết các cảnh" });
+// capwrite: the caption shown under a borrowed picture.
+export const CAPWRITE_LABEL = "Chú thích trên video";

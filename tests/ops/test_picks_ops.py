@@ -581,3 +581,12 @@ def test_set_subjects_and_set_about_reject_invalid_strips_and_blank_fields(clien
         r = pk(client, [bad_op])
         assert r.status_code == 422, (bad_op, r.text)
         untouched(client, r, before)
+
+
+def test_set_and_clear_picture_caption(client):
+    r = pk(client, [{'op': 'set_caption', 'asset': 'B', 'caption': 'Silk damask, Italy, about 1500'}])
+    assert r.status_code == 200, r.text
+    assert picks(client)['assets']['B']['caption'] == 'Silk damask, Italy, about 1500'
+    r = pk(client, [{'op': 'set_caption', 'asset': 'B', 'caption': ''}])
+    assert r.status_code == 200, r.text
+    assert 'caption' not in picks(client)['assets']['B']

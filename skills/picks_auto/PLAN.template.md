@@ -134,3 +134,5 @@ Run them from this folder. Each prints what it did; each has `--help`.
 - **Crop** the main painting: `{{CROP_CMD}} --box 0.40,0.10,0.62,0.30 -o look/head.jpg` cuts that box out of the painting and writes it (the output must be inside `look/`); open the file to look at it. `{{CROP_CMD}} --grid -o look/grid.jpg` writes the painting with a labelled grid.
 
 If a command fails to start, say so in a line of your last message and carry on by reading your own file carefully: do not look for another way to reach the program. When the check says `0 error(s)`, you are done: write one sentence of what you did as your last message.
+
+For each chosen borrowed picture, write `caption` in its choice entry: plain English, at most 60 characters and about eight words, like "Silk damask, Italy, about 1500", "View of Florence from the hill", or "Saint Margaret, Flemish, 15th century". Describe the picture as a museum label; include maker and year only when the record states them for the work itself. Never use a photographer, photograph date, filename, website, channel, catalogue or camera number, or a guess. App-made maps have no caption.

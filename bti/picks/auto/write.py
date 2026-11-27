@@ -80,6 +80,8 @@ def resolve_picks(plan: dict, search: dict, choice: dict, books: list[dict]) -> 
             row = {"id": wid, "beat": ln["beat"], "item": it, "pick": None, "reason": "", "code": None, "source": w.get("source"),
                    "seconds": w.get("seconds"), "what": it.get("what") or it.get("place") or "",
                    "queries": [q for q in (w.get("tried_queries") or []) if isinstance(q, str) and q.strip()]}
+            if ch and ch.get("caption") and it["type"] != "map":
+                row["caption"] = ch["caption"]
             if ch is None:                                       # the want was not shown to the agent: nothing was found for it
                 row["code"] = w.get("code") or "no_candidates"
             elif ch["pick"] is None:
@@ -350,6 +352,8 @@ def build_lines(inp: ainputs.Inputs, plan: dict, picks: dict, got: dict, failed:
                         if it["type"] == "clip":
                             note = "%s (clip khoảng %g giây)" % (p["reason"], it["seconds"])
                         item_dict = {"src": key, "asset": None, "region": None, "role": _role(it), "note": _cut(note, NOTE_MAX)}
+                        if p.get("caption"):
+                            item_dict["caption"] = p["caption"]
                         if p.get("step") in (2, 3):
                             item_dict["step"] = p["step"]
                         items.append(item_dict)
@@ -491,12 +495,16 @@ class Writer:
 
 def _ops_for(lines: list[dict], main_key: str) -> list[dict]:
     """The operations of a group of lines: the imports (one ref per picture), then `set_picks` / `skip_beat` for each line."""
-    ops, refs = [], {}
+    ops, refs, captions = [], {}, {}
     for ln in lines:
         for it in ln["items"]:
             if it.get("src") and it["src"] not in refs:
                 refs[it["src"]] = "p%d" % (len(refs) + 1)
                 ops.append({"op": "import", "source": it["src"][0], "source_id": it["src"][1], "ref": refs[it["src"]]})
+            if it.get("src") and it.get("caption") and it["src"] not in captions:
+                captions[it["src"]] = it["caption"]
+    for src, caption in captions.items():
+        ops.append({"op": "set_caption", "asset": "$" + refs[src], "caption": caption})
     for ln in lines:
         kinds = {"kinds": list(ln["kinds"])} if ln.get("kinds") else {}
         if "names" in ln:

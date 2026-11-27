@@ -47,7 +47,8 @@ def eligius(tmp_path_factory):
 def test_the_storyboard_of_the_first_export_gives_the_same_issues_as_before_and_the_new_warning(eligius):
     d, now = eligius
     new = [i for i in now if i["code"] == "frame_off_painting"]
-    rest = [{"level": i["level"], "code": i["code"], "path": i["path"], "message": i["message"], "args": i["args"]} for i in now if i["code"] != "frame_off_painting"]
+    rest = [{"level": i["level"], "code": i["code"], "path": i["path"], "message": i["message"], "args": i["args"]} for i in now if i["code"] not in {"frame_off_painting", "borrowed_without_caption"}]
+    assert len([i for i in now if i["code"] == "borrowed_without_caption"]) == 1
     assert rest == BEFORE["eligius"], "the stored storyboard validates with the same issues apart from the new warning"
     assert len(new) == 59 and {i["level"] for i in new} == {"warn"}
 

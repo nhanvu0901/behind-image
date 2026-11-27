@@ -7,7 +7,7 @@
 //          isDirty(), busy(), add(beatId, item) -> token, undoAdd(token) -> bool, openHand(beatId, tab?), approve(), check(), drawRegions(), setCurrent(beatId), scriptHref }
 // The decisions are in picks_rows_logic.js and selectlogic.js (pure, tested); the words are labels.js (PICKS_PAGE_LABELS).
 import { h, kids, toast } from '../util.js';
-import { PICKS_PAGE_LABELS as W, PICKS_AUTO_LABELS as AL, FLAG, FLAG_HELP } from '../labels.js';
+import { PICKS_PAGE_LABELS as W, PICKS_AUTO_LABELS as AL, FLAG, FLAG_HELP, CAPWRITE_LABEL } from '../labels.js';
 import { pickRows, nextMissing, headerNumbers, approveState, pageBlocker, sectionsOf } from './picks_rows_logic.js';
 import { emptySelection, applyClick, selectChapter, pruneSelection, stepFocus } from '../selectlogic.js';
 
@@ -47,7 +47,11 @@ export function mountPickRows({ top, col, scope, api }) {
       box.append(v, h('span', { class: 'pr-play', text: '▶' }));
     } else if (a) box.append(api.thumb(a, p.region, 64));
     if (p.flag && FLAG[p.flag]) box.append(h('span', { class: 'pr-flag', text: '!', title: `${FLAG[p.flag]}. ${FLAG_HELP[p.flag] || ''}` }));
-    return h('figure', { class: 'pr-pic' }, box, h('figcaption', { class: 'pr-cap', title: p.caption, text: p.caption }));
+    const editor = a && p.key !== api.doc().main_asset && p.role !== 'map'
+      ? h('label', { class: 'pr-cap' }, CAPWRITE_LABEL, h('input', { type: 'text', maxlength: 60, value: a.caption || '',
+          'aria-label': CAPWRITE_LABEL, onchange: (e) => api.setCaption(p.key, e.target.value) })) : null;
+    return h('figure', { class: 'pr-pic' }, box, h('figcaption', { class: 'pr-cap', title: p.caption, text: p.caption }), editor);
+
   }
   function rowEl(r) {
     const open = expanded.has(r.id);

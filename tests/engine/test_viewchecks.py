@@ -66,7 +66,7 @@ def test_the_first_draft_of_the_real_run_raises_the_checks_a_draft_can_show(real
     doc, issues, viewer = run(real, timing, "first_draft")
     assert not [i for i in issues if i["level"] == "error"], "the first draft validated with no error"
     got = by_code(viewer)
-    assert set(got) == {"upright_whole_share", "highlight_off_frame", "highlight_too_dark", "text_not_in_narration", "asset_not_in_lines", "explainer_early"}
+    assert set(got) == {"upright_whole_share", "highlight_off_frame", "highlight_too_dark", "text_not_in_narration", "asset_not_in_lines", "explainer_early", "borrowed_without_caption"}
     up = got["upright_whole_share"][0]["args"]
     assert up["count"] == 41                                    # the 41 shots of 109 that showed the painting small between the bars
     assert 0.24 <= up["share"] <= 0.30 and 190 <= up["seconds"] <= 215
@@ -97,7 +97,8 @@ def test_the_draft_after_the_first_round_of_requests_also_raises_the_short_shot_
 
 def test_the_final_storyboard_of_the_real_run_raises_none_of_them(real, timing):
     doc, issues, viewer = run(real, timing, "final")
-    non_short = [i for i in viewer if i["code"] != "shot_short"]
+    assert len([i for i in viewer if i["code"] == "borrowed_without_caption"]) == 1
+    non_short = [i for i in viewer if i["code"] not in {"shot_short", "borrowed_without_caption"}]
     assert non_short == [], [(i["code"], i["path"]) for i in non_short]
     assert {i["args"]["shot"] for i in viewer if i["code"] == "shot_short"} == {"s0108", "s0114", "s0115", "s0117", "s0118", "s0155"}
     assert not [i for i in issues if i["level"] == "error"]
@@ -109,7 +110,7 @@ def test_the_state_before_the_third_round_raises_the_highlights_that_made_the_sc
     assert {i["args"]["shot"] for i in got["highlight_off_frame"]} == {"s0126", "s0076", "s0158"}
     dark = {(i["args"]["shot"], i["args"]["overlay"]) for i in got["highlight_too_dark"]}
     assert {("s0145", "o37"), ("s0097", "o1"), ("s0159", "o52")} <= dark             # the three black stretches of the exported file (5:56, 11:09 and the oranges)
-    assert set(got) == {"highlight_off_frame", "highlight_too_dark", "shot_short"}, "only highlights and <2.5s shots remain"
+    assert set(got) == {"highlight_off_frame", "highlight_too_dark", "shot_short", "borrowed_without_caption"}, "only highlights and <2.5s shots remain"
     assert all(i["args"]["luma"] < VC.HI_MIN_LUMA for i in got["highlight_too_dark"])
 
 

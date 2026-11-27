@@ -1109,7 +1109,10 @@ def check_choice(obj: Any, ctx: ChoiceCtx, *, ws_root: Path | None = None, state
         if not _vietnamese(reason):
             err.append("%s: `reason` must be written in Vietnamese, with its accents (the owner reads it); it says %r" % (where, reason[:60]))
             continue
-        wants[wid] = {"pick": pick, "reason": _short(reason, REASON_MAX), **({"shows_subject": True} if wid in ctx.subject_wants and pick is not None else {}), **({"period_picture": w["period_picture"], "no_period_picture": w.get("no_period_picture", False)} if wid in ctx.period_wants and pick is not None else {})}
+        if w.get("caption") not in (None, "") and not pdoc.caption_valid(w["caption"]):
+            err.append("%s: caption must be a clean picture label of at most 60 characters" % where)
+            continue
+        wants[wid] = {"pick": pick, "reason": _short(reason, REASON_MAX), **({"caption": w["caption"].strip()} if w.get("caption") else {}), **({"shows_subject": True} if wid in ctx.subject_wants and pick is not None else {}), **({"period_picture": w["period_picture"], "no_period_picture": w.get("no_period_picture", False)} if wid in ctx.period_wants and pick is not None else {})}
     left = [w for w in ctx.wants if w not in wants]
     if left and not any("wants[" in e for e in err):
         more = " and %d more" % (len(left) - 12) if len(left) > 12 else ""

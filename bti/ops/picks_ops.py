@@ -432,6 +432,27 @@ def import_(ctx, o):
     ctx.say({"asset": None if ctx.dry_run else key}, variant="main" if as_main else "default", source=SOURCE_VI[o["source"]])
 
 
+# capwrite: one caption per picture, shared by all its uses.
+@op("picks", "set_caption",
+    summary="Set or clear the short caption shown under a borrowed picture.",
+    schema=S.obj("set_caption", ["asset", "caption"], {"asset": ASSET,
+        "caption": S.string("A clean English picture label, or empty to clear.", max_length=60)}),
+    example={"op": "set_caption", "asset": "B", "caption": "Silk damask, Italy, about 1500"},
+    sentences="Chú thích của {pic}: đã lưu")
+def set_caption(ctx, o):
+    ctx.whole_document("set_caption")
+    key = _asset(ctx, o["asset"], "asset")
+    value = o["caption"].strip()
+    if o["caption"] and not pdoc.caption_valid(o["caption"], key):
+        ctx.bad("caption", "must be a short, clean picture label")
+    ctx.touch("asset:" + key)
+    if value:
+        ctx.doc["assets"][key]["caption"] = value
+    else:
+        ctx.doc["assets"][key].pop("caption", None)
+    ctx.say({"asset": key}, pic=_pic(ctx, key))
+
+
 # ---------------------------------------------------------------- panelbox (2026-11-20): the painted area of a picture
 @op("picks", "set_content_box",
     summary="Set the painted area of a picture: the box (pixels of the stored picture) that is the painting itself, without the black or grey ground of a museum photograph "
