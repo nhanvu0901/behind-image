@@ -21,6 +21,8 @@ The engine draws exactly what the storyboard says; it never decides.
 ## The actions and operations it uses
 
 <!-- BEGIN GENERATED: actions -->
+The visual path composes the approved visual script and reviews its moments; the legacy path uses a model draft and proposal. Both paths keep hand operations and the storyboard gate.
+
 | id | step | page button | gate | cost | long job |
 |---|---|---|---|---|---|
 | `storyboard.compose` | edit | Dựng storyboard |  |  |  |

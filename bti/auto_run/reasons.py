@@ -83,6 +83,10 @@ NEED_VI = {
 
 # musicstep: an empty library does not block the run.
 NEED_VI["music_library"] = "thư viện nhạc có bản ghi dùng được"
+NEED_VI["visual_script"] = "kịch bản hình được viết xong"
+NEED_VI["visual_script_valid"] = "bạn sửa lỗi trong kịch bản hình"
+NEED_VI["scorecard"] = "bảng chấm điểm được cập nhật"
+NEED_VI["visual_review_available"] = "bộ xem lại kịch bản hình được cài vào máy chủ"
 
 
 class _Info(dict):
@@ -342,3 +346,5 @@ if __name__ == "__main__":
         print("wrote", target)
     else:
         print(json.dumps(samples(), ensure_ascii=False, indent=1))
+
+NEED_VI["visual_composed"] = "bạn tạo lại storyboard từ kịch bản hình hiện tại"

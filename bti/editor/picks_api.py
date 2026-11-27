@@ -97,7 +97,21 @@ def put_picks(pid: str, request: Request, body: dict = Body(...)):
 def approve_picks(pid: str, request: Request, body: dict = Body(...)):
     d = _pdir(request, pid)
     actor = gate_actor(d, "picks", body)        # c5cli
+    from bti.editor.pipeline_api import project_meta
+    if project_meta(d).get("pipeline", "legacy") == "visual" and not (d / "visual.json").is_file():
+        raise ApiError(409, "Create the visual script before approving pictures.", code="invalid_request")
+    if project_meta(d).get("pipeline", "legacy") == "visual":
+        if not (d / "timing.json").is_file():
+            raise ApiError(409, "Timing is required to validate the visual script.", code="timing_missing")
+        from bti.editor.state_api import visual_errors
+        errors = visual_errors(d)
+        if errors:
+            raise ApiError(422, "Kịch bản hình còn lỗi. Hãy xem và sửa danh sách lỗi.", code="validation_failed", issues=errors)
     service.approve(d, body.get("rev"), actor)
+    from bti.auto import RUN_ACTOR
+    if actor != RUN_ACTOR:
+        from bti.compose.api import compose_if_approved
+        compose_if_approved(d)
     return _full(request, pid, d)
 
 

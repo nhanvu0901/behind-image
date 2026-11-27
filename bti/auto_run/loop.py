@@ -80,6 +80,7 @@ class Run:
         self.recent: list[str] = []
         self.tolerated: dict[tuple[str, str], dict] = {}          # (gate, code) -> {gate, code, count, lines?}: the warnings the run let through (the last look at each gate)
         self.music_tried = False
+        self.scorecard_seen: set[str] = set()
         self.music_warning = False
         self.done_steps = 0
         self.of = len(reasons.STEPS)
@@ -189,7 +190,10 @@ class Run:
         acts = [a for a in st.get("next_actions") or [] if isinstance(a, dict) and isinstance(a.get("id"), str)]
         auto = st.get("auto") if isinstance(st.get("auto"), dict) else {}
         target = self.until or "export"
-        if (steps.get(target) or {}).get("state") == "done":
+        visual = (st.get("pipeline") or {}).get("value") == "visual"
+        target_done = (steps.get(target) or {}).get("state") == "done"
+        post_score = visual and target == "export" and target_done and "post" not in self.scorecard_seen
+        if target_done and not post_score:
             return reasons.make("until_reached" if self.until and self.until != "export" else "exported", pid=self.pid, step=target), None
         if auto.get("enabled") is not True:
             return reasons.make("auto_turned_off", pid=self.pid, step=st.get("current")), None
@@ -198,11 +202,26 @@ class Run:
             kinds = sorted({str(j.get("kind")) for j in busy})
             return reasons.make("busy_elsewhere", pid=self.pid, step=st.get("current"),
                                 jobs_vi=", ".join(reasons.JOB_KIND_VI.get(k, k) for k in kinds), jobs_en=", ".join(kinds)), None
+        if post_score:
+            score = next((a for a in acts if a["id"] == "scorecard.make" and a.get("ready")), None)
+            if score is None:
+                return self._nothing_to_do(st, acts), None
+            refusal = self._allowed(score, auto)
+            return (refusal, None) if refusal else (None, score)
         todo = [a for a in acts if a.get("ready") is True and a.get("advances") is True and not a["id"].startswith("auto.") and not a["id"].endswith(".cancel")
                 and not (a["id"] == "music.auto" and self.music_tried)]
         if not todo:
             return self._nothing_to_do(st, acts), None
         a = todo[0]
+        if visual and a["id"] in ("storyboard.approve", "export.start") and "pre" not in self.scorecard_seen:
+            score = next((x for x in acts if x["id"] == "scorecard.make" and x.get("ready")), None)
+            if score is None:
+                return self._nothing_to_do(st, acts), None
+            a = score
+        if visual and a["id"] == "storyboard.approve":
+            music = next((x for x in todo if x["id"] == "music.auto"), None)
+            if music is not None:
+                a = music
         if a["id"] == "export.start" and not self.music_tried:
             music = next((x for x in acts if x["id"] == "music.auto"), None)
             if music and any(n in ("music_library", "agent_usable") for n in music.get("needs", [])):
@@ -211,7 +230,8 @@ class Run:
         # A human may approve directly, but the automatic run must never bypass
         # a required viewer review merely because its agent is unavailable.
         pending_review = next((x for x in acts if x["id"] == "storyboard.review" and x.get("ready") is False), None)
-        if a["id"] == "storyboard.approve" and pending_review is not None:
+        if pending_review is not None and (a["id"] == "storyboard.approve" or
+                                           (visual and a["id"] in ("scorecard.make", "music.auto", "export.start"))):
             return self._nothing_to_do(st, [pending_review]), None
         refusal = self._allowed(a, auto)
         if refusal is not None:
@@ -274,7 +294,9 @@ class Run:
         base = {"pid": self.pid, "action": a["id"], "action_label": a.get("label"), "step": a.get("step")}
         warnings: list[dict] = []
         if a.get("gate"):
-            warnings = self._quality_bar(a, base)
+            warnings = self._quality_bar(a, base, st)
+            if a["id"] == "picks.approve" and (st.get("pipeline") or {}).get("value") == "visual":
+                warnings.extend({"code": "visual_missing", "level": "warning", "message": str(s)} for s in st.get("visual_missing") or [])
         sig = a["id"] + str(a.get("path")) + json.dumps(body, sort_keys=True, ensure_ascii=False, default=str)
         if len(self.recent) >= NO_PROGRESS - 1 and all(s == sig for s in self.recent[-(NO_PROGRESS - 1):]):
             self._finish(reasons.make("no_progress", count=NO_PROGRESS - 1, **base))
@@ -298,6 +320,9 @@ class Run:
                 return
             self._refused(a, base, rep, err)
             return
+        if a["id"] == "scorecard.make" and (st.get("pipeline") or {}).get("value") == "visual":
+            exported = any(s.get("step") == "export" and s.get("state") == "done" for s in st.get("steps") or [])
+            self.scorecard_seen.add("post" if exported else "pre")
         self.recent.append(sig)
         del self.recent[:-NO_PROGRESS]
         jid = rep.data.get("job_id") if isinstance(rep.data, dict) else None
@@ -311,14 +336,32 @@ class Run:
         self.stale = 0
         self.log.update_step(rec, status=rep.status, ok=True, seconds=secs)
 
-    def _quality_bar(self, a: dict, base: dict) -> list[dict]:
+    def _quality_bar(self, a: dict, base: dict, st: dict | None = None) -> list[dict]:
         """Read the document behind the gate and judge its checks; ends the run (raises _Stop) when it should not be approved. Returns the tolerated warnings."""
         gate = a["id"].split(".")[0]
+        visual = ((st or {}).get("pipeline") or {}).get("value") == "visual"
+        if visual and gate == "storyboard":
+            rep = self.call("GET", "/api/projects/%s/scorecard" % self.pid)
+            if not rep.ok or not isinstance(rep.data, dict) or not isinstance(rep.data.get("scorecard"), dict) or rep.data.get("stale"):
+                raise _Stop(reasons.make("action_failed", **{**base, "action": "scorecard.make"}, error=self._error(rep)))
+            stoppers, tolerated = checks.visual_scorecard(rep.data["scorecard"])
+            for code, n in checks.tally(tolerated).items():
+                self.tolerated[(gate, code)] = {"gate": gate, "code": code, "count": n}
+            if stoppers:
+                raise _Stop(reasons.make("quality_warning", gate=gate, count=len(stoppers), issues=stoppers, **base))
+            return tolerated
         rep = self.call("GET", checks.document_path(a["path"], gate))
         if not rep.ok or not isinstance(rep.data, dict):
             raise _Stop(reasons.make("action_failed", **{**base, "action": "%s (reading its document)" % a["id"]}, error=self._error(rep)))
         lines, outside = _lines_of(rep.data), _outside_of(rep.data)
-        verdict, stoppers, tolerated = checks.vet(gate, rep.data.get("issues"), lines, outside)
+        issues = rep.data.get("issues")
+        if visual and gate == "picks" and isinstance(issues, list):
+            missing = [i for i in issues if i.get("code") in ("beat_no_pick", "outside_no_picture")]
+            issues = [i for i in issues if i.get("code") not in ("beat_no_pick", "outside_no_picture")]
+        else:
+            missing = []
+        verdict, stoppers, tolerated = checks.vet(gate, issues, lines, outside)
+        tolerated.extend(missing)
         if verdict == "error":
             raise _Stop(reasons.make("quality_error", gate=gate, count=len(stoppers), issues=stoppers, **base))
         if verdict == "warning":

@@ -24,6 +24,8 @@ if the owner allowed it) approves the picks, and the storyboard draft starts fro
 ## The actions and operations it uses
 
 <!-- BEGIN GENERATED: actions -->
+The visual path uses `visual.plan` and the picks gate; `picks.auto` and `picks.edit` are legacy actions.
+
 | id | step | page button | gate | cost | long job |
 |---|---|---|---|---|---|
 | `picks.search` | picks | Tìm hình |  |  |  |

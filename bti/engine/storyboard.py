@@ -1021,7 +1021,10 @@ def _validate(sb: dict, tm: Timing, bundle: R.StyleBundle, project_dir: Path | N
     if end_t is not None and tm.duration and end_t > tm.duration + 1.0:
         warn("end", "end %.2f s is after the audio/timing duration %.2f s" % (end_t, tm.duration), "end_after_audio", end=end_t, duration=tm.duration)
     _check_identity(sb, shots, bundle, err, warn)
-    issues.extend(VC.check(sb, tm, bundle, project_dir, starts, end_t, safe_rel))     # fixdraft: what a viewer would see (warnings only)
+    # pipewire: composed storyboards use the scorecard in place of legacy viewer checks.
+    made_from = sb.get("made_from")
+    if not isinstance(made_from, dict) or not made_from.get("visual"):
+        issues.extend(VC.check(sb, tm, bundle, project_dir, starts, end_t, safe_rel))
     return issues
 
 

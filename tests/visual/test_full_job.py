@@ -94,8 +94,8 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
         assert doc.load(pdir)['beats'][beats[0]['id']]['items'][0]['role'] == 'map'
 
 
-@pytest.mark.parametrize("broken_import,web_on,web_finds", [(False, False, False), (True, False, False), (False, True, False), (False, True, True)])
-def test_fake_agent_finds_one_picture_and_records_missed_one(tmp_path, monkeypatch, broken_import, web_on, web_finds):
+@pytest.mark.parametrize("broken_import,web_on,web_finds,by_run", [(False, False, False, False), (True, False, False, False), (False, True, False, False), (False, True, True, False), (False, True, False, True)])
+def test_fake_agent_finds_one_picture_and_records_missed_one(tmp_path, monkeypatch, broken_import, web_on, web_finds, by_run):
     from auto_helpers import install_sources, FakeSource, fake_thumb
     from bti.picks import context, doc, websettings
     from bti.picks.auto import session
@@ -160,7 +160,8 @@ def test_fake_agent_finds_one_picture_and_records_missed_one(tmp_path, monkeypat
             item = meta('commons', 'File:Portrait A.jpg', 'Another portrait', 'unused')
             return {'items': [item], 'errors': []}
         return {'items': [], 'errors': []}
-    rec = job.start(pdir.name, pdir, manager=manager, guard_factory=lambda d: Guard(d, extra=lambda: None, repo_root=d.parent), python=sys.executable, fetch_thumb=fake_thumb, web={'on': web_on, 'max': 10, 'search': fake_web})
+    rec = job.start(pdir.name, pdir, manager=manager, guard_factory=lambda d: Guard(d, extra=lambda: None, repo_root=d.parent), python=sys.executable, fetch_thumb=fake_thumb, web={'on': web_on, 'max': 10, 'search': fake_web}, by_run=by_run)
+    web_on = web_on and not by_run
     result = manager.wait(rec['id'], 60)
     assert bool(web_queries) == web_on
     if web_on:

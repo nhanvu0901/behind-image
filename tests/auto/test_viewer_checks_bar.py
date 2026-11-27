@@ -58,3 +58,37 @@ def test_model_viewer_findings_stop_storyboard_approval():
         verdict, stopping, _ = checks.vet("storyboard", [issue(code)])
         assert verdict == "warning" and stopping[0]["code"] == code
         assert VI.search(stopping[0]["why_vi"])
+
+
+def test_visual_scorecard_hard_lines_ignore_other_quality_targets():
+    from bti.auto_run.checks import visual_scorecard
+    metrics = [
+        {"key": "marks_on_person", "value": 1, "items": [{"shot": "s1"}]},
+        {"key": "biggest_mark", "over_30_count": 1, "items": [{"shot": "s2"}]},
+        {"key": "short_shots", "value": 1, "items": [{"shot": "s3"}]},
+        {"key": "borrowed_pictures", "value": {"under_3s_count": 1}, "items": [{"shot": "s4", "under_3s": True}]},
+        {"key": "name_strips", "value": {"sub_repeats": 1, "on_thing": 0}, "items": [{"shot": "s5", "sub_repeats": True}]},
+        {"key": "small_painting_share", "ok": False, "items": [{"shot": "s6"}]},
+    ]
+    hard, other = visual_scorecard({"metrics": metrics})
+    assert {x["metric"] for x in hard} == {"marks_on_person", "biggest_mark", "short_shots", "borrowed_pictures", "name_strips"}
+    assert all(x["code"] == "validation_failed" and VI.search(x["why_vi"]) for x in hard)
+    assert any(x["code"] == "small_painting_share" for x in other)
+
+
+def test_visual_scorecard_cannot_pass_when_hard_metrics_are_missing():
+    hard, _ = checks.visual_scorecard({"metrics": []})
+    assert hard and hard[0]["code"] == "validation_failed"
+    assert VI.search(hard[0]["why_vi"])
+
+
+def test_visual_scorecard_hard_count_without_details_still_stops():
+    metrics = [
+        {"key": "marks_on_person", "value": 1, "items": []},
+        {"key": "biggest_mark", "over_30_count": 0, "items": []},
+        {"key": "short_shots", "value": 0, "items": []},
+        {"key": "borrowed_pictures", "value": {"under_3s_count": 0}, "items": []},
+        {"key": "name_strips", "value": {"sub_repeats": 0}, "items": []},
+    ]
+    hard, _ = checks.visual_scorecard({"metrics": metrics})
+    assert any(i["metric"] == "marks_on_person" for i in hard)

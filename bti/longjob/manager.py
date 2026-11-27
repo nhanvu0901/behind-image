@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Callable
 
 from bti.proc import group_kwargs, kill_tree
+from bti import deploy_guard
 
 from .config import REPO_ROOT, load as load_config
 from .heavy import Cancelled, HeavyError, HeavySlot
@@ -424,6 +425,11 @@ class LongJobManager:
             if busy is not None:
                 raise Busy(busy.public())
             self._jobs[job.id] = job
+            # Register before checking the deploy lock: the deploy's subsequent
+            # state read either sees this job or this registration is removed.
+            if deploy_guard.active():
+                self._jobs.pop(job.id, None)
+                raise deploy_guard.DeployBusy()
             self._roots.add(project_dir.parent)
             if len(self._jobs) > KEEP_IN_MEMORY:
                 for k in sorted(self._jobs, key=lambda k: self._jobs[k].created)[: len(self._jobs) - KEEP_IN_MEMORY]:

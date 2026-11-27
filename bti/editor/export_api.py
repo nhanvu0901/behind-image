@@ -206,6 +206,10 @@ def get_export(pid: str, request: Request):
 @router.post("/projects/{pid}/export/start")
 def start_export(pid: str, request: Request):
     d = project_dir(request, pid)
+    from .pipeline_api import project_meta
+    from .state_api import visual_composition_needs
+    if project_meta(d, strict=True).get("pipeline", "legacy") == "visual" and visual_composition_needs(d):
+        raise ApiError(422, "Hãy sửa kịch bản hình và tạo lại storyboard trước khi xuất.", code="validation_failed")
     try:
         job = run.start(d)
     except ExportError as e:

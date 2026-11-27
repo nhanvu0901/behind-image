@@ -227,3 +227,48 @@ def vet(gate: str, issues: Any, lines: int | None = None, outside: int | None = 
     if v["stopping"]:
         return "warning", v["stopping"], v["tolerated"]
     return "ok", [], v["tolerated"]
+
+
+# worker pipewire: only these individual scorecard findings block visual exports.
+def visual_scorecard(scorecard: dict) -> tuple[list[dict], list[dict]]:
+    hard, other = [], []
+    labels = {
+        "marks_on_person": ("a mark is on a person", "có dấu chỉ đặt lên người"),
+        "biggest_mark": ("a mark exceeds the size limit", "có dấu chỉ lớn quá giới hạn"),
+        "short_shots": ("a shot is shorter than the floor", "có cảnh ngắn hơn thời lượng tối thiểu"),
+        "borrowed_pictures": ("a borrowed picture lasts less than three seconds", "có hình mượn hiện dưới ba giây"),
+        "name_strips": ("a name strip subtitle repeats the name", "có dòng phụ lặp lại tên trên nhãn"),
+    }
+    metrics = scorecard.get("metrics")
+    metrics = [m for m in metrics if isinstance(m, dict)] if isinstance(metrics, list) else []
+    missing = set(labels) - {m.get("key") for m in metrics}
+    if missing:
+        hard.append({"code": "validation_failed", "level": "warning", "metric": "scorecard",
+                     "message": "Missing scorecard metrics: " + ", ".join(sorted(missing)),
+                     "why": "the scorecard is missing required measurements", "why_vi": "bảng chấm điểm thiếu số đo bắt buộc"})
+    for metric in metrics:
+        key = metric.get("key")
+        value = metric.get("value")
+        items = metric.get("items") or []
+        count = 0
+        if key == "marks_on_person" or key == "short_shots":
+            selected = items if value else []
+            count = value
+        elif key == "biggest_mark":
+            selected = items if metric.get("over_30_count") else []
+            count = metric.get("over_30_count")
+        elif key == "borrowed_pictures":
+            selected = [item for item in items if item.get("under_3s")]
+            count = value.get("under_3s_count") if isinstance(value, dict) else 0
+        elif key == "name_strips":
+            selected = [item for item in items if item.get("sub_repeats")]
+            count = value.get("sub_repeats") if isinstance(value, dict) else 0
+        else:
+            selected = []
+        if isinstance(count, (int, float)) and count > len(selected):
+            selected = [*selected, {"count_without_details": count - len(selected)}]
+        hard.extend({"code": "validation_failed", "metric": key, "level": "warning", "message": str(item),
+                     "why": labels[key][0], "why_vi": labels[key][1]} for item in selected)
+        if not selected and metric.get("ok") is False:
+            other.append({"code": key, "level": "warning", "message": str(value)})
+    return hard, other

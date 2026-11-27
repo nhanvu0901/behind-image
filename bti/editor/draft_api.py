@@ -106,15 +106,25 @@ def post_start(pid: str, request: Request, body: dict = Body(...)):
 @router.post("/review")
 def post_review(pid: str, request: Request, body: dict = Body(None)):
     d = _pdir(request, pid)
-    from bti.draft import review
+    from bti.editor.pipeline_api import project_meta
+    if project_meta(d).get("pipeline", "legacy") == "visual":
+        try:
+            from bti.visual import review
+        except ImportError as exc:
+            raise ApiError(503, "The visual review module is not available.", code="source_unavailable") from exc
+    else:
+        from bti.draft import review
     from bti.longjob import Busy
     from bti.auto import RUN_ACTOR
+    from bti.picks.auto.inputs import AutoError
     actor = body.get("actor") if isinstance(body, dict) else None
     try:
         manager = getattr(request.app.state, "longjob_manager", None)
         job = review.start(pid, d, manager=manager, run_ok=actor == RUN_ACTOR)
     except DraftError as e:
         raise ApiError(409, e.message, code=e.code, **(e.extra or {}))
+    except AutoError as e:
+        raise ApiError(e.status, e.message, code=e.code, **e.extra)
     except Busy as e:
         raise ApiError(409, "a draft is already running", code="busy", job_id=e.job_id)
     return {"job_id": job["id"], **_who(job)}

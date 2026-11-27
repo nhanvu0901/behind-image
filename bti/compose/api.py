@@ -19,6 +19,13 @@ def post_compose(pid: str, request: Request, body: dict = Body(default={})):
     project = root / pid
     if not valid_pid(pid) or not project.is_dir() or project.is_symlink():
         raise ApiError(404, "project not found", code="project_not_found")
+    return compose_project(project, body)
+
+
+def compose_project(project: Path, body: dict | None = None):
+    """Compose and persist a project under its storyboard save lock."""
+    body = body or {}
+    pid = project.name
     with save_lock(project):
         try:
             visual = read_json(project / "visual.json")
@@ -29,6 +36,10 @@ def post_compose(pid: str, request: Request, body: dict = Body(default={})):
             raise ApiError(409, "composition input is missing or unreadable", code="invalid_request") from exc
         if "base_rev" in body and body["base_rev"] != (compute_rev(current) if current else None):
             raise ApiError(409, "storyboard revision changed", code="stale_revision")
+        from bti.visual.validate import validate as validate_visual
+        visual_issues = [i for i in validate_visual(visual, timing, picks) if i.get("level") != "review"]
+        if visual_issues:
+            raise ApiError(422, "Kịch bản hình còn lỗi. Hãy xem và sửa danh sách lỗi.", code="validation_failed", issues=visual_issues)
         style = (current or {}).get("style", "gae")
         doc, notes = compose(visual, timing, picks, {"id": style}, current)
         doc["project"], doc["timing"] = pid, "timing.json"
@@ -43,4 +54,20 @@ def post_compose(pid: str, request: Request, body: dict = Body(default={})):
         if any(i["level"] == "error" for i in issues):
             raise ApiError(422, "composition failed validation", code="validation_failed", issues=issues)
         storyboard.save(project, doc, issues)
-        return {"rev": compute_rev(doc), "notes": notes, "issues": issues}
+    from bti.scorecard import build
+    build.make_for_project(project)
+    return {"rev": compute_rev(doc), "notes": notes, "issues": issues}
+
+
+def compose_if_approved(project: Path):
+    """Recompose visual projects only after the current picks approval stands."""
+    from bti.editor.pipeline_api import project_meta
+    from bti.picks import context, doc
+    if project_meta(project).get("pipeline", "legacy") != "visual":
+        return None
+    if not (project / "visual.json").is_file() or not (project / "timing.json").is_file():
+        return None
+    nv = context.narration_view(project)
+    if not doc.approval_state(doc.load(project), nv["rev"], nv["approved"])["approved"]:
+        return None
+    return compose_project(project)

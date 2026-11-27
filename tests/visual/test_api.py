@@ -89,6 +89,18 @@ def test_action_cost_mentions_web_when_owner_enabled_it(monkeypatch):
     assert '7 web searches' in cost_about(spec)
 
 
-def test_visual_plan_is_not_counted_as_an_automatic_run_action():
+def test_visual_plan_can_be_taken_by_the_automatic_run():
     from bti.editor.state_api import RUN_MANUAL
-    assert 'visual.plan' in RUN_MANUAL
+    assert 'visual.plan' not in RUN_MANUAL
+
+
+def test_agent_visual_plan_never_enables_paid_web(tmp_path, monkeypatch):
+    from bti.editor.app import create_app
+    from bti.visual import job
+    (tmp_path / 'demo').mkdir()
+    calls = []
+    monkeypatch.setattr(job, 'start', lambda pid, pdir, **kw: calls.append(kw) or {'id': 'fake', 'meta': {}})
+    app = create_app(projects_root=tmp_path, engine_module=None, media_module=None, output_root=False)
+    r = TestClient(app).post('/api/projects/demo/visual/plan', json={'actor': 'cli:test'})
+    assert r.status_code == 200
+    assert calls[0]['web']['on'] is False

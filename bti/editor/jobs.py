@@ -62,6 +62,10 @@ class JobManager:
                "created": time.time()}
         with self._lock:
             self._jobs[jid] = job
+            from bti import deploy_guard
+            if deploy_guard.active():
+                self._jobs.pop(jid, None)
+                raise deploy_guard.DeployBusy()
             if len(self._jobs) > MAX_JOBS:
                 for k in sorted(self._jobs, key=lambda k: self._jobs[k]["created"])[: len(self._jobs) - MAX_JOBS]:
                     if self._jobs[k]["state"] in ("done", "error"):

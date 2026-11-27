@@ -63,6 +63,7 @@ def test_status_says_where_the_project_stands_and_the_next_command(bti, at):
     lines = r.out.splitlines()
     assert lines[0] == "project: arn   stage: picked   current step: edit (Dựng hình)"
     assert lines[1].startswith("automatic running: off") and lines[2].startswith("approvals: outline human; narration human; picks human; storyboard -")
+    assert "pipeline: legacy" in lines
     assert "steps:" in lines and any(l.split()[:2] == ["done", "artwork"] for l in lines) and any(l.split()[:2] == ["current", "edit"] for l in lines)
     assert "jobs running: none" in lines and "can do now:" in lines
     assert any(l.strip().startswith("draft.start") and "advances" in l and "costs model (about 20 minutes); needs --yes-cost" in l for l in lines)
