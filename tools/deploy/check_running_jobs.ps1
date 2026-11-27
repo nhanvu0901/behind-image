@@ -2,7 +2,7 @@
 param([string]$BaseUrl = 'http://127.0.0.1:8560', [switch]$ForceWhileRunning)
 if ($ForceWhileRunning) { exit 0 }
 try {
-  $projects = @(Invoke-RestMethod -UseBasicParsing -Uri "$BaseUrl/api/projects" -TimeoutSec 15 -ErrorAction Stop)
+  $projects = Invoke-RestMethod -UseBasicParsing -Uri "$BaseUrl/api/projects" -TimeoutSec 15 -ErrorAction Stop
   foreach ($project in $projects) {
     $id = [uri]::EscapeDataString([string]$project.id)
     $state = Invoke-RestMethod -UseBasicParsing -Uri "$BaseUrl/api/projects/$id/state" -TimeoutSec 30 -ErrorAction Stop
