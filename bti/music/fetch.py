@@ -19,10 +19,11 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from bti.media.http import USER_AGENT
 from . import library
 
 API = "https://commons.wikimedia.org/w/api.php"
-HEADERS = {"User-Agent": "BehindTheImageMusicLibrary/1.0 (Wikimedia Commons public API)"}
+HEADERS = {"User-Agent": USER_AGENT}
 
 
 def _value(meta, key):
