@@ -975,6 +975,7 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(longjob_router)
     app.include_router(voice_router)
     app.include_router(picks_router)
+    from bti.visual.api import router as visual_router; app.include_router(visual_router)  # visualdoc
     from .tighten_api import router as tighten_router; app.include_router(tighten_router)
     app.include_router(draft_router)
     app.include_router(export_router)

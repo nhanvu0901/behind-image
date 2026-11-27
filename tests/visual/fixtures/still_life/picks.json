@@ -1,0 +1,84 @@
+{
+  "schema": "bti.picks/1",
+  "main_asset": "A",
+  "assets": {
+    "A": {
+      "file": "media/painting.png",
+      "regions": {
+        "VASE": {
+          "x": 184,
+          "y": 160,
+          "rx": 12,
+          "ry": 12,
+          "label": "vase"
+        },
+        "ROSE": {
+          "x": 185,
+          "y": 75,
+          "rx": 12,
+          "ry": 12,
+          "label": "rose"
+        },
+        "PEAR": {
+          "x": 270,
+          "y": 232,
+          "rx": 12,
+          "ry": 12,
+          "label": "pear"
+        },
+        "APPLE": {
+          "x": 322,
+          "y": 225,
+          "rx": 12,
+          "ry": 12,
+          "label": "apple"
+        },
+        "CLOTH": {
+          "x": 90,
+          "y": 275,
+          "rx": 12,
+          "ry": 12,
+          "label": "cloth"
+        },
+        "PLATE": {
+          "x": 120,
+          "y": 240,
+          "rx": 12,
+          "ry": 12,
+          "label": "plate"
+        },
+        "GLASS": {
+          "x": 242,
+          "y": 170,
+          "rx": 12,
+          "ry": 12,
+          "label": "glass"
+        },
+        "LEMON": {
+          "x": 304,
+          "y": 262,
+          "rx": 12,
+          "ry": 12,
+          "label": "lemon"
+        },
+        "STEM": {
+          "x": 195,
+          "y": 113,
+          "rx": 12,
+          "ry": 12,
+          "label": "stem"
+        },
+        "TABLE": {
+          "x": 365,
+          "y": 260,
+          "rx": 12,
+          "ry": 12,
+          "label": "table"
+        }
+      },
+      "width": 400,
+      "height": 300
+    }
+  },
+  "beats": {}
+}

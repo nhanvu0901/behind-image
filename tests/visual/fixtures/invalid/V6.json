@@ -1,0 +1,282 @@
+{
+  "schema": "bti.visual/1",
+  "made_from": {
+    "narration": "fixture-narration",
+    "timing": "fixture-timing"
+  },
+  "cast": [
+    {
+      "id": "village",
+      "kind": "idea",
+      "name": "village",
+      "also": [],
+      "strip": true,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "VILLAGE"
+        }
+      ]
+    },
+    {
+      "id": "river",
+      "kind": "thing",
+      "name": "river",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "RIVER"
+        }
+      ]
+    },
+    {
+      "id": "bridge",
+      "kind": "thing",
+      "name": "bridge",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "BRIDGE"
+        }
+      ]
+    },
+    {
+      "id": "mill",
+      "kind": "thing",
+      "name": "mill",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "MILL"
+        }
+      ]
+    },
+    {
+      "id": "trees",
+      "kind": "thing",
+      "name": "trees",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "TREES"
+        }
+      ]
+    },
+    {
+      "id": "hill",
+      "kind": "thing",
+      "name": "hill",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "HILL"
+        }
+      ]
+    },
+    {
+      "id": "road",
+      "kind": "thing",
+      "name": "road",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "ROAD"
+        }
+      ]
+    },
+    {
+      "id": "fields",
+      "kind": "thing",
+      "name": "fields",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "FIELDS"
+        }
+      ]
+    },
+    {
+      "id": "cloud",
+      "kind": "thing",
+      "name": "cloud",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "CLOUD"
+        }
+      ]
+    },
+    {
+      "id": "window",
+      "kind": "thing",
+      "name": "window",
+      "also": [],
+      "strip": false,
+      "sub": "",
+      "shown_by": [
+        {
+          "region": "WINDOW"
+        }
+      ]
+    }
+  ],
+  "wanted": [],
+  "moments": [
+    {
+      "id": "m0001",
+      "line": "b0001",
+      "w0": 0,
+      "w1": 5,
+      "about": "village",
+      "show": {
+        "region": "VILLAGE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy village trong tranh."
+    },
+    {
+      "id": "m0002",
+      "line": "b0002",
+      "w0": 5,
+      "w1": 10,
+      "about": "river",
+      "show": {
+        "region": "RIVER"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy river trong tranh."
+    },
+    {
+      "id": "m0003",
+      "line": "b0003",
+      "w0": 10,
+      "w1": 15,
+      "about": "bridge",
+      "show": {
+        "region": "BRIDGE"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy bridge trong tranh."
+    },
+    {
+      "id": "m0004",
+      "line": "b0004",
+      "w0": 15,
+      "w1": 20,
+      "about": "mill",
+      "show": {
+        "region": "MILL"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy mill trong tranh."
+    },
+    {
+      "id": "m0005",
+      "line": "b0005",
+      "w0": 20,
+      "w1": 25,
+      "about": "trees",
+      "show": {
+        "region": "TREES"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy trees trong tranh."
+    },
+    {
+      "id": "m0006",
+      "line": "b0006",
+      "w0": 25,
+      "w1": 30,
+      "about": "hill",
+      "show": {
+        "region": "HILL"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy hill trong tranh."
+    },
+    {
+      "id": "m0007",
+      "line": "b0007",
+      "w0": 30,
+      "w1": 35,
+      "about": "road",
+      "show": {
+        "region": "ROAD"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy road trong tranh."
+    },
+    {
+      "id": "m0008",
+      "line": "b0008",
+      "w0": 35,
+      "w1": 40,
+      "about": "fields",
+      "show": {
+        "region": "FIELDS"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy fields trong tranh."
+    },
+    {
+      "id": "m0009",
+      "line": "b0009",
+      "w0": 40,
+      "w1": 45,
+      "about": "cloud",
+      "show": {
+        "region": "CLOUD"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy cloud trong tranh."
+    },
+    {
+      "id": "m0010",
+      "line": "b0010",
+      "w0": 45,
+      "w1": 50,
+      "about": "window",
+      "show": {
+        "region": "WINDOW"
+      },
+      "move": "hold",
+      "from": "previous",
+      "say": [],
+      "why": "Cho thấy window trong tranh."
+    }
+  ]
+}

@@ -186,6 +186,11 @@ def _asset(a: Any) -> dict | None:
            "height": _int(a.get("height")), "credit": credit, "regions": regions}
     if isinstance(a.get("caption"), str) and a["caption"]:
         out["caption"] = a["caption"]
+    # visualdoc: preserve picture-pool metadata exactly, including an explicit null period.
+    if "shows" in a and isinstance(a["shows"], list):
+        out["shows"] = copy.deepcopy(a["shows"])
+    if "period" in a:
+        out["period"] = a["period"]
     for k in ("original_width", "original_height"):          # the source's own size, kept apart from the stored one
         if _int(a.get(k)) > 0:
             out[k] = _int(a.get(k))
@@ -346,6 +351,11 @@ def doc_problem(d: Any) -> str | None:
                 return f"picks.assets.{k}.{f} must be a string"
         if a.get("caption") not in (None, "") and not caption_valid(a["caption"], k):
             return f"picks.assets.{k}.caption must be a short, clean picture label (at most 60 characters)"
+        # visualdoc: pool information is optional for legacy pictures.
+        if "shows" in a and (not isinstance(a["shows"], list) or any(not isinstance(v, str) or not v.strip() for v in a["shows"])):
+            return f"picks.assets.{k}.shows must be a list of nonempty cast ids"
+        if "period" in a and a["period"] not in ("then", "later", "today", None):
+            return f"picks.assets.{k}.period must be then, later, today or null"
         if a.get("content_box") is not None and _content_box(a["content_box"]) is None:
             return f"picks.assets.{k}.content_box must be an object with numbers x0 < x1 and y0 < y1"
         regions = a.get("regions", {})

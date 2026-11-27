@@ -1,0 +1,84 @@
+{
+  "schema": "bti.picks/1",
+  "main_asset": "A",
+  "assets": {
+    "A": {
+      "file": "media/painting.png",
+      "regions": {
+        "VILLAGE": {
+          "x": 120,
+          "y": 150,
+          "rx": 12,
+          "ry": 12,
+          "label": "village"
+        },
+        "RIVER": {
+          "x": 230,
+          "y": 220,
+          "rx": 12,
+          "ry": 12,
+          "label": "river"
+        },
+        "BRIDGE": {
+          "x": 215,
+          "y": 190,
+          "rx": 12,
+          "ry": 12,
+          "label": "bridge"
+        },
+        "MILL": {
+          "x": 314,
+          "y": 147,
+          "rx": 12,
+          "ry": 12,
+          "label": "mill"
+        },
+        "TREES": {
+          "x": 40,
+          "y": 140,
+          "rx": 12,
+          "ry": 12,
+          "label": "trees"
+        },
+        "HILL": {
+          "x": 235,
+          "y": 92,
+          "rx": 12,
+          "ry": 12,
+          "label": "hill"
+        },
+        "ROAD": {
+          "x": 90,
+          "y": 236,
+          "rx": 12,
+          "ry": 12,
+          "label": "road"
+        },
+        "FIELDS": {
+          "x": 350,
+          "y": 235,
+          "rx": 12,
+          "ry": 12,
+          "label": "fields"
+        },
+        "CLOUD": {
+          "x": 80,
+          "y": 45,
+          "rx": 12,
+          "ry": 12,
+          "label": "cloud"
+        },
+        "WINDOW": {
+          "x": 132,
+          "y": 151,
+          "rx": 12,
+          "ry": 12,
+          "label": "window"
+        }
+      },
+      "width": 400,
+      "height": 300
+    }
+  },
+  "beats": {}
+}
