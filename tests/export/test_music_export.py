@@ -5,11 +5,14 @@ from bti.music import library
 
 
 def test_music_remixes_without_rendering_and_adds_credit(patch_run, project, settings, manager, fake_tools, tmp_path, monkeypatch):
+    from bti.music import mix
+    monkeypatch.setattr(mix, "mix_command", lambda ffmpeg, voice, cues, out, duration:
+                        [*ffmpeg, "-filter_complex", "fake", "-t", str(duration), str(out)])
     music_dir = tmp_path / "music"
     music_dir.mkdir()
     (music_dir / "one.opus").write_text("fake audio")
     rows = [{"id": "one", "file": "one.opus", "duration": 100, "title": "A piece", "composer": "A composer",
-             "credit": "A piece — A performer", "license": "CC0", "source": "https://commons.wikimedia.org/wiki/File:One.ogg"}]
+             "performer": "A performer", "credit": "A piece — A performer", "license": "CC0", "source": "https://commons.wikimedia.org/wiki/File:One.ogg"}]
     (music_dir / "library.json").write_text(json.dumps(rows))
     monkeypatch.setattr(library, "directory", lambda: music_dir)
     before_plan = run.plan_for(project, settings)
@@ -17,7 +20,7 @@ def test_music_remixes_without_rendering_and_adds_credit(patch_run, project, set
     assert first["state"] == "done"
     calls = len(fake_tools.calls("engine"))
     doc = {"schema": "bti.music/1", "cues": [{"recording": "one", "start": {"t": 0}, "end": {"t": 5},
-            "offset": 0, "level_db": -24, "fade_in": 1, "fade_out": 1, "role": "bed", "why": "Quiet."}]}
+            "offset": 0, "level": "normal", "fade_in": 1, "fade_out": 1, "role": "bed", "why": "Quiet."}]}
     (project / "music.json").write_text(json.dumps(doc))
     assert run.state(project, manager)["state"] == "stale"
     after_plan = run.plan_for(project, settings)
@@ -27,7 +30,7 @@ def test_music_remixes_without_rendering_and_adds_credit(patch_run, project, set
     assert second["state"] == "done", second.get("error")
     assert len(fake_tools.calls("engine")) == calls
     text = (project / "export" / "description.txt").read_text(encoding="utf-8")
-    assert "Music" in text and "A piece — A performer" in text and "CC0" in text
+    assert "Music" in text and "A piece — A composer; performed by A performer" in text and "CC0" in text
     assert run.state(project, manager)["state"] == "done"
 
 

@@ -23,11 +23,11 @@ def test_music_view_resolves_cues_and_serves_recordings(tmp_path, monkeypatch):
     project.mkdir(parents=True)
     lib.mkdir()
     (lib / "piece.opus").write_bytes(b"recording")
-    (lib / "library.json").write_text(json.dumps([{"id": "one", "file": "piece.opus", "duration": 10, "title": "Piece", "composer": "Composer", "license": "CC0", "credit": "Credit"}]))
+    (lib / "library.json").write_text(json.dumps([{"id": "one", "file": "piece.opus", "duration": 60, "title": "Piece", "composer": "Composer", "license": "CC0", "credit": "Credit"}]))
     monkeypatch.setattr(library, "directory", lambda: lib)
     (project / "storyboard.json").write_text(json.dumps({"end": {"t": 10}, "shots": []}))
     (project / "timing.json").write_text(json.dumps({"duration": 10, "words": [{"w": "hello", "s": 1, "e": 2}], "chapters": []}))
-    cue = {"recording": "one", "start": {"w": 0}, "end": {"t": 5}, "offset": 0, "level_db": -24,
+    cue = {"recording": "one", "start": {"w": 0}, "end": {"t": 5}, "offset": 0, "level": "normal",
            "fade_in": 1, "fade_out": 1, "role": "bed", "why": "Quiet."}
     (project / "music.json").write_text(json.dumps({"cues": [cue]}))
     client = TestClient(create_app(projects_root=projects, engine_module=None, media_module=None))

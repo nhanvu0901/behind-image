@@ -15,11 +15,11 @@ on the last shot. Silence is allowed.
 
 Write `out/music.json` as `{ "cues": [...] }`. Each cue has:
 `recording` (catalogue id), `start` and `end` anchors, `offset` (seconds into
-the recording), `role` (`bed`, `swell`, `ident`, `ending`), `level_db` (gain
-from -60 to -6 dB), `fade_in` and `fade_out` (seconds), and `why` (one sentence).
+the recording), `role` (`bed`, `swell`, `ident`, `ending`), `level` (`soft`, `normal`, or
+`strong`), `fade_in` and `fade_out` (seconds), and `why` (one sentence).
 Anchors: `{ "t": 12.5 }`, `{ "w": 12, "text": "word", "off": 0 }`,
 `{ "chapter": 0 }`, `{ "ident": true }`, or `{ "end": true }`. Chapter
 indices are zero-based. A recording excerpt must be long enough; cues may
-only overlap within both fades and three cues may never overlap. Fades must fit
+only overlap within both fades and three cues may never overlap. A recording shorter than 45 seconds may be used only as a swell. The catalogue lists each recording’s duration and character. Fades must fit
 within a cue. Keep every cue within the video. Run the provided check command
 (`./check` on Unix, `check.cmd` on Windows) and fix every error before finishing. Do not modify the input files.

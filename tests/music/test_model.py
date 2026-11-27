@@ -21,12 +21,12 @@ def test_set_and_clear_music_require_validated_current_revision(tmp_path, monkey
     (project / "timing.json").write_text(json.dumps({"duration": 10, "words": [{"w": "hello", "s": 0, "e": 1}], "chapters": []}))
     lib = tmp_path / "music"
     lib.mkdir()
-    (lib / "library.json").write_text(json.dumps([{"id": "one", "duration": 10}]))
+    (lib / "library.json").write_text(json.dumps([{"id": "one", "duration": 60}]))
     monkeypatch.setattr(library, "directory", lambda: lib)
     client = TestClient(create_app(projects_root=root, engine_module=None, media_module=None))
     url = "/api/projects/p/music"
     rev = client.get(url).json()["rev"]
-    doc = {"cues": [{"recording": "one", "start": {"t": 0}, "end": {"t": 5}, "offset": 0, "level_db": -24,
+    doc = {"cues": [{"recording": "one", "start": {"t": 0}, "end": {"t": 5}, "offset": 0, "level": "normal",
                      "fade_in": 1, "fade_out": 1, "role": "bed", "why": "Quiet opening."}]}
     response = client.put(url, json={"base_rev": rev, "music": doc})
     assert response.status_code == 200, response.text
@@ -54,13 +54,13 @@ def test_agent_writes_valid_music_and_receives_timed_inputs(tmp_path, monkeypatc
     (project / "project.json").write_text(json.dumps({"title": "Landscape", "artist": "Painter", "year": "1850", "place": "France"}))
     lib = tmp_path / "music"
     lib.mkdir()
-    (lib / "library.json").write_text(json.dumps([{"id": "one", "duration": 10, "title": "Piece"}]))
+    (lib / "library.json").write_text(json.dumps([{"id": "one", "duration": 60, "title": "Piece", "forces": "solo piano"}]))
     monkeypatch.setattr(library, "directory", lambda: lib)
     resolved = SimpleNamespace(model="mock", public=lambda: {"id": "fake", "model": "mock"})
     monkeypatch.setattr(draft, "_resolve", lambda p, role, model: resolved)
     monkeypatch.setattr(session, "check_installed", lambda model: None)
     seen = {}
-    cue = {"recording": "one", "start": {"t": 0}, "end": {"t": 5}, "offset": 0, "level_db": -24,
+    cue = {"recording": "one", "start": {"t": 0}, "end": {"t": 5}, "offset": 0, "level": "normal",
            "fade_in": 1, "fade_out": 1, "role": "bed", "why": "Quiet opening."}
     def fake_session(root, **kwargs):
         data = json.loads((root / "inputs" / "context.json").read_text(encoding="utf-8"))
@@ -82,6 +82,7 @@ def test_agent_writes_valid_music_and_receives_timed_inputs(tmp_path, monkeypatc
     rec = job.start("p", project, manager=Manager())
     assert rec["result"]["cues"] == 1
     assert store.read(project)["cues"] == [cue]
+    assert seen["library"]["one"]["character"] == "solo piano"
     assert seen["painting"]["place"] == "France"
     assert seen["narration"][0]["lines"][0]["text"] == "hello world"
     assert seen["pauses"] == [{"start": 1, "end": 3, "duration": 2}]
@@ -110,7 +111,7 @@ def test_agent_refuses_when_another_agent_is_working(tmp_path, monkeypatch):
     (tmp_path / "timing.json").write_text(json.dumps({"words": [], "chapters": []}))
     lib = tmp_path / "lib"
     lib.mkdir()
-    (lib / "library.json").write_text(json.dumps([{"id": "one", "duration": 10}]))
+    (lib / "library.json").write_text(json.dumps([{"id": "one", "duration": 60}]))
     monkeypatch.setattr(library, "directory", lambda: lib)
     monkeypatch.setattr(draft, "_resolve", lambda p, role, model: SimpleNamespace(model="mock", public=lambda: {}))
     monkeypatch.setattr(session, "check_installed", lambda model: None)
@@ -141,7 +142,7 @@ def test_state_lists_music_actions_only_with_storyboard_and_marks_busy(tmp_path,
     from types import SimpleNamespace
     from bti.editor import state_api as state
     from bti.music import library
-    monkeypatch.setattr(library, "index", lambda: {"one": {"duration": 20}})
+    monkeypatch.setattr(library, "index", lambda: {"one": {"duration": 60}})
     monkeypatch.setattr(state, "_model_needs", lambda c, role: [])
     ctx = SimpleNamespace(sb_exists=False, sb_corrupt=False, d=tmp_path, actor=lambda role: "agent:mock", agent_busy=lambda kind: False)
     assert state.b_music_auto(ctx) is None

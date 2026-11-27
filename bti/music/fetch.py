@@ -11,6 +11,9 @@ import json
 import re
 import subprocess
 import tempfile
+import time
+from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -57,17 +60,29 @@ def build_record(seed, ident, filename, meta, source, duration, loudness):
     ok, label = licence(meta)
     if not ok:
         raise ValueError(label)
-    performer = _plain(_value(meta, "Artist"))
-    if not performer:
-        raise ValueError("performer is absent from the file metadata")
+    performer = _plain(_value(meta, "Performer"))
+    composer_name = seed["composer"]
+    if not performer and composer_name:
+        description = _plain(_value(meta, "ImageDescription"))
+        surname = re.escape(composer_name.split()[-1])
+        match = re.match(r"^([A-Za-zÀ-ÖØ-öø-ÿ][A-Za-zÀ-ÖØ-öø-ÿ .'-]{2,80}?)\s+-\s*" + surname + r"(?:\s|[-,:])", description, re.I)
+        if match:
+            performer = match.group(1).strip()
+    if performer.casefold() in {composer_name.casefold(), composer_name.split()[-1].casefold() if composer_name else ""}:
+        performer = ""
     filename_title = urllib.parse.unquote(urllib.parse.urlparse(source).path.rsplit("/", 1)[-1]).removeprefix("File:").replace("_", " ")
     title = re.sub(r"\.[^.]+$", "", filename_title) or seed["title"]
     composer = seed["composer"]
-    credit = "%s — %s; performed by %s" % (title, composer, performer)
-    return {"id": ident, "file": filename, "title": title, "composer": composer,
+    credit = title + (" — " + composer if composer else "")
+    if performer:
+        credit += "; performed by " + performer
+    record = {"id": ident, "file": filename, "title": title, "composer": composer,
             "composed": seed["composed"], "period": seed["period"], "forces": seed["forces"],
-            "duration": duration, "loudness": loudness, "performer": performer, "license": label,
+            "duration": duration, "loudness": loudness, "license": label,
             "source": source, "credit": credit}
+    if performer:
+        record["performer"] = performer
+    return record
 
 
 def _json(url):
@@ -121,82 +136,169 @@ def _convert(source, destination):
     return round(duration, 3), float(values[-1])
 
 
-def fetch(limit, root, max_bytes, max_downloads=None):
+CATEGORIES = [
+    ("Category:Audio files of the Open Goldberg Variations", "Johann Sebastian Bach", "baroque", "piano or harpsichord"),
+    ("Category:Audio files of Open Well-Tempered Clavier, Book 1", "Johann Sebastian Bach", "baroque", "piano"),
+    ("Category:Musopen", "", "", "unknown"),
+    ("Category:Musopen Kickstarter Project", "", "", "unknown"),
+    ("Category:Audio files of music by Frédéric Chopin", "Frédéric Chopin", "romantic", "unknown"),
+    ("Category:Audio files of music by Claude Debussy", "Claude Debussy", "modern", "unknown"),
+    ("Category:Audio files of music by Erik Satie", "Erik Satie", "modern", "unknown"),
+    ("Category:Audio files of music by Ludwig van Beethoven", "Ludwig van Beethoven", "classical", "unknown"),
+]
+
+
+def _retry_delay(exc):
+    value = exc.headers.get("Retry-After") if exc.headers else None
+    if value:
+        try:
+            return max(1, float(value))
+        except ValueError:
+            try:
+                return max(1, (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds())
+            except (TypeError, ValueError):
+                pass
+    return 60
+
+
+def _retry(call):
+    failures = 0
+    while True:
+        try:
+            return call()
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (429, 503):
+                raise
+            delay = max(_retry_delay(exc), min(300, 5 * 2 ** min(failures, 6)))
+            failures += 1
+            print("Commons rate limit; waiting %.0f seconds" % delay, flush=True)
+            time.sleep(delay)
+
+
+def _category_page(category, continuation):
+    params = {"action": "query", "format": "json", "formatversion": "2", "generator": "categorymembers",
+              "gcmtitle": category, "gcmtype": "file|subcat", "gcmlimit": "50", "prop": "imageinfo",
+              "iiprop": "url|mime|size|extmetadata", "maxlag": "5", **continuation}
+    while True:
+        result = _retry(lambda: _json(API + "?" + urllib.parse.urlencode(params)))
+        error = result.get("error", {})
+        if error.get("code") != "maxlag":
+            if error:
+                raise ValueError("Commons API: " + str(error))
+            return result
+        delay = max(5, float(error.get("lag", 5)))
+        print("Commons maxlag; waiting %.0f seconds" % delay, flush=True)
+        time.sleep(delay)
+
+
+def _save_state(root, state):
+    from bti.script.store import write_json_atomic
+    write_json_atomic(root / "fetch-state.json", state)
+
+
+def fetch(limit, root, max_bytes, max_downloads=None, *, categories=None, max_total_bytes=500*1024*1024):
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     rows = library.read(root)
     known = {r.get("source") for r in rows}
-    added = 0
-    downloads = 0
-    max_downloads = max_downloads if max_downloads is not None else limit * 3
-    seeds = sorted(seed_plan(), key=lambda row: "instrumental" not in row["forces"])
-    for seed in seeds:
-        if added >= limit or downloads >= max_downloads:
-            break
-        try:
-            pages = candidates(seed)
-        except urllib.error.HTTPError as exc:
-            if exc.code == 429:
-                print("Commons rate limit reached; try again later")
-                break
-            print("search failed for %s: %s" % (seed["query"], exc))
-            continue
-        except (OSError, ValueError) as exc:
-            print("search failed for %s: %s" % (seed["query"], exc))
-            break
-        for page in pages:
-            if downloads >= max_downloads:
-                break
-            info = (page.get("imageinfo") or [{}])[0]
-            meta = info.get("extmetadata") or {}
-            ok, reason = licence(meta)
-            title = page.get("title", "unknown")
-            if not ok:
-                print("refused %s: %s" % (title, reason))
-                continue
-            if not _matches(page, seed):
-                print("refused %s: filename does not identify the composer and work" % title)
-                continue
-            if not str(info.get("mime", "")).startswith("audio/") or info.get("size", max_bytes + 1) > max_bytes:
-                print("refused %s: not audio or too large" % title)
-                continue
-            source = info.get("descriptionurl", "")
-            if source in known or not source.startswith("https://commons.wikimedia.org/"):
-                continue
-            ident = hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
-            filename = ident + ".opus"
-            dest = root / filename
-            if dest.exists():
-                print("refused %s: output file already exists" % title)
-                continue
+    entries = categories if categories is not None else CATEGORIES
+    entries = [(entry, "", "", "unknown") if isinstance(entry, str) else tuple(entry) for entry in entries]
+    state_path = root / "fetch-state.json"
+    if state_path.exists():
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    else:
+        state = {"queue": [{"category": c, "composer": composer, "period": period, "forces": forces,
+                            "continue": {}, "depth": 0} for c, composer, period, forces in entries],
+                 "pending": [], "seen": [x[0] for x in entries], "bytes": 0}
+    # Checkpoints can outlive the catalogue's category descriptions.
+    category_forces = {category: forces for category, _, _, forces in entries}
+    for item in [*state["queue"], *state["pending"]]:
+        if item["category"] in category_forces:
+            item["forces"] = category_forces[item["category"]]
+    added = downloads = 0
+    max_downloads = max_downloads if max_downloads is not None else limit * 5
+    while (state["queue"] or state["pending"]) and added < limit and downloads < max_downloads:
+        if not state["pending"]:
+            item = state["queue"][0]
+            print("category: " + item["category"], flush=True)
             try:
-                # Temporary files stay in the selected library and are removed individually.
-                with tempfile.NamedTemporaryFile(dir=root, prefix=".fetch-", delete=False) as f:
-                    raw = Path(f.name)
-                with tempfile.NamedTemporaryFile(dir=root, prefix=".fetch-", suffix=".opus", delete=False) as f:
-                    converted = Path(f.name)
+                result = _category_page(item["category"], item["continue"])
+            except (OSError, ValueError) as exc:
+                print("category failed: %s" % exc, flush=True)
+                _save_state(root, state)
+                break
+            time.sleep(1)
+            pages = result.get("query", {}).get("pages", [])
+            for page in pages:
+                if page.get("ns") == 14 and item["depth"] < 2 and page.get("title") not in state["seen"]:
+                    state["seen"].append(page["title"])
+                    state["queue"].append({**item, "category": page["title"], "continue": {}, "depth": item["depth"] + 1})
+                elif page.get("ns", 6) == 6:
+                    state["pending"].append({"page": page, "category": item["category"], "composer": item["composer"],
+                                             "period": item["period"], "forces": item["forces"]})
+            continuation = result.get("continue")
+            if continuation:
+                item["continue"] = continuation
+            else:
+                state["queue"].pop(0)
+            _save_state(root, state)
+            continue
+        pending = state["pending"][0]
+        page = pending["page"]
+        info = (page.get("imageinfo") or [{}])[0]
+        meta = info.get("extmetadata") or {}
+        title, source = page.get("title", "unknown"), info.get("descriptionurl", "")
+        ok, reason = licence(meta)
+        size = info.get("size", max_bytes + 1)
+        mime = info.get("mime", "")
+        if (not ok or not (mime.startswith("audio/") or mime == "application/ogg") or
+            not isinstance(size, int) or size > max_bytes or not source.startswith("https://commons.wikimedia.org/") or source in known):
+            print("skipped %s: %s" % (title, reason if not ok else "known, not audio, missing source, or too large"), flush=True)
+        elif state["bytes"] + size > max_total_bytes:
+            print("download byte limit reached; checkpoint saved", flush=True)
+            break
+        else:
+            ident = hashlib.sha256(source.encode("utf-8")).hexdigest()[:16]
+            filename, dest = ident + ".opus", root / (ident + ".opus")
+            if dest.exists():
+                print("skipped %s: output file already exists" % title, flush=True)
+            else:
+                raw = converted = None
                 try:
+                    with tempfile.NamedTemporaryFile(dir=root, prefix=".fetch-", delete=False) as f:
+                        raw = Path(f.name)
+                    with tempfile.NamedTemporaryFile(dir=root, prefix=".fetch-", suffix=".opus", delete=False) as f:
+                        converted = Path(f.name)
                     downloads += 1
-                    _download(info.get("url", ""), raw, max_bytes)
+                    state["bytes"] += size
+                    _save_state(root, state)
+                    _retry(lambda: _download(info.get("url", ""), raw, max_bytes))
+                    time.sleep(5)
                     duration, loudness = _convert(raw, converted)
+                    composer = _plain(_value(meta, "Composer")) or pending["composer"]
+                    seed = {"title": title, "composer": composer, "composed": "", "period": pending["period"], "forces": pending["forces"]}
                     record = build_record(seed, ident, filename, meta, source, duration, loudness)
+                    record["category"] = pending["category"]
                     converted.replace(dest)
                     try:
                         library.write(rows + [record], root)
                     except Exception:
                         dest.unlink()
                         raise
+                    rows.append(record)
+                    known.add(source)
+                    added += 1
+                    print("added %s (%s, %.1f LUFS)" % (title, reason, loudness), flush=True)
+                except (OSError, ValueError, subprocess.CalledProcessError) as exc:
+                    print("refused %s: %s" % (title, exc), flush=True)
                 finally:
-                    raw.unlink(missing_ok=True)
-                    converted.unlink(missing_ok=True)
-                rows.append(record)
-                known.add(source)
-                added += 1
-                print("added %s (%s, %.1f LUFS)" % (title, reason, loudness))
-                break
-            except Exception as exc:
-                print("refused %s: %s" % (title, exc))
-    print("added %d recording(s)" % added)
+                    if raw is not None:
+                        raw.unlink(missing_ok=True)
+                    if converted is not None:
+                        converted.unlink(missing_ok=True)
+        state["pending"].pop(0)
+        _save_state(root, state)
+    print("added %d recording(s); downloaded %.1f MB" % (added, state["bytes"] / 1024**2), flush=True)
     return added
 
 
@@ -206,10 +308,11 @@ def main(argv=None):
     parser.add_argument("--directory", type=Path, default=None)
     parser.add_argument("--max-mb", type=int, default=20)
     parser.add_argument("--max-downloads", type=int, default=None)
+    parser.add_argument("--max-total-mb", type=int, default=500)
     args = parser.parse_args(argv)
-    if args.limit < 1 or args.max_mb < 1 or (args.max_downloads is not None and args.max_downloads < 1):
+    if args.limit < 1 or args.max_mb < 1 or args.max_total_mb < 1 or (args.max_downloads is not None and args.max_downloads < 1):
         parser.error("limits must be positive")
-    fetch(args.limit, args.directory or library.directory(), args.max_mb * 1024 * 1024, args.max_downloads)
+    fetch(args.limit, args.directory or library.directory(), args.max_mb * 1024 * 1024, args.max_downloads, max_total_bytes=args.max_total_mb * 1024 * 1024)
 
 
 if __name__ == "__main__":
