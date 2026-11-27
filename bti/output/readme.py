@@ -186,6 +186,8 @@ def _contents(st: dict) -> list[str]:
     add("`%s/`: `shots.md` (%s cảnh bằng lời thường), `storyboard.json`%s." % (PARTS["storyboard"], (sb.get("counts") or {}).get("shots"),
                                                                               (", %d tờ ảnh tổng hợp (mỗi cảnh một khung hình)" % len(sheets)) if sheets else ""), "storyboard")
     add("`%s/`: `description.txt` (mô tả đăng video), `chapters.txt` (mục lục), `report.json` (báo cáo kiểm tra)." % PARTS["export"], "export")
+    q = parts.get("quality") or {}
+    add("`%s/`: `scorecard.md` (bảng chấm chất lượng), `record.md` (hồ sơ dựng video), `sheets/` (%s tờ ảnh tổng hợp)." % (PARTS["quality"], (q.get("counts") or {}).get("sheets") or 0), "quality")
     lg = st.get("log") or {}
     L.append("- `log/`: `changes.md` (%s lần sửa), `jobs.md` (%s việc dài)%s." % (lg.get("changes", 0), lg.get("jobs", 0), (", `auto_runs.md` (%s lần chạy tự động)" % lg["auto_runs"]) if lg.get("auto_runs") else ""))
     return L

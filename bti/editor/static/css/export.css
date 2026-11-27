@@ -31,3 +31,14 @@
 .v-exp .ex-music-list { margin: 0; padding-left: 22px; }
 .v-exp .ex-music-list li { margin: 6px 0; }
 .v-exp .ex-music-list audio { display: block; width: min(100%, 360px); height: 32px; margin-top: 3px; }
+/* worker scorecard */
+.v-exp .ex-score-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.v-exp .ex-score-head h4 { margin: 0; }
+.v-exp .ex-scorecard tr.sc-warn { background: rgba(212, 160, 23, .09); }
+.v-exp .ex-scorecard .badge.na { background: var(--elev); color: var(--muted); border: 1px solid var(--border); }
+.v-exp .ex-score-detail { font-size: 11px; margin-top: 2px; }
+.v-exp .ex-sheets { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 10px; }
+.v-exp .ex-sheet { display: flex; flex-direction: column; gap: 4px; text-decoration: none; color: inherit; background: var(--elev); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+.v-exp .ex-sheet:hover { border-color: var(--accent); }
+.v-exp .ex-sheet img { width: 100%; height: auto; display: block; border-radius: 3px; }
+.v-exp .ex-sheet span { font-size: 11px; color: var(--muted); }

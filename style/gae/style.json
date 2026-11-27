@@ -521,5 +521,27 @@
   },
   "min_element_s": 1.5,
   "source": "docs/design/2026-11-18-identity-raking-light.md sections 3 to 5 and section 11. nominal.<role>.start_s = seconds from the start of the VIDEO at which the element starts (the opening overlays go on the shot on screen then); dur_s = nominal length, the engine scales the times of a shorter element; a role with null is not used by that style; mark_transition is the entry transition of the mark shot (null = hard cut); brand_params holds default parameters written when applying that brand technique (`variant: B` for ID-BRAND-04); earlier.<role> lists the techniques of an earlier form of the same style that a stored storyboard may still hold (raking: ID-BRAND-01 and ID-BRAND-03 before ID-BRAND-04): they are not reported as another style's, and they are replaced by the style's own technique when the identity is applied again."
+ },
+ "quality": {
+  "small_painting_max_share": 0.06,
+  "small_painting_cover_threshold": 0.70,
+  "marks_per_min_max": 3.0,
+  "mark_max_height_pct": 0.30,
+  "marks_on_person_max": 0,
+  "strip_sub_repeats_max": 0,
+  "strip_on_thing_max": 0,
+  "borrowed_min_s": 3.0,
+  "borrowed_max_gap_s": 120.0,
+  "short_shot_min_s": 2.5,
+  "short_shots_max": 0,
+  "region_repeat_max": 4,
+  "subject_not_shown_max": 0,
+  "unfilled_identity_max": 0,
+  "identity_fill_min_cover": 0.95,
+  "loudness_target_lufs": -15.0,
+  "loudness_tolerance_lu": 1.5,
+  "pause_under_speech_min_db": 6.0,
+  "pause_under_speech_max_db": 22.0,
+  "source": "docs/design/2026-11-27-unified-pipeline.md section 6 (phase 0 yardstick; open to tuning)"
  }
 }

@@ -30,6 +30,7 @@ The finished video as one MP4, with a check sheet, a description that lists the 
 | `auto.run` | export | Chạy tự động |  | machine_time: the sum of what it may start from where the project stands | yes |
 | `auto.cancel` | export | Dừng |  |  |  |
 | `output.build` | export | Ghi thư mục output |  |  |  |
+| `scorecard.make` | export | Chấm điểm chất lượng |  | machine_time: a few seconds |  |
 <!-- END GENERATED: actions -->
 
 The export is rendered in ~60-second parts cut at shot starts and joined at the end. Each part is keyed only by what decides its frames (the shots and overlays playing inside it, their assets and regions, anchored word times, style, fps, width, quality, and `RENDER_VERSION` — not the whole storyboard revision). Cancelling (`bti job <id> --cancel`, or the `export.cancel` action) keeps the finished parts; starting again goes on from there, also after a server restart.

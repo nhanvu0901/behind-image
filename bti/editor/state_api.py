@@ -226,6 +226,10 @@ SPECS: list[Spec] = [
          when="Listed when the app has an output folder (`output/<artwork key>/`) and the project is not a reference project. Always ready: fills (or refills) the folder from the project as it stands "
               "(the video, the readable documents, the log, the index); the body `{\"clean\": true}` also removes the working folder's caches when the export stands. A project of the same painting "
               "as the folder's last project takes it over."),
+    # ---- scorecard: quality scorecard, contact sheets and render record (bti/scorecard/)
+    Spec("scorecard.make", "export", "Chấm điểm chất lượng", "POST", P + "/scorecard/make",
+         cost=("machine_time", "a few seconds"),
+         when="Once the project has a readable storyboard and timing.json. Computes the quality scorecard, contact sheets and render record into scorecard/ and output/<key>/7_quality/; never gates anything."),
 ]
 SPEC: dict[str, Spec] = {s.id: s for s in SPECS}
 assert len(SPEC) == len(SPECS), "duplicate action id"
@@ -1083,6 +1087,14 @@ def b_output_build(c: Ctx):
     return E([], {})
 
 
+def b_scorecard_make(c: Ctx):
+    """scorecard: build quality scorecard, contact sheets and render record when storyboard and timing exist."""
+    if not c.sb_exists or c.sb_corrupt:
+        return None
+    needs = [] if c.has_timing else ["timing"]
+    return E(needs, {}, advances=False)
+
+
 BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "outline.generate": b_outline_generate, "outline.import": b_outline_import, "outline.approve": b_outline_approve,
     "narration.generate": b_narration_generate, "narration.import": b_narration_import, "narration.ops": b_narration_ops,
@@ -1095,7 +1107,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
     "draft.edit": b_draft_edit, "identity.set": b_identity_set,
     "music.auto": b_music_auto, "music.set": b_music_set, "music.clear": b_music_clear,
-    "export.start": b_export_start, "auto.run": b_auto_run, "output.build": b_output_build,
+    "export.start": b_export_start, "auto.run": b_auto_run, "output.build": b_output_build, "scorecard.make": b_scorecard_make,
 }
 CANCELS = set(CANCEL_ID.values())
 

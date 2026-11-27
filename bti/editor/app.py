@@ -981,6 +981,8 @@ def create_app(projects_root: str | Path | None = None, style_root: str | Path |
     app.include_router(settings_router)
     from bti.output.api import router as _output_router              # outfolder: POST .../output/build, GET .../output
     app.include_router(_output_router)
+    from bti.scorecard.api import router as _scorecard_router        # scorecard: GET .../scorecard, POST .../scorecard/make
+    app.include_router(_scorecard_router)
     from .agent_api import make_router as _agent_router              # which agent works on a project (step select)
     app.include_router(_agent_router(pdir=pdir))
     from .identity_api import make_router as _identity_router        # opening, channel-name beat and chapter marks (needs this app's save path)
