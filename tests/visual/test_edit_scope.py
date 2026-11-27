@@ -51,6 +51,9 @@ def test_edit_workspace_carries_script_scope_and_instruction(tmp_path):
     assert json.loads((root / 'inputs/scope.json').read_text()) == ['m1']
     assert 'Show the town' in (root / 'TASK.md').read_text()
     assert (root / 'inputs/catalogue.json').is_file()
+    plan = (root / 'inputs/PLAN.md').read_text(encoding='utf-8')
+    assert '{{CROP_CMD}}' not in plan and '{{CHECK_CMD}}' not in plan
+    assert 'crop' in plan and 'check' in plan
 
 
 def test_scope_rejects_new_moment_outside_requested_words(tmp_path):

@@ -197,6 +197,7 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         state['choice'] = json.loads((ws / 'out/choice.json').read_text(encoding='utf-8'))
         if state['regions']:
             from bti.picks.auto import helper
+            check.sync_tighten(ws)
             rep = helper.run_check(ws / 'tighten')
             state['region_choices'] = rep.value['regions']
         return {'chosen': len(state['choice']), 'notes': notes}

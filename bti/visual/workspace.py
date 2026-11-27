@@ -115,11 +115,7 @@ def build_choose(pdir: Path, visual: dict, search: dict, *, root: Path | None = 
             raw = shapes.box_to_region(region['box'], main['width'], main['height'])
             entries.append({'name': name, 'raw': raw, 'label': region['what'], 'thing': region.get('thing', ''), 'lines': [], 'line_texts': {}})
         old_workspace.build_tighten(pdir, main, entries, limits, root=root / 'tighten')
-        regions_file = root / 'tighten/inputs/regions.json'
-        region_inputs = json.loads(regions_file.read_text(encoding='utf-8'))
-        region_inputs['note'] = region_inputs['note'].replace('out/tighten.json', 'tighten/out/tighten.json')
-        _json(regions_file, region_inputs)
-        (root / 'tighten/TASK.md').write_text('Follow the region instructions in ../TASK.md; write tighten/out/tighten.json relative to the choose folder.\n', encoding='utf-8')
+        (root / 'tighten/TASK.md').write_text('Follow the region instructions in ../TASK.md; write out/tighten.json relative to the choose folder.\n', encoding='utf-8')
     instruction = (REPO / 'skills/visual_plan/CHOOSE.template.md').read_text(encoding='utf-8')
     instruction = instruction.replace('{{CHECK_CMD}}', '.\\check.cmd' if windows else './check')
     if regions:

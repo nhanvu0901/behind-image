@@ -73,4 +73,5 @@ def test_choose_check_names_region_file_from_choose_root(tmp_path):
     (tmp_path / 'out/choice.json').write_text('{}')
     (tmp_path / 'tighten/inputs/context.json').write_text(json.dumps({'mode': 'tighten', 'tighten': {}}))
     report = run_check(tmp_path)
-    assert 'tighten/out/tighten.json' in report['issues'][0]['message']
+    assert 'out/tighten.json' in report['issues'][0]['message']
+    assert all('tighten/out/' not in issue['message'] for issue in report['issues'])

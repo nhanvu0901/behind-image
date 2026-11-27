@@ -59,8 +59,10 @@ def test_choose_workspace_prepares_new_region_cutouts(tmp_path):
                         regions={'TREE': {'box': [0.1, 0.1, 0.5, 0.6], 'what': 'a tree'}}, limits=Limits(5, 30, 1))
     entries = json.loads((root / 'tighten/inputs/regions.json').read_text())['regions']
     assert entries[0]['name'] == 'TREE' and (root / 'tighten' / entries[0]['cutout']).exists()
-    assert 'tighten/out/tighten.json' in json.loads((root / 'tighten/inputs/regions.json').read_text())['note']
-    assert 'tighten/out/tighten.json' in (root / 'tighten/TASK.md').read_text()
+    assert 'out/tighten.json' in json.loads((root / 'tighten/inputs/regions.json').read_text())['note']
+    assert 'out/tighten.json' in (root / 'tighten/TASK.md').read_text()
+    for content in ((root / 'TASK.md').read_text(), (root / 'tighten/TASK.md').read_text(), (root / 'tighten/inputs/regions.json').read_text()):
+        assert 'tighten/out/tighten.json' not in content
 
 
 def test_revisions_use_the_same_file_hashes_as_the_visual_converter(tmp_path):

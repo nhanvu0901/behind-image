@@ -50,7 +50,11 @@ def build_workspace(inp, timing, visual, ids, instruction, *, root=None):
     root = workspace.build_plan(inp, timing, root=root, instruction=text)
     workspace._json(root / 'inputs/visual.json', visual)
     workspace._json(root / 'inputs/scope.json', ids)
-    (root / 'inputs/PLAN.md').write_text((workspace.REPO / 'skills/visual_plan/PLAN.template.md').read_text(encoding='utf-8'), encoding='utf-8')
+    import sys
+    plan = (workspace.REPO / 'skills/visual_plan/PLAN.template.md').read_text(encoding='utf-8')
+    plan = plan.replace('{{CHECK_CMD}}', '.\\check.cmd' if sys.platform == 'win32' else './check')
+    plan = plan.replace('{{CROP_CMD}}', '.\\crop.cmd' if sys.platform == 'win32' else './crop')
+    (root / 'inputs/PLAN.md').write_text(plan, encoding='utf-8')
     import json
     context_path = root / 'inputs/context.json'
     context_data = json.loads(context_path.read_text(encoding='utf-8'))
@@ -58,7 +62,6 @@ def build_workspace(inp, timing, visual, ids, instruction, *, root=None):
     context_path.write_text(json.dumps(context_data, ensure_ascii=False), encoding='utf-8')
     # Keep the command the model runs identical to the programmatic gate.
     import stat
-    import sys
     windows = sys.platform == 'win32'
     command = root / ('check.cmd' if windows else 'check')
     if windows:
