@@ -120,3 +120,17 @@ def test_point_in_borrowed_picture_region_is_not_assumed_missing():
     doc["moments"][0].update(about=None, show={"picture": "B"}, say=[{"point": [{"region": "DETAIL", "word": 1}]}])
     picks = {"main_asset": "A", "assets": {"A": {"regions": {"RIVER": {}}}, "B": {"regions": {"DETAIL": {}}}}}
     assert not [i for i in validate(doc, timing(), picks) if i["rule"] == "V8" and i.get("level") != "review"]
+
+
+def test_point_inside_person_region_is_person_but_partial_overlap_is_not():
+    doc = valid()
+    doc['cast'][0].update(kind='person', shown_by=[{'region': 'BODY'}])
+    doc['moments'][0]['say'] = [{'point': [{'region': 'DETAIL', 'word': 1}]}]
+    regions = {'BODY': {'x': 50, 'y': 50, 'rx': 25, 'ry': 25},
+               'DETAIL': {'x': 50, 'y': 50, 'rx': 5, 'ry': 5}}
+    picks = {'main_asset': 'A', 'assets': {'A': {'regions': regions}}}
+    errors = [i for i in validate(doc, timing(), picks) if i['rule'] == 'V8' and i.get('level') != 'review']
+    assert any('person region' in i['message'] for i in errors)
+    regions['DETAIL']['x'] = 75
+    errors = [i for i in validate(doc, timing(), picks) if i['rule'] == 'V8' and i.get('level') != 'review']
+    assert not any('person region' in i['message'] for i in errors)

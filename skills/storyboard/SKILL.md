@@ -23,6 +23,7 @@ The engine draws exactly what the storyboard says; it never decides.
 <!-- BEGIN GENERATED: actions -->
 | id | step | page button | gate | cost | long job |
 |---|---|---|---|---|---|
+| `storyboard.compose` | edit | Dựng storyboard |  |  |  |
 | `draft.start` | edit | Dựng bản nháp |  | model: about 20 minutes | yes |
 | `proposal.apply` | edit | Áp dụng |  |  |  |
 | `storyboard.restore` | edit | Khôi phục bản gần nhất |  |  |  |

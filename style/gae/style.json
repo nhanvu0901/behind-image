@@ -1,4 +1,21 @@
 {
+ "compose": {
+  "shot_min_s": 2.5,
+  "borrowed_min_s": 3.0,
+  "device_min_s": 3.0,
+  "strip_line_min_s": 1.5,
+  "strip_extra_word_s": 0.3,
+  "strip_base_words": 3,
+  "strip_max_s": 4.0,
+  "strip_main_s": 3.0,
+  "strip_fade_s": 0.0,
+  "mark_side_max": 0.4,
+  "mark_height_max": 0.3,
+  "mark_area_max": 0.08,
+  "spotlight_floor": 0.6,
+  "ring_min_frame_width": 0.012,
+  "ring_max_frame_height": 0.15
+ },
  "canvas": {
   "width": {
    "value": 1920,

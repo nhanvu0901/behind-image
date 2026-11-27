@@ -4,6 +4,23 @@ from __future__ import annotations
 import re
 
 
+def point_is_person(region: str, cast: list, regions: dict) -> bool:
+    """A point target is a person when its region is or lies inside a person's region."""
+    from bti.engine.viewchecks import region_point_box
+    target = region_point_box(regions.get(region))
+    for member in cast:
+        if member.get("kind") != "person":
+            continue
+        for where in member.get("shown_by", []):
+            name = where.get("region")
+            if name == region:
+                return True
+            outer = region_point_box(regions.get(name))
+            if target and outer and outer[0] <= target[0] <= target[2] <= outer[2] and outer[1] <= target[1] <= target[3] <= outer[3]:
+                return True
+    return False
+
+
 def moment_words(moment: dict, timing: dict) -> tuple[list[str], float, float]:
     """Return the words and speech boundaries of a nonempty half-open span."""
     words = timing["words"]
