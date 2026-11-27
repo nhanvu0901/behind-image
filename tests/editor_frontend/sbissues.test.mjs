@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { issueText, FIXDRAFT_CODES, CATALOGUE_CODES, PANELBOX_CODES, POINTFIX_CODES, BOXCAM_CODES, NAMEFIRST_CODES, IDFIX_CODES, SUBJDRAFT_CODES, PICTIME_CODES, SUBJVIS_CODES } from '../../bti/editor/static/js/errmsg.js';
+import { issueText, FIXDRAFT_CODES, CATALOGUE_CODES, PANELBOX_CODES, POINTFIX_CODES, BOXCAM_CODES, NAMEFIRST_CODES, IDFIX_CODES, SUBJDRAFT_CODES, PICTIME_CODES, SUBJVIS_CODES, REVIEWFIX_CODES } from '../../bti/editor/static/js/errmsg.js';
 import { storyboardIssueText, whereOf, KNOWN_CODES, paramReason } from '../../bti/editor/static/js/sbissues.js';
 
 const VI = /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđ]/i;
@@ -135,7 +135,7 @@ const engineCodes = () => JSON.parse(execFileSync(PY, ['-c', 'import json; from 
 test('every code in bti.engine.storyboard.ISSUE_CODES has a Vietnamese template (and no template is for a code that does not exist)', { skip: !fs.existsSync(PY) && 'no .venv/bin/python' }, () => {
   const codes = engineCodes();
   assert.ok(codes.length >= 90, 'ISSUE_CODES looks empty');
-  const missing = codes.filter((c) => !TEMPLATE_CODES.includes(c) && !FIXDRAFT_CODES.includes(c) && !CATALOGUE_CODES.includes(c) && !PANELBOX_CODES.includes(c) && !POINTFIX_CODES.includes(c) && !BOXCAM_CODES.includes(c) && !NAMEFIRST_CODES.includes(c) && !IDFIX_CODES.includes(c) && !SUBJDRAFT_CODES.includes(c) && !PICTIME_CODES.includes(c) && !SUBJVIS_CODES.includes(c));         // fixdraft, catalogue, panelbox, pointfix, boxcam, idfix, subjdraft: their sentences live in errmsg.js
+  const missing = codes.filter((c) => !TEMPLATE_CODES.includes(c) && !FIXDRAFT_CODES.includes(c) && !CATALOGUE_CODES.includes(c) && !PANELBOX_CODES.includes(c) && !POINTFIX_CODES.includes(c) && !BOXCAM_CODES.includes(c) && !NAMEFIRST_CODES.includes(c) && !IDFIX_CODES.includes(c) && !SUBJDRAFT_CODES.includes(c) && !PICTIME_CODES.includes(c) && !SUBJVIS_CODES.includes(c) && !REVIEWFIX_CODES.includes(c));         // fixdraft, catalogue, panelbox, pointfix, boxcam, idfix, subjdraft: their sentences live in errmsg.js
   assert.deepEqual(missing, [], 'codes without a Vietnamese template: ' + missing.join(', '));
   const extra = TEMPLATE_CODES.filter((c) => !codes.includes(c));
   assert.deepEqual(extra, [], 'templates for codes the engine does not have: ' + extra.join(', '));
@@ -158,4 +158,11 @@ test('templates use args: param, technique, limits, region', () => {
   assert.match(t('param_bad_form', { param: 'tiles', technique: 'LAY-08', hint: 'Số cột x số hàng, ví dụ 4x2', pattern: 'x' }), /Số cột x số hàng/);
   assert.match(t('point_numeric_only', { param: 'from_quad', technique: 'DIA-02', index: 0 }), /chỉ nhập được hai số/);
   assert.match(t('unknown_technique', { technique: 'ZZZ-99' }), /ZZZ-99/);
+});
+
+// worker reviewfix
+test("incomplete review has a Vietnamese count", () => {
+  const t = issueText({code: "review_incomplete", args: {count: 3}});
+  assert.equal(t.text, "Chưa xem được 3 cảnh.");
+  assert.ok(!t.generic);
 });

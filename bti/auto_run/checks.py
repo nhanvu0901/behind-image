@@ -163,6 +163,8 @@ OUTSIDE_NO_PICTURE_LIMIT = 0.34          # worker linekinds: of the lines about 
 SHARE_LIMITS: dict[str, dict[str, float]] = {"picks": {"beat_no_pick": NO_PICK_LIMIT, "outside_no_picture": OUTSIDE_NO_PICTURE_LIMIT}}
 # the number a share is of: "lines" (the lines of the narration, the default) or "outside" (the lines about something outside the painting)
 SHARE_OF: dict[str, str] = {"outside_no_picture": "outside"}
+# worker reviewfix: report incomplete review without stopping automatic runs.
+TOLERATED["storyboard"] = TOLERATED["storyboard"] | frozenset({"review_incomplete"})
 UNKNOWN_WHY = ("a check the run does not know yet", "có cảnh báo mới mà chạy tự động chưa biết")
 
 def document_path(approve_path: str, gate: str) -> str:

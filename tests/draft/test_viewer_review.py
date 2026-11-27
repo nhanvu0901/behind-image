@@ -428,3 +428,58 @@ def test_make_job_parts_repairs_outside_on_painting_when_model_finds_no_issue(tm
         part.run(ctx)
     assert len(edits) == 1 and edits[0][0] == ["s2"] and "outside_on_painting" in edits[0][1]
     assert load_report(tmp_path, compute_rev(sb))["rounds"] == 1
+
+@pytest.mark.parametrize('first,second,missing', [
+    ('short', 'complete', 0), ('short', 'short', 1),
+    ('unreadable', 'complete', 0), ('unreadable', 'unreadable', -1),
+])
+def test_model_review_retries_short_or_unreadable_answers(tmp_path, first, second, missing):
+    import json
+    from types import SimpleNamespace
+    from bti.draft.review import run_model_review, ReviewError
+    rows = [{'id': x, 'words': 'words ' + x, 'frames': [{'sheet': 'sheet.jpg'}]} for x in ['a', 'b']]
+    (tmp_path / 'sheet.jpg').write_bytes(b'image')
+    calls = []
+    class Provider:
+        def run(self, workspace, **kwargs):
+            asked = json.loads((workspace / 'shots.json').read_text(encoding='utf-8'))
+            calls.append([r['id'] for r in asked])
+            assert (workspace / 'sheet.jpg').read_bytes() == b'image'
+            kind = [first, second][len(calls) - 1]
+            if kind == 'unreadable':
+                data = 'not json'
+            else:
+                selected = asked if kind == 'complete' else asked[:1] if len(calls) == 1 else []
+                data = json.dumps({'shots': [{'id': r['id'], 'problems': ([{'code': 'text_wrong', 'detail': 'Wrong text'}] if r['id'] == 'a' else [])} for r in selected]})
+            (workspace / 'out' / 'review.json').write_text(data, encoding='utf-8')
+            return SimpleNamespace(status='ok')
+    if missing < 0:
+        with pytest.raises(ReviewError):
+            run_model_review(tmp_path, rows, model='fake', provider=Provider())
+    else:
+        answer = run_model_review(tmp_path, rows, model='fake', provider=Provider())
+        assert [x['id'] for x in answer['shots']] == ['a', 'b']
+        assert answer.get('incomplete', 0) == missing
+        if first == 'short':
+            assert answer['shots'][0]['problems'][0]['code'] == 'text_wrong'
+    assert calls == [['a', 'b'], ['b'] if first == 'short' else ['a', 'b']]
+
+
+def test_incomplete_report_is_saved_and_does_not_stop_auto(tmp_path):
+    import json
+    from types import SimpleNamespace
+    from bti.draft.review import make_job_parts, issues_for
+    from bti.editor.common import compute_rev
+    from bti.auto_run.checks import judge
+    sb = {'shots': [{'id': 'a'}, {'id': 'b'}]}
+    (tmp_path / 'storyboard.json').write_text(json.dumps(sb), encoding='utf-8')
+    def reviewer(*_):
+        return ([{'id': 'a'}, {'id': 'b'}], {'shots': [{'id': 'a', 'problems': []}, {'id': 'b', 'problems': []}], 'incomplete': 1})
+    ctx = SimpleNamespace(cancelled=lambda: False, progress=lambda *_: None)
+    parts = make_job_parts(tmp_path, 'fake', review_round=reviewer, draft_issues=lambda _: [])
+    for part in parts:
+        result = part.run(ctx)
+    issues = issues_for(tmp_path, compute_rev(sb))
+    assert len(issues) == 1 and issues[0]['code'] == 'review_incomplete'
+    assert issues[0]['args']['count'] == 1
+    assert len(judge('storyboard', issues)['tolerated']) == 1
