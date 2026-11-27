@@ -84,6 +84,8 @@ export const textSourceLabel = (v) => TEXT_SOURCE[v] || String(v || '');
 export const EASE = { linear: 'Đều', in_quad: 'Chậm rồi nhanh (nhẹ)', out_quad: 'Nhanh rồi chậm (nhẹ)', in_cubic: 'Chậm rồi nhanh', out_cubic: 'Nhanh rồi chậm', inout_sine: 'Mượt hai đầu (nhẹ)', inout_cubic: 'Mượt hai đầu' };
 export const VALUE = {
   ...EASE,
+  // composer: pair entrance
+  together: 'Hiện cùng lúc',
   log: 'Theo tỉ lệ (log)', upper_all: 'In hoa toàn bộ', upper: 'In hoa', as_is: 'Giữ nguyên', as_typed: 'Như đã gõ',
   right: 'Phải', left: 'Trái', top: 'Trên', bottom: 'Dưới',
   all: 'Tất cả', cross: 'Chữ thập', frame: 'Khung hình', cover: 'Phủ kín (cắt bớt)', stretch: 'Kéo giãn', contain: 'Vừa trong khung',

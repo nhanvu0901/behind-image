@@ -1167,6 +1167,16 @@
      "measured": null
     },
     {
+     "name": "entrance",
+     "type": "enum",
+     "default": "slide",
+     "min": null,
+     "max": null,
+     "unit": null,
+     "values": ["slide", "together"],
+     "measured": null
+    },
+    {
      "name": "slide_delay_s",
      "type": "number",
      "default": 0.1,

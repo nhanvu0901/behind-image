@@ -45,13 +45,14 @@ class TwoPanel(BaseRenderer):
         cx, cy, z = self.camL.at(t)
         put(f, xl, py, compose_matte(self.ctx.image(self.kl), cx, cy, z, pw, ph))
         t_slide = self.t0 + float(p["slide_delay_s"])
-        sl = ease("out_cubic", (t - t_slide - .05) / float(p["slide_s"]))
+        together = p.get("entrance", "slide") == "together"
+        sl = 1.0 if together else ease("out_cubic", (t - t_slide - .05) / float(p["slide_s"]))
         x = int(round(W + 10 - (W + 10 - xr) * sl))
         cx, cy, z = self.camR.at(t)
         right = self.ctx.image(self.kr).view(cx, cy, z, pw, ph)[0].astype(np.float32)
         put(f, x, py, right)
-        self.capL.apply(f, ramp(t, t_slide, .2))
-        self.capR.apply(f, ramp(t, t_slide + .75, .25))
+        self.capL.apply(f, 1.0 if together else ramp(t, t_slide, .2))
+        self.capR.apply(f, 1.0 if together else ramp(t, t_slide + .75, .25))
         return f
 
     @classmethod

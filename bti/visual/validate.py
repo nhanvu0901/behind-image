@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections import Counter
 import re
-from .helpers import cast_member, moment_words, show_matches
+from .helpers import cast_member, moment_words, point_is_person, show_matches
 from .schema import VALIDATOR
 
 
@@ -172,7 +172,7 @@ def validate(doc: dict, timing: dict, picks: dict | None = None) -> list[dict]:
                 region = point["region"]
                 if not valid or not w0 <= point["word"] < w1:
                     issue("V8", mid, f"{mid}: put point word inside the moment.")
-                if any(c["kind"] == "person" and {"region": region} in c["shown_by"] for c in cast):
+                if "picture" not in show and point_is_person(region, cast, main_regions):
                     issue("V8", mid, f"{mid}: do not point at person region {region}.")
                 if picks is not None and region not in main_regions:
                     issue("V8", mid, f"{mid}: use a region present on the main painting.")

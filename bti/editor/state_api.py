@@ -176,6 +176,8 @@ SPECS: list[Spec] = [
          when="While the picks are not approved. Needs the approved narration, picks with a main painting and no errors. Advances."),
     Spec("picks.cancel", "picks", "Dừng", "POST", "/api/longjobs/{job_id}/cancel", when="While a picks job (suggestions, a clip or the agent's choice of pictures) of the project runs."),
     # ---- storyboard (step 5, page step id `edit`)
+    Spec("storyboard.compose", "edit", "Dựng storyboard", "POST", P + "/storyboard/compose",
+         when="When a visual script exists. Composes in seconds without a model."),  # composer
     Spec("draft.start", "edit", "Dựng bản nháp", "POST", P + "/draft/start", long_job=True, follow=LONGJOBS, role="draft",
          cost=("model", "about 20 minutes"),
          when="Once step 5 is open. Needs the voice and the approved picks, no draft job running, the pictures agent not working (one agent run at a time) and a usable agent. Advances while there is no draft (or it is out of date) and no storyboard. Optional body field `note` (text, at most 600 characters, `--set note=...`): the owner's wish for this draft (for example \"fewer close-ups\"), put into the agent's task file; leave it out when the owner gave none."),
@@ -920,6 +922,16 @@ def _edit_open(c: Ctx) -> bool:
     return c.open("edit")
 
 
+def b_storyboard_compose(c: Ctx):
+    # composer: offered only for projects with a visual script.
+    if not (c.d / "visual.json").is_file():
+        return None
+    needs = [] if (c.d / "timing.json").is_file() else ["timing"]
+    if not c.picks_main:
+        needs.append("main_asset")
+    return E(needs, {"base_rev": c.sb_rev}, advances=not c.sb_exists)
+
+
 def b_draft_start(c: Ctx):
     if not _edit_open(c):
         return None
@@ -1136,6 +1148,7 @@ BUILDERS: dict[str, Callable[[Ctx], dict | None]] = {
     "picks.import_clip": b_picks_import_clip, "picks.suggest": b_picks_suggest, "picks.put": b_picks_put,
     "visual.plan": b_visual_plan,  # planner
     "picks.auto": b_picks_auto, "picks.retry_missing": b_picks_retry_missing, "picks.tighten": b_picks_tighten, "picks.edit": b_picks_edit, "picks.ops": b_picks_ops, "picks.approve": b_picks_approve,
+    "storyboard.compose": b_storyboard_compose,  # composer
     "draft.start": b_draft_start, "proposal.apply": b_proposal_apply, "storyboard.restore": b_storyboard_restore,
     "storyboard.validate": b_storyboard_validate, "storyboard.retime": b_storyboard_retime, "storyboard.review": b_storyboard_review, "storyboard.approve": b_storyboard_approve, "storyboard.preview": b_storyboard_preview,
     "storyboard.put": b_storyboard_put, "storyboard.ops": b_storyboard_ops, "changes.list": b_changes_list, "changes.undo": b_changes_undo,
