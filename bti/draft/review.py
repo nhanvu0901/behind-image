@@ -82,7 +82,7 @@ def _build_repair_batches(ids, repair_map, prefix: str) -> list[tuple[list[str],
     return batches
 
 
-def _validate(ids, answer):
+def _validate(ids, answer, *, allow_missing=False):
     if not isinstance(answer, dict) or not isinstance(answer.get("shots"), list):
         raise ReviewError("review must contain a shots list")
     expected = set(ids)
@@ -104,7 +104,7 @@ def _validate(ids, answer):
                 raise ReviewError("invalid review problem")
             seen.add(code)
         found[shot["id"]] = problems
-    if set(found) != expected:
+    if not allow_missing and set(found) != expected:
         raise ReviewError("review omitted shots")
     return found
 
@@ -120,7 +120,9 @@ def review_and_repair(shot_ids, review, edit, *, draft_issues=None):
     prefix = "Fix these viewer-review problems using only the narration and project sources:\n"
     for round_index in range(3):
         ids = list(shot_ids())
-        found = _validate(ids, review(ids))
+        answer = review(ids)
+        found = _validate(ids, answer)
+        incomplete = answer.get("incomplete", 0)
         history.append(found)
         extra = _index_draft_issues(ids, draft_issues(ids) if draft_issues else [])
         combined = {sid: list(found[sid]) + list(extra.get(sid, [])) for sid in ids}
@@ -130,6 +132,8 @@ def review_and_repair(shot_ids, review, edit, *, draft_issues=None):
                         for sid in ids for p in found[sid]]
             draft_warnings = [{"level": "warn", "code": p["code"], "shot": sid, "message": p["detail"].strip()}
                               for sid in ids for p in extra.get(sid, [])]
+            if incomplete:
+                warnings.append(_incomplete_warning(incomplete))
             out = {"rounds": round_index, "warnings": warnings, "history": history}
             if draft_warnings:
                 out["draft_warnings"] = draft_warnings
@@ -138,6 +142,11 @@ def review_and_repair(shot_ids, review, edit, *, draft_issues=None):
             edit(scope, instruction)
     raise AssertionError("unreachable")
 
+
+
+def _incomplete_warning(count):
+    return {"level": "warn", "code": "review_incomplete", "count": count,
+            "args": {"count": count}, "message": f"Chưa xem được {count} cảnh."}
 
 def _subject_phrases(picks):
     """Names and image/region labels supplied by the project, never guessed facts."""
@@ -267,28 +276,55 @@ def run_model_review(workspace, rows, *, project_dir=None, model=None, provider=
         kwargs["guard"] = Guard(Path(project_dir))
     if ctx is not None:
         kwargs.update(cancel=ctx.cancelled, runner=ctx.run_process)
-    result = provider.run(root, **kwargs)
-    if result.status == "cancelled":
-        from bti.longjob import Cancelled
-        raise Cancelled()
-    if result.status != "ok":
-        from .inputs import DraftError
-        code = getattr(result, "error_code", None)
-        if not code:
-            code = "draft_tampered" if result.status == "tampered" else (
-                "claude_timeout" if draft_run._is_claude(model) else "agy_timeout") if result.status == "timeout" else "agy_error"
-        raise DraftError(code, getattr(result, "error_message", "") or "viewer review agent failed",
-                         retry_after_seconds=getattr(result, "retry_after_seconds", None))
-    try:
-        if out.is_symlink() or answer_path.is_symlink() or answer_path.stat().st_size > 2_000_000:
+    import shutil
+    found = {}
+    requested = list(rows)
+    for attempt in range(2):
+        work = root if attempt == 0 else root / "follow-up"
+        if attempt:
+            work.mkdir()
+            (work / "out").mkdir()
+            (work / "TASK.md").write_text(task, encoding="utf-8")
+            (work / "shots.json").write_text(json.dumps(requested, ensure_ascii=False, indent=2), encoding="utf-8")
+            for name in {f["sheet"] for row in requested for f in row.get("frames", [])}:
+                source = root / name
+                dest = work / name
+                dest.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(source, dest)
+        output = work / "out" / "review.json"
+        result = provider.run(work, **kwargs)
+        if result.status == "cancelled":
+            from bti.longjob import Cancelled
+            raise Cancelled()
+        if result.status != "ok":
+            from .inputs import DraftError
+            code = getattr(result, "error_code", None)
+            if not code:
+                code = "draft_tampered" if result.status == "tampered" else (
+                    "claude_timeout" if draft_run._is_claude(model) else "agy_timeout") if result.status == "timeout" else "agy_error"
+            raise DraftError(code, getattr(result, "error_message", "") or "viewer review agent failed",
+                             retry_after_seconds=getattr(result, "retry_after_seconds", None))
+        if output.parent.is_symlink() or output.is_symlink():
             raise ReviewError("review output is not a regular, bounded file")
-        def invalid_constant(value):
-            raise ValueError("invalid JSON constant: " + value)
-        answer = json.loads(answer_path.read_text(encoding="utf-8"), parse_constant=invalid_constant)
-    except (OSError, UnicodeError, ValueError) as e:
-        raise ReviewError("review agent did not write valid JSON") from e
-    _validate([r["id"] for r in rows], answer)
-    return answer
+        try:
+            if output.stat().st_size > 2_000_000:
+                raise ReviewError("review output is not a regular, bounded file")
+            def invalid_constant(value):
+                raise ValueError("invalid JSON constant: " + value)
+            answer = json.loads(output.read_text(encoding="utf-8"), parse_constant=invalid_constant)
+            partial = _validate([r["id"] for r in requested], answer, allow_missing=True)
+        except (OSError, UnicodeError, ValueError) as exc:
+            if attempt:
+                raise ReviewError("review agent did not write valid JSON or shape") from exc
+            continue
+        found.update(partial)
+        requested = [r for r in rows if r["id"] not in found]
+        if not requested:
+            break
+    missing = len(requested)
+    return {"shots": [{"id": row["id"], "problems": found.get(row["id"], [])} for row in rows],
+            "incomplete": missing}
+
 
 
 def scoped_edit(project_dir, shots, instruction, *, model, ctx, make_parts=None, base_rev=None):
@@ -369,7 +405,7 @@ def issues_for(project_dir, revision):
     report = load_report(project_dir, revision)
     if report is None:
         return []
-    return [{**w, "path": "shots", "args": {"shot": w.get("shot")}} for w in report["warnings"] if isinstance(w, dict)]
+    return [{**w, "path": "shots", "args": {**w.get("args", {}), "shot": w.get("shot")}} for w in report["warnings"] if isinstance(w, dict)]
 
 
 def _review_round(project_dir, directory, model, ctx):
@@ -477,7 +513,7 @@ def make_job_parts(project_dir, model, *, review_round=None, edit=None, draft_is
     reviewer, editor = review_round or _review_round, edit or scoped_edit
     draft_issues_fn = draft_issues or (lambda cur_ids: _draft_repair_issues(project_dir, cur_ids))
     root = project_dir / "cache" / "draft" / "viewer_review" / uuid.uuid4().hex
-    state = {"revision": None, "inputs": None, "history": [], "pending": [], "rounds": 0, "finished": False, "found": {}, "draft_extra": {}}
+    state = {"revision": None, "inputs": None, "history": [], "pending": [], "rounds": 0, "finished": False, "found": {}, "draft_extra": {}, "incomplete": 0}
     prefix = "Fix these viewer-review problems using only the narration and project sources:\n"
 
     def check(ctx):
@@ -521,6 +557,7 @@ def make_job_parts(project_dir, model, *, review_round=None, edit=None, draft_is
             extra = _index_draft_issues(ids, draft_issues_fn(ids))
             combined = {sid: list(found[sid]) + list(extra.get(sid, [])) for sid in ids}
             state["found"] = found
+            state["incomplete"] = answer.get("incomplete", 0)
             state["draft_extra"] = extra
             state["history"].append(found)
             flagged = [sid for sid in ids if combined[sid]]
@@ -555,6 +592,8 @@ def make_job_parts(project_dir, model, *, review_round=None, edit=None, draft_is
             raise ReviewError("review did not complete")
         warnings = [{"level": "warn", "code": ISSUE_CODES[p["code"]], "shot": sid, "message": p["detail"].strip()}
                     for sid, problems in state["found"].items() for p in problems]
+        if state["incomplete"]:
+            warnings.append(_incomplete_warning(state["incomplete"]))
         draft_warnings = [{"level": "warn", "code": p["code"], "shot": sid, "message": p["detail"].strip()}
                           for sid in state["found"] for p in (state.get("draft_extra") or {}).get(sid, [])]
         result = {"revision": state["revision"], "inputs": state["inputs"], "rounds": state["rounds"], "warnings": warnings, "history": state["history"]}

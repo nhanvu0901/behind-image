@@ -1096,3 +1096,6 @@ Object.assign(VALUE, {
   B: 'Cách B — Đèn rọi hai nhịp',
   C: 'Cách C — Đèn hạ góc quét',
 });
+
+// worker reviewfix: incomplete viewer review.
+Object.assign(CODE, { review_incomplete: "Chưa xem hết các cảnh" });

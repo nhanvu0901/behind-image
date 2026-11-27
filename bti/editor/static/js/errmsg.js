@@ -969,3 +969,8 @@ export const SUBJVIS_SENTENCES = {
 };
 export const SUBJVIS_CODES = Object.keys(SUBJVIS_SENTENCES);
 Object.assign(BUILD, SUBJVIS_SENTENCES);
+
+// worker reviewfix: incomplete viewer review.
+export const REVIEWFIX_SENTENCES = { review_incomplete: (i) => `Chưa xem được ${i.args?.count ?? "?"} cảnh.` };
+export const REVIEWFIX_CODES = Object.keys(REVIEWFIX_SENTENCES);
+Object.assign(BUILD, REVIEWFIX_SENTENCES);
