@@ -21,9 +21,9 @@ def run_check(root: Path) -> dict:
                 from bti.picks.auto import helper
                 try:
                     report = helper.run_check(root / 'tighten')
-                    issues.extend({'rule': 'region', 'moment': None, 'message': e} for e in report.errors)
+                    issues.extend({'rule': 'region', 'moment': None, 'message': e.replace('out/tighten.json', 'tighten/out/tighten.json')} for e in report.errors)
                 except SystemExit as e:
-                    issues.append({'rule': 'region', 'moment': None, 'message': str(e)})
+                    issues.append({'rule': 'region', 'moment': None, 'message': str(e).replace('out/tighten.json', 'tighten/out/tighten.json')})
             return {'ok': not issues, 'issues': issues}
         doc = json.loads((root / 'out/visual.json').read_text(encoding='utf-8'))
         timing = json.loads((root / 'inputs/timing.json').read_text(encoding='utf-8'))

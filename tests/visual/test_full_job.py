@@ -8,8 +8,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'picks'))
 from auto_helpers import make_auto_project
 
 
-@pytest.mark.parametrize("repair,map_view,stale,region,cancel", [(False, False, False, False, False), (True, False, False, False, False), (False, True, False, False, False), (False, False, True, False, False), (False, False, False, True, False), (False, False, False, False, True)])
-def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatch, repair, map_view, stale, region, cancel):
+@pytest.mark.parametrize("repair,map_view,stale,region,cancel,wrong_path", [(False, False, False, False, False, False), (True, False, False, False, False, False), (False, True, False, False, False, False), (False, False, True, False, False, False), (False, False, False, True, False, False), (False, False, False, True, False, True), (False, False, False, False, True, False)])
+def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatch, repair, map_view, stale, region, cancel, wrong_path):
     from bti.picks import context, doc
     from bti.picks.auto import session
     from bti.longjob import LongJobManager
@@ -50,6 +50,8 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
                 row['confirmed'] = True
                 target.write_text(json.dumps({'schema': 'bti.picks.tighten/1', 'regions': [row]}))
                 assert check(2) is None
+                if wrong_path:
+                    target.replace(ws / 'out/tighten.json')
                 return SimpleNamespace(status='ok', steps=2, turns=2, repairs=1, elapsed=0)
             moments = [{'id': f'm{i:04}', 'line': b['id'], 'w0': b['w0'], 'w1': b['w1'], 'about': None, 'show': {'whole': True}, 'move': 'hold', 'from': 'whole', 'say': [], 'why': 'Toàn cảnh.'} for i, b in enumerate(beats)]
             if region:
@@ -89,6 +91,8 @@ def test_fake_agent_job_saves_script_and_projects_all_lines(tmp_path, monkeypatc
     assert all(doc.load(pdir)['beats'][b['id']]['items'] for b in beats)
     if region:
         assert doc.load(pdir)['assets']['A']['regions']['HEAD']['tight'] is True
+        if wrong_path:
+            assert 'tighten/out/tighten.json' in str(result)
     if map_view:
         assert store.load(pdir)['moments'][0]['show']['map']['picture'] in doc.load(pdir)['assets']
         assert doc.load(pdir)['beats'][beats[0]['id']]['items'][0]['role'] == 'map'

@@ -62,3 +62,15 @@ def test_choose_check_requires_tightening_when_cutouts_present(tmp_path):
     (tmp_path / 'inputs/search.json').write_text(json.dumps({'wants': {}}))
     (tmp_path / 'out/choice.json').write_text('{}')
     assert not run_check(tmp_path)['ok']
+
+
+def test_choose_check_names_region_file_from_choose_root(tmp_path):
+    for folder in ('inputs', 'out', 'tighten/inputs'):
+        (tmp_path / folder).mkdir(parents=True, exist_ok=True)
+    (tmp_path / 'inputs/context.json').write_text(json.dumps({'mode': 'choose'}))
+    (tmp_path / 'inputs/visual.json').write_text(json.dumps({'cast': [], 'wanted': []}))
+    (tmp_path / 'inputs/search.json').write_text(json.dumps({'wants': {}}))
+    (tmp_path / 'out/choice.json').write_text('{}')
+    (tmp_path / 'tighten/inputs/context.json').write_text(json.dumps({'mode': 'tighten', 'tighten': {}}))
+    report = run_check(tmp_path)
+    assert 'tighten/out/tighten.json' in report['issues'][0]['message']
