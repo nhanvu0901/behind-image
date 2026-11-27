@@ -38,6 +38,13 @@ owner wants; it is updated whenever a comment adds to it or changes it. The owne
 - A caption under a borrowed picture stays while the picture stays (11-22). Never a file name or a source name (11-26).
 - No large year over a label that already shows it (11-22).
 
+**Pointers** (added 2026-11-27)
+- The white circle that draws on a thing as it is named is wanted ("we lost the white circle animation for example
+  when talk about the candle"); what was wrong on 11-26 was its size and where it was put, not the device.
+
+**Repetition** (added 2026-11-27)
+- A fact said again and again "sound AI" ("the second wife and non is recorded we repeated this too much").
+
 **Camera and pace**
 - No zooming out and back in on the same frame: "just keep it, keep the first" (11-21).
 - No picture that flashes by: a shot lasts at least 2.5 s (11-26); a borrowed picture long enough to be seen, and it is
@@ -78,7 +85,14 @@ owner wants; it is updated whenever a comment adds to it or changes it. The owne
   pictures without a caption (the silk, one van Eyck portrait); the couple from the waist up still returns often;
   8 review findings left (5 picture mismatches, 2 missing context, 1 text); no picture found for the earliest
   inventory.
-- **GOOD / NOT GOOD / WANTS (owner):** (waiting for the owner's comments)
+- **GOOD (owner):** "this is the best version so far".
+- **NOT GOOD (owner):** "we lost the white circle animation for example when talk about the candle"; "there are
+  some narration that is repeated why? the most part that sound AI is the second wife and non is recorded we
+  repeated this too much".
+- **WANTS (owner):** an analysis first; "dont try to overfit, look at the pipeline as the whole".
+- **Measured after the comment:** the script held 1 pointer in 126 moments (the candle) and the composer drew it as a
+  spotlight, not a ring; the narration uses 20 of its 63 facts in more than one line and 13 in three or more (one
+  fact in 7 lines); "second wife ... none recorded" is said 3 times, "died in 1433" 4 times.
 
 ### 2026-11-26 (night): Arnolfini, Opus 5.5 Medium, with music and ident B
 - **File:** `~/Desktop/Claude Render/eyck-the-arnolfini-portrait.mp4` (825,760,041 bytes, 11:13). Project
