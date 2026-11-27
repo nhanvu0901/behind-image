@@ -42,7 +42,7 @@ def test_the_stages_are_the_ones_expected_here():
 
 
 @pytest.mark.parametrize("stage", STAGES)
-def test_from_every_stage_it_takes_the_expected_actions_in_order_and_ends_as_expected(client, world, stage):
+def test_from_every_stage_it_takes_the_expected_actions_in_order_and_ends_as_expected(client, world, stage, saytwice_fake_writer):
     world.build(stage)
     set_auto(client, enabled=True)
     job, run = run_to_end(client)
@@ -56,7 +56,16 @@ def test_from_every_stage_it_takes_the_expected_actions_in_order_and_ends_as_exp
         assert run["outcome"] == "done" and state(client)["steps"][-1]["state"] == "done"
 
 
-def test_a_whole_project_from_the_first_step_to_the_export_once_the_pictures_are_there(client, world):
+@pytest.fixture
+def saytwice_fake_writer(monkeypatch):
+    # worker saytwice: the synthetic writer repeats filler; these tests exercise later pipeline stages.
+    # The three real gate decisions are covered in test_script_checks.py.
+    from bti.script import validate, generate
+    monkeypatch.setattr(validate, "repetition_issues", lambda *args: [])
+    monkeypatch.setattr(generate, "repetition_repairs", lambda *args: {})
+
+
+def test_a_whole_project_from_the_first_step_to_the_export_once_the_pictures_are_there(client, world, saytwice_fake_writer):
     """A project at the start: the run stops where the pictures are needed; the owner picks; the next run goes on to the end."""
     world.build("new")
     set_auto(client, enabled=True)

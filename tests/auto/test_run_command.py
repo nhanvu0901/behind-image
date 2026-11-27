@@ -12,6 +12,15 @@ def bti(client, *argv, **kw):
     return run_bti(AppTransport(client), *argv, **kw)
 
 
+@pytest.fixture
+def saytwice_fake_writer(monkeypatch):
+    # worker saytwice: the synthetic writer repeats filler; these tests exercise later pipeline stages.
+    # The three real gate decisions are covered in test_script_checks.py.
+    from bti.script import validate, generate
+    monkeypatch.setattr(validate, "repetition_issues", lambda *args: [])
+    monkeypatch.setattr(generate, "repetition_repairs", lambda *args: {})
+
+
 def test_the_command_is_listed_with_its_options_and_documented():
     names = [n for n, _, _ in cli_main.COMMANDS]
     assert "run" in names
@@ -59,7 +68,7 @@ def test_wait_follows_the_run_and_a_finished_project_is_exit_0(client, world):
     assert "job " in r.out                                                          # the progress lines of the job it followed
 
 
-def test_a_run_that_waits_for_the_owner_is_exit_3_and_says_what_for(client, world):
+def test_a_run_that_waits_for_the_owner_is_exit_3_and_says_what_for(client, world, saytwice_fake_writer):
     world.build("new")
     set_auto(client, enabled=True)
     r = bti(client, "run", PID, "--yes-cost", "--wait", "--interval", "0")

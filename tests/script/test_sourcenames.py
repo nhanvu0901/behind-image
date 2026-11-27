@@ -199,7 +199,7 @@ def test_validate_narration_warns_per_line(version, authors, talk):
             i for i in iss
             if i["level"] in ("warning", "error")
             and not str(i.get("code") or "").startswith("cold_open_")
-            and i.get("code") != "attribution_phrase"
+            and i.get("code") not in ("attribution_phrase", "fact_said_too_often", "return_same_words", "sentence_repeated")
         ]
         assert non_legacy == []                                      # no source/error warnings on v3 (v3 predates cold-open and attribution rules)
         assert len([i for i in iss if i["code"] == "attribution_phrase"]) == 13

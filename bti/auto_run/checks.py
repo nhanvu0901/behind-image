@@ -41,6 +41,10 @@ STOPS: dict[str, dict[str, tuple[str, str]]] = {
                            "có dữ kiện chứa lời nhắn cho bạn, lời dẫn viết từ đó có thể đọc to lời nhắn ấy"),
     },
     "narration": {
+        # worker saytwice: repetition must be resolved before expensive voice generation.
+        "fact_said_too_often": ("a fact is cited more than twice", "có dữ kiện được nhắc quá hai lần"),
+        "return_same_words": ("a return repeats the original wording", "có lần nhắc lại dùng cùng lời"),
+        "sentence_repeated": ("words repeat across narration lines", "có câu chữ bị lặp giữa các dòng"),
         "words_off_target": ("the length is more than 15% away from the target: the video would not be the length that was planned",
                              "độ dài lời dẫn lệch quá 15% so với mục tiêu"),
         "unknown_fact": ("a line cites a fact that is not in the outline", "có dòng nhắc dữ kiện không có trong dàn ý"),

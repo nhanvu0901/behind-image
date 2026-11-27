@@ -244,10 +244,15 @@ Lỗi thường gặp (hiện tiếng Việt): chưa đăng nhập (`claude auth
 | Chưa có dàn ý, chưa duyệt, đã đổi sau khi duyệt (`outline_missing`, `outline_not_approved`, `outline_stale`) | Lời dẫn đi theo dàn ý đã duyệt. Duyệt lại dàn ý trước, rồi duyệt lời dẫn. |
 | Dàn ý: Chưa có câu hỏi chính, chưa có chương, trùng mã chương, chương chưa có tên, chưa có số từ, trùng mã dữ kiện | Điền cho đủ trước khi duyệt dàn ý. |
 
+Dàn ý có lỗi `fact_in_too_many_chapters` khi một dữ kiện nằm trong ba chương trở lên: giữ một chương chính và tối đa một chương nhắc lại.
+
 **Cảnh báo (không chặn)**
 
 | Thông báo | Nghĩa là gì |
 |---|---|
+| Dữ kiện được nói quá hai lần (`fact_said_too_often`) | Các dòng dẫn cùng dữ kiện quá hai lần; gộp hoặc cắt bớt. |
+| Lần nhắc lại dùng cùng lời (`return_same_words`) | Hai dòng dẫn cùng dữ kiện và lặp từ; viết lần sau bằng lời mới cho một lý do mới. |
+| Câu chữ bị lặp (`sentence_repeated`) | Hai dòng lặp ít nhất sáu từ liên tiếp; viết lại dòng sau. |
 | Lệch mục tiêu quá 15% (`words_off_target`) | Tổng số từ cách mục tiêu hơn 15%. |
 | Chương lệch ngân sách quá 30% (`chapter_off_budget`) | Một chương dài hoặc ngắn hơn ngân sách hơn 30%. Thanh ngân sách ở dưới cùng đổi sang vàng (lệch trên 15%) hoặc đỏ (trên 30%). |
 | Dòng quá dài (`beat_too_long`) | Một dòng hơn 90 từ. Nên Tách. |

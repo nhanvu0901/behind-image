@@ -102,6 +102,10 @@ def validate_outline(o: Outline, brief: dict | None = None) -> list[dict]:
         for fid in c.facts:
             if fid not in known_f:
                 out.append(issue("warning", "unknown_fact", f"Chapter {c.id} uses fact {fid}, which is not in the fact table.", chapter=c.id))
+    for fid in sorted(known_f):
+        chapters = [c.id for c in o.chapters if fid in c.facts]
+        if len(chapters) > 2:
+            out.append(issue("error", "fact_in_too_many_chapters", f"Fact {fid} is in chapters {', '.join(chapters)}; give it one home and at most one return.", fact=fid, chapters=chapters))
     used = {fid for c in o.chapters for fid in c.facts}
     for f in o.facts:
         if f.id not in used:
@@ -150,6 +154,56 @@ def source_overlap(n: Narration, brief: dict, size: int = 8) -> float:
                         mark[j] = True
             covered += sum(mark)
     return round(covered / total, 3) if total else 0.0
+
+
+def repetition_issues(n: Narration, brief: dict | None = None) -> list[dict]:
+    """Compare distinct beats in order; only names supplied in the brief are exempt."""
+    beats = [(c.id, b) for c in n.chapters for b in c.beats]
+    tokens = textfold.tokens
+    painting = (brief or {}).get("painting", {})
+    names = [painting.get("title", "") or n.title, painting.get("artist", "")]
+    for person in (brief or {}).get("cast", []):
+        if isinstance(person, dict):
+            aliases = person.get("also")
+            names.extend([person.get("name", ""), *(aliases if isinstance(aliases, list) else [])])
+    exempt = {tuple(tokens(name)) for name in names if name and tokens(name)}
+    def only_names(run):
+        reachable = {0}
+        for i in range(len(run)):
+            if i in reachable:
+                reachable.update(i + len(name) for name in exempt if run[i:i + len(name)] == name)
+        return len(run) in reachable
+
+    words = [tokens(b.text) for _, b in beats]
+    out = []
+    facts = sorted({f for _, b in beats for f in b.facts})
+    for fact in facts:
+        matches = [(c, b) for c, b in beats if fact in b.facts]
+        if len(matches) > 2:
+            places = [f"{c}/{b.id}: {' '.join(b.text.split()[:8])}" for c, b in matches]
+            out.append(issue("warning", "fact_said_too_often", f"Fact {fact} is cited in {', '.join(places)}; keep at most two mentions.", fact=fact, beats=[b.id for _, b in matches], chapters=[c for c, _ in matches], places=places, chapter=matches[-1][0], beat=matches[-1][1].id))
+    for i, (c1, b1) in enumerate(beats):
+        for j in range(i + 1, len(beats)):
+            c2, b2 = beats[j]
+            runs = []
+            for a in range(len(words[i])):
+                for b in range(len(words[j])):
+                    if words[i][a] != words[j][b] or (a and b and words[i][a-1] == words[j][b-1]):
+                        continue
+                    k = 0
+                    while a+k < len(words[i]) and b+k < len(words[j]) and words[i][a+k] == words[j][b+k]:
+                        k += 1
+                    if k >= 4:
+                        runs.append(tuple(words[i][a:a+k]))
+            common = sorted(set(b1.facts) & set(b2.facts))
+            for run in sorted(set(runs), key=lambda x: (-len(x), x)):
+                phrase = ' '.join(run)
+                details = dict(chapter=c2, beat=b2.id, chapters=[c1, c2], beats=[b1.id, b2.id], words=phrase, facts=common)
+                if len(run) >= 6:
+                    out.append(issue("warning", "sentence_repeated", f"Beats {b1.id} and {b2.id} repeat '{phrase}'; rewrite the later wording.", **details))
+                if common and not only_names(run):
+                    out.append(issue("warning", "return_same_words", f"Beats {b1.id} and {b2.id} cite {', '.join(common)} and repeat '{phrase}'; paraphrase the return for a new reason.", **details))
+    return out
 
 
 def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WPS_DEFAULT, brief: dict | None = None) -> list[dict]:
@@ -220,6 +274,7 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
                 for f in b.facts:
                     if f not in known:
                         out.append(issue("warning", "unknown_fact", f"Beat {b.id} cites fact {f}, which is not in the outline.", **where))
+    out.extend(repetition_issues(n, brief))
     target = outline.target_words if outline else 0
     if target:
         ratio = st["words"] / target

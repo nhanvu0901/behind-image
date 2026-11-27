@@ -88,6 +88,7 @@ test('validation issues are Vietnamese sentences (the dialog of U1-002)', () => 
 test('every code the server can raise has a Vietnamese sentence', () => {
   const codes = ['no_thesis', 'no_chapters', 'duplicate_chapter', 'chapter_no_title', 'chapter_no_budget', 'duplicate_fact', 'fact_no_source', 'unknown_source_id', 'disputed_no_conflict', 'unknown_fact', 'fact_unused', 'no_hook_choice', 'budget_sum', 'outline_missing', 'outline_not_approved', 'outline_stale', 'chapter_missing', 'empty_chapter', 'chapter_order', 'unknown_chapter', 'empty_beat', 'markup_in_text', 'spoken_chars', 'beat_too_long', 'no_show', 'words_under', 'words_off_target', 'chapter_off_budget', 'length', 'source_share', 'overlap', 'chapter_by_position', 'chapter_twice', 'meta_orphan', 'no_chapter_lines', 'preamble_dropped', 'chapter_empty', 'budget_defaulted', 'no_facts', 'hook_defaulted', 'long_sentence', 'sentence_median',
     /* worker fixscript */ 'source_author_named', 'source_talk', 'fact_for_owner', 'outline_note',
+    /* worker saytwice */ 'fact_in_too_many_chapters', 'fact_said_too_often', 'return_same_words', 'sentence_repeated',
     /* worker voiceplain */ 'attribution_phrase'];
   for (const code of codes) { const t = issueText({ code, message: 'x', chapter: 'c01', fact: 'f01', beat: 'b1' }); assert.ok(!t.generic, code); assert.ok(isVietnamese(t.text) || /\d|c01|f01|b1/.test(t.text), code); }
 });

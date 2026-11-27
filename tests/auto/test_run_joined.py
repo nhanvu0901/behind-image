@@ -46,6 +46,9 @@ def add_main_painting(c, pid: str = PID) -> None:
 @pytest.fixture()
 def agent(client, world, tmp_path, monkeypatch):
     """The project `arn` with an approved narration, the voice made, a main painting and no pictures; the fake agent runner and the fake sources. -> the fake agent."""
+    # worker saytwice: preserve the fixed beat ids used by the picture-agent fake.
+    from bti.script import generate
+    monkeypatch.setattr(generate, "repetition_repairs", lambda *args: {})
     world.build("voiced")
     add_main_painting(client)
     (tmp_path / "work").mkdir()

@@ -1293,3 +1293,6 @@ export const VISUAL_PAGE_LABELS = {
     failed: 'Chưa sửa được kịch bản hình: ',
   },
 };
+
+// worker saytwice: repetition checks.
+Object.assign(CODE, { fact_in_too_many_chapters: 'Dữ kiện có trong quá hai chương', fact_said_too_often: 'Dữ kiện được nói quá hai lần', return_same_words: 'Lần nhắc lại dùng cùng lời', sentence_repeated: 'Câu chữ bị lặp' });

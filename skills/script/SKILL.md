@@ -80,7 +80,7 @@ approved outline as cli:bti
 $ bti do arn narration.generate --yes-cost --wait
 started job <job> (narration.generate)
 ...
-done: {"written":["c01","c02","c03","c04","c05","c06"],"skipped":[],"rev":"<rev>"}
+done: {"written":["c01","c02","c03","c04","c05","c06"],"skipped":[],"rev":"<rev>","repetition_repaired":["c01","c02","c03","c04","c05","c06"]}
 $ bti approve arn narration
 approved narration as cli:bti
 $ bti status arn
@@ -125,6 +125,7 @@ Take the numbers from `docs/APP_GUIDE.md` (sections 5.1 to 5.5); the page shows 
   does not stop a run; read them before you approve the outline, and tell the owner what they say). The narration never sees them.
 - **A hook first.** The outline carries the main question and three candidate openings; the cold open (`ROLE: cold_open`, 60 to 145 words) starts with a short visual first line (at most 25 words), speaks both the painting's name and the painter's name in ordinary speech within about 60 words, sets the contradiction ("but"/"yet") before about word 72, and ends on an open question (`?`) with no plan-of-the-video phrases.
 - **Cold-open warnings.** Narration checks report `cold_open_missing_name`, `cold_open_no_closing_question` and `cold_open_roadmap` (these stop an automatic run so the voice stage does not read an incomplete opening), plus `cold_open_late_name`, `cold_open_first_line_long`, `cold_open_no_early_turn` and `cold_open_word_count`.
+- **Repeated points.** A fact in three outline chapters is an error (`fact_in_too_many_chapters`). In narration, `fact_said_too_often`, `return_same_words` and `sentence_repeated` warn about repeated citations or wording and stop the automatic run at the narration gate. The narration job attempts one repair round for later mentions; fix any warnings that remain. Names are exempt from the four-word return check only when supplied by the painting title, artist or the visual cast.
 - **Each line says what to show.** The `show` hint of a line ("the mirror; the writing above it") is what the picture step works from; a line with none is a warning (`no_show`).
 - **Overlap with the books** is only information (the owner decided copyright is not a blocker), but a line that copies a sentence of a book is a poor line: write it again in your own words.
 

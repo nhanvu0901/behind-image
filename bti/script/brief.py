@@ -321,7 +321,16 @@ def _build_brief(pdir: Path, *, library_root: Path | None = None, include_low: l
             {"work_id": v.get("work_id"), "src": next((k for k, w in code_map.items() if w == v.get("work_id")), None),
              "value": v.get("value")} for v in c.get("values") or []]})
 
+    # A visual script, when one already exists, is the explicit source of cast names.
+    # Before visual planning there is no cast: do not infer names from source prose.
+    try:
+        visual = json.loads((pdir / "visual.json").read_text(encoding="utf-8"))
+        cast = visual.get("cast", []) if isinstance(visual, dict) else []
+        cast = cast if isinstance(cast, list) else []
+    except (OSError, ValueError):
+        cast = []
     return {"project": proj.get("id") or pdir.name, "built_at": now_iso(),
+            "cast": cast,
             "shape": "dossier" if dossier else ("project" if proj.get("sources") else "files"),
             "painting": painting, "sources": sources, "code_map": code_map, "details": det_list,
             "conflicts": conflicts, "options": {**opts, "include_low": sorted(ticked), "exclude": sorted(excluded)},

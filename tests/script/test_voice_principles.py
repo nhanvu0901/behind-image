@@ -1,4 +1,4 @@
-"""Tests for the four voice principles, the `attribution_phrase` narration warning,
+"""Tests for the five voice principles, the `attribution_phrase` narration warning,
 the prompt cold-open examples, and zero painting-specific (Arnolfini) leakage."""
 from __future__ import annotations
 

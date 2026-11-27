@@ -104,3 +104,10 @@ def test_attribution_phrase_stops_the_run_and_has_page_labels():
     assert "worker voiceplain" in js and "worker voiceplain" in labels
     assert re.search(r"\battribution_phrase:", js) and re.search(r"\battribution_phrase:", labels)
     assert "Object.assign(BUILD, VOICEPLAIN_ISSUES);" in js.splitlines() and "Object.assign(CODE, CODE_VOICEPLAIN);" in labels.splitlines()
+
+
+def test_saytwice_warnings_stop_automatic_narration_approval():
+    for code in ('fact_said_too_often', 'return_same_words', 'sentence_repeated'):
+        assert code in checks.STOPS['narration']
+        verdict = checks.vet('narration', [{'level': 'warning', 'code': code, 'message': 'repeat'}])
+        assert verdict[0] == 'warning' and verdict[1][0]['code'] == code
