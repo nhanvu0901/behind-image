@@ -19,7 +19,13 @@ def post_compose(pid: str, request: Request, body: dict = Body(default={})):
     project = root / pid
     if not valid_pid(pid) or not project.is_dir() or project.is_symlink():
         raise ApiError(404, "project not found", code="project_not_found")
-    return compose_project(project, body)
+    from bti.longjob import manager, Busy
+    from bti.auto import RUN_ACTOR
+    try:
+        with manager.compose_slot(pid, project, run_ok=body.get("actor") == RUN_ACTOR):
+            return compose_project(project, body)
+    except Busy as exc:
+        raise ApiError(409, "Another agent is working on this project.", code="agent_job_running", job_id=exc.job_id) from exc
 
 
 def compose_project(project: Path, body: dict | None = None):

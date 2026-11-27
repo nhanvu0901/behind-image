@@ -572,3 +572,30 @@ def test_visual_run_walks_the_complete_order_with_fake_jobs(tmp_path):
     result, _, log = run_loop(tmp_path, t)
     assert result["reason"] == "exported"
     assert [step["action"] for step in log.rec["steps"]] == ["visual.plan", "picks.approve", "storyboard.compose", "storyboard.review", "scorecard.make", "music.auto", "storyboard.approve", "export.start", "scorecard.make"]
+
+
+def test_visual_until_edit_does_not_stop_at_old_stale_storyboard(tmp_path):
+    compose = act('storyboard.compose', 'edit', body={'base_rev': 'old'})
+    state = made_state([compose], done=('artwork', 'script', 'voice', 'picks', 'edit'))
+    state['pipeline'] = {'value': 'visual'}
+    runner, _ = make_run(tmp_path, Scripted(PID, [state]), until='edit')
+    result, action = runner._decide(state)
+    assert result is None and action['id'] == 'storyboard.compose'
+
+
+def test_visual_until_edit_does_not_call_invalid_script_complete(tmp_path):
+    compose = act('storyboard.compose', 'edit', ready=False, needs=['visual_script_valid'], advances=False)
+    state = made_state([compose], done=('artwork', 'script', 'voice', 'picks', 'edit'))
+    state['pipeline'] = {'value': 'visual'}
+    runner, _ = make_run(tmp_path, Scripted(PID, [state]), until='edit')
+    result, action = runner._decide(state)
+    assert action is None and result['reason'] != 'until_reached'
+
+
+def test_visual_until_edit_does_not_stop_before_visual_plan(tmp_path):
+    plan = act('visual.plan', 'picks', body={'actor': 'agent:mock'})
+    state = made_state([plan], done=('artwork', 'script', 'voice', 'picks', 'edit'))
+    state['pipeline'] = {'value': 'visual'}
+    runner, _ = make_run(tmp_path, Scripted(PID, [state]), until='edit')
+    result, action = runner._decide(state)
+    assert result is None and action['id'] == 'visual.plan'

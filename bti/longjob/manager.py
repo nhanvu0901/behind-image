@@ -14,7 +14,7 @@ import threading
 import time
 import uuid
 from collections import deque
-from contextlib import nullcontext
+from contextlib import contextmanager, nullcontext
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -405,6 +405,28 @@ class LongJobManager:
                 except OSError:
                     pass
 
+    @contextmanager
+    def compose_slot(self, pid, project_dir, *, run_ok=False):
+        """Reserve the agent slot for a synchronous, externally requested composition."""
+        project_dir = Path(project_dir)
+        job = _Job("compose", pid, project_dir, [], {}, self._persist)
+        with self._lock:
+            busy = next((j for j in self._jobs.values() if j.pid == pid and j.state in ACTIVE and
+                         (j.kind in ("draft", "title", "compose") or (j.kind == "auto" and not run_ok) or
+                          (j.kind == "picks" and (j.meta.get("action") in ("auto", "tighten") or
+                                                   j.meta.get("visual_action") == "edit")))), None)
+            if busy:
+                raise Busy(busy.public())
+            self._jobs[job.id] = job
+            if deploy_guard.active():
+                self._jobs.pop(job.id, None)
+                raise deploy_guard.DeployBusy()
+        try:
+            yield
+        finally:
+            with self._lock:
+                self._jobs.pop(job.id, None)
+
     # -- public api
     def start(self, kind: str, pid: str, project_dir: Path | str, parts: list[Part], meta: dict | None = None) -> dict:
         """Start a job and return its public record (`["id"]` is the id; `get`, `cancel` and `wait` accept the record or the id).
@@ -424,6 +446,15 @@ class LongJobManager:
             busy = next((j for j in self._jobs.values() if j.pid == pid and j.kind == kind and j.state in ACTIVE), None)
             if busy is not None:
                 raise Busy(busy.public())
+            # wireup: reserve the shared agent slot atomically across job kinds.
+            def agent_job(kind, meta):
+                return kind in ("draft", "title", "compose") or (kind == "picks" and
+                    (meta.get("action") in ("auto", "tighten") or meta.get("visual_action") == "edit"))
+            if agent_job(kind, job.meta):
+                busy = next((j for j in self._jobs.values() if j.pid == pid and j.state in ACTIVE
+                                and agent_job(j.kind, j.meta)), None)
+                if busy is not None:
+                    raise Busy(busy.public())
             self._jobs[job.id] = job
             # Register before checking the deploy lock: the deploy's subsequent
             # state read either sees this job or this registration is removed.

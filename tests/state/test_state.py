@@ -449,14 +449,11 @@ def test_picks_approval_invokes_recompose_for_visual_project(at, monkeypatch):
 
 
 def test_visual_review_calls_visual_worker(at, monkeypatch):
-    import sys
-    import types
+    from bti.visual import review
     c, pid, st = at("drafted")
     assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
     calls = []
-    module = types.ModuleType("bti.visual.review")
-    module.start = lambda pid, d, **kw: (calls.append((pid, d)) or {"id": "fake", "meta": {}})
-    monkeypatch.setitem(sys.modules, "bti.visual.review", module)
+    monkeypatch.setattr(review, "start", lambda pid, d, **kw: (calls.append((pid, d)) or {"id": "fake", "meta": {}}))
     r = c.post(f"/api/projects/{pid}/draft/review", json={"actor": "agent:auto"})
     assert r.status_code == 200, r.text
     assert calls == [(pid, c.root / pid)]
@@ -486,6 +483,11 @@ def test_the_exact_visual_action_ids_at_each_stage(at, stage, monkeypatch):
         "storyboard_approved": ["storyboard.compose", "export.start", "scorecard.make", *late, "music.auto"],
         "exported": ["storyboard.compose", "scorecard.make", *late, "export.start", "music.auto"],
     }
+    # wireup: visual edits are available once a visual script exists.
+    if stage in {"picks_approved", "proposal_waiting"}:
+        expected[stage].append("visual.edit")
+    elif stage in {"drafted", "storyboard_approved", "exported"}:
+        expected[stage].insert(expected[stage].index("music.set"), "visual.edit")
     if stage == "drafted":
         import importlib.util
         if importlib.util.find_spec("bti.visual.review") is not None:

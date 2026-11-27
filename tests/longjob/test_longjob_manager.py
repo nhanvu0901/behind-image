@@ -556,3 +556,42 @@ def test_cancel_kills_an_interactive_child(mgr, root):
     mgr.cancel(job)
     assert mgr.wait(job, 20)["state"] == "cancelled"
     until(lambda: not alive(pids[0]), 10)
+
+
+def test_visual_edit_and_draft_cannot_start_together(mgr, root):
+    go = threading.Event()
+    job = mgr.start('picks', 'p1', root / 'p1', [Part('edit', 'Edit', lambda c: go.wait(10))],
+                    meta={'action': 'edit', 'visual_action': 'edit'})
+    try:
+        with pytest.raises(Busy):
+            mgr.start('draft', 'p1', root / 'p1', [Part('review', 'Review', lambda c: None)])
+    finally:
+        go.set()
+        mgr.wait(job)
+
+
+def test_synchronous_compose_reserves_agent_slot_and_deploy_lock(mgr, root, monkeypatch):
+    from bti import deploy_guard
+    with mgr.compose_slot('p1', root / 'p1'):
+        with pytest.raises(Busy):
+            mgr.start('draft', 'p1', root / 'p1', [Part('review', 'Review', lambda c: None)])
+        assert mgr.active('p1', 'compose')
+    assert mgr.active('p1', 'compose') is None
+    monkeypatch.setattr(deploy_guard, 'active', lambda: True)
+    with pytest.raises(deploy_guard.DeployBusy):
+        with mgr.compose_slot('p1', root / 'p1'):
+            pass
+
+
+def test_compose_slot_rejects_unrelated_automatic_run(mgr, root):
+    go = threading.Event()
+    job = mgr.start('auto', 'p1', root / 'p1', [Part('run', 'Run', lambda c: go.wait(10))])
+    try:
+        with pytest.raises(Busy):
+            with mgr.compose_slot('p1', root / 'p1'):
+                pass
+        with mgr.compose_slot('p1', root / 'p1', run_ok=True):
+            pass
+    finally:
+        go.set()
+        mgr.wait(job)

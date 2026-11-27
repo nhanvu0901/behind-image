@@ -271,14 +271,14 @@ def other_agent_job(pid: str, own_kind: str, manager=None, *, run_ok: bool = Fal
     m = manager or _manager()
     if m is None:
         return None
-    for kind in (KIND, "picks", "auto", "title"):          # titlestep: the title writer (kind `title`) is an agent run too
+    for kind in (KIND, "picks", "auto", "title", "compose"):          # titlestep: the title writer (kind `title`) is an agent run too
         if kind == own_kind or (kind == "auto" and run_ok):
             continue
         try:
             rec = m.active(pid, kind)
         except Exception:       # noqa: BLE001 - a registry that cannot answer never blocks a start
             continue
-        if rec and (kind != "picks" or (rec.get("meta") or {}).get("action") in ("auto", "tighten")):
+        if rec and (kind != "picks" or ((rec.get("meta") or {}).get("action") in ("auto", "tighten") or (rec.get("meta") or {}).get("visual_action") == "edit")):
             return rec
     return None
 

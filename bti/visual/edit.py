@@ -125,7 +125,6 @@ def run_edit(pid, pdir, instruction, scope, *, model, ctx, base_rev=None, **seam
     """Run an edit in an existing agent job, including search, save and compose."""
     import json
     from pathlib import Path
-    from types import SimpleNamespace
     from bti.visual import check, job, projection, store
     from bti.picks.auto import inputs, search, session, write
     from bti.picks import context, doc, service, websettings
@@ -267,10 +266,9 @@ def run_edit(pid, pdir, instruction, scope, *, model, ctx, base_rev=None, **seam
     operations = projection.operations(projection.project(visual, timing, inp.painting.key))
     for offset in range(0, len(operations), 200):
         writer.send(operations[offset:offset + 200], 'Agent sửa kịch bản hình: chọn hình theo đoạn')
-    store.save(pdir, visual, base_rev=rev, actor='agent:' + model)
-    from bti.compose.api import post_compose
-    request = SimpleNamespace(app=SimpleNamespace(state=SimpleNamespace(projects_root=pdir.parent)))
-    composed = post_compose(pid, request, {})
+    store.save(pdir, visual, base_rev=rev, actor='agent:' + model, compose=False)
+    from bti.compose.api import compose_project
+    composed = compose_project(pdir)
     missing_moments = missing_by_moment(visual, ids, before=before)
     missing_moments.update(missing_by_moment(visual, [m['id'] for m in visual['moments']]))
     return {'sentence': 'Đã sửa kịch bản hình và dựng lại storyboard.',

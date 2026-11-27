@@ -192,6 +192,15 @@ class Run:
         target = self.until or "export"
         visual = (st.get("pipeline") or {}).get("value") == "visual"
         target_done = (steps.get(target) or {}).get("state") == "done"
+        # wireup: an inherited storyboard can look finished before the visual
+        # script has been composed. Do not stop at that obsolete edit step.
+        if visual and target == "edit" and any(
+            (a["id"] == "storyboard.compose" and (a.get("advances") or not a.get("ready"))) or
+            (a["id"] == "visual.plan" and a.get("advances")) or
+            (a["id"] == "picks.approve" and "visual_script" in (a.get("needs") or []))
+            for a in acts
+        ):
+            target_done = False
         post_score = visual and target == "export" and target_done and "post" not in self.scorecard_seen
         if target_done and not post_score:
             return reasons.make("until_reached" if self.until and self.until != "export" else "exported", pid=self.pid, step=target), None

@@ -364,14 +364,24 @@ def _report_path(project_dir, revision):
 
 def _input_signature(project_dir):
     import hashlib
+    import json
     from pathlib import Path
     h = hashlib.sha256()
     for name in ("timing.json", "picks.json"):
         h.update(name.encode())
         try:
-            h.update((Path(project_dir) / name).read_bytes())
+            raw = (Path(project_dir) / name).read_bytes()
         except FileNotFoundError:
-            h.update(b"<missing>")
+            raw = b"<missing>"
+        if name == "picks.json":
+            try:
+                doc = json.loads(raw)
+                if isinstance(doc, dict):
+                    doc.pop("approval", None)
+                    raw = json.dumps(doc, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+            except (ValueError, UnicodeError):
+                pass
+        h.update(raw)
     return h.hexdigest()
 
 
