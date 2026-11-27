@@ -12,7 +12,8 @@ YOUR TASK
 {{TASK}}
 
 HOW TO FOLLOW THE OUTLINE
-- Follow the four voice principles in HOW THIS CHANNEL NARRATES (orient before intrigue; one narrator, the channel's own voice; never mention a gesture, object or sign without saying in the same sentence what it is or means; plain, complete sentences understood at first hearing).
+- Follow the five voice principles in HOW THIS CHANNEL NARRATES (orient before intrigue; one narrator, the channel's own voice; the first time you point at a gesture, object or sign, say in the same sentence what it is or means; plain, complete sentences understood at first hearing; say each point once and return to it at most once, in new words, for a new reason).
+- EACH POINT AT MOST TWICE IN THE WHOLE SCRIPT. The outline lists a fact in the chapter that tells it and, at most, in one later chapter that returns to it. Tell a fact in full only in the first of them. In the second, return to it in one short clause of new words, from another side, and only to answer that chapter's question. A fact the outline does not list for the chapter you are writing is not spoken there at all, not even in passing. When THE CHAPTERS ALREADY WRITTEN are shown, read them first and note which points are told and which have used their return: you may not say those again, and you never reuse a sentence or an image from them.
 - Keep the chapters, their order and their ids. Each chapter's budget is a CEILING: do not go over it. Aim for 90 to 100 percent of it. A chapter over its budget is cut and written again, so cut it yourself while you write. The whole narration comes to {{TARGET_WORDS}} words or fewer.
 - Use only the facts in the fact table, and only as certain as their certainty word says. Do not add a fact that is not in the table.
 - Cite the fact ids a paragraph rests on, in its >> line. Never put source ids (such as PAY-07) or fact ids in the spoken text.
@@ -28,7 +29,7 @@ THE COLD OPEN (chapter with ROLE: cold_open)
 - Keep the cold open between 60 and 145 words in total.
 - The first sentence, at most 25 words, names the painting and the painter in plain words outside quotations; give the year when certain.
 - In the next sentence or two introduce who or what is shown by position, identifying each person before or as their name is used; never introduce someone only as the wife or relative of a person not yet presented.
-- In one sentence point to two or three strange things visible in the painting, concrete and supported by the sources, and say in the same sentence what each one is or means.
+- In one sentence point to two or three strange things visible in the painting, concrete and supported by the sources, and say in the same sentence, in a few words, what each one is. Its full explanation belongs to its own chapter; what you say here is that point's first mention.
 - By about word 72 set the open question, with both sides of the contradiction together in one sentence so the viewer need not remember earlier numbers. End on that question.
 - Use plain words, never a plan of the video or stock phrases. See the forbidden phrase list in HOW THIS CHANNEL NARRATES.
 - For `show` hints, start with the whole painting and people, move to the concrete details, then pull back to the whole painting on the question.
@@ -47,7 +48,13 @@ Example 2 (crowded religious scene — *The Feast in the House of Levi*, Paolo V
 This is The Feast in the House of Levi, painted by Paolo Veronese in 1573. Under a bright stone arcade, Christ sits at the centre of a crowded table surrounded by guests and servants. But Veronese began this canvas as a Last Supper, and the figures around Christ barely fit a solemn meal. A jester holds a parrot, armed soldiers drink on the steps, and a servant wipes a bleeding nose. Was Veronese turning a sacred feast into theatre, or hiding everyday Venice inside a Bible story?
 ```
 
-Both examples name the painting and painter in the first sentence, orient the viewer before raising the puzzle, explain every strange detail in the same sentence, and end cleanly on both sides of the question in plain words.
+Both examples name the painting and painter in the first sentence, orient the viewer before raising the puzzle, say in a few words what every strange detail is, and end cleanly on both sides of the question in plain words.
+
+BEFORE YOU ANSWER, CHECK THE WHOLE SCRIPT ONCE
+- For every fact id, count the beats whose >> line cites it. More than two: cut or regroup until it is two or fewer.
+- For every fact cited twice, read the two beats side by side. The second must be shorter, must not explain the point again, and must share no run of four words with the first.
+- Read the last chapter against the first. No sentence, image or closing phrase of yours appears twice anywhere in the script.
+- The chapter that weighs two possibilities and the closing reason about groups of evidence; neither is a list of things already shown.
 
 {{NOTES}}
 
