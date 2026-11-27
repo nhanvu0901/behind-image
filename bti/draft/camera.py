@@ -89,10 +89,10 @@ def naming_overlay_time(overlays: list | None, region_name: str | None, tm: Timi
 
 
 def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, asset: dict, box,
-                      prev_frame: tuple[float, float, float] | None, t0: float, t1: float,
-                      overlays: list | None = None, tm: Timing | None = None, *,
-                      fit_pct: float = VC.WHOLE_FIT_PCT, frame_fill: float | None = None,
-                      sharp_zoom: float | None = None) -> list[dict]:
+                       prev_frame: tuple[float, float, float] | None, t0: float, t1: float,
+                       overlays: list | None = None, tm: Timing | None = None, *,
+                       fit_pct: float = VC.WHOLE_FIT_PCT, frame_fill: float | None = None,
+                       sharp_zoom: float | None = None) -> list[dict]:
     """Compute `[key, ...]` camera keys for an offered main-painting camera shot (`CAM-01/03/04/05`, `STATIC-01`)."""
     w = float(asset.get("width") or 1920.0)
     h = float(asset.get("height") or 1080.0)
@@ -102,24 +102,47 @@ def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, 
     rbox = VC.region_point_box(reg)
 
     whole = VC.whole_painting_frame(w, h, pbox, fit_pct=fit_pct)
-    end = VC.region_frame(reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom)
     z_cap = VC.sharp_limit(w, h, sharp_zoom=sharp_zoom)
+    z_cov = VC.cover_zoom(w, h, pbox)
+    can_fill = z_cov <= z_cap + 1e-9
+    z_floor = max(whole[2], z_cov) if (reg is not None and can_fill) else whole[2]
     dur = max(0.2, float(t1) - float(t0))
+
+    travel = (
+        VC.region_travel_frames(
+            reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom,
+            regions=regs, region_name=region_name, dur=dur, max_speed=MAX_TRAVEL_SPEED,
+        )
+        if reg is not None else None
+    )
+    end = (
+        travel["head"]
+        if travel is not None
+        else VC.region_frame(reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill,
+                             sharp_zoom=sharp_zoom, regions=regs, region_name=region_name)
+    )
     t_name = naming_overlay_time(overlays, region_name, tm, t0, t1) if (region_name and tm is not None) else None
     t_arr = _arrive_time(dur, t0, t_name)
 
     def clamp(cx: float, cy: float, z: float) -> tuple[float, float, float]:
-        return VC.fit_frame_to_box(cx, cy, z, w, h, pbox, fit_pct=fit_pct, z_cap=z_cap)
+        z_eff = max(z_floor, float(z)) if reg is not None else float(z)
+        return VC.fit_frame_to_box(cx, cy, z_eff, w, h, pbox, fit_pct=fit_pct, z_cap=z_cap)
+
+    def filling_default() -> tuple[float, float, float]:
+        if reg is not None and can_fill:
+            return VC.fit_frame_to_box(end[0], end[1], z_cov, w, h, pbox, fit_pct=fit_pct, z_cap=z_cap)
+        return whole
 
     def resolve_from(ref: str | None) -> tuple[float, float, float]:
         if ref == "whole":
             return whole
         if ref in (None, "previous"):
-            return prev_frame if prev_frame is not None else whole
+            return prev_frame if prev_frame is not None else filling_default()
         target_reg = regs.get(ref) if isinstance(ref, str) else None
         if target_reg is not None:
-            return VC.region_frame(target_reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom)
-        return prev_frame if prev_frame is not None else whole
+            return VC.region_frame(target_reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill,
+                                   sharp_zoom=sharp_zoom, regions=regs, region_name=ref)
+        return prev_frame if prev_frame is not None else filling_default()
 
     def ensure_rbox(frame: tuple[float, float, float], target_end: tuple[float, float, float]) -> tuple[float, float, float]:
         """If clamping pushed `frame` so high in zoom that `rbox` is no longer inside it, fall back safely toward `target_end`."""
@@ -132,9 +155,9 @@ def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, 
             # Whole painting: keep whole painting fit at start and gently drift in without clipping.
             end_drift = clamp(whole[0], whole[1], min(z_cap, whole[2] * (1.0 + min(pct, 0.035))))
             return [_key(0.0, whole, ease), _key(1.0, end_drift, "linear")]
-        z0 = max(whole[2], end[2] / (1.0 + pct))
+        z0 = max(z_floor, end[2] / (1.0 + pct))
         start = ensure_rbox(clamp(end[0], end[1], z0), end)
-        # If zoom was already near whole fit so z0 == end[2], try a tiny inward push without exceeding sharp limit.
+        # If zoom was already near whole/cover floor so z0 == end[2], try a tiny inward push without exceeding sharp limit.
         if abs(end[2] - start[2]) < 1e-4 and end[2] * (1.0 + 0.03) <= z_cap + 1e-6:
             end_pushed = ensure_rbox(clamp(end[0], end[1], min(z_cap, end[2] * 1.03)), end)
             return [_key(0.0, start, ease), _key(1.0, end_pushed, "linear")]
@@ -152,9 +175,109 @@ def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, 
         if speed > MAX_TRAVEL_SPEED + 1e-9 or _zoom_rate(start, end, t_arr) > ZOOM_RATE_MAX + 1e-9:
             return push_on_end(fallback_pct, fallback_ease)
         arrive_rel = max(0.05, min(0.90, t_arr / dur))
-        z_arr = max(whole[2], end[2] / (1.0 + HOLD_PUSH_PCT))
+        z_arr = max(z_floor, end[2] / (1.0 + HOLD_PUSH_PCT))
         arr = ensure_rbox(clamp(end[0], end[1], z_arr), end)
         return [_key(0.0, start, travel_ease), _key(arrive_rel, arr, "linear"), _key(1.0, end, "linear")]
+
+    # Oversized tall/wide regions: stay at filling zoom and travel from head end to tail end, or hold head end when short.
+    if travel is not None:
+        head_pose = travel["head"]
+        tail_pose = travel["tail"]
+        head_box = travel["head_box"]
+
+        def ensure_head(frame: tuple[float, float, float], target_pose: tuple[float, float, float]) -> tuple[float, float, float]:
+            if head_box is not None and not VC.box_inside_frame(head_box, *frame)[0]:
+                return target_pose
+            return frame
+
+        def hold_head(pose: tuple[float, float, float], pct: float = SAME_REGION_PUSH_PCT,
+                      ease: str = "inout_sine") -> list[dict]:
+            z0 = max(z_floor, pose[2] / (1.0 + pct))
+            start = ensure_head(clamp(pose[0], pose[1], z0), pose)
+            if abs(pose[2] - start[2]) < 1e-4 and pose[2] * 1.03 <= z_cap + 1e-6:
+                end_pushed = ensure_head(clamp(pose[0], pose[1], min(z_cap, pose[2] * 1.03)), pose)
+                return [_key(0.0, start, ease), _key(1.0, end_pushed, "linear")]
+            return [_key(0.0, start, ease), _key(1.0, pose, "linear")]
+
+        def direct_travel() -> list[dict]:
+            dist_ht = _dist_fw(head_pose, tail_pose)
+            if dur < MIN_TRAVEL_S or dist_ht < 0.05 or dist_ht / dur > MAX_TRAVEL_SPEED + 1e-9:
+                return hold_head(head_pose, SAME_REGION_PUSH_PCT, "inout_sine")
+            if t_name is not None and head_box is not None and t_name > t0 + 1e-6:
+                pose_at_name = VC.camera_at([(t0, *head_pose, "inout_sine"), (t1, *tail_pose, "linear")], t_name)
+                if not VC.box_inside_frame(head_box, *pose_at_name)[0]:
+                    hold_s = min(dur - MIN_TRAVEL_S, max(0.0, t_name - t0))
+                    rem = dur - hold_s
+                    if rem >= MIN_TRAVEL_S:
+                        t_rem = VC.region_travel_frames(
+                            reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom,
+                            regions=regs, region_name=region_name, dur=rem, max_speed=MAX_TRAVEL_SPEED,
+                        )
+                        if t_rem is not None:
+                            d_rem = _dist_fw(t_rem["head"], t_rem["tail"])
+                            if d_rem >= 0.05 and d_rem / rem <= MAX_TRAVEL_SPEED + 1e-9:
+                                hold_rel = max(0.05, min(0.90, hold_s / dur))
+                                t_hold = t0 + hold_rel * dur
+                                keys_chk = [(t0, *t_rem["head"], "linear"), (t_hold, *t_rem["head"], "inout_sine"), (t1, *t_rem["tail"], "linear")]
+                                if VC.box_inside_frame(head_box, *VC.camera_at(keys_chk, t_name))[0]:
+                                    return [_key(0.0, t_rem["head"], "linear"),
+                                            _key(hold_rel, t_rem["head"], "inout_sine"),
+                                            _key(1.0, t_rem["tail"], "linear")]
+                    return hold_head(head_pose, HOLD_PUSH_PCT, "inout_sine")
+            return [_key(0.0, head_pose, "inout_sine"), _key(1.0, tail_pose, "linear")]
+
+        if tid == "STATIC-01":
+            return hold_head(head_pose, STATIC_DRIFT_PCT, "linear")
+
+        prior_start: tuple[float, float, float] | None = None
+        prior_ease = "inout_cubic"
+        if tid == "CAM-01":
+            prior_ease = "inout_sine"
+            if from_ref is not None:
+                prior_start = resolve_from(from_ref)
+            elif prev_frame is not None and prev_frame[2] <= head_pose[2] * 1.02 and (not can_fill or prev_frame[2] >= z_cov - 1e-5):
+                prior_start = prev_frame
+        elif tid == "CAM-03":
+            prior_ease = "inout_cubic"
+            if from_ref is not None:
+                prior_start = resolve_from(from_ref)
+            elif prev_frame is not None and prev_frame[2] > head_pose[2] * 1.04:
+                prior_start = prev_frame
+        elif tid == "CAM-04":
+            prior_ease = "inout_sine"
+            if from_ref is not None:
+                prior_start = resolve_from(from_ref)
+        else:
+            prior_ease = "inout_cubic"
+            prior_start = resolve_from(from_ref) if from_ref is not None else prev_frame
+
+        if prior_start is not None:
+            dist_p = _dist_fw(prior_start, head_pose)
+            z_ratio_p = abs(head_pose[2] / max(1e-6, prior_start[2]) - 1.0)
+            if (dist_p >= 0.05 or z_ratio_p >= 0.08) and t_arr >= MIN_TRAVEL_S:
+                if dist_p / t_arr <= MAX_TRAVEL_SPEED + 1e-9 and _zoom_rate(prior_start, head_pose, t_arr) <= ZOOM_RATE_MAX + 1e-9:
+                    arrive_rel = max(0.05, min(0.90, t_arr / dur))
+                    rem_dur = dur * (1.0 - arrive_rel)
+                    t_rem = (
+                        VC.region_travel_frames(
+                            reg, w, h, pbox, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom,
+                            regions=regs, region_name=region_name, dur=rem_dur, max_speed=MAX_TRAVEL_SPEED,
+                        )
+                        if rem_dur >= MIN_TRAVEL_S else None
+                    )
+                    if t_rem is not None:
+                        d_rem = _dist_fw(t_rem["head"], t_rem["tail"])
+                        d_to_head = _dist_fw(prior_start, t_rem["head"])
+                        if (d_rem >= 0.05 and d_rem / rem_dur <= MAX_TRAVEL_SPEED + 1e-9
+                                and d_to_head / t_arr <= MAX_TRAVEL_SPEED + 1e-9
+                                and _zoom_rate(prior_start, t_rem["head"], t_arr) <= ZOOM_RATE_MAX + 1e-9):
+                            return [_key(0.0, prior_start, prior_ease),
+                                    _key(arrive_rel, t_rem["head"], "inout_sine"),
+                                    _key(1.0, t_rem["tail"], "linear")]
+                    z_arr = max(z_floor, head_pose[2] / (1.0 + HOLD_PUSH_PCT))
+                    arr = ensure_head(clamp(head_pose[0], head_pose[1], z_arr), head_pose)
+                    return [_key(0.0, prior_start, prior_ease), _key(arrive_rel, arr, "linear"), _key(1.0, head_pose, "linear")]
+        return direct_travel()
 
     if tid == "STATIC-01":
         return push_on_end(STATIC_DRIFT_PCT, "linear")
@@ -185,7 +308,7 @@ def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, 
             if abs(start[2] - end[2]) < 1e-3 and _dist_fw(start, end) < 0.02:
                 start = VC.fit_frame_to_box(whole[0], whole[1], min(z_pull_max, whole[2] * (1.0 + PULL_START_PCT)), w, h, pbox, fit_pct=fit_pct, z_cap=z_pull_max)
             return [_key(0.0, start, "inout_cubic"), _key(1.0, end, "linear")]
-        # Pulling back to a wider band/region: arrive early so the whole wider region sits cleanly in frame.
+        # Pulling back to a wider band/region: arrive early at the filling region frame so the named region sits cleanly in frame.
         dist = _dist_fw(start, end)
         if (dist >= 0.05 or start[2] > end[2] * 1.08) and t_arr >= MIN_TRAVEL_S and (dist / t_arr) <= MAX_TRAVEL_SPEED + 1e-9 and _zoom_rate(start, end, t_arr) <= ZOOM_RATE_MAX + 1e-9:
             arrive_rel = max(0.05, min(0.90, t_arr / dur))
@@ -204,7 +327,8 @@ def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, 
             return travel_to_end(resolve_from(from_ref), "inout_sine")
         if reg is None:
             bw, bh = pbox[2] - pbox[0], pbox[3] - pbox[1]
-            z = max(whole[2], min(z_cap, 1920.0 / max(1.0, bw)))
+            z = max(whole[2], min(z_cap, z_cov))
+            hw = 1920.0 / (2.0 * z)
             hh = 1080.0 / (2.0 * z)
             if bh > 2.0 * hh + 40.0:
                 y_bot = min(pbox[3] - hh, pbox[1] + bh * 0.72)
@@ -216,20 +340,30 @@ def _build_main_camera(tid: str, region_name: str | None, from_ref: str | None, 
                 cx_mid = 0.5 * (pbox[0] + pbox[2])
                 return [_key(0.0, clamp(cx_mid, y_bot, z), "inout_sine"),
                         _key(1.0, clamp(cx_mid, y_top, z), "linear")]
+            if bw > 2.0 * hw + 40.0:
+                x_left = max(pbox[0] + hw, pbox[0] + bw * 0.28)
+                x_right = min(pbox[2] - hw, pbox[0] + bw * 0.72)
+                max_dx = MAX_TRAVEL_SPEED * dur * (1920.0 / z)
+                if x_right - x_left > max_dx:
+                    mid = 0.5 * (x_left + x_right)
+                    x_left, x_right = mid - 0.5 * max_dx, mid + 0.5 * max_dx
+                cy_mid = 0.5 * (pbox[1] + pbox[3])
+                return [_key(0.0, clamp(x_left, cy_mid, z), "inout_sine"),
+                        _key(1.0, clamp(x_right, cy_mid, z), "linear")]
             return push_on_end(SAME_REGION_PUSH_PCT, "inout_sine")
-        # Vertical upward glide along a tall/detail region, arriving on `end` by `t_arr` and holding with gentle push.
+        # Vertical upward glide along a detail region, arriving on `end` by `t_arr` and holding with gentle push.
         rh = (rbox[3] - rbox[1]) if rbox is not None else 0.0
         dy = min(0.25 * rh, 0.30 * (1080.0 / end[2]))
         if dy >= 20.0 and t_arr >= MIN_TRAVEL_S:
-            start = clamp(end[0], end[1] + dy, max(whole[2], end[2] / (1.0 + HOLD_PUSH_PCT)))
+            start = clamp(end[0], end[1] + dy, max(z_floor, end[2] / (1.0 + HOLD_PUSH_PCT)))
             if _dist_fw(start, end) / t_arr <= MAX_TRAVEL_SPEED + 1e-9 and _zoom_rate(start, end, t_arr) <= ZOOM_RATE_MAX + 1e-9:
                 arrive_rel = max(0.05, min(0.90, t_arr / dur))
-                z_arr = max(whole[2], end[2] / (1.0 + HOLD_PUSH_PCT))
+                z_arr = max(z_floor, end[2] / (1.0 + HOLD_PUSH_PCT))
                 arr = ensure_rbox(clamp(end[0], end[1], z_arr), end)
                 return [_key(0.0, start, "inout_sine"), _key(arrive_rel, arr, "linear"), _key(1.0, end, "linear")]
         return push_on_end(SAME_REGION_PUSH_PCT, "inout_sine")
 
-    # Default (`CAM-05` Zoom and shift): travel from `from_ref` (default "previous", else "whole") -> `end`.
+    # Default (`CAM-05` Zoom and shift): travel from `from_ref` (default "previous", else filling default) -> `end`.
     eff_from = from_ref or "previous"
     return travel_to_end(resolve_from(eff_from), "inout_cubic")
 
@@ -247,14 +381,26 @@ def build_main_camera(tid: str, region_name: str | None, from_ref: str | None, a
     if prev_frame is None or not keys:
         return keys
 
+    w = float(asset.get("width") or 1920.0)
+    h = float(asset.get("height") or 1080.0)
+    pbox = box if (isinstance(box, (list, tuple)) and len(box) == 4 and box[2] > box[0] and box[3] > box[1]) else (0.0, 0.0, w, h)
+    regs = asset.get("regions") or {}
+    reg = regs.get(region_name) if isinstance(region_name, str) else None
+    z_cov = VC.cover_zoom(w, h, pbox)
+    z_cap = VC.sharp_limit(w, h, sharp_zoom=sharp_zoom)
+    can_fill = z_cov <= z_cap + 1e-9
+    is_oversized = bool(reg is not None and VC.region_oversized_axis(reg, w, h, pbox, sharp_zoom=sharp_zoom) is not None)
+
     def frame(key):
         return (key["cx"], key["cy"], key["zoom"])
 
     def close(a, b, limit):
         return _dist_fw(a, b) <= limit and abs(b[2] / max(1e-6, a[2]) - 1.0) <= limit
 
-    if (prev_region is not _UNSET_REGION and prev_region == region_name) or close(prev_frame, frame(keys[-1]), 0.03):
+    if prev_region is not _UNSET_REGION and prev_region == region_name:
         return [_key(0.0, prev_frame), _key(1.0, prev_frame)]
-    if close(prev_frame, frame(keys[0]), 0.12):
+    if close(prev_frame, frame(keys[-1]), 0.03) and not (is_oversized and any(not close(frame(k), frame(keys[-1]), 0.05) for k in keys)):
+        return [_key(0.0, prev_frame), _key(1.0, prev_frame)]
+    if close(prev_frame, frame(keys[0]), 0.12) and (reg is None or not can_fill or prev_frame[2] >= z_cov - 1e-5):
         keys[0].update(cx=prev_frame[0], cy=prev_frame[1], zoom=prev_frame[2])
     return keys

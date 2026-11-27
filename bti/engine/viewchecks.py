@@ -849,6 +849,32 @@ REGION_IN_TOL_PX = 1.0                  # source-px tolerance so contentbox.fit_
 ARRIVE_MIN_S = 2.0                      # a named region stays wholly inside the frame for at least 2.0 s ...
 ARRIVE_MIN_SHARE = 0.55                 # ... OR at least 55% of the shot (whichever is shorter)
 ARRIVE_STEP_S = 0.05                    # camera sampling step for checking region arrival time
+TRAVEL_MARGIN = 0.08                    # headroom share along the travel axis at head/tail ends of an oversized region
+HEAD_FIT_FILL = 0.85                    # matched head/face region must fit within this share of the travel frame
+
+_NON_PERSON_REGION_TOKENS = frozenset({
+    "bed", "window", "tabard", "gown", "skirt", "dress", "sleeve", "fur", "band", "full",
+    "room", "wall", "floor", "bench", "chair", "mirror", "chandelier", "shelves", "shelf",
+    "counter", "dog", "carpet", "shoes", "boots", "pattens", "tree", "orange", "oranges",
+    "doorway", "hem", "cushion", "beads", "rosary", "signature", "inscription", "scales",
+    "coins", "ring", "girdle", "buckle", "coral", "vessel", "pitcher", "pitchers", "frame",
+    "table", "ceiling",
+})
+_HEAD_TOKENS = frozenset({"head", "face"})
+_EXCLUDED_HEAD_CAND_TOKENS = frozenset({
+    "band", "full", "room", "chair", "dog", "two", "both", "light", "standing", "hands", "faces",
+})
+_PERSON_REGION_TOKENS = frozenset({
+    "figure", "person", "man", "woman", "saint", "couple", "husband", "wife", "merchant",
+    "lady", "girl", "boy", "king", "queen", "virgin", "christ", "angel", "portrait",
+    "body", "standing", "reclining", "seated", "nguoi", "thanh", "chong", "vo",
+})
+_GENERIC_PERSON_TOKENS = frozenset({
+    "figure", "full", "whole", "body", "standing", "reclining", "seated", "head", "face",
+    "bust", "upper", "lower", "left", "right", "side", "front", "back", "tight", "close",
+    "med", "the", "of", "in", "on", "and", "a", "an", "his", "her", "with", "cua",
+    "nguoi", "toan", "than", "ben", "trai", "phai",
+})
 
 HINTS.update({
     "device_wrong_kind": ("Use a device only on a line whose kinds call for it (MAP-01: journey; TIME-01: dates; NUM-01: figure; DOC-01: inscription; AN-03 and AN-06: construction; TREE-01: relations; "
@@ -1981,43 +2007,262 @@ def fit_frame_to_box(cx: float, cy: float, z: float, w: float, h: float, box=Non
     return (round(float(fcx), 2), round(float(fcy), 2), round(float(fz), 5))
 
 
+def cover_zoom(w: float, h: float, box=None) -> float:
+    """Minimum zoom at which a 1920x1080 frame fills the painted area `box` with zero black bars."""
+    wf, hf = float(w), float(h)
+    if wf <= 0 or hf <= 0:
+        return 1.0
+    pbox = _valid_box(box, wf, hf)
+    bw = max(pbox[2] - pbox[0], 1.0)
+    bh = max(pbox[3] - pbox[1], 1.0)
+    return math.ceil(max(L.CANVAS_W / bw, L.CANVAS_H / bh) * 1e5 - 1e-9) / 1e5
+
+
+def _clamp_rbox_to_pbox(rbox: tuple[float, float, float, float],
+                        pbox: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+    x0 = max(rbox[0], pbox[0])
+    y0 = max(rbox[1], pbox[1])
+    x1 = min(rbox[2], pbox[2])
+    y1 = min(rbox[3], pbox[3])
+    return (x0, y0, x1, y1) if x1 > x0 and y1 > y0 else rbox
+
+
+def region_oversized_axis(region: dict | None, w: float, h: float, box=None, *,
+                          sharp_zoom: float | None = None) -> str | None:
+    """Return `'tall'` or `'wide'` when `region` exceeds a filling 16:9 frame on that axis, else None."""
+    wf, hf = float(w), float(h)
+    if wf <= 0 or hf <= 0:
+        return None
+    rbox = region_box(region)
+    if rbox is None:
+        return None
+    pbox = _valid_box(box, wf, hf)
+    z_cov = cover_zoom(wf, hf, pbox)
+    cap = sharp_limit(wf, hf, sharp_zoom=sharp_zoom)
+    if z_cov > cap + 1e-9:
+        return None
+    rbox_in = _clamp_rbox_to_pbox(rbox, pbox)
+    rw = rbox_in[2] - rbox_in[0]
+    rh = rbox_in[3] - rbox_in[1]
+    fw_cov = L.CANVAS_W / z_cov
+    fh_cov = L.CANVAS_H / z_cov
+    if rh > fh_cov + REGION_IN_TOL_PX and rh / fh_cov >= rw / fw_cov:
+        return "tall"
+    if rw > fw_cov + REGION_IN_TOL_PX:
+        return "wide"
+    return None
+
+
+def find_head_region(region_name: str | None, region: dict | None,
+                     regions: dict | None) -> tuple[str, tuple[float, float, float, float]] | None:
+    """Find a head/face region of the same person inside `region`, returning `(name, box)` or None."""
+    if not isinstance(regions, dict):
+        return None
+    rbox = region_box(region)
+    if rbox is None:
+        return None
+    reg_area = (rbox[2] - rbox[0]) * (rbox[3] - rbox[1])
+    if reg_area <= 0:
+        return None
+    reg_key_toks = set(tokens(str(region_name or "").replace("_", " ")))
+    if reg_key_toks & _NON_PERSON_REGION_TOKENS:
+        return None
+    reg_all_toks = reg_key_toks | set(tokens(region.get("label"))) | set(tokens(region.get("thing")))
+    is_person_reg = bool(reg_all_toks & _PERSON_REGION_TOKENS)
+    reg_specific_key = reg_key_toks - _GENERIC_PERSON_TOKENS
+    reg_id_toks = reg_all_toks - _GENERIC_PERSON_TOKENS
+    rw, rh = rbox[2] - rbox[0], rbox[3] - rbox[1]
+    pad = 0.05 * max(rw, rh)
+
+    buckets: dict[int, list[tuple[int, float, str, tuple[float, float, float, float]]]] = {0: [], 1: [], 2: []}
+    for cname, cand in sorted(regions.items()):
+        if cname == region_name:
+            continue
+        cbox = region_box(cand)
+        if cbox is None:
+            continue
+        carea = (cbox[2] - cbox[0]) * (cbox[3] - cbox[1])
+        if carea <= 0 or carea >= 0.60 * reg_area:
+            continue
+        ov = max(0.0, min(rbox[2], cbox[2]) - max(rbox[0], cbox[0])) * max(0.0, min(rbox[3], cbox[3]) - max(rbox[1], cbox[1]))
+        if ov < 0.70 * carea:
+            continue
+        ccx, ccy = 0.5 * (cbox[0] + cbox[2]), 0.5 * (cbox[1] + cbox[3])
+        if not (rbox[0] - pad <= ccx <= rbox[2] + pad and rbox[1] - pad <= ccy <= rbox[3] + pad):
+            continue
+        ckey = set(tokens(str(cname).replace("_", " ")))
+        if not (ckey & _HEAD_TOKENS) or (ckey & _EXCLUDED_HEAD_CAND_TOKENS):
+            continue
+        cid_all = ckey | set(tokens(cand.get("label"))) | set(tokens(cand.get("thing")))
+        cid_toks = cid_all - _GENERIC_PERSON_TOKENS
+        ckey_specific = ckey - _GENERIC_PERSON_TOKENS
+        if reg_specific_key and (reg_specific_key & ckey_specific):
+            prio = 0
+        elif is_person_reg and reg_id_toks and (reg_id_toks & cid_toks):
+            prio = 1
+        elif is_person_reg:
+            reg_male = bool(reg_all_toks & {"man", "husband"})
+            reg_fem = bool(reg_all_toks & {"woman", "wife"})
+            cid_male = bool(cid_all & {"man", "husband"})
+            cid_fem = bool(cid_all & {"woman", "wife"})
+            if (reg_male and cid_fem) or (reg_fem and cid_male):
+                continue
+            if ("saint" in ckey) and ("saint" not in reg_key_toks):
+                continue
+            prio = 2
+        else:
+            continue
+        buckets[prio].append((0 if "head" in ckey else 1, -carea, str(cname), cbox))
+
+    chosen = buckets[0] or buckets[1] or (buckets[2] if len(buckets[2]) == 1 else [])
+    if not chosen:
+        return None
+    chosen.sort()
+    return chosen[0][2], chosen[0][3]
+
+
+def region_travel_frames(region: dict | None, w: float, h: float, box=None, *,
+                         fit_pct: float = WHOLE_FIT_PCT, frame_fill: float | None = None,
+                         sharp_zoom: float | None = None, regions: dict | None = None,
+                         region_name: str | None = None, dur: float | None = None,
+                         max_speed: float | None = None) -> dict | None:
+    """Compute filling-zoom `(head, tail)` travel poses for a region taller/wider than a filling frame."""
+    axis = region_oversized_axis(region, w, h, box, sharp_zoom=sharp_zoom)
+    if axis is None:
+        return None
+    wf, hf = float(w), float(h)
+    pbox = _valid_box(box, wf, hf)
+    rbox = region_box(region)
+    assert rbox is not None
+    rbox_in = _clamp_rbox_to_pbox(rbox, pbox)
+    x0, y0, x1, y1 = rbox_in
+    rw, rh = x1 - x0, y1 - y0
+    rx, ry = 0.5 * (x0 + x1), 0.5 * (y0 + y1)
+    z_cov = cover_zoom(wf, hf, pbox)
+    cap = sharp_limit(wf, hf, sharp_zoom=sharp_zoom)
+    fill = FRAME_FILL if frame_fill is None else float(frame_fill)
+
+    head_match = find_head_region(region_name, region, regions)
+    head_name = head_match[0] if head_match else None
+    head_box = _clamp_rbox_to_pbox(head_match[1], pbox) if head_match else None
+
+    if axis == "tall":
+        z_cross = max(z_cov, min(cap, fill * L.CANVAS_W / max(1.0, rw)))
+    else:
+        z_cross = max(z_cov, min(cap, fill * L.CANVAS_H / max(1.0, rh)))
+
+    if head_box is not None:
+        hw_h, hh_h = head_box[2] - head_box[0], head_box[3] - head_box[1]
+        z_head_cap = min(HEAD_FIT_FILL * L.CANVAS_W / max(1.0, hw_h), HEAD_FIT_FILL * L.CANVAS_H / max(1.0, hh_h))
+        z_ideal = max(z_cov, min(z_cross, z_head_cap, cap))
+    else:
+        z_ideal = z_cross
+
+    if dur is not None and max_speed is not None and float(dur) > 0 and float(max_speed) > 0:
+        span_frac = 1.0 - 2.0 * TRAVEL_MARGIN
+        if axis == "tall":
+            z_speed = (span_frac * L.CANVAS_H + L.CANVAS_W * float(max_speed) * float(dur)) / max(1.0, rh)
+        else:
+            z_speed = L.CANVAS_W * (span_frac + float(max_speed) * float(dur)) / max(1.0, rw)
+        z_speed = math.floor(z_speed * 1e5) / 1e5
+        z_travel = max(z_cov, min(z_ideal, z_speed)) if z_speed >= z_cov else z_ideal
+    else:
+        z_travel = z_ideal
+
+    fw, fh = L.CANVAS_W / z_travel, L.CANVAS_H / z_travel
+    if axis == "tall":
+        cx_head = rx
+        cx_tail = rx
+        if head_box is not None and 0.5 * (head_box[1] + head_box[3]) > ry:
+            bot_anchor = max(y1, head_box[3])
+            cy_head = bot_anchor - fh * (0.5 - TRAVEL_MARGIN)
+            cy_tail = y0 + fh * (0.5 - TRAVEL_MARGIN)
+        else:
+            top_anchor = min(y0, head_box[1]) if head_box is not None else y0
+            cy_head = top_anchor + fh * (0.5 - TRAVEL_MARGIN)
+            cy_tail = y1 - fh * (0.5 - TRAVEL_MARGIN)
+    else:
+        cy_head = ry
+        cy_tail = ry
+        if head_box is not None and 0.5 * (head_box[0] + head_box[2]) > rx:
+            right_anchor = max(x1, head_box[2])
+            cx_head = right_anchor - fw * (0.5 - TRAVEL_MARGIN)
+            cx_tail = x0 + fw * (0.5 - TRAVEL_MARGIN)
+        else:
+            left_anchor = min(x0, head_box[0]) if head_box is not None else x0
+            cx_head = left_anchor + fw * (0.5 - TRAVEL_MARGIN)
+            cx_tail = x1 - fw * (0.5 - TRAVEL_MARGIN)
+
+    if head_box is not None:
+        if head_box[2] - head_box[0] <= fw:
+            cx_head = min(max(cx_head, head_box[2] - 0.5 * fw), head_box[0] + 0.5 * fw)
+        if head_box[3] - head_box[1] <= fh:
+            cy_head = min(max(cy_head, head_box[3] - 0.5 * fh), head_box[1] + 0.5 * fh)
+
+    head_pose = fit_frame_to_box(cx_head, cy_head, z_travel, wf, hf, pbox, fit_pct=fit_pct, z_cap=cap)
+    tail_pose = fit_frame_to_box(cx_tail, cy_tail, z_travel, wf, hf, pbox, fit_pct=fit_pct, z_cap=cap)
+    return {
+        "axis": axis,
+        "head": head_pose,
+        "tail": tail_pose,
+        "head_region": head_name,
+        "head_box": head_box,
+        "rbox": rbox_in,
+        "z_cover": z_cov,
+    }
+
+
 def region_frame(region: dict | None, w: float, h: float, box=None, *, fit_pct: float = WHOLE_FIT_PCT,
-                 frame_fill: float | None = None, sharp_zoom: float | None = None) -> tuple[float, float, float]:
+                 frame_fill: float | None = None, sharp_zoom: float | None = None,
+                 regions: dict | None = None, region_name: str | None = None) -> tuple[float, float, float]:
     """One frame rule `(cx, cy, zoom)` for a region on an image of size `w x h` with painted area `box`:
-    centred on the region centre; zoom gives `FRAME_FILL` of frame width or height (whichever reached first),
-    capped at `SHARP_ZOOM` (`SMALL_PICTURE_MAX_ZOOM` for small stored pictures), never below whole-painting fit,
+    centred on the region centre (or at the head end of an oversized tall/wide region); zoom gives `FRAME_FILL`
+    of frame width or height (whichever reached first), capped at `SHARP_ZOOM` (`SMALL_PICTURE_MAX_ZOOM` for small
+    stored pictures), never below filling cover zoom when `cap` allows (whole-painting fit only when `region` is None),
     and kept inside the painted surface."""
     wf, hf = float(w), float(h)
     if wf <= 0 or hf <= 0:
         return (0.0, 0.0, 1.0)
     pbox = _valid_box(box, wf, hf)
-    bw = pbox[2] - pbox[0]
     cx_w, cy_w, z_whole = whole_painting_frame(wf, hf, pbox, fit_pct=fit_pct)
     if not isinstance(region, dict):
         return (cx_w, cy_w, z_whole)
     fill = FRAME_FILL if frame_fill is None else float(frame_fill)
     cap = sharp_limit(wf, hf, sharp_zoom=sharp_zoom)
+    z_cov = cover_zoom(wf, hf, pbox)
+    z_min = max(z_whole, z_cov) if z_cov <= cap + 1e-9 else z_whole
     rbox = region_box(region)
     if rbox is not None:
+        travel = region_travel_frames(
+            region, wf, hf, pbox, fit_pct=fit_pct, frame_fill=frame_fill,
+            sharp_zoom=sharp_zoom, regions=regions, region_name=region_name,
+        )
+        if travel is not None:
+            return travel["head"]
         rw, rh = rbox[2] - rbox[0], rbox[3] - rbox[1]
         z_raw = min(fill * L.CANVAS_W / rw, fill * L.CANVAS_H / rh)
-        z = max(z_whole, min(cap, z_raw))
+        z = max(z_min, min(cap, z_raw))
         cx, cy = float(region["x"]), float(region["y"])
     elif _num(region.get("x")) and _num(region.get("y")):
         cx, cy = float(region["x"]), float(region["y"])
-        z = max(z_whole, min(cap, L.CANVAS_W / bw))
+        z = max(z_whole, min(cap, z_cov))
     else:
         return (cx_w, cy_w, z_whole)
     return fit_frame_to_box(cx, cy, z, wf, hf, pbox, fit_pct=fit_pct, z_cap=cap)
 
 
 def region_frame_info(region: dict | None, w: float, h: float, box=None, *, fit_pct: float = WHOLE_FIT_PCT,
-                      frame_fill: float | None = None, sharp_zoom: float | None = None) -> dict:
+                      frame_fill: float | None = None, sharp_zoom: float | None = None,
+                      regions: dict | None = None, region_name: str | None = None) -> dict:
     """Computed compiler end frame and screen fill metrics for a region (used by draft helpers)."""
-    cx, cy, z = region_frame(region, w, h, box, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom)
+    cx, cy, z = region_frame(region, w, h, box, fit_pct=fit_pct, frame_fill=frame_fill, sharp_zoom=sharp_zoom,
+                             regions=regions, region_name=region_name)
     hw, hh = L.CANVAS_W / (2.0 * z), L.CANVAS_H / (2.0 * z)
     fx0, fy0, fx1, fy1 = cx - hw, cy - hh, cx + hw, cy + hh
     info: dict = {"cx": cx, "cy": cy, "zoom": z, "rect": [round(fx0, 1), round(fy0, 1), round(fx1, 1), round(fy1, 1)]}
+    axis = region_oversized_axis(region, w, h, box, sharp_zoom=sharp_zoom) if isinstance(region, dict) else None
+    if axis is not None:
+        info["travel"] = axis
     rbox = region_box(region)
     if rbox is not None:
         ws = (rbox[2] - rbox[0]) * z / L.CANVAS_W
@@ -2060,13 +2305,39 @@ def _shot_target(shot: dict, t0: float, t1: float, main: str, regs: dict, rows: 
     return None, dom
 
 
+def _oversized_box_in_frame(rbox: tuple[float, float, float, float], axis: str,
+                               cx: float, cy: float, zoom: float,
+                               tol: float = REGION_IN_TOL_PX) -> tuple[bool, float]:
+    """Check whether an oversized tall/wide region fills/sits cleanly in frame along its cross axis and overlaps along its travel axis."""
+    if zoom <= 0:
+        return (False, float("inf"))
+    hw, hh = L.CANVAS_W / (2.0 * zoom), L.CANVAS_H / (2.0 * zoom)
+    fx0, fy0, fx1, fy1 = cx - hw, cy - hh, cx + hw, cy + hh
+    if axis == "tall":
+        miss = max(0.0, fx0 - rbox[0], rbox[2] - fx1)
+        ov_y = max(0.0, min(fy1, rbox[3]) - max(fy0, rbox[1]))
+        need_y = 0.5 * min(2.0 * hh, rbox[3] - rbox[1])
+        if ov_y + tol < need_y:
+            miss = max(miss, need_y - ov_y)
+    else:
+        miss = max(0.0, fy0 - rbox[1], rbox[3] - fy1)
+        ov_x = max(0.0, min(fx1, rbox[2]) - max(fx0, rbox[0]))
+        need_x = 0.5 * min(2.0 * hw, rbox[2] - rbox[0])
+        if ov_x + tol < need_x:
+            miss = max(miss, need_x - ov_x)
+    return (miss <= tol, miss)
+
+
 def _region_framing(c: _Ctx) -> list[dict]:
     """Viewer checks `camera_off_region` and `thing_arrives_late` on main-painting shots that point at a named region or a unique detail pick."""
+    from bti.media import contentbox as CB
     main = _main_painting(c)
     asset = c.assets.get(main) if main else None
     regs = (asset.get("regions") if isinstance(asset, dict) else None) or {}
     if not regs:
         return []
+    size = c.size(main) if main else None
+    pbox = _valid_box(CB.box_of(asset, c.project_dir), size[0], size[1]) if (isinstance(asset, dict) and size) else None
     rows = _beat_rows(c)
     out: list[dict] = []
     for i, shot in enumerate(c.shots):
@@ -2089,9 +2360,16 @@ def _region_framing(c: _Ctx) -> list[dict]:
         rbox = region_point_box(regs[rname])
         if rbox is None:
             continue
+        axis = region_oversized_axis(regs[rname], size[0], size[1], pbox) if size else None
+        check_box = _clamp_rbox_to_pbox(rbox, pbox) if pbox else rbox
+
+        def _in_frame(cx: float, cy: float, z: float) -> tuple[bool, float]:
+            if axis is not None:
+                return _oversized_box_in_frame(check_box, axis, cx, cy, z)
+            return box_inside_frame(check_box, cx, cy, z)
 
         cx1, cy1, z1 = camera_at(keys, t1)
-        ok_end, miss_px = box_inside_frame(rbox, cx1, cy1, z1)
+        ok_end, miss_px = _in_frame(cx1, cy1, z1)
         if not ok_end:
             out.append(_issue("camera_off_region", "shots[%d]" % i,
                               "At the end of shot %s (%.2f s), region %s extends %.0f px outside the frame (centre %.0f, %.0f at zoom %.3g)."
@@ -2105,7 +2383,7 @@ def _region_framing(c: _Ctx) -> list[dict]:
         for k in range(n):
             tk = t0 + (k + 0.5) * dt
             cx, cy, z = camera_at(keys, tk)
-            if box_inside_frame(rbox, cx, cy, z)[0]:
+            if _in_frame(cx, cy, z)[0]:
                 in_s += dt
         share = in_s / dur
         if in_s < ARRIVE_MIN_S - 1e-6 and share < ARRIVE_MIN_SHARE - 1e-6:

@@ -117,3 +117,53 @@ def test_late_threshold_and_edge_tolerance_and_no_kinds_silence(tmp_path):
         s["slots"]["image"].pop("region", None)
     issues3 = SB.validate(sb, tm, bundle, d)
     assert not [i for i in issues3 if i["code"] in ("camera_off_region", "thing_arrives_late")]
+
+
+def test_oversized_tall_region_travel_and_hold_clear_checks_while_misaimed_fires(tmp_path):
+    from bti.draft import camera as CAM
+    d, sb, tm, bundle = _base_project(tmp_path)
+    asset = sb["assets"]["MAIN"]
+    asset["regions"]["MAN_FIGURE"] = {"x": 1238, "y": 2662, "rx": 992, "ry": 2108, "label": "Standing man"}
+    asset["regions"]["MAN_HEAD"] = {"x": 1091, "y": 943, "rx": 438, "ry": 372, "label": "Man head"}
+    pk = json.loads((d / "picks.json").read_text(encoding="utf-8"))
+    pk["assets"]["MAIN"] = copy.deepcopy(asset)
+    (d / "picks.json").write_text(json.dumps(pk), encoding="utf-8")
+
+    # 1. Travelled tall region (0..8s) and held-head short shot (8..10.5s) must pass cleanly
+    cam_travel = CAM.build_main_camera("CAM-05", "MAN_FIGURE", None, asset, None, None, 0.0, 8.0)
+    cam_hold = CAM.build_main_camera("CAM-05", "MAN_FIGURE", None, asset, None, None, 8.0, 10.5)
+    sb["shots"] = [
+        {"id": "s0001", "start": {"t": 0.0}, "technique": "CAM-05", "intent": "point_at",
+         "slots": {"image": {"asset": "MAIN", "region": "MAN_FIGURE"}},
+         "params": {"camera": cam_travel}, "overlays": [], "locked": False, "source": "agent", "note": ""},
+        {"id": "s0002", "start": {"t": 8.0}, "technique": "CAM-05", "intent": "point_at",
+         "slots": {"image": {"asset": "MAIN", "region": "MAN_FIGURE"}},
+         "params": {"camera": cam_hold}, "overlays": [], "locked": False, "source": "agent", "note": ""},
+    ]
+    issues = SB.validate(sb, tm, bundle, d)
+    assert not [i for i in issues if i["code"] in ("camera_off_region", "thing_arrives_late")], issues
+
+    # 2. Mis-aimed camera far to the right (wrong side of painting) still fires both warnings
+    sb["shots"][0]["params"]["camera"] = [
+        {"at": {"rel": 0.0}, "cx": 3300.0, "cy": 1000.0, "zoom": 1.2, "ease": "linear"},
+        {"at": {"rel": 1.0}, "cx": 3300.0, "cy": 1000.0, "zoom": 1.2, "ease": "linear"},
+    ]
+    issues_bad = SB.validate(sb, tm, bundle, d)
+    assert [i["args"]["shot"] for i in issues_bad if i["code"] == "camera_off_region"] == ["s0001"]
+    assert [i["args"]["shot"] for i in issues_bad if i["code"] == "thing_arrives_late"] == ["s0001"]
+
+    # 3. A region spanning full width slightly past content_box (like Eligius COUNTER) clears when framed at content_box cover zoom
+    asset["content_box"] = {"x0": 100, "y0": 106, "x1": 3740, "y1": 5147, "how": "set"}
+    asset["regions"]["COUNTER"] = {"x": 1920, "y": 4200, "rx": 1850, "ry": 400, "label": "Full counter"}
+    pk["assets"]["MAIN"] = copy.deepcopy(asset)
+    (d / "picks.json").write_text(json.dumps(pk), encoding="utf-8")
+    box = (100.0, 106.0, 3740.0, 5147.0)
+    cam_counter = CAM.build_main_camera("CAM-05", "COUNTER", None, asset, box, None, 0.0, 6.0)
+    sb["assets"]["MAIN"] = copy.deepcopy(asset)
+    sb["shots"] = [{
+        "id": "s0001", "start": {"t": 0.0}, "technique": "CAM-05", "intent": "point_at",
+        "slots": {"image": {"asset": "MAIN", "region": "COUNTER"}},
+        "params": {"camera": cam_counter}, "overlays": [], "locked": False, "source": "agent", "note": "",
+    }]
+    issues_counter = SB.validate(sb, tm, bundle, d)
+    assert not [i for i in issues_counter if i["code"] in ("camera_off_region", "thing_arrives_late", "frame_off_painting")], issues_counter
