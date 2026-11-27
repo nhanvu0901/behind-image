@@ -176,3 +176,61 @@ def test_bright_painting_text_remains_legible_with_halo(tmp_path):
     y_band = slice(int(540 * 0.62), int(540 * 0.85))
     band = frame[y_band, :, :]
     assert int(band.min()) < 165 and int(band.max()) >= 230
+
+
+def test_variant_b_light_stays_on_painted_surface_and_matte_margins_stay_dark(tmp_path):
+    """When a narrow upright painting is shown with black matte margins, Move 1 never illuminates the matte outside the painting."""
+    img = _textured_painting(800, 1600)
+    z = 0.955 * 1080.0 / 1600.0
+    cam = [{"at": {"rel": 0.0}, "cx": 400.0, "cy": 800.0, "zoom": z, "ease": "linear"},
+           {"at": {"rel": 1.0}, "cx": 400.0, "cy": 800.0, "zoom": z, "ease": "linear"}]
+    p = _make_lab_regions(
+        tmp_path,
+        [shot(1, 0.0, TID, {"variant": "B", "_pending_region": "R", "text": "", "title": "Margin Check", "subtitle": "Work · Artist, 1500"}, camera=cam)],
+        {"R": {"x": 400, "y": 800, "rx": 30, "ry": 30}},
+        image=img, name="matte_check", end=9.1,
+    )
+    # At 960x540, painting occupies x in [345, 615] -> left margin x < 310, right margin x > 650.
+    for t in (0.6, 1.5, 2.7):
+        fr = p.frame_at(t, 960)
+        left_margin = fr[:, :300, :]
+        right_margin = fr[:, 660:, :]
+        assert int(left_margin.max()) <= 8, (t, int(left_margin.max()))
+        assert int(right_margin.max()) <= 8, (t, int(right_margin.max()))
+    # With channel name enabled too, pixels outside the name/title rows stay dark in the margins.
+    p_txt = _make_lab_regions(
+        tmp_path,
+        [shot(1, 0.0, TID, {"variant": "B", "_pending_region": "R", "title": "Margin Check", "subtitle": "Work · Artist, 1500"}, camera=cam)],
+        {"R": {"x": 400, "y": 800, "rx": 30, "ry": 30}},
+        image=img, name="matte_check_txt", end=9.1,
+    )
+    f_start = p_txt.frame_at(1.0, 960)
+    assert int(f_start[200:320, :300, :].max()) <= 8 and int(f_start[200:320, 660:, :].max()) <= 8
+    # Inside the painting at Move 1 start (t=1.0), the left edge of the painted surface itself is lit.
+    assert int(f_start[100:260, 355:440, :].max()) >= 75
+
+
+@pytest.mark.parametrize("variant", VARIANTS)
+def test_tiny_rest_region_enforces_phone_readable_spot_floor(tmp_path, variant):
+    """A tiny region (rx=5, ry=5) still produces a phone-readable lit spot (>= 9% of frame height radius) at rest."""
+    img = np.full((1600, 1200, 3), 170, np.uint8)
+    cam = [{"at": {"rel": 0.0}, "cx": 600.0, "cy": 800.0, "zoom": 1.6, "ease": "linear"},
+           {"at": {"rel": 1.0}, "cx": 600.0, "cy": 800.0, "zoom": 1.6, "ease": "linear"}]
+    p = _make_lab_regions(
+        tmp_path,
+        [shot(1, 0.0, TID, {"variant": variant, "_pending_region": "TINY", "title": "Tiny Spot", "subtitle": "Work · Artist, 1500"}, camera=cam)],
+        {"TINY": {"x": 600, "y": 800, "rx": 5, "ry": 5}},
+        image=img, name=f"tiny_{variant}", end=9.1,
+    )
+    fr = p.frame_at(9.1 * 0.68, 960).astype(np.float32)
+    lum = fr.mean(axis=2)
+    cy_px = 540 // 2
+    cx_px = 960 // 2
+    col_profile = lum[:, cx_px - 3:cx_px + 4].mean(axis=1)
+    # Exclude text bands by checking contiguous half-peak span around the spot centre.
+    peak = col_profile[cy_px - 30:cy_px + 30].max()
+    bg = col_profile[0:20].mean()
+    half_lvl = bg + 0.5 * (peak - bg)
+    above = np.where(col_profile[cy_px - 120:cy_px + 120] >= half_lvl)[0]
+    radius_px = (above[-1] - above[0]) / 2.0
+    assert radius_px / 540.0 >= 0.09, (variant, radius_px, radius_px / 540.0)

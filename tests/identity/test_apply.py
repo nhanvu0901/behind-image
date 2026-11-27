@@ -94,10 +94,17 @@ def test_title_case_rules():
 
 
 def test_a_mark_flows_into_the_next_shot_on_resolved_numbers(sb, style, timing, tm):
-    """The last key of the mark IS the first key of the next shot (same picture, centre and zoom), and the mark starts 4 % wider."""
+    """When the next shot fills the screen, the mark ends on its first key and starts 4 % wider (still filling the screen).
+    When the next shot does NOT fill the screen (whole painting or half-way pose), the mark uses a width-filling band instead."""
+    from bti.media import contentbox as CB
+
     out, _ = raking(sb, style, timing)
     sp = spans(out, tm)
-    checked = 0
+    a_info = out["assets"]["arnolfini_portrait"]
+    w, h = float(a_info["width"]), float(a_info["height"])
+    z_cover = round(1920.0 / w, 5)
+    flowed = 0
+    banded = 0
     for i in MARK_IDS:
         mark = by_id(out, i)
         j = out["shots"].index(mark) + 1
@@ -106,23 +113,30 @@ def test_a_mark_flows_into_the_next_shot_on_resolved_numbers(sb, style, timing, 
         assert mark["slots"]["image"]["asset"] == nxt["slots"]["image"]["asset"]
         a = cam(mark, *sp[i], tm)
         b = cam(nxt, *sp[nxt["id"]], tm)
-        end_of_mark, start_of_next = a.at(sp[i][1]), b.at(sp[nxt["id"]][0])
-        assert end_of_mark == pytest.approx(start_of_next, abs=1e-9), (i, end_of_mark, start_of_next)
         first = a.at(sp[i][0])
-        assert first[0] == pytest.approx(end_of_mark[0]) and first[1] == pytest.approx(end_of_mark[1])
-        assert end_of_mark[2] / first[2] == pytest.approx(1.04, rel=1e-3)
-        checked += 1
-    assert checked == len(MARK_IDS)
+        end_of_mark = a.at(sp[i][1])
+        start_of_next = b.at(sp[nxt["id"]][0])
+        assert first[2] >= z_cover - 1e-5 and end_of_mark[2] >= z_cover - 1e-5
+        assert CB.outside_share((0.0, 0.0, w, h), *first) <= CB.OFF_LIMIT + 1e-9
+        assert CB.outside_share((0.0, 0.0, w, h), *end_of_mark) <= CB.OFF_LIMIT + 1e-9
+        if start_of_next[2] >= z_cover - 1e-5:
+            assert end_of_mark == pytest.approx(start_of_next, abs=1e-9), (i, end_of_mark, start_of_next)
+            assert end_of_mark[2] / first[2] == pytest.approx(1.04, rel=1e-3)
+            flowed += 1
+        else:
+            assert end_of_mark[2] / first[2] == pytest.approx(1.03, rel=1e-3)
+            banded += 1
+    assert flowed == 4 and banded == 2
 
 
-def test_a_mark_before_a_shot_with_no_camera_uses_the_main_picture_whole(sb, style, timing, tm):
+def test_a_mark_before_a_shot_with_no_camera_uses_a_width_filling_band(sb, style, timing, tm):
     nxt = by_id(sb, "s0016")                      # the shot after chapter card s0015
     nxt["params"].pop("camera")
     out, _ = raking(sb, style, timing)
     mark = by_id(out, "s0015")
     assert mark["slots"]["image"]["asset"] == "arnolfini_portrait"            # the picture of the first shot of the video
     k0, k1 = mark["params"]["camera"]
-    z = round(0.955 * 1080 / 6000, 5)
+    z = 0.43776                                                               # ceil(1920 / 4386 * 1e5) / 1e5: width-filling
     assert (k0["cx"], k0["cy"], k0["zoom"]) == (2193.0, 3000.0, z)
     assert k1["zoom"] == round(z * 1.03, 5) and k1["at"] == {"rel": 1.0} and k0["at"] == {"rel": 0.0}
 
@@ -149,19 +163,27 @@ def test_a_transition_is_never_longer_than_the_mark(sb, style, timing):
 
 
 # ------------------------------------------------------------------------------------------------------------ rule 2: the title slot
-def test_the_title_slot_becomes_the_channel_name_beat_on_the_picture_before_it(sb, style, timing, tm):
-    prev = by_id(sb, "s0060")
-    last = prev["params"]["camera"][-1]
+def test_the_title_slot_becomes_the_channel_name_beat_filling_the_screen(sb, style, timing, tm):
+    # s0060 ends on the whole painting (0.1719, not filling), so the beat uses a width-filling band instead of pillarboxed whole.
     out, rep = raking(sb, style, timing)
     s = by_id(out, TITLE_ID)
     assert s["technique"] == "ID-BRAND-01" and s["params"]["text"] == "RAKING LIGHT" and s["slots"] == {"image": {"asset": "arnolfini_portrait"}}
     k0, k1 = s["params"]["camera"]
-    assert (k0["cx"], k0["cy"], k0["zoom"]) == (last["cx"], last["cy"], last["zoom"])
-    assert k1["zoom"] == round(last["zoom"] * 1.03, 5) and (k1["cx"], k1["cy"]) == (last["cx"], last["cy"])
+    z = 0.43776
+    assert (k0["cx"], k0["cy"], k0["zoom"]) == (2193.0, 3000.0, z)
+    assert k1["zoom"] == round(z * 1.03, 5) and (k1["cx"], k1["cy"]) == (2193.0, 3000.0)
     assert s["intent"] == "structure" and s["note"] == "title card" and s["start"] == by_id(sb, TITLE_ID)["start"]
     assert not [x for x in rep["skipped"] if x["what"] == "brand"]
     d, _ = dim(sb, style, timing)
     assert by_id(d, TITLE_ID)["technique"] == "ID-BRAND-02"
+
+    # When the previous shot ends on a screen-filling pose, the beat continues from that pose with a 3 % push.
+    sb_fill = copy.deepcopy(sb)
+    by_id(sb_fill, "s0060")["params"]["camera"][-1] = {"at": {"rel": 1.0}, "cx": 2193.0, "cy": 2400.0, "zoom": 0.60, "ease": "linear"}
+    out2, _ = raking(sb_fill, style, timing)
+    k0_f, k1_f = by_id(out2, TITLE_ID)["params"]["camera"]
+    assert (k0_f["cx"], k0_f["cy"], k0_f["zoom"]) == (2193.0, 2400.0, 0.60)
+    assert k1_f["zoom"] == round(0.60 * 1.03, 5) and (k1_f["cx"], k1_f["cy"]) == (2193.0, 2400.0)
 
 
 def test_no_title_slot_is_reported_and_the_rest_is_still_done(sb, style, timing):

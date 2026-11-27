@@ -85,6 +85,84 @@ def test_choose_rest_region_all_three_rules():
     assert ID.choose_rest_region(tm, p3, "main_pic") is None
 
 
+def test_choose_rest_region_handles_subject_where_list():
+    tm = _cold_timing()
+    # Subject `where` as a list (standard picks schema): skips non-main / loose places and picks the first tight main region.
+    picks = _make_picks(
+        last_item={"asset": "main_pic", "region": None, "role": "main"},
+        subjects=[
+            {
+                "id": "s_multi",
+                "kind": "person",
+                "name": "Christ",
+                "strip": True,
+                "where": [
+                    {"asset": "outside_pic", "region": "FACE"},
+                    {"region": "DOG_LOOSE"},
+                    {"region": "MIRROR_TIGHT"},
+                ],
+            },
+        ],
+        beat_about={"b0001": [{"id": "s_multi", "words": "Christ"}]},
+    )
+    assert ID.choose_rest_region(tm, picks, "main_pic") == "MIRROR_TIGHT"
+
+
+def test_ident_and_marks_never_sit_on_halfway_pose_and_always_fill_screen(sb, timing):
+    b = R.load_bundle("gae")
+    picks = _make_picks(last_item={"asset": "main_pic", "region": "MIRROR_TIGHT", "role": "detail"})
+    tm_data = copy.deepcopy(timing)
+    tm_data["chapters"] = [{"id": "c01", "start": 0.0, "end": 4.0}, {"id": "c02", "start": 10.0, "end": 40.0}]
+    tm_data["beats"] = [{"id": "b0001", "chapter": "c01", "start": 0.5, "end": 2.0},
+                        {"id": "b0002", "chapter": "c01", "start": 2.0, "end": 4.0}]
+    tm = Timing(tm_data)
+    # Upright painting 3840x5253: z_cover = 0.50; opening shot is 0.19634; previous shot ends at halfway z=0.31.
+    main_w, main_h = 3840.0, 5253.0
+    sb["assets"]["main_pic"] = {
+        "kind": "image", "file": "main.jpg", "title": "The Arnolfini Portrait", "artist": "Jan van Eyck", "year": "1434",
+        "width": int(main_w), "height": int(main_h),
+        "regions": {"MIRROR_TIGHT": {"x": 1940, "y": 1558, "rx": 25, "ry": 50, "tight": True}},
+    }
+    for s in sb["shots"]:
+        s["overlays"] = [o for o in s.get("overlays") or [] if not o.get("technique", "").startswith("ID-")]
+    sb["shots"][0]["slots"] = {"image": {"asset": "main_pic"}}
+    sb["shots"][0]["params"]["camera"] = [
+        {"at": {"rel": 0.0}, "cx": 1920.0, "cy": 2626.5, "zoom": 0.19634, "ease": "linear"},
+        {"at": {"rel": 1.0}, "cx": 1920.0, "cy": 2626.5, "zoom": 0.19634, "ease": "linear"},
+    ]
+    # Shot before brand ends at halfway z=0.31; shots after marks include halfway z=0.31 and filling z=0.70.
+    brand_idx = next(i for i, s in enumerate(sb["shots"]) if s["technique"] in ("X-CARD-02",) or s["technique"].startswith("ID-BRAND-"))
+    sb["shots"][brand_idx - 1]["slots"] = {"image": {"asset": "main_pic"}}
+    sb["shots"][brand_idx - 1]["params"]["camera"] = [
+        {"at": {"rel": 0.0}, "cx": 1920.0, "cy": 1741.94, "zoom": 0.31, "ease": "linear"},
+        {"at": {"rel": 1.0}, "cx": 1920.0, "cy": 1741.94, "zoom": 0.31, "ease": "linear"},
+    ]
+    for s in sb["shots"]:
+        if s["intent"] != "structure" and (s.get("slots") or {}).get("image", {}).get("asset") == "arnolfini_portrait":
+            s["slots"]["image"]["asset"] = "main_pic"
+    for k in range(brand_idx + 1, len(sb["shots"])):
+        if sb["shots"][k]["intent"] == "structure":
+            nxt = sb["shots"][k + 1]
+            nxt["slots"] = {"image": {"asset": "main_pic"}}
+            nxt["params"]["camera"] = [
+                {"at": {"rel": 0.0}, "cx": 1920.0, "cy": 3511.06, "zoom": 0.31, "ease": "linear"},
+                {"at": {"rel": 1.0}, "cx": 1920.0, "cy": 1741.94, "zoom": 0.31, "ease": "linear"},
+            ]
+            break
+
+    out, _ = ID.apply_identity(sb, "raking", b.style, tm, {"main_asset": "main_pic", "picks": picks}, defaults=b.param_defaults)
+    for s in out["shots"]:
+        if s["intent"] != "structure":
+            continue
+        cam = s["params"]["camera"]
+        for key in cam:
+            vw, vh = 1920.0 / key["zoom"], 1080.0 / key["zoom"]
+            cov_w = max(0.0, min(main_w, key["cx"] + vw / 2.0) - max(0.0, key["cx"] - vw / 2.0)) / vw
+            cov_h = max(0.0, min(main_h, key["cy"] + vh / 2.0) - max(0.0, key["cy"] - vh / 2.0)) / vh
+            assert cov_w >= 0.99 and cov_h >= 0.99, (s["id"], s["technique"], key, cov_w, cov_h)
+            assert key["zoom"] >= 0.50 - 1e-5, (s["id"], key)
+
+
 def test_default_raking_applies_brand04_variant_b_with_texts_and_preserves_dim(sb, timing):
     b = R.load_bundle("gae")
     picks = _make_picks(last_item={"asset": "main_pic", "region": "DOORWAY", "role": "detail"})
