@@ -141,7 +141,7 @@ def test_approval_is_refused_for_chapters_that_differ_and_lists_them(client):
     assert n["chapter_diff"]["not_in_outline"] == [gone]
     r = client.post(f"{B}/narration/approve", json={"rev": n["rev"]})
     assert r.status_code == 422 and r.json()["chapter_diff"]["not_in_outline"] == [gone]
-    assert any(i["code"] == "unknown_chapter" and i["level"] == "error" for i in r.json()["issues"])
+    assert any(i["code"] == "chapter_not_in_outline" and i["level"] == "error" for i in r.json()["issues"])
     # saving stays allowed ("incomplete is not invalid")
     assert client.put(f"{B}/narration", json={"narration": n["narration"], "base_rev": n["rev"]}).status_code == 200
     # an outline chapter with no narration is refused too

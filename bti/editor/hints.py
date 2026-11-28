@@ -122,6 +122,8 @@ HINTS: dict[str, dict] = {
     "document_invalid": _t("after_fix", "The document has the wrong shape (see `detail`): send a document as GET returns it."),
     "locked_beats": _t("after_fix", "Unlock the beats named in `locked`, or send {\"force\": true} to replace them."),
     "unknown_chapter": _t("after_fix", "Use chapter ids that exist in the outline (GET /api/projects/{pid}/outline)."),
+    # worker stalechap: narration validation error when a chapter id is not in the approved outline.
+    "chapter_not_in_outline": _t("after_fix", "Drop the chapter that is not in the outline (POST /api/projects/{pid}/narration/ops with drop_chapter) or regenerate the narration for the approved outline."),
     "op_invalid": _t("after_fix", "Correct the operation named in `detail` (GET the narration for the current beat and chapter ids), then send the ops again."),
     "prompt_error": _t("after_fix", "The prompt cannot be built from the current documents: read `detail`."),
     "model_required": _t("after_fix", "Name a model in `model` (GET /api/models lists them), or leave `model` out to use the project's agent."),

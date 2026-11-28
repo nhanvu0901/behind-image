@@ -114,7 +114,7 @@ def test_unknown_fact_and_no_show_are_warnings_unknown_chapter_is_an_error():
     n.chapters.append(type(n.chapters[0])("c09", "chapter", "EXTRA", False, [Beat("b0099", "x")]))
     iss = validate.validate_narration(n, o)
     assert {"unknown_fact", "no_show"} <= set(codes(iss, "warning"))
-    assert "unknown_chapter" in codes(iss, "error")           # round 2 (R2B-001): a chapter the outline lacks blocks approval
+    assert "chapter_not_in_outline" in codes(iss, "error")           # round 2 (R2B-001): a chapter the outline lacks blocks approval
 
 
 def test_warning_spoken_chars_is_a_warning_only():

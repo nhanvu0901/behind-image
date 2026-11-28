@@ -229,7 +229,8 @@ def validate_narration(n: Narration, outline: Outline | None, *, wps: float = WP
             if outline.chapter(c.id) is None:
                 # an error for approval (saving stays allowed): a narration approval belongs to one outline, and a chapter the
                 # outline does not have means the narration was written for another one
-                out.append(issue("error", "unknown_chapter", f"Chapter {c.id} {c.title} is not in the outline.", chapter=c.id))
+                out.append(issue("error", "chapter_not_in_outline", f"Chapter {c.id} {c.title} is not in the outline.",
+                                 chapter=c.id, args={"chapter": c.id}))
     known = outline.fact_ids() if outline else None
     authors = sourcenames.author_names(brief)           # without the brief (an approval, a test) the names of the books are not known: only the phrases are checked
     for c in n.chapters:

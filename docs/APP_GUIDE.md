@@ -258,7 +258,7 @@ Dàn ý có lỗi `fact_in_too_many_chapters` khi một dữ kiện nằm trong 
 | Dòng quá dài (`beat_too_long`) | Một dòng hơn 90 từ. Nên Tách. |
 | Mã dữ kiện không có trong dàn ý (`unknown_fact`) | Dòng hoặc chương nhắc tới một mã không có ở bảng dữ kiện. |
 | Dòng chưa có gợi ý hình (`no_show`) | Ô "cho xem" trống. Cần cho bước chọn hình sau này. |
-| Chương không có trong dàn ý (`unknown_chapter`) | Lời dẫn có chương mà dàn ý không có. |
+| Chương không có trong dàn ý (`chapter_not_in_outline`) | Lời dẫn có chương mà dàn ý không có. |
 | Dấu câu giọng đọc không ngắt được (`spoken_chars`) | Có `; : ( )` hoặc gạch ngang. Giọng đọc chỉ ngắt ở dấu phẩy và dấu chấm. |
 | Câu quá dài (`long_sentence`) | Một dòng có câu dài hơn **25 từ**: đó là giới hạn duy nhất (prompt, bộ kiểm tra và tài liệu cùng một số). Tách câu. |
 | Lời dẫn nêu tên tác giả sách nguồn (`source_author_named`) | Một dòng có họ của người viết một trong các sách của dự án ("Payne nói", "Hodge đọc là ..."). Người xem chưa từng nghe tên họ: viết lại dòng bằng giọng người kể, hoặc bấm "Viết lại chương" với ghi chú. Chỉ tính họ viết hoa nguyên từ (không tính "hitching a ride", "Hodges"), và không tính người khác trùng họ khi trước họ có một tên khác trong câu ("Sir Thomas Hodge"). Tên đầu sách không được tìm. |

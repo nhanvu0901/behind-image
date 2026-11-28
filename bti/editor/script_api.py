@@ -337,8 +337,8 @@ def make_router(projects_root: Path, *, models_path: Path | None = None, jobs: S
                                    locked=locked, kept=True, code="locked_beats")
             if body.get("merge") and old:
                 got = {c.id for c in n.chapters}
-                n.chapters = [c for c in old.chapters if c.id not in got] + n.chapters
                 order = {c.id: i for i, c in enumerate(o.chapters)}
+                n.chapters = [c for c in old.chapters if c.id not in got and c.id in order] + n.chapters
                 n.chapters.sort(key=lambda c: order.get(c.id, 10_000))
             n.source = {"kind": "paste", "model": "", "created_at": store.now_iso(), "outline_sha1": o.rev()}
             store.save_narration(d, n)

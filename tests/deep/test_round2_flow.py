@@ -51,7 +51,7 @@ def test_R2B_001_narration_approval_does_not_survive_a_changed_outline(client, f
     assert client.post(P(flow_pid) + "/outline/approve", json={"rev": o["rev"]}).status_code == 200
     n = client.get(P(flow_pid) + "/narration").json()
     codes = [i["code"] for i in n["issues"]]
-    assert "unknown_chapter" in codes                      # precondition: the narration is out of line with the outline
+    assert "chapter_not_in_outline" in codes                      # precondition: the narration is out of line with the outline
     assert n["approved"] is False, "narration stays approved although it holds a chapter the outline no longer has"
     assert client.get(P(flow_pid) + "/pipeline").json()["stage"] != "script"
 
