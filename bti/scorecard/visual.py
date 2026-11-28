@@ -101,6 +101,8 @@ def moments_subject_not_shown(visual: dict, timing: dict | None = None, *, shot_
     for m in visual.get("moments") or []:
         if not isinstance(m, dict):
             continue
+        if beats and isinstance(m.get("line"), str) and m["line"] not in beats:
+            continue
         about = m.get("about")
         if not isinstance(about, str) or about not in cast:
             continue

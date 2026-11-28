@@ -343,9 +343,11 @@ def remove_stale_beats(ctx, o):
         ctx.touch("beat:" + bid)
         del ctx.doc["beats"][bid]
         ctx.say({"beat": bid}, beat=bid)
-    if stale and "names" in ctx.doc:
-        ctx.touch("names")
-        ctx.doc["names"] = [n for n in ctx.doc["names"] if n.get("line") not in stale]
+    if "names" in ctx.doc:
+        kept = [n for n in ctx.doc["names"] if n.get("line") in ctx.facts.beat_set]
+        if len(kept) != len(ctx.doc["names"]):
+            ctx.touch("names")
+            ctx.doc["names"] = kept
 
 
 @op("picks", "remove_pick",

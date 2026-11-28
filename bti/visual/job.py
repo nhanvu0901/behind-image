@@ -108,6 +108,7 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
     timing = read_object(pdir / 'timing.json', 'timing')
     if not timing:
         raise inputs.AutoError('timing_missing', 'Timing is required before planning.', 409)
+    timing_lines = {b['id'] for b in (timing.get('beats') or []) if isinstance(b, dict) and isinstance(b.get('id'), str)}
     resolved = draft_run._resolve(pdir, 'picks', model)
     session.check_installed(resolved.model)
     if manager is None:
@@ -199,10 +200,11 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         story = read_object(pdir / 'storyboard.json', 'storyboard') or {}
         removable = cleanup_names(existing, visual, story, agent_regions(ChangeLog(pdir), inp.painting.key, existing))
         from bti.visual.regions import _strings
-        removable -= set(_strings(inp.picks.get('names', [])))
+        legacy_names = [n for n in inp.picks.get('names', []) if isinstance(n, dict) and n.get('line') in timing_lines]
+        removable -= set(_strings(legacy_names))
         new_lines = {m['line'] for m in visual['moments']}
         for bid, beat in inp.picks.get('beats', {}).items():
-            if bid not in new_lines:
+            if bid in timing_lines and bid not in new_lines:
                 removable -= set(_strings(beat))
         kept = set(existing) - removable
         region_context = {'kept_regions': len(kept), 'existing_regions': sorted(kept), 'planned_regions': sorted(state['regions'])}
@@ -311,10 +313,11 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         eligible = region_cleanup.agent_regions(ChangeLog(pdir), key, old_regions)
         removed = region_cleanup.cleanup_names(old_regions, visual, storyboard, eligible)
         # Legacy cast names and lines outside the new script must not be broken.
-        removed -= set(region_cleanup._strings(current.get('names', [])))
+        legacy_names = [n for n in current.get('names', []) if isinstance(n, dict) and n.get('line') in timing_lines]
+        removed -= set(region_cleanup._strings(legacy_names))
         new_lines = {m['line'] for m in visual['moments']}
         for bid, beat in current.get('beats', {}).items():
-            if bid not in new_lines:
+            if bid in timing_lines and bid not in new_lines:
                 removed -= set(region_cleanup._strings(beat))
         keep, dropped = write.final_regions({'regions': state['regions']}, {'regions': state.get('region_choices', {})})
         if dropped:
@@ -334,14 +337,21 @@ def start(pid, pdir, *, model=None, manager=None, by_run=False, **seams):
         proj = projection.project(visual, timing, key)
         ops = projection.operations(proj)
         if removed:
-            region_ops, ops = region_cleanup.replacement_batch(current, key, removed, additions, ops)
-            if len(region_ops) > 200:
-                raise PartError('validation_failed', 'Quá nhiều thay đổi vùng để lưu trong một lô; hãy dùng lại các vùng hiện có.')
-            writer.send(region_ops, 'Agent viết kịch bản hình: thay vùng chi tiết', expected_rev=doc.revision(current))
-        elif additions:
-            writer.send(additions, 'Agent viết kịch bản hình: vùng chi tiết')
-        for offset in range(0, len(ops), 200):
-            writer.send(ops[offset:offset + 200], 'Agent viết kịch bản hình: chọn hình theo đoạn')
+            region_ops, rest = region_cleanup.replacement_batch(current, key, removed, additions, ops, keep_beats=timing_lines)
+            if len(region_ops) + len(rest) <= 200:
+                writer.send(region_ops + rest, 'Agent viết kịch bản hình: thay vùng chi tiết', expected_rev=doc.revision(current))
+            else:
+                if len(region_ops) > 200:
+                    raise PartError('validation_failed', 'Quá nhiều thay đổi vùng để lưu trong một lô; hãy dùng lại các vùng hiện có.')
+                writer.send(region_ops, 'Agent viết kịch bản hình: thay vùng chi tiết', expected_rev=doc.revision(current))
+                for offset in range(0, len(rest), 200):
+                    writer.send(rest[offset:offset + 200], 'Agent viết kịch bản hình: chọn hình theo đoạn')
+        elif additions and len(additions) + len(ops) <= 200:
+            writer.send([ops[0]] + additions + ops[1:], 'Agent viết kịch bản hình: chọn hình theo đoạn')
+        else:
+            if additions:
+                writer.send(additions, 'Agent viết kịch bản hình: vùng chi tiết')
+            projection.send_projection(writer, ops, current, 'Agent viết kịch bản hình: chọn hình theo đoạn')
         store.save(pdir, visual, base_rev=base_rev, actor='agent:' + resolved.model)
         missing = missing_sentences(visual)
         return {'sentence': 'Đã viết kịch bản hình.', 'missing': missing}

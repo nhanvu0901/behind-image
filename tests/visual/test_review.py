@@ -137,3 +137,19 @@ def test_approval_only_change_does_not_invalidate_review(tmp_path):
     picks['beats']['b1'] = {'items': []}
     (tmp_path / 'picks.json').write_text(json.dumps(picks), encoding='utf8')
     assert _input_signature(tmp_path) != before
+
+
+def test_prepare_sheets_ignores_moments_from_old_narration_lines(tmp_path):
+    import numpy as np
+    from bti.visual.review import prepare_sheets
+    class Project:
+        def timing(self):
+            return {'words': [{'w': 'city', 's': 1.2, 'e': 1.8}], 'beats': [{'id': 'b_new', 'w0': 0, 'w1': 1}]}
+        def resolve(self):
+            return {'shots': [{'id': 's1', 'moment': 'm_old', '_t0': 0, '_t1': 4, 'overlays': []}]}
+        def frame_at(self, t, width):
+            return np.zeros((360, 640, 3), dtype=np.uint8)
+    visual = {'moments': [{'id': 'm_old', 'line': 'b_old', 'about': 'old_cast', 'why': 'Cũ.'}],
+              'cast': [{'id': 'old_cast', 'name': 'Old Name'}]}
+    rows, _ = prepare_sheets(Project(), visual, {'compose_notes': [{'moment': 'm_old', 'what': 'note'}]}, tmp_path)
+    assert rows[0]['about'] is None and rows[0]['why'] is None

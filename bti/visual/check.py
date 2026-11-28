@@ -86,11 +86,13 @@ def run_check(root: Path) -> dict:
             from bti.visual.regions import cleanup_names
             removable = cleanup_names(existing, doc, context_data.get('storyboard'), context_data.get('agent_regions', []))
             from bti.visual.regions import _strings
-            removable -= set(_strings(context_data.get('legacy_names', [])))
+            timing_lines = {b.get('id') for b in (timing.get('beats') or []) if isinstance(b, dict) and isinstance(b.get('id'), str)}
+            legacy_names = [n for n in context_data.get('legacy_names', []) if not timing_lines or (isinstance(n, dict) and n.get('line') in timing_lines)]
+            removable -= set(_strings(legacy_names))
             moments = doc.get('moments', []) if isinstance(doc, dict) else []
             lines = {m.get('line') for m in moments if isinstance(m, dict)} if isinstance(moments, list) else set()
             for bid, beat in context_data.get('old_beats', {}).items():
-                if bid not in lines:
+                if (not timing_lines or bid in timing_lines) and bid not in lines:
                     removable -= set(_strings(beat))
             kept = len(existing) - len(removable)
             new = len(set(regions) - (set(existing) - removable))

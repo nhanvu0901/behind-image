@@ -57,9 +57,41 @@ def project(visual: dict, timing: dict, main_asset: str) -> dict:
 
 def operations(projection: dict) -> list[dict]:
     """Typed picks operations for a complete projection, in dependency order."""
-    ops = [{'op': 'set_subjects', 'subjects': projection['subjects']}]
+    ops = [{'op': 'remove_stale_beats'}, {'op': 'set_subjects', 'subjects': projection['subjects']}]
     for line in projection['lines']:
         ops.append({'op': 'set_picks', 'beat': line['beat'], 'items': line['items'], 'reason': line['reason'][:400],
                     'kinds': line['kinds'], 'missing': line['missing']})
         ops.append({'op': 'set_about', 'beat': line['beat'], 'about': line['about']})
     return ops
+
+
+def send_projection(writer, ops: list[dict], current: dict, note: str, *, expected_rev: str | None = None) -> None:
+    """Send projection ops in one logged batch when <= 200 ops, else safely across batches."""
+    def send(batch, rev):
+        if rev is not None:
+            writer.send(batch, note, expected_rev=rev)
+        else:
+            writer.send(batch, note)
+
+    if len(ops) <= 200:
+        send(ops, expected_rev)
+        return
+    work_ops = [dict(op) for op in ops]
+    final_subjects_op = None
+    extra = []
+    subj_idx = next((i for i, op in enumerate(work_ops) if op.get('op') == 'set_subjects'), None)
+    if subj_idx is not None:
+        new_subjects = work_ops[subj_idx]['subjects']
+        new_ids = {s['id'] for s in new_subjects if isinstance(s, dict) and 'id' in s}
+        extra = [dict(s) for s in (current.get('subjects') or []) if isinstance(s, dict) and s.get('id') not in new_ids]
+        if extra:
+            final_subjects_op = dict(work_ops[subj_idx])
+            work_ops[subj_idx] = {'op': 'set_subjects', 'subjects': new_subjects + extra}
+    chunks = [work_ops[offset:offset + 200] for offset in range(0, len(work_ops), 200)]
+    if final_subjects_op is not None and extra:
+        if len(chunks[-1]) < 200:
+            chunks[-1].append(final_subjects_op)
+        else:
+            chunks.append([final_subjects_op])
+    for idx, chunk in enumerate(chunks):
+        send(chunk, expected_rev if idx == 0 else None)

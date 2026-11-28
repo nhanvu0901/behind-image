@@ -738,10 +738,25 @@ def b_music_auto(c: Ctx):
         return None
     from bti.music import library, store as music_store
     try:
-        has_library = bool(library.index())
-        has_document = music_store.read(c.d) is not None
+        idx = library.index()
+        has_library = bool(idx)
+        music_doc = music_store.read(c.d)
+        has_document = music_doc is not None
     except Exception:
-        has_library, has_document = False, False
+        idx, has_library, music_doc, has_document = {}, False, None, False
+    if has_document and has_library and getattr(c, "has_timing", False):
+        try:
+            from bti.engine.timing import Timing
+            from bti.music.document import MusicError, validate as validate_music
+            from bti.music.export import landmarks
+            sb = read_json(c.d / "storyboard.json")
+            tm = Timing.load(c.d / "timing.json")
+            duration = tm.resolve(sb["end"])
+            validate_music(music_doc, idx, tm, duration, landmarks(sb, tm))
+        except MusicError:
+            has_document = False
+        except Exception:
+            pass
     needs = [] if has_library else ["music_library"]
     if c.agent_busy("title"):
         needs.append("no_running_job")
@@ -830,7 +845,8 @@ def b_visual_plan(c: Ctx):
     if c.agent_busy("picks"):
         needs.append("no_running_job")
     needs += _model_needs(c, "picks")
-    return E(list(dict.fromkeys(needs)), {"actor": c.actor("picks")}, advances=not (c.d / "visual.json").is_file())
+    advances = not (c.d / "visual.json").is_file() or (c.has_timing and _try(lambda: visual_errors(c.d), None) != [])
+    return E(list(dict.fromkeys(needs)), {"actor": c.actor("picks")}, advances=advances)
 
 
 def b_picks_auto(c: Ctx):                                                   # c3picks
@@ -1237,6 +1253,8 @@ def b_visual_edit(c: Ctx):
     needs = (["no_running_job"] if c.box_busy() else []) + _model_needs(c, "picks")
     if not c.has_timing:
         needs.append("timing")
+    elif _try(lambda: visual_errors(c.d), None) != []:
+        needs.append("visual_script_valid")
     return E(needs, fill=["instruction", "scope"], template={"instruction": None, "scope": None,
              "base_rev": store.revision(visual), "actor": c.actor("picks")})
 

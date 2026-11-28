@@ -70,12 +70,15 @@ def build_plan(inp, timing: dict, *, root: Path | None = None, instruction: str 
     from bti.ops.log import ChangeLog
     from bti.script.store import read_object
     from bti.visual.regions import agent_regions
+    timing_lines = set(timing_beats)
     current_regions = inp.picks['assets'][p.key].get('regions', {})
     storyboard = read_object(inp.pdir / 'storyboard.json', 'storyboard') or {}
     eligible = sorted(agent_regions(ChangeLog(inp.pdir), p.key, current_regions))
+    legacy_names = [n for n in inp.picks.get('names', []) if isinstance(n, dict) and (not timing_lines or n.get('line') in timing_lines)]
+    old_beats = {bid: beat for bid, beat in inp.picks.get('beats', {}).items() if not timing_lines or bid in timing_lines}
     _json(root / 'inputs/context.json', {'mode': 'plan', 'made_from': {'narration': narration_hash, 'timing': timing_hash},
           'agent_regions': eligible, 'storyboard': storyboard,
-          'legacy_names': inp.picks.get('names', []), 'old_beats': inp.picks.get('beats', {})})
+          'legacy_names': legacy_names, 'old_beats': old_beats})
     windows = sys.platform == 'win32'
     for command in ('check', 'crop'):
         module = 'bti.visual.check' if command == 'check' else 'bti.picks.auto.helper'

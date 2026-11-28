@@ -13,7 +13,7 @@ from bti.engine import registry
 from bti.engine import techniques  # noqa: F401 - registers renderers
 from bti.engine.viewchecks import region_point_box, box_inside_frame, fit_frame_to_box
 from bti.media.contentbox import box_of
-from bti.engine.timing import Timing
+from bti.engine.timing import AnchorError, Timing
 from bti.visual.helpers import sentence_for_word
 
 from .schedule import schedule
@@ -396,12 +396,39 @@ def compose(visual, timing, picks, style, current=None):
         shots.insert(0, shot)
     if isinstance(current, dict):
         old = current.get("shots") or []
+        timing_lines = {b.get("id") for b in (timing.get("beats") or []) if isinstance(b, dict) and isinstance(b.get("id"), str)}
         spans = []
         for index, previous in enumerate(old):
             if previous.get("locked"):
-                left = tm.resolve(previous["start"])
-                right = tm.resolve(old[index + 1]["start"]) if index + 1 < len(old) else tm.resolve(current.get("end", {"t": timing["duration"]}))
-                spans.append((left, right, deepcopy(previous)))
+                if timing_lines and isinstance(previous.get("beat"), str) and previous["beat"] and previous["beat"] not in timing_lines:
+                    notes.append({"moment": previous.get("moment", "program"), "rule": "C8", "what": "locked shot from an old narration line was not kept"})
+                    continue
+                try:
+                    left = float(tm.resolve(previous["start"]))
+                except (AnchorError, KeyError, TypeError, ValueError):
+                    notes.append({"moment": previous.get("moment", "program"), "rule": "C8", "what": "locked shot with an anchor outside the current timing was not kept"})
+                    continue
+                if left < 0 or left >= float(timing["duration"]):
+                    notes.append({"moment": previous.get("moment", "program"), "rule": "C8", "what": "locked shot with an anchor outside the current timing was not kept"})
+                    continue
+                try:
+                    right = float(tm.resolve(old[index + 1]["start"]) if index + 1 < len(old) else tm.resolve(current.get("end", {"t": timing["duration"]})))
+                except (AnchorError, KeyError, TypeError, ValueError):
+                    right = float(timing["duration"])
+                right = max(left, min(float(timing["duration"]), right))
+                kept_shot = deepcopy(previous)
+                kept_overlays = []
+                for ov in kept_shot.get("overlays") or []:
+                    if not isinstance(ov, dict):
+                        continue
+                    try:
+                        tm.resolve(ov["start"])
+                    except (AnchorError, KeyError, TypeError, ValueError):
+                        notes.append({"moment": kept_shot.get("moment", "program"), "rule": "C8", "what": "overlay with a stale timing anchor on locked shot was omitted"})
+                        continue
+                    kept_overlays.append(ov)
+                kept_shot["overlays"] = kept_overlays
+                spans.append((left, right, kept_shot))
         kept = []
         for shot in shots:
             at = tm.resolve(shot["start"])

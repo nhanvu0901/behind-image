@@ -90,8 +90,10 @@ def prepare_sheets(project, visual, storyboard, destination, *, ids=None, cancel
     from bti.longjob import Cancelled
     dest = Path(destination); dest.mkdir(parents=True, exist_ok=True)
     wanted = set(ids) if ids is not None else None
-    words = project.timing().get('words') or []
-    moments = {m['id']: m for m in visual['moments']}
+    timing = project.timing() or {}
+    words = timing.get('words') or []
+    timing_lines = {b.get('id') for b in (timing.get('beats') or []) if isinstance(b, dict) and isinstance(b.get('id'), str)}
+    moments = {m['id']: m for m in visual['moments'] if not timing_lines or m.get('line') in timing_lines}
     cast = {c['id']: c for c in visual.get('cast', [])}
     notes = storyboard.get('compose_notes') or []
     rows, tiles, paths = [], [], []

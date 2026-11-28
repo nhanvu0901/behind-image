@@ -595,3 +595,32 @@ def test_visual_review_and_scorecard_wait_for_current_composition(at, monkeypatc
     actions = {a["id"]: a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"]}
     for action in ("storyboard.review", "scorecard.make"):
         assert not actions[action]["ready"] and "visual_composed" in actions[action]["needs"]
+
+
+def test_stale_visual_script_and_music_against_new_timing_advance_in_state(at, tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from bti.editor import state_api
+    from bti.music import library
+    c, pid, st = at("picks_approved")
+    p = c.root / pid
+    shutil.copy(DEMO_SRC / "timing.json", p / "timing.json")
+    (p / "visual.json").write_text('{"schema": "bti.visual/1", "made_from": {"narration": "n", "timing": "t"}, "cast": [], "wanted": [], "moments": [{"id": "m1", "line": "b9999", "w0": 0, "w1": 1, "about": null, "show": {"whole": true}, "move": "hold", "from": "whole", "say": [], "why": "Cũ."}]}', encoding="utf-8")
+    assert c.put(f"/api/projects/{pid}/pipeline-setting", json={"pipeline": "visual", "base_rev": st["pipeline"]["rev"]}).status_code == 200
+    actions = {a["id"]: a for a in c.get(f"/api/projects/{pid}/state").json()["next_actions"]}
+    assert actions["visual.plan"]["advances"] is True
+
+    edit_ctx = SimpleNamespace(pipeline={"value": "visual"}, d=p, has_timing=True,
+                               open=lambda step: step == "edit", box_busy=lambda: False,
+                               agent=lambda role: {"usable": True}, actor=lambda role: "agent:fake")
+    ve = state_api.b_visual_edit(edit_ctx)
+    assert ve is not None and "visual_script_valid" in ve["needs"]
+
+    monkeypatch.setattr(library, "index", lambda: {"rec1": {"duration": 120}})
+    monkeypatch.setattr(state_api, "_model_needs", lambda ctx, role: [])
+    (p / "storyboard.json").write_text(json.dumps({"end": {"t": 10.0}, "shots": []}), encoding="utf-8")
+    (p / "music.json").write_text(json.dumps({"schema": "bti.music/1", "cues": [
+        {"recording": "rec1", "start": {"beat": "b9999", "at": 0}, "end": {"t": 5.0},
+         "offset": 0.0, "level": "normal", "fade_in": 0.5, "fade_out": 0.5, "role": "bed", "why": "old"}]}), encoding="utf-8")
+    mctx = SimpleNamespace(sb_exists=True, sb_corrupt=False, d=p, has_timing=True,
+                           actor=lambda role: "agent:mock", agent_busy=lambda kind: False)
+    assert state_api.b_music_auto(mctx)["advances"] is True
