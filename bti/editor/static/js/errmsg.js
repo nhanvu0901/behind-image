@@ -999,3 +999,10 @@ for (const stage of ['draft', 'picks', 'title', 'script', 'settings']) {
   if (STAGE_CODES[stage]) STAGE_CODES[stage].claude_api_key_missing = APIKEY_SENTENCE;
 }
 BY_CODE_HTTP.claude_api_key_missing = () => APIKEY_SENTENCE;
+
+// worker stalechap: chapter in narration that is not in the approved outline.
+export const STALECHAP_SENTENCES = {
+  chapter_not_in_outline: (i) => `Chương ${w(i.chapter)} có trong lời dẫn nhưng không có trong dàn ý. Hãy xóa chương này hoặc viết lại lời dẫn theo dàn ý đã duyệt.`,
+};
+export const STALECHAP_CODES = Object.keys(STALECHAP_SENTENCES);
+Object.assign(BUILD, STALECHAP_SENTENCES);

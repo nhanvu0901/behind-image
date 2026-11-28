@@ -1296,3 +1296,6 @@ export const VISUAL_PAGE_LABELS = {
 
 // worker saytwice: repetition checks.
 Object.assign(CODE, { fact_in_too_many_chapters: 'Dữ kiện có trong quá hai chương', fact_said_too_often: 'Dữ kiện được nói quá hai lần', return_same_words: 'Lần nhắc lại dùng cùng lời', sentence_repeated: 'Câu chữ bị lặp' });
+
+// worker stalechap: chapter in narration that is not in the approved outline.
+Object.assign(CODE, { chapter_not_in_outline: 'Chương không có trong dàn ý' });

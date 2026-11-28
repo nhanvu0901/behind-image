@@ -208,10 +208,13 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
                     if base_locked is _UNSET else set(base_locked))
     written: list[str] = []
     skipped: list[dict] = []
+    removed: list[str] = []
     shortened: list[dict] = []          # the chapters that came out over their budget and were written again (see CUT_OVER_SHARE)
 
     def result_of(rev: str | None = None) -> dict:
         out = {"written": written, "skipped": skipped}
+        if removed:
+            out["removed"] = removed
         if shortened:
             out["shortened"] = shortened
         if rev is not None:
@@ -271,8 +274,12 @@ def run_narration(job: Job, pdir: Path, spec: dict, chapters: list[str] | None =
             cur.counters["beat"] = max(cur.counters["beat"], res.narration.counters["beat"])
             new = NChapter(cid, oc.role, oc.title, oc.card, beats)
             order = {c.id: i for i, c in enumerate(outline.chapters)}
-            cur.chapters = [c for c in cur.chapters if c.id != cid] + [new]
+            stale = [c.id for c in cur.chapters if c.id not in order]
+            cur.chapters = [c for c in cur.chapters if c.id != cid and c.id in order] + [new]
             cur.chapters.sort(key=lambda c: order.get(c.id, 10_000))
+            for scid in stale:
+                if scid not in removed:
+                    removed.append(scid)
             cur.source = {"kind": "model", "model": spec["id"], "created_at": now_iso(), "outline_sha1": outline.rev()}
             cur.title = cur.title or brief["painting"]["title"]
             rev = save_narration(pdir, cur, backup=first_save)
