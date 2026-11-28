@@ -78,7 +78,7 @@ def _main_asset_key(c: VC._Ctx, picks: dict | None) -> str | None:
     return c.main_asset()
 
 
-def _person_regions(picks: dict | None, vis: dict | None) -> dict[str, str]:
+def _person_regions(picks: dict | None, vis: dict | None, timing_beats: set[str] | None = None) -> dict[str, str]:
     out: dict[str, str] = {}
     if vis is not None:
         out.update(V.cast_person_regions(vis))
@@ -94,6 +94,8 @@ def _person_regions(picks: dict | None, vis: dict | None) -> dict[str, str]:
         for entry in picks.get("names") or []:
             if not isinstance(entry, dict):
                 continue
+            if timing_beats and isinstance(entry.get("line"), str) and entry["line"] not in timing_beats:
+                continue
             where = entry.get("where") if isinstance(entry.get("where"), dict) else {}
             reg = where.get("region")
             if isinstance(reg, str) and reg:
@@ -101,7 +103,7 @@ def _person_regions(picks: dict | None, vis: dict | None) -> dict[str, str]:
     return out
 
 
-def _strip_catalog(picks: dict | None, vis: dict | None) -> list[dict]:
+def _strip_catalog(picks: dict | None, vis: dict | None, timing_beats: set[str] | None = None) -> list[dict]:
     entries: list[dict] = []
     if vis is not None:
         entries.extend(V.cast_strip_entries(vis))
@@ -119,6 +121,8 @@ def _strip_catalog(picks: dict | None, vis: dict | None) -> list[dict]:
             })
         for n in picks.get("names") or []:
             if not isinstance(n, dict) or not isinstance(n.get("name"), str):
+                continue
+            if timing_beats and isinstance(n.get("line"), str) and n["line"] not in timing_beats:
                 continue
             entries.append({
                 "id": None,
@@ -321,8 +325,8 @@ def _metric_marks_on_person(marks: list[dict], person_regs: dict[str, str], tgt:
     }
 
 
-def _metric_name_strips(c: VC._Ctx, picks: dict | None, vis: dict | None, tgt: dict) -> dict:
-    catalog = _strip_catalog(picks, vis)
+def _metric_name_strips(c: VC._Ctx, picks: dict | None, vis: dict | None, tgt: dict, timing_beats: set[str] | None = None) -> dict:
+    catalog = _strip_catalog(picks, vis, timing_beats=timing_beats)
     has_catalog = bool(catalog)
     items: list[dict] = []
     sub_rep_n = 0
@@ -470,14 +474,18 @@ def _metric_short_shots(c: VC._Ctx, tgt: dict) -> dict:
     }
 
 
-def _metric_repeated_regions(c: VC._Ctx, main: str | None, vis: dict | None, tgt: dict) -> dict:
+def _metric_repeated_regions(c: VC._Ctx, main: str | None, vis: dict | None, tgt: dict, timing_beats: set[str] | None = None) -> dict:
     max_rep = int(tgt["region_repeat_max"])
     regs = (c.assets.get(main) or {}).get("regions") if main and isinstance(c.assets.get(main), dict) else {}
     regs = regs if isinstance(regs, dict) else {}
     moment_region: dict[str, str] = {}
     if vis is not None:
         for m in vis.get("moments") or []:
-            if isinstance(m, dict) and isinstance(m.get("id"), str) and isinstance(m.get("show"), dict) and isinstance(m["show"].get("region"), str):
+            if not isinstance(m, dict):
+                continue
+            if timing_beats and isinstance(m.get("line"), str) and m["line"] not in timing_beats:
+                continue
+            if isinstance(m.get("id"), str) and isinstance(m.get("show"), dict) and isinstance(m["show"].get("region"), str):
                 moment_region[m["id"]] = m["show"]["region"]
     counts: dict[str, list[dict]] = {}
     for i, sp in enumerate(c.spans):
@@ -686,17 +694,18 @@ def compute_metrics(
     ctx = _ctx_for(pdir, sb, timing, bundle)
     main = _main_asset_key(ctx, picks)
     marks = _collect_marks(ctx)
-    person_regs = _person_regions(picks, visual)
+    timing_beats = {b["id"] for b in ((timing or {}).get("beats") or []) if isinstance(b, dict) and isinstance(b.get("id"), str)}
+    person_regs = _person_regions(picks, visual, timing_beats=timing_beats or None)
 
     metrics = [
         _metric_small_painting(ctx, main, tgt),
         _metric_marks_per_min(marks, ctx.total, tgt),
         _metric_biggest_mark(marks, tgt),
         _metric_marks_on_person(marks, person_regs, tgt),
-        _metric_name_strips(ctx, picks, visual, tgt),
+        _metric_name_strips(ctx, picks, visual, tgt, timing_beats=timing_beats or None),
         _metric_borrowed_pictures(ctx, main, tgt),
         _metric_short_shots(ctx, tgt),
-        _metric_repeated_regions(ctx, main, visual, tgt),
+        _metric_repeated_regions(ctx, main, visual, tgt, timing_beats=timing_beats or None),
         _metric_subject_not_shown(ctx, picks, visual, timing, tgt),
         _metric_unfilled_identity(ctx, tgt),
         _metric_loudness(audio, tgt),

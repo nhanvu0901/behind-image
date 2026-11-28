@@ -142,6 +142,9 @@ def run_edit(pid, pdir, instruction, scope, *, model, ctx, base_rev=None, **seam
     before = store.load(pdir)
     if not before or not timing:
         raise PartError('validation_failed', 'Cần kịch bản hình và thời gian lời dẫn.')
+    timing_lines = {b.get('id') for b in (timing.get('beats') or []) if isinstance(b, dict) and isinstance(b.get('id'), str)}
+    if timing_lines and any(m.get('line') not in timing_lines for m in before.get('moments', [])):
+        raise PartError('validation_failed', 'Kịch bản hình đang thuộc lời dẫn cũ; hãy viết lại kịch bản hình.')
     rev = store.revision(before)
     if base_rev is not None and base_rev != rev:
         raise PartError('picks_auto_stale', 'Kịch bản hình đã thay đổi.')
@@ -267,8 +270,7 @@ def run_edit(pid, pdir, instruction, scope, *, model, ctx, base_rev=None, **seam
     if any(i.get('level') != 'review' for i in check.validate(visual, timing, picks)):
         raise PartError('validation_failed', 'Kịch bản hình không hợp lệ sau khi tìm hình.')
     operations = projection.operations(projection.project(visual, timing, inp.painting.key))
-    for offset in range(0, len(operations), 200):
-        writer.send(operations[offset:offset + 200], 'Agent sửa kịch bản hình: chọn hình theo đoạn')
+    projection.send_projection(writer, operations, picks, 'Agent sửa kịch bản hình: chọn hình theo đoạn')
     store.save(pdir, visual, base_rev=rev, actor='agent:' + model, compose=False)
     from bti.compose.api import compose_project
     composed = compose_project(pdir)
@@ -286,12 +288,18 @@ def start(pid, pdir, *, instruction, scope, model=None, manager=None, by_run=Fal
     from bti.picks.auto import inputs, session
     from bti.longjob import Part
     from bti.visual import store
+    from bti.script.store import read_object
     pdir = Path(pdir)
     if not isinstance(instruction, str) or not instruction.strip() or len(instruction) > 2000:
         raise inputs.AutoError('invalid_request', 'Supply an instruction of at most 2000 characters.', 422)
     visual = store.load(pdir)
     if not visual:
         raise inputs.AutoError('validation_failed', 'Visual script is missing.', 409)
+    timing = read_object(pdir / 'timing.json', 'timing')
+    if timing:
+        timing_lines = {b.get('id') for b in (timing.get('beats') or []) if isinstance(b, dict) and isinstance(b.get('id'), str)}
+        if timing_lines and any(m.get('line') not in timing_lines for m in visual.get('moments', [])):
+            raise inputs.AutoError('validation_failed', 'Visual script references lines from an old narration; run visual.plan again.', 409)
     try:
         scope_ids(visual, scope)
     except (ValueError, KeyError) as exc:

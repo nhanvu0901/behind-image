@@ -36,8 +36,8 @@ def test_projection_operations_replace_subjects_and_each_line():
     projected = {'subjects': [{'id': 'p', 'kind': 'person', 'name': 'Ada', 'strip': True, 'where': {'region': 'FACE'}}],
                  'lines': [{'beat': 'b0001', 'items': [{'asset': 'A', 'region': 'FACE', 'role': 'detail'}], 'about': [{'id': 'p', 'words': 'Ada'}], 'kinds': ['detail'], 'missing': [], 'reason': 'Khuôn mặt.'}]}
     ops = operations(projected)
-    assert [x['op'] for x in ops] == ['set_subjects', 'set_picks', 'set_about']
-    assert ops[1]['items'] == projected['lines'][0]['items'] and ops[2]['about'] == projected['lines'][0]['about']
+    assert [x['op'] for x in ops] == ['remove_stale_beats', 'set_subjects', 'set_picks', 'set_about']
+    assert ops[2]['items'] == projected['lines'][0]['items'] and ops[3]['about'] == projected['lines'][0]['about']
 
 
 def test_projection_limits_legacy_queries_without_changing_visual():
@@ -69,3 +69,27 @@ def test_pair_with_missing_want_uses_its_explicit_fallback():
     line = project(doc, {'words': [{'w': 'word'}]}, 'A')['lines'][0]
     assert [(x['asset'], x['region']) for x in line['items']] == [('B', None), ('A', 'FACE')]
     assert line['missing'][0]['what'] == 'x'
+
+
+def test_send_projection_splits_long_scripts_safely_keeping_remove_stale_first():
+    from bti.visual.projection import operations, send_projection
+    projected = {
+        'subjects': [{'id': 'new_s', 'kind': 'idea', 'name': 'New', 'strip': False, 'where': None}],
+        'lines': [{'beat': f'b{i:04d}', 'items': [{'asset': 'A', 'region': None, 'role': 'main'}],
+                   'about': [{'id': 'new_s', 'words': 'New'}], 'kinds': ['whole'], 'missing': [], 'reason': 'Ok.'}
+                  for i in range(120)],
+    }
+    ops = operations(projected)
+    assert len(ops) == 242
+    sent = []
+    class Writer:
+        def send(self, batch, note, *, expected_rev=None):
+            sent.append((batch, note, expected_rev))
+    current = {'subjects': [{'id': 'old_s', 'kind': 'idea', 'name': 'Old', 'strip': False, 'where': None}]}
+    send_projection(Writer(), ops, current, 'save', expected_rev='r0')
+    assert len(sent) == 2
+    assert sent[0][0][0] == {'op': 'remove_stale_beats'}
+    assert sent[0][2] == 'r0'
+    assert {s['id'] for s in sent[0][0][1]['subjects']} == {'new_s', 'old_s'}
+    assert sent[1][0][-1] == {'op': 'set_subjects', 'subjects': projected['subjects']}
+    assert sent[1][2] is None

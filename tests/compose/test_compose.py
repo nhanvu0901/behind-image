@@ -403,3 +403,18 @@ def test_shown_text_region_up_to_45_percent_gets_a_capped_ring():
     ring = next(o for o in sb["shots"][0]["overlays"] if o["technique"] == "AN-01")
     zoom = max(k["zoom"] for k in sb["shots"][0]["params"]["camera"])
     assert ring["params"]["radius"] * zoom <= 0.15 * 1080
+
+
+def test_recompose_drops_locked_shot_with_stale_narration_beat_or_anchor():
+    visual, timing, picks = fixture("landscape")
+    sb, _ = compose(visual, timing, picks, {"id": "gae"})
+    stale_locked = {
+        "id": "s_old", "moment": "m_old", "beat": "b0130",
+        "start": {"beat": "b0130", "at": 0}, "technique": "STATIC-01",
+        "slots": {"image": {"asset": "A"}}, "params": {}, "intent": "point_at",
+        "transition_in": None, "overlays": [], "locked": True, "source": "human", "note": "old",
+    }
+    sb["shots"].insert(0, stale_locked)
+    recomposed, notes = compose(visual, timing, picks, {"id": "gae"}, sb)
+    assert all(s.get("id") != "s_old" for s in recomposed["shots"])
+    assert any("old narration line" in n["what"] or "outside the current timing" in n["what"] for n in notes)

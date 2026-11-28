@@ -290,3 +290,41 @@ def test_compute_metrics_supports_visual_json_contract(tmp_path: Path):
     assert m["subject_not_shown"]["ok"] is False
     assert m["loudness"]["ok"] is None
     assert m["pause_vs_speech"]["ok"] is None
+
+
+def test_scorecard_ignores_old_narration_names_and_stale_moments(tmp_path: Path):
+    from bti.scorecard.visual import moments_subject_not_shown
+    pdir = tmp_path / "proj_stale"
+    _make_image(pdir / "assets" / "main.png", 1200, 1080)
+    _write_json(pdir / "picks.json", {
+        "main_asset": "main",
+        "assets": {"main": {"file": "assets/main.png", "width": 1200, "height": 1080,
+                            "regions": {"STALE_NAME_FACE": {"x": 500, "y": 400, "rx": 50, "ry": 50},
+                                        "CUR_THING": {"x": 200, "y": 200, "rx": 40, "ry": 40}}}},
+        "names": [{"name": "Old Person", "line": "b0130", "where": {"region": "STALE_NAME_FACE"}, "sure": True, "words": ""}],
+    })
+    timing = {"duration": 10.0, "words": [{"w": "hello", "s": 0.0, "e": 1.0}],
+              "beats": [{"id": "b0264", "w0": 0, "w1": 1, "start": 0.0, "end": 10.0}]}
+    _write_json(pdir / "timing.json", timing)
+    visual = {
+        "schema": "bti.visual/1",
+        "cast": [{"id": "old", "kind": "person", "name": "Old", "shown_by": [{"region": "OLD_FACE"}]}],
+        "wanted": [],
+        "moments": [
+            {"id": "m_old", "line": "b0130", "w0": 0, "w1": 1, "about": "old", "show": {"region": "CUR_THING"}},
+            {"id": "m_cur", "line": "b0264", "w0": 0, "w1": 1, "about": None, "show": {"region": "CUR_THING"}},
+        ],
+    }
+    _write_json(pdir / "visual.json", visual)
+    _write_json(pdir / "storyboard.json", {
+        "schema": "bti.storyboard/1", "title": "T", "timing": "timing.json", "end": {"t": 10.0},
+        "assets": {"main": {"file": "assets/main.png", "width": 1200, "height": 1080}},
+        "shots": [{"id": "s1", "moment": "m_cur", "start": {"t": 0.0}, "technique": "STATIC-01",
+                   "slots": {"image": {"asset": "main"}}, "params": {},
+                   "overlays": [{"technique": "AN-01", "params": {"at": "STALE_NAME_FACE", "radius": 20}}]}],
+    })
+    assert moments_subject_not_shown(visual, timing) == []
+    sc = compute_metrics(pdir)
+    m = _metric_map(sc)
+    assert m["marks_on_person"]["value"] == 0
+    assert m["subject_not_shown"]["value"] == 0

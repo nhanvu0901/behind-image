@@ -257,3 +257,107 @@ def test_visual_plan_refuses_when_another_agent_is_running(tmp_path, monkeypatch
         job.start(pdir.name, pdir, manager=Manager())
     assert exc.value.code == 'agent_job_running'
     assert exc.value.extra['job_id'] == '1234567890abcdef'
+
+
+def test_visual_plan_removes_old_narration_lines_first_and_undoes_in_one_batch(tmp_path, monkeypatch):
+    from bti.picks import context, doc
+    from bti.picks.auto import session
+    from bti.picks.auto.write import Writer
+    from bti.longjob import LongJobManager
+    from bti.visual import job, store
+    from bti.draft.guard import Guard
+    from bti.script import store as sstore
+    from bti.script.store import Beat, NChapter, Narration
+    from bti.ops.adapters import PicksAdapter
+    from bti.ops.log import ChangeLog
+    from bti.ops.runner import run_undo
+    root = tmp_path / 'projects'
+    root.mkdir()
+    pdir = make_auto_project(root)
+    old_beats = context.narration_view(pdir)['beat_ids']
+    writer = Writer(pdir, 'agent:old', redo=True)
+    writer.send([
+        {'op': 'set_region', 'asset': 'A', 'region': 'OLD_REG', 'x': 20, 'y': 20},
+        {'op': 'set_subjects', 'subjects': [{'id': 'old_subj', 'kind': 'person', 'name': 'Old Person', 'also': [], 'strip': True, 'sub': '', 'where': {'region': 'OLD_REG'}}]},
+        {'op': 'set_picks', 'beat': old_beats[0], 'items': [{'asset': 'A', 'region': 'OLD_REG', 'role': 'detail'}],
+         'names': [{'name': 'Old Person', 'also': [], 'line': old_beats[0], 'where': {'region': 'OLD_REG'}, 'sure': True, 'words': ''}]},
+        {'op': 'set_about', 'beat': old_beats[0], 'about': [{'id': 'old_subj', 'words': 'Old Person'}]},
+        *[{'op': 'set_picks', 'beat': bid, 'items': [{'asset': 'A', 'region': None, 'role': 'main'}]} for bid in old_beats[1:]],
+    ], 'narration A picks')
+    old_picks_snapshot = doc.load(pdir)
+
+    # Rewrite narration to B with brand-new line ids and new timing.
+    n_b = Narration('t1', 'The Test Painting', 'en')
+    ch = NChapter('c01', 'cold_open', 'COLD OPEN', False)
+    ch.beats = [
+        Beat('b0264', 'Giovanni Arnolfini wears a dark cloak here.', ['f01'], ['the cloak']),
+        Beat('b0265', 'The mirror hangs behind them on the wall.', ['f01'], ['the mirror']),
+    ]
+    n_b.chapters = [ch]
+    sstore.save_narration(pdir, n_b)
+    sstore.approve(pdir, 'narration', n_b.rev())
+    words, beats = [], []
+    for line in ch.beats:
+        start = len(words)
+        for w in line.text.split():
+            i = len(words)
+            words.append({'w': w, 's': i * .8, 'e': (i + 1) * .8})
+        beats.append({'id': line.id, 'w0': start, 'w1': len(words)})
+    (pdir / 'timing.json').write_text(json.dumps({'words': words, 'beats': beats}), encoding='utf-8')
+
+    class FakeAgent:
+        def run(self, ws, *, check, **kwargs):
+            ctx = json.loads((ws / 'inputs/context.json').read_text(encoding='utf-8'))
+            if ctx['mode'] == 'choose':
+                (ws / 'out/choice.json').write_text('{}')
+                data = json.loads((ws / 'tighten/inputs/regions.json').read_text(encoding='utf-8'))['regions'][0]
+                w, h = data['cutout_size']
+                row = {'name': 'CLOAK', 'action': 'tight', 'box': [int(w * .2), int(h * .2), int(w * .8), int(h * .8)], 'thing': 'a dark cloak', 'confirmed': False}
+                target = ws / 'out/tighten.json'
+                target.write_text(json.dumps({'schema': 'bti.picks.tighten/1', 'regions': [row]}))
+                assert 'tighten/look/check_' in check(1)
+                row['confirmed'] = True
+                target.write_text(json.dumps({'schema': 'bti.picks.tighten/1', 'regions': [row]}))
+                assert check(2) is None
+                return SimpleNamespace(status='ok', steps=2, turns=2, repairs=1, elapsed=0)
+            (ws / 'out/regions.json').write_text(json.dumps({'CLOAK': {'box': [.1, .1, .4, .5], 'what': 'dark cloak'}}))
+            visual = {
+                'schema': 'bti.visual/1', 'made_from': ctx['made_from'],
+                'cast': [{'id': 'giovanni', 'kind': 'person', 'name': 'Giovanni Arnolfini', 'also': [], 'strip': True, 'sub': '', 'shown_by': [{'region': 'CLOAK'}]}],
+                'wanted': [],
+                'moments': [
+                    {'id': 'm0001', 'line': 'b0264', 'w0': beats[0]['w0'], 'w1': beats[0]['w1'], 'about': 'giovanni', 'show': {'region': 'CLOAK'}, 'move': 'hold', 'from': 'whole', 'say': [{'intro': 'giovanni', 'word': 0}], 'why': 'Giới thiệu.'},
+                    {'id': 'm0002', 'line': 'b0265', 'w0': beats[1]['w0'], 'w1': beats[1]['w1'], 'about': None, 'show': {'whole': True}, 'move': 'hold', 'from': 'whole', 'say': [], 'why': 'Toàn cảnh.'},
+                ],
+            }
+            (ws / 'out/visual.json').write_text(json.dumps(visual), encoding='utf-8')
+            assert check(1) is None
+            return SimpleNamespace(status='ok', steps=1, turns=1, repairs=0, elapsed=0)
+
+    monkeypatch.setattr(session, 'agent_module', lambda _: FakeAgent())
+    monkeypatch.setattr(session, 'check_installed', lambda _: None)
+    manager = LongJobManager()
+    manager.configure(projects_root=root)
+    rec = job.start(pdir.name, pdir, manager=manager, guard_factory=lambda d: Guard(d, extra=lambda: None, repo_root=d.parent), python=sys.executable)
+    result = manager.wait(rec['id'], 60)
+    assert result['state'] == 'done', result
+
+    after_picks = doc.load(pdir)
+    assert set(after_picks['beats']) == {'b0264', 'b0265'}
+    assert after_picks.get('names', []) == []
+    assert [s['id'] for s in after_picks['subjects']] == ['giovanni']
+    assert 'OLD_REG' not in after_picks['assets']['A']['regions']
+
+    records = ChangeLog(pdir).records('picks')
+    latest = records[-1]
+    assert latest['ops'][0] == {'op': 'remove_stale_beats'}
+    assert any(op.get('op') == 'set_subjects' for op in latest['ops'])
+    assert {op.get('beat') for op in latest['ops'] if op.get('op') == 'set_picks'} == {'b0264', 'b0265'}
+
+    undo_res = run_undo({'picks': PicksAdapter(pdir)}, latest['batch'], {'base_rev': doc.revision(after_picks), 'actor': 'human', 'note': 'undo'}, ChangeLog(pdir))
+    assert undo_res['applied'] == 1
+    restored = doc.load(pdir)
+    assert set(restored['beats']) == set(old_beats)
+    assert restored['subjects'] == old_picks_snapshot['subjects']
+    assert restored['names'] == old_picks_snapshot['names']
+    assert 'OLD_REG' in restored['assets']['A']['regions']

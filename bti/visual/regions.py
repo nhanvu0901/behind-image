@@ -54,11 +54,12 @@ def agent_regions(log, asset, current):
     return {name for name, value in known.items() if current.get(name) == value}
 
 
-def replacement_batch(current, asset, removed, additions, projection):
+def replacement_batch(current, asset, removed, additions, projection, *, keep_beats=None):
     """Keep region and affected line changes in the same undoable batch."""
     affected = {bid for bid, beat in current.get('beats', {}).items()
-                if any(item.get('asset') == asset and item.get('region') in removed
-                       for item in beat.get('items', []))}
+                if (keep_beats is None or bid in keep_beats)
+                and any(item.get('asset') == asset and item.get('region') in removed
+                        for item in beat.get('items', []))}
     # Subject changes must be paired with the final line so the batch validates
     # and a later projection does not make its undo conflict.
     for op in projection:
@@ -69,9 +70,13 @@ def replacement_batch(current, asset, removed, additions, projection):
     available = {op.get('beat') for op in projection if op.get('op') == 'set_picks'}
     if affected - available:
         raise ValueError('Cannot replace regions referenced by lines absent from the new script.')
-    batch = [{'op': 'remove_region', 'asset': asset, 'region': name} for name in sorted(removed)] + additions
+    has_stale_cleanup = any(op.get('op') == 'remove_stale_beats' for op in projection)
+    batch = ([{'op': 'remove_stale_beats'}] if has_stale_cleanup else []) + [
+        {'op': 'remove_region', 'asset': asset, 'region': name} for name in sorted(removed)] + additions
     rest = []
     for op in projection:
+        if op.get('op') == 'remove_stale_beats':
+            continue
         if op['op'] == 'set_subjects' or op.get('beat') in affected:
             batch.append(op)
         else:

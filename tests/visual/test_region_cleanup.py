@@ -44,3 +44,13 @@ def test_replacement_batch_keeps_changed_subject_mentions_with_their_final_lines
     batch, rest = replacement_batch(current, 'A', {'OLD'}, [], projected)
     assert batch[1:] == projected
     assert rest == []
+
+
+def test_replacement_batch_puts_remove_stale_beats_first_and_skips_stale_beats():
+    from bti.visual.regions import replacement_batch
+    current = {'beats': {'b_old': {'items': [{'asset': 'A', 'region': 'OLD'}]}, 'b_new': {'items': [{'asset': 'A'}]}}}
+    projected = [{'op': 'remove_stale_beats'}, {'op': 'set_subjects', 'subjects': []},
+                 {'op': 'set_picks', 'beat': 'b_new', 'items': [{'asset': 'A'}]}, {'op': 'set_about', 'beat': 'b_new', 'about': []}]
+    batch, rest = replacement_batch(current, 'A', {'OLD'}, [], projected, keep_beats={'b_new'})
+    assert [o['op'] for o in batch] == ['remove_stale_beats', 'remove_region', 'set_subjects']
+    assert [o['op'] for o in rest] == ['set_picks', 'set_about']

@@ -764,7 +764,7 @@ def _texts_not_in_narration(c: _Ctx) -> list[dict]:
 
 
 # ----------------------------------------------------------------------------------------------------------- 6. pictures no line uses
-def lines_assets(project_dir) -> set | None:
+def lines_assets(project_dir, beat_ids=None) -> set | None:
     """The pictures that some line of the narration has (picks.json of the project) and the main painting; None when there is no picks.json."""
     if project_dir is None:
         return None
@@ -777,7 +777,9 @@ def lines_assets(project_dir) -> set | None:
     if not isinstance(doc, dict) or not isinstance(doc.get("assets"), dict) or not isinstance(doc.get("beats"), dict):
         return None
     out = {doc["main_asset"]} if isinstance(doc.get("main_asset"), str) else set()
-    for entry in doc["beats"].values():
+    for bid, entry in doc["beats"].items():
+        if beat_ids is not None and bid not in beat_ids:
+            continue
         if isinstance(entry, dict) and entry.get("status") != "skip":
             for it in entry.get("items") or []:
                 if isinstance(it, dict) and isinstance(it.get("asset"), str):
@@ -786,7 +788,8 @@ def lines_assets(project_dir) -> set | None:
 
 
 def _unused_pictures(c: _Ctx) -> list[dict]:
-    allowed = lines_assets(c.project_dir)
+    timing_beats = {b["id"] for b in (getattr(c.tm, "beats", None) or []) if isinstance(b, dict) and isinstance(b.get("id"), str)}
+    allowed = lines_assets(c.project_dir, beat_ids=timing_beats or None)
     if allowed is None:
         return []
     used: dict = {}
@@ -1411,6 +1414,9 @@ def _name_not_shown(c):
     cast = picks.get("names")
     if not isinstance(cast, list):
         return []
+    timing_beats = {b["id"] for b in (getattr(c.tm, "beats", None) or []) if isinstance(b, dict) and isinstance(b.get("id"), str)}
+    if timing_beats:
+        cast = [n for n in cast if not isinstance(n, dict) or not isinstance(n.get("line"), str) or n["line"] in timing_beats]
     beats = {b.get("id"): b for b in (getattr(c.tm, "beats", None) or []) if isinstance(b, dict)}
     items_by_shot = {}
     for item in _items_of(c):
@@ -2460,6 +2466,9 @@ def _strip_without_light(c: _Ctx) -> list[dict]:
     cast = picks.get("names")
     if not isinstance(cast, list):
         return []
+    timing_beats = {b["id"] for b in (getattr(c.tm, "beats", None) or []) if isinstance(b, dict) and isinstance(b.get("id"), str)}
+    if timing_beats:
+        cast = [n for n in cast if not isinstance(n, dict) or not isinstance(n.get("line"), str) or n["line"] in timing_beats]
     main = _main_painting(c)
     asset = c.assets.get(main) if main else None
     if not isinstance(asset, dict):
