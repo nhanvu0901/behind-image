@@ -473,7 +473,14 @@ def _file_named(d: Path, sb: dict, key: str, default: str) -> bool:
 
 
 def storyboard_old_narration(d: Path, sb: dict) -> bool:
-    """Detect obsolete beat references, or an older draft's narration snapshot."""
+    """Judge composed storyboards by their timing hash; legacy storyboards by beat ids or draft proposals."""
+    from bti.draft.inputs import canon_hash
+    made_from = sb.get("made_from")
+    if isinstance(made_from, dict) and made_from:
+        timing_path = d / "timing.json"
+        if not timing_path.is_file():
+            return False
+        return made_from.get("timing") != canon_hash(read_json(timing_path))
     from bti.picks.context import narration_view
     ids = set(narration_view(d)["beat_ids"])
     if not ids:
@@ -484,7 +491,6 @@ def storyboard_old_narration(d: Path, sb: dict) -> bool:
     # Compiled shots have word anchors, not beat ids. A saved draft records the
     # narration hash; use it only when picks were approved after the storyboard.
     from datetime import datetime
-    from bti.draft.inputs import canon_hash
     picks = read_json(d / "picks.json")
     approved_at = (picks.get("approval") or {}).get("approved_at")
     if not approved_at or datetime.fromisoformat(approved_at.replace("Z", "+00:00")).timestamp() <= (d / "storyboard.json").stat().st_mtime:
